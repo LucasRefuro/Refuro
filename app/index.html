@@ -1048,6 +1048,7 @@
       <div><label>Telefoonnummer (afzender)</label><input id="b_tel" placeholder="06 12345678" onchange="slaBedrijfOp()"></div>
     </div>
     <p class="muted" style="margin-top:8px">Deze gegevens worden gebruikt in de statusberichten naar klanten. Berichten openen in je eigen mail-/sms-app zodat jij ze verstuurt.</p>
+    <button class="btn ghost" style="margin-top:12px" onclick="toonOnboarding()"><svg class="i s"><use href="#i-shop"/></svg>Rondleiding opnieuw bekijken</button>
   </div>
 
   <div class="card" id="inst-huisstijl" hidden>
@@ -1192,6 +1193,7 @@ function load(){
   if(!s.teams) s.teams=[{id:1, naam:'Winkel'}];
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
   if(s.vergrendeld===undefined) s.vergrendeld=false;
+  if(s.onboardingKlaar===undefined) s.onboardingKlaar=false;
   return s;
 }
 function betaalNaam(b){ return b==='pin'?'pin':(b==='cash'?'cash met bon':'cash zonder bon'); }
@@ -2917,12 +2919,102 @@ function importData(input){
   r.readAsText(f);
 }
 
+/* ---------- onboarding: rondleiding + eerste gegevens ---------- */
+let onbStap=0;
+const ONB_TOUR=[
+  {ic:'i-chart', t:'Dashboard', d:'In één oogopslag je omzet, winst en wat er vandaag nog moet gebeuren.'},
+  {ic:'i-scan', t:'Scannen', d:'Scan of zoek een product om het snel in of uit voorraad te boeken.'},
+  {ic:'i-wrench', t:'Reparaties', d:'Volg elke reparatie van aanmelding tot afgerond, met een linkje voor je klant.'},
+  {ic:'i-box', t:'Producten', d:'Je hele voorraad, met automatische waarschuwing als iets bijna op is.'},
+  {ic:'i-settings', t:'Instellingen', d:'Hier pas je later ook je bedrijfsgegevens, huisstijl en team aan.'}
+];
+function toonOnboarding(){
+  onbStap=0;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='onbOverlay';
+  ov.innerHTML='<div class="popup groot" id="onbPopup"></div>';
+  document.body.appendChild(ov);
+  onbRender();
+}
+function onbDots(){
+  return '<div style="display:flex; gap:6px; justify-content:center; margin:18px 0 4px">'+
+    [0,1,2,3].map(i=>`<span style="width:7px;height:7px;border-radius:50%;background:${i===onbStap?'var(--oranje,#2563EB)':'var(--border,#E9EFF8)'}"></span>`).join('')+
+    '</div>';
+}
+function onbRender(){
+  const p=document.getElementById('onbPopup'); if(!p) return;
+  let inner='';
+  if(onbStap===0){
+    inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Welkom bij ${esc((state.huisstijl&&state.huisstijl.naam)||'Refuro')}!</h2>
+      <p class="muted" style="margin:10px 0 4px">Voor je begint lopen we in drie korte stappen door de app: je bedrijfsgegevens, een mini-rondleiding, en klaar.</p>
+      <p class="muted">Duurt hooguit een minuut, en je kan het later altijd opnieuw bekijken via Instellingen.</p>
+      <div class="acts" style="justify-content:flex-end; margin-top:22px">
+        <button class="btn ghost" onclick="onbAfronden(true)">Overslaan</button>
+        <button class="btn" onclick="onbGa(1)">Beginnen</button>
+      </div>`;
+  } else if(onbStap===1){
+    const i=state.instellingen||{};
+    inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Jouw bedrijfsgegevens</h2>
+      <p class="muted" style="margin-bottom:14px">Deze gebruiken we in de statusberichten naar je klanten. Later aan te passen in Instellingen.</p>
+      <div class="grid">
+        <div><label>Bedrijfsnaam</label><input id="onb_naam" placeholder="Refuro" value="${esc(i.naam||'')}"></div>
+        <div><label>E-mailadres</label><input id="onb_email" placeholder="info@refuro.nl" value="${esc(i.email||'')}"></div>
+        <div><label>Telefoonnummer</label><input id="onb_tel" placeholder="06 12345678" value="${esc(i.tel||'')}"></div>
+      </div>
+      <div class="acts" style="justify-content:space-between; margin-top:22px">
+        <button class="btn ghost" onclick="onbGa(-1)">Terug</button>
+        <div class="betaalrow">
+          <button class="btn ghost" onclick="onbGa(1)">Overslaan</button>
+          <button class="btn" onclick="onbBedrijfOpslaan()">Volgende</button>
+        </div>
+      </div>`;
+  } else if(onbStap===2){
+    inner=`<h2><svg class="i"><use href="#i-scan"/></svg>Korte rondleiding</h2>
+      <p class="muted" style="margin-bottom:14px">Dit vind je in het menu aan de linkerkant:</p>
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        ${ONB_TOUR.map(s=>`<div class="card" style="padding:14px; box-shadow:none; border:1px solid var(--border,#E9EFF8)">
+          <svg class="i" style="margin-bottom:6px"><use href="#${s.ic}"/></svg>
+          <div style="font-weight:600; margin-bottom:3px">${s.t}</div>
+          <div class="muted" style="font-size:12.5px; line-height:1.5">${s.d}</div>
+        </div>`).join('')}
+      </div>
+      <div class="acts" style="justify-content:space-between; margin-top:22px">
+        <button class="btn ghost" onclick="onbGa(-1)">Terug</button>
+        <button class="btn" onclick="onbGa(1)">Volgende</button>
+      </div>`;
+  } else {
+    inner=`<h2><svg class="i"><use href="#i-check"/></svg>Helemaal klaar!</h2>
+      <p class="muted" style="margin:10px 0 22px">Je kan nu direct aan de slag. Wil je deze rondleiding nog eens zien, dat kan altijd via Instellingen → Bedrijfsgegevens.</p>
+      <div class="acts" style="justify-content:flex-end">
+        <button class="btn" onclick="onbAfronden(false)"><svg class="i s"><use href="#i-check"/></svg>Aan de slag</button>
+      </div>`;
+  }
+  p.innerHTML=inner+onbDots();
+}
+function onbGa(delta){ onbStap=Math.max(0,Math.min(3,onbStap+delta)); onbRender(); }
+function onbBedrijfOpslaan(){
+  state.instellingen={
+    naam:document.getElementById('onb_naam').value.trim(),
+    email:document.getElementById('onb_email').value.trim(),
+    tel:document.getElementById('onb_tel').value.trim()
+  };
+  save();
+  onbGa(1);
+}
+function onbAfronden(overgeslagen){
+  state.onboardingKlaar=true; save();
+  const o=document.getElementById('onbOverlay'); if(o) o.remove();
+  if(!overgeslagen) toast('✔️ Welkom! Je kan meteen beginnen.', true);
+  renderInstellingen();
+}
+
 save();
 pasHuisstijlToe();
 renderScanLog(); updateBadge(); renderDashboard();
 if(state.vergrendeld && state.medewerkers.some(m=>m.pin)) toonLogin();
 else { gebruiker=state.medewerkers.find(m=>m.rol==='eigenaar' && m.actief!==false)||state.medewerkers[0]||null; }
 pasRechtenToe();
+if(!state.onboardingKlaar) toonOnboarding();
 </script>
 </body>
 </html>
