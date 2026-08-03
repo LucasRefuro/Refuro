@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beheerpaneel voor abonnementen en klanten</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#12183d; --navy-2:#1d2557; --lblauw:#D6E8F5; --paars:#635BFF; --paars-d:#4b45cc;
+    --bg:#F4F8FC; --card:#fff; --text:#12183d; --muted:#7b86a8; --border:#e3ebf4;
+    --green:#1a9e57; --amber:#c98a00; --red:#d43a3a; --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Poppins',-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh;}
+  aside{width:230px; background:var(--navy); color:#fff; padding:22px 14px; display:flex; flex-direction:column; gap:4px; position:fixed; top:0; bottom:0; left:0;}
+  .logo{display:flex; align-items:center; gap:10px; padding:0 8px 22px;}
+  .logo .mark{width:38px; height:38px; background:var(--paars); border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;}
+  .logo .name{font-weight:800; font-size:15px; line-height:1.1;}
+  .logo .sub{font-size:10px; color:var(--lblauw); opacity:.8; letter-spacing:.12em; text-transform:uppercase;}
+  aside nav{display:flex; flex-direction:column; gap:3px;}
+  aside nav button{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:none; color:#c8d0ee; padding:11px 12px; border-radius:10px; font-family:inherit; font-size:13.5px; font-weight:500; cursor:pointer;}
+  aside nav button:hover{background:var(--navy-2); color:#fff;}
+  aside nav button.active{background:var(--paars); color:#fff; font-weight:600;}
+  aside .foot{margin-top:auto; font-size:10.5px; color:#8b95c4; padding:0 8px;}
+  main{margin-left:230px; flex:1; padding:26px 30px; max-width:1250px;}
+  .pagehead{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;}
+  .pagehead h1{font-size:21px; font-weight:700;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:18px; box-shadow:0 1px 3px rgba(18,24,61,.05);}
+  h2{font-size:15px; font-weight:600; margin-bottom:14px;}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500;}
+  input,select,textarea{width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--text);}
+  input:focus,select:focus{outline:none; border-color:var(--paars);}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px;}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end;}
+  .btn{background:var(--paars); color:#fff; border:none; padding:10px 20px; border-radius:10px; font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; text-decoration:none; display:inline-block;}
+  .btn:hover{background:var(--paars-d);}
+  .btn.ghost{background:#fff; color:var(--navy); border:1.5px solid var(--border);}
+  .btn.danger{background:var(--red);}
+  .btn.small{padding:5px 11px; font-size:12px;}
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{text-align:left; color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.05em;}
+  th,td{padding:10px 8px; border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  .num{text-align:right;}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:18px;}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+  .kpi .l{font-size:11.5px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em;}
+  .kpi .v{font-size:24px; font-weight:800; margin-top:4px;}
+  .kpi.accent{background:var(--navy); border-color:var(--navy); color:#fff;}
+  .kpi.accent .l{color:var(--lblauw);}
+  .chip{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; white-space:nowrap;}
+  .chip.actief{background:#e2f6ea; color:#14683c;}
+  .chip.proef{background:#fff3d6; color:var(--amber);}
+  .chip.achterstallig{background:#fdeaea; color:var(--red);}
+  .chip.opgezegd{background:#eef1f6; color:var(--muted);}
+  .infobox{background:var(--lblauw); border-radius:10px; padding:14px 16px; font-size:13px; line-height:1.6;}
+  .warnbox{background:#fff3d6; border:1.5px solid #f0d98e; border-radius:10px; padding:14px 16px; font-size:13.5px; line-height:1.6;}
+  .planbox{border:2px solid var(--border); border-radius:14px; padding:18px;}
+  .planbox.pop{border-color:var(--paars);}
+  .planbox .pn{font-weight:700; font-size:15px;}
+  .planbox .pp{font-size:26px; font-weight:800; margin:6px 0 10px;}
+/* ============ MODULAIRE LAYOUT v4 ============ */
+  body{font-size:15px;}
+  aside{width:264px; padding:28px 18px 22px;}
+  aside nav button{padding:12px 14px; font-size:14px; border-radius:13px;}
+  .logo .mark{width:44px; height:44px; border-radius:14px; font-size:20px;}
+  .logo .name{font-size:17.5px;}
+  main{margin-left:264px; max-width:none; width:auto; padding:0;}
+  .binnen{max-width:1640px; margin:0 auto; padding:32px 40px 72px;}
+  .pagehead h1{font-size:27px; letter-spacing:-.7px;}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:18px; background:none;
+    border:none; border-radius:0; box-shadow:none; overflow:visible; margin-bottom:20px;}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:18px; padding:22px 24px; box-shadow:var(--schaduw); transition:.2s;}
+  .kpi:hover{transform:translateY(-2px); box-shadow:var(--schaduw-l);}
+  .kpi::after{display:none;}
+  .kpi .v{font-size:27px; margin-top:10px; letter-spacing:-.8px;}
+  .modules{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:stretch;}
+  .modules .breed{grid-column:1 / -1;}
+  .modules > .card{margin-bottom:0; display:flex; flex-direction:column;}
+  .modules > .card > *:last-child{margin-bottom:0;}
+  @media(max-width:1180px){ .modules{grid-template-columns:1fr;} }
+  .card{border-radius:20px; padding:24px 26px; margin-bottom:20px;}
+  .btn{font-size:14px; padding:12px 22px;}
+  .btn.small{font-size:12.5px; padding:7px 13px;}
+  table{font-size:14px;} th,td{padding:13px 12px;}
+  input,select,textarea{font-size:14px; padding:12px 14px;}
+  @media(max-width:1024px){ .binnen{padding:26px 24px 60px;} }
+  @media(max-width:860px){
+    aside{width:100%; padding:12px 14px;}
+    main{margin-left:0;}
+    .binnen{padding:20px 16px 48px;}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+    .kpi{padding:16px 18px;} .kpi .v{font-size:22px;}
+    .card{padding:20px; border-radius:18px;}
+    .pagehead h1{font-size:23px;}
+    .grid{grid-template-columns:1fr;}
+  }
+  @media(max-width:520px){ .kpis{grid-template-columns:1fr;} }
+
+  .planbox ul{list-style:none; font-size:12.5px; color:var(--muted); line-height:1.9;}
+  .planbox li{padding-left:20px; position:relative;}
+  .planbox li::before{content:''; position:absolute; left:0; top:9px; width:11px; height:6px; border-left:1.8px solid var(--green);
+    border-bottom:1.8px solid var(--green); transform:rotate(-45deg);}
+  code{background:#eef1f6; padding:2px 6px; border-radius:5px; font-size:12px;}
+  .stap{display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); font-size:13.5px; line-height:1.6;}
+  .stap:last-child{border:none;}
+  .stap .nr{width:26px; height:26px; border-radius:50%; background:var(--paars); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex:none;}
+  .toast{position:fixed; top:20px; right:20px; background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px; font-size:13.5px; z-index:100;}
+  @media(max-width:760px){ aside{position:static; width:100%;} body{flex-direction:column;} main{margin-left:0; padding:16px;} }
+
+/* ============ DESIGNSYSTEEM v3 ============ */
+  :root{
+    --navy:#0B1A33; --navy-2:#16294a; --paars:#2563EB; --paars-d:#1D4FD8;
+    --bg:#F1F5FB; --card:#FFFFFF; --soft:#F5F8FD; --soft-2:#EDF3FB; --border:#E9EFF8;
+    --lblauw:#E8F0FE; --text:#0B1A33; --muted:#7A8BA8;
+    --green:#16A34A; --green-soft:#E8F7EE; --red:#E11D48; --red-soft:#FDECF1;
+    --amber:#F59E0B; --amber-soft:#FEF4E2; --radius:20px;
+    --schaduw:0 1px 2px rgba(11,26,51,.04), 0 8px 24px rgba(11,26,51,.05);
+    --schaduw-l:0 2px 6px rgba(11,26,51,.06), 0 18px 48px rgba(11,26,51,.10);
+  }
+  html{scroll-behavior:smooth;}
+  body{font-size:14px; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--paars); color:#fff;}
+  ::-webkit-scrollbar{width:10px; height:10px;}
+  ::-webkit-scrollbar-thumb{background:#D9E3F0; border-radius:8px; border:3px solid transparent; background-clip:content-box;}
+
+  aside{width:246px; background:var(--card); color:var(--text); padding:26px 16px 20px; border-right:1px solid var(--border);}
+  .logo{padding:0 8px 26px; gap:11px;}
+  .logo .mark{width:40px; height:40px; background:var(--paars); border-radius:13px; font-size:19px; color:#fff;
+    box-shadow:0 6px 16px rgba(37,99,235,.34);}
+  .logo .name{font-weight:700; font-size:16.5px; color:var(--text); letter-spacing:-.2px;}
+  .logo .sub{font-size:9.5px; font-weight:600; color:var(--muted); letter-spacing:.14em; opacity:1;}
+  aside nav{gap:2px;}
+  aside nav button{color:var(--muted); padding:11px 13px; border-radius:12px; gap:11px; transition:.16s;}
+  aside nav button:hover{background:var(--soft); color:var(--text);}
+  aside nav button.active{background:var(--paars); color:#fff; box-shadow:0 6px 18px rgba(37,99,235,.32);}
+  aside .foot{color:var(--muted); opacity:.75; padding:0 10px; line-height:1.5;}
+  main{margin-left:246px; padding:26px 32px 60px; max-width:1320px;}
+
+  .pagehead{margin-bottom:22px; gap:12px;}
+  .pagehead h1{font-size:22px; letter-spacing:-.4px;}
+  .card{border-radius:var(--radius); padding:22px 24px; margin-bottom:18px; box-shadow:var(--schaduw);}
+  h2{font-size:14.5px; margin-bottom:16px; letter-spacing:-.1px;}
+  label{font-size:11.5px; margin-bottom:6px;}
+  input,select,textarea{padding:11px 13px; border-radius:12px; transition:.15s;}
+  input:hover,select:hover{border-color:#D8E3F2;}
+  input:focus,select:focus{border-color:var(--paars); box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+  .grid{gap:14px;} .row{gap:12px;}
+
+  .btn{padding:11px 20px; border-radius:12px; transition:.16s; box-shadow:0 4px 14px rgba(37,99,235,.26);}
+  .btn:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(37,99,235,.34);}
+  .btn.ghost{background:var(--card); color:var(--text); border:1.5px solid var(--border); box-shadow:none;}
+  .btn.ghost:hover{background:var(--soft); border-color:#D8E3F2;}
+  .btn.danger{background:var(--red); box-shadow:0 4px 14px rgba(225,29,72,.24);}
+  .btn.small{padding:6px 12px; font-size:12px; border-radius:9px; box-shadow:none;}
+  .btn.small:hover{transform:none;}
+
+  th{font-size:10.5px; letter-spacing:.07em; padding-bottom:12px;}
+  th,td{padding:12px 10px;}
+  th:first-child,td:first-child{padding-left:2px;}
+  tbody tr{transition:.14s;} tbody tr:hover{background:var(--soft);}
+
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); background:var(--card);
+    border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--schaduw); overflow:hidden; gap:0; margin-bottom:18px;}
+  .kpi{padding:20px 22px; border:none; border-right:1px solid var(--border); border-radius:0; background:var(--card);}
+  .kpi:last-child{border-right:none;}
+  .kpi .l{font-size:11px; text-transform:none; letter-spacing:.03em; display:flex; align-items:center; gap:7px; color:var(--muted);}
+  .kpi .l::before{content:''; width:8px; height:8px; border-radius:50%; background:var(--paars); flex:none;}
+  .kpis .kpi:nth-child(2) .l::before{background:var(--green);}
+  .kpis .kpi:nth-child(3) .l::before{background:#8B5CF6;}
+  .kpis .kpi:nth-child(4) .l::before{background:var(--amber);}
+  .kpis .kpi:nth-child(5) .l::before{background:var(--red);}
+  .kpi .v{font-size:23px; font-weight:700; margin-top:7px; letter-spacing:-.6px; color:var(--text);}
+  .kpi.accent{background:var(--card); border-color:var(--border);}
+  .kpi.accent .l{color:var(--muted);} .kpi.accent .v{color:var(--paars);}
+  @media(max-width:760px){ .kpi{border-right:none; border-bottom:1px solid var(--border);} }
+
+  .chip{font-size:10.5px; padding:4px 11px; border-radius:20px;}
+  .chip.actief{background:var(--green-soft); color:#0f6b38;}
+  .chip.proef{background:var(--amber-soft); color:#96650a;}
+  .chip.achterstallig{background:var(--red-soft); color:#a3123c;}
+  .chip.opgezegd{background:var(--soft-2); color:var(--muted);}
+  .infobox{background:var(--soft); border:1px solid var(--border); border-radius:14px; padding:16px 18px; line-height:1.7;}
+  .warnbox{background:var(--amber-soft); border:1px solid #F6DFB0; border-radius:14px; padding:16px 18px; line-height:1.7;}
+  .planbox{border:1.5px solid var(--border); border-radius:18px; padding:22px; background:var(--card); transition:.2s;}
+  .planbox:hover{transform:translateY(-3px); box-shadow:var(--schaduw);}
+  .planbox.pop{border-color:var(--paars); box-shadow:0 8px 30px rgba(37,99,235,.14);}
+  .planbox .pn{font-weight:700; font-size:15px;}
+  .planbox .pp{font-size:28px; font-weight:700; margin:8px 0 14px; letter-spacing:-.8px; color:var(--paars);}
+  .planbox ul{font-size:12.5px; line-height:2;}
+  code{background:var(--soft-2); padding:2px 7px; border-radius:6px; font-size:12px;}
+  .stap{padding:14px 0; line-height:1.7; gap:14px;}
+  .stap .nr{width:28px; height:28px; background:var(--paars); box-shadow:0 4px 12px rgba(37,99,235,.28);}
+  .toast{background:rgba(11,26,51,.95); backdrop-filter:blur(10px); padding:13px 18px; border-radius:14px; font-size:13px;
+    box-shadow:var(--schaduw-l); animation:toastin .28s cubic-bezier(.34,1.3,.64,1);}
+  @keyframes toastin{from{opacity:0; transform:translateX(30px)}to{opacity:1; transform:none}}
+  @media(max-width:860px){
+    aside{position:static; width:100%; flex-direction:row; align-items:center; overflow-x:auto; padding:12px; border-right:none; border-bottom:1px solid var(--border);}
+    aside nav{flex-direction:row;} aside nav button{white-space:nowrap;}
+    .logo{padding:0 14px 0 4px;} aside .foot{display:none;}
+    body{flex-direction:column;} main{margin-left:0; padding:18px;}
+  }
+  /* iconen */
+  .i{width:17px; height:17px; flex:none; stroke:currentColor; fill:none; stroke-width:1.7;
+     stroke-linecap:round; stroke-linejoin:round; vertical-align:-3px;}
+  .i.s{width:14px; height:14px; vertical-align:-2.5px;}
+  h2 .i{margin-right:9px; color:var(--muted);}
+  .btn .i{margin-right:7px;}
+  .icoknop{display:inline-flex; align-items:center; justify-content:center; padding:6px 9px;}
+  .icoknop .i{margin:0;}
+  /* doorlopende scheidingslijn */
+  .kpis{align-items:stretch;}
+  .kpi{border-right:none; position:relative; display:flex; flex-direction:column; justify-content:center; padding:22px 24px;}
+  .kpi::after{content:''; position:absolute; top:0; bottom:0; right:0; width:1px; background:var(--border);}
+  .kpi:last-child::after{display:none;}
+  @media(max-width:760px){ .kpi::after{top:auto; left:0; right:0; bottom:0; height:1px; width:auto;} }
+  /* tekstritme */
+  body{line-height:1.55;}
+  h2{display:flex; align-items:center; line-height:1.4;}
+  h2 .muted{margin-left:8px; font-weight:500;}
+  p{line-height:1.7;}
+  .infobox, .warnbox{max-width:82ch;}
+  .kpi .l{line-height:1.4;} .kpi .v{margin-top:9px; line-height:1.2;}
+  td, th{vertical-align:middle;}
+  .planbox ul{line-height:2;}
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l3.5-4 3 2.5L18 8"/></symbol>
+  <symbol id="i-shop" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9h18M3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M9 20v-6h6v6"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 2c3.5 2 6 6 6 10l-3 3H9l-3-3c0-4 2.5-8 6-10z"/><circle cx="12" cy="9" r="2"/><path d="M9 15l-2 5 5-2 5 2-2-5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3.5 6h17M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6M18.5 6l-.8 13a2 2 0 0 1-2 1.9H8.3a2 2 0 0 1-2-1.9L5.5 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-exit" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M17 8l4 4-4 4M21 12H10"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.4"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 15H3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.5V4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 20.5 11h.5a2 2 0 1 1 0 4h-.2z"/></symbol>
+</svg>
+<aside>
+  <div class="logo">
+    <div class="mark"><svg class="i" style="width:20px;height:20px"><use href="#i-settings"/></svg></div>
+    <div><div class="name">Beheerpaneel</div><div class="sub">Abonnementen</div></div>
+  </div>
+  <nav>
+    <button data-tab="overzicht" class="active"><svg class="i"><use href="#i-chart"/></svg> Overzicht</button>
+    <button data-tab="klanten"><svg class="i"><use href="#i-shop"/></svg> Klanten</button>
+    <button data-tab="plannen"><svg class="i"><use href="#i-card"/></svg> Abonnementen</button>
+    <button data-tab="stripe"><svg class="i"><use href="#i-plug"/></svg> Stripe-koppeling</button>
+    <button data-tab="live"><svg class="i"><use href="#i-rocket"/></svg> Live gaan</button>
+  </nav>
+  <div class="foot">Demo-omgeving<br>Data lokaal opgeslagen</div>
+</aside>
+<main>
+<div class="binnen">
+
+<section id="tab-overzicht">
+  <div class="pagehead"><h1>Overzicht</h1></div>
+  <div class="warnbox" style="margin-bottom:20px">⚠️ <b>Demo-omgeving.</b> Dit paneel laat zien hoe je abonnementen beheert, met alle Stripe-velden al op hun plek. Echte betalingen, facturen en het afsluiten van de app bij niet betalen werken pas zodra dit op een server draait. Zie het tabblad Live gaan.</div>
+  <div class="kpis" id="kpis"></div>
+  <div class="modules">
+    <div class="card">
+      <h2>Nieuwe klanten per maand</h2>
+      <div id="groei"></div>
+    </div>
+    <div class="card">
+      <h2>Aandacht nodig</h2>
+      <div id="aandacht"></div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-klanten" hidden>
+  <div class="pagehead"><h1>Klanten (winkels)</h1></div>
+  <div class="card">
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Winkel</th><th>Contact</th><th>Abonnement</th><th>Status</th><th class="num">Per maand</th><th>Klant sinds</th><th>Stripe</th><th></th></tr></thead>
+      <tbody id="klantBody"></tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Nieuwe klant toevoegen</h2>
+    <div class="grid" style="margin-bottom:12px">
+      <div><label>Winkelnaam</label><input id="k_naam" placeholder="bijv. TelefoonHuis Utrecht"></div>
+      <div><label>Contactpersoon</label><input id="k_contact"></div>
+      <div><label>E-mail</label><input id="k_email" type="email"></div>
+      <div><label>Abonnement</label><select id="k_plan"></select></div>
+      <div><label>Status</label><select id="k_status">
+        <option value="proef">Proefperiode</option><option value="actief">Actief</option>
+        <option value="achterstallig">Betaling mislukt</option><option value="opgezegd">Opgezegd</option></select></div>
+    </div>
+    <button class="btn" onclick="voegKlantToe()">Klant toevoegen</button>
+  </div>
+</section>
+
+<section id="tab-plannen" hidden>
+  <div class="pagehead"><h1>Abonnementen</h1></div>
+  <div class="card">
+    <h2>Jouw pakketten</h2>
+    <div class="grid" id="planKaarten" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))"></div>
+  </div>
+  <div class="card">
+    <h2>Pakketten bewerken</h2>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Naam</th><th class="num">€ / maand</th><th class="num">Max. medewerkers</th><th class="num">Proefdagen</th><th>Stripe Price ID</th><th></th></tr></thead>
+      <tbody id="planBody"></tbody>
+    </table>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div style="flex:1; min-width:150px"><label>Naam</label><input id="p_naam" placeholder="bijv. Pro"></div>
+      <div><label>€ / maand</label><input id="p_prijs" type="number" step="0.01" min="0"></div>
+      <div><label>Max. medewerkers</label><input id="p_max" type="number" min="1" value="5"></div>
+      <div><label>Proefdagen</label><input id="p_proef" type="number" min="0" value="14"></div>
+      <div><button class="btn" onclick="voegPlanToe()">Toevoegen</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-stripe" hidden>
+  <div class="pagehead"><h1>Stripe-koppeling</h1></div>
+  <div class="card">
+    <div class="warnbox" style="margin-bottom:18px">⚠️ <b>Belangrijk.</b> Je geheime Stripe-sleutel hoort nooit in een bestand dat in de browser draait. Iedereen kan die dan uitlezen en betalingen namens jou doen. Bewaar hem alleen op je server. Hieronder vul je de publieke gegevens in. De geheime sleutel zet je later in de serveromgeving.</div>
+    <div class="grid" style="margin-bottom:14px">
+      <div><label>Publiceerbare sleutel (mag publiek)</label><input id="s_pk" placeholder="pk_live_..." onchange="slaStripeOp()"></div>
+      <div><label>Stripe-account (bedrijfsnaam)</label><input id="s_acc" placeholder="Refuro B.V." onchange="slaStripeOp()"></div>
+      <div><label>Webhook-adres (later)</label><input id="s_hook" placeholder="https://jouwdomein.nl/api/stripe/webhook" onchange="slaStripeOp()"></div>
+      <div><label>Klantportaal-link</label><input id="s_portal" placeholder="https://billing.stripe.com/p/login/..." onchange="slaStripeOp()"></div>
+    </div>
+    <p class="muted" style="font-size:12.5px">De klantportaal-link maak je in Stripe onder Instellingen, Klantportaal. Daarmee kunnen winkels zelf hun betaalgegevens wijzigen, facturen downloaden en opzeggen, zonder dat jij iets hoeft te bouwen.</p>
+  </div>
+  <div class="card">
+    <h2>Wat er straks automatisch gebeurt</h2>
+    <div class="infobox">
+      <b>1. Winkel meldt zich aan.</b> Jij maakt een klant aan en Stripe stuurt een betaallink.<br><br>
+      <b>2. Betaling gelukt.</b> Stripe seint je server via een webhook, de status wordt actief en de winkel krijgt toegang.<br><br>
+      <b>3. Maandelijks.</b> Stripe int automatisch en maakt de factuur op.<br><br>
+      <b>4. Betaling mislukt.</b> De status wordt betaling mislukt, de winkel ziet een melding en krijgt een paar dagen om het te herstellen.<br><br>
+      <b>5. Opzegging.</b> De toegang loopt door tot het einde van de betaalde periode, daarna alleen lezen.
+    </div>
+  </div>
+  <div class="card">
+    <h2>Test de koppeling (simulatie)</h2>
+    <div class="row">
+      <button class="btn ghost" onclick="simuleer('betaald')"><svg class="i s"><use href="#i-check"/></svg>Betaling geslaagd</button>
+      <button class="btn ghost" onclick="simuleer('mislukt')"><svg class="i s"><use href="#i-x"/></svg>Betaling mislukt</button>
+      <button class="btn ghost" onclick="simuleer('opgezegd')"><svg class="i s"><use href="#i-exit"/></svg>Opzegging</button>
+    </div>
+    <div id="simLog" class="muted" style="margin-top:12px; font-size:12.5px"></div>
+  </div>
+</section>
+
+<section id="tab-live" hidden>
+  <div class="pagehead"><h1>Live gaan</h1></div>
+  <div class="card">
+    <h2>Wat er nodig is om echt te kunnen verkopen</h2>
+    <div class="stap"><div class="nr">1</div><div><b>Domein + hosting</b><br>Bijvoorbeeld <code>jouwsysteem.nl</code>. De app draait dan op een server in plaats van als bestand. Kosten: ongeveer €10–25 per maand voor tientallen winkels.</div></div>
+    <div class="stap"><div class="nr">2</div><div><b>Database</b><br>Nu staat alles in de browser van één computer. Online komt alles in een centrale database, zodat medewerkers op meerdere apparaten dezelfde gegevens zien en niets verloren gaat.</div></div>
+    <div class="stap"><div class="nr">3</div><div><b>Echte accounts</b><br>E-mail + wachtwoord in plaats van een pincode, met een eigen omgeving per winkel. Winkels kunnen elkaars gegevens niet zien.</div></div>
+    <div class="stap"><div class="nr">4</div><div><b>Stripe-abonnementen</b><br>Betaalpagina, automatische incasso, facturen en het klantportaal. De paywall wordt op de server afgedwongen, dus niet te omzeilen.</div></div>
+    <div class="stap"><div class="nr">5</div><div><b>Mail &amp; sms</b><br>Voor de statusberichten aan klanten van de winkels. Mail via bijvoorbeeld Postmark of Resend (€0–15/maand), sms of WhatsApp via MessageBird of Twilio (per bericht).</div></div>
+    <div class="stap"><div class="nr">6</div><div><b>Publieke klantpagina</b><br>Elke reparatie krijgt een eigen webadres dat vanzelf meeloopt met de status. Dat is de link die je in het eerste bericht meestuurt.</div></div>
+    <div class="stap"><div class="nr">7</div><div><b>Juridisch</b><br>Algemene voorwaarden, privacyverklaring en een verwerkersovereenkomst, omdat je klantgegevens van andere winkels verwerkt.</div></div>
+  </div>
+  <div class="card">
+    <h2>Advies voor de volgorde</h2>
+    <div class="infobox">Begin met je eigen winkel op de lokale versie. Daarmee weet je zeker dat het systeem in de praktijk klopt. Zet daarna de online versie op met database en accounts, en voeg Stripe pas toe zodra je de eerste geïnteresseerde winkel hebt. Zo betaal je niets voor een systeem dat nog geen klanten heeft.</div>
+  </div>
+</section>
+
+</div>
+</main>
+<script>
+const KEY='saas_admin_v1';
+let state=load();
+let simTeller=[];
+
+function load(){
+  let s=null;
+  try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+  if(!s) s={};
+  if(!s.plannen) s.plannen=[
+    {id:1, naam:'Start', prijs:29, max:2, proef:14, priceId:'', functies:['Voorraad en scannen','Reparaties','1 vestiging']},
+    {id:2, naam:'Pro', prijs:59, max:8, proef:14, priceId:'', functies:['Alles van Start','Dashboard en rapportage','Klantberichten','Eigen huisstijl']},
+    {id:3, naam:'Keten', prijs:129, max:99, proef:30, priceId:'', functies:['Alles van Pro','Meerdere vestigingen','Prioriteit support']}
+  ];
+  if(!s.klanten) s.klanten=[
+    {id:1, naam:'Refuro (eigen winkel)', contact:'Lucas', email:'lucasklein835@gmail.com', plan:2, status:'actief', sinds:Date.now()-120*864e5, stripeId:''},
+    {id:2, naam:'TelefoonHuis Utrecht', contact:'Mert', email:'info@telefoonhuis.nl', plan:2, status:'proef', sinds:Date.now()-6*864e5, stripeId:''},
+    {id:3, naam:'GSM Service Breda', contact:'Ilona', email:'hallo@gsmbreda.nl', plan:1, status:'achterstallig', sinds:Date.now()-70*864e5, stripeId:''}
+  ];
+  if(!s.stripe) s.stripe={pk:'', acc:'', hook:'', portal:''};
+  return s;
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function euro(n){ return '€ '+Number(n).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
+function plan(id){ return state.plannen.find(p=>p.id===id)||{naam:'Geen pakket', prijs:0}; }
+function datum(t){ return new Date(t).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}); }
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
+}
+const STATUS_LABEL={actief:'✅ Actief', proef:'⏳ Proefperiode', achterstallig:'⚠️ Betaling mislukt', opgezegd:'Opgezegd'};
+
+document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('aside nav button').forEach(x=>x.classList.toggle('active', x===b));
+  document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+b.dataset.tab));
+  teken();
+}));
+
+function mrr(){ return state.klanten.filter(k=>k.status==='actief').reduce((s,k)=>s+plan(k.plan).prijs,0); }
+function tekenOverzicht(){
+  const actief=state.klanten.filter(k=>k.status==='actief').length;
+  const proef=state.klanten.filter(k=>k.status==='proef').length;
+  const prob=state.klanten.filter(k=>k.status==='achterstallig').length;
+  const m=mrr();
+  document.getElementById('kpis').innerHTML=
+    `<div class="kpi accent"><div class="l">Maandomzet (MRR)</div><div class="v">${euro(m)}</div></div>`+
+    `<div class="kpi"><div class="l">Per jaar</div><div class="v">${euro(m*12)}</div></div>`+
+    `<div class="kpi"><div class="l">Actieve winkels</div><div class="v">${actief}</div></div>`+
+    `<div class="kpi"><div class="l">In proefperiode</div><div class="v" style="color:var(--amber)">${proef}</div></div>`+
+    `<div class="kpi"><div class="l">Betaling mislukt</div><div class="v" style="color:${prob?'var(--red)':'inherit'}">${prob}</div></div>`;
+  const maanden={};
+  state.klanten.forEach(k=>{
+    const d=new Date(k.sinds);
+    const key=d.toLocaleDateString('nl-NL',{month:'short',year:'2-digit'});
+    maanden[key]=(maanden[key]||0)+1;
+  });
+  document.getElementById('groei').innerHTML='<table><tbody>'+Object.entries(maanden).map(([k,v])=>
+    `<tr><td>${esc(k)}</td><td class="num">${v} nieuw</td></tr>`).join('')+'</tbody></table>';
+  const let_op=state.klanten.filter(k=>k.status==='achterstallig'||k.status==='proef');
+  document.getElementById('aandacht').innerHTML = let_op.length
+    ? '<table><tbody>'+let_op.map(k=>{
+        const tekst = k.status==='achterstallig' ? 'Betaling mislukt, neem contact op' :
+          'Proefperiode, nog '+Math.max(0, plan(k.plan).proef-Math.floor((Date.now()-k.sinds)/864e5))+' dagen';
+        return `<tr><td><b>${esc(k.naam)}</b><br><span class="muted" style="font-size:11px">${esc(k.email)}</span></td>`+
+        `<td><span class="chip ${k.status}">${STATUS_LABEL[k.status]}</span></td><td>${tekst}</td>`+
+        `<td class="num"><a class="btn small ghost" href="mailto:${esc(k.email)}"><svg class="i s"><use href="#i-mail"/></svg>Mail</a></td></tr>`;
+      }).join('')+'</tbody></table>'
+    : '<p class="muted">Alles loopt goed.</p>';
+}
+function tekenKlanten(){
+  document.getElementById('klantBody').innerHTML=state.klanten.map(k=>`<tr>`+
+    `<td><b>${esc(k.naam)}</b></td>`+
+    `<td>${esc(k.contact||'')}<br><span class="muted" style="font-size:11px">${esc(k.email||'')}</span></td>`+
+    `<td><select onchange="updKlant(${k.id},'plan',this.value)">${state.plannen.map(p=>`<option value="${p.id}" ${p.id===k.plan?'selected':''}>${esc(p.naam)}</option>`).join('')}</select></td>`+
+    `<td><select onchange="updKlant(${k.id},'status',this.value)">${Object.keys(STATUS_LABEL).map(s=>`<option value="${s}" ${s===k.status?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}</select></td>`+
+    `<td class="num">${euro(plan(k.plan).prijs)}</td>`+
+    `<td>${datum(k.sinds)}</td>`+
+    `<td><input value="${esc(k.stripeId||'')}" placeholder="cus_..." onchange="updKlant(${k.id},'stripeId',this.value)" style="width:120px; font-size:12px"></td>`+
+    `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderKlant(${k.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('')
+    || '<tr><td colspan="8" class="muted">Nog geen klanten.</td></tr>';
+  document.getElementById('k_plan').innerHTML=state.plannen.map(p=>`<option value="${p.id}">${esc(p.naam)} · ${euro(p.prijs)} per maand</option>`).join('');
+}
+function updKlant(id,veld,val){
+  const k=state.klanten.find(k=>k.id===id); if(!k) return;
+  k[veld]=(veld==='plan')?Number(val):val;
+  save(); teken(); toast('✔️ Opgeslagen');
+}
+function voegKlantToe(){
+  const naam=document.getElementById('k_naam').value.trim();
+  if(!naam){ toast('⚠️ Vul een winkelnaam in.'); return; }
+  state.klanten.push({id:uid(), naam, contact:document.getElementById('k_contact').value.trim(),
+    email:document.getElementById('k_email').value.trim(), plan:Number(document.getElementById('k_plan').value),
+    status:document.getElementById('k_status').value, sinds:Date.now(), stripeId:''});
+  save();
+  ['k_naam','k_contact','k_email'].forEach(i=>document.getElementById(i).value='');
+  teken(); toast('✅ Klant toegevoegd: '+naam);
+}
+function verwijderKlant(id){
+  const k=state.klanten.find(k=>k.id===id);
+  if(k && confirm('"'+k.naam+'" verwijderen?')){
+    state.klanten=state.klanten.filter(x=>x.id!==id); save(); teken(); toast('Klant verwijderd');
+  }
+}
+function tekenPlannen(){
+  document.getElementById('planKaarten').innerHTML=state.plannen.map((p,i)=>
+    `<div class="planbox ${i===1?'pop':''}"><div class="pn">${esc(p.naam)}</div>`+
+    `<div class="pp">${euro(p.prijs)}<span style="font-size:13px; font-weight:500; color:var(--muted)">/mnd</span></div>`+
+    `<ul>${(p.functies||[]).map(f=>'<li>'+f+'</li>').join('')}<li>Tot ${p.max} medewerkers</li><li>${p.proef} dagen proberen</li></ul>`+
+    `<div class="muted" style="font-size:11.5px; margin-top:10px">${state.klanten.filter(k=>k.plan===p.id&&k.status==='actief').length} actieve winkels</div></div>`).join('');
+  document.getElementById('planBody').innerHTML=state.plannen.map(p=>`<tr>`+
+    `<td><input value="${esc(p.naam)}" onchange="updPlan(${p.id},'naam',this.value)"></td>`+
+    `<td><input class="num" type="number" step="0.01" value="${p.prijs}" onchange="updPlan(${p.id},'prijs',this.value)"></td>`+
+    `<td><input class="num" type="number" value="${p.max}" onchange="updPlan(${p.id},'max',this.value)"></td>`+
+    `<td><input class="num" type="number" value="${p.proef}" onchange="updPlan(${p.id},'proef',this.value)"></td>`+
+    `<td><input value="${esc(p.priceId||'')}" placeholder="price_..." onchange="updPlan(${p.id},'priceId',this.value)" style="font-size:12px"></td>`+
+    `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderPlan(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
+}
+function updPlan(id,veld,val){
+  const p=state.plannen.find(p=>p.id===id); if(!p) return;
+  p[veld]=(veld==='naam'||veld==='priceId')?val:Number(val)||0;
+  save(); teken(); toast('✔️ Opgeslagen');
+}
+function voegPlanToe(){
+  const naam=document.getElementById('p_naam').value.trim();
+  if(!naam){ toast('⚠️ Vul een naam in.'); return; }
+  state.plannen.push({id:uid(), naam, prijs:Number(document.getElementById('p_prijs').value)||0,
+    max:Number(document.getElementById('p_max').value)||1, proef:Number(document.getElementById('p_proef').value)||0,
+    priceId:'', functies:[]});
+  save(); document.getElementById('p_naam').value='';
+  teken(); toast('✅ Pakket toegevoegd: '+naam);
+}
+function verwijderPlan(id){
+  if(state.klanten.some(k=>k.plan===id)){ toast('⚠️ Dit pakket is nog in gebruik.'); return; }
+  state.plannen=state.plannen.filter(p=>p.id!==id); save(); teken(); toast('🗑 Pakket verwijderd');
+}
+function slaStripeOp(){
+  state.stripe={pk:document.getElementById('s_pk').value.trim(), acc:document.getElementById('s_acc').value.trim(),
+    hook:document.getElementById('s_hook').value.trim(), portal:document.getElementById('s_portal').value.trim()};
+  save(); toast('✔️ Stripe-gegevens opgeslagen');
+}
+function tekenStripe(){
+  const s=state.stripe;
+  document.getElementById('s_pk').value=s.pk||'';
+  document.getElementById('s_acc').value=s.acc||'';
+  document.getElementById('s_hook').value=s.hook||'';
+  document.getElementById('s_portal').value=s.portal||'';
+}
+function simuleer(soort){
+  const teksten={
+    betaald:'Webhook <code>invoice.paid</code> ontvangen. Klantstatus wordt actief, factuur verstuurd, toegang verlengd met een maand.',
+    mislukt:'Webhook <code>invoice.payment_failed</code> ontvangen. Status wordt betaling mislukt, de klant krijgt een herinneringsmail en na zeven dagen alleen lezen toegang.',
+    opgezegd:'Webhook <code>customer.subscription.deleted</code> ontvangen. Status wordt opgezegd, toegang blijft tot het einde van de betaalde periode.'
+  };
+  simTeller.unshift(new Date().toLocaleTimeString('nl-NL')+' &middot; '+teksten[soort]);
+  simTeller=simTeller.slice(0,6);
+  document.getElementById('simLog').innerHTML=simTeller.map(t=>'<div style="padding:5px 0; border-bottom:1px solid var(--border)">'+t+'</div>').join('');
+  toast('Simulatie uitgevoerd. Zo werkt het straks live.');
+}
+function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); }
+save(); teken();
+</script>
+</body>
+</html>
