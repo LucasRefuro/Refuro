@@ -386,9 +386,9 @@ function load(){
   try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
   if(!s) s={};
   if(!s.plannen) s.plannen=[
-    {id:1, naam:'Start', prijs:29, max:2, proef:14, priceId:'', functies:['Voorraad en scannen','Reparaties','1 vestiging']},
-    {id:2, naam:'Pro', prijs:59, max:8, proef:14, priceId:'', functies:['Alles van Start','Dashboard en rapportage','Klantberichten','Eigen huisstijl']},
-    {id:3, naam:'Keten', prijs:129, max:99, proef:30, priceId:'', functies:['Alles van Pro','Meerdere vestigingen','Prioriteit support']}
+    {id:1, naam:'Start', prijs:19.95, max:2, proef:14, priceId:'price_1U0TpRQVIntfXHAiBxKkqfaW', functies:['Voorraad en scannen','Reparaties','1 vestiging']},
+    {id:2, naam:'Pro', prijs:44.95, max:8, proef:14, priceId:'price_1U0TppQVIntfXHAi4kDshR7T', functies:['Alles van Start','Dashboard en rapportage','Klantberichten','Eigen huisstijl']},
+    {id:3, naam:'Enterprise', prijs:79.95, max:99, proef:30, priceId:'price_1U0Ts2QVIntfXHAiFuMZVMSf', functies:['Alles van Pro','Meerdere vestigingen','Prioriteit support']}
   ];
   if(!s.klanten) s.klanten=[
     {id:1, naam:'Refuro (eigen winkel)', contact:'Lucas', email:'lucasklein835@gmail.com', plan:2, status:'actief', sinds:Date.now()-120*864e5, stripeId:''},
