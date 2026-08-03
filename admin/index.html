@@ -378,6 +378,8 @@
 </main>
 <script>
 const KEY='saas_admin_v1';
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
 let state=load();
 let simTeller=[];
 
@@ -410,6 +412,31 @@ function toast(msg){
   document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
 }
 const STATUS_LABEL={actief:'✅ Actief', proef:'⏳ Proefperiode', achterstallig:'⚠️ Betaling mislukt', opgezegd:'Opgezegd'};
+
+async function syncKlantenVanSupabase(){
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/klanten?select=*', {
+      headers:{ 'apikey':SUPABASE_ANON_KEY, 'Authorization':'Bearer '+SUPABASE_ANON_KEY }
+    });
+    if(!res.ok) return;
+    const rijen=await res.json();
+    let gewijzigd=false;
+    rijen.forEach(r=>{
+      if(!r.stripe_customer_id) return;
+      const p=state.plannen.find(pl=>pl.naam===r.plan);
+      const planId=p?p.id:state.plannen[0].id;
+      let k=state.klanten.find(k=>k.stripeId===r.stripe_customer_id);
+      if(k){
+        k.naam=r.naam||k.naam; k.email=r.email||k.email; k.plan=planId; k.status=r.status||k.status;
+      } else {
+        state.klanten.push({id:uid(), naam:r.naam||r.email||'Nieuwe klant', contact:'', email:r.email||'',
+          plan:planId, status:r.status||'proef', sinds:new Date(r.sinds||Date.now()).getTime(), stripeId:r.stripe_customer_id});
+      }
+      gewijzigd=true;
+    });
+    if(gewijzigd){ save(); teken(); }
+  }catch(e){ /* geen verbinding, gewoon lokale data laten staan */ }
+}
 
 document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('aside nav button').forEach(x=>x.classList.toggle('active', x===b));
@@ -539,6 +566,8 @@ function simuleer(soort){
 }
 function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); }
 save(); teken();
+syncKlantenVanSupabase();
+setInterval(syncKlantenVanSupabase, 60000);
 </script>
 </body>
 </html>
