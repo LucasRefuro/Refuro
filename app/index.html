@@ -2023,7 +2023,15 @@ async function uitloggen(){
   if(!document.getElementById('loginScherm')) toonLogin();
 }
 
-/* ================= ACCOUNT SYSTEEM (echte logins via Supabase) ================= */
+/* ================= ACCOUNT SYSTEEM (echte logins via Supabase) =================
+   Eén flow, van betaling tot dagelijks gebruik:
+   1. authBoot()        kijkt wat er nodig is: herstel-link, setup, uitnodiging of inloggen
+   2. doeLogin()        gebruikersnaam of e-mail + wachtwoord, daarna eventueel 2FA
+   3. ladAccountEnStart() haalt het profiel op en start de app + onboarding
+   Alle meldingen verschijnen ín het venster, knoppen tonen hun bezig-status. */
+
+const APP_URL = location.origin + location.pathname;
+
 function authWrap(inner){
   let el=document.getElementById('authScherm');
   if(!el){ el=document.createElement('div'); el.id='authScherm'; document.body.appendChild(el); }
@@ -2039,6 +2047,7 @@ function authWrap(inner){
   return el;
 }
 function authSluit(){ const el=document.getElementById('authScherm'); if(el) el.remove(); }
+
 /* Meldingen horen binnen het inlogvenster: een toast valt erachter weg. */
 function authMelding(tekst, soort){
   const v=document.getElementById('authFout');
@@ -2048,50 +2057,132 @@ function authMelding(tekst, soort){
   v.hidden=false;
 }
 function authBezig(knop, aan, tekstBezig){
+  if(!knop || !knop.dataset) knop=document.querySelector('#authScherm .btn.actie');
   if(!knop) return;
-  if(aan){ knop.dataset.tekst=knop.textContent; knop.textContent=tekstBezig||'Bezig'; knop.disabled=true; knop.style.opacity=.7; }
+  if(aan){ knop.dataset.tekst=knop.textContent; knop.textContent=tekstBezig||'Even geduld'; knop.disabled=true; knop.style.opacity=.7; }
   else { if(knop.dataset.tekst) knop.textContent=knop.dataset.tekst; knop.disabled=false; knop.style.opacity=''; }
 }
 
+/* Leesbare uitleg in plaats van Engelse foutcodes. */
+function authFoutTekst(error){
+  const m=String((error && error.message)||error||'');
+  if(m.includes('Invalid login credentials')) return 'Onbekende combinatie van gebruikersnaam of e-mail en wachtwoord.';
+  if(m.includes('Email not confirmed')) return 'Dit e-mailadres is nog niet bevestigd. Kijk in je mail of vraag een nieuwe link aan via wachtwoord vergeten.';
+  if(m.toLowerCase().includes('rate limit') || m.includes('Too many')) return 'Te veel pogingen kort na elkaar. Wacht een minuut en probeer opnieuw.';
+  if(m.includes('Failed to fetch') || m.includes('NetworkError') || m.includes('Load failed')) return 'Geen verbinding. Controleer je internet en probeer opnieuw.';
+  if(m.includes('should be at least')) return 'Kies een wachtwoord van minstens 8 tekens.';
+  if(m.includes('same_password') || m.includes('different from the old')) return 'Kies een ander wachtwoord dan je huidige.';
+  console.error('auth:', m);
+  return 'Er ging iets mis. Probeer het opnieuw.';
+}
+
+/* Wachtwoordveld met oogje om mee te kunnen kijken. */
+function wwVeld(id, placeholder, autocompleet){
+  return `<div style="position:relative">
+    <input id="${id}" type="password" autocomplete="${autocompleet}" placeholder="${placeholder}" style="padding-right:46px">
+    <button type="button" tabindex="-1" onclick="wisselWwZicht('${id}', this)" title="Wachtwoord tonen"
+      style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; padding:8px; color:var(--muted-l); display:flex">
+      <svg class="i s" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </div>`;
+}
+function wisselWwZicht(id, knop){
+  const v=document.getElementById(id); if(!v) return;
+  v.type = v.type==='password' ? 'text' : 'password';
+  knop.style.color = v.type==='text' ? 'var(--oranje)' : 'var(--muted-l)';
+  v.focus();
+}
+
+/* Enter in een formulier drukt op de hoofdknop, zodat de bezig-status meeloopt. */
+function authEnter(e){
+  if(e.key!=='Enter') return;
+  const knop=document.querySelector('#authScherm .btn.actie');
+  if(knop && !knop.disabled) knop.click();
+}
+
 async function authBoot(){
+  /* Meteen een scherm tonen, zodat de app er niet even 'open' uitziet voor het inloggen. */
+  authWrap(`<p class="muted">Even kijken of je al bent ingelogd…</p>`);
+
   const params=new URLSearchParams(location.search);
-  if(location.hash.indexOf('type=recovery')>-1 || params.get('type')==='recovery'){
+  const hashParams=new URLSearchParams(location.hash.replace(/^#/,''));
+
+  /* Verlopen of kapotte e-maillink: leg het uit in plaats van stil te falen. */
+  if(hashParams.get('error_description') || params.get('error_description')){
+    const uitleg=hashParams.get('error_description')||params.get('error_description');
+    history.replaceState(null,'',location.pathname);
+    toonAuthLogin();
+    authMelding(/expired|invalid/i.test(uitleg)
+      ? 'Deze e-maillink is verlopen of al gebruikt. Vraag een nieuwe aan via wachtwoord vergeten.'
+      : uitleg);
+    return;
+  }
+
+  /* Terug uit de wachtwoord-vergeten mail. */
+  if(hashParams.get('type')==='recovery' || params.get('type')==='recovery'){
+    /* De client verwerkt de tokens uit de link op de achtergrond; even ruimte geven. */
+    await new Promise(r=>setTimeout(r,300));
     toonNieuwWachtwoordScherm();
     return;
   }
+
   const setupSession=params.get('setup');
   if(setupSession){ toonOwnerSetup(setupSession); return; }
   const inviteToken=params.get('invite');
   if(inviteToken){ toonInviteSetup(inviteToken); return; }
+
   const {data:{session}}=await sb.auth.getSession();
   if(!session){ toonAuthLogin(); return; }
   await ladAccountEnStart(session);
 }
 
+/* Vangt de herstel-link ook op als die net iets later binnenkomt. */
+try{
+  sb.auth.onAuthStateChange((event)=>{
+    if(event==='PASSWORD_RECOVERY') toonNieuwWachtwoordScherm();
+  });
+}catch(e){}
+
 async function ladAccountEnStart(session){
-  const {data:acc,error}=await sb.from('accounts').select('*').eq('id',session.user.id).single();
+  const {data:acc,error}=await sb.from('accounts').select('*').eq('id',session.user.id).maybeSingle();
   if(error || !acc){
-    toast('Kon accountgegevens niet laden, log opnieuw in.');
+    console.error('profiel laden:', error);
     try{ await sb.auth.signOut(); }catch(e){}
     toonAuthLogin();
+    authMelding(error ? 'Kon je gegevens niet laden. Probeer opnieuw in te loggen.'
+      : 'Je inlog bestaat, maar er hangt nog geen Storvo-profiel aan. Neem contact op via info@storvo.app.');
     return;
   }
   account=acc;
   gebruiker={id:acc.id, naam:acc.naam, rol:acc.rol};
+
+  /* Bedrijfsgegevens voorvullen vanuit het team, zodat de onboarding niet leeg begint. */
+  if(!state.instellingen || !state.instellingen.naam || state.instellingen.naam==='Storvo'){
+    try{
+      const {data:team}=await sb.from('klanten').select('naam,email').eq('id',acc.team_id).maybeSingle();
+      if(team){
+        state.instellingen=Object.assign({}, state.instellingen, {naam:team.naam, email:(state.instellingen&&state.instellingen.email)||team.email||''});
+        save();
+      }
+    }catch(e){}
+  }
+
   authSluit();
   pasRechtenToe();
   showTab(mag('dashboard')?'dashboard':'scan');
+  renderInstellingen();
   if(!account.onboarding_klaar) toonOnboarding();
 }
 
 function toonAuthLogin(fout){
   authWrap(`
     <p class="muted" style="margin-bottom:14px">Log in met je gebruikersnaam of e-mailadres</p>
-    <label>Gebruikersnaam of e-mail</label><input id="al_id" autocomplete="username" onkeydown="if(event.key==='Enter')doeLogin()">
-    <div style="margin-top:10px"><label>Wachtwoord</label><input id="al_ww" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doeLogin()"></div>
+    <label>Gebruikersnaam of e-mail</label><input id="al_id" autocomplete="username" onkeydown="authEnter(event)">
+    <div style="margin-top:10px"><label>Wachtwoord</label>${wwVeld('al_ww','','current-password')}</div>
     <button class="btn actie" style="width:100%; margin-top:16px" onclick="doeLogin(this)">Inloggen</button>
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonWachtwoordVergeten()">Wachtwoord vergeten?</button>
   `);
+  const w=document.getElementById('al_ww'); if(w) w.addEventListener('keydown', authEnter);
   if(fout) authMelding(fout);
   const f=document.getElementById('al_id'); if(f) f.focus();
 }
@@ -2102,13 +2193,15 @@ async function doeLogin(knop){
   if(!idv||!ww){ authMelding('Vul zowel je gebruikersnaam of e-mail als je wachtwoord in.'); return; }
   authBezig(knop, true, 'Inloggen');
   let email=idv;
-  if(!idv.includes('@')){
+  if(idv.includes('@')){
+    email=idv.toLowerCase();
+  } else {
     const {data:emailData,error:emailErr}=await sb.rpc('email_for_username',{gebruikersnaam_input:idv});
-    if(emailErr || !emailData){ authBezig(knop,false); authMelding('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
+    if(emailErr || !emailData){ authBezig(knop,false); authMelding('Onbekende combinatie van gebruikersnaam of e-mail en wachtwoord.'); return; }
     email=emailData;
   }
   const {data,error}=await sb.auth.signInWithPassword({email,password:ww});
-  if(error){ authBezig(knop,false); authMelding('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
+  if(error){ authBezig(knop,false); authMelding(authFoutTekst(error)); return; }
   const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
     toon2FAStap();
@@ -2123,18 +2216,20 @@ async function toon2FAStap(){
   if(!factor){ toonAuthLogin('Twee-staps-verificatie kon niet worden gestart.'); return; }
   authWrap(`
     <p class="muted" style="margin-bottom:14px">Voer de 6-cijferige code uit je authenticator-app in</p>
-    <input id="al_2fa" maxlength="6" inputmode="numeric" style="text-align:center; letter-spacing:6px; font-size:20px" onkeydown="if(event.key==='Enter')bevestig2FALogin('${factor.id}')">
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="bevestig2FALogin('${factor.id}')">Bevestigen</button>
+    <input id="al_2fa" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="text-align:center; letter-spacing:6px; font-size:20px" onkeydown="authEnter(event)">
+    <button class="btn actie" style="width:100%; margin-top:16px" onclick="bevestig2FALogin('${factor.id}', this)">Bevestigen</button>
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="sb.auth.signOut().then(()=>toonAuthLogin())">Terug</button>
   `);
   const f=document.getElementById('al_2fa'); if(f) f.focus();
 }
-async function bevestig2FALogin(factorId){
+async function bevestig2FALogin(factorId, knop){
   const code=(document.getElementById('al_2fa').value||'').trim();
+  if(code.length<6){ authMelding('Vul de 6-cijferige code in.'); return; }
+  authBezig(knop, true, 'Controleren');
   const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId});
-  if(chErr){ authMelding(chErr.message); return; }
+  if(chErr){ authBezig(knop,false); authMelding(authFoutTekst(chErr)); return; }
   const {error}=await sb.auth.mfa.verify({factorId, challengeId:ch.id, code});
-  if(error){ authMelding('Onjuiste code, probeer opnieuw.'); return; }
+  if(error){ authBezig(knop,false); authMelding('Onjuiste code, probeer opnieuw.'); return; }
   const {data:{session}}=await sb.auth.getSession();
   await ladAccountEnStart(session);
 }
@@ -2142,14 +2237,16 @@ async function bevestig2FALogin(factorId){
 function toonWachtwoordVergeten(){
   authWrap(`
     <p class="muted" style="margin-bottom:14px">Vul je e-mailadres in. We sturen een link waarmee je een nieuw wachtwoord kan instellen.</p>
-    <input id="al_reset_email" type="email" placeholder="jij@bedrijf.nl">
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="verstuurResetMail()">Verstuur link</button>
+    <label>E-mailadres</label><input id="al_reset_email" type="email" autocomplete="email" placeholder="jij@bedrijf.nl" onkeydown="authEnter(event)">
+    <button class="btn actie" style="width:100%; margin-top:16px" onclick="verstuurResetMail(this)">Verstuur link</button>
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonAuthLogin()">Terug naar inloggen</button>
   `);
+  const f=document.getElementById('al_reset_email'); if(f) f.focus();
 }
-async function verstuurResetMail(){
-  const email=(document.getElementById('al_reset_email').value||'').trim();
-  if(!email){ authMelding('Vul een e-mailadres in.'); return; }
+async function verstuurResetMail(knop){
+  const email=(document.getElementById('al_reset_email').value||'').trim().toLowerCase();
+  if(!email || !email.includes('@')){ authMelding('Vul een geldig e-mailadres in.'); return; }
+  authBezig(knop, true, 'Versturen');
   let bedrijf=null;
   try{
     const {data}=await sb.rpc('team_naam_voor_email',{email_input:email});
@@ -2163,41 +2260,48 @@ async function verstuurResetMail(){
       <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonAuthLogin()">Terug naar inloggen</button>`);
     return;
   }
-  try{ await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}); }catch(e){}
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});
+  if(error){ authBezig(knop,false); authMelding(authFoutTekst(error)); return; }
   authWrap(`<p style="margin-bottom:6px; font-weight:600">${esc(bedrijf)}</p>
     <p class="muted" style="margin-bottom:16px">We hebben een e-mail gestuurd naar <b>${esc(email)}</b> met een link om een nieuw wachtwoord in te stellen. Niets ontvangen? Kijk ook even in je spam.</p>
     <button class="btn ghost" style="width:100%" onclick="toonAuthLogin()">Terug naar inloggen</button>`);
 }
+
 function toonNieuwWachtwoordScherm(){
   authWrap(`
-    <p class="muted" style="margin-bottom:14px">Kies een nieuw wachtwoord</p>
-    <input id="al_nieuw_ww" type="password" placeholder="Nieuw wachtwoord (min. 8 tekens)" autocomplete="new-password">
-    <div style="margin-top:8px"><input id="al_nieuw_ww2" type="password" placeholder="Herhaal wachtwoord" autocomplete="new-password"></div>
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="slaNieuwWachtwoordOp()">Wachtwoord opslaan</button>
+    <p class="muted" style="margin-bottom:14px">Kies een nieuw wachtwoord voor je account</p>
+    <label>Nieuw wachtwoord</label>${wwVeld('al_nieuw_ww','Minstens 8 tekens','new-password')}
+    <div style="margin-top:10px"><label>Herhaal wachtwoord</label>${wwVeld('al_nieuw_ww2','','new-password')}</div>
+    <button class="btn actie" style="width:100%; margin-top:16px" onclick="slaNieuwWachtwoordOp(this)">Wachtwoord opslaan</button>
   `);
+  ['al_nieuw_ww','al_nieuw_ww2'].forEach(id=>{ const v=document.getElementById(id); if(v) v.addEventListener('keydown', authEnter); });
+  const f=document.getElementById('al_nieuw_ww'); if(f) f.focus();
 }
-async function slaNieuwWachtwoordOp(){
+async function slaNieuwWachtwoordOp(knop){
   const w1=document.getElementById('al_nieuw_ww').value, w2=document.getElementById('al_nieuw_ww2').value;
   if(!w1||w1.length<8){ authMelding('Kies een wachtwoord van minstens 8 tekens.'); return; }
-  if(w1!==w2){ authMelding('Wachtwoorden komen niet overeen.'); return; }
+  if(w1!==w2){ authMelding('De wachtwoorden komen niet overeen.'); return; }
+  authBezig(knop, true, 'Opslaan');
   const {error}=await sb.auth.updateUser({password:w1});
-  if(error){ toast(''+error.message); return; }
-  toast('Wachtwoord gewijzigd.', true);
+  if(error){ authBezig(knop,false); authMelding(authFoutTekst(error)); return; }
   history.replaceState(null,'',location.pathname);
   const {data:{session}}=await sb.auth.getSession();
-  if(session) await ladAccountEnStart(session); else toonAuthLogin();
+  if(session){ toast('Wachtwoord gewijzigd.', true); await ladAccountEnStart(session); }
+  else { toonAuthLogin(); authMelding('Wachtwoord gewijzigd. Log in met je nieuwe wachtwoord.','ok'); }
 }
 
 /* -- nieuw account na Stripe-betaling (eigenaar) -- */
 function toonOwnerSetup(sessionId){
   authWrap(`
     <p class="muted" style="margin-bottom:14px">Bedankt voor je aanmelding. Maak je account aan om te beginnen.</p>
-    <label>Bedrijfsnaam</label><input id="os_bedrijf" placeholder="Storvo">
-    <div style="margin-top:10px"><label>Je naam</label><input id="os_naam" placeholder="Voor- en achternaam"></div>
-    <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="os_gebruikersnaam" autocomplete="username"></div>
-    <div style="margin-top:10px"><label>Wachtwoord</label><input id="os_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
+    <label>Bedrijfsnaam</label><input id="os_bedrijf" placeholder="Naam van je winkel" onkeydown="authEnter(event)">
+    <div style="margin-top:10px"><label>Je naam</label><input id="os_naam" placeholder="Voor- en achternaam" onkeydown="authEnter(event)"></div>
+    <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="os_gebruikersnaam" autocomplete="username" placeholder="Waarmee je wil inloggen" onkeydown="authEnter(event)"></div>
+    <div style="margin-top:10px"><label>Wachtwoord</label>${wwVeld('os_ww','Minstens 8 tekens','new-password')}</div>
     <button class="btn actie" id="os_knop" style="width:100%; margin-top:16px" onclick="maakOwnerAccount('${esc(sessionId)}', this)">Account aanmaken</button>
   `);
+  const w=document.getElementById('os_ww'); if(w) w.addEventListener('keydown', authEnter);
+  const f=document.getElementById('os_bedrijf'); if(f) f.focus();
 }
 async function maakOwnerAccount(sessionId, knop){
   const bedrijf=(document.getElementById('os_bedrijf').value||'').trim();
@@ -2214,10 +2318,12 @@ async function maakOwnerAccount(sessionId, knop){
       body:JSON.stringify({session_id:sessionId, bedrijfsnaam:bedrijf, naam, gebruikersnaam, wachtwoord:ww})
     });
     uit=await res.json();
-    if(!res.ok || !uit.email) throw new Error((uit.error||'Aanmaken account mislukt.')+(uit.detail?' ('+uit.detail+')':''));
-  }catch(e){ authBezig(knop,false); authMelding(e.message||'Er ging iets mis, probeer het opnieuw.'); return; }
+    if(uit && uit.detail) console.error('create-owner-account:', uit.detail);
+    if(!res.ok || !uit.email) throw new Error(uit.error||'Aanmaken account mislukt.');
+  }catch(e){ authBezig(knop,false); authMelding(authFoutTekst(e)===e.message?e.message:(e.message||authFoutTekst(e))); return; }
   const {data,error}=await sb.auth.signInWithPassword({email:uit.email, password:ww});
   if(error){ authBezig(knop,false); history.replaceState(null,'',location.pathname); toonAuthLogin(); authMelding('Je account is aangemaakt. Log in met je gegevens.','ok'); return; }
+  state.instellingen=Object.assign({}, state.instellingen, {naam:bedrijf}); save();
   history.replaceState(null,'',location.pathname);
   await ladAccountEnStart(data.session);
 }
@@ -2234,19 +2340,22 @@ async function toonInviteSetup(token){
   }
   authWrap(`
     <p class="muted" style="margin-bottom:14px">Je bent uitgenodigd voor <b>${esc(info.team_naam)}</b> als <b>${esc(info.rol)}</b>. Maak je account aan.</p>
-    <label>Je naam</label><input id="is_naam" placeholder="Voor- en achternaam">
-    <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="is_gebruikersnaam" autocomplete="username"></div>
-    <div style="margin-top:10px"><label>E-mailadres</label><input id="is_email" type="email" autocomplete="email"></div>
-    <div style="margin-top:10px"><label>Wachtwoord</label><input id="is_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
+    <label>Je naam</label><input id="is_naam" placeholder="Voor- en achternaam" onkeydown="authEnter(event)">
+    <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="is_gebruikersnaam" autocomplete="username" placeholder="Waarmee je wil inloggen" onkeydown="authEnter(event)"></div>
+    <div style="margin-top:10px"><label>E-mailadres</label><input id="is_email" type="email" autocomplete="email" onkeydown="authEnter(event)"></div>
+    <div style="margin-top:10px"><label>Wachtwoord</label>${wwVeld('is_ww','Minstens 8 tekens','new-password')}</div>
     <button class="btn actie" style="width:100%; margin-top:16px" onclick="maakInviteAccount('${esc(token)}', this)">Account aanmaken</button>
   `);
+  const w=document.getElementById('is_ww'); if(w) w.addEventListener('keydown', authEnter);
+  const f=document.getElementById('is_naam'); if(f) f.focus();
 }
 async function maakInviteAccount(token, knop){
   const naam=(document.getElementById('is_naam').value||'').trim();
   const gebruikersnaam=(document.getElementById('is_gebruikersnaam').value||'').trim();
-  const email=(document.getElementById('is_email').value||'').trim();
+  const email=(document.getElementById('is_email').value||'').trim().toLowerCase();
   const ww=document.getElementById('is_ww').value||'';
   if(!naam||!gebruikersnaam||!email||!ww){ authMelding('Vul alle velden in.'); return; }
+  if(!email.includes('@')){ authMelding('Vul een geldig e-mailadres in.'); return; }
   if(ww.length<8){ authMelding('Kies een wachtwoord van minstens 8 tekens.'); return; }
   authBezig(knop, true, 'Account aanmaken');
   let uit;
@@ -2256,7 +2365,8 @@ async function maakInviteAccount(token, knop){
       body:JSON.stringify({token, naam, gebruikersnaam, wachtwoord:ww, email})
     });
     uit=await res.json();
-    if(!res.ok || !uit.ok) throw new Error((uit.error||'Aanmaken account mislukt.')+(uit.detail?' ('+uit.detail+')':''));
+    if(uit && uit.detail) console.error('redeem-invite:', uit.detail);
+    if(!res.ok || !uit.ok) throw new Error(uit.error||'Aanmaken account mislukt.');
   }catch(e){ authBezig(knop,false); authMelding(e.message||'Er ging iets mis, probeer het opnieuw.'); return; }
   const {data,error}=await sb.auth.signInWithPassword({email, password:ww});
   if(error){ authBezig(knop,false); history.replaceState(null,'',location.pathname); toonAuthLogin(); authMelding('Je account is aangemaakt. Log in met je gegevens.','ok'); return; }
