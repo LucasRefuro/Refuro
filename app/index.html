@@ -129,7 +129,7 @@
   .popup .acts .btn{width:100%; padding:12px;}
   .betaalrow{display:flex; gap:8px;}
   .betaalrow .btn{flex:1;}
-  #toasts{position:fixed; top:20px; right:20px; z-index:120; display:flex; flex-direction:column; gap:8px; align-items:flex-end;}
+  #toasts{position:fixed; top:20px; right:20px; z-index:300; display:flex; flex-direction:column; gap:8px; align-items:flex-end;}
   .toast{background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px; font-size:13.5px; font-weight:500; box-shadow:0 6px 24px rgba(0,0,0,.25); animation:toastin .25s ease; max-width:340px;}
   .toast.groen{background:var(--green);}
   .toast.weg{opacity:0; transform:translateX(30px); transition:.3s;}
@@ -185,6 +185,9 @@
   .loginbox .mk{width:56px; height:56px; border-radius:14px; background:var(--oranje); color:var(--actieftekst); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; margin:0 auto 14px; overflow:hidden;}
   .loginbox .mk img{width:100%; height:100%; object-fit:cover;}
   .loginbox label{display:block; text-align:left; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:4px;}
+  .authfout{margin-top:14px; padding:12px 14px; border-radius:14px; font-size:13.5px; line-height:1.5;
+    background:var(--red-soft,#FAE4E4); color:var(--red-tekst,#A33333); text-align:left;}
+  .authfout.ok{background:var(--green-soft,#E3F4EC); color:var(--green-tekst,#177A51);}
   .loginbox input,.loginbox select{width:100%; margin-bottom:2px;}
   .mwLijst{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:18px 0;}
   .mwKnop{background:var(--bg); border:2px solid transparent; border-radius:12px; padding:14px 10px; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--text); cursor:pointer;}
@@ -2025,14 +2028,30 @@ function authWrap(inner){
   let el=document.getElementById('authScherm');
   if(!el){ el=document.createElement('div'); el.id='authScherm'; document.body.appendChild(el); }
   const h=huisstijl();
+  const eigenNaam=(h.naam||'Storvo').trim();
+  const isStorvo=eigenNaam.toLowerCase()==='storvo';
   el.innerHTML=`<div class="loginbox">
-    <div class="mk">${h.logo?`<img src="${h.logo}">`:esc((h.naam||'R').charAt(0).toUpperCase())}</div>
-    <h2 style="font-size:18px; margin-bottom:2px">${esc(h.naam||'Storvo')}</h2>
+    <div class="mk">${h.logo?`<img src="${h.logo}">`:(isStorvo?VINKJE:esc(eigenNaam.charAt(0).toUpperCase()))}</div>
+    <h2>${isStorvo?'storvo':esc(eigenNaam)}</h2>
     ${inner}
+    <div id="authFout" class="authfout" hidden></div>
   </div>`;
   return el;
 }
 function authSluit(){ const el=document.getElementById('authScherm'); if(el) el.remove(); }
+/* Meldingen horen binnen het inlogvenster: een toast valt erachter weg. */
+function authMelding(tekst, soort){
+  const v=document.getElementById('authFout');
+  if(!v){ toast(tekst); return; }
+  v.textContent=tekst;
+  v.className='authfout'+(soort==='ok'?' ok':'');
+  v.hidden=false;
+}
+function authBezig(knop, aan, tekstBezig){
+  if(!knop) return;
+  if(aan){ knop.dataset.tekst=knop.textContent; knop.textContent=tekstBezig||'Bezig'; knop.disabled=true; knop.style.opacity=.7; }
+  else { if(knop.dataset.tekst) knop.textContent=knop.dataset.tekst; knop.disabled=false; knop.style.opacity=''; }
+}
 
 async function authBoot(){
   const params=new URLSearchParams(location.search);
@@ -2070,25 +2089,26 @@ function toonAuthLogin(fout){
     <p class="muted" style="margin-bottom:14px">Log in met je gebruikersnaam of e-mailadres</p>
     <label>Gebruikersnaam of e-mail</label><input id="al_id" autocomplete="username" onkeydown="if(event.key==='Enter')doeLogin()">
     <div style="margin-top:10px"><label>Wachtwoord</label><input id="al_ww" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doeLogin()"></div>
-    ${fout?`<p style="color:#c0392b; margin-top:10px; font-size:13px; text-align:left">${esc(fout)}</p>`:''}
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="doeLogin()">Inloggen</button>
+    <button class="btn actie" style="width:100%; margin-top:16px" onclick="doeLogin(this)">Inloggen</button>
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonWachtwoordVergeten()">Wachtwoord vergeten?</button>
   `);
+  if(fout) authMelding(fout);
   const f=document.getElementById('al_id'); if(f) f.focus();
 }
 
-async function doeLogin(){
+async function doeLogin(knop){
   const idv=(document.getElementById('al_id').value||'').trim();
   const ww=document.getElementById('al_ww').value||'';
-  if(!idv||!ww){ toonAuthLogin('Vul zowel je gebruikersnaam of e-mail als je wachtwoord in.'); return; }
+  if(!idv||!ww){ authMelding('Vul zowel je gebruikersnaam of e-mail als je wachtwoord in.'); return; }
+  authBezig(knop, true, 'Inloggen');
   let email=idv;
   if(!idv.includes('@')){
     const {data:emailData,error:emailErr}=await sb.rpc('email_for_username',{gebruikersnaam_input:idv});
-    if(emailErr || !emailData){ toonAuthLogin('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
+    if(emailErr || !emailData){ authBezig(knop,false); authMelding('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
     email=emailData;
   }
   const {data,error}=await sb.auth.signInWithPassword({email,password:ww});
-  if(error){ toonAuthLogin('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
+  if(error){ authBezig(knop,false); authMelding('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
   const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
     toon2FAStap();
@@ -2112,9 +2132,9 @@ async function toon2FAStap(){
 async function bevestig2FALogin(factorId){
   const code=(document.getElementById('al_2fa').value||'').trim();
   const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId});
-  if(chErr){ toast(''+chErr.message); return; }
+  if(chErr){ authMelding(chErr.message); return; }
   const {error}=await sb.auth.mfa.verify({factorId, challengeId:ch.id, code});
-  if(error){ toast('Onjuiste code, probeer opnieuw.'); return; }
+  if(error){ authMelding('Onjuiste code, probeer opnieuw.'); return; }
   const {data:{session}}=await sb.auth.getSession();
   await ladAccountEnStart(session);
 }
@@ -2129,7 +2149,7 @@ function toonWachtwoordVergeten(){
 }
 async function verstuurResetMail(){
   const email=(document.getElementById('al_reset_email').value||'').trim();
-  if(!email){ toast('Vul een e-mailadres in.'); return; }
+  if(!email){ authMelding('Vul een e-mailadres in.'); return; }
   let bedrijf=null;
   try{
     const {data}=await sb.rpc('team_naam_voor_email',{email_input:email});
@@ -2158,8 +2178,8 @@ function toonNieuwWachtwoordScherm(){
 }
 async function slaNieuwWachtwoordOp(){
   const w1=document.getElementById('al_nieuw_ww').value, w2=document.getElementById('al_nieuw_ww2').value;
-  if(!w1||w1.length<8){ toast('Kies een wachtwoord van minstens 8 tekens.'); return; }
-  if(w1!==w2){ toast('Wachtwoorden komen niet overeen.'); return; }
+  if(!w1||w1.length<8){ authMelding('Kies een wachtwoord van minstens 8 tekens.'); return; }
+  if(w1!==w2){ authMelding('Wachtwoorden komen niet overeen.'); return; }
   const {error}=await sb.auth.updateUser({password:w1});
   if(error){ toast(''+error.message); return; }
   toast('Wachtwoord gewijzigd.', true);
@@ -2176,16 +2196,17 @@ function toonOwnerSetup(sessionId){
     <div style="margin-top:10px"><label>Je naam</label><input id="os_naam" placeholder="Voor- en achternaam"></div>
     <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="os_gebruikersnaam" autocomplete="username"></div>
     <div style="margin-top:10px"><label>Wachtwoord</label><input id="os_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="maakOwnerAccount('${esc(sessionId)}')">Account aanmaken</button>
+    <button class="btn actie" id="os_knop" style="width:100%; margin-top:16px" onclick="maakOwnerAccount('${esc(sessionId)}', this)">Account aanmaken</button>
   `);
 }
-async function maakOwnerAccount(sessionId){
+async function maakOwnerAccount(sessionId, knop){
   const bedrijf=(document.getElementById('os_bedrijf').value||'').trim();
   const naam=(document.getElementById('os_naam').value||'').trim();
   const gebruikersnaam=(document.getElementById('os_gebruikersnaam').value||'').trim();
   const ww=document.getElementById('os_ww').value||'';
-  if(!bedrijf||!naam||!gebruikersnaam||!ww){ toast('Vul alle velden in.'); return; }
-  if(ww.length<8){ toast('Kies een wachtwoord van minstens 8 tekens.'); return; }
+  if(!bedrijf||!naam||!gebruikersnaam||!ww){ authMelding('Vul alle velden in.'); return; }
+  if(ww.length<8){ authMelding('Kies een wachtwoord van minstens 8 tekens.'); return; }
+  authBezig(knop, true, 'Account aanmaken');
   let uit;
   try{
     const res=await fetch(SUPABASE_URL+'/functions/v1/create-owner-account',{
@@ -2194,9 +2215,9 @@ async function maakOwnerAccount(sessionId){
     });
     uit=await res.json();
     if(!res.ok || !uit.email) throw new Error(uit.error||'Aanmaken account mislukt.');
-  }catch(e){ toast(''+e.message); return; }
+  }catch(e){ authBezig(knop,false); authMelding(e.message||'Er ging iets mis, probeer het opnieuw.'); return; }
   const {data,error}=await sb.auth.signInWithPassword({email:uit.email, password:ww});
-  if(error){ toast('Account aangemaakt. Log in met je gegevens.', true); history.replaceState(null,'',location.pathname); toonAuthLogin(); return; }
+  if(error){ authBezig(knop,false); history.replaceState(null,'',location.pathname); toonAuthLogin(); authMelding('Je account is aangemaakt. Log in met je gegevens.','ok'); return; }
   history.replaceState(null,'',location.pathname);
   await ladAccountEnStart(data.session);
 }
@@ -2217,16 +2238,17 @@ async function toonInviteSetup(token){
     <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="is_gebruikersnaam" autocomplete="username"></div>
     <div style="margin-top:10px"><label>E-mailadres</label><input id="is_email" type="email" autocomplete="email"></div>
     <div style="margin-top:10px"><label>Wachtwoord</label><input id="is_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="maakInviteAccount('${esc(token)}')">Account aanmaken</button>
+    <button class="btn actie" style="width:100%; margin-top:16px" onclick="maakInviteAccount('${esc(token)}', this)">Account aanmaken</button>
   `);
 }
-async function maakInviteAccount(token){
+async function maakInviteAccount(token, knop){
   const naam=(document.getElementById('is_naam').value||'').trim();
   const gebruikersnaam=(document.getElementById('is_gebruikersnaam').value||'').trim();
   const email=(document.getElementById('is_email').value||'').trim();
   const ww=document.getElementById('is_ww').value||'';
-  if(!naam||!gebruikersnaam||!email||!ww){ toast('Vul alle velden in.'); return; }
-  if(ww.length<8){ toast('Kies een wachtwoord van minstens 8 tekens.'); return; }
+  if(!naam||!gebruikersnaam||!email||!ww){ authMelding('Vul alle velden in.'); return; }
+  if(ww.length<8){ authMelding('Kies een wachtwoord van minstens 8 tekens.'); return; }
+  authBezig(knop, true, 'Account aanmaken');
   let uit;
   try{
     const res=await fetch(SUPABASE_URL+'/functions/v1/redeem-invite',{
@@ -2235,9 +2257,9 @@ async function maakInviteAccount(token){
     });
     uit=await res.json();
     if(!res.ok || !uit.ok) throw new Error(uit.error||'Aanmaken account mislukt.');
-  }catch(e){ toast(''+e.message); return; }
+  }catch(e){ authBezig(knop,false); authMelding(e.message||'Er ging iets mis, probeer het opnieuw.'); return; }
   const {data,error}=await sb.auth.signInWithPassword({email, password:ww});
-  if(error){ toast('Account aangemaakt. Log in met je gegevens.', true); history.replaceState(null,'',location.pathname); toonAuthLogin(); return; }
+  if(error){ authBezig(knop,false); history.replaceState(null,'',location.pathname); toonAuthLogin(); authMelding('Je account is aangemaakt. Log in met je gegevens.','ok'); return; }
   history.replaceState(null,'',location.pathname);
   await ladAccountEnStart(data.session);
 }
@@ -2348,9 +2370,9 @@ async function start2FAInschakelen(){
 async function bevestig2FAInschakelen(factorId){
   const code=(document.getElementById('ma_2fa_code').value||'').trim();
   const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId});
-  if(chErr){ toast(''+chErr.message); return; }
+  if(chErr){ authMelding(chErr.message); return; }
   const {error}=await sb.auth.mfa.verify({factorId, challengeId:ch.id, code});
-  if(error){ toast('Onjuiste code, probeer opnieuw.'); return; }
+  if(error){ authMelding('Onjuiste code, probeer opnieuw.'); return; }
   await sb.from('accounts').update({tweestaps_actief:true}).eq('id',account.id);
   account.tweestaps_actief=true;
   render2FAStatus();
