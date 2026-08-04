@@ -244,7 +244,7 @@
 <aside>
   <div class="logo">
     <div class="mark"><svg class="i" style="width:20px;height:20px"><use href="#i-settings"/></svg></div>
-    <div><div class="name">Beheerpaneel</div><div class="sub">Abonnementen</div></div>
+    <div><div class="name">Storvo</div><div class="sub">Beheerpaneel</div></div>
   </div>
   <nav>
     <button data-tab="overzicht" class="active"><svg class="i"><use href="#i-chart"/></svg> Overzicht</button>
@@ -354,7 +354,7 @@
     <div class="warnbox" style="margin-bottom:18px">⚠️ <b>Belangrijk.</b> Je geheime Stripe-sleutel hoort nooit in een bestand dat in de browser draait. Iedereen kan die dan uitlezen en betalingen namens jou doen. Bewaar hem alleen op je server. Hieronder vul je de publieke gegevens in. De geheime sleutel zet je later in de serveromgeving.</div>
     <div class="grid" style="margin-bottom:14px">
       <div><label>Publiceerbare sleutel (mag publiek)</label><input id="s_pk" placeholder="pk_live_..." onchange="slaStripeOp()"></div>
-      <div><label>Stripe-account (bedrijfsnaam)</label><input id="s_acc" placeholder="Refuro B.V." onchange="slaStripeOp()"></div>
+      <div><label>Stripe-account (bedrijfsnaam)</label><input id="s_acc" placeholder="Storvo B.V." onchange="slaStripeOp()"></div>
       <div><label>Webhook-adres (later)</label><input id="s_hook" placeholder="https://jouwdomein.nl/api/stripe/webhook" onchange="slaStripeOp()"></div>
       <div><label>Klantportaal-link</label><input id="s_portal" placeholder="https://billing.stripe.com/p/login/..." onchange="slaStripeOp()"></div>
     </div>
@@ -422,7 +422,7 @@ function load(){
     {id:3, naam:'Enterprise', prijs:79.95, max:99, proef:30, priceId:'price_1U0Ts2QVIntfXHAiFuMZVMSf', functies:['Alles van Pro','Meerdere vestigingen','Prioriteit support']}
   ];
   if(!s.klanten) s.klanten=[
-    {id:1, naam:'Refuro (eigen winkel)', contact:'Lucas', email:'lucasklein835@gmail.com', plan:2, status:'actief', sinds:Date.now()-120*864e5, stripeId:''},
+    {id:1, naam:'Storvo (eigen winkel)', contact:'Lucas', email:'lucasklein835@gmail.com', plan:2, status:'actief', sinds:Date.now()-120*864e5, stripeId:''},
     {id:2, naam:'TelefoonHuis Utrecht', contact:'Mert', email:'info@telefoonhuis.nl', plan:2, status:'proef', sinds:Date.now()-6*864e5, stripeId:''},
     {id:3, naam:'GSM Service Breda', contact:'Ilona', email:'hallo@gsmbreda.nl', plan:1, status:'achterstallig', sinds:Date.now()-70*864e5, stripeId:''}
   ];

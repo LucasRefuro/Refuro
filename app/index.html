@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refuro Winkel Stock</title>
+<title>Storvo Winkel Stock</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -595,7 +595,7 @@
 <aside>
   <div class="logo">
     <div class="mark" id="logoMark">R</div>
-    <div><div class="name" id="logoNaam">Refuro</div><div class="sub" id="logoSub">Winkel Stock</div></div>
+    <div><div class="name" id="logoNaam">Storvo</div><div class="sub" id="logoSub">Winkel Stock</div></div>
   </div>
   <nav>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
@@ -1066,7 +1066,7 @@
   <div class="card" id="inst-bedrijf" hidden>
     <h2><svg class="i"><use href="#i-shop"/></svg>Bedrijfsgegevens <span class="muted">(voor klantberichten bij reparaties)</span></h2>
     <div class="grid">
-      <div><label>Bedrijfsnaam</label><input id="b_naam" placeholder="Refuro" onchange="slaBedrijfOp()"></div>
+      <div><label>Bedrijfsnaam</label><input id="b_naam" placeholder="Storvo" onchange="slaBedrijfOp()"></div>
       <div><label>E-mailadres (afzender)</label><input id="b_email" placeholder="info@refuro.nl" onchange="slaBedrijfOp()"></div>
       <div><label>Telefoonnummer (afzender)</label><input id="b_tel" placeholder="06 12345678" onchange="slaBedrijfOp()"></div>
     </div>
@@ -1077,7 +1077,7 @@
   <div class="card" id="inst-huisstijl" hidden>
     <h2><svg class="i"><use href="#i-palette"/></svg>Huisstijl <span class="muted">(kleuren, logo en naam van jouw winkel)</span></h2>
     <div class="grid" style="margin-bottom:14px">
-      <div><label>Weergavenaam in de app</label><input id="hs_naam" placeholder="Refuro" onchange="slaHuisstijlOp()"></div>
+      <div><label>Weergavenaam in de app</label><input id="hs_naam" placeholder="Storvo" onchange="slaHuisstijlOp()"></div>
       <div><label>Ondertitel</label><input id="hs_sub" placeholder="Winkel Stock" onchange="slaHuisstijlOp()"></div>
     </div>
     <div class="grid" style="margin-bottom:14px">
@@ -1216,7 +1216,7 @@ function load(){
   ];
   if(!s.reparaties) s.reparaties=[];
   if(!s.onderdelen) s.onderdelen=[];
-  if(!s.instellingen) s.instellingen={naam:'Refuro', email:'', tel:''};
+  if(!s.instellingen) s.instellingen={naam:'Storvo', email:'', tel:''};
   if(!s.repNr) s.repNr=0;
   if(!s.teams) s.teams=[{id:1, naam:'Winkel'}];
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
@@ -1959,7 +1959,7 @@ function toonLogin(){
   el.id='loginScherm';
   el.innerHTML=`<div class="loginbox">
     <div class="mk">${h.logo?`<img src="${h.logo}">`:esc((h.naam||'R').charAt(0).toUpperCase())}</div>
-    <h2 style="font-size:18px">${esc(h.naam||'Refuro')}</h2>
+    <h2 style="font-size:18px">${esc(h.naam||'Storvo')}</h2>
     <p class="muted" id="loginTekst">Wie ben je?</p>
     <div class="mwLijst" id="loginLijst">${actieve.map(m=>
       `<button class="mwKnop" onclick="kiesMw(${m.id})">${esc(m.naam)}<span class="rol">${esc(m.rol)}</span></button>`).join('')}</div>
@@ -2024,7 +2024,7 @@ function authWrap(inner){
   const h=huisstijl();
   el.innerHTML=`<div class="loginbox">
     <div class="mk">${h.logo?`<img src="${h.logo}">`:esc((h.naam||'R').charAt(0).toUpperCase())}</div>
-    <h2 style="font-size:18px; margin-bottom:2px">${esc(h.naam||'Refuro')}</h2>
+    <h2 style="font-size:18px; margin-bottom:2px">${esc(h.naam||'Storvo')}</h2>
     ${inner}
   </div>`;
   return el;
@@ -2127,8 +2127,22 @@ function toonWachtwoordVergeten(){
 async function verstuurResetMail(){
   const email=(document.getElementById('al_reset_email').value||'').trim();
   if(!email){ toast('⚠️ Vul een e-mailadres in.'); return; }
+  let bedrijf=null;
+  try{
+    const {data}=await sb.rpc('team_naam_voor_email',{email_input:email});
+    bedrijf=data||null;
+  }catch(e){}
+  if(!bedrijf){
+    authWrap(`<p style="margin-bottom:6px; font-weight:600">Geen account gevonden</p>
+      <p class="muted" style="margin-bottom:16px">We kennen <b>${esc(email)}</b> nog niet. Maak eerst een account aan, of probeer een ander e-mailadres.</p>
+      <a class="btn" style="width:100%; display:block; box-sizing:border-box" href="https://storvo.app/#prijzen">Account aanmaken</a>
+      <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonWachtwoordVergeten()">Ander e-mailadres proberen</button>
+      <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonAuthLogin()">Terug naar inloggen</button>`);
+    return;
+  }
   try{ await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}); }catch(e){}
-  authWrap(`<p style="margin-bottom:14px">Als dit e-mailadres bij ons bekend is, ontvang je zo een e-mail met een link om een nieuw wachtwoord in te stellen.</p>
+  authWrap(`<p style="margin-bottom:6px; font-weight:600">${esc(bedrijf)}</p>
+    <p class="muted" style="margin-bottom:16px">We hebben een e-mail gestuurd naar <b>${esc(email)}</b> met een link om een nieuw wachtwoord in te stellen. Niets ontvangen? Kijk ook even in je spam.</p>
     <button class="btn" style="width:100%" onclick="toonAuthLogin()">Terug naar inloggen</button>`);
 }
 function toonNieuwWachtwoordScherm(){
@@ -2155,7 +2169,7 @@ async function slaNieuwWachtwoordOp(){
 function toonOwnerSetup(sessionId){
   authWrap(`
     <p class="muted" style="margin-bottom:14px">Bedankt voor je aanmelding! Maak je account aan om te starten.</p>
-    <label>Bedrijfsnaam</label><input id="os_bedrijf" placeholder="Refuro">
+    <label>Bedrijfsnaam</label><input id="os_bedrijf" placeholder="Storvo">
     <div style="margin-top:10px"><label>Je naam</label><input id="os_naam" placeholder="Voor- en achternaam"></div>
     <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="os_gebruikersnaam" autocomplete="username"></div>
     <div style="margin-top:10px"><label>Wachtwoord</label><input id="os_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
@@ -2454,7 +2468,7 @@ function renderPrestaties(){
 }
 
 /* ---------- huisstijl (white-label) ---------- */
-const HS_STANDAARD={naam:'Refuro', sub:'Winkel Stock', navy:'#0B1A33', oranje:'#2563EB', menutekst:'#7A8BA8', actieftekst:'#FFFFFF', tekst:'#0B1A33', bg:'#F1F5FB', logo:'', v:3};
+const HS_STANDAARD={naam:'Storvo', sub:'Winkel Stock', navy:'#0B1A33', oranje:'#2563EB', menutekst:'#7A8BA8', actieftekst:'#FFFFFF', tekst:'#0B1A33', bg:'#F1F5FB', logo:'', v:3};
 const HS_KLEUREN=['navy','oranje','menutekst','actieftekst','tekst','bg'];
 function huisstijl(){
   if(!state.huisstijl) state.huisstijl=Object.assign({}, HS_STANDAARD);
@@ -2476,12 +2490,12 @@ function pasHuisstijlToe(){
   r.setProperty('--actieftekst', h.actieftekst);
   r.setProperty('--text', h.tekst);
   r.setProperty('--bg', h.bg);
-  document.getElementById('logoNaam').textContent=h.naam||'Refuro';
+  document.getElementById('logoNaam').textContent=h.naam||'Storvo';
   document.getElementById('logoSub').textContent=h.sub||'';
   const mark=document.getElementById('logoMark');
   if(h.logo){ mark.innerHTML=`<img src="${h.logo}" class="logoImg" alt="logo">`; mark.style.background='transparent'; }
   else { mark.textContent=(h.naam||'R').trim().charAt(0).toUpperCase(); mark.style.background=''; }
-  document.title=(h.naam||'Refuro')+' voorraad en reparaties';
+  document.title=(h.naam||'Storvo')+' voorraad en reparaties';
 }
 function schaduw(hex, pct){
   const n=parseInt(hex.slice(1),16);
@@ -2490,7 +2504,7 @@ function schaduw(hex, pct){
 }
 function slaHuisstijlOp(){
   const h=huisstijl();
-  h.naam=document.getElementById('hs_naam').value.trim()||'Refuro';
+  h.naam=document.getElementById('hs_naam').value.trim()||'Storvo';
   h.sub=document.getElementById('hs_sub').value.trim();
   HS_KLEUREN.forEach(k=>{ h[k]=document.getElementById('hs_'+k).value.toUpperCase(); });
   save(); pasHuisstijlToe(); renderHuisstijl();
@@ -3197,7 +3211,7 @@ function repStatus(id, status){
 function berichtTekst(r){
   const b=state.instellingen||{};
   const groet='Beste '+r.klant.naam+', ';
-  const einde=' Mvg, '+(b.naam||'Refuro')+(b.tel?' ('+b.tel+')':'');
+  const einde=' Mvg, '+(b.naam||'Storvo')+(b.tel?' ('+b.tel+')':'');
   switch(r.status){
     case 'aangemeld': return groet+'we hebben je reparatie '+r.nr+' ('+r.toestel+' - '+r.type+') aangemeld. We bestellen de onderdelen en houden je op de hoogte.'+einde;
     case 'besteld': return groet+'de onderdelen voor je reparatie '+r.nr+' zijn besteld. Verwachte levering: '+verwachteLeveringRep(r.besteldOp||Date.now()).toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'})+'.'+einde;
@@ -3314,7 +3328,7 @@ function onbRender(){
   const p=document.getElementById('onbPopup'); if(!p) return;
   let inner='';
   if(onbStap===0){
-    inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Welkom bij ${esc((state.huisstijl&&state.huisstijl.naam)||'Refuro')}!</h2>
+    inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Welkom bij ${esc((state.huisstijl&&state.huisstijl.naam)||'Storvo')}!</h2>
       <p class="muted" style="margin:10px 0 4px">Voor je begint lopen we in drie korte stappen door de app: je bedrijfsgegevens, een mini-rondleiding, en klaar.</p>
       <p class="muted">Duurt hooguit een minuut, en je kan het later altijd opnieuw bekijken via Instellingen.</p>
       <div class="acts" style="justify-content:flex-end; margin-top:22px">
@@ -3326,7 +3340,7 @@ function onbRender(){
     inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Jouw bedrijfsgegevens</h2>
       <p class="muted" style="margin-bottom:14px">Deze gebruiken we in de statusberichten naar je klanten. Later aan te passen in Instellingen.</p>
       <div class="grid">
-        <div><label>Bedrijfsnaam</label><input id="onb_naam" placeholder="Refuro" value="${esc(i.naam||'')}"></div>
+        <div><label>Bedrijfsnaam</label><input id="onb_naam" placeholder="Storvo" value="${esc(i.naam||'')}"></div>
         <div><label>E-mailadres</label><input id="onb_email" placeholder="info@refuro.nl" value="${esc(i.email||'')}"></div>
         <div><label>Telefoonnummer</label><input id="onb_tel" placeholder="06 12345678" value="${esc(i.tel||'')}"></div>
       </div>
