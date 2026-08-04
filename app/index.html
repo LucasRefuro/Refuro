@@ -2262,9 +2262,34 @@ async function verstuurResetMail(knop){
   }
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});
   if(error){ authBezig(knop,false); authMelding(authFoutTekst(error)); return; }
+  toonResetVerstuurd(bedrijf, email);
+}
+
+/* Bevestigingsscherm met aftellende opnieuw-versturen-knop (Supabase staat 1 mail per minuut toe). */
+let resetTimer=null;
+function toonResetVerstuurd(bedrijf, email){
   authWrap(`<p style="margin-bottom:6px; font-weight:600">${esc(bedrijf)}</p>
     <p class="muted" style="margin-bottom:16px">We hebben een e-mail gestuurd naar <b>${esc(email)}</b> met een link om een nieuw wachtwoord in te stellen. Niets ontvangen? Kijk ook even in je spam.</p>
-    <button class="btn ghost" style="width:100%" onclick="toonAuthLogin()">Terug naar inloggen</button>`);
+    <button class="btn ghost" id="resetOpnieuw" data-email="${esc(email)}" data-bedrijf="${esc(bedrijf)}" style="width:100%" disabled onclick="verstuurResetOpnieuw(this)">Opnieuw versturen (60)</button>
+    <button class="btn ghost" style="width:100%; margin-top:8px" onclick="stopResetTimer(); toonAuthLogin()">Terug naar inloggen</button>`);
+  let over=60;
+  stopResetTimer();
+  resetTimer=setInterval(()=>{
+    over--;
+    const k=document.getElementById('resetOpnieuw');
+    if(!k){ stopResetTimer(); return; }
+    if(over<=0){ stopResetTimer(); k.disabled=false; k.textContent='Opnieuw versturen'; k.classList.remove('ghost'); k.classList.add('actie'); }
+    else k.textContent='Opnieuw versturen ('+over+')';
+  },1000);
+}
+function stopResetTimer(){ if(resetTimer){ clearInterval(resetTimer); resetTimer=null; } }
+async function verstuurResetOpnieuw(knop){
+  const email=knop.dataset.email, bedrijf=knop.dataset.bedrijf;
+  authBezig(knop, true, 'Versturen');
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});
+  if(error){ authBezig(knop,false); authMelding(authFoutTekst(error)); return; }
+  toonResetVerstuurd(bedrijf, email);
+  authMelding('Nieuwe e-mail verstuurd.','ok');
 }
 
 function toonNieuwWachtwoordScherm(){
