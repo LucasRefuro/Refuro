@@ -6,191 +6,236 @@
 <title data-t="title">Storvo · Voorraad &amp; reparaties voor telefoonwinkels</title>
 <meta name="description" content="Storvo: alles-in-één systeem voor telefoonwinkels. Voorraad scannen, reparaties volgen, klanten automatisch op de hoogte houden en je omzet live inzien.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════ STORVO DESIGNSYSTEEM ═══════════════
+   Kleuren, typografie en vormen volgens het Storvo brand book v2.0.
+   Verhouding: 70% licht, 20% groen/petrol, 5% status, 5% amber.
+   Amber is uitsluitend de primaire actie: één per scherm.
+   ════════════════════════════════════════════════════ */
 :root{
-  --navy:#0B1A33; --navy-2:#16294a; --blauw:#2563EB; --blauw-d:#1D4FD8; --blauw-l:#60A5FA;
-  --bg:#F1F5FB; --card:#FFFFFF; --soft:#F5F8FD; --soft-2:#EDF3FB; --border:#E9EFF8;
-  --lblauw:#E8F0FE; --text:#0B1A33; --muted:#7A8BA8;
-  --green:#16A34A; --green-soft:#E8F7EE; --amber:#F59E0B; --red:#E11D48;
-  --schaduw:0 1px 2px rgba(11,26,51,.04), 0 8px 24px rgba(11,26,51,.05);
-  --schaduw-l:0 2px 6px rgba(11,26,51,.06), 0 24px 60px rgba(11,26,51,.12);
+  /* merkkleuren */
+  --groen:#0B5B52; --petrol:#123F39; --amber:#E88A1D; --amber-d:#CE7811;
+  --warmwit:#F7F6F3; --ink:#17201E;
+  /* tinten */
+  --mint:#7FC4B6; --ijsgroen:#E7F1EE;
+  /* status (nooit als merkkleur) */
+  --st-groen:#1E9E6A; --st-geel:#E8B31D; --st-rood:#D64545;
+  /* vlakken en lijnen */
+  --card:#FFFFFF; --rand:#ECEAE4; --rand-zacht:#F0EEE8;
+  --muted:#5B6663; --muted-l:#8A938F; --body:#475350;
+  --schaduw:0 6px 24px rgba(23,32,30,.07);
+  --schaduw-l:0 10px 34px rgba(23,32,30,.10);
+  --radius:24px; --radius-s:18px; --pil:100px;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
-body{font-family:'Poppins',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text);
-  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;}
-::selection{background:var(--blauw); color:#fff;}
+body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--warmwit); color:var(--ink);
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;}
+::selection{background:var(--ijsgroen); color:var(--groen);}
 ::-webkit-scrollbar{width:10px;}
-::-webkit-scrollbar-thumb{background:#D9E3F0; border-radius:8px; border:3px solid transparent; background-clip:content-box;}
+::-webkit-scrollbar-thumb{background:#DDD9D1; border-radius:8px; border:3px solid transparent; background-clip:content-box;}
 a{color:inherit; text-decoration:none;}
-.wrap{max-width:1180px; margin:0 auto; padding:0 26px;}
+.wrap{max-width:1200px; margin:0 auto; padding:0 28px;}
+
+/* koppen en cijfers altijd in Sora, links uitgelijnd */
+h1,h2,h3,.sora{font-family:'Sora',sans-serif; letter-spacing:0;}
+h1{font-size:clamp(38px,5.6vw,68px); line-height:1.08; font-weight:800; letter-spacing:-.02em; margin-bottom:22px;}
+h2{font-size:clamp(28px,3.8vw,44px); line-height:1.2; font-weight:800; margin-bottom:14px;}
+h3{font-size:19px; font-weight:700; margin-bottom:8px;}
+.label{font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--groen);}
 
 /* ---------- cursor ---------- */
-.cur-dot,.cur-ring{position:fixed; top:0; left:0; pointer-events:none; z-index:999; border-radius:50%; mix-blend-mode:normal;}
-.cur-dot{width:7px; height:7px; background:var(--blauw); transform:translate(-50%,-50%);}
-.cur-ring{width:34px; height:34px; border:1.5px solid rgba(37,99,235,.45); transform:translate(-50%,-50%);
+.cur-dot,.cur-ring{position:fixed; top:0; left:0; pointer-events:none; z-index:999; border-radius:50%;}
+.cur-dot{width:7px; height:7px; background:var(--groen); transform:translate(-50%,-50%);}
+.cur-ring{width:34px; height:34px; border:1.5px solid rgba(11,91,82,.4); transform:translate(-50%,-50%);
   transition:width .25s, height .25s, background .25s, border-color .25s;}
-.cur-ring.groot{width:58px; height:58px; background:rgba(37,99,235,.10); border-color:rgba(37,99,235,.7);}
+.cur-ring.groot{width:58px; height:58px; background:rgba(11,91,82,.08); border-color:rgba(11,91,82,.65);}
 @media(hover:none),(max-width:860px){ .cur-dot,.cur-ring{display:none;} }
 
-/* ---------- nav ---------- */
-nav.top{position:fixed; top:0; left:0; right:0; z-index:100; padding:14px 0; transition:.3s;
-  background:transparent;}
-nav.top.vast{background:rgba(241,245,251,.82); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--border); padding:10px 0;}
-nav.top .in{display:flex; align-items:center; gap:14px;}
-.merk{display:flex; align-items:center; gap:11px; font-weight:700; font-size:17px; letter-spacing:-.3px;}
-.merk .mk{width:38px; height:38px; border-radius:12px; background:var(--blauw); color:#fff; display:flex;
-  align-items:center; justify-content:center; font-weight:800; font-size:18px; box-shadow:0 6px 16px rgba(37,99,235,.34);}
-nav.top .links{display:flex; gap:4px; margin-left:auto;}
-nav.top .links a{padding:9px 15px; border-radius:11px; font-size:13.5px; font-weight:500; color:var(--muted); transition:.16s;}
-nav.top .links a:hover{background:var(--card); color:var(--text);}
-@media(max-width:860px){ nav.top .links{display:none;} }
+/* ---------- logo ---------- */
+.merk{display:flex; align-items:center; gap:12px;}
+.merk .mk{width:38px; height:38px; border-radius:9px; background:var(--groen); display:flex; align-items:center;
+  justify-content:center; flex:none;}
+.merk .mk svg{width:21px; height:21px; stroke:var(--warmwit); fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;}
+.merk .wm{font-family:'Sora',sans-serif; font-size:25px; font-weight:800; letter-spacing:-.04em; line-height:1; color:var(--ink);}
+.merk.op-donker .mk{background:var(--warmwit);}
+.merk.op-donker .mk svg{stroke:var(--groen);}
+.merk.op-donker .wm{color:var(--warmwit);}
 
-.btn{display:inline-block; background:var(--blauw); color:#fff; padding:13px 26px; border-radius:13px; font-size:14px;
-  font-weight:600; border:none; cursor:pointer; font-family:inherit; transition:.18s; box-shadow:0 6px 20px rgba(37,99,235,.3);}
-.btn:hover{background:var(--blauw-d); transform:translateY(-2px); box-shadow:0 12px 28px rgba(37,99,235,.36);}
-.btn.wit{background:var(--card); color:var(--text); box-shadow:var(--schaduw);}
-.btn.wit:hover{background:#fff; box-shadow:var(--schaduw-l);}
-.btn.klein{padding:10px 18px; font-size:13px;}
-.btn.lijn{background:transparent; color:var(--text); border:1.5px solid var(--border); box-shadow:none;}
-.btn.lijn:hover{background:var(--card); border-color:#D8E3F2;}
+/* ---------- nav ---------- */
+nav.top{position:fixed; top:0; left:0; right:0; z-index:100; padding:16px 0; transition:.3s; background:transparent;}
+nav.top.vast{background:rgba(247,246,243,.86); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--rand); padding:11px 0;}
+nav.top .in{display:flex; align-items:center; gap:10px;}
+nav.top .links{display:flex; gap:2px; margin-left:auto;}
+nav.top .links a{padding:9px 17px; border-radius:var(--pil); font-size:14px; font-weight:600; color:var(--muted-l); transition:.16s;}
+nav.top .links a:hover{background:var(--ijsgroen); color:var(--groen);}
+@media(max-width:900px){ nav.top .links{display:none;} }
+
+/* ---------- knoppen ----------
+   .btn        = primaire actie, amber, één per scherm
+   .btn.groen  = merkactie
+   .btn.lijn   = secundair
+   .btn.wit    = op donkere vlakken                          */
+.btn{display:inline-block; background:var(--amber); color:#fff; padding:14px 28px; border-radius:var(--pil); font-size:15px;
+  font-weight:700; border:none; cursor:pointer; font-family:inherit; transition:.18s; box-shadow:0 6px 18px rgba(232,138,29,.26);}
+.btn:hover{background:var(--amber-d); transform:translateY(-2px); box-shadow:0 12px 26px rgba(232,138,29,.3);}
+.btn.groen{background:var(--groen); box-shadow:0 6px 18px rgba(11,91,82,.22);}
+.btn.groen:hover{background:var(--petrol); box-shadow:0 12px 26px rgba(11,91,82,.26);}
+.btn.lijn{background:transparent; color:var(--groen); border:1.5px solid rgba(11,91,82,.28); box-shadow:none;}
+.btn.lijn:hover{background:var(--ijsgroen); border-color:var(--groen); transform:none;}
+.btn.wit{background:var(--warmwit); color:var(--groen); box-shadow:var(--schaduw);}
+.btn.wit:hover{background:#fff;}
+.btn.klein{padding:10px 20px; font-size:13.5px;}
 
 /* ---------- hero ---------- */
-header.hero{padding:150px 0 90px; position:relative; overflow:hidden;}
-.blob{position:absolute; border-radius:50%; filter:blur(90px); opacity:.5; pointer-events:none;}
-.blob.b1{width:520px; height:520px; background:#BFD9FF; top:-160px; right:-120px;}
-.blob.b2{width:420px; height:420px; background:#D9E7FF; top:280px; left:-180px;}
-.blob.b3{width:300px; height:300px; background:#C7F0DC; bottom:-80px; right:22%;}
-.hero .in{position:relative; z-index:2; text-align:center; max-width:820px; margin:0 auto;}
-.pill{display:inline-flex; align-items:center; gap:9px; background:var(--card); border:1px solid var(--border);
-  padding:7px 16px 7px 8px; border-radius:30px; font-size:12.5px; font-weight:600; color:var(--muted); box-shadow:var(--schaduw); margin-bottom:26px;}
-.pill b{background:var(--blauw); color:#fff; padding:3px 10px; border-radius:20px; font-size:10.5px; letter-spacing:.04em;}
-h1{font-size:clamp(34px,5.4vw,60px); line-height:1.08; font-weight:700; letter-spacing:-1.8px; margin-bottom:20px;}
-h1 .grad{background:linear-gradient(100deg,var(--blauw),#7C3AED); -webkit-background-clip:text; background-clip:text; color:transparent;}
-.lead{font-size:17px; color:var(--muted); max-width:620px; margin:0 auto 34px;}
-.heroknoppen{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:18px;}
-.klein-note{font-size:12.5px; color:var(--muted);}
+header.hero{padding:158px 0 90px; position:relative; overflow:hidden;}
+.blob{position:absolute; border-radius:50%; pointer-events:none;}
+.blob.b1{width:1000px; height:1000px; top:-40%; right:-14%; background:radial-gradient(circle,rgba(11,91,82,.13),transparent 70%);}
+.blob.b2{width:620px; height:620px; top:300px; left:-220px; background:radial-gradient(circle,rgba(127,196,182,.22),transparent 70%);}
+.blob.b3{width:420px; height:420px; bottom:-120px; right:20%; background:radial-gradient(circle,rgba(231,241,238,.9),transparent 70%);}
+.hero .in{position:relative; z-index:2; max-width:900px;}
+.pill{display:inline-flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--rand);
+  padding:7px 18px 7px 8px; border-radius:var(--pil); font-size:13px; font-weight:600; color:var(--muted);
+  box-shadow:var(--schaduw); margin-bottom:28px;}
+.pill b{background:var(--ijsgroen); color:var(--groen); padding:4px 12px; border-radius:var(--pil); font-size:11px;
+  font-weight:700; letter-spacing:.1em; text-transform:uppercase;}
+h1 .grad{color:var(--groen);}
+.lead{font-size:19px; color:var(--body); max-width:640px; margin-bottom:34px; line-height:1.55;}
+.heroknoppen{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+.klein-note{font-size:13.5px; color:var(--muted-l);}
 
-/* mockup */
-.mock{margin:60px auto 0; max-width:980px; position:relative; z-index:2;}
-.mockvenster{background:var(--card); border:1px solid var(--border); border-radius:22px; box-shadow:var(--schaduw-l); overflow:hidden;}
-.mockbalk{display:flex; align-items:center; gap:7px; padding:13px 16px; border-bottom:1px solid var(--border); background:var(--soft);}
-.mockbalk i{width:11px; height:11px; border-radius:50%; display:block;}
-.mockbody{display:flex; min-height:330px;}
-.mocknav{width:150px; border-right:1px solid var(--border); padding:16px 12px; display:flex; flex-direction:column; gap:5px;}
-.mocknav div{padding:8px 11px; border-radius:9px; font-size:11.5px; color:var(--muted); font-weight:500;}
-.mocknav div.aan{background:var(--blauw); color:#fff; font-weight:600;}
-.mockmain{flex:1; padding:18px; background:var(--bg);}
-.mockkpi{display:grid; grid-template-columns:repeat(4,1fr); background:var(--card); border:1px solid var(--border);
-  border-radius:14px; overflow:hidden; margin-bottom:14px;}
-.mockkpi div{padding:13px; border-right:1px solid var(--border);}
+/* mockup: rustig wit werkvlak */
+.mock{margin:64px auto 0; max-width:1000px; position:relative; z-index:2;}
+.mockvenster{background:var(--card); border-radius:var(--radius); box-shadow:var(--schaduw-l); overflow:hidden;}
+.mockbalk{display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1.5px solid var(--rand);}
+.mockactie{background:var(--amber); color:#fff; border-radius:var(--pil); padding:8px 18px; font-size:12.5px; font-weight:700;}
+.mockbody{display:flex; min-height:340px;}
+.mocknav{width:164px; border-right:1.5px solid var(--rand); padding:18px 12px; display:flex; flex-direction:column; gap:4px;}
+.mocknav div{padding:9px 14px; border-radius:var(--pil); font-size:12px; color:var(--muted-l); font-weight:600;}
+.mocknav div.aan{background:var(--ijsgroen); color:var(--groen);}
+.mockmain{flex:1; padding:0;}
+.mockkpi{display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1.5px solid var(--rand);}
+.mockkpi div{padding:18px 20px; border-right:1.5px solid var(--rand);}
 .mockkpi div:last-child{border-right:none;}
-.mockkpi .l{font-size:8.5px; color:var(--muted); font-weight:600; display:flex; align-items:center; gap:5px;}
-.mockkpi .l::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--blauw);}
-.mockkpi div:nth-child(2) .l::before{background:var(--green);}
-.mockkpi div:nth-child(3) .l::before{background:var(--amber);}
-.mockkpi div:nth-child(4) .l::before{background:var(--red);}
-.mockkpi .v{font-size:15px; font-weight:700; margin-top:3px; letter-spacing:-.4px;}
-.mockgraf{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px;}
-.mockbars{display:flex; align-items:flex-end; gap:7px; height:110px; margin-top:10px;}
-.mockbars i{flex:1; background:var(--soft-2); border-radius:5px 5px 2px 2px; display:block; transition:height 1s cubic-bezier(.2,.8,.3,1);}
-.mockbars i.aan{background:var(--blauw);}
-.tooltip{position:absolute; background:var(--navy); color:#fff; padding:6px 12px; border-radius:9px; font-size:11px;
-  font-weight:600; box-shadow:var(--schaduw-l); opacity:0; transform:translateY(6px); transition:.4s;}
+.mockkpi .l{font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l);}
+.mockkpi .v{font-family:'Sora',sans-serif; font-size:24px; font-weight:800; margin-top:4px;}
+.mockgraf{padding:18px 20px;}
+.mockgraf .kop-k{font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l);}
+.mockbars{display:flex; align-items:flex-end; gap:8px; height:120px; margin-top:14px;}
+.mockbars i{flex:1; background:var(--ijsgroen); border-radius:6px 6px 3px 3px; display:block; transition:height 1s cubic-bezier(.2,.8,.3,1);}
+.mockbars i.aan{background:var(--groen);}
+.tooltip{position:absolute; background:var(--petrol); color:var(--warmwit); padding:6px 14px; border-radius:var(--pil);
+  font-family:'Sora',sans-serif; font-size:12px; font-weight:700; box-shadow:var(--schaduw-l); opacity:0;
+  transform:translateY(6px); transition:.4s;}
 .tooltip.zie{opacity:1; transform:none;}
 
-/* ---------- secties ---------- */
-section{padding:88px 0;}
-.kop{text-align:center; max-width:620px; margin:0 auto 52px;}
-.kop .tag{display:inline-block; background:var(--lblauw); color:var(--blauw-d); font-size:11.5px; font-weight:700;
-  padding:5px 14px; border-radius:20px; letter-spacing:.05em; text-transform:uppercase; margin-bottom:16px;}
-h2{font-size:clamp(26px,3.6vw,38px); line-height:1.18; letter-spacing:-1px; font-weight:700; margin-bottom:14px;}
-.kop p{color:var(--muted); font-size:15.5px;}
+/* ---------- secties: links uitgelijnd ---------- */
+section{padding:92px 0;}
+.kop{max-width:720px; margin:0 0 52px;}
+.kop .tag{display:inline-block; background:var(--ijsgroen); color:var(--groen); font-size:12px; font-weight:700;
+  padding:7px 18px; border-radius:var(--pil); letter-spacing:.12em; text-transform:uppercase; margin-bottom:18px;}
+.kop p{color:var(--body); font-size:18px; line-height:1.55;}
 
-.rooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); gap:20px;}
-.f{background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px; box-shadow:var(--schaduw); transition:.25s;}
-.f:hover{transform:translateY(-5px); box-shadow:var(--schaduw-l);}
-.f .ic{width:48px; height:48px; border-radius:15px; background:var(--lblauw); display:flex; align-items:center;
-  justify-content:center; margin-bottom:18px; color:var(--blauw);}
-.i{width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round;}
-.f h3{font-size:16px; margin-bottom:8px; letter-spacing:-.2px;}
-.f p{font-size:13.5px; color:var(--muted); line-height:1.65;}
+.rooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px;}
+.f{background:var(--card); border-radius:var(--radius); padding:32px; box-shadow:var(--schaduw); transition:.25s;}
+.f:hover{transform:translateY(-4px); box-shadow:var(--schaduw-l);}
+.f .ic{width:56px; height:56px; border-radius:16px; background:var(--ijsgroen); display:flex; align-items:center;
+  justify-content:center; margin-bottom:20px; color:var(--groen);}
+.i{width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+.ic .i{width:28px; height:28px;}
+.f p{font-size:15px; color:var(--body); line-height:1.6;}
 
 /* stappen */
-.stappen{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:20px; counter-reset:s;}
-.st{background:var(--card); border:1px solid var(--border); border-radius:20px; padding:26px; position:relative; box-shadow:var(--schaduw);}
-.st .nr{width:34px; height:34px; border-radius:11px; background:var(--blauw); color:#fff; display:flex; align-items:center;
-  justify-content:center; font-weight:700; font-size:14px; margin-bottom:14px; box-shadow:0 6px 16px rgba(37,99,235,.3);}
-.st h3{font-size:15px; margin-bottom:7px;}
-.st p{font-size:13px; color:var(--muted);}
+.stappen{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:22px;}
+.st{background:var(--card); border-radius:var(--radius); padding:30px; box-shadow:var(--schaduw);}
+.st .nr{font-family:'Sora',sans-serif; font-size:34px; font-weight:800; line-height:1; color:var(--mint); margin-bottom:14px;}
+.st p{font-size:14.5px; color:var(--body);}
 
-/* cijfers */
-.cijfers{background:linear-gradient(135deg,var(--navy),var(--navy-2)); border-radius:26px; padding:52px 40px; color:#fff;
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:30px; text-align:center; position:relative; overflow:hidden;}
-.cijfers::before{content:''; position:absolute; width:400px; height:400px; border-radius:50%;
-  background:radial-gradient(circle,rgba(96,165,250,.28),transparent 70%); top:-160px; right:-100px;}
+/* cijfers: donker petrolvlak */
+.cijfers{background:radial-gradient(1200px 800px at 85% 15%,#0e4c44 0%,var(--petrol) 60%); border-radius:var(--radius);
+  padding:56px 48px; color:var(--warmwit); display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:34px;
+  position:relative; overflow:hidden;}
 .cijfers .c{position:relative; z-index:2;}
-.cijfers .n{font-size:38px; font-weight:800; letter-spacing:-1.4px;}
-.cijfers .t{font-size:12.5px; opacity:.72; margin-top:5px;}
+.cijfers .n{font-family:'Sora',sans-serif; font-size:46px; font-weight:800; letter-spacing:-.02em; color:var(--mint);}
+.cijfers .t{font-size:14px; color:#A8C5BE; margin-top:6px; line-height:1.45;}
 
 /* prijzen */
-.prijzen{display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:22px; align-items:start;}
-.p{background:var(--card); border:1.5px solid var(--border); border-radius:22px; padding:30px; box-shadow:var(--schaduw); transition:.25s; position:relative;}
-.p:hover{transform:translateY(-5px); box-shadow:var(--schaduw-l);}
-.p.pop{border-color:var(--blauw); box-shadow:0 10px 40px rgba(37,99,235,.16);}
-.p .badge{position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--blauw); color:#fff;
-  font-size:10.5px; font-weight:700; padding:5px 14px; border-radius:20px; letter-spacing:.05em;}
-.p .pn{font-weight:700; font-size:17px;}
-.p .pd{font-size:12.5px; color:var(--muted); margin-top:3px;}
-.p .pp{font-size:40px; font-weight:800; letter-spacing:-1.6px; margin:18px 0 4px;}
-.p .pp span{font-size:14px; font-weight:500; color:var(--muted); letter-spacing:0;}
-.p ul{list-style:none; margin:20px 0 24px; font-size:13.5px;}
-.p li{padding:8px 0 8px 24px; position:relative; color:var(--muted); line-height:1.55;}
-.p li::before{content:''; position:absolute; left:2px; top:13px; width:11px; height:6px;
-  border-left:2px solid var(--green); border-bottom:2px solid var(--green); transform:rotate(-45deg);}
+.prijzen{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:24px; align-items:start;}
+.p{background:var(--card); border-radius:var(--radius); padding:34px; box-shadow:var(--schaduw); transition:.25s; position:relative;}
+.p:hover{transform:translateY(-4px); box-shadow:var(--schaduw-l);}
+.p.pop{background:var(--petrol); color:var(--warmwit); box-shadow:var(--schaduw-l);}
+.p .badge{display:inline-block; background:var(--mint); color:var(--petrol); font-size:11px; font-weight:700;
+  padding:5px 14px; border-radius:var(--pil); letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;}
+.p .pn{font-family:'Sora',sans-serif; font-weight:700; font-size:24px;}
+.p .pd{font-size:14px; color:var(--muted-l); margin-top:4px;}
+.p.pop .pd{color:#A8C5BE;}
+.p .pp{font-family:'Sora',sans-serif; font-size:46px; font-weight:800; letter-spacing:-.02em; margin:20px 0 4px;}
+.p .pp span{font-family:'Instrument Sans',sans-serif; font-size:15px; font-weight:500; color:var(--muted-l); letter-spacing:0;}
+.p.pop .pp span{color:#A8C5BE;}
+.p ul{list-style:none; margin:22px 0 26px; font-size:15px;}
+.p li{padding:9px 0 9px 28px; position:relative; color:var(--body); line-height:1.5;}
+.p.pop li{color:#CFE2DD;}
+.p li::before{content:''; position:absolute; left:2px; top:15px; width:11px; height:6px;
+  border-left:2px solid var(--st-groen); border-bottom:2px solid var(--st-groen); transform:rotate(-45deg); border-radius:1px;}
+.p.pop li::before{border-color:var(--mint);}
 .p .btn{width:100%; text-align:center;}
 
 /* faq */
-.faq{max-width:760px; margin:0 auto;}
-.v{background:var(--card); border:1px solid var(--border); border-radius:16px; margin-bottom:11px; overflow:hidden; transition:.2s;}
-.v summary{padding:19px 22px; font-weight:600; font-size:14.5px; cursor:pointer; list-style:none; display:flex; align-items:center; gap:12px;}
+.faq{max-width:820px;}
+.v{background:var(--card); border-radius:var(--radius-s); margin-bottom:12px; overflow:hidden; transition:.2s; box-shadow:var(--schaduw);}
+.v summary{padding:22px 26px; font-weight:600; font-size:16px; cursor:pointer; list-style:none; display:flex; align-items:center; gap:12px;}
 .v summary::-webkit-details-marker{display:none;}
-.v summary::after{content:'+'; margin-left:auto; font-size:20px; color:var(--muted); font-weight:400; transition:.25s;}
-.v[open] summary::after{transform:rotate(45deg); color:var(--blauw);}
-.v p{padding:0 22px 20px; font-size:13.5px; color:var(--muted); line-height:1.7;}
-.v:hover{border-color:#D8E3F2;}
+.v summary::after{content:''; margin-left:auto; width:10px; height:10px; border-right:2px solid var(--muted-l);
+  border-bottom:2px solid var(--muted-l); transform:rotate(45deg); transition:.25s; flex:none;}
+.v[open] summary::after{transform:rotate(-135deg); border-color:var(--groen);}
+.v p{padding:0 26px 24px; font-size:15px; color:var(--body); line-height:1.65;}
 
 /* cta */
-.cta{background:linear-gradient(135deg,var(--blauw),#4F46E5); border-radius:28px; padding:60px 40px; text-align:center;
-  color:#fff; position:relative; overflow:hidden;}
-.cta::before{content:''; position:absolute; width:460px; height:460px; border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%); top:-180px; left:-80px;}
-.cta h2{color:#fff; position:relative; z-index:2;}
-.cta p{opacity:.9; max-width:520px; margin:0 auto 28px; position:relative; z-index:2;}
+.cta{background:radial-gradient(1000px 700px at 80% 20%,#0e4c44 0%,var(--groen) 60%); border-radius:var(--radius);
+  padding:66px 48px; color:var(--warmwit); position:relative; overflow:hidden;}
+.cta h2{color:var(--warmwit); position:relative; z-index:2; max-width:620px;}
+.cta p{color:#A8C5BE; max-width:540px; margin-bottom:30px; position:relative; z-index:2; font-size:18px;}
 .cta .btn{position:relative; z-index:2;}
 
-footer{padding:50px 0 40px; border-top:1px solid var(--border); margin-top:70px;}
-footer .in{display:flex; gap:20px; align-items:center; flex-wrap:wrap; font-size:13px; color:var(--muted);}
-footer .rechts{margin-left:auto; display:flex; gap:20px;}
-footer a:hover{color:var(--text);}
+footer{padding:54px 0 44px; border-top:1px solid var(--rand); margin-top:72px;}
+footer .in{display:flex; gap:22px; align-items:center; flex-wrap:wrap; font-size:14px; color:var(--muted);}
+footer .rechts{margin-left:auto; display:flex; gap:22px;}
+footer a:hover{color:var(--groen);}
+
+/* taalknop */
+#taalKnop{font-family:'Sora',sans-serif; font-weight:700; letter-spacing:.04em; min-width:52px;}
 
 /* scroll-animatie */
-.op{opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.22,.8,.3,1), transform .7s cubic-bezier(.22,.8,.3,1);}
+.op{opacity:0; transform:translateY(24px); transition:opacity .7s cubic-bezier(.22,.8,.3,1), transform .7s cubic-bezier(.22,.8,.3,1);}
 .op.zie{opacity:1; transform:none;}
-.voortgang{position:fixed; top:0; left:0; height:3px; background:linear-gradient(90deg,var(--blauw),#7C3AED); z-index:200; width:0;}
+.voortgang{position:fixed; top:0; left:0; height:3px; background:var(--groen); z-index:200; width:0;}
 @media(prefers-reduced-motion:reduce){ .op{opacity:1; transform:none; transition:none;} html{scroll-behavior:auto;} }
+
+@media(max-width:760px){
+  header.hero{padding:130px 0 70px;}
+  section{padding:70px 0;}
+  .mockbody{flex-direction:column;}
+  .mocknav{width:100%; flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1.5px solid var(--rand);}
+  .mockkpi{grid-template-columns:repeat(2,1fr);}
+  .mockkpi div:nth-child(2){border-right:none;}
+  .cijfers,.cta{padding:40px 28px;}
+}
 </style>
 </head>
 <body>
+<!-- Iconen: Lucide (lucide.dev), één lijngewicht, ronde uiteinden. Nooit gemengd of gevuld. -->
 <svg style="display:none" aria-hidden="true">
-  <symbol id="w-scan" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M3 12h18"/></symbol>
-  <symbol id="w-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4.5 4.5 0 0 1 6 5.9l-8 8a2.4 2.4 0 0 1-3.4-3.4l8-8"/><circle cx="6.5" cy="17.5" r="2.5"/></symbol>
-  <symbol id="w-message" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-5 2 1.4-4.4A8 8 0 1 1 21 12z"/></symbol>
-  <symbol id="w-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l3.5-4 3 2.5L18 8"/></symbol>
-  <symbol id="w-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12h11L21 7H6"/></symbol>
-  <symbol id="w-users" viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/><path d="M22 20v-2a4 4 0 0 0-3-3.8M16 3.3a4 4 0 0 1 0 7.4"/></symbol>
+  <symbol id="w-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="w-scan" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="w-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="w-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="w-chart" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+  <symbol id="w-cart" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="w-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="w-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="w-gereed" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
 </svg>
 <div class="voortgang" id="voortgang"></div>
 <div class="cur-ring" id="curRing"></div>
@@ -198,7 +243,7 @@ footer a:hover{color:var(--text);}
 
 <nav class="top" id="nav">
   <div class="wrap in">
-    <div class="merk"><div class="mk">S</div> Storvo<span style="color:var(--blauw)">.</span></div>
+    <a href="#" class="merk" aria-label="Storvo"><span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="wm">storvo</span></a>
     <div class="links">
       <a href="#functies" data-t="nav_functies">Functies</a>
       <a href="#werkwijze" data-t="nav_werkwijze">Hoe het werkt</a>
@@ -207,7 +252,7 @@ footer a:hover{color:var(--text);}
     </div>
     <button class="btn lijn klein" id="taalKnop" onclick="wisselTaal()" style="cursor:pointer">EN</button>
     <a href="/app/" class="btn lijn klein" data-t="nav_login">Inloggen</a>
-    <a href="#prijzen" class="btn klein" data-t="nav_try">Gratis proberen</a>
+    <a href="#prijzen" class="btn groen klein" data-t="nav_try">Gratis proberen</a>
   </div>
 </nav>
 
@@ -216,7 +261,7 @@ footer a:hover{color:var(--text);}
   <div class="blob b2" data-par="-0.1"></div>
   <div class="blob b3" data-par="0.08"></div>
   <div class="wrap in">
-    <div class="pill op" data-t="hero_pill"><b>NIEUW</b> Reparaties volgen via een live klantpagina</div>
+    <div class="pill op" data-t="hero_pill"><b>Nieuw</b> Je klant volgt de reparatie live mee</div>
     <h1 class="op" data-t="hero_h1">Je hele winkel in <span class="grad">één overzicht</span></h1>
     <p class="lead op" data-t="hero_lead">Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.</p>
     <div class="heroknoppen op">
@@ -229,23 +274,24 @@ footer a:hover{color:var(--text);}
   <div class="mock wrap op" id="mock">
     <div class="mockvenster">
       <div class="mockbalk">
-        <i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i>
+        <div class="merk" style="gap:9px"><span class="mk" style="width:30px;height:30px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="wm" style="font-size:19px">storvo</span></div>
+        <span class="mockactie" data-t="mock_actie">Nieuwe reparatie</span>
       </div>
       <div class="mockbody">
         <div class="mocknav">
-          <div class="aan" data-t="mock_dash">Dashboard</div><div data-t="mock_scan">Scannen</div><div data-t="mock_diensten">Diensten</div>
-          <div data-t="mock_rep">Reparaties</div><div data-t="mock_prod">Producten</div><div data-t="mock_best">Bestellingen</div><div>Team</div>
+          <div class="aan" data-t="mock_dash">Vandaag</div><div data-t="mock_scan">Voorraad</div><div data-t="mock_rep">Reparaties</div>
+          <div data-t="mock_diensten">Diensten</div><div data-t="mock_best">Bestellingen</div><div data-t="mock_prod">Rapporten</div><div>Team</div>
         </div>
         <div class="mockmain">
           <div class="mockkpi">
+            <div><div class="l" data-t="mock_rep2">Reparaties open</div><div class="v">14</div></div>
+            <div><div class="l" data-t="mock_tebestellen">Lage voorraad</div><div class="v" style="color:var(--st-rood)">6</div></div>
+            <div><div class="l" data-t="mock_winst">Marge deze week</div><div class="v" style="color:var(--st-groen)">38%</div></div>
             <div><div class="l" data-t="mock_omzet">Omzet</div><div class="v">€ 2.847</div></div>
-            <div><div class="l" data-t="mock_winst">Winst</div><div class="v" style="color:var(--green)">€ 1.219</div></div>
-            <div><div class="l" data-t="mock_rep2">Reparaties</div><div class="v">14</div></div>
-            <div><div class="l" data-t="mock_tebestellen">Te bestellen</div><div class="v" style="color:var(--red)">3</div></div>
           </div>
           <div class="mockgraf" style="position:relative">
-            <div style="font-size:11px; font-weight:600" data-t="mock_grafiek">Omzet deze week</div>
-            <div class="tooltip" id="tt" style="left:52%; top:34px">€ 640</div>
+            <div class="kop-k" data-t="mock_grafiek">Omzet deze week</div>
+            <div class="tooltip" id="tt" style="left:52%; top:44px">€ 640</div>
             <div class="mockbars" id="bars">
               <i style="height:36%"></i><i style="height:52%"></i><i style="height:44%"></i>
               <i class="aan" style="height:82%"></i><i style="height:58%"></i><i style="height:66%"></i><i style="height:40%"></i>
@@ -275,7 +321,7 @@ footer a:hover{color:var(--text);}
   </div>
 </section>
 
-<section id="werkwijze" style="background:var(--card); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
+<section id="werkwijze" style="background:var(--ijsgroen)">
   <div class="wrap">
     <div class="kop op">
       <div class="tag" data-t="w_tag">Hoe het werkt</div>
@@ -283,10 +329,10 @@ footer a:hover{color:var(--text);}
       <p data-t="w_p">Zo loopt een reparatie door het systeem, zonder dat je iets hoeft te onthouden.</p>
     </div>
     <div class="stappen">
-      <div class="st op"><div class="nr">1</div><h3 data-t="w1_h">Aanmelden</h3><p data-t="w1_p">Klantgegevens, toestel en reparatie invoeren. Je ziet meteen of het onderdeel op voorraad ligt en wat je eraan verdient.</p></div>
-      <div class="st op"><div class="nr">2</div><h3 data-t="w2_h">Bestellen</h3><p data-t="w2_p">Ligt het onderdeel er niet, dan komt het op de bestellijst vóór 16:30, met de verwachte leverdatum voor je klant.</p></div>
-      <div class="st op"><div class="nr">3</div><h3 data-t="w3_h">Repareren</h3><p data-t="w3_p">Onderdelen binnen en reparatie starten met een verwachte ophaaltijd. Loopt iets anders, dan zet je er een opmerking bij.</p></div>
-      <div class="st op"><div class="nr">4</div><h3 data-t="w4_h">Ophalen</h3><p data-t="w4_p">De klant krijgt bericht dat het klaar is en jij rekent af met pin of cash. De omzet staat meteen in je dashboard.</p></div>
+      <div class="st op"><div class="nr">01</div><h3 data-t="w1_h">Aanmelden</h3><p data-t="w1_p">Klantgegevens, toestel en reparatie invoeren. Je ziet meteen of het onderdeel op voorraad ligt en wat je eraan verdient.</p></div>
+      <div class="st op"><div class="nr">02</div><h3 data-t="w2_h">Bestellen</h3><p data-t="w2_p">Ligt het onderdeel er niet, dan komt het op de bestellijst vóór 16:30, met de verwachte leverdatum voor je klant.</p></div>
+      <div class="st op"><div class="nr">03</div><h3 data-t="w3_h">Repareren</h3><p data-t="w3_p">Onderdelen binnen en reparatie starten met een verwachte ophaaltijd. Loopt iets anders, dan zet je er een opmerking bij.</p></div>
+      <div class="st op"><div class="nr">04</div><h3 data-t="w4_h">Ophalen</h3><p data-t="w4_p">De klant krijgt bericht dat het klaar is en jij rekent af met pin of cash. De omzet staat meteen in je dashboard.</p></div>
     </div>
   </div>
 </section>
@@ -314,10 +360,10 @@ footer a:hover{color:var(--text);}
         <div class="pn">Start</div><div class="pd" data-t="p1_d">Voor de eenmanszaak</div>
         <div class="pp">€ 19,95<span data-t="p_mnd">/mnd</span></div>
         <ul data-t="p1_ul"><li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li></ul>
-        <a href="https://buy.stripe.com/7sY00l4Tg18pczaaRp33W00" class="btn wit" data-t="p_cta">Gratis proberen</a>
+        <a href="https://buy.stripe.com/7sY00l4Tg18pczaaRp33W00" class="btn lijn" data-t="p_cta">Gratis proberen</a>
       </div>
       <div class="p pop op">
-        <div class="badge" data-t="p_badge">MEEST GEKOZEN</div>
+        <div class="badge" data-t="p_badge">Meest gekozen</div>
         <div class="pn">Pro</div><div class="pd" data-t="p2_d">Voor de winkel die groeit</div>
         <div class="pp">€ 44,95<span data-t="p_mnd">/mnd</span></div>
         <ul data-t="p2_ul"><li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li></ul>
@@ -327,13 +373,13 @@ footer a:hover{color:var(--text);}
         <div class="pn">Enterprise</div><div class="pd" data-t="p3_d">Voor meerdere vestigingen</div>
         <div class="pp">€ 79,95<span data-t="p_mnd">/mnd</span></div>
         <ul data-t="p3_ul"><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>30 dagen proberen</li></ul>
-        <a href="https://buy.stripe.com/6oU4gBdpMg3j2YA5x533W02" class="btn wit" data-t="p_cta">Gratis proberen</a>
+        <a href="https://buy.stripe.com/6oU4gBdpMg3j2YA5x533W02" class="btn lijn" data-t="p_cta">Gratis proberen</a>
       </div>
     </div>
   </div>
 </section>
 
-<section id="vragen" style="background:var(--card); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
+<section id="vragen" style="background:var(--ijsgroen)">
   <div class="wrap">
     <div class="kop op">
       <div class="tag" data-t="q_tag">Vragen</div>
@@ -353,21 +399,25 @@ footer a:hover{color:var(--text);}
 <section id="contact">
   <div class="wrap">
     <div class="cta op">
+      <div class="label" style="color:var(--mint); margin-bottom:14px" data-t="cta_label">Alles geregeld</div>
       <h2 data-t="cta_h2">Klaar om je winkel rustiger te maken?</h2>
       <p data-t="cta_p">Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.</p>
-      <a href="mailto:info@storvo.app?subject=Ik%20wil%20het%20graag%20proberen" class="btn wit" data-t="cta_btn">Start je proefperiode</a>
+      <a href="mailto:info@storvo.app?subject=Ik%20wil%20het%20graag%20proberen" class="btn" data-t="cta_btn">Start je proefperiode</a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap in">
-    <div class="merk" style="font-size:15px"><div class="mk" style="width:32px;height:32px;font-size:15px;border-radius:10px">S</div> Storvo</div>
+    <div>
+      <div class="merk"><span class="mk" style="width:32px;height:32px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="wm" style="font-size:21px">storvo</span></div>
+      <div class="sora" style="font-size:14px; font-weight:700; color:var(--groen); margin-top:8px" data-t="tagline">Alles geregeld.</div>
+    </div>
     <div class="rechts">
       <a href="#functies" data-t="nav_functies">Functies</a><a href="#prijzen" data-t="nav_prijzen">Prijzen</a><a href="mailto:info@storvo.app">Contact</a>
     </div>
   </div>
-  <div class="wrap" style="margin-top:18px; font-size:12px; color:var(--muted)" data-t="footer_c">© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.</div>
+  <div class="wrap" style="margin-top:22px; font-size:13px; color:var(--muted-l)" data-t="footer_c">© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.</div>
 </footer>
 
 <script>
@@ -389,7 +439,7 @@ document.querySelectorAll('a,button,summary,.f,.p,.st').forEach(el=>{
 });
 
 /* scroll-animaties (met veiligheidsnet voor oude browsers) */
-const heeftIO = 'IntersectionObserver' in window;
+const heeftIO = 'IntersectionObserver'in window;
 if(heeftIO){
   const io=new IntersectionObserver((es)=>{
     es.forEach((e,i)=>{ if(e.isIntersecting){ setTimeout(()=>e.target.classList.add('zie'), (i%6)*70); io.unobserve(e.target); } });
@@ -455,13 +505,14 @@ nl:{
   title:'Storvo · Voorraad &amp; reparaties voor telefoonwinkels',
   nav_functies:'Functies', nav_werkwijze:'Hoe het werkt', nav_prijzen:'Prijzen', nav_vragen:'Vragen',
   nav_login:'Inloggen', nav_try:'Gratis proberen',
-  hero_pill:'<b>NIEUW</b> Reparaties volgen via een live klantpagina',
+  hero_pill:'<b>Nieuw</b> Je klant volgt de reparatie live mee',
   hero_h1:'Je hele winkel in <span class="grad">één overzicht</span>',
   hero_lead:'Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.',
   hero_cta1:'14 dagen gratis proberen', hero_cta2:'Bekijk hoe het werkt',
   hero_note:'Geen creditcard nodig. Binnen tien minuten ingericht.',
-  mock_dash:'Dashboard', mock_scan:'Scannen', mock_diensten:'Diensten', mock_rep:'Reparaties', mock_prod:'Producten', mock_best:'Bestellingen',
-  mock_omzet:'Omzet', mock_winst:'Winst', mock_rep2:'Reparaties', mock_tebestellen:'Te bestellen', mock_grafiek:'Omzet deze week',
+  mock_actie:'Nieuwe reparatie',
+  mock_dash:'Vandaag', mock_scan:'Voorraad', mock_diensten:'Diensten', mock_rep:'Reparaties', mock_prod:'Rapporten', mock_best:'Bestellingen',
+  mock_omzet:'Omzet', mock_winst:'Marge deze week', mock_rep2:'Reparaties open', mock_tebestellen:'Lage voorraad', mock_grafiek:'Omzet deze week',
   f_tag:'Functies', f_h2:'Alles wat je nodig hebt, niets wat je afleidt',
   f_p:'Eén systeem voor je voorraad, je reparaties en je cijfers, in plaats van drie schriften en een spreadsheet.',
   f1_h:'Scannen dat gewoon werkt', f1_p:'Scan waar je ook bent in de app. Er verschijnt meteen een venster om in of uit te boeken. Staat een barcode nog niet in het systeem, dan maak je het product direct aan.',
@@ -479,7 +530,7 @@ nl:{
   c3:'opstartkosten, maandelijks opzegbaar', c4:'minuten om je hele winkel in te richten',
   p_tag:'Prijzen', p_h2:'Eerlijke prijs, geen verrassingen',
   p_p:'Alle bedragen per maand, exclusief btw. Eerst 14 dagen gratis proberen, daarna maandelijks opzegbaar.',
-  p_mnd:'/mnd', p_cta:'Gratis proberen', p_badge:'MEEST GEKOZEN',
+  p_mnd:'/mnd', p_cta:'Gratis proberen', p_badge:'Meest gekozen',
   p1_d:'Voor de eenmanszaak',
   p1_ul:'<li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li>',
   p2_d:'Voor de winkel die groeit',
@@ -493,6 +544,7 @@ nl:{
   q4_s:'Kan ik mijn eigen huisstijl gebruiken?', q4_p:'Ja, vanaf het Pro-pakket. Logo uploaden, kleuren instellen met hexcode, en zowel de app als de klantpagina nemen dat over.',
   q5_s:'Wat gebeurt er met mijn gegevens als ik stop?', q5_p:'Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.',
   q6_s:'Zitten er kosten aan het opstarten?', q6_p:'Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.',
+  cta_label:'Alles geregeld', tagline:'Alles geregeld.',
   cta_h2:'Klaar om je winkel rustiger te maken?', cta_p:'Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.',
   cta_btn:'Start je proefperiode',
   footer_c:'© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.'
@@ -501,13 +553,14 @@ en:{
   title:'Storvo · Inventory &amp; repairs for phone shops',
   nav_functies:'Features', nav_werkwijze:'How it works', nav_prijzen:'Pricing', nav_vragen:'FAQ',
   nav_login:'Log in', nav_try:'Try for free',
-  hero_pill:'<b>NEW</b> Track repairs on a live customer page',
+  hero_pill:'<b>New</b> Your customer follows the repair live',
   hero_h1:'Your whole shop in <span class="grad">one overview</span>',
   hero_lead:'Scan inventory, track repairs, keep customers informed and see exactly what you earn. Built for phone shops, together with phone shops.',
   hero_cta1:'Try free for 14 days', hero_cta2:'See how it works',
   hero_note:'No credit card required. Set up in ten minutes.',
-  mock_dash:'Dashboard', mock_scan:'Scan', mock_diensten:'Services', mock_rep:'Repairs', mock_prod:'Products', mock_best:'Orders',
-  mock_omzet:'Revenue', mock_winst:'Profit', mock_rep2:'Repairs', mock_tebestellen:'To order', mock_grafiek:'Revenue this week',
+  mock_actie:'New repair',
+  mock_dash:'Today', mock_scan:'Stock', mock_diensten:'Services', mock_rep:'Repairs', mock_prod:'Reports', mock_best:'Orders',
+  mock_omzet:'Revenue', mock_winst:'Margin this week', mock_rep2:'Repairs open', mock_tebestellen:'Low stock', mock_grafiek:'Revenue this week',
   f_tag:'Features', f_h2:'Everything you need, nothing that distracts',
   f_p:'One system for your inventory, repairs and numbers, instead of three notebooks and a spreadsheet.',
   f1_h:'Scanning that just works', f1_p:'Scan from anywhere in the app. A window pops up right away to book stock in or out. If a barcode is not in the system yet, you create the product on the spot.',
@@ -525,7 +578,7 @@ en:{
   c3:'setup costs, cancel monthly', c4:'minutes to set up your entire shop',
   p_tag:'Pricing', p_h2:'A fair price, no surprises',
   p_p:'All amounts per month, excluding VAT. Try free for 14 days first, then cancel monthly.',
-  p_mnd:'/mo', p_cta:'Try for free', p_badge:'MOST POPULAR',
+  p_mnd:'/mo', p_cta:'Try for free', p_badge:'Most popular',
   p1_d:'For the one-person shop',
   p1_ul:'<li>Inventory &amp; scanning</li><li>Repairs with customer page</li><li>Order list and deliveries</li><li>Up to 2 employees</li><li>1 location</li>',
   p2_d:'For the growing shop',
@@ -533,12 +586,13 @@ en:{
   p3_d:'For multiple locations',
   p3_ul:'<li>Everything in Pro</li><li>Unlimited locations and teams</li><li>Numbers per location</li><li>Priority support</li><li>30-day trial</li>',
   q_tag:'FAQ', q_h2:'Good to know',
-  q1_s:'Can I transfer my current inventory?', q1_p:'Yes. You can create individual products, but "quick add" is faster: pick a product type, scan the barcode per phone model and it is in. Hundreds of cases or screen protectors are entered in no time.',
+  q1_s:'Can I transfer my current inventory?', q1_p:'Yes. You can create individual products, but "quick add"is faster: pick a product type, scan the barcode per phone model and it is in. Hundreds of cases or screen protectors are entered in no time.',
   q2_s:'Does it work with my barcode scanner?', q2_p:'Almost every USB or Bluetooth scanner works, because it behaves like a keyboard. Nothing to install: just scan, wherever you are in the app.',
   q3_s:'How does my customer get status updates?', q3_p:'By email or text, with a link to a page in your branding where the customer follows the progress live. You decide per customer whether messages are sent.',
   q4_s:'Can I use my own branding?', q4_p:'Yes, from the Pro plan. Upload your logo, set colours with a hex code, and both the app and the customer page take it over.',
   q5_s:'What happens to my data if I stop?', q5_p:'You can download a full backup at any time. If you cancel, your data stays available for 30 days so you can export everything.',
   q6_s:'Are there any setup costs?', q6_p:'No. No setup costs and no annual contract. You pay per month and cancel whenever you want.',
+  cta_label:'All taken care of', tagline:'All taken care of.',
   cta_h2:'Ready to make your shop calmer?', cta_p:'Try it free for 14 days. Not happy? Then you stop without any hassle.',
   cta_btn:'Start your free trial',
   footer_c:'© 2026 Storvo. Inventory and repair software for phone shops.'

@@ -4,15 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beheerpaneel voor abonnementen en klanten</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#12183d; --navy-2:#1d2557; --lblauw:#D6E8F5; --paars:#635BFF; --paars-d:#4b45cc;
-    --bg:#F4F8FC; --card:#fff; --text:#12183d; --muted:#7b86a8; --border:#e3ebf4;
-    --green:#1a9e57; --amber:#c98a00; --red:#d43a3a; --radius:14px;
+    --navy:#123F39; --navy-2:#0E4C44; --lblauw:#E7F1EE; --paars:#0B5B52; --paars-d:#093F39;
+    --actie:#E88A1D; --actie-d:#CE7811; --mint:#7FC4B6;
+    --bg:#F7F6F3; --card:#fff; --text:#17201E; --muted:#5B6663; --muted-l:#8A938F; --border:#ECEAE4;
+    --soft-2:#F0EEE8;
+    --green:#1E9E6A; --green-soft:#E3F4EC; --green-tekst:#177A51;
+    --amber:#E8B31D; --amber-soft:#FAF0D8; --amber-tekst:#946C07;
+    --red:#D64545; --red-soft:#FAE4E4; --red-tekst:#A33333;
+    --radius:24px; --pil:100px;
+    --schaduw:0 6px 24px rgba(23,32,30,.07); --schaduw-l:0 10px 34px rgba(23,32,30,.10);
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{font-family:'Poppins',-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh;}
+  body{font-family:'Instrument Sans',-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh;}
   aside{width:230px; background:var(--navy); color:#fff; padding:22px 14px; display:flex; flex-direction:column; gap:4px; position:fixed; top:0; bottom:0; left:0;}
   .logo{display:flex; align-items:center; gap:10px; padding:0 8px 22px;}
   .logo .mark{width:38px; height:38px; background:var(--paars); border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;}
@@ -58,7 +64,7 @@
   .warnbox{background:#fff3d6; border:1.5px solid #f0d98e; border-radius:10px; padding:14px 16px; font-size:13.5px; line-height:1.6;}
   .planbox{border:2px solid var(--border); border-radius:14px; padding:18px;}
   .planbox.pop{border-color:var(--paars);}
-  .planbox .pn{font-weight:700; font-size:15px;}
+  .planbox .pn{font-family:'Sora',sans-serif; font-weight:700; font-size:18px;}
   .planbox .pp{font-size:26px; font-weight:800; margin:6px 0 10px;}
 /* ============ MODULAIRE LAYOUT v4 ============ */
   body{font-size:15px;}
@@ -111,88 +117,89 @@
 
 /* ============ DESIGNSYSTEEM v3 ============ */
   :root{
-    --navy:#0B1A33; --navy-2:#16294a; --paars:#2563EB; --paars-d:#1D4FD8;
-    --bg:#F1F5FB; --card:#FFFFFF; --soft:#F5F8FD; --soft-2:#EDF3FB; --border:#E9EFF8;
-    --lblauw:#E8F0FE; --text:#0B1A33; --muted:#7A8BA8;
-    --green:#16A34A; --green-soft:#E8F7EE; --red:#E11D48; --red-soft:#FDECF1;
-    --amber:#F59E0B; --amber-soft:#FEF4E2; --radius:20px;
-    --schaduw:0 1px 2px rgba(11,26,51,.04), 0 8px 24px rgba(11,26,51,.05);
-    --schaduw-l:0 2px 6px rgba(11,26,51,.06), 0 18px 48px rgba(11,26,51,.10);
+    --navy:#123F39; --navy-2:#0E4C44; --paars:#0B5B52; --paars-d:#093F39;
+    --actie:#E88A1D; --actie-d:#CE7811; --mint:#7FC4B6;
+    --bg:#F7F6F3; --card:#FFFFFF; --soft:#F7F6F3; --soft-2:#F0EEE8; --border:#ECEAE4;
+    --lblauw:#E7F1EE; --text:#17201E; --muted:#5B6663; --muted-l:#8A938F;
+    --green:#1E9E6A; --green-soft:#E3F4EC; --green-tekst:#177A51;
+    --red:#D64545; --red-soft:#FAE4E4; --red-tekst:#A33333;
+    --amber:#E8B31D; --amber-soft:#FAF0D8; --amber-tekst:#946C07;
+    --radius:24px; --pil:100px;
+    --schaduw:0 6px 24px rgba(23,32,30,.07);
+    --schaduw-l:0 10px 34px rgba(23,32,30,.10);
   }
   html{scroll-behavior:smooth;}
-  body{font-size:14px; -webkit-font-smoothing:antialiased;}
-  ::selection{background:var(--paars); color:#fff;}
+  body{font-size:15px; -webkit-font-smoothing:antialiased;}
+  ::selection{background:var(--lblauw); color:var(--paars);}
   ::-webkit-scrollbar{width:10px; height:10px;}
-  ::-webkit-scrollbar-thumb{background:#D9E3F0; border-radius:8px; border:3px solid transparent; background-clip:content-box;}
+  ::-webkit-scrollbar-thumb{background:#DDD9D1; border-radius:8px; border:3px solid transparent; background-clip:content-box;}
 
-  aside{width:246px; background:var(--card); color:var(--text); padding:26px 16px 20px; border-right:1px solid var(--border);}
+  aside{width:246px; background:var(--card); color:var(--text); padding:26px 16px 20px; border-right:1.5px solid var(--border);}
   .logo{padding:0 8px 26px; gap:11px;}
-  .logo .mark{width:40px; height:40px; background:var(--paars); border-radius:13px; font-size:19px; color:#fff;
-    box-shadow:0 6px 16px rgba(37,99,235,.34);}
-  .logo .name{font-weight:700; font-size:16.5px; color:var(--text); letter-spacing:-.2px;}
-  .logo .sub{font-size:9.5px; font-weight:600; color:var(--muted); letter-spacing:.14em; opacity:1;}
+  .logo .mark{width:40px; height:40px; background:var(--paars); border-radius:10px; font-size:19px; color:#F7F6F3; box-shadow:none;}
+  .logo .mark .i{width:22px; height:22px; stroke-width:2.4;}
+  .logo .name{font-family:'Sora',sans-serif; font-weight:800; font-size:22px; color:var(--text); letter-spacing:-.04em; line-height:1;}
+  .logo .sub{font-size:10px; font-weight:700; color:var(--muted-l); letter-spacing:.12em; text-transform:uppercase; margin-top:4px;}
   aside nav{gap:2px;}
-  aside nav button{color:var(--muted); padding:11px 13px; border-radius:12px; gap:11px; transition:.16s;}
-  aside nav button:hover{background:var(--soft); color:var(--text);}
-  aside nav button.active{background:var(--paars); color:#fff; box-shadow:0 6px 18px rgba(37,99,235,.32);}
+  aside nav button{color:var(--muted-l); padding:11px 16px; border-radius:var(--pil); gap:11px; font-weight:600; transition:.16s;}
+  aside nav button:hover{background:var(--soft-2); color:var(--text);}
+  aside nav button.active{background:var(--lblauw); color:var(--paars); box-shadow:none;}
   aside .foot{color:var(--muted); opacity:.75; padding:0 10px; line-height:1.5;}
   main{margin-left:246px; padding:26px 32px 60px; max-width:1320px;}
 
   .pagehead{margin-bottom:22px; gap:12px;}
-  .pagehead h1{font-size:22px; letter-spacing:-.4px;}
-  .card{border-radius:var(--radius); padding:22px 24px; margin-bottom:18px; box-shadow:var(--schaduw);}
-  h2{font-size:14.5px; margin-bottom:16px; letter-spacing:-.1px;}
-  label{font-size:11.5px; margin-bottom:6px;}
-  input,select,textarea{padding:11px 13px; border-radius:12px; transition:.15s;}
-  input:hover,select:hover{border-color:#D8E3F2;}
-  input:focus,select:focus{border-color:var(--paars); box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+  .pagehead h1{font-family:'Sora',sans-serif; font-size:26px; font-weight:800; letter-spacing:-.02em;}
+  .card{border-radius:var(--radius); border:none; padding:24px 26px; margin-bottom:20px; box-shadow:var(--schaduw);}
+  h2{font-family:'Sora',sans-serif; font-size:16px; font-weight:700; margin-bottom:18px;}
+  label{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-l); margin-bottom:7px;}
+  input,select,textarea{padding:12px 14px; border-radius:14px; transition:.15s;}
+  input:hover,select:hover{border-color:#DCD8D0;}
+  input:focus,select:focus{border-color:var(--paars); box-shadow:0 0 0 4px rgba(11,91,82,.10);}
   .grid{gap:14px;} .row{gap:12px;}
 
-  .btn{padding:11px 20px; border-radius:12px; transition:.16s; box-shadow:0 4px 14px rgba(37,99,235,.26);}
-  .btn:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(37,99,235,.34);}
-  .btn.ghost{background:var(--card); color:var(--text); border:1.5px solid var(--border); box-shadow:none;}
-  .btn.ghost:hover{background:var(--soft); border-color:#D8E3F2;}
-  .btn.danger{background:var(--red); box-shadow:0 4px 14px rgba(225,29,72,.24);}
-  .btn.small{padding:6px 12px; font-size:12px; border-radius:9px; box-shadow:none;}
+  .btn{padding:12px 22px; border-radius:var(--pil); font-weight:700; transition:.16s; box-shadow:0 5px 16px rgba(11,91,82,.20);}
+  .btn:hover{transform:translateY(-1px); box-shadow:0 9px 22px rgba(11,91,82,.26);}
+  .btn.actie{background:var(--actie); box-shadow:0 5px 16px rgba(232,138,29,.24);}
+  .btn.actie:hover{background:var(--actie-d); box-shadow:0 9px 22px rgba(232,138,29,.3);}
+  .btn.ghost{background:var(--card); color:var(--paars); border:1.5px solid rgba(11,91,82,.24); box-shadow:none;}
+  .btn.ghost:hover{background:var(--lblauw); border-color:var(--paars);}
+  .btn.danger{background:var(--red); box-shadow:0 5px 16px rgba(214,69,69,.22);}
+  .btn.small{padding:7px 15px; font-size:12.5px; border-radius:var(--pil); box-shadow:none;}
   .btn.small:hover{transform:none;}
 
-  th{font-size:10.5px; letter-spacing:.07em; padding-bottom:12px;}
-  th,td{padding:12px 10px;}
+  th{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); padding-bottom:13px;}
+  th,td{padding:13px 12px; border-bottom:1px solid var(--soft-2);}
   th:first-child,td:first-child{padding-left:2px;}
-  tbody tr{transition:.14s;} tbody tr:hover{background:var(--soft);}
+  tbody tr{transition:.14s;} tbody tr:hover{background:var(--soft-2);}
 
-  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); background:var(--card);
-    border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--schaduw); overflow:hidden; gap:0; margin-bottom:18px;}
-  .kpi{padding:20px 22px; border:none; border-right:1px solid var(--border); border-radius:0; background:var(--card);}
-  .kpi:last-child{border-right:none;}
-  .kpi .l{font-size:11px; text-transform:none; letter-spacing:.03em; display:flex; align-items:center; gap:7px; color:var(--muted);}
-  .kpi .l::before{content:''; width:8px; height:8px; border-radius:50%; background:var(--paars); flex:none;}
-  .kpis .kpi:nth-child(2) .l::before{background:var(--green);}
-  .kpis .kpi:nth-child(3) .l::before{background:#8B5CF6;}
-  .kpis .kpi:nth-child(4) .l::before{background:var(--amber);}
-  .kpis .kpi:nth-child(5) .l::before{background:var(--red);}
-  .kpi .v{font-size:23px; font-weight:700; margin-top:7px; letter-spacing:-.6px; color:var(--text);}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); background:none;
+    border:none; border-radius:0; box-shadow:none; overflow:visible; gap:18px; margin-bottom:20px;}
+  .kpi{padding:22px 24px; border:none; border-radius:18px; background:var(--card); box-shadow:var(--schaduw); transition:.2s;}
+  .kpi:hover{transform:translateY(-2px); box-shadow:var(--schaduw-l);}
+  .kpi .l{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l);}
+  .kpi .l::before{display:none;}
+  .kpi .v{font-family:'Sora',sans-serif; font-size:30px; font-weight:800; margin-top:8px; letter-spacing:-.02em; color:var(--text);}
   .kpi.accent{background:var(--card); border-color:var(--border);}
   .kpi.accent .l{color:var(--muted);} .kpi.accent .v{color:var(--paars);}
-  @media(max-width:760px){ .kpi{border-right:none; border-bottom:1px solid var(--border);} }
+  
 
-  .chip{font-size:10.5px; padding:4px 11px; border-radius:20px;}
-  .chip.actief{background:var(--green-soft); color:#0f6b38;}
-  .chip.proef{background:var(--amber-soft); color:#96650a;}
-  .chip.achterstallig{background:var(--red-soft); color:#a3123c;}
+  .chip{font-size:11.5px; font-weight:700; padding:5px 14px; border-radius:var(--pil);}
+  .chip.actief{background:var(--green-soft); color:var(--green-tekst);}
+  .chip.proef{background:var(--amber-soft); color:var(--amber-tekst);}
+  .chip.achterstallig{background:var(--red-soft); color:var(--red-tekst);}
   .chip.opgezegd{background:var(--soft-2); color:var(--muted);}
-  .infobox{background:var(--soft); border:1px solid var(--border); border-radius:14px; padding:16px 18px; line-height:1.7;}
-  .warnbox{background:var(--amber-soft); border:1px solid #F6DFB0; border-radius:14px; padding:16px 18px; line-height:1.7;}
+  .infobox{background:var(--lblauw); border:none; border-radius:18px; padding:16px 18px; line-height:1.7; color:var(--muted);}
+  .warnbox{background:var(--amber-soft); border:none; border-radius:18px; padding:16px 18px; line-height:1.7; color:var(--amber-tekst);}
   .planbox{border:1.5px solid var(--border); border-radius:18px; padding:22px; background:var(--card); transition:.2s;}
   .planbox:hover{transform:translateY(-3px); box-shadow:var(--schaduw);}
-  .planbox.pop{border-color:var(--paars); box-shadow:0 8px 30px rgba(37,99,235,.14);}
-  .planbox .pn{font-weight:700; font-size:15px;}
-  .planbox .pp{font-size:28px; font-weight:700; margin:8px 0 14px; letter-spacing:-.8px; color:var(--paars);}
+  .planbox.pop{border-color:var(--paars); box-shadow:var(--schaduw-l);}
+  .planbox .pn{font-family:'Sora',sans-serif; font-weight:700; font-size:18px;}
+  .planbox .pp{font-family:'Sora',sans-serif; font-size:30px; font-weight:800; margin:8px 0 14px; letter-spacing:-.02em; color:var(--paars);}
   .planbox ul{font-size:12.5px; line-height:2;}
   code{background:var(--soft-2); padding:2px 7px; border-radius:6px; font-size:12px;}
   .stap{padding:14px 0; line-height:1.7; gap:14px;}
-  .stap .nr{width:28px; height:28px; background:var(--paars); box-shadow:0 4px 12px rgba(37,99,235,.28);}
-  .toast{background:rgba(11,26,51,.95); backdrop-filter:blur(10px); padding:13px 18px; border-radius:14px; font-size:13px;
+  .stap .nr{width:28px; height:28px; background:var(--lblauw); color:var(--paars); font-family:'Sora',sans-serif; box-shadow:none;}
+  .toast{background:var(--navy); color:#F7F6F3; padding:14px 20px; border-radius:18px; font-size:13.5px;
     box-shadow:var(--schaduw-l); animation:toastin .28s cubic-bezier(.34,1.3,.64,1);}
   @keyframes toastin{from{opacity:0; transform:translateX(30px)}to{opacity:1; transform:none}}
   @media(max-width:860px){
@@ -202,19 +209,16 @@
     body{flex-direction:column;} main{margin-left:0; padding:18px;}
   }
   /* iconen */
-  .i{width:17px; height:17px; flex:none; stroke:currentColor; fill:none; stroke-width:1.7;
-     stroke-linecap:round; stroke-linejoin:round; vertical-align:-3px;}
-  .i.s{width:14px; height:14px; vertical-align:-2.5px;}
-  h2 .i{margin-right:9px; color:var(--muted);}
+  .i{width:20px; height:20px; flex:none; stroke:currentColor; fill:none; stroke-width:2;
+     stroke-linecap:round; stroke-linejoin:round; vertical-align:-4px;}
+  .i.s{width:16px; height:16px; vertical-align:-3px;}
+  h2 .i{margin-right:10px; color:var(--paars);}
   .btn .i{margin-right:7px;}
   .icoknop{display:inline-flex; align-items:center; justify-content:center; padding:6px 9px;}
   .icoknop .i{margin:0;}
-  /* doorlopende scheidingslijn */
   .kpis{align-items:stretch;}
-  .kpi{border-right:none; position:relative; display:flex; flex-direction:column; justify-content:center; padding:22px 24px;}
-  .kpi::after{content:''; position:absolute; top:0; bottom:0; right:0; width:1px; background:var(--border);}
-  .kpi:last-child::after{display:none;}
-  @media(max-width:760px){ .kpi::after{top:auto; left:0; right:0; bottom:0; height:1px; width:auto;} }
+  .kpi{position:relative; display:flex; flex-direction:column; justify-content:center;}
+  .kpi::after{display:none;}
   /* tekstritme */
   body{line-height:1.55;}
   h2{display:flex; align-items:center; line-height:1.4;}
@@ -228,23 +232,23 @@
 </head>
 <body>
 <svg style="display:none" aria-hidden="true">
-  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l3.5-4 3 2.5L18 8"/></symbol>
-  <symbol id="i-shop" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9h18M3 9v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/><path d="M9 20v-6h6v6"/></symbol>
-  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></symbol>
-  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></symbol>
-  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 2c3.5 2 6 6 6 10l-3 3H9l-3-3c0-4 2.5-8 6-10z"/><circle cx="12" cy="9" r="2"/><path d="M9 15l-2 5 5-2 5 2-2-5"/></symbol>
-  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/></symbol>
-  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3.5 6h17M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6M18.5 6l-.8 13a2 2 0 0 1-2 1.9H8.3a2 2 0 0 1-2-1.9L5.5 6"/></symbol>
-  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
-  <symbol id="i-exit" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M17 8l4 4-4 4M21 12H10"/></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.4"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
-  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 15H3a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.5V4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 20.5 11h.5a2 2 0 1 1 0 4h-.2z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></symbol>
+  <symbol id="i-shop" viewBox="0 0 24 24"><path d="M15 21v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91 0z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-exit" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
 </svg>
 <aside>
   <div class="logo">
-    <div class="mark"><svg class="i" style="width:20px;height:20px"><use href="#i-settings"/></svg></div>
-    <div><div class="name">Storvo</div><div class="sub">Beheerpaneel</div></div>
+    <div class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <div><div class="name">storvo</div><div class="sub">Beheerpaneel</div></div>
   </div>
   <nav>
     <button data-tab="overzicht" class="active"><svg class="i"><use href="#i-chart"/></svg> Overzicht</button>
@@ -261,7 +265,7 @@
 
 <section id="tab-overzicht">
   <div class="pagehead"><h1>Overzicht</h1></div>
-  <div class="warnbox" style="margin-bottom:20px">⚠️ <b>Demo-omgeving.</b> Dit paneel laat zien hoe je abonnementen beheert, met alle Stripe-velden al op hun plek. Echte betalingen, facturen en het afsluiten van de app bij niet betalen werken pas zodra dit op een server draait. Zie het tabblad Live gaan.</div>
+  <div class="warnbox" style="margin-bottom:20px"> <b>Demo-omgeving.</b> Dit paneel laat zien hoe je abonnementen beheert, met alle Stripe-velden al op hun plek. Echte betalingen, facturen en het afsluiten van de app bij niet betalen werken pas zodra dit op een server draait. Zie het tabblad Live gaan.</div>
   <div class="kpis" id="kpis"></div>
   <div class="modules">
     <div class="card">
@@ -275,7 +279,7 @@
   </div>
 </section>
 
-<section id="tab-klanten" hidden>
+<section id="tab-klanten"hidden>
   <div class="pagehead"><h1>Klanten (winkels)</h1></div>
   <div class="card">
     <div style="overflow-x:auto">
@@ -296,13 +300,13 @@
         <option value="proef">Proefperiode</option><option value="actief">Actief</option>
         <option value="achterstallig">Betaling mislukt</option><option value="opgezegd">Opgezegd</option></select></div>
     </div>
-    <button class="btn" onclick="voegKlantToe()">Klant toevoegen</button>
+    <button class="btn actie" onclick="voegKlantToe()">Klant toevoegen</button>
   </div>
 </section>
 
-<section id="tab-teams" hidden>
+<section id="tab-teams"hidden>
   <div class="pagehead"><h1>Teams &amp; accounts</h1></div>
-  <div class="warnbox" style="margin-bottom:20px">⚠️ Dit overzicht toont echte accountgegevens (namen, gebruikersnamen, e-mailadressen) van al je klanten. Dit tabblad is nog niet met een eigen inlog beveiligd — deel de link naar dit paneel met niemand.</div>
+  <div class="warnbox" style="margin-bottom:20px"> Dit overzicht toont echte accountgegevens (namen, gebruikersnamen, e-mailadressen) van al je klanten. Dit tabblad is nog niet met een eigen inlog beveiligd — deel de link naar dit paneel met niemand.</div>
   <div class="card" id="teamsOverzichtKaart">
     <h2>Alle teams</h2>
     <div style="overflow-x:auto">
@@ -312,7 +316,7 @@
     </table>
     </div>
   </div>
-  <div class="card" id="teamDetailKaart" hidden>
+  <div class="card" id="teamDetailKaart"hidden>
     <h2 id="teamDetailTitel">Team</h2>
     <div style="overflow-x:auto">
     <table>
@@ -324,7 +328,7 @@
   </div>
 </section>
 
-<section id="tab-plannen" hidden>
+<section id="tab-plannen"hidden>
   <div class="pagehead"><h1>Abonnementen</h1></div>
   <div class="card">
     <h2>Jouw pakketten</h2>
@@ -348,10 +352,10 @@
   </div>
 </section>
 
-<section id="tab-stripe" hidden>
+<section id="tab-stripe"hidden>
   <div class="pagehead"><h1>Stripe-koppeling</h1></div>
   <div class="card">
-    <div class="warnbox" style="margin-bottom:18px">⚠️ <b>Belangrijk.</b> Je geheime Stripe-sleutel hoort nooit in een bestand dat in de browser draait. Iedereen kan die dan uitlezen en betalingen namens jou doen. Bewaar hem alleen op je server. Hieronder vul je de publieke gegevens in. De geheime sleutel zet je later in de serveromgeving.</div>
+    <div class="warnbox" style="margin-bottom:18px"> <b>Belangrijk.</b> Je geheime Stripe-sleutel hoort nooit in een bestand dat in de browser draait. Iedereen kan die dan uitlezen en betalingen namens jou doen. Bewaar hem alleen op je server. Hieronder vul je de publieke gegevens in. De geheime sleutel zet je later in de serveromgeving.</div>
     <div class="grid" style="margin-bottom:14px">
       <div><label>Publiceerbare sleutel (mag publiek)</label><input id="s_pk" placeholder="pk_live_..." onchange="slaStripeOp()"></div>
       <div><label>Stripe-account (bedrijfsnaam)</label><input id="s_acc" placeholder="Storvo B.V." onchange="slaStripeOp()"></div>
@@ -381,7 +385,7 @@
   </div>
 </section>
 
-<section id="tab-live" hidden>
+<section id="tab-live"hidden>
   <div class="pagehead"><h1>Live gaan</h1></div>
   <div class="card">
     <h2>Wat er nodig is om echt te kunnen verkopen</h2>
@@ -440,7 +444,7 @@ function toast(msg){
   const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
 }
-const STATUS_LABEL={actief:'✅ Actief', proef:'⏳ Proefperiode', achterstallig:'⚠️ Betaling mislukt', opgezegd:'Opgezegd'};
+const STATUS_LABEL={actief:'Actief', proef:'Proefperiode', achterstallig:'Betaling mislukt', opgezegd:'Opgezegd'};
 
 async function syncKlantenVanSupabase(){
   try{
@@ -493,7 +497,7 @@ function tekenTeams(){
     const n=teamsData.accounts.filter(a=>a.team_id===t.id).length;
     return `<tr>
       <td>${esc(t.naam)}</td>
-      <td>${STATUS_LABEL[t.status]||esc(t.status)}</td>
+      <td><span class="chip ${esc(t.status)}">${STATUS_LABEL[t.status]||esc(t.status)}</span></td>
       <td class="num">${n}</td>
       <td>${datum(new Date(t.sinds).getTime())}</td>
       <td><button class="btn ghost small" data-team="${t.id}" onclick="toonTeamDetail(this.dataset.team)">Accounts bekijken</button></td>
@@ -510,8 +514,8 @@ function toonTeamDetail(teamId){
     <td>${esc(l.gebruikersnaam)}</td>
     <td>${esc(l.email)}</td>
     <td>${esc(l.rol)}</td>
-    <td>${l.tweestaps_actief?'✅ aan':'uit'}</td>
-    <td>${l.onboarding_klaar?'✅ klaar':'nog niet'}</td>
+    <td>${l.tweestaps_actief?'aan':'uit'}</td>
+    <td>${l.onboarding_klaar?'klaar':'nog niet'}</td>
     <td><button class="btn ghost small" data-email="${esc(l.email)}" onclick="stuurWachtwoordVergeten(this.dataset.email)"><svg class="i s"><use href="#i-mail"/></svg>Wachtwoord-vergeten mail</button></td>
   </tr>`).join('') || '<tr><td colspan="7">Nog geen accounts.</td></tr>';
   document.getElementById('teamDetailKaart').hidden=false;
@@ -523,8 +527,8 @@ async function stuurWachtwoordVergeten(email){
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
       body:JSON.stringify({email})
     });
-    toast('✔️ Wachtwoord-vergeten mail verstuurd naar '+email);
-  }catch(e){ toast('⚠️ Versturen mislukt'); }
+    toast('Wachtwoord-vergeten mail verstuurd naar '+email);
+  }catch(e){ toast('Versturen mislukt'); }
 }
 
 document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>{
@@ -581,21 +585,21 @@ function tekenKlanten(){
 function updKlant(id,veld,val){
   const k=state.klanten.find(k=>k.id===id); if(!k) return;
   k[veld]=(veld==='plan')?Number(val):val;
-  save(); teken(); toast('✔️ Opgeslagen');
+  save(); teken(); toast('Opgeslagen');
 }
 function voegKlantToe(){
   const naam=document.getElementById('k_naam').value.trim();
-  if(!naam){ toast('⚠️ Vul een winkelnaam in.'); return; }
+  if(!naam){ toast('Vul een winkelnaam in.'); return; }
   state.klanten.push({id:uid(), naam, contact:document.getElementById('k_contact').value.trim(),
     email:document.getElementById('k_email').value.trim(), plan:Number(document.getElementById('k_plan').value),
     status:document.getElementById('k_status').value, sinds:Date.now(), stripeId:''});
   save();
   ['k_naam','k_contact','k_email'].forEach(i=>document.getElementById(i).value='');
-  teken(); toast('✅ Klant toegevoegd: '+naam);
+  teken(); toast('Klant toegevoegd: '+naam);
 }
 function verwijderKlant(id){
   const k=state.klanten.find(k=>k.id===id);
-  if(k && confirm('"'+k.naam+'" verwijderen?')){
+  if(k && confirm('"'+k.naam+'"verwijderen?')){
     state.klanten=state.klanten.filter(x=>x.id!==id); save(); teken(); toast('Klant verwijderd');
   }
 }
@@ -616,25 +620,25 @@ function tekenPlannen(){
 function updPlan(id,veld,val){
   const p=state.plannen.find(p=>p.id===id); if(!p) return;
   p[veld]=(veld==='naam'||veld==='priceId')?val:Number(val)||0;
-  save(); teken(); toast('✔️ Opgeslagen');
+  save(); teken(); toast('Opgeslagen');
 }
 function voegPlanToe(){
   const naam=document.getElementById('p_naam').value.trim();
-  if(!naam){ toast('⚠️ Vul een naam in.'); return; }
+  if(!naam){ toast('Vul een naam in.'); return; }
   state.plannen.push({id:uid(), naam, prijs:Number(document.getElementById('p_prijs').value)||0,
     max:Number(document.getElementById('p_max').value)||1, proef:Number(document.getElementById('p_proef').value)||0,
     priceId:'', functies:[]});
   save(); document.getElementById('p_naam').value='';
-  teken(); toast('✅ Pakket toegevoegd: '+naam);
+  teken(); toast('Pakket toegevoegd: '+naam);
 }
 function verwijderPlan(id){
-  if(state.klanten.some(k=>k.plan===id)){ toast('⚠️ Dit pakket is nog in gebruik.'); return; }
-  state.plannen=state.plannen.filter(p=>p.id!==id); save(); teken(); toast('🗑 Pakket verwijderd');
+  if(state.klanten.some(k=>k.plan===id)){ toast('Dit pakket is nog in gebruik.'); return; }
+  state.plannen=state.plannen.filter(p=>p.id!==id); save(); teken(); toast('Pakket verwijderd');
 }
 function slaStripeOp(){
   state.stripe={pk:document.getElementById('s_pk').value.trim(), acc:document.getElementById('s_acc').value.trim(),
     hook:document.getElementById('s_hook').value.trim(), portal:document.getElementById('s_portal').value.trim()};
-  save(); toast('✔️ Stripe-gegevens opgeslagen');
+  save(); toast('Stripe-gegevens opgeslagen');
 }
 function tekenStripe(){
   const s=state.stripe;

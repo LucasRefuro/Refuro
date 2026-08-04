@@ -1,55 +1,74 @@
-<!-- Storvo | Wachtwoord vergeten - plak dit in Supabase: Authentication -> Email Templates -> Reset Password (body) -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F5FB; padding:32px 16px; font-family:'Segoe UI', Helvetica, Arial, sans-serif;">
+<!-- Storvo · Wachtwoord vergeten
+     Plakken in Supabase: Authentication -> Emails -> Reset password (Body, tabblad Source)
+     Vormgeving volgens het Storvo brand book v2.0: wit vlak, groen merk, één amber actie. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F7F6F3; padding:40px 16px; font-family:'Instrument Sans','Segoe UI',Helvetica,Arial,sans-serif;">
   <tr>
     <td align="center">
-      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%;">
-        <!-- Logo / merk -->
+      <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px; width:100%; border-radius:24px; overflow:hidden; background-color:#ffffff; box-shadow:0 6px 24px rgba(23,32,30,0.07);">
+
+        <!-- E-mailheader: monogram + woordmerk -->
         <tr>
-          <td align="center" style="padding-bottom:24px;">
+          <td style="padding:22px 32px; border-bottom:1.5px solid #ECEAE4;">
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="background-color:#2563EB; border-radius:14px; width:48px; height:48px; text-align:center; vertical-align:middle; font-size:24px; font-weight:800; color:#ffffff; font-family:'Segoe UI', Helvetica, Arial, sans-serif;">S</td>
-                <td style="padding-left:12px; font-size:22px; font-weight:800; color:#0B1A33;">Storvo</td>
+                <td width="34" style="width:34px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="34" style="width:34px; height:34px; background-color:#0B5B52; border-radius:9px;">
+                    <tr><td align="center" valign="middle" style="height:34px; line-height:34px; font-size:17px; font-weight:700; color:#F7F6F3;">&#10003;</td></tr>
+                  </table>
+                </td>
+                <td style="padding-left:11px; font-family:'Sora','Segoe UI',Helvetica,Arial,sans-serif; font-size:23px; font-weight:800; letter-spacing:-0.04em; color:#17201E;">storvo</td>
               </tr>
             </table>
           </td>
         </tr>
-        <!-- Kaart -->
+
+        <!-- Inhoud -->
         <tr>
-          <td style="background-color:#ffffff; border-radius:18px; padding:36px 32px; box-shadow:0 6px 24px rgba(11,26,51,0.08);">
-            <h1 style="margin:0 0 14px; font-size:20px; color:#0B1A33;">Wachtwoord opnieuw instellen</h1>
-            <p style="margin:0 0 22px; font-size:14.5px; line-height:1.6; color:#4A5A73;">
-              Je hebt aangevraagd om het wachtwoord van je Storvo-account opnieuw in te stellen.
-              Klik op de knop hieronder om een nieuw wachtwoord te kiezen. Deze link is 1 uur geldig.
+          <td style="padding:34px 32px 36px;">
+            <h1 style="margin:0 0 14px; font-family:'Sora','Segoe UI',Helvetica,Arial,sans-serif; font-size:25px; font-weight:800; line-height:1.25; color:#17201E; letter-spacing:-0.01em;">Wachtwoord opnieuw instellen</h1>
+            <p style="margin:0 0 24px; font-size:15.5px; line-height:1.6; color:#475350;">
+              Je hebt een nieuw wachtwoord aangevraagd voor je Storvo-account. Klik op de knop hieronder om er een te kiezen. De link is een uur geldig.
             </p>
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+
+            <!-- De enige actie op dit scherm: amber -->
+            <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
-                <td align="center">
+                <td style="background-color:#E88A1D; border-radius:100px;">
                   <a href="{{ .ConfirmationURL }}"
-                     style="display:inline-block; background-color:#2563EB; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600; padding:14px 32px; border-radius:12px;">
+                     style="display:inline-block; padding:14px 30px; font-family:'Instrument Sans','Segoe UI',Helvetica,Arial,sans-serif; font-size:15px; font-weight:700; color:#ffffff; text-decoration:none;">
                     Nieuw wachtwoord instellen
                   </a>
                 </td>
               </tr>
             </table>
-            <p style="margin:24px 0 0; font-size:12.5px; line-height:1.6; color:#7A8BA8;">
-              Werkt de knop niet? Kopieer dan deze link naar je browser:<br>
-              <a href="{{ .ConfirmationURL }}" style="color:#2563EB; word-break:break-all;">{{ .ConfirmationURL }}</a>
+
+            <p style="margin:26px 0 0; font-size:13px; line-height:1.6; color:#8A938F;">
+              Werkt de knop niet? Kopieer deze link naar je browser:<br>
+              <a href="{{ .ConfirmationURL }}" style="color:#0B5B52; word-break:break-all;">{{ .ConfirmationURL }}</a>
             </p>
-            <hr style="border:none; border-top:1px solid #E7ECF5; margin:24px 0;">
-            <p style="margin:0; font-size:12.5px; line-height:1.6; color:#7A8BA8;">
-              Heb je dit niet aangevraagd? Dan kan je deze e-mail veilig negeren; je wachtwoord blijft ongewijzigd.
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;">
+              <tr><td style="border-top:1px solid #ECEAE4; font-size:0; line-height:0;">&nbsp;</td></tr>
+            </table>
+
+            <p style="margin:22px 0 0; font-size:13px; line-height:1.6; color:#8A938F;">
+              Heb je dit niet aangevraagd? Dan kan je deze e-mail negeren. Je wachtwoord blijft dan gewoon hetzelfde.
             </p>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td align="center" style="padding-top:24px; font-size:12px; color:#7A8BA8;">
-            Storvo · Alles-in-één systeem voor telefoonwinkels<br>
-            <a href="https://storvo.app" style="color:#7A8BA8;">storvo.app</a> · <a href="https://storvo.nl" style="color:#7A8BA8;">storvo.nl</a>
           </td>
         </tr>
       </table>
+
+      <!-- Voettekst -->
+      <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px; width:100%;">
+        <tr>
+          <td align="center" style="padding:22px 8px 0; font-size:12.5px; line-height:1.6; color:#8A938F;">
+            <span style="font-family:'Sora','Segoe UI',Helvetica,Arial,sans-serif; font-weight:700; color:#0B5B52;">Alles geregeld.</span><br>
+            Storvo · alles-in-één systeem voor telefoonwinkels<br>
+            <a href="https://storvo.app" style="color:#8A938F;">storvo.app</a>
+          </td>
+        </tr>
+      </table>
+
     </td>
   </tr>
 </table>
