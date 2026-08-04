@@ -422,11 +422,62 @@
 
 </div>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const KEY='saas_admin_v1';
 const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
-const ADMIN_PANEL_KEY='3lfuuW-Ig4QUhqq_x78mYGhUzGgrG8UL';
+const sbAdmin=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+/* ---------- toegangspoort: alleen platformbeheerders ---------- */
+function adminLoginScherm(fout){
+  let el=document.getElementById('adminPoort');
+  if(!el){ el=document.createElement('div'); el.id='adminPoort';
+    el.style.cssText='position:fixed;inset:0;z-index:500;background:radial-gradient(1100px 800px at 80% 15%,#0E4C44 0%,#123F39 62%);display:flex;align-items:center;justify-content:center;padding:20px;';
+    document.body.appendChild(el); }
+  el.innerHTML=`<div style="background:#fff;border-radius:24px;padding:38px 34px;width:min(400px,94vw);box-shadow:0 10px 34px rgba(23,32,30,.2)">
+    <div style="width:52px;height:52px;border-radius:13px;background:#0B5B52;display:flex;align-items:center;justify-content:center;margin-bottom:18px">
+      <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:#F7F6F3;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <h2 style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.04em;margin-bottom:4px">storvo</h2>
+    <p style="color:#5B6663;font-size:14px;margin-bottom:18px">Beheerpaneel. Alleen voor Storvo-medewerkers.</p>
+    <label>E-mailadres</label><input id="ap_email" type="email" autocomplete="username" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')adminLogin(this)">
+    <label>Wachtwoord</label><input id="ap_ww" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin(this)">
+    <button class="btn actie" id="ap_knop" style="width:100%;margin-top:18px" onclick="adminLogin(this)">Inloggen</button>
+    ${fout?`<div style="margin-top:14px;padding:12px 14px;border-radius:14px;font-size:13.5px;background:#FAE4E4;color:#A33333">${esc(fout)}</div>`:''}
+  </div>`;
+  const f=document.getElementById('ap_email'); if(f) f.focus();
+}
+async function adminLogin(){
+  const email=(document.getElementById('ap_email').value||'').trim().toLowerCase();
+  const ww=document.getElementById('ap_ww').value||'';
+  if(!email||!ww){ adminLoginScherm('Vul je e-mailadres en wachtwoord in.'); return; }
+  const k=document.getElementById('ap_knop'); if(k){ k.disabled=true; k.textContent='Inloggen'; k.style.opacity=.7; }
+  const {error}=await sbAdmin.auth.signInWithPassword({email,password:ww});
+  if(error){ adminLoginScherm('Onbekende combinatie van e-mail en wachtwoord.'); return; }
+  const ok=await controleerAdmin();
+  if(!ok){ await sbAdmin.auth.signOut(); adminLoginScherm('Dit account heeft geen toegang tot het beheerpaneel.'); return; }
+  const el=document.getElementById('adminPoort'); if(el) el.remove();
+  laadTeams();
+}
+async function controleerAdmin(){
+  try{
+    const {data:{session}}=await sbAdmin.auth.getSession();
+    if(!session) return false;
+    const res=await fetch(SUPABASE_URL+'/functions/v1/admin-teams',{
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token}});
+    if(!res.ok) return false;
+    const uit=await res.json();
+    teamsData={teams:uit.teams||[], accounts:uit.accounts||[]};
+    teamsGeladen=true;
+    return true;
+  }catch(e){ return false; }
+}
+async function adminPoortBoot(){
+  adminLoginScherm();
+  const ok=await controleerAdmin();
+  if(ok){ const el=document.getElementById('adminPoort'); if(el) el.remove(); tekenTeams(); }
+}
 let teamsData={teams:[], accounts:[]};
 let teamsGeladen=false;
 let huidigTeamId=null;
@@ -492,15 +543,17 @@ async function syncKlantenVanSupabase(){
 async function laadTeams(){
   const body=document.getElementById('teamsBody');
   try{
+    const {data:{session}}=await sbAdmin.auth.getSession();
+    if(!session){ adminLoginScherm(); return; }
     const res=await fetch(SUPABASE_URL+'/functions/v1/admin-teams', {
-      headers:{ 'apikey':SUPABASE_ANON_KEY, 'X-Admin-Key':ADMIN_PANEL_KEY }
+      headers:{ 'apikey':SUPABASE_ANON_KEY, 'Authorization':'Bearer '+session.access_token }
     });
     const uit=await res.json();
     if(!res.ok) throw new Error(uit.error||'Laden mislukt');
     teamsData={teams:uit.teams||[], accounts:uit.accounts||[]};
     teamsGeladen=true;
   }catch(e){
-    if(body) body.innerHTML=`<tr><td colspan="5">Kon teams niet laden: ${esc(e.message)}. Controleer of ADMIN_PANEL_KEY is ingesteld in Supabase.</td></tr>`;
+    if(body) body.innerHTML=`<tr><td colspan="5">Kon teams niet laden: ${esc(e.message)}</td></tr>`;
     return;
   }
   tekenTeams();
@@ -678,6 +731,7 @@ function simuleer(soort){
 function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); }
 save(); teken();
 syncKlantenVanSupabase();
+adminPoortBoot();
 setInterval(syncKlantenVanSupabase, 60000);
 </script>
 </body>

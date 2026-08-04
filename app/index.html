@@ -464,6 +464,10 @@
   .zoekres div{padding:12px 16px; font-size:13.5px; cursor:pointer; border-bottom:1px solid var(--soft-2);}
   .zoekres div:last-child{border-bottom:none;}
   .zoekres div:hover{background:var(--lblauw);}
+  .syncstatus{display:none; align-items:center; gap:7px; margin-left:auto; padding:7px 14px; border-radius:var(--pil);
+    font-size:12.5px; font-weight:600; white-space:nowrap;}
+  .syncstatus + .topuser{margin-left:12px;}
+  @media(max-width:860px){ .syncstatus{font-size:0; gap:0; padding:8px;} .syncstatus .i{margin:0;} }
   .topuser{display:flex; align-items:center; gap:10px; margin-left:auto; padding:6px 14px 6px 6px; background:var(--card);
     border:none; border-radius:var(--pil); cursor:pointer; transition:.15s; box-shadow:0 1px 3px rgba(23,32,30,.06);}
   .topuser:hover{box-shadow:var(--schaduw);}
@@ -656,6 +660,7 @@
       <span class="ic"><svg class="i s"><use href="#i-search"/></svg></span>
       <input id="globaalZoek" placeholder="Zoek product, reparatie of klant" autocomplete="off" oninput="globaalZoeken()" onblur="setTimeout(()=>{const r=document.getElementById('zoekRes'); if(r) r.remove();},180)">
     </div>
+    <div class="syncstatus" id="syncStatus" style="display:none"></div>
     <div class="topuser" id="topUser" onclick="uitloggen()"></div>
   </div>
 </div>
@@ -1259,8 +1264,27 @@ function load(){
   if(s.onboardingKlaar===undefined) s.onboardingKlaar=false;
   return s;
 }
+/* Een lege winkel, met dezelfde standaardwaarden als bij een nieuwe installatie. */
+function schoneState(){
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  const s=load();
+  return s;
+}
 function betaalNaam(b){ return b==='pin'?'pin':(b==='cash'?'cash met bon':'cash zonder bon'); }
-function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); }
+/* Alles opnieuw tekenen, bijvoorbeeld na binnenkomende wijzigingen van een collega. */
+function tekenAlles(){
+  try{
+    renderScanLog(); updateBadge(); renderDashboard();
+    if(typeof renderProducten==='function') renderProducten();
+    if(typeof renderBestellen==='function') renderBestellen();
+    if(typeof renderReparaties==='function') renderReparaties();
+    if(typeof renderDiensten==='function') renderDiensten();
+    if(typeof renderTeam==='function') renderTeam();
+    if(typeof renderInstellingen==='function') renderInstellingen();
+    pasHuisstijlToe();
+  }catch(e){ console.error('opnieuw tekenen:', e); }
+}
 function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
 function catNaam(id){ const c=state.categorieen.find(c=>c.id===id); return c?c.naam:'Overig'; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -2053,6 +2077,7 @@ function login(m){
 }
 async function uitloggen(){
   if(account){
+    syncStop();
     account=null; gebruiker=null;
     try{ await sb.auth.signOut(); }catch(e){}
     toonAuthLogin();
@@ -2061,6 +2086,208 @@ async function uitloggen(){
   gebruiker=null;
   if(!document.getElementById('loginScherm')) toonLogin();
 }
+
+/* ================= CLOUDSYNCHRONISATIE =================
+   De winkel werkt altijd lokaal door, ook zonder internet.
+   Wijzigingen gaan naar de cloud zodra dat kan, en worden samengevoegd
+   met wat collega's op andere apparaten hebben gedaan.
+
+   Werkwijze: driewegsamenvoeging.
+     basis  = wat we de vorige keer met de cloud hebben uitgewisseld
+     lokaal = wat er nu op dit apparaat staat
+     server = wat er nu in de cloud staat
+   Per onderdeel kijken we wie er iets veranderde ten opzichte van de basis.
+   Zo overschrijft niemand het werk van een ander.                        */
+
+const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
+const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
+                      'reparaties','onderdelen','diensten','teams','medewerkers'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar'];
+
+let syncVersie = 0;          // versie van het document in de cloud
+let syncBezig = false;
+let syncWachtrij = false;    // er kwam iets binnen terwijl we aan het opslaan waren
+let syncTimer = null;
+let syncStatus = 'uit';      // uit | bewaard | bezig | offline | fout
+
+function syncBasisLees(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_BASIS_KEY)) || null; }catch(e){ return null; }
+}
+function syncBasisSchrijf(doc){
+  try{ localStorage.setItem(SYNC_BASIS_KEY, JSON.stringify(doc)); }catch(e){}
+}
+function syncKopie(o){ return JSON.parse(JSON.stringify(o)); }
+function syncGelijk(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+
+/* Alleen de winkelgegevens uitwisselen, geen technische velden. */
+function syncDocumentUitState(){
+  const doc={};
+  SYNC_LIJSTEN.forEach(k=>{ doc[k]=state[k]||[]; });
+  SYNC_VELDEN.forEach(k=>{ if(state[k]!==undefined) doc[k]=state[k]; });
+  doc.repNr=state.repNr||0;
+  return syncKopie(doc);
+}
+
+function syncOpIndex(lijst){
+  const m=new Map();
+  (lijst||[]).forEach(x=>{ if(x && x.id!==undefined) m.set(String(x.id), x); });
+  return m;
+}
+
+/* Voegt één lijst samen. Bewerken wint van verwijderen: in een winkel is
+   per ongeluk iets kwijtraken erger dan een regel te veel. */
+function syncVoegLijstSamen(basis, lokaal, server){
+  const b=syncOpIndex(basis), l=syncOpIndex(lokaal), s=syncOpIndex(server);
+  const volgorde=[];
+  (lokaal||[]).forEach(x=>{ if(x&&x.id!==undefined) volgorde.push(String(x.id)); });
+  (server||[]).forEach(x=>{ if(x&&x.id!==undefined && !volgorde.includes(String(x.id))) volgorde.push(String(x.id)); });
+
+  const uit=[];
+  volgorde.forEach(id=>{
+    const bi=b.get(id), li=l.get(id), si=s.get(id);
+    if(li && si){
+      if(bi && syncGelijk(li,bi)) uit.push(si);          // wij deden niets, cloud misschien wel
+      else uit.push(li);                                  // wij wijzigden: dat telt
+    } else if(li && !si){
+      if(!bi) uit.push(li);                               // hier nieuw aangemaakt
+      else if(!syncGelijk(li,bi)) uit.push(li);           // elders verwijderd, maar hier bewerkt
+      // anders: elders verwijderd en hier ongewijzigd -> weg
+    } else if(!li && si){
+      if(!bi) uit.push(si);                               // elders nieuw aangemaakt
+      // anders: hier verwijderd -> weg
+    }
+  });
+  return uit;
+}
+
+function syncVoegSamen(basis, lokaal, server){
+  const uit={};
+  SYNC_LIJSTEN.forEach(k=>{
+    uit[k]=syncVoegLijstSamen(basis?basis[k]:null, lokaal[k], server?server[k]:null);
+  });
+  /* Verkopen en logboek staan nieuw-eerst en worden kort gehouden. */
+  if(uit.verkopen) uit.verkopen.sort((a,b)=>(b.t||0)-(a.t||0));
+  if(uit.log){ uit.log.sort((a,b)=>(b.t||0)-(a.t||0)); uit.log=uit.log.slice(0,50); }
+
+  SYNC_VELDEN.forEach(k=>{
+    const bi=basis?basis[k]:undefined, li=lokaal[k], si=server?server[k]:undefined;
+    if(si===undefined){ uit[k]=li; return; }
+    if(li===undefined){ uit[k]=si; return; }
+    uit[k] = (bi!==undefined && syncGelijk(li,bi)) ? si : li;
+  });
+  /* Reparatienummers mogen nooit opnieuw beginnen. */
+  uit.repNr=Math.max(lokaal.repNr||0, (server&&server.repNr)||0, (basis&&basis.repNr)||0);
+  return uit;
+}
+
+function syncStatusToon(nieuw){
+  syncStatus=nieuw;
+  const el=document.getElementById('syncStatus');
+  if(!el) return;
+  const teksten={
+    bewaard:['Bewaard','i-check','var(--green-tekst)','var(--green-soft)'],
+    bezig:['Bewaren','i-undo','var(--muted)','var(--soft-2)'],
+    offline:['Offline, wordt later bewaard','i-clock','var(--amber-tekst)','var(--amber-soft)'],
+    fout:['Niet bewaard, we proberen het opnieuw','i-bell','var(--red-tekst)','var(--red-soft)']
+  };
+  if(nieuw==='uit'){ el.style.display='none'; return; }
+  const [tekst,icoon,kleur,vlak]=teksten[nieuw]||teksten.bezig;
+  el.style.display='inline-flex';
+  el.style.color=kleur; el.style.background=vlak;
+  el.innerHTML=`<svg class="i s"><use href="#${icoon}"/></svg>${tekst}`;
+  el.title = nieuw==='bewaard' ? 'Alles staat veilig in de cloud' : tekst;
+}
+
+/* Haalt de cloudversie op en voegt die samen met wat hier staat. */
+async function syncHaalOp(){
+  if(!account) return false;
+  const {data,error}=await sb.from('winkeldata').select('data,versie').eq('team_id',account.team_id).maybeSingle();
+  if(error){ console.error('sync ophalen:', error); return false; }
+  const server = data ? data.data : null;
+  syncVersie = data ? data.versie : 0;
+
+  const lokaal = syncDocumentUitState();
+  const basis  = syncBasisLees();
+
+  if(!server){
+    /* Nog niets in de cloud: wat hier staat wordt het startpunt. */
+    return true;
+  }
+  const samen = syncVoegSamen(basis, lokaal, server);
+  SYNC_LIJSTEN.forEach(k=>{ state[k]=samen[k]; });
+  SYNC_VELDEN.forEach(k=>{ if(samen[k]!==undefined) state[k]=samen[k]; });
+  state.repNr=samen.repNr;
+  localStorage.setItem(KEY, JSON.stringify(state));
+  syncBasisSchrijf(server);
+  return true;
+}
+
+/* Slaat op in de cloud. Bij een botsing eerst samenvoegen, dan opnieuw. */
+async function syncOpslaan(pogingen){
+  if(!account || syncBezig) { syncWachtrij=true; return; }
+  syncBezig=true;
+  syncStatusToon('bezig');
+  const doc=syncDocumentUitState();
+  try{
+    const {data,error}=await sb.rpc('winkeldata_opslaan',{data_input:doc, verwachte_versie:syncVersie});
+    if(error) throw error;
+    const uit=Array.isArray(data)?data[0]:data;
+    if(uit && uit.conflict){
+      /* Een collega was net sneller: samenvoegen en nog een keer proberen. */
+      const samen=syncVoegSamen(syncBasisLees(), doc, uit.data);
+      SYNC_LIJSTEN.forEach(k=>{ state[k]=samen[k]; });
+      SYNC_VELDEN.forEach(k=>{ if(samen[k]!==undefined) state[k]=samen[k]; });
+      state.repNr=samen.repNr;
+      localStorage.setItem(KEY, JSON.stringify(state));
+      syncVersie=uit.versie;
+      syncBasisSchrijf(uit.data);
+      syncBezig=false;
+      if((pogingen||0)<3){ return syncOpslaan((pogingen||0)+1); }
+      syncStatusToon('fout');
+      return;
+    }
+    syncVersie=uit?uit.versie:syncVersie+1;
+    syncBasisSchrijf(doc);
+    syncBezig=false;
+    syncStatusToon('bewaard');
+    if(syncWachtrij){ syncWachtrij=false; syncPlan(600); }
+  }catch(e){
+    syncBezig=false;
+    const offline = !navigator.onLine || /fetch|network|Load failed/i.test(String(e&&e.message));
+    syncStatusToon(offline?'offline':'fout');
+    syncPlan(offline?15000:8000);   /* blijft het vanzelf opnieuw proberen */
+  }
+}
+
+/* Wachten tot het rustig is, zodat we niet bij elke toetsaanslag versturen. */
+function syncPlan(vertraging){
+  if(!account) return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncOpslaan(0), vertraging||1500);
+}
+
+/* Start de synchronisatie na het inloggen. */
+async function syncStart(){
+  if(!account) return;
+  syncStatusToon('bezig');
+  const gelukt=await syncHaalOp();
+  if(!gelukt){ syncStatusToon(navigator.onLine?'fout':'offline'); syncPlan(10000); return; }
+  await syncOpslaan(0);
+  tekenAlles();
+}
+
+function syncStop(){
+  clearTimeout(syncTimer);
+  syncVersie=0; syncBezig=false; syncWachtrij=false;
+  try{ localStorage.removeItem(SYNC_BASIS_KEY); }catch(e){}
+  syncStatusToon('uit');
+}
+
+/* Zodra internet terugkomt meteen bijwerken. */
+addEventListener('online', ()=>{ if(account) syncPlan(300); });
+addEventListener('offline', ()=>{ if(account) syncStatusToon('offline'); });
+/* Regelmatig kijken of een collega iets heeft gewijzigd. */
+setInterval(()=>{ if(account && navigator.onLine && !syncBezig) syncHaalOp().then(ok=>{ if(ok) tekenAlles(); }); }, 45000);
 
 /* ================= ACCOUNT SYSTEEM (echte logins via Supabase) =================
    Eén flow, van betaling tot dagelijks gebruik:
@@ -2195,6 +2422,15 @@ async function ladAccountEnStart(session){
   account=acc;
   gebruiker={id:acc.id, naam:acc.naam, rol:acc.rol};
 
+  /* Logt er iemand van een ander team in op dit apparaat, dan mogen de
+     gegevens van de vorige winkel niet blijven staan. */
+  if(state.teamId && state.teamId!==acc.team_id){
+    state=schoneState();
+    syncStop();
+  }
+  state.teamId=acc.team_id;
+  localStorage.setItem(KEY, JSON.stringify(state));
+
   /* Bedrijfsgegevens voorvullen vanuit het team, zodat de onboarding niet leeg begint. */
   if(!state.instellingen || !state.instellingen.naam || state.instellingen.naam==='Storvo'){
     try{
@@ -2210,6 +2446,7 @@ async function ladAccountEnStart(session){
   pasRechtenToe();
   showTab(mag('dashboard')?'dashboard':'scan');
   renderInstellingen();
+  syncStart();
   if(!account.onboarding_klaar) toonOnboarding();
 }
 
