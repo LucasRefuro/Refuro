@@ -228,6 +228,23 @@
   .kpi .l{line-height:1.4;} .kpi .v{margin-top:9px; line-height:1.2;}
   td, th{vertical-align:middle;}
   .planbox ul{line-height:2;}
+
+  [hidden]{display:none !important;}
+  select{appearance:none; -webkit-appearance:none; -moz-appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A938F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 13px center; background-size:16px 16px; padding-right:42px;}
+  select:hover{border-color:var(--paars);
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B5B52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");}
+  select option{font-family:inherit; color:var(--text); background:#fff;}
+  input[type=checkbox]{appearance:none; -webkit-appearance:none; width:22px; height:22px; min-width:22px;
+    padding:0; border:1.5px solid #DCD8D0; border-radius:7px; background:#fff; cursor:pointer;
+    vertical-align:-5px; transition:.15s; background-position:center; background-repeat:no-repeat; background-size:14px;}
+  input[type=checkbox]:hover{border-color:var(--paars);}
+  input[type=checkbox]:checked{background-color:var(--paars); border-color:var(--paars);
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F7F6F3' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");}
+  input[type=checkbox]:focus-visible{outline:none; box-shadow:0 0 0 4px rgba(11,91,82,.12);}
+  td input, td select{padding:9px 12px; border-radius:10px; font-size:13.5px;}
+  td select{padding-right:36px; background-position:right 11px center;}
 </style>
 </head>
 <body>
@@ -258,7 +275,7 @@
     <button data-tab="stripe"><svg class="i"><use href="#i-plug"/></svg> Stripe-koppeling</button>
     <button data-tab="live"><svg class="i"><use href="#i-rocket"/></svg> Live gaan</button>
   </nav>
-  <div class="foot">Demo-omgeving<br>Data lokaal opgeslagen</div>
+  <div class="foot">Storvo beheer<br>Versie 1.0</div>
 </aside>
 <main>
 <div class="binnen">

@@ -551,6 +551,35 @@
   .chip + .chip{margin-left:6px;}
   .row > div{min-width:0;}
   .grid > div{min-width:0;}
+
+  /* verborgen is verborgen, ook als een blok een eigen display heeft */
+  [hidden]{display:none !important;}
+
+  /* ---------- nette selectievakken (brandbook: ronde vormen, groen accent) ---------- */
+  select{appearance:none; -webkit-appearance:none; -moz-appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A938F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 13px center; background-size:16px 16px; padding-right:42px;}
+  select:hover{border-color:var(--oranje);
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B5B52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");}
+  select option{font-family:inherit; color:var(--text); background:#fff;}
+
+  /* ---------- nette aankruisvakken ---------- */
+  input[type=checkbox]{appearance:none; -webkit-appearance:none; width:22px; height:22px; min-width:22px;
+    padding:0; border:1.5px solid #DCD8D0; border-radius:7px; background:#fff; cursor:pointer;
+    vertical-align:-5px; transition:.15s; background-position:center; background-repeat:no-repeat; background-size:14px;}
+  input[type=checkbox]:hover{border-color:var(--oranje);}
+  input[type=checkbox]:checked{background-color:var(--oranje); border-color:var(--oranje);
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F7F6F3' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");}
+  input[type=checkbox]:focus-visible{outline:none; box-shadow:0 0 0 4px rgba(11,91,82,.12);}
+
+  /* compacte invoer binnen tabellen */
+  td input, td select{padding:9px 12px; border-radius:10px; font-size:13.5px;}
+  td select{padding-right:36px; background-position:right 11px center;}
+
+  /* ritme: vaste ruimte tussen kop, tabjes en inhoud van een kaart */
+  .card > .periodesel{margin-bottom:16px;}
+  .card > h2 + .periodesel{margin-top:-4px;}
+  .card table{margin-top:2px;}
 </style>
 </head>
 <body>
@@ -616,7 +645,7 @@
   </nav>
   <div style="margin-top:auto">
     <div class="gebruikerchip" id="gebruikerChip" style="display:none"></div>
-    <div class="foot" id="sidebarFoot">Data lokaal opgeslagen</div>
+    <div class="foot" id="sidebarFoot">Versie 1.0</div>
   </div>
 </aside>
 <main>
@@ -1435,20 +1464,30 @@ function renderChart(){
       kols.push({lbl:u+'u', omzet:omzetIn(van,tot), winst:winstIn(van,tot), vorig:toonVorig?omzetIn(van-7*864e5,tot-7*864e5):0});
     }
   }else{
-    document.getElementById('chartTitel').textContent='Omzet en winst over 14 dagen';
-    for(let i=13;i>=0;i--){
+    /* De grafiek volgt de gekozen periode: 7 dagen, 30 dagen of alles (max 60). */
+    let dagen=14;
+    if(periode==='week') dagen=7;
+    else if(periode==='maand') dagen=30;
+    else if(periode==='alles'){
+      const eerste=Math.min(...state.verkopen.map(v=>v.t), Date.now());
+      dagen=Math.min(60, Math.max(7, Math.ceil((Date.now()-eerste)/864e5)+1));
+    }
+    document.getElementById('chartTitel').textContent='Omzet en winst over '+dagen+' dagen';
+    for(let i=dagen-1;i>=0;i--){
       const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
       const van=d.getTime(), tot=van+864e5;
       kols.push({lbl:d.toLocaleDateString('nl-NL',{day:'numeric',month:'numeric'}), omzet:omzetIn(van,tot), winst:winstIn(van,tot), vorig:toonVorig?omzetIn(van-7*864e5,tot-7*864e5):0});
     }
   }
   const max=Math.max(1,...kols.map(k=>Math.max(k.omzet,k.vorig)));
-  document.getElementById('chart').innerHTML=kols.map(k=>
+  /* bij veel kolommen niet elke dag een label, anders loopt het in elkaar */
+  const labelStap=Math.ceil(kols.length/15);
+  document.getElementById('chart').innerHTML=kols.map((k,i)=>
     `<div class="dag" title="${k.lbl}: omzet ${euro(k.omzet)}, winst ${euro(k.winst)}${toonVorig?', vorige week '+euro(k.vorig):''}">`+
     `<div class="bars">${toonVorig?`<div class="bar vorig" style="height:${Math.round(k.vorig/max*120)}px"></div>`:''}`+
     `<div class="bar omzet" style="height:${Math.round(k.omzet/max*120)}px"></div>`+
     `<div class="bar winst" style="height:${Math.round(Math.max(0,k.winst)/max*120)}px"></div></div>`+
-    `<div class="lbl">${k.lbl}</div></div>`).join('');
+    `<div class="lbl">${(kols.length-1-i)%labelStap===0?k.lbl:''}</div></div>`).join('');
 }
 function verwachteLevering(ts){
   const d=new Date(ts);
