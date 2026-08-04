@@ -2214,7 +2214,7 @@ async function maakOwnerAccount(sessionId, knop){
       body:JSON.stringify({session_id:sessionId, bedrijfsnaam:bedrijf, naam, gebruikersnaam, wachtwoord:ww})
     });
     uit=await res.json();
-    if(!res.ok || !uit.email) throw new Error(uit.error||'Aanmaken account mislukt.');
+    if(!res.ok || !uit.email) throw new Error((uit.error||'Aanmaken account mislukt.')+(uit.detail?' ('+uit.detail+')':''));
   }catch(e){ authBezig(knop,false); authMelding(e.message||'Er ging iets mis, probeer het opnieuw.'); return; }
   const {data,error}=await sb.auth.signInWithPassword({email:uit.email, password:ww});
   if(error){ authBezig(knop,false); history.replaceState(null,'',location.pathname); toonAuthLogin(); authMelding('Je account is aangemaakt. Log in met je gegevens.','ok'); return; }
@@ -2256,7 +2256,7 @@ async function maakInviteAccount(token, knop){
       body:JSON.stringify({token, naam, gebruikersnaam, wachtwoord:ww, email})
     });
     uit=await res.json();
-    if(!res.ok || !uit.ok) throw new Error(uit.error||'Aanmaken account mislukt.');
+    if(!res.ok || !uit.ok) throw new Error((uit.error||'Aanmaken account mislukt.')+(uit.detail?' ('+uit.detail+')':''));
   }catch(e){ authBezig(knop,false); authMelding(e.message||'Er ging iets mis, probeer het opnieuw.'); return; }
   const {data,error}=await sb.auth.signInWithPassword({email, password:ww});
   if(error){ authBezig(knop,false); history.replaceState(null,'',location.pathname); toonAuthLogin(); authMelding('Je account is aangemaakt. Log in met je gegevens.','ok'); return; }
