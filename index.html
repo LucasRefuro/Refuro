@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voorraad &amp; reparaties voor telefoonwinkels</title>
-<meta name="description" content="Alles-in-één systeem voor telefoonwinkels: voorraad scannen, reparaties volgen, klanten automatisch op de hoogte houden en je omzet live inzien.">
+<title data-t="title">Storvo · Voorraad &amp; reparaties voor telefoonwinkels</title>
+<meta name="description" content="Storvo: alles-in-één systeem voor telefoonwinkels. Voorraad scannen, reparaties volgen, klanten automatisch op de hoogte houden en je omzet live inzien.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -198,15 +198,16 @@ footer a:hover{color:var(--text);}
 
 <nav class="top" id="nav">
   <div class="wrap in">
-    <div class="merk"><div class="mk">R</div> Refuro<span style="color:var(--blauw)">.</span></div>
+    <div class="merk"><div class="mk">S</div> Storvo<span style="color:var(--blauw)">.</span></div>
     <div class="links">
-      <a href="#functies">Functies</a>
-      <a href="#werkwijze">Hoe het werkt</a>
-      <a href="#prijzen">Prijzen</a>
-      <a href="#vragen">Vragen</a>
+      <a href="#functies" data-t="nav_functies">Functies</a>
+      <a href="#werkwijze" data-t="nav_werkwijze">Hoe het werkt</a>
+      <a href="#prijzen" data-t="nav_prijzen">Prijzen</a>
+      <a href="#vragen" data-t="nav_vragen">Vragen</a>
     </div>
-    <a href="/app/" class="btn lijn klein">Inloggen</a>
-    <a href="#prijzen" class="btn klein">Gratis proberen</a>
+    <button class="btn lijn klein" id="taalKnop" onclick="wisselTaal()" style="cursor:pointer">EN</button>
+    <a href="/app/" class="btn lijn klein" data-t="nav_login">Inloggen</a>
+    <a href="#prijzen" class="btn klein" data-t="nav_try">Gratis proberen</a>
   </div>
 </nav>
 
@@ -215,14 +216,14 @@ footer a:hover{color:var(--text);}
   <div class="blob b2" data-par="-0.1"></div>
   <div class="blob b3" data-par="0.08"></div>
   <div class="wrap in">
-    <div class="pill op"><b>NIEUW</b> Reparaties volgen via een live klantpagina</div>
-    <h1 class="op">Je hele winkel in <span class="grad">één overzicht</span></h1>
-    <p class="lead op">Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.</p>
+    <div class="pill op" data-t="hero_pill"><b>NIEUW</b> Reparaties volgen via een live klantpagina</div>
+    <h1 class="op" data-t="hero_h1">Je hele winkel in <span class="grad">één overzicht</span></h1>
+    <p class="lead op" data-t="hero_lead">Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.</p>
     <div class="heroknoppen op">
-      <a href="#prijzen" class="btn">14 dagen gratis proberen</a>
-      <a href="#werkwijze" class="btn lijn">Bekijk hoe het werkt</a>
+      <a href="#prijzen" class="btn" data-t="hero_cta1">14 dagen gratis proberen</a>
+      <a href="#werkwijze" class="btn lijn" data-t="hero_cta2">Bekijk hoe het werkt</a>
     </div>
-    <div class="klein-note op">Geen creditcard nodig. Binnen tien minuten ingericht.</div>
+    <div class="klein-note op" data-t="hero_note">Geen creditcard nodig. Binnen tien minuten ingericht.</div>
   </div>
 
   <div class="mock wrap op" id="mock">
@@ -232,18 +233,18 @@ footer a:hover{color:var(--text);}
       </div>
       <div class="mockbody">
         <div class="mocknav">
-          <div class="aan">Dashboard</div><div>Scannen</div><div>Diensten</div>
-          <div>Reparaties</div><div>Producten</div><div>Bestellingen</div><div>Team</div>
+          <div class="aan" data-t="mock_dash">Dashboard</div><div data-t="mock_scan">Scannen</div><div data-t="mock_diensten">Diensten</div>
+          <div data-t="mock_rep">Reparaties</div><div data-t="mock_prod">Producten</div><div data-t="mock_best">Bestellingen</div><div>Team</div>
         </div>
         <div class="mockmain">
           <div class="mockkpi">
-            <div><div class="l">Omzet</div><div class="v">€ 2.847</div></div>
-            <div><div class="l">Winst</div><div class="v" style="color:var(--green)">€ 1.219</div></div>
-            <div><div class="l">Reparaties</div><div class="v">14</div></div>
-            <div><div class="l">Te bestellen</div><div class="v" style="color:var(--red)">3</div></div>
+            <div><div class="l" data-t="mock_omzet">Omzet</div><div class="v">€ 2.847</div></div>
+            <div><div class="l" data-t="mock_winst">Winst</div><div class="v" style="color:var(--green)">€ 1.219</div></div>
+            <div><div class="l" data-t="mock_rep2">Reparaties</div><div class="v">14</div></div>
+            <div><div class="l" data-t="mock_tebestellen">Te bestellen</div><div class="v" style="color:var(--red)">3</div></div>
           </div>
           <div class="mockgraf" style="position:relative">
-            <div style="font-size:11px; font-weight:600">Omzet deze week</div>
+            <div style="font-size:11px; font-weight:600" data-t="mock_grafiek">Omzet deze week</div>
             <div class="tooltip" id="tt" style="left:52%; top:34px">€ 640</div>
             <div class="mockbars" id="bars">
               <i style="height:36%"></i><i style="height:52%"></i><i style="height:44%"></i>
@@ -259,17 +260,17 @@ footer a:hover{color:var(--text);}
 <section id="functies">
   <div class="wrap">
     <div class="kop op">
-      <div class="tag">Functies</div>
-      <h2>Alles wat je nodig hebt, niets wat je afleidt</h2>
-      <p>Eén systeem voor je voorraad, je reparaties en je cijfers, in plaats van drie schriften en een spreadsheet.</p>
+      <div class="tag" data-t="f_tag">Functies</div>
+      <h2 data-t="f_h2">Alles wat je nodig hebt, niets wat je afleidt</h2>
+      <p data-t="f_p">Eén systeem voor je voorraad, je reparaties en je cijfers, in plaats van drie schriften en een spreadsheet.</p>
     </div>
     <div class="rooster">
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-scan"/></svg></div><h3>Scannen dat gewoon werkt</h3><p>Scan waar je ook bent in de app. Er verschijnt meteen een venster om in of uit te boeken. Staat een barcode nog niet in het systeem, dan maak je het product direct aan.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-wrench"/></svg></div><h3>Reparaties van begin tot eind</h3><p>Van aanmelden tot ophalen, met een eigen reparatienummer, onderdelen, winstberekening en een tijdlijn die je klant live kan volgen.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-message"/></svg></div><h3>Klanten automatisch bijpraten</h3><p>Bij elke stap gaat er een bericht uit. Onderdelen besteld, reparatie gestart, klaar om op te halen. Dat scheelt telefoontjes.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-chart"/></svg></div><h3>Cijfers die kloppen</h3><p>Omzet, winst, marge en cash apart van pin. Per uur, per dag en vergeleken met vorige week, zodat je ziet of het beter gaat.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-cart"/></svg></div><h3>Nooit meer misgrijpen</h3><p>Zakt de voorraad onder je minimum, dan verschijnt het artikel op de bestellijst. Besteld vóór 16:30 betekent morgen binnen.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-users"/></svg></div><h3>Je team erbij</h3><p>Iedereen krijgt een eigen pincode en rechten. Elke verkoop en reparatie staat op naam, dus je ziet precies wie wat heeft gedaan.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-scan"/></svg></div><h3 data-t="f1_h">Scannen dat gewoon werkt</h3><p data-t="f1_p">Scan waar je ook bent in de app. Er verschijnt meteen een venster om in of uit te boeken. Staat een barcode nog niet in het systeem, dan maak je het product direct aan.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-wrench"/></svg></div><h3 data-t="f2_h">Reparaties van begin tot eind</h3><p data-t="f2_p">Van aanmelden tot ophalen, met een eigen reparatienummer, onderdelen, winstberekening en een tijdlijn die je klant live kan volgen.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-message"/></svg></div><h3 data-t="f3_h">Klanten automatisch bijpraten</h3><p data-t="f3_p">Bij elke stap gaat er een bericht uit. Onderdelen besteld, reparatie gestart, klaar om op te halen. Dat scheelt telefoontjes.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-chart"/></svg></div><h3 data-t="f4_h">Cijfers die kloppen</h3><p data-t="f4_p">Omzet, winst, marge en cash apart van pin. Per uur, per dag en vergeleken met vorige week, zodat je ziet of het beter gaat.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-cart"/></svg></div><h3 data-t="f5_h">Nooit meer misgrijpen</h3><p data-t="f5_p">Zakt de voorraad onder je minimum, dan verschijnt het artikel op de bestellijst. Besteld vóór 16:30 betekent morgen binnen.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-users"/></svg></div><h3 data-t="f6_h">Je team erbij</h3><p data-t="f6_p">Iedereen krijgt een eigen pincode en rechten. Elke verkoop en reparatie staat op naam, dus je ziet precies wie wat heeft gedaan.</p></div>
     </div>
   </div>
 </section>
@@ -277,15 +278,15 @@ footer a:hover{color:var(--text);}
 <section id="werkwijze" style="background:var(--card); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
   <div class="wrap">
     <div class="kop op">
-      <div class="tag">Hoe het werkt</div>
-      <h2>Van binnenkomst tot afrekenen</h2>
-      <p>Zo loopt een reparatie door het systeem, zonder dat je iets hoeft te onthouden.</p>
+      <div class="tag" data-t="w_tag">Hoe het werkt</div>
+      <h2 data-t="w_h2">Van binnenkomst tot afrekenen</h2>
+      <p data-t="w_p">Zo loopt een reparatie door het systeem, zonder dat je iets hoeft te onthouden.</p>
     </div>
     <div class="stappen">
-      <div class="st op"><div class="nr">1</div><h3>Aanmelden</h3><p>Klantgegevens, toestel en reparatie invoeren. Je ziet meteen of het onderdeel op voorraad ligt en wat je eraan verdient.</p></div>
-      <div class="st op"><div class="nr">2</div><h3>Bestellen</h3><p>Ligt het onderdeel er niet, dan komt het op de bestellijst vóór 16:30, met de verwachte leverdatum voor je klant.</p></div>
-      <div class="st op"><div class="nr">3</div><h3>Repareren</h3><p>Onderdelen binnen en reparatie starten met een verwachte ophaaltijd. Loopt iets anders, dan zet je er een opmerking bij.</p></div>
-      <div class="st op"><div class="nr">4</div><h3>Ophalen</h3><p>De klant krijgt bericht dat het klaar is en jij rekent af met pin of cash. De omzet staat meteen in je dashboard.</p></div>
+      <div class="st op"><div class="nr">1</div><h3 data-t="w1_h">Aanmelden</h3><p data-t="w1_p">Klantgegevens, toestel en reparatie invoeren. Je ziet meteen of het onderdeel op voorraad ligt en wat je eraan verdient.</p></div>
+      <div class="st op"><div class="nr">2</div><h3 data-t="w2_h">Bestellen</h3><p data-t="w2_p">Ligt het onderdeel er niet, dan komt het op de bestellijst vóór 16:30, met de verwachte leverdatum voor je klant.</p></div>
+      <div class="st op"><div class="nr">3</div><h3 data-t="w3_h">Repareren</h3><p data-t="w3_p">Onderdelen binnen en reparatie starten met een verwachte ophaaltijd. Loopt iets anders, dan zet je er een opmerking bij.</p></div>
+      <div class="st op"><div class="nr">4</div><h3 data-t="w4_h">Ophalen</h3><p data-t="w4_p">De klant krijgt bericht dat het klaar is en jij rekent af met pin of cash. De omzet staat meteen in je dashboard.</p></div>
     </div>
   </div>
 </section>
@@ -293,10 +294,10 @@ footer a:hover{color:var(--text);}
 <section>
   <div class="wrap">
     <div class="cijfers op">
-      <div class="c"><div class="n" data-tel="12">0</div><div class="t">minuten per dag bespaard aan administratie</div></div>
-      <div class="c"><div class="n" data-tel="98" data-suf="%">0</div><div class="t">van de klanten weet zelf de status van hun reparatie</div></div>
-      <div class="c"><div class="n" data-tel="0" data-pre="€ " data-suf=",-">0</div><div class="t">opstartkosten, maandelijks opzegbaar</div></div>
-      <div class="c"><div class="n" data-tel="10">0</div><div class="t">minuten om je hele winkel in te richten</div></div>
+      <div class="c"><div class="n" data-tel="12">0</div><div class="t" data-t="c1">minuten per dag bespaard aan administratie</div></div>
+      <div class="c"><div class="n" data-tel="98" data-suf="%">0</div><div class="t" data-t="c2">van de klanten weet zelf de status van hun reparatie</div></div>
+      <div class="c"><div class="n" data-tel="0" data-pre="€ " data-suf=",-">0</div><div class="t" data-t="c3">opstartkosten, maandelijks opzegbaar</div></div>
+      <div class="c"><div class="n" data-tel="10">0</div><div class="t" data-t="c4">minuten om je hele winkel in te richten</div></div>
     </div>
   </div>
 </section>
@@ -304,29 +305,29 @@ footer a:hover{color:var(--text);}
 <section id="prijzen">
   <div class="wrap">
     <div class="kop op">
-      <div class="tag">Prijzen</div>
-      <h2>Eerlijke prijs, geen verrassingen</h2>
-      <p>Alle bedragen per maand, exclusief btw. Eerst 14 dagen gratis proberen, daarna maandelijks opzegbaar.</p>
+      <div class="tag" data-t="p_tag">Prijzen</div>
+      <h2 data-t="p_h2">Eerlijke prijs, geen verrassingen</h2>
+      <p data-t="p_p">Alle bedragen per maand, exclusief btw. Eerst 14 dagen gratis proberen, daarna maandelijks opzegbaar.</p>
     </div>
     <div class="prijzen">
       <div class="p op">
-        <div class="pn">Start</div><div class="pd">Voor de eenmanszaak</div>
-        <div class="pp">€ 19,95<span>/mnd</span></div>
-        <ul><li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li></ul>
-        <a href="https://buy.stripe.com/7sY00l4Tg18pczaaRp33W00" class="btn wit">Gratis proberen</a>
+        <div class="pn">Start</div><div class="pd" data-t="p1_d">Voor de eenmanszaak</div>
+        <div class="pp">€ 19,95<span data-t="p_mnd">/mnd</span></div>
+        <ul data-t="p1_ul"><li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li></ul>
+        <a href="https://buy.stripe.com/7sY00l4Tg18pczaaRp33W00" class="btn wit" data-t="p_cta">Gratis proberen</a>
       </div>
       <div class="p pop op">
-        <div class="badge">MEEST GEKOZEN</div>
-        <div class="pn">Pro</div><div class="pd">Voor de winkel die groeit</div>
-        <div class="pp">€ 44,95<span>/mnd</span></div>
-        <ul><li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li></ul>
-        <a href="https://buy.stripe.com/7sY4gB2L804l0Qs7Fd33W01" class="btn">Gratis proberen</a>
+        <div class="badge" data-t="p_badge">MEEST GEKOZEN</div>
+        <div class="pn">Pro</div><div class="pd" data-t="p2_d">Voor de winkel die groeit</div>
+        <div class="pp">€ 44,95<span data-t="p_mnd">/mnd</span></div>
+        <ul data-t="p2_ul"><li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li></ul>
+        <a href="https://buy.stripe.com/7sY4gB2L804l0Qs7Fd33W01" class="btn" data-t="p_cta">Gratis proberen</a>
       </div>
       <div class="p op">
-        <div class="pn">Enterprise</div><div class="pd">Voor meerdere vestigingen</div>
-        <div class="pp">€ 79,95<span>/mnd</span></div>
-        <ul><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>30 dagen proberen</li></ul>
-        <a href="https://buy.stripe.com/6oU4gBdpMg3j2YA5x533W02" class="btn wit">Gratis proberen</a>
+        <div class="pn">Enterprise</div><div class="pd" data-t="p3_d">Voor meerdere vestigingen</div>
+        <div class="pp">€ 79,95<span data-t="p_mnd">/mnd</span></div>
+        <ul data-t="p3_ul"><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>30 dagen proberen</li></ul>
+        <a href="https://buy.stripe.com/6oU4gBdpMg3j2YA5x533W02" class="btn wit" data-t="p_cta">Gratis proberen</a>
       </div>
     </div>
   </div>
@@ -335,16 +336,16 @@ footer a:hover{color:var(--text);}
 <section id="vragen" style="background:var(--card); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
   <div class="wrap">
     <div class="kop op">
-      <div class="tag">Vragen</div>
-      <h2>Goed om te weten</h2>
+      <div class="tag" data-t="q_tag">Vragen</div>
+      <h2 data-t="q_h2">Goed om te weten</h2>
     </div>
     <div class="faq">
-      <details class="v op"><summary>Kan ik mijn huidige voorraad overzetten?</summary><p>Ja. Je kunt losse producten aanmaken, maar sneller gaat het met "snel toevoegen": kies een producttype, scan per telefoonmodel de barcode en het staat erin. Honderden hoesjes of screenprotectors heb je zo ingevoerd.</p></details>
-      <details class="v op"><summary>Werkt het met mijn barcodescanner?</summary><p>Vrijwel elke USB- of bluetoothscanner werkt, omdat die zich gedraagt als toetsenbord. Je hoeft niets te installeren: scan gewoon, waar je ook bent in de app.</p></details>
-      <details class="v op"><summary>Hoe krijgt mijn klant de statusberichten?</summary><p>Via e-mail of sms, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.</p></details>
-      <details class="v op"><summary>Kan ik mijn eigen huisstijl gebruiken?</summary><p>Ja, vanaf het Pro-pakket. Logo uploaden, kleuren instellen met hexcode, en zowel de app als de klantpagina nemen dat over.</p></details>
-      <details class="v op"><summary>Wat gebeurt er met mijn gegevens als ik stop?</summary><p>Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.</p></details>
-      <details class="v op"><summary>Zitten er kosten aan het opstarten?</summary><p>Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.</p></details>
+      <details class="v op"><summary data-t="q1_s">Kan ik mijn huidige voorraad overzetten?</summary><p data-t="q1_p">Ja. Je kunt losse producten aanmaken, maar sneller gaat het met "snel toevoegen": kies een producttype, scan per telefoonmodel de barcode en het staat erin. Honderden hoesjes of screenprotectors heb je zo ingevoerd.</p></details>
+      <details class="v op"><summary data-t="q2_s">Werkt het met mijn barcodescanner?</summary><p data-t="q2_p">Vrijwel elke USB- of bluetoothscanner werkt, omdat die zich gedraagt als toetsenbord. Je hoeft niets te installeren: scan gewoon, waar je ook bent in de app.</p></details>
+      <details class="v op"><summary data-t="q3_s">Hoe krijgt mijn klant de statusberichten?</summary><p data-t="q3_p">Via e-mail of sms, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.</p></details>
+      <details class="v op"><summary data-t="q4_s">Kan ik mijn eigen huisstijl gebruiken?</summary><p data-t="q4_p">Ja, vanaf het Pro-pakket. Logo uploaden, kleuren instellen met hexcode, en zowel de app als de klantpagina nemen dat over.</p></details>
+      <details class="v op"><summary data-t="q5_s">Wat gebeurt er met mijn gegevens als ik stop?</summary><p data-t="q5_p">Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.</p></details>
+      <details class="v op"><summary data-t="q6_s">Zitten er kosten aan het opstarten?</summary><p data-t="q6_p">Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.</p></details>
     </div>
   </div>
 </section>
@@ -352,21 +353,21 @@ footer a:hover{color:var(--text);}
 <section id="contact">
   <div class="wrap">
     <div class="cta op">
-      <h2>Klaar om je winkel rustiger te maken?</h2>
-      <p>Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.</p>
-      <a href="mailto:info@refuro.nl?subject=Ik%20wil%20het%20graag%20proberen" class="btn wit">Start je proefperiode</a>
+      <h2 data-t="cta_h2">Klaar om je winkel rustiger te maken?</h2>
+      <p data-t="cta_p">Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.</p>
+      <a href="mailto:info@storvo.app?subject=Ik%20wil%20het%20graag%20proberen" class="btn wit" data-t="cta_btn">Start je proefperiode</a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap in">
-    <div class="merk" style="font-size:15px"><div class="mk" style="width:32px;height:32px;font-size:15px;border-radius:10px">R</div> Refuro</div>
+    <div class="merk" style="font-size:15px"><div class="mk" style="width:32px;height:32px;font-size:15px;border-radius:10px">S</div> Storvo</div>
     <div class="rechts">
-      <a href="#functies">Functies</a><a href="#prijzen">Prijzen</a><a href="mailto:info@refuro.nl">Contact</a>
+      <a href="#functies" data-t="nav_functies">Functies</a><a href="#prijzen" data-t="nav_prijzen">Prijzen</a><a href="mailto:info@storvo.app">Contact</a>
     </div>
   </div>
-  <div class="wrap" style="margin-top:18px; font-size:12px; color:var(--muted)">© 2026 Refuro. Voorraad en reparatiesoftware voor telefoonwinkels.</div>
+  <div class="wrap" style="margin-top:18px; font-size:12px; color:var(--muted)" data-t="footer_c">© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.</div>
 </footer>
 
 <script>
@@ -447,6 +448,126 @@ const mockIo=new IntersectionObserver(es=>{
 },{threshold:.3});
 const mock=document.getElementById('mock'); if(mock) mockIo.observe(mock);
 }else{ const tt=document.getElementById('tt'); if(tt) tt.classList.add('zie'); }
+
+/* ---------- taal NL / EN ---------- */
+const VERTALINGEN={
+nl:{
+  title:'Storvo · Voorraad &amp; reparaties voor telefoonwinkels',
+  nav_functies:'Functies', nav_werkwijze:'Hoe het werkt', nav_prijzen:'Prijzen', nav_vragen:'Vragen',
+  nav_login:'Inloggen', nav_try:'Gratis proberen',
+  hero_pill:'<b>NIEUW</b> Reparaties volgen via een live klantpagina',
+  hero_h1:'Je hele winkel in <span class="grad">één overzicht</span>',
+  hero_lead:'Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.',
+  hero_cta1:'14 dagen gratis proberen', hero_cta2:'Bekijk hoe het werkt',
+  hero_note:'Geen creditcard nodig. Binnen tien minuten ingericht.',
+  mock_dash:'Dashboard', mock_scan:'Scannen', mock_diensten:'Diensten', mock_rep:'Reparaties', mock_prod:'Producten', mock_best:'Bestellingen',
+  mock_omzet:'Omzet', mock_winst:'Winst', mock_rep2:'Reparaties', mock_tebestellen:'Te bestellen', mock_grafiek:'Omzet deze week',
+  f_tag:'Functies', f_h2:'Alles wat je nodig hebt, niets wat je afleidt',
+  f_p:'Eén systeem voor je voorraad, je reparaties en je cijfers, in plaats van drie schriften en een spreadsheet.',
+  f1_h:'Scannen dat gewoon werkt', f1_p:'Scan waar je ook bent in de app. Er verschijnt meteen een venster om in of uit te boeken. Staat een barcode nog niet in het systeem, dan maak je het product direct aan.',
+  f2_h:'Reparaties van begin tot eind', f2_p:'Van aanmelden tot ophalen, met een eigen reparatienummer, onderdelen, winstberekening en een tijdlijn die je klant live kan volgen.',
+  f3_h:'Klanten automatisch bijpraten', f3_p:'Bij elke stap gaat er een bericht uit. Onderdelen besteld, reparatie gestart, klaar om op te halen. Dat scheelt telefoontjes.',
+  f4_h:'Cijfers die kloppen', f4_p:'Omzet, winst, marge en cash apart van pin. Per uur, per dag en vergeleken met vorige week, zodat je ziet of het beter gaat.',
+  f5_h:'Nooit meer misgrijpen', f5_p:'Zakt de voorraad onder je minimum, dan verschijnt het artikel op de bestellijst. Besteld vóór 16:30 betekent morgen binnen.',
+  f6_h:'Je team erbij', f6_p:'Iedereen krijgt een eigen pincode en rechten. Elke verkoop en reparatie staat op naam, dus je ziet precies wie wat heeft gedaan.',
+  w_tag:'Hoe het werkt', w_h2:'Van binnenkomst tot afrekenen', w_p:'Zo loopt een reparatie door het systeem, zonder dat je iets hoeft te onthouden.',
+  w1_h:'Aanmelden', w1_p:'Klantgegevens, toestel en reparatie invoeren. Je ziet meteen of het onderdeel op voorraad ligt en wat je eraan verdient.',
+  w2_h:'Bestellen', w2_p:'Ligt het onderdeel er niet, dan komt het op de bestellijst vóór 16:30, met de verwachte leverdatum voor je klant.',
+  w3_h:'Repareren', w3_p:'Onderdelen binnen en reparatie starten met een verwachte ophaaltijd. Loopt iets anders, dan zet je er een opmerking bij.',
+  w4_h:'Ophalen', w4_p:'De klant krijgt bericht dat het klaar is en jij rekent af met pin of cash. De omzet staat meteen in je dashboard.',
+  c1:'minuten per dag bespaard aan administratie', c2:'van de klanten weet zelf de status van hun reparatie',
+  c3:'opstartkosten, maandelijks opzegbaar', c4:'minuten om je hele winkel in te richten',
+  p_tag:'Prijzen', p_h2:'Eerlijke prijs, geen verrassingen',
+  p_p:'Alle bedragen per maand, exclusief btw. Eerst 14 dagen gratis proberen, daarna maandelijks opzegbaar.',
+  p_mnd:'/mnd', p_cta:'Gratis proberen', p_badge:'MEEST GEKOZEN',
+  p1_d:'Voor de eenmanszaak',
+  p1_ul:'<li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li>',
+  p2_d:'Voor de winkel die groeit',
+  p2_ul:'<li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li>',
+  p3_d:'Voor meerdere vestigingen',
+  p3_ul:'<li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>30 dagen proberen</li>',
+  q_tag:'Vragen', q_h2:'Goed om te weten',
+  q1_s:'Kan ik mijn huidige voorraad overzetten?', q1_p:'Ja. Je kunt losse producten aanmaken, maar sneller gaat het met "snel toevoegen": kies een producttype, scan per telefoonmodel de barcode en het staat erin. Honderden hoesjes of screenprotectors heb je zo ingevoerd.',
+  q2_s:'Werkt het met mijn barcodescanner?', q2_p:'Vrijwel elke USB- of bluetoothscanner werkt, omdat die zich gedraagt als toetsenbord. Je hoeft niets te installeren: scan gewoon, waar je ook bent in de app.',
+  q3_s:'Hoe krijgt mijn klant de statusberichten?', q3_p:'Via e-mail of sms, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.',
+  q4_s:'Kan ik mijn eigen huisstijl gebruiken?', q4_p:'Ja, vanaf het Pro-pakket. Logo uploaden, kleuren instellen met hexcode, en zowel de app als de klantpagina nemen dat over.',
+  q5_s:'Wat gebeurt er met mijn gegevens als ik stop?', q5_p:'Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.',
+  q6_s:'Zitten er kosten aan het opstarten?', q6_p:'Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.',
+  cta_h2:'Klaar om je winkel rustiger te maken?', cta_p:'Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.',
+  cta_btn:'Start je proefperiode',
+  footer_c:'© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.'
+},
+en:{
+  title:'Storvo · Inventory &amp; repairs for phone shops',
+  nav_functies:'Features', nav_werkwijze:'How it works', nav_prijzen:'Pricing', nav_vragen:'FAQ',
+  nav_login:'Log in', nav_try:'Try for free',
+  hero_pill:'<b>NEW</b> Track repairs on a live customer page',
+  hero_h1:'Your whole shop in <span class="grad">one overview</span>',
+  hero_lead:'Scan inventory, track repairs, keep customers informed and see exactly what you earn. Built for phone shops, together with phone shops.',
+  hero_cta1:'Try free for 14 days', hero_cta2:'See how it works',
+  hero_note:'No credit card required. Set up in ten minutes.',
+  mock_dash:'Dashboard', mock_scan:'Scan', mock_diensten:'Services', mock_rep:'Repairs', mock_prod:'Products', mock_best:'Orders',
+  mock_omzet:'Revenue', mock_winst:'Profit', mock_rep2:'Repairs', mock_tebestellen:'To order', mock_grafiek:'Revenue this week',
+  f_tag:'Features', f_h2:'Everything you need, nothing that distracts',
+  f_p:'One system for your inventory, repairs and numbers, instead of three notebooks and a spreadsheet.',
+  f1_h:'Scanning that just works', f1_p:'Scan from anywhere in the app. A window pops up right away to book stock in or out. If a barcode is not in the system yet, you create the product on the spot.',
+  f2_h:'Repairs from start to finish', f2_p:'From check-in to pickup, with its own repair number, parts, profit calculation and a timeline your customer can follow live.',
+  f3_h:'Customers updated automatically', f3_p:'A message goes out at every step. Parts ordered, repair started, ready for pickup. That saves phone calls.',
+  f4_h:'Numbers that add up', f4_p:'Revenue, profit, margin and cash separate from card. Per hour, per day and compared to last week, so you can see if things are improving.',
+  f5_h:'Never out of stock again', f5_p:'When inventory drops below your minimum, the item appears on the order list. Ordered before 4:30 PM means delivered tomorrow.',
+  f6_h:'Bring your team', f6_p:'Everyone gets their own PIN and permissions. Every sale and repair is recorded by name, so you know exactly who did what.',
+  w_tag:'How it works', w_h2:'From walk-in to checkout', w_p:'This is how a repair moves through the system, without you having to remember a thing.',
+  w1_h:'Check in', w1_p:'Enter customer details, device and repair. You instantly see whether the part is in stock and what you earn on it.',
+  w2_h:'Order', w2_p:'If the part is not in stock, it goes on the order list before 4:30 PM, with the expected delivery date for your customer.',
+  w3_h:'Repair', w3_p:'Parts arrive and you start the repair with an expected pickup time. If something changes, you add a note.',
+  w4_h:'Pickup', w4_p:'The customer gets a message that it is ready and you check out by card or cash. The revenue shows up in your dashboard right away.',
+  c1:'minutes saved on admin every day', c2:'of customers check their repair status themselves',
+  c3:'setup costs, cancel monthly', c4:'minutes to set up your entire shop',
+  p_tag:'Pricing', p_h2:'A fair price, no surprises',
+  p_p:'All amounts per month, excluding VAT. Try free for 14 days first, then cancel monthly.',
+  p_mnd:'/mo', p_cta:'Try for free', p_badge:'MOST POPULAR',
+  p1_d:'For the one-person shop',
+  p1_ul:'<li>Inventory &amp; scanning</li><li>Repairs with customer page</li><li>Order list and deliveries</li><li>Up to 2 employees</li><li>1 location</li>',
+  p2_d:'For the growing shop',
+  p2_ul:'<li>Everything in Start</li><li>Dashboard with profit per category</li><li>Automatic customer messages</li><li>Your own logo and colours</li><li>Up to 8 employees</li>',
+  p3_d:'For multiple locations',
+  p3_ul:'<li>Everything in Pro</li><li>Unlimited locations and teams</li><li>Numbers per location</li><li>Priority support</li><li>30-day trial</li>',
+  q_tag:'FAQ', q_h2:'Good to know',
+  q1_s:'Can I transfer my current inventory?', q1_p:'Yes. You can create individual products, but "quick add" is faster: pick a product type, scan the barcode per phone model and it is in. Hundreds of cases or screen protectors are entered in no time.',
+  q2_s:'Does it work with my barcode scanner?', q2_p:'Almost every USB or Bluetooth scanner works, because it behaves like a keyboard. Nothing to install: just scan, wherever you are in the app.',
+  q3_s:'How does my customer get status updates?', q3_p:'By email or text, with a link to a page in your branding where the customer follows the progress live. You decide per customer whether messages are sent.',
+  q4_s:'Can I use my own branding?', q4_p:'Yes, from the Pro plan. Upload your logo, set colours with a hex code, and both the app and the customer page take it over.',
+  q5_s:'What happens to my data if I stop?', q5_p:'You can download a full backup at any time. If you cancel, your data stays available for 30 days so you can export everything.',
+  q6_s:'Are there any setup costs?', q6_p:'No. No setup costs and no annual contract. You pay per month and cancel whenever you want.',
+  cta_h2:'Ready to make your shop calmer?', cta_p:'Try it free for 14 days. Not happy? Then you stop without any hassle.',
+  cta_btn:'Start your free trial',
+  footer_c:'© 2026 Storvo. Inventory and repair software for phone shops.'
+}};
+let taal='nl';
+function zetTaal(t){
+  taal=t;
+  document.documentElement.lang=t;
+  const dict=VERTALINGEN[t];
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const v=dict[el.dataset.t];
+    if(v!==undefined) el.innerHTML=v;
+  });
+  const knop=document.getElementById('taalKnop');
+  if(knop) knop.textContent=(t==='nl')?'EN':'NL';
+  try{ localStorage.setItem('storvo_taal',t); }catch(e){}
+}
+function wisselTaal(){ zetTaal(taal==='nl'?'en':'nl'); }
+(function(){
+  let t=null;
+  try{ t=localStorage.getItem('storvo_taal'); }catch(e){}
+  if(t!=='nl' && t!=='en'){
+    const host=location.hostname;
+    if(host.endsWith('.nl')) t='nl';
+    else if(host.endsWith('storvo.app')) t='en';
+    else t=(navigator.language||'nl').toLowerCase().startsWith('nl')?'nl':'en';
+  }
+  if(t!=='nl') zetTaal(t); else zetTaal('nl');
+})();
 
 /* zachte ankerscroll */
 document.querySelectorAll('a[href^="#"]').forEach(a=>{

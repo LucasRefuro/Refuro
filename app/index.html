@@ -180,10 +180,17 @@
   .popup.groot{width:min(680px,94vw); max-height:88vh; overflow:auto;}
   .logoImg{width:38px; height:38px; border-radius:10px; object-fit:cover;}
   /* login & gebruiker */
-  #loginScherm{position:fixed; inset:0; background:var(--navy); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px;}
+  #loginScherm,#authScherm{position:fixed; inset:0; background:var(--navy); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; overflow:auto;}
   .loginbox{background:#fff; border-radius:18px; padding:30px; width:min(420px,94vw); text-align:center;}
   .loginbox .mk{width:56px; height:56px; border-radius:14px; background:var(--oranje); color:var(--actieftekst); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; margin:0 auto 14px; overflow:hidden;}
   .loginbox .mk img{width:100%; height:100%; object-fit:cover;}
+  .loginbox label{display:block; text-align:left; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:4px;}
+  .loginbox input,.loginbox select{width:100%; margin-bottom:2px;}
+  .teamRij{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--rand,#e7ecf5); flex-wrap:wrap;}
+  .teamRij .av{width:34px; height:34px; border-radius:10px; background:var(--oranje); color:var(--actieftekst); display:flex; align-items:center; justify-content:center; font-weight:700; flex:none;}
+  .rolTag{font-size:11px; font-weight:700; text-transform:uppercase; padding:2px 8px; border-radius:6px; background:var(--bg); color:var(--muted);}
+  .fa2Aan{color:#1c8a4c; font-weight:600; font-size:12px;}
+  .fa2Uit{color:var(--muted); font-size:12px;}
   .mwLijst{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:18px 0;}
   .mwKnop{background:var(--bg); border:2px solid transparent; border-radius:12px; padding:14px 10px; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--text); cursor:pointer;}
   .mwKnop:hover{border-color:var(--oranje);}
@@ -375,7 +382,7 @@
     box-shadow:var(--schaduw-l); animation:toastin .28s cubic-bezier(.34,1.3,.64,1); line-height:1.45;}
   .toast.groen{background:rgba(22,163,74,.96);}
 
-  #loginScherm{background:linear-gradient(135deg, var(--navy), var(--navy-2));}
+  #loginScherm,#authScherm{background:linear-gradient(135deg, var(--navy), var(--navy-2));}
   .loginbox{border-radius:26px; padding:36px 32px; box-shadow:var(--schaduw-l);}
   .loginbox .mk{width:60px; height:60px; border-radius:18px; font-size:27px; margin-bottom:16px;
     box-shadow:0 10px 26px color-mix(in srgb, var(--oranje) 36%, transparent);}
@@ -895,6 +902,7 @@
       <button data-s="mw" class="active">Medewerkers</button>
       <button data-s="teams">Teams</button>
       <button data-s="prestaties">Prestaties</button>
+      <button data-s="accounts">Accounts &amp; inloggen</button>
     </div>
   </div>
 
@@ -957,6 +965,21 @@
         <tbody id="prestBody"></tbody>
       </table>
       </div>
+    </div>
+  </div>
+
+  <div id="team-accounts" hidden>
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-lock"/></svg>Accounts &amp; inloggen</h2>
+      <p class="muted" style="margin-bottom:14px">Dit is het echte inlogsysteem: elke medewerker krijgt een eigen gebruikersnaam, e-mailadres en wachtwoord, met optionele twee-staps-verificatie. Nodig nieuwe collega's uit via een deelbare link — zij doorlopen bij hun eerste keer inloggen automatisch dezelfde rondleiding.</p>
+      <div id="teamAccBody">Bezig met laden…</div>
+      <div class="row" style="margin-top:16px; align-items:flex-end">
+        <div style="min-width:180px"><label>Rol voor uitnodiging</label>
+          <select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select>
+        </div>
+        <div><button class="btn" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Uitnodigingslink maken</button></div>
+      </div>
+      <div id="inviteResultaat" style="margin-top:12px"></div>
     </div>
   </div>
 </section>
@@ -1121,6 +1144,7 @@
 
 </div>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const KEY='refuro_stock_v2';
 const OUDE_KEY='voorraadbeheer_v1';
@@ -1159,6 +1183,10 @@ let dagDatum=null;
 let chartMode='uur';
 let gebruiker=null;
 let prestPeriode='dag';
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let account=null;
 
 function load(){
   let s=null;
@@ -1894,7 +1922,7 @@ document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('cli
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','bestellen','instellingen'],
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','bestellen','instellingen','team'],
   medewerker:['scan','diensten','reparaties','producten','nieuw','bestellen']
 };
 function mag(tab){
@@ -1912,9 +1940,11 @@ function pasRechtenToe(){
     chip.style.display='flex';
     chip.innerHTML=`<div class="av">${esc(gebruiker.naam.charAt(0).toUpperCase())}</div>`+
       `<div>${esc(gebruiker.naam)}<br><span style="opacity:.7">${esc(gebruiker.rol)}</span></div>`+
-      `<button onclick="uitloggen()">wissel</button>`;
+      (account?`<button onclick="toonMijnAccount()" title="Mijn account">⚙</button>`:'')+
+      `<button onclick="uitloggen()">${account?'uitloggen':'wissel'}</button>`;
     if(top) top.innerHTML=`<div class="av">${esc(gebruiker.naam.charAt(0).toUpperCase())}</div>`+
       `<div><div class="nm">${esc(gebruiker.naam)}</div><div class="rl">${esc(gebruiker.rol)}</div></div>`;
+    if(top) top.onclick=account?(()=>toonMijnAccount()):(()=>uitloggen());
   }else{
     chip.style.display='none';
     if(top) top.innerHTML='';
@@ -1976,9 +2006,347 @@ function login(m){
   showTab(mag('dashboard')?'dashboard':'scan');
   toast('👋 Welkom '+m.naam, true);
 }
-function uitloggen(){
+async function uitloggen(){
+  if(account){
+    account=null; gebruiker=null;
+    try{ await sb.auth.signOut(); }catch(e){}
+    toonAuthLogin();
+    return;
+  }
   gebruiker=null;
   if(!document.getElementById('loginScherm')) toonLogin();
+}
+
+/* ================= ACCOUNT SYSTEEM (echte logins via Supabase) ================= */
+function authWrap(inner){
+  let el=document.getElementById('authScherm');
+  if(!el){ el=document.createElement('div'); el.id='authScherm'; document.body.appendChild(el); }
+  const h=huisstijl();
+  el.innerHTML=`<div class="loginbox">
+    <div class="mk">${h.logo?`<img src="${h.logo}">`:esc((h.naam||'R').charAt(0).toUpperCase())}</div>
+    <h2 style="font-size:18px; margin-bottom:2px">${esc(h.naam||'Refuro')}</h2>
+    ${inner}
+  </div>`;
+  return el;
+}
+function authSluit(){ const el=document.getElementById('authScherm'); if(el) el.remove(); }
+
+async function authBoot(){
+  const params=new URLSearchParams(location.search);
+  if(location.hash.indexOf('type=recovery')>-1 || params.get('type')==='recovery'){
+    toonNieuwWachtwoordScherm();
+    return;
+  }
+  const setupSession=params.get('setup');
+  if(setupSession){ toonOwnerSetup(setupSession); return; }
+  const inviteToken=params.get('invite');
+  if(inviteToken){ toonInviteSetup(inviteToken); return; }
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ toonAuthLogin(); return; }
+  await ladAccountEnStart(session);
+}
+
+async function ladAccountEnStart(session){
+  const {data:acc,error}=await sb.from('accounts').select('*').eq('id',session.user.id).single();
+  if(error || !acc){
+    toast('⚠️ Kon accountgegevens niet laden, log opnieuw in.');
+    try{ await sb.auth.signOut(); }catch(e){}
+    toonAuthLogin();
+    return;
+  }
+  account=acc;
+  gebruiker={id:acc.id, naam:acc.naam, rol:acc.rol};
+  authSluit();
+  pasRechtenToe();
+  showTab(mag('dashboard')?'dashboard':'scan');
+  if(!account.onboarding_klaar) toonOnboarding();
+}
+
+function toonAuthLogin(fout){
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Log in met je gebruikersnaam of e-mailadres</p>
+    <label>Gebruikersnaam of e-mail</label><input id="al_id" autocomplete="username" onkeydown="if(event.key==='Enter')doeLogin()">
+    <div style="margin-top:10px"><label>Wachtwoord</label><input id="al_ww" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doeLogin()"></div>
+    ${fout?`<p style="color:#c0392b; margin-top:10px; font-size:13px; text-align:left">${esc(fout)}</p>`:''}
+    <button class="btn" style="width:100%; margin-top:16px" onclick="doeLogin()">Inloggen</button>
+    <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonWachtwoordVergeten()">Wachtwoord vergeten?</button>
+  `);
+  const f=document.getElementById('al_id'); if(f) f.focus();
+}
+
+async function doeLogin(){
+  const idv=(document.getElementById('al_id').value||'').trim();
+  const ww=document.getElementById('al_ww').value||'';
+  if(!idv||!ww){ toonAuthLogin('Vul zowel je gebruikersnaam of e-mail als je wachtwoord in.'); return; }
+  let email=idv;
+  if(!idv.includes('@')){
+    const {data:emailData,error:emailErr}=await sb.rpc('email_for_username',{gebruikersnaam_input:idv});
+    if(emailErr || !emailData){ toonAuthLogin('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
+    email=emailData;
+  }
+  const {data,error}=await sb.auth.signInWithPassword({email,password:ww});
+  if(error){ toonAuthLogin('Onbekende gebruikersnaam of e-mail, of onjuist wachtwoord.'); return; }
+  const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
+    toon2FAStap();
+    return;
+  }
+  await ladAccountEnStart(data.session);
+}
+
+async function toon2FAStap(){
+  const {data:factors}=await sb.auth.mfa.listFactors();
+  const factor=(factors && factors.totp && factors.totp[0])||null;
+  if(!factor){ toonAuthLogin('Twee-staps-verificatie kon niet worden gestart.'); return; }
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Voer de 6-cijferige code uit je authenticator-app in</p>
+    <input id="al_2fa" maxlength="6" inputmode="numeric" style="text-align:center; letter-spacing:6px; font-size:20px" onkeydown="if(event.key==='Enter')bevestig2FALogin('${factor.id}')">
+    <button class="btn" style="width:100%; margin-top:16px" onclick="bevestig2FALogin('${factor.id}')">Bevestigen</button>
+    <button class="btn ghost" style="width:100%; margin-top:8px" onclick="sb.auth.signOut().then(()=>toonAuthLogin())">Terug</button>
+  `);
+  const f=document.getElementById('al_2fa'); if(f) f.focus();
+}
+async function bevestig2FALogin(factorId){
+  const code=(document.getElementById('al_2fa').value||'').trim();
+  const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId});
+  if(chErr){ toast('⚠️ '+chErr.message); return; }
+  const {error}=await sb.auth.mfa.verify({factorId, challengeId:ch.id, code});
+  if(error){ toast('⚠️ Onjuiste code, probeer opnieuw.'); return; }
+  const {data:{session}}=await sb.auth.getSession();
+  await ladAccountEnStart(session);
+}
+
+function toonWachtwoordVergeten(){
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Vul je e-mailadres in. We sturen een link waarmee je een nieuw wachtwoord kan instellen.</p>
+    <input id="al_reset_email" type="email" placeholder="jij@bedrijf.nl">
+    <button class="btn" style="width:100%; margin-top:16px" onclick="verstuurResetMail()">Verstuur link</button>
+    <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonAuthLogin()">Terug naar inloggen</button>
+  `);
+}
+async function verstuurResetMail(){
+  const email=(document.getElementById('al_reset_email').value||'').trim();
+  if(!email){ toast('⚠️ Vul een e-mailadres in.'); return; }
+  try{ await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}); }catch(e){}
+  authWrap(`<p style="margin-bottom:14px">Als dit e-mailadres bij ons bekend is, ontvang je zo een e-mail met een link om een nieuw wachtwoord in te stellen.</p>
+    <button class="btn" style="width:100%" onclick="toonAuthLogin()">Terug naar inloggen</button>`);
+}
+function toonNieuwWachtwoordScherm(){
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Kies een nieuw wachtwoord</p>
+    <input id="al_nieuw_ww" type="password" placeholder="Nieuw wachtwoord (min. 8 tekens)" autocomplete="new-password">
+    <div style="margin-top:8px"><input id="al_nieuw_ww2" type="password" placeholder="Herhaal wachtwoord" autocomplete="new-password"></div>
+    <button class="btn" style="width:100%; margin-top:16px" onclick="slaNieuwWachtwoordOp()">Wachtwoord opslaan</button>
+  `);
+}
+async function slaNieuwWachtwoordOp(){
+  const w1=document.getElementById('al_nieuw_ww').value, w2=document.getElementById('al_nieuw_ww2').value;
+  if(!w1||w1.length<8){ toast('⚠️ Kies een wachtwoord van minstens 8 tekens.'); return; }
+  if(w1!==w2){ toast('⚠️ Wachtwoorden komen niet overeen.'); return; }
+  const {error}=await sb.auth.updateUser({password:w1});
+  if(error){ toast('⚠️ '+error.message); return; }
+  toast('✔️ Wachtwoord gewijzigd.', true);
+  history.replaceState(null,'',location.pathname);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session) await ladAccountEnStart(session); else toonAuthLogin();
+}
+
+/* -- nieuw account na Stripe-betaling (eigenaar) -- */
+function toonOwnerSetup(sessionId){
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Bedankt voor je aanmelding! Maak je account aan om te starten.</p>
+    <label>Bedrijfsnaam</label><input id="os_bedrijf" placeholder="Refuro">
+    <div style="margin-top:10px"><label>Je naam</label><input id="os_naam" placeholder="Voor- en achternaam"></div>
+    <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="os_gebruikersnaam" autocomplete="username"></div>
+    <div style="margin-top:10px"><label>Wachtwoord</label><input id="os_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
+    <button class="btn" style="width:100%; margin-top:16px" onclick="maakOwnerAccount('${esc(sessionId)}')">Account aanmaken</button>
+  `);
+}
+async function maakOwnerAccount(sessionId){
+  const bedrijf=(document.getElementById('os_bedrijf').value||'').trim();
+  const naam=(document.getElementById('os_naam').value||'').trim();
+  const gebruikersnaam=(document.getElementById('os_gebruikersnaam').value||'').trim();
+  const ww=document.getElementById('os_ww').value||'';
+  if(!bedrijf||!naam||!gebruikersnaam||!ww){ toast('⚠️ Vul alle velden in.'); return; }
+  if(ww.length<8){ toast('⚠️ Kies een wachtwoord van minstens 8 tekens.'); return; }
+  let uit;
+  try{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/create-owner-account',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
+      body:JSON.stringify({session_id:sessionId, bedrijfsnaam:bedrijf, naam, gebruikersnaam, wachtwoord:ww})
+    });
+    uit=await res.json();
+    if(!res.ok || !uit.email) throw new Error(uit.error||'Aanmaken account mislukt.');
+  }catch(e){ toast('⚠️ '+e.message); return; }
+  const {data,error}=await sb.auth.signInWithPassword({email:uit.email, password:ww});
+  if(error){ toast('✔️ Account aangemaakt. Log in met je gegevens.', true); history.replaceState(null,'',location.pathname); toonAuthLogin(); return; }
+  history.replaceState(null,'',location.pathname);
+  await ladAccountEnStart(data.session);
+}
+
+/* -- uitnodiging werknemer -- */
+async function toonInviteSetup(token){
+  authWrap(`<p class="muted">Uitnodiging controleren…</p>`);
+  const {data,error}=await sb.rpc('invite_info',{token_input:token});
+  const info=data && data[0];
+  if(error || !info || !info.geldig){
+    authWrap(`<p style="margin-bottom:14px">Deze uitnodigingslink is ongeldig of al gebruikt. Vraag je werkgever om een nieuwe link.</p>
+      <button class="btn" style="width:100%" onclick="toonAuthLogin()">Naar inloggen</button>`);
+    return;
+  }
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Je bent uitgenodigd voor <b>${esc(info.team_naam)}</b> als <b>${esc(info.rol)}</b>. Maak je account aan.</p>
+    <label>Je naam</label><input id="is_naam" placeholder="Voor- en achternaam">
+    <div style="margin-top:10px"><label>Gebruikersnaam</label><input id="is_gebruikersnaam" autocomplete="username"></div>
+    <div style="margin-top:10px"><label>E-mailadres</label><input id="is_email" type="email" autocomplete="email"></div>
+    <div style="margin-top:10px"><label>Wachtwoord</label><input id="is_ww" type="password" autocomplete="new-password" placeholder="Min. 8 tekens"></div>
+    <button class="btn" style="width:100%; margin-top:16px" onclick="maakInviteAccount('${esc(token)}')">Account aanmaken</button>
+  `);
+}
+async function maakInviteAccount(token){
+  const naam=(document.getElementById('is_naam').value||'').trim();
+  const gebruikersnaam=(document.getElementById('is_gebruikersnaam').value||'').trim();
+  const email=(document.getElementById('is_email').value||'').trim();
+  const ww=document.getElementById('is_ww').value||'';
+  if(!naam||!gebruikersnaam||!email||!ww){ toast('⚠️ Vul alle velden in.'); return; }
+  if(ww.length<8){ toast('⚠️ Kies een wachtwoord van minstens 8 tekens.'); return; }
+  let uit;
+  try{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/redeem-invite',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
+      body:JSON.stringify({token, naam, gebruikersnaam, wachtwoord:ww, email})
+    });
+    uit=await res.json();
+    if(!res.ok || !uit.ok) throw new Error(uit.error||'Aanmaken account mislukt.');
+  }catch(e){ toast('⚠️ '+e.message); return; }
+  const {data,error}=await sb.auth.signInWithPassword({email, password:ww});
+  if(error){ toast('✔️ Account aangemaakt. Log in met je gegevens.', true); history.replaceState(null,'',location.pathname); toonAuthLogin(); return; }
+  history.replaceState(null,'',location.pathname);
+  await ladAccountEnStart(data.session);
+}
+
+/* -- teamledenbeheer (eigenaar/beheerder) -- */
+async function renderTeamAccounts(){
+  const body=document.getElementById('teamAccBody');
+  if(!account){ body.innerHTML='<p class="muted">Laden…</p>'; return; }
+  const {data:leden,error}=await sb.from('accounts').select('*').order('created_at',{ascending:true});
+  if(error){ body.innerHTML='<p class="muted">Kon teamleden niet laden.</p>'; return; }
+  body.innerHTML=(leden||[]).map(l=>`<div class="teamRij">
+    <div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
+    <div style="flex:1; min-width:160px"><b>${esc(l.naam)}</b>${l.id===account.id?' <span class="muted">(jij)</span>':''}<br>
+      <span class="muted">${esc(l.gebruikersnaam)} · ${esc(l.email)}</span></div>
+    <span class="rolTag">${esc(l.rol)}</span>
+    <span class="${l.tweestaps_actief?'fa2Aan':'fa2Uit'}">${l.tweestaps_actief?'2FA aan':'2FA uit'}</span>
+    <button class="btn ghost small" data-id="${l.id}" data-naam="${esc(l.naam)}" onclick="teamWachtwoordInstellen(this.dataset.id,this.dataset.naam)"><svg class="i s"><use href="#i-lock"/></svg>Wachtwoord instellen</button>
+  </div>`).join('') || '<p class="muted">Nog geen teamleden.</p>';
+}
+async function teamWachtwoordInstellen(accountId, naam){
+  const ww=window.prompt('Nieuw wachtwoord voor '+naam+' (min. 8 tekens):');
+  if(!ww) return;
+  if(ww.length<8){ toast('⚠️ Wachtwoord moet minstens 8 tekens zijn.'); return; }
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ toast('⚠️ Log opnieuw in.'); return; }
+  try{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/team-set-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({account_id:accountId, nieuw_wachtwoord:ww})
+    });
+    const uit=await res.json();
+    if(!res.ok || !uit.ok) throw new Error(uit.error||'Wachtwoord wijzigen mislukt.');
+    toast('✔️ Wachtwoord van '+naam+' is gewijzigd.', true);
+  }catch(e){ toast('⚠️ '+e.message); }
+}
+async function maakUitnodiging(){
+  if(!account){ return; }
+  const rol=document.getElementById('inv_rol').value;
+  const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol}).select().single();
+  const uit=document.getElementById('inviteResultaat');
+  if(error || !data){ uit.innerHTML='<p style="color:#c0392b">Kon geen uitnodiging aanmaken.</p>'; return; }
+  const link=location.origin+location.pathname+'?invite='+data.token;
+  uit.innerHTML=`<div class="infobox">Deel deze link met je nieuwe collega (14 dagen geldig):<br>
+    <input readonly value="${esc(link)}" style="margin-top:8px" onclick="this.select()">
+    <button class="btn ghost small" style="margin-top:8px" onclick="navigator.clipboard.writeText('${esc(link)}').then(()=>toast('✔️ Link gekopieerd', true))"><svg class="i s"><use href="#i-clipboard"/></svg>Kopiëren</button>
+  </div>`;
+}
+
+/* -- mijn account (alle rollen): naam, wachtwoord, 2FA -- */
+function toonMijnAccount(){
+  if(!account) return;
+  const el=document.createElement('div'); el.className='overlay'; el.id='mijnAccountPopup';
+  el.innerHTML=`<div class="popup">
+    <h2>Mijn account</h2>
+    <div style="text-align:left; margin-top:12px">
+      <label>Naam</label><input id="ma_naam" value="${esc(account.naam)}">
+      <p class="muted" style="margin-top:10px">Gebruikersnaam: <b>${esc(account.gebruikersnaam)}</b><br>E-mail: <b>${esc(account.email)}</b></p>
+      <button class="btn ghost" style="width:100%; margin-top:10px" onclick="slaMijnNaamOp()">Naam opslaan</button>
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--rand,#e7ecf5)">
+      <label>Nieuw wachtwoord</label><input id="ma_ww" type="password" placeholder="Min. 8 tekens">
+      <button class="btn ghost" style="width:100%; margin-top:10px" onclick="slaMijnWachtwoordOp()">Wachtwoord wijzigen</button>
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--rand,#e7ecf5)">
+      <div id="ma_2fa"></div>
+    </div>
+    <button class="btn" style="width:100%; margin-top:16px" onclick="document.getElementById('mijnAccountPopup').remove()">Sluiten</button>
+  </div>`;
+  document.body.appendChild(el);
+  render2FAStatus();
+}
+function render2FAStatus(){
+  const el=document.getElementById('ma_2fa'); if(!el) return;
+  if(account.tweestaps_actief){
+    el.innerHTML=`<p class="fa2Aan">✔️ Twee-staps-verificatie is ingeschakeld</p>
+      <button class="btn ghost" style="width:100%; margin-top:8px" onclick="schakel2FAUit()">Uitschakelen</button>`;
+  }else{
+    el.innerHTML=`<p class="muted">Twee-staps-verificatie is optioneel maar wordt aangeraden.</p>
+      <button class="btn ghost" style="width:100%; margin-top:8px" onclick="start2FAInschakelen()">Inschakelen</button>`;
+  }
+}
+async function slaMijnNaamOp(){
+  const naam=(document.getElementById('ma_naam').value||'').trim();
+  if(!naam){ toast('⚠️ Vul een naam in.'); return; }
+  const {error}=await sb.from('accounts').update({naam}).eq('id',account.id);
+  if(error){ toast('⚠️ Opslaan mislukt.'); return; }
+  account.naam=naam; gebruiker.naam=naam;
+  pasRechtenToe();
+  toast('✔️ Naam opgeslagen.', true);
+}
+async function slaMijnWachtwoordOp(){
+  const ww=document.getElementById('ma_ww').value||'';
+  if(ww.length<8){ toast('⚠️ Kies een wachtwoord van minstens 8 tekens.'); return; }
+  const {error}=await sb.auth.updateUser({password:ww});
+  if(error){ toast('⚠️ '+error.message); return; }
+  document.getElementById('ma_ww').value='';
+  toast('✔️ Wachtwoord gewijzigd.', true);
+}
+async function start2FAInschakelen(){
+  const {data,error}=await sb.auth.mfa.enroll({factorType:'totp'});
+  if(error){ toast('⚠️ '+error.message); return; }
+  const el=document.getElementById('ma_2fa');
+  el.innerHTML=`<p class="muted">Scan deze QR-code met je authenticator-app (bijv. Google Authenticator):</p>
+    <img src="${data.totp.qr_code}" style="width:160px; height:160px; margin:10px auto; display:block">
+    <p class="muted" style="font-size:11px; word-break:break-all">Of voer handmatig in: ${esc(data.totp.secret)}</p>
+    <input id="ma_2fa_code" maxlength="6" inputmode="numeric" placeholder="6-cijferige code" style="text-align:center; letter-spacing:4px">
+    <button class="btn" style="width:100%; margin-top:8px" onclick="bevestig2FAInschakelen('${data.id}')">Bevestigen</button>`;
+}
+async function bevestig2FAInschakelen(factorId){
+  const code=(document.getElementById('ma_2fa_code').value||'').trim();
+  const {data:ch,error:chErr}=await sb.auth.mfa.challenge({factorId});
+  if(chErr){ toast('⚠️ '+chErr.message); return; }
+  const {error}=await sb.auth.mfa.verify({factorId, challengeId:ch.id, code});
+  if(error){ toast('⚠️ Onjuiste code, probeer opnieuw.'); return; }
+  await sb.from('accounts').update({tweestaps_actief:true}).eq('id',account.id);
+  account.tweestaps_actief=true;
+  render2FAStatus();
+  toast('✔️ Twee-staps-verificatie ingeschakeld.', true);
+}
+async function schakel2FAUit(){
+  const {data:factors}=await sb.auth.mfa.listFactors();
+  const factor=(factors && factors.totp && factors.totp[0])||null;
+  if(factor){ await sb.auth.mfa.unenroll({factorId:factor.id}); }
+  await sb.from('accounts').update({tweestaps_actief:false}).eq('id',account.id);
+  account.tweestaps_actief=false;
+  render2FAStatus();
+  toast('Twee-staps-verificatie uitgeschakeld.', true);
 }
 function zetVergrendeling(aan){
   if(aan && !state.medewerkers.some(m=>m.pin)){
@@ -2058,7 +2426,8 @@ function verwijderTeam(id){
 }
 document.querySelectorAll('#teamTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#teamTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['mw','teams','prestaties'].forEach(s=>document.getElementById('team-'+s).hidden = s!==b.dataset.s);
+  ['mw','teams','prestaties','accounts'].forEach(s=>document.getElementById('team-'+s).hidden = s!==b.dataset.s);
+  if(b.dataset.s==='accounts') renderTeamAccounts();
 }));
 document.querySelectorAll('#prestSel button').forEach(b=>b.addEventListener('click',()=>{
   prestPeriode=b.dataset.p;
@@ -3003,6 +3372,7 @@ function onbBedrijfOpslaan(){
 }
 function onbAfronden(overgeslagen){
   state.onboardingKlaar=true; save();
+  if(account){ account.onboarding_klaar=true; sb.from('accounts').update({onboarding_klaar:true}).eq('id',account.id); }
   const o=document.getElementById('onbOverlay'); if(o) o.remove();
   if(!overgeslagen) toast('✔️ Welkom! Je kan meteen beginnen.', true);
   renderInstellingen();
@@ -3011,10 +3381,7 @@ function onbAfronden(overgeslagen){
 save();
 pasHuisstijlToe();
 renderScanLog(); updateBadge(); renderDashboard();
-if(state.vergrendeld && state.medewerkers.some(m=>m.pin)) toonLogin();
-else { gebruiker=state.medewerkers.find(m=>m.rol==='eigenaar' && m.actief!==false)||state.medewerkers[0]||null; }
-pasRechtenToe();
-if(!state.onboardingKlaar) toonOnboarding();
+authBoot();
 </script>
 </body>
 </html>

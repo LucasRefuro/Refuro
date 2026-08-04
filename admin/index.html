@@ -249,6 +249,7 @@
   <nav>
     <button data-tab="overzicht" class="active"><svg class="i"><use href="#i-chart"/></svg> Overzicht</button>
     <button data-tab="klanten"><svg class="i"><use href="#i-shop"/></svg> Klanten</button>
+    <button data-tab="teams"><svg class="i"><use href="#i-shop"/></svg> Teams &amp; accounts</button>
     <button data-tab="plannen"><svg class="i"><use href="#i-card"/></svg> Abonnementen</button>
     <button data-tab="stripe"><svg class="i"><use href="#i-plug"/></svg> Stripe-koppeling</button>
     <button data-tab="live"><svg class="i"><use href="#i-rocket"/></svg> Live gaan</button>
@@ -296,6 +297,30 @@
         <option value="achterstallig">Betaling mislukt</option><option value="opgezegd">Opgezegd</option></select></div>
     </div>
     <button class="btn" onclick="voegKlantToe()">Klant toevoegen</button>
+  </div>
+</section>
+
+<section id="tab-teams" hidden>
+  <div class="pagehead"><h1>Teams &amp; accounts</h1></div>
+  <div class="warnbox" style="margin-bottom:20px">⚠️ Dit overzicht toont echte accountgegevens (namen, gebruikersnamen, e-mailadressen) van al je klanten. Dit tabblad is nog niet met een eigen inlog beveiligd — deel de link naar dit paneel met niemand.</div>
+  <div class="card" id="teamsOverzichtKaart">
+    <h2>Alle teams</h2>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Winkel</th><th>Status</th><th class="num">Accounts</th><th>Klant sinds</th><th></th></tr></thead>
+      <tbody id="teamsBody"></tbody>
+    </table>
+    </div>
+  </div>
+  <div class="card" id="teamDetailKaart" hidden>
+    <h2 id="teamDetailTitel">Team</h2>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Naam</th><th>Gebruikersnaam</th><th>E-mail</th><th>Rol</th><th>2FA</th><th>Onboarding</th><th></th></tr></thead>
+      <tbody id="teamAccountsBody"></tbody>
+    </table>
+    </div>
+    <button class="btn ghost" style="margin-top:14px" onclick="document.getElementById('teamDetailKaart').hidden=true">Sluiten</button>
   </div>
 </section>
 
@@ -380,6 +405,10 @@
 const KEY='saas_admin_v1';
 const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+const ADMIN_PANEL_KEY='3lfuuW-Ig4QUhqq_x78mYGhUzGgrG8UL';
+let teamsData={teams:[], accounts:[]};
+let teamsGeladen=false;
+let huidigTeamId=null;
 let state=load();
 let simTeller=[];
 
@@ -438,10 +467,71 @@ async function syncKlantenVanSupabase(){
   }catch(e){ /* geen verbinding, gewoon lokale data laten staan */ }
 }
 
+/* ---------- Teams & accounts (echte gebruikers via Supabase) ---------- */
+async function laadTeams(){
+  const body=document.getElementById('teamsBody');
+  try{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/admin-teams', {
+      headers:{ 'apikey':SUPABASE_ANON_KEY, 'X-Admin-Key':ADMIN_PANEL_KEY }
+    });
+    const uit=await res.json();
+    if(!res.ok) throw new Error(uit.error||'Laden mislukt');
+    teamsData={teams:uit.teams||[], accounts:uit.accounts||[]};
+    teamsGeladen=true;
+  }catch(e){
+    if(body) body.innerHTML=`<tr><td colspan="5">Kon teams niet laden: ${esc(e.message)}. Controleer of ADMIN_PANEL_KEY is ingesteld in Supabase.</td></tr>`;
+    return;
+  }
+  tekenTeams();
+}
+function tekenTeams(){
+  const body=document.getElementById('teamsBody');
+  if(!body) return;
+  if(!teamsGeladen){ body.innerHTML='<tr><td colspan="5">Bezig met laden…</td></tr>'; return; }
+  if(!teamsData.teams.length){ body.innerHTML='<tr><td colspan="5">Nog geen teams met een echt account.</td></tr>'; return; }
+  body.innerHTML=teamsData.teams.map(t=>{
+    const n=teamsData.accounts.filter(a=>a.team_id===t.id).length;
+    return `<tr>
+      <td>${esc(t.naam)}</td>
+      <td>${STATUS_LABEL[t.status]||esc(t.status)}</td>
+      <td class="num">${n}</td>
+      <td>${datum(new Date(t.sinds).getTime())}</td>
+      <td><button class="btn ghost small" data-team="${t.id}" onclick="toonTeamDetail(this.dataset.team)">Accounts bekijken</button></td>
+    </tr>`;
+  }).join('');
+}
+function toonTeamDetail(teamId){
+  huidigTeamId=teamId;
+  const team=teamsData.teams.find(t=>t.id===teamId);
+  const leden=teamsData.accounts.filter(a=>a.team_id===teamId);
+  document.getElementById('teamDetailTitel').textContent='Accounts van '+(team?team.naam:'team');
+  document.getElementById('teamAccountsBody').innerHTML=leden.map(l=>`<tr>
+    <td>${esc(l.naam)}</td>
+    <td>${esc(l.gebruikersnaam)}</td>
+    <td>${esc(l.email)}</td>
+    <td>${esc(l.rol)}</td>
+    <td>${l.tweestaps_actief?'✅ aan':'uit'}</td>
+    <td>${l.onboarding_klaar?'✅ klaar':'nog niet'}</td>
+    <td><button class="btn ghost small" data-email="${esc(l.email)}" onclick="stuurWachtwoordVergeten(this.dataset.email)"><svg class="i s"><use href="#i-mail"/></svg>Wachtwoord-vergeten mail</button></td>
+  </tr>`).join('') || '<tr><td colspan="7">Nog geen accounts.</td></tr>';
+  document.getElementById('teamDetailKaart').hidden=false;
+}
+async function stuurWachtwoordVergeten(email){
+  try{
+    await fetch(SUPABASE_URL+'/auth/v1/recover', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
+      body:JSON.stringify({email})
+    });
+    toast('✔️ Wachtwoord-vergeten mail verstuurd naar '+email);
+  }catch(e){ toast('⚠️ Versturen mislukt'); }
+}
+
 document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('aside nav button').forEach(x=>x.classList.toggle('active', x===b));
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+b.dataset.tab));
   teken();
+  if(b.dataset.tab==='teams' && !teamsGeladen) laadTeams();
 }));
 
 function mrr(){ return state.klanten.filter(k=>k.status==='actief').reduce((s,k)=>s+plan(k.plan).prijs,0); }
