@@ -112,7 +112,7 @@
   .stap{display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); font-size:13.5px; line-height:1.6;}
   .stap:last-child{border:none;}
   .stap .nr{width:26px; height:26px; border-radius:50%; background:var(--paars); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex:none;}
-  .toast{position:fixed; top:20px; right:20px; background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px; font-size:13.5px; z-index:100;}
+  #toasts{position:fixed; right:24px; bottom:24px; z-index:300; display:flex; flex-direction:column-reverse; gap:10px; align-items:flex-end;}
   @media(max-width:760px){ aside{position:static; width:100%;} body{flex-direction:column;} main{margin-left:0; padding:16px;} }
 
 /* ============ DESIGNSYSTEEM v3 ============ */
@@ -199,8 +199,22 @@
   code{background:var(--soft-2); padding:2px 7px; border-radius:6px; font-size:12px;}
   .stap{padding:14px 0; line-height:1.7; gap:14px;}
   .stap .nr{width:28px; height:28px; background:var(--lblauw); color:var(--paars); font-family:'Sora',sans-serif; box-shadow:none;}
-  .toast{background:var(--navy); color:#F7F6F3; padding:14px 20px; border-radius:18px; font-size:13.5px;
-    box-shadow:var(--schaduw-l); animation:toastin .28s cubic-bezier(.34,1.3,.64,1);}
+  /* meldingen rechtsonder */
+  .toast{display:flex; align-items:flex-start; gap:12px; background:#fff; color:var(--text);
+    padding:15px 18px; border-radius:18px; font-size:14px; font-weight:500; line-height:1.45;
+    box-shadow:0 12px 32px rgba(23,32,30,.18), 0 2px 6px rgba(23,32,30,.08);
+    border-left:4px solid var(--muted-l); cursor:pointer; max-width:400px;
+    animation:toastin .3s cubic-bezier(.34,1.3,.64,1);}
+  .toast .tico{width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center;
+    justify-content:center; background:var(--soft-2); color:var(--muted);}
+  .toast .tico .i{width:15px; height:15px;}
+  .toast .ttxt{padding-top:3px;}
+  .toast.ok{border-left-color:var(--green);}
+  .toast.ok .tico{background:var(--green-soft); color:var(--green-tekst);}
+  .toast.fout{border-left-color:var(--red);}
+  .toast.fout .tico{background:var(--red-soft); color:var(--red-tekst);}
+  .toast.weg{opacity:0; transform:translateY(12px) scale(.97); transition:.32s cubic-bezier(.4,0,.2,1);}
+  @media(max-width:860px){ #toasts{left:14px; right:14px; bottom:14px; align-items:stretch;} .toast{max-width:none;} }
   @keyframes toastin{from{opacity:0; transform:translateX(30px)}to{opacity:1; transform:none}}
   @media(max-width:860px){
     aside{position:static; width:100%; flex-direction:row; align-items:center; overflow-x:auto; padding:12px; border-right:none; border-bottom:1px solid var(--border);}
@@ -507,10 +521,20 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
 function plan(id){ return state.plannen.find(p=>p.id===id)||{naam:'Geen pakket', prijs:0}; }
 function datum(t){ return new Date(t).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}); }
-function toast(msg){
-  document.querySelectorAll('.toast').forEach(t=>t.remove());
-  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
+/* Melding rechtsonder. soort: 'ok' (groen), 'fout' (rood), anders neutraal. */
+function toast(msg, soort){
+  let c=document.getElementById('toasts');
+  if(!c){ c=document.createElement('div'); c.id='toasts'; document.body.appendChild(c); }
+  const iconen={ok:'i-check', fout:'i-x'};
+  const t=document.createElement('div');
+  t.className='toast'+(soort?' '+soort:'');
+  t.innerHTML='<span class="tico"><svg class="i s"><use href="#'+(iconen[soort]||'i-mail')+'"/></svg></span><span class="ttxt"></span>';
+  t.querySelector('.ttxt').textContent=msg;
+  const sluit=()=>{ t.classList.add('weg'); setTimeout(()=>t.remove(),320); };
+  t.onclick=sluit;
+  c.appendChild(t);
+  while(c.children.length>4) c.firstChild.remove();
+  setTimeout(sluit, soort==='fout'?6000:3600);
 }
 const STATUS_LABEL={actief:'Actief', proef:'Proefperiode', achterstallig:'Betaling mislukt', opgezegd:'Opgezegd'};
 
@@ -597,8 +621,8 @@ async function stuurWachtwoordVergeten(email){
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
       body:JSON.stringify({email})
     });
-    toast('Wachtwoord-vergeten mail verstuurd naar '+email);
-  }catch(e){ toast('Versturen mislukt'); }
+    toast('Wachtwoord-vergeten mail verstuurd naar '+email, 'ok');
+  }catch(e){ toast('Versturen mislukt', 'fout'); }
 }
 
 document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>{

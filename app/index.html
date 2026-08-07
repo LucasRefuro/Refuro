@@ -16,6 +16,14 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   body{font-family:'Instrument Sans',-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh;}
 
+  /* ── Aparte inlogomgeving ──
+     Zolang er niemand is ingelogd bestaat de winkelomgeving niet: geen zijbalk,
+     geen dashboard, geen glimp van cijfers bij het verversen van de pagina. */
+  body:not(.ingelogd) > aside,
+  body:not(.ingelogd) > main{ display:none !important; }
+  body:not(.ingelogd){ display:block; background:var(--navy); }
+  body.ingelogd{ display:flex; background:var(--bg); }
+
   /* sidebar */
   aside{width:230px; background:var(--navy); color:var(--actieftekst); padding:22px 14px; display:flex; flex-direction:column; gap:4px; position:fixed; top:0; bottom:0; left:0; z-index:10;}
   .logo{display:flex; align-items:center; gap:10px; padding:0 8px 22px;}
@@ -129,10 +137,7 @@
   .popup .acts .btn{width:100%; padding:12px;}
   .betaalrow{display:flex; gap:8px;}
   .betaalrow .btn{flex:1;}
-  #toasts{position:fixed; top:20px; right:20px; z-index:300; display:flex; flex-direction:column; gap:8px; align-items:flex-end;}
-  .toast{background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px; font-size:13.5px; font-weight:500; box-shadow:0 6px 24px rgba(0,0,0,.25); animation:toastin .25s ease; max-width:340px;}
-  .toast.groen{background:var(--green);}
-  .toast.weg{opacity:0; transform:translateX(30px); transition:.3s;}
+  #toasts{position:fixed; right:24px; bottom:24px; z-index:300; display:flex; flex-direction:column-reverse; gap:10px; align-items:flex-end;}
   @keyframes toastin{from{opacity:0; transform:translateX(30px);} to{opacity:1; transform:none;}}
   #leveringen td{transition:opacity .4s;}
   .dienstKnop{background:var(--lblauw); border:2px solid transparent; border-radius:12px; padding:16px 14px; font-family:inherit; text-align:left; cursor:pointer; color:var(--navy);}
@@ -180,7 +185,8 @@
   .popup.groot{width:min(680px,94vw); max-height:88vh; overflow:auto;}
   .logoImg{width:38px; height:38px; border-radius:10px; object-fit:cover;}
   /* login & gebruiker */
-  #loginScherm,#authScherm{position:fixed; inset:0; background:var(--navy); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; overflow:auto;}
+  #loginScherm,#authScherm{position:fixed; inset:0; background:var(--navy); z-index:200; display:flex;
+    flex-direction:column; align-items:center; justify-content:center; padding:24px; overflow:auto;}
   .loginbox{background:#fff; border-radius:18px; padding:30px; width:min(420px,94vw); text-align:center;}
   .loginbox .mk{width:56px; height:56px; border-radius:14px; background:var(--oranje); color:var(--actieftekst); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; margin:0 auto 14px; overflow:hidden;}
   .loginbox .mk img{width:100%; height:100%; object-fit:cover;}
@@ -415,13 +421,33 @@
   .popup .pv{margin-bottom:22px; line-height:1.6; color:var(--muted);}
   .popup .acts{gap:10px;} .popup .acts .btn{padding:13px;}
 
-  #toasts{top:22px; right:22px; gap:9px;}
-  .toast{background:var(--navy); color:var(--actieftekst); padding:14px 20px; border-radius:var(--radius-s); font-size:13.5px;
-    font-weight:500; box-shadow:var(--schaduw-l); animation:toastin .28s cubic-bezier(.34,1.3,.64,1); line-height:1.45;}
-  .toast.groen{background:var(--green);}
+  /* ---------- meldingen rechtsonder ---------- */
+  #toasts{right:24px; bottom:24px; top:auto; gap:10px; max-width:min(400px,calc(100vw - 48px));}
+  .toast{display:flex; align-items:flex-start; gap:12px; background:#fff; color:var(--text);
+    padding:15px 18px; border-radius:var(--radius-s); font-size:14px; font-weight:500; line-height:1.45;
+    box-shadow:0 12px 32px rgba(23,32,30,.18), 0 2px 6px rgba(23,32,30,.08);
+    border-left:4px solid var(--muted-l); cursor:pointer; pointer-events:auto;
+    animation:toastin .3s cubic-bezier(.34,1.3,.64,1); max-width:400px;}
+  .toast:hover{box-shadow:0 16px 40px rgba(23,32,30,.22), 0 2px 6px rgba(23,32,30,.1);}
+  .toast .tico{width:26px; height:26px; border-radius:8px; flex:none; display:flex; align-items:center;
+    justify-content:center; background:var(--soft-2); color:var(--muted);}
+  .toast .tico .i{width:15px; height:15px;}
+  .toast .ttxt{padding-top:3px;}
+  .toast.ok{border-left-color:var(--green);}
+  .toast.ok .tico{background:var(--green-soft); color:var(--green-tekst);}
+  .toast.let-op{border-left-color:var(--amber);}
+  .toast.let-op .tico{background:var(--amber-soft); color:var(--amber-tekst);}
+  .toast.fout{border-left-color:var(--red);}
+  .toast.fout .tico{background:var(--red-soft); color:var(--red-tekst);}
+  .toast.weg{opacity:0; transform:translateY(12px) scale(.97); transition:.32s cubic-bezier(.4,0,.2,1);}
+  @keyframes toastin{from{opacity:0; transform:translateY(16px) scale(.96)}to{opacity:1; transform:none}}
 
   /* ---------- inloggen: donker petrolvlak, wit logo ---------- */
   #loginScherm,#authScherm{background:radial-gradient(1100px 800px at 80% 15%, var(--navy-2) 0%, var(--navy) 62%);}
+  /* de inlogomgeving krijgt een eigen voettekst, zoals een echte inlogpagina */
+  .authvoet{margin-top:22px; text-align:center; color:#A8C5BE; font-size:12.5px; line-height:1.6;}
+  .authvoet b{font-family:'Sora',sans-serif; font-weight:700; color:var(--mint); display:block; margin-bottom:2px;}
+  .authvoet a{color:#A8C5BE; text-decoration:underline;}
   .loginbox{border-radius:var(--radius); padding:38px 34px; box-shadow:var(--schaduw-l); text-align:left;}
   .loginbox .mk{width:52px; height:52px; border-radius:13px; background:var(--oranje); margin:0 0 18px;
     display:flex; align-items:center; justify-content:center; box-shadow:none; overflow:hidden;}
@@ -515,7 +541,7 @@
     .betaalrow{flex-direction:column;} .betaalrow .btn{width:100%;}
     .modeToggle{flex-direction:column;}
     .popup{padding:24px; border-radius:var(--radius-s);}
-    #toasts{left:14px; right:14px; top:14px; align-items:stretch;} .toast{max-width:none;}
+    #toasts{left:14px; right:14px; bottom:14px; top:auto; align-items:stretch; max-width:none;} .toast{max-width:none;}
   }
   @media(max-width:520px){
     .kpis{grid-template-columns:1fr;}
@@ -1660,7 +1686,7 @@ function scanPopup(code){
   const p=state.producten.find(p=>p.barcode===code);
   if(!p){
     piep(200);
-    toast('Onbekende barcode '+code+', maak het product aan');
+    toast('Onbekende barcode '+code+', maak het product aan', 'let-op');
     nieuwMetBarcode(code);
     return;
   }
@@ -1704,21 +1730,28 @@ function herteken(){
   if(!document.getElementById('tab-bestellen').hidden) renderBestellen();
   if(!document.getElementById('tab-reparaties').hidden) renderReparaties();
 }
-function toast(msg, groen){
+/* Melding rechtsonder. soort: 'ok' (groen), 'let-op' (amber), 'fout' (rood), anders neutraal. */
+function toast(msg, soort){
   let c=document.getElementById('toasts');
   if(!c){ c=document.createElement('div'); c.id='toasts'; document.body.appendChild(c); }
+  if(soort===true) soort='ok';
+  const iconen={ok:'i-check', 'let-op':'i-bell', fout:'i-x'};
   const t=document.createElement('div');
-  t.className='toast'+(groen?'groen':'');
-  t.textContent=msg;
+  t.className='toast'+(soort?' '+soort:'');
+  t.innerHTML='<span class="tico"><svg class="i s"><use href="#'+(iconen[soort]||'i-bell')+'"/></svg></span>'+
+              '<span class="ttxt"></span>';
+  t.querySelector('.ttxt').textContent=msg;
+  const sluit=()=>{ t.classList.add('weg'); setTimeout(()=>t.remove(),320); };
+  t.onclick=sluit;
   c.appendChild(t);
   while(c.children.length>4) c.firstChild.remove();
-  setTimeout(()=>{ t.classList.add('weg'); setTimeout(()=>t.remove(),350); }, 3200);
+  setTimeout(sluit, soort==='fout'?6000:3600);
 }
 function ongedaanMaken(logId){
   const l=state.log.find(x=>x.id===logId);
   if(!l || l.ongedaan) return;
   const p=l.pid?state.producten.find(p=>p.id===l.pid):null;
-  if(l.pid && !p){ toast('Product bestaat niet meer, kan niet terugboeken.'); return; }
+  if(l.pid && !p){ toast('Product bestaat niet meer, kan niet terugboeken.', 'let-op'); return; }
   const n=l.aantal||1;
   if(l.m==='in'){
     if(p.voorraad<n && !confirm('Voorraad is lager dan het terug te boeken aantal. Toch terugboeken (voorraad wordt '+(p.voorraad-n)+')?')) return;
@@ -1758,15 +1791,15 @@ function wijzigAantal(logId,val){
   const l=state.log.find(x=>x.id===logId);
   if(!l || l.ongedaan) return;
   const p=state.producten.find(p=>p.id===l.pid);
-  if(!p){ toast('Product bestaat niet meer.'); renderScanLog(); return; }
+  if(!p){ toast('Product bestaat niet meer.', 'let-op'); renderScanLog(); return; }
   const nieuw=Math.max(1, Math.floor(Number(val)||1));
   const oud=l.aantal||1, delta=nieuw-oud;
   if(delta===0) return;
   if(l.m==='in'){
-    if(p.voorraad+delta<0){ toast('Voorraad kan niet negatief worden.'); renderScanLog(); return; }
+    if(p.voorraad+delta<0){ toast('Voorraad kan niet negatief worden.', 'let-op'); renderScanLog(); return; }
     p.voorraad+=delta;
   }else{
-    if(delta>0 && p.voorraad<delta){ toast('Maar '+p.voorraad+' op voorraad.'); renderScanLog(); return; }
+    if(delta>0 && p.voorraad<delta){ toast('Maar '+p.voorraad+' op voorraad.', 'let-op'); renderScanLog(); return; }
     p.voorraad-=delta;
     const v=state.verkopen.find(v=>v.id===logId);
     if(v){ const eV=v.verkoop/oud, eI=v.inkoop/oud; v.verkoop=eV*nieuw; v.inkoop=eI*nieuw; v.aantal=nieuw; }
@@ -2069,6 +2102,7 @@ function pinCheck(){
   }
 }
 function login(m){
+  document.body.classList.add('ingelogd');
   gebruiker=m;
   const el=document.getElementById('loginScherm'); if(el) el.remove();
   pasRechtenToe();
@@ -2078,6 +2112,7 @@ function login(m){
 async function uitloggen(){
   if(account){
     syncStop();
+    document.body.classList.remove('ingelogd');
     account=null; gebruiker=null;
     try{ await sb.auth.signOut(); }catch(e){}
     toonAuthLogin();
@@ -2309,7 +2344,8 @@ function authWrap(inner){
     <h2>${isStorvo?'storvo':esc(eigenNaam)}</h2>
     ${inner}
     <div id="authFout" class="authfout" hidden></div>
-  </div>`;
+  </div>
+  <div class="authvoet"><b>Alles geregeld.</b>Storvo &middot; <a href="https://storvo.app">storvo.app</a></div>`;
   return el;
 }
 function authSluit(){ const el=document.getElementById('authScherm'); if(el) el.remove(); }
@@ -2442,6 +2478,7 @@ async function ladAccountEnStart(session){
     }catch(e){}
   }
 
+  document.body.classList.add('ingelogd');
   authSluit();
   pasRechtenToe();
   showTab(mag('dashboard')?'dashboard':'scan');
@@ -2693,9 +2730,9 @@ async function renderTeamAccounts(){
 async function teamWachtwoordInstellen(accountId, naam){
   const ww=window.prompt('Nieuw wachtwoord voor '+naam+' (min. 8 tekens):');
   if(!ww) return;
-  if(ww.length<8){ toast('Wachtwoord moet minstens 8 tekens zijn.'); return; }
+  if(ww.length<8){ toast('Wachtwoord moet minstens 8 tekens zijn.', 'let-op'); return; }
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){ toast('Log opnieuw in.'); return; }
+  if(!session){ toast('Log opnieuw in.', 'let-op'); return; }
   try{
     const res=await fetch(SUPABASE_URL+'/functions/v1/team-set-password',{
       method:'POST',
@@ -2705,7 +2742,7 @@ async function teamWachtwoordInstellen(accountId, naam){
     const uit=await res.json();
     if(!res.ok || !uit.ok) throw new Error(uit.error||'Wachtwoord wijzigen mislukt.');
     toast('Wachtwoord van '+naam+' is gewijzigd.', true);
-  }catch(e){ toast(''+e.message); }
+  }catch(e){ toast(e.message, 'fout'); }
 }
 async function maakUitnodiging(){
   if(!account){ return; }
@@ -2764,13 +2801,13 @@ async function slaMijnWachtwoordOp(){
   const ww=document.getElementById('ma_ww').value||'';
   if(ww.length<8){ toast('Kies een wachtwoord van minstens 8 tekens.'); return; }
   const {error}=await sb.auth.updateUser({password:ww});
-  if(error){ toast(''+error.message); return; }
+  if(error){ toast(error.message, 'fout'); return; }
   document.getElementById('ma_ww').value='';
   toast('Wachtwoord gewijzigd.', true);
 }
 async function start2FAInschakelen(){
   const {data,error}=await sb.auth.mfa.enroll({factorType:'totp'});
-  if(error){ toast(''+error.message); return; }
+  if(error){ toast(error.message, 'fout'); return; }
   const el=document.getElementById('ma_2fa');
   el.innerHTML=`<p class="muted">Scan deze QR-code met je authenticator-app (bijv. Google Authenticator):</p>
     <img src="${data.totp.qr_code}" style="width:160px; height:160px; margin:10px auto; display:block">
@@ -2800,7 +2837,7 @@ async function schakel2FAUit(){
 }
 function zetVergrendeling(aan){
   if(aan && !state.medewerkers.some(m=>m.pin)){
-    toast('Stel eerst een pincode in bij minstens één medewerker.');
+    toast('Stel eerst een pincode in bij minstens één medewerker.', 'let-op');
     document.getElementById('lockToggle').checked=false;
     return;
   }
