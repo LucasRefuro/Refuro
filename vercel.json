@@ -20,5 +20,9 @@
       "destination": "https://storvo.app/admin/",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    { "source": "/r/:winkel/:code", "destination": "/r/index.html" },
+    { "source": "/r/:winkel", "destination": "/r/index.html" }
   ]
 }

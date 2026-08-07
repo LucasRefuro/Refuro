@@ -610,6 +610,81 @@
   .card > .periodesel{margin-bottom:16px;}
   .card > h2 + .periodesel{margin-top:-4px;}
   .card table{margin-top:2px;}
+
+  /* ---------- onboarding ---------- */
+  .onbvenster{width:min(720px,94vw); max-height:88vh; padding:0; overflow:hidden; display:flex; flex-direction:column;}
+  .onbkop{padding:22px 30px 0; flex:none;}
+  .onbbalk{height:5px; background:var(--soft-2); border-radius:var(--pil); overflow:hidden;}
+  .onbbalk i{display:block; height:100%; background:var(--oranje); border-radius:var(--pil); transition:width .45s cubic-bezier(.4,0,.2,1);}
+  .onbstap{margin-top:10px; font-size:11.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l);}
+  .onbinhoud{padding:20px 30px 26px; overflow:auto; flex:1;}
+  .onbinhoud h2{font-size:22px; font-weight:800; margin-bottom:10px;}
+  .onbuitleg{margin-bottom:20px; max-width:60ch;}
+  .onbvoet{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:26px;
+    padding-top:20px; border-top:1px solid var(--soft-2);}
+  .onbvoet .btn{white-space:nowrap;}
+
+  .onbwelkom{text-align:left;}
+  .onbmerk{width:60px; height:60px; border-radius:17px; background:var(--oranje); display:flex; align-items:center;
+    justify-content:center; margin-bottom:20px;}
+  .onbmerk .i{width:32px; height:32px; stroke:var(--actieftekst); stroke-width:2.6;}
+  .onbmerk.klaar{background:var(--green);}
+  .onbpunten{display:flex; flex-direction:column; gap:14px; margin:22px 0;}
+  .onbpunten > div{display:flex; gap:14px; align-items:flex-start; background:var(--soft-2); border-radius:16px; padding:14px 16px;}
+  .onbpunten .nr{width:30px; height:30px; border-radius:10px; background:var(--lblauw); color:var(--oranje); flex:none;
+    display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; font-weight:800; font-size:13px;}
+  .klein{font-size:12.5px;}
+
+  .onbvoorbeeld{margin-top:22px; background:var(--lblauw); border-radius:16px; padding:16px 18px;}
+  .onbvoorbeeld .label{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--oranje); margin-bottom:8px;}
+  .onbvoorbeeld .bericht{font-size:14px; line-height:1.6; color:var(--muted);}
+
+  .onbkleuren{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px;}
+  .onbkleur{background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:14px; cursor:pointer;
+    font-family:inherit; text-align:left; transition:.16s;}
+  .onbkleur:hover{border-color:var(--oranje);}
+  .onbkleur.aan{border-color:var(--oranje); box-shadow:0 0 0 3px rgba(11,91,82,.12);}
+  .onbkleur span{display:inline-block; width:26px; height:26px; border-radius:9px; margin-right:6px; vertical-align:-8px;}
+  .onbkleur b{display:block; margin-top:10px; font-size:12.5px; font-weight:600; color:var(--muted);}
+
+  .onbchips{display:flex; flex-wrap:wrap; gap:10px;}
+  .onbchip{display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--border);
+    color:var(--muted); border-radius:var(--pil); padding:11px 18px; font-family:inherit; font-size:14px;
+    font-weight:600; cursor:pointer; transition:.16s;}
+  .onbchip:hover{border-color:var(--oranje); color:var(--text);}
+  .onbchip .i{opacity:0; transition:.16s; color:var(--oranje);}
+  .onbchip.aan{border-color:var(--oranje); background:var(--lblauw); color:var(--oranje);}
+  .onbchip.aan .i{opacity:1;}
+
+  .onbrondlijst{display:flex; flex-direction:column; gap:10px;}
+  .onbrond{display:flex; align-items:center; gap:14px; background:var(--card); border:1.5px solid var(--border);
+    border-radius:16px; padding:14px 18px; cursor:pointer; transition:.16s;}
+  .onbrond:hover{border-color:var(--oranje); background:var(--lblauw); transform:translateX(3px);}
+  .onbrond .nr{font-family:'Sora',sans-serif; font-weight:800; font-size:17px; color:var(--mint); flex:none;}
+  .onbrond > div{flex:1; font-size:14px; line-height:1.5;}
+  .onbrond .i{color:var(--muted-l); flex:none;}
+
+  /* spotlight-rondleiding over de echte app */
+  #rondLaag{position:fixed; inset:0; z-index:150; pointer-events:none;}
+  .rondspot{position:absolute; border-radius:16px; box-shadow:0 0 0 9999px rgba(18,63,57,.62); transition:.35s cubic-bezier(.4,0,.2,1);
+    border:2px solid var(--mint);}
+  .rondkaart{position:absolute; width:min(340px,calc(100vw - 40px)); background:#fff; border-radius:20px; padding:22px 24px;
+    box-shadow:0 18px 46px rgba(23,32,30,.28); pointer-events:auto; transition:.35s cubic-bezier(.4,0,.2,1);
+    animation:popin .3s cubic-bezier(.34,1.3,.64,1);}
+  .rondkaart .rondnr{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--mint); margin-bottom:8px;}
+  .rondkaart h3{font-family:'Sora',sans-serif; font-size:19px; font-weight:800; margin-bottom:8px;}
+  .rondkaart p{font-size:14px; line-height:1.6; color:var(--muted); margin-bottom:18px;}
+  .rondvoet{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+
+  @media(max-width:860px){
+    .onbvenster{width:100%; max-height:92vh;}
+    .onbkop{padding:18px 20px 0;} .onbinhoud{padding:18px 20px 22px;}
+    .onbinhoud h2{font-size:19px;}
+    .onbvoet{flex-direction:column-reverse; align-items:stretch;}
+    .onbvoet .btn{width:100%; justify-content:center;}
+    .rondkaart{left:16px !important; right:16px; top:auto !important; bottom:20px; width:auto;}
+    .rondspot{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -848,6 +923,9 @@
         <div><label>Telefoonnummer *</label><input id="r_tel"></div>
         <div><label>E-mail (optioneel)</label><input id="r_email"></div>
         <div><label>Op de hoogte houden?</label><select id="r_notify"><option value="1">Ja, via mail of sms</option><option value="0">Nee</option></select></div>
+        <div style="display:flex; align-items:center; gap:9px; padding-bottom:12px">
+          <input type="checkbox" id="r_inleveren"><label for="r_inleveren" style="margin:0; text-transform:none; letter-spacing:0; font-size:13.5px; font-weight:500; color:var(--text); cursor:pointer">Klant brengt het toestel later langs</label>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -1061,6 +1139,7 @@
       <button data-s="cats">Categorieën</button>
       <button data-s="bedrijf">Bedrijf</button>
       <button data-s="huisstijl">Huisstijl</button>
+      <button data-s="klantpagina">Klantpagina</button>
       <button data-s="leveranciers">Leveranciers</button>
       <button data-s="abonnement">Abonnement</button>
       <button data-s="backup">Back-up</button>
@@ -1138,6 +1217,54 @@
     </div>
     <p class="muted" style="margin-top:8px">Deze gegevens worden gebruikt in de statusberichten naar klanten. Berichten openen in je eigen mail-/sms-app zodat jij ze verstuurt.</p>
     <button class="btn ghost" style="margin-top:12px" onclick="toonOnboarding()"><svg class="i s"><use href="#i-shop"/></svg>Rondleiding opnieuw bekijken</button>
+  </div>
+
+  <div class="card" id="inst-klantpagina" hidden>
+    <h2><svg class="i"><use href="#i-link"/></svg>Klantpagina <span class="muted">(wat je klant ziet)</span></h2>
+    <p class="muted" style="margin-bottom:18px">Iedere reparatie krijgt een eigen webadres. Je klant ziet daar de voortgang, jouw berichten en hoe hij je kan bereiken.</p>
+
+    <div class="infobox" style="margin-bottom:20px">
+      <b>Jouw adres</b><br>
+      <input readonly id="kp_basis" style="margin-top:8px" onclick="this.select()">
+      <p class="muted" style="margin-top:8px; font-size:12.5px">Achter dit adres komt het reparatienummer, bijvoorbeeld <code id="kp_voorbeeld"></code></p>
+    </div>
+
+    <h2 style="font-size:14.5px; margin-top:22px"><svg class="i s"><use href="#i-palette"/></svg>Eigen uitstraling</h2>
+    <label style="display:flex; align-items:center; gap:9px; margin-bottom:16px; text-transform:none; letter-spacing:0; font-size:14px; font-weight:500; color:var(--text); cursor:pointer">
+      <input type="checkbox" id="kp_eigen" onchange="kpWisselEigen(this.checked)"> Andere kleuren dan het dashboard gebruiken
+    </label>
+    <div id="kp_stijlvelden" hidden>
+      <div class="grid" style="margin-bottom:14px">
+        <div><label>Naam op de pagina</label><input id="kp_naam" onchange="slaKlantpaginaOp()"></div>
+        <div><label>Accentkleur</label><div class="kleurrij"><input id="kp_accent" type="color" oninput="kpKleurSync('accent',this.value)" onchange="slaKlantpaginaOp()"><input id="kp_accent_hex" maxlength="7" oninput="kpHex('accent',this.value)"></div></div>
+        <div><label>Donkere kopbalk</label><div class="kleurrij"><input id="kp_donker" type="color" oninput="kpKleurSync('donker',this.value)" onchange="slaKlantpaginaOp()"><input id="kp_donker_hex" maxlength="7" oninput="kpHex('donker',this.value)"></div></div>
+        <div><label>Achtergrond</label><div class="kleurrij"><input id="kp_bg" type="color" oninput="kpKleurSync('bg',this.value)" onchange="slaKlantpaginaOp()"><input id="kp_bg_hex" maxlength="7" oninput="kpHex('bg',this.value)"></div></div>
+      </div>
+      <div class="row" style="align-items:center">
+        <div><label>Eigen logo</label><input type="file" id="kp_logo" accept="image/*" onchange="kpUploadLogo(this)"></div>
+        <div id="kp_logoPrev"></div>
+        <button class="btn ghost small" onclick="kpVerwijderLogo()">Logo weghalen</button>
+      </div>
+    </div>
+
+    <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-shop"/></svg>Contact en openingstijden</h2>
+    <div class="grid" style="margin-bottom:14px">
+      <div><label>WhatsApp-nummer</label><input id="kp_whatsapp" placeholder="06 12345678" onchange="slaKlantpaginaOp()"></div>
+      <div><label>Adres</label><input id="kp_adres" placeholder="Dorpsstraat 1, Utrecht" onchange="slaKlantpaginaOp()"></div>
+    </div>
+    <div><label>Openingstijden</label><input id="kp_tijden" placeholder="Ma t/m za 10:00 tot 18:00" onchange="slaKlantpaginaOp()"></div>
+    <p class="muted" style="margin-top:8px; font-size:12.5px">Laat het WhatsApp-nummer leeg om je gewone telefoonnummer te gebruiken.</p>
+
+    <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-message"/></svg>Teksten op de pagina</h2>
+    <div class="grid">
+      <div><label>Bij wachten op toestel</label><input id="kp_t_inleveren" onchange="slaKlantpaginaOp()"></div>
+      <div><label>Bij klaar om op te halen</label><input id="kp_t_ophalen" onchange="slaKlantpaginaOp()"></div>
+      <div><label>Boven het vragen-blok</label><input id="kp_t_vragen" onchange="slaKlantpaginaOp()"></div>
+    </div>
+
+    <div class="row" style="margin-top:22px">
+      <button class="btn" onclick="kpVoorbeeld()"><svg class="i s"><use href="#i-search"/></svg>Voorbeeld bekijken</button>
+    </div>
   </div>
 
   <div class="card" id="inst-huisstijl"hidden>
@@ -2017,7 +2144,7 @@ function updateBadge(){
 /* ---------- instellingen ---------- */
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','huisstijl','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','huisstijl','klantpagina','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
 }));
@@ -2470,8 +2597,11 @@ async function ladAccountEnStart(session){
   /* Bedrijfsgegevens voorvullen vanuit het team, zodat de onboarding niet leeg begint. */
   if(!state.instellingen || !state.instellingen.naam || state.instellingen.naam==='Storvo'){
     try{
-      const {data:team}=await sb.from('klanten').select('naam,email').eq('id',acc.team_id).maybeSingle();
+      const {data:team}=await sb.from('klanten').select('naam,email,slug').eq('id',acc.team_id).maybeSingle();
       if(team){
+        account.slug=team.slug;
+        if(!state.klantpagina) state.klantpagina={};
+        state.klantpagina.slug=team.slug;
         state.instellingen=Object.assign({}, state.instellingen, {naam:team.naam, email:(state.instellingen&&state.instellingen.email)||team.email||''});
         save();
       }
@@ -2947,7 +3077,7 @@ const HS_STANDAARD={naam:'Storvo', sub:'Alles geregeld', navy:'#123F39', oranje:
 const HS_KLEUREN=['navy','oranje','menutekst','actieftekst','tekst','bg'];
 function huisstijl(){
   if(!state.huisstijl) state.huisstijl=Object.assign({}, HS_STANDAARD);
-  if(state.huisstijl.v!==3){
+  if(state.huisstijl.v!==HS_STANDAARD.v){
     const bewaar={naam:state.huisstijl.naam, sub:state.huisstijl.sub, logo:state.huisstijl.logo};
     state.huisstijl=Object.assign({}, HS_STANDAARD, bewaar);
   }
@@ -3025,7 +3155,19 @@ function renderHuisstijl(){
 }
 
 /* ---------- klantpagina ---------- */
+function kopieerKlantLink(id){
+  const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  const link=kpLinkVoor(r.nr);
+  if(!link){ toast('Je klantpagina-adres is nog niet klaar.','let-op'); return; }
+  navigator.clipboard.writeText(link).then(()=>toast('Link gekopieerd, klaar om te delen.','ok'));
+}
 function klantPagina(id){
+  const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  const link=kpLinkVoor(r.nr);
+  if(link){ window.open(link,'_blank'); return; }
+  klantPaginaLokaal(id);
+}
+function klantPaginaLokaal(id){
   const r=state.reparaties.find(r=>r.id===id); if(!r) return;
   const h=huisstijl(), b=state.instellingen||{};
   const idx=REP_VOLGORDE.indexOf(r.status);
@@ -3159,6 +3301,7 @@ function renderInstellingen(){
   document.getElementById('b_email').value=i.email||'';
   document.getElementById('b_tel').value=i.tel||'';
   renderHuisstijl();
+  renderKlantpagina();
   renderAbo();
   const lv=state.leveranciers||{foneday:{},mobileparts:{}};
   document.getElementById('lv_fd_user').value=(lv.foneday&&lv.foneday.user)||'';
@@ -3377,6 +3520,7 @@ function boekDienst(bet){
 /* ---------- reparaties ---------- */
 const REP_STATUS={
   aangemeld:{label:'Aangemeld', volgende:'besteld', knop:'Onderdelen besteld', ico:'i-cart'},
+  inleveren:{label:'Wacht op toestel', volgende:'besteld', knop:'Toestel ontvangen', ico:'i-phone'},
   besteld:{label:'Besteld', volgende:'binnen', knop:'Onderdelen binnen', ico:'i-package'},
   binnen:{label:'Onderdelen binnen', volgende:'bezig', knop:'Reparatie starten', ico:'i-play'},
   bezig:{label:'Bezig', volgende:'klaar', knop:'Klaar melden', ico:'i-check'},
@@ -3485,6 +3629,7 @@ function rekenWinst(){
 function resetRepForm(){
   ['r_naam','r_tel','r_email','r_toestel','r_type','r_prijs','r_ondNaam','r_ondPrijs'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('r_notify').value='1';
+  document.getElementById('r_inleveren').checked=false;
   document.getElementById('r_exbtw').checked=false;
   repOnd=[]; renderRepOnd();
   document.getElementById('sealHint').innerHTML='';
@@ -3512,21 +3657,28 @@ function maakReparatie(){
     toestel:document.getElementById('r_toestel').value.trim(),
     type:document.getElementById('r_type').value.trim(),
     prijs, onderdelen:repOnd.map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad})),
-    status:allesOpVoorraad?'binnen':'aangemeld', besteldOp:null,
+    inleveren:document.getElementById('r_inleveren').checked,
+    status:'aangemeld', besteldOp:null,
     door:gebruiker?gebruiker.naam:null,
-    tijdlijn:[{status:allesOpVoorraad?'binnen':'aangemeld', t:Date.now()}]
+    tijdlijn:[{status:'aangemeld', t:Date.now()}]
   };
+  /* Moet de klant het toestel nog brengen, dan wachten we daarop. Anders kan
+     de reparatie meteen door als alle onderdelen er al liggen. */
+  if(r.inleveren){ r.status='inleveren'; r.tijdlijn.push({status:'inleveren', t:Date.now()}); }
+  else if(allesOpVoorraad){ r.status='binnen'; r.tijdlijn.push({status:'binnen', t:Date.now()}); }
   state.reparaties.unshift(r);
   save();
-  toast('Reparatie '+nr+' aangemaakt. '+(allesOpVoorraad?'Alle onderdelen op voorraad, direct te starten.':'Onderdelen bestellen vóór 16:30.'), true);
+  toast('Reparatie '+nr+' aangemaakt. '+(r.inleveren?'We wachten tot de klant het toestel langsbrengt.':(allesOpVoorraad?'Alle onderdelen op voorraad, direct te starten.':'Onderdelen bestellen vóór 16:30.')), 'ok');
   piep(880);
   resetRepForm();
   document.querySelector('#repTabs button[data-s="overzicht"]').click();
   renderReparaties(); updateBadge();
 }
 function repKosten(r){ return r.onderdelen.reduce((s,o)=>s+o.inkoop,0); }
-const REP_VOLGORDE=['aangemeld','besteld','binnen','bezig','klaar','afgerond'];
-function repProgressie(r){ return Math.round((REP_VOLGORDE.indexOf(r.status)+1)/REP_VOLGORDE.length*100); }
+const REP_VOLGORDE=['aangemeld','inleveren','besteld','binnen','bezig','klaar','afgerond'];
+/* De inleverstap telt alleen mee als de klant het toestel nog moet brengen. */
+function repStappen(r){ return REP_VOLGORDE.filter(s=>s!=='inleveren' || (r&&r.inleveren)); }
+function repProgressie(r){ const s=repStappen(r); return Math.round((s.indexOf(r.status)+1)/s.length*100); }
 function repLog(r){ if(!r.tijdlijn) r.tijdlijn=[{status:r.status, t:r.t}]; return r.tijdlijn; }
 function repNotities(r){ if(!r.notities) r.notities=[]; return r.notities; }
 function heeftProbleem(r){ return repNotities(r).some(n=>n.prob && !n.opgelost); }
@@ -3537,9 +3689,10 @@ function tijdKort(t){
 function repDetail(id){
   const r=state.reparaties.find(r=>r.id===id); if(!r) return;
   sluitPopup();
-  const huidigIdx=REP_VOLGORDE.indexOf(r.status);
+  const volgorde=repStappen(r);
+  const huidigIdx=volgorde.indexOf(r.status);
   const tl=repLog(r);
-  const stappen=REP_VOLGORDE.map((st,i)=>{
+  const stappen=volgorde.map((st,i)=>{
     const gedaan=tl.find(x=>x.status===st);
     const cls=i<huidigIdx?'done':(i===huidigIdx?'nu':'todo');
     const extra = st==='besteld'&&r.besteldOp ? ' · '+repLeverTekst(r.besteldOp)
@@ -3575,6 +3728,7 @@ function repDetail(id){
         <button class="btn danger" onclick="voegNotitie(${r.id},true,true)">Als probleem</button>
       </div>
       ${REP_STATUS[r.status].volgende?`<button class="btn" onclick="sluitPopup(); repVolgende(${r.id})"><svg class="i s"><use href="#${REP_STATUS[r.status].ico}"/></svg>${REP_STATUS[r.status].knop}</button>`:''}
+      <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
       <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
       <button class="btn ghost" onclick="sluitPopup()">Sluiten (Esc)</button>
     </div>
@@ -3780,96 +3934,466 @@ function importData(input){
   r.readAsText(f);
 }
 
-/* ---------- onboarding: rondleiding + eerste gegevens ---------- */
+/* ---------- Klantpagina: instellingen en eigen uitstraling ----------
+   De pagina volgt standaard de huisstijl van het dashboard. Zet de winkel
+   eigen kleuren aan, dan gelden die alleen op de klantpagina.            */
+
+const KP_STANDAARDTEKSTEN={
+  inleveren:'Breng je toestel langs in de winkel, dan gaan we er meteen mee aan de slag.',
+  ophalen:'Je toestel staat klaar. Je kan het ophalen tijdens onze openingstijden.',
+  vragen:'Stel ze gerust, we helpen je graag verder.'
+};
+
+function klantpagina(){
+  if(!state.klantpagina) state.klantpagina={};
+  const kp=state.klantpagina;
+  if(!kp.teksten) kp.teksten=Object.assign({}, KP_STANDAARDTEKSTEN);
+  Object.keys(KP_STANDAARDTEKSTEN).forEach(k=>{ if(!kp.teksten[k]) kp.teksten[k]=KP_STANDAARDTEKSTEN[k]; });
+  return kp;
+}
+
+/* Het webadres van deze winkel. Gaan we later over op subdomeinen,
+   dan hoeft alleen deze functie te veranderen. */
+function kpBasisAdres(){
+  const slug=(account && account.slug) || (state.klantpagina && state.klantpagina.slug) || '';
+  return slug ? 'https://storvo.app/r/'+slug : '';
+}
+function kpLinkVoor(nr){
+  const basis=kpBasisAdres();
+  if(!basis) return '';
+  return basis+'/'+String(nr||'').replace(/[^0-9a-zA-Z]/g,'');
+}
+
+function renderKlantpagina(){
+  const kp=klantpagina();
+  const h=huisstijl();
+  const basis=kpBasisAdres();
+  const bas=document.getElementById('kp_basis'); if(!bas) return;
+  bas.value = basis || 'Wordt aangemaakt zodra je bent ingelogd';
+  const vb=document.getElementById('kp_voorbeeld');
+  if(vb) vb.textContent = basis ? basis+'/'+(state.repNr?('R'+new Date().getFullYear().toString().slice(2)+'-'+String(state.repNr).padStart(3,'0')):'R26-001') : '';
+
+  const eigen=!!kp.eigenStijl;
+  document.getElementById('kp_eigen').checked=eigen;
+  document.getElementById('kp_stijlvelden').hidden=!eigen;
+
+  const s=kp.stijl||{};
+  const zet=(id,waarde)=>{ const el=document.getElementById(id); if(el) el.value=waarde; };
+  zet('kp_naam', s.naam || h.naam || '');
+  const kleuren={accent:s.oranje||h.oranje, donker:s.navy||h.navy, bg:s.bg||h.bg};
+  Object.keys(kleuren).forEach(k=>{ zet('kp_'+k, kleuren[k]); zet('kp_'+k+'_hex', (kleuren[k]||'').toUpperCase()); });
+
+  zet('kp_whatsapp', kp.whatsapp||'');
+  zet('kp_adres', kp.adres||'');
+  zet('kp_tijden', kp.openingstijden||'');
+  zet('kp_t_inleveren', kp.teksten.inleveren);
+  zet('kp_t_ophalen', kp.teksten.ophalen);
+  zet('kp_t_vragen', kp.teksten.vragen);
+
+  const prev=document.getElementById('kp_logoPrev');
+  if(prev) prev.innerHTML = s.logo ? `<img src="${s.logo}" class="logoImg" alt="logo">` : '';
+}
+
+function kpWisselEigen(aan){
+  const kp=klantpagina();
+  kp.eigenStijl=aan;
+  if(aan && !kp.stijl){
+    /* Beginnen bij de kleuren van het dashboard, zodat het niet ineens anders oogt. */
+    const h=huisstijl();
+    kp.stijl={naam:h.naam, oranje:h.oranje, navy:h.navy, bg:h.bg, tekst:h.tekst, logo:h.logo};
+  }
+  if(!aan) kp.stijl=null;
+  save();
+  renderKlantpagina();
+}
+function kpKleurSync(veld,waarde){
+  const el=document.getElementById('kp_'+veld+'_hex'); if(el) el.value=waarde.toUpperCase();
+  slaKlantpaginaOp();
+}
+function kpHex(veld,waarde){
+  const v=waarde.trim();
+  if(!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+  const el=document.getElementById('kp_'+veld); if(el) el.value=v;
+  slaKlantpaginaOp();
+}
+function kpUploadLogo(input){
+  const f=input.files[0]; if(!f) return;
+  if(f.size>400000){ toast('Kies een afbeelding kleiner dan 400 kB.','let-op'); return; }
+  const r=new FileReader();
+  r.onload=()=>{ const kp=klantpagina(); kp.stijl=kp.stijl||{}; kp.stijl.logo=r.result; save(); renderKlantpagina(); toast('Logo opgeslagen.','ok'); };
+  r.readAsDataURL(f);
+}
+function kpVerwijderLogo(){
+  const kp=klantpagina(); if(kp.stijl) kp.stijl.logo='';
+  save(); renderKlantpagina();
+}
+function slaKlantpaginaOp(){
+  const kp=klantpagina();
+  const lees=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
+  if(kp.eigenStijl){
+    kp.stijl=kp.stijl||{};
+    kp.stijl.naam=lees('kp_naam');
+    kp.stijl.oranje=lees('kp_accent');
+    kp.stijl.navy=lees('kp_donker');
+    kp.stijl.bg=lees('kp_bg');
+  }
+  kp.whatsapp=lees('kp_whatsapp');
+  kp.adres=lees('kp_adres');
+  kp.openingstijden=lees('kp_tijden');
+  kp.teksten={
+    inleveren:lees('kp_t_inleveren')||KP_STANDAARDTEKSTEN.inleveren,
+    ophalen:lees('kp_t_ophalen')||KP_STANDAARDTEKSTEN.ophalen,
+    vragen:lees('kp_t_vragen')||KP_STANDAARDTEKSTEN.vragen
+  };
+  save();
+}
+function kpVoorbeeld(){
+  const laatste=(state.reparaties||[])[0];
+  const link=kpLinkVoor(laatste?laatste.nr:'R26-001');
+  if(!link){ toast('Je klantpagina-adres wordt aangemaakt zodra je bent ingelogd.','let-op'); return; }
+  window.open(link,'_blank');
+}
+
+/* ---------- Onboarding: de winkel in een paar minuten startklaar ----------
+   Zeven stappen. De gebruiker richt onderweg echt iets in, in plaats van
+   alleen schermen weg te klikken. Alles is later te wijzigen bij Instellingen. */
+
 let onbStap=0;
-const ONB_TOUR=[
-  {ic:'i-chart', t:'Dashboard', d:'In één oogopslag je omzet, winst en wat er vandaag nog moet gebeuren.'},
-  {ic:'i-scan', t:'Scannen', d:'Scan of zoek een product om het snel in of uit voorraad te boeken.'},
-  {ic:'i-wrench', t:'Reparaties', d:'Volg elke reparatie van aanmelding tot afgerond, met een linkje voor je klant.'},
-  {ic:'i-box', t:'Producten', d:'Je hele voorraad, met automatische waarschuwing als iets bijna op is.'},
-  {ic:'i-settings', t:'Instellingen', d:'Hier pas je later ook je bedrijfsgegevens, huisstijl en team aan.'}
+const ONB_LAATSTE=6;
+
+const ONB_MERKEN=[
+  {id:'iphone',   naam:'iPhone',    voorvoegsel:['iPhone']},
+  {id:'samsung',  naam:'Samsung',   voorvoegsel:['Samsung']},
 ];
+const ONB_CATS=[
+  {naam:'Hoesjes',          inkoop:3.50, verkoop:14.95, min:3, bestel:10},
+  {naam:'Screenprotectors', inkoop:1.50, verkoop:9.95,  min:5, bestel:20},
+  {naam:'Opladers',         inkoop:2.50, verkoop:12.95, min:3, bestel:10},
+  {naam:'Kabels',           inkoop:1.75, verkoop:9.95,  min:5, bestel:15},
+  {naam:'Oordopjes',        inkoop:6.00, verkoop:24.95, min:2, bestel:6},
+  {naam:'Powerbanks',       inkoop:8.00, verkoop:29.95, min:2, bestel:6},
+  {naam:'Accessoires',      inkoop:2.50, verkoop:9.95,  min:3, bestel:10}
+];
+const ONB_KLEUREN=[
+  {naam:'Storvo groen', oranje:'#0B5B52', navy:'#123F39'},
+  {naam:'Diepblauw',    oranje:'#1D4ED8', navy:'#111C3A'},
+  {naam:'Paars',        oranje:'#6D28D9', navy:'#221046'},
+  {naam:'Warm rood',    oranje:'#C2410C', navy:'#3A1509'},
+  {naam:'Antraciet',    oranje:'#374151', navy:'#111827'}
+];
+const ONB_RONDLEIDING=[
+  {tab:'dashboard',   t:'Dashboard',    d:'Je omzet, winst en marge van vandaag. Ook wat er nog moet gebeuren: reparaties die klaarstaan en producten die op raken.'},
+  {tab:'scan',        t:'Scannen',      d:'Het hart van de winkel. Scan een barcode om iets te verkopen of in te boeken. Werkt met elke barcodescanner, en overal in de app.'},
+  {tab:'reparaties',  t:'Reparaties',   d:'Van aanmelden tot ophalen. De klant volgt de voortgang via een eigen pagina, dus je krijgt minder telefoontjes.'},
+  {tab:'producten',   t:'Producten',    d:'Je volledige voorraad. Zakt iets onder het minimum, dan verschijnt het vanzelf op je bestellijst.'},
+  {tab:'instellingen',t:'Instellingen', d:'Bedrijfsgegevens, huisstijl, leveranciers en je abonnement. Hier kan je deze rondleiding ook opnieuw starten.'}
+];
+
 function toonOnboarding(){
   onbStap=0;
-  const ov=document.createElement('div');
-  ov.className='overlay'; ov.id='onbOverlay';
-  ov.innerHTML='<div class="popup groot" id="onbPopup"></div>';
-  document.body.appendChild(ov);
+  let ov=document.getElementById('onbOverlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.className='overlay'; ov.id='onbOverlay';
+    ov.innerHTML='<div class="popup onbvenster" id="onbPopup"></div>';
+    document.body.appendChild(ov);
+  }
   onbRender();
 }
-function onbDots(){
-  return '<div style="display:flex; gap:6px; justify-content:center; margin:18px 0 4px">'+
-    [0,1,2,3].map(i=>`<span style="width:7px;height:7px;border-radius:50%;background:${i===onbStap?'var(--oranje,#0B5B52)':'var(--border,#ECEAE4)'}"></span>`).join('')+
-    '</div>';
+
+/* Voortgangsbalk met de stap waar je bent. */
+function onbVoortgang(){
+  const namen=['Welkom','Bedrijf','Huisstijl','Assortiment','Toestellen','Team','Rondleiding','Klaar'];
+  const pct=Math.round(onbStap/ONB_LAATSTE*100);
+  return `<div class="onbkop">
+    <div class="onbbalk"><i style="width:${pct}%"></i></div>
+    <div class="onbstap">Stap ${Math.min(onbStap+1,ONB_LAATSTE+1)} van ${ONB_LAATSTE+1} &middot; ${namen[onbStap]||'Klaar'}</div>
+  </div>`;
 }
+function onbKnoppen(vorige, volgende, tekstVolgende, overslaan){
+  return `<div class="onbvoet">
+    ${vorige?`<button class="btn ghost" onclick="onbGa(-1)"><svg class="i s"><use href="#i-left"/></svg>Terug</button>`:'<span></span>'}
+    <div style="display:flex; gap:10px; align-items:center">
+      ${overslaan?`<button class="btn ghost" onclick="${overslaan}">Overslaan</button>`:''}
+      ${volgende?`<button class="btn actie" onclick="${volgende}">${tekstVolgende||'Volgende'}<svg class="i s" style="margin:0 0 0 8px"><use href="#i-right"/></svg></button>`:''}
+    </div>
+  </div>`;
+}
+
 function onbRender(){
   const p=document.getElementById('onbPopup'); if(!p) return;
+  const i=state.instellingen||{};
+  const h=huisstijl();
   let inner='';
+
+  /* ── 0. Welkom ─────────────────────────────────────────────── */
   if(onbStap===0){
-    inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Welkom bij ${esc((state.huisstijl&&state.huisstijl.naam)||'Storvo')}</h2>
-      <p class="muted" style="margin:10px 0 4px">Voor je begint lopen we in drie korte stappen door de app: je bedrijfsgegevens, een mini-rondleiding, en klaar.</p>
-      <p class="muted">Duurt hooguit een minuut, en je kan het later altijd opnieuw bekijken via Instellingen.</p>
-      <div class="acts" style="justify-content:flex-end; margin-top:22px">
-        <button class="btn ghost" onclick="onbAfronden(true)">Overslaan</button>
-        <button class="btn actie" onclick="onbGa(1)">Beginnen</button>
-      </div>`;
-  } else if(onbStap===1){
-    const i=state.instellingen||{};
+    inner=`<div class="onbwelkom">
+      <div class="onbmerk"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h2>Welkom bij Storvo${account&&account.naam?', '+esc(account.naam.split(' ')[0]):''}</h2>
+      <p class="muted">We maken je winkel in een paar minuten startklaar. Je vult je gegevens in, kiest je kleuren en je assortiment, en krijgt daarna een korte rondleiding.</p>
+      <div class="onbpunten">
+        <div><span class="nr">1</span><div><b>Inrichten</b><br><span class="muted">Bedrijfsgegevens, huisstijl en assortiment</span></div></div>
+        <div><span class="nr">2</span><div><b>Team</b><br><span class="muted">Nodig je collega's uit met een link</span></div></div>
+        <div><span class="nr">3</span><div><b>Rondleiding</b><br><span class="muted">We lopen samen door de app</span></div></div>
+      </div>
+      <p class="muted klein">Duurt ongeveer drie minuten. Alles is later aan te passen.</p>
+    </div>`+onbKnoppen(false,'onbGa(1)','Beginnen','onbAfronden(true)');
+  }
+
+  /* ── 1. Bedrijfsgegevens ───────────────────────────────────── */
+  else if(onbStap===1){
     inner=`<h2><svg class="i"><use href="#i-shop"/></svg>Jouw bedrijfsgegevens</h2>
-      <p class="muted" style="margin-bottom:14px">Deze gebruiken we in de statusberichten naar je klanten. Later aan te passen in Instellingen.</p>
+      <p class="muted onbuitleg">Deze gegevens komen in de berichten naar je klanten te staan, bijvoorbeeld als een reparatie klaar is.</p>
       <div class="grid">
-        <div><label>Bedrijfsnaam</label><input id="onb_naam" placeholder="Storvo" value="${esc(i.naam||'')}"></div>
-        <div><label>E-mailadres</label><input id="onb_email" placeholder="info@jouwwinkel.nl" value="${esc(i.email||'')}"></div>
+        <div><label>Bedrijfsnaam</label><input id="onb_naam" placeholder="Naam van je winkel" value="${esc(i.naam||'')}" oninput="onbLiveNaam(this.value)"></div>
+        <div><label>E-mailadres</label><input id="onb_email" type="email" placeholder="info@jouwwinkel.nl" value="${esc(i.email||'')}"></div>
         <div><label>Telefoonnummer</label><input id="onb_tel" placeholder="06 12345678" value="${esc(i.tel||'')}"></div>
       </div>
-      <div class="acts" style="justify-content:space-between; margin-top:22px">
-        <button class="btn ghost" onclick="onbGa(-1)">Terug</button>
-        <div class="betaalrow">
-          <button class="btn ghost" onclick="onbGa(1)">Overslaan</button>
-          <button class="btn actie" onclick="onbBedrijfOpslaan()">Volgende</button>
-        </div>
-      </div>`;
-  } else if(onbStap===2){
-    inner=`<h2><svg class="i"><use href="#i-scan"/></svg>Korte rondleiding</h2>
-      <p class="muted" style="margin-bottom:14px">Dit vind je in het menu aan de linkerkant:</p>
-      <div class="grid" style="grid-template-columns:1fr 1fr">
-        ${ONB_TOUR.map(s=>`<div class="card" style="padding:14px; box-shadow:none; border:1px solid var(--border,#ECEAE4)">
-          <svg class="i l" style="margin-bottom:8px; color:var(--oranje)"><use href="#${s.ic}"/></svg>
-          <div style="font-weight:600; margin-bottom:3px">${s.t}</div>
-          <div class="muted" style="font-size:12.5px; line-height:1.5">${s.d}</div>
-        </div>`).join('')}
-      </div>
-      <div class="acts" style="justify-content:space-between; margin-top:22px">
-        <button class="btn ghost" onclick="onbGa(-1)">Terug</button>
-        <button class="btn actie" onclick="onbGa(1)">Volgende</button>
-      </div>`;
-  } else {
-    inner=`<h2><svg class="i"><use href="#i-check"/></svg>Alles geregeld</h2>
-      <p class="muted" style="margin:10px 0 22px">Je kan nu direct aan de slag. Wil je deze rondleiding nog eens zien, dat kan altijd via Instellingen, bij Bedrijfsgegevens.</p>
-      <div class="acts" style="justify-content:flex-end">
-        <button class="btn actie" onclick="onbAfronden(false)"><svg class="i s"><use href="#i-check"/></svg>Aan de slag</button>
-      </div>`;
+      <div class="onbvoorbeeld">
+        <div class="label">Zo ziet een bericht aan je klant eruit</div>
+        <div class="bericht" id="onb_bericht"></div>
+      </div>`+onbKnoppen(true,'onbBedrijfOpslaan()','Volgende','onbGa(1)');
   }
-  p.innerHTML=inner+onbDots();
+
+  /* ── 2. Huisstijl ──────────────────────────────────────────── */
+  else if(onbStap===2){
+    inner=`<h2><svg class="i"><use href="#i-palette"/></svg>Jouw kleuren</h2>
+      <p class="muted onbuitleg">Kies een kleur die bij je winkel past. Je ziet hem meteen terug in de app en op de pagina die je klant te zien krijgt.</p>
+      <div class="onbkleuren">
+        ${ONB_KLEUREN.map(k=>`<button class="onbkleur${h.oranje===k.oranje?' aan':''}" onclick="onbKiesKleur('${k.oranje}','${k.navy}')" title="${k.naam}">
+          <span style="background:${k.oranje}"></span><span style="background:${k.navy}"></span>
+          <b>${k.naam}</b></button>`).join('')}
+      </div>
+      <div class="row" style="margin-top:18px; align-items:flex-end">
+        <div><label>Eigen kleur</label><div class="kleurrij"><input type="color" value="${h.oranje}" oninput="onbKiesKleur(this.value, null)"></div></div>
+        <div style="flex:1"><label>Logo (optioneel)</label><input type="file" accept="image/*" onchange="uploadLogo(this)"></div>
+      </div>
+      <p class="muted klein" style="margin-top:14px">Je ziet de wijziging direct in de zijbalk achter dit venster.</p>`
+      +onbKnoppen(true,'onbGa(1)','Volgende');
+  }
+
+  /* ── 3. Assortiment ────────────────────────────────────────── */
+  else if(onbStap===3){
+    const huidige=(state.categorieen||[]).map(c=>c.naam);
+    inner=`<h2><svg class="i"><use href="#i-tag"/></svg>Wat verkoop je?</h2>
+      <p class="muted onbuitleg">Kies de soorten producten die je in de winkel hebt. We zetten meteen richtprijzen en een minimumvoorraad klaar, die je later kan aanpassen.</p>
+      <div class="onbchips">
+        ${ONB_CATS.map(c=>`<button class="onbchip${huidige.includes(c.naam)?' aan':''}" data-cat="${esc(c.naam)}" onclick="onbWisselCat(this)">
+          <svg class="i s"><use href="#i-check"/></svg>${esc(c.naam)}</button>`).join('')}
+      </div>
+      <p class="muted klein" style="margin-top:16px">Mist er iets? Je voegt later zelf categorieën toe bij Instellingen.</p>`
+      +onbKnoppen(true,'onbCatsOpslaan()','Volgende');
+  }
+
+  /* ── 4. Toestellen ─────────────────────────────────────────── */
+  else if(onbStap===4){
+    const aantal=(state.modellen||[]).length;
+    inner=`<h2><svg class="i"><use href="#i-phone"/></svg>Welke toestellen repareer je?</h2>
+      <p class="muted onbuitleg">Dan staan de juiste modellen klaar bij het aanmelden van een reparatie. Je hoeft ze niet één voor één in te typen.</p>
+      <div class="onbchips">
+        ${ONB_MERKEN.map(m=>`<button class="onbchip aan" data-merk="${m.id}" onclick="this.classList.toggle('aan')">
+          <svg class="i s"><use href="#i-check"/></svg>${m.naam}</button>`).join('')}
+      </div>
+      <div class="infobox" style="margin-top:18px">Er staan nu <b id="onb_modelaantal">${aantal}</b> modellen klaar. Zet een merk uit als je die niet repareert.</div>`
+      +onbKnoppen(true,'onbModellenOpslaan()','Volgende');
+  }
+
+  /* ── 5. Team ───────────────────────────────────────────────── */
+  else if(onbStap===5){
+    const mag = account && ['eigenaar','beheerder'].includes(account.rol);
+    inner=`<h2><svg class="i"><use href="#i-users"/></svg>Werk je met collega's?</h2>
+      <p class="muted onbuitleg">Iedereen krijgt een eigen inlog, zodat je ziet wie wat heeft verkocht of gerepareerd. Ze doorlopen zelf ook deze rondleiding.</p>
+      ${mag?`<div class="row" style="align-items:flex-end">
+        <div style="min-width:170px"><label>Rol</label>
+          <select id="onb_invrol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
+        <button class="btn" onclick="onbMaakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Uitnodigingslink maken</button>
+      </div>
+      <div id="onb_invresultaat" style="margin-top:14px"></div>
+      <div class="infobox" style="margin-top:16px"><b>Medewerker</b> scant, verkoopt en doet reparaties. <b>Beheerder</b> ziet daarnaast de cijfers en instellingen.</div>`
+      :`<div class="infobox">Alleen de eigenaar of een beheerder kan collega's uitnodigen.</div>`}`
+      +onbKnoppen(true,'onbGa(1)','Volgende','onbGa(1)');
+  }
+
+  /* ── 6. Rondleiding door de app ────────────────────────────── */
+  else if(onbStap===6){
+    inner=`<h2><svg class="i"><use href="#i-play"/></svg>Korte rondleiding</h2>
+      <p class="muted onbuitleg">We lopen langs de vijf onderdelen die je dagelijks gebruikt. Je ziet ze meteen oplichten in het menu.</p>
+      <div class="onbrondlijst">
+        ${ONB_RONDLEIDING.map((s,n)=>`<div class="onbrond" onclick="startRondleiding(${n})">
+          <span class="nr">${String(n+1).padStart(2,'0')}</span>
+          <div><b>${s.t}</b><br><span class="muted">${s.d}</span></div>
+          <svg class="i s"><use href="#i-right"/></svg>
+        </div>`).join('')}
+      </div>`
+      +onbKnoppen(true,'startRondleiding(0)','Start rondleiding','onbAfronden(false)');
+  }
+
+  /* ── 7. Klaar ──────────────────────────────────────────────── */
+  else {
+    inner=`<div class="onbwelkom">
+      <div class="onbmerk klaar"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h2>Alles geregeld</h2>
+      <p class="muted">Je winkel staat klaar. Begin met het scannen van je eerste product, of meld meteen een reparatie aan.</p>
+      <div class="onbpunten">
+        <div><span class="nr"><svg class="i s"><use href="#i-scan"/></svg></span><div><b>Eerste product inboeken</b><br><span class="muted">Ga naar Scannen en houd je scanner op een barcode</span></div></div>
+        <div><span class="nr"><svg class="i s"><use href="#i-wrench"/></svg></span><div><b>Reparatie aanmelden</b><br><span class="muted">Klantgegevens, toestel, klaar</span></div></div>
+        <div><span class="nr"><svg class="i s"><use href="#i-undo"/></svg></span><div><b>Rondleiding opnieuw</b><br><span class="muted">Altijd terug te vinden bij Instellingen, Bedrijf</span></div></div>
+      </div>
+    </div>
+    <div class="onbvoet"><span></span>
+      <button class="btn actie" onclick="onbAfronden(false)"><svg class="i s"><use href="#i-check"/></svg>Aan de slag</button>
+    </div>`;
+  }
+
+  p.innerHTML=onbVoortgang()+'<div class="onbinhoud">'+inner+'</div>';
+  if(onbStap===1){ onbVernieuwVoorbeeld(); ['onb_naam','onb_email','onb_tel'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('input', onbVernieuwVoorbeeld); }); }
 }
-function onbGa(delta){ onbStap=Math.max(0,Math.min(3,onbStap+delta)); onbRender(); }
+
+function onbGa(delta){
+  onbStap=Math.max(0, Math.min(ONB_LAATSTE+1, onbStap+delta));
+  onbRender();
+  const p=document.getElementById('onbPopup'); if(p) p.scrollTop=0;
+}
+
+/* ── Stap 1: live voorbeeld van een klantbericht ── */
+function onbLiveNaam(v){
+  const h=huisstijl(); h.naam=v||'Storvo';
+  state.huisstijl=h; save(); pasHuisstijlToe();
+}
+function onbVernieuwVoorbeeld(){
+  const vak=document.getElementById('onb_bericht'); if(!vak) return;
+  const naam=(document.getElementById('onb_naam')||{}).value||'je winkel';
+  const tel=(document.getElementById('onb_tel')||{}).value||'';
+  vak.textContent='Beste Sara, je iPhone 14 is klaar en kan opgehaald worden. (#482) '
+    +'Met vriendelijke groet, '+naam+(tel?' ('+tel+')':'');
+}
 function onbBedrijfOpslaan(){
   state.instellingen={
-    naam:document.getElementById('onb_naam').value.trim(),
-    email:document.getElementById('onb_email').value.trim(),
-    tel:document.getElementById('onb_tel').value.trim()
+    naam:(document.getElementById('onb_naam').value||'').trim(),
+    email:(document.getElementById('onb_email').value||'').trim(),
+    tel:(document.getElementById('onb_tel').value||'').trim()
   };
   save();
   onbGa(1);
 }
-function onbAfronden(overgeslagen){
-  state.onboardingKlaar=true; save();
-  if(account){ account.onboarding_klaar=true; sb.from('accounts').update({onboarding_klaar:true}).eq('id',account.id); }
-  const o=document.getElementById('onbOverlay'); if(o) o.remove();
-  if(!overgeslagen) toast('Welkom. Je kan meteen beginnen.', true);
-  renderInstellingen();
+
+/* ── Stap 2: kleur meteen doorvoeren ── */
+function onbKiesKleur(accent, donker){
+  const h=huisstijl();
+  h.oranje=accent;
+  if(donker) h.navy=donker;
+  state.huisstijl=h; save(); pasHuisstijlToe();
+  document.querySelectorAll('.onbkleur').forEach(b=>b.classList.remove('aan'));
+  const knop=[...document.querySelectorAll('.onbkleur')].find(b=>b.getAttribute('onclick').includes(accent));
+  if(knop) knop.classList.add('aan');
 }
 
+/* ── Stap 3: categorieën aan- en uitzetten ── */
+function onbWisselCat(knop){ knop.classList.toggle('aan'); }
+function onbCatsOpslaan(){
+  const gekozen=[...document.querySelectorAll('.onbchip[data-cat].aan')].map(b=>b.dataset.cat);
+  if(gekozen.length){
+    const bestaand=new Map((state.categorieen||[]).map(c=>[c.naam,c]));
+    const nieuw=[];
+    gekozen.forEach((naam,n)=>{
+      const sjabloon=ONB_CATS.find(c=>c.naam===naam)||{};
+      nieuw.push(bestaand.get(naam) || Object.assign({id:uid()+n}, sjabloon));
+    });
+    /* Categorieën die al producten hebben blijven altijd staan. */
+    (state.categorieen||[]).forEach(c=>{
+      if(!nieuw.some(x=>x.naam===c.naam) && (state.producten||[]).some(p=>p.cat===c.id)) nieuw.push(c);
+    });
+    state.categorieen=nieuw;
+    save();
+  }
+  onbGa(1);
+}
+
+/* ── Stap 4: modellen klaarzetten ── */
+function onbModellenOpslaan(){
+  const uit=[...document.querySelectorAll('.onbchip[data-merk]')].filter(b=>!b.classList.contains('aan')).map(b=>b.dataset.merk);
+  if(uit.length){
+    const weg=[];
+    ONB_MERKEN.filter(m=>uit.includes(m.id)).forEach(m=>weg.push(...m.voorvoegsel));
+    state.modellen=(state.modellen||[]).filter(mo=>!weg.some(v=>mo.naam.startsWith(v)));
+    save();
+  }
+  onbGa(1);
+}
+
+/* ── Stap 5: uitnodiging maken vanuit de rondleiding ── */
+async function onbMaakUitnodiging(){
+  const uit=document.getElementById('onb_invresultaat');
+  if(!account){ uit.innerHTML='<p class="muted">Log opnieuw in om uit te nodigen.</p>'; return; }
+  const rol=document.getElementById('onb_invrol').value;
+  const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol}).select().single();
+  if(error||!data){ uit.innerHTML='<p style="color:var(--red-tekst)">Kon geen uitnodiging aanmaken.</p>'; return; }
+  const link=location.origin+location.pathname+'?invite='+data.token;
+  uit.innerHTML=`<div class="infobox">Deel deze link met je collega, 14 dagen geldig:
+    <input readonly value="${esc(link)}" style="margin-top:8px" onclick="this.select()">
+    <button class="btn ghost small" style="margin-top:8px" onclick="navigator.clipboard.writeText('${esc(link)}').then(()=>toast('Link gekopieerd','ok'))"><svg class="i s"><use href="#i-clipboard"/></svg>Kopiëren</button>
+  </div>`;
+}
+
+/* ── Stap 6: rondleiding met spotlight op het echte menu ── */
+let rondStap=0;
+function startRondleiding(vanaf){
+  rondStap=vanaf||0;
+  const ov=document.getElementById('onbOverlay'); if(ov) ov.style.display='none';
+  toonRondleiding();
+}
+function toonRondleiding(){
+  const s=ONB_RONDLEIDING[rondStap];
+  if(!s){ stopRondleiding(); onbStap=ONB_LAATSTE+1; const ov=document.getElementById('onbOverlay'); if(ov) ov.style.display=''; onbRender(); return; }
+  showTab(s.tab);
+  let laag=document.getElementById('rondLaag');
+  if(!laag){ laag=document.createElement('div'); laag.id='rondLaag'; document.body.appendChild(laag); }
+  const knop=document.querySelector(`aside nav button[data-tab="${s.tab}"]`);
+  const r=knop?knop.getBoundingClientRect():{top:80,left:20,width:200,height:44};
+  laag.innerHTML=`
+    <div class="rondspot" style="top:${r.top-6}px; left:${r.left-6}px; width:${r.width+12}px; height:${r.height+12}px"></div>
+    <div class="rondkaart" style="top:${Math.min(r.top, innerHeight-260)}px; left:${r.left+r.width+22}px">
+      <div class="rondnr">${String(rondStap+1).padStart(2,'0')} van ${String(ONB_RONDLEIDING.length).padStart(2,'0')}</div>
+      <h3>${s.t}</h3>
+      <p>${s.d}</p>
+      <div class="rondvoet">
+        <button class="btn ghost small" onclick="stopRondleiding(true)">Rondleiding sluiten</button>
+        <div style="display:flex; gap:8px">
+          ${rondStap>0?'<button class="btn ghost small" onclick="rondGa(-1)">Terug</button>':''}
+          <button class="btn actie small" onclick="rondGa(1)">${rondStap===ONB_RONDLEIDING.length-1?'Afronden':'Volgende'}</button>
+        </div>
+      </div>
+    </div>`;
+}
+function rondGa(d){ rondStap+=d; toonRondleiding(); }
+function stopRondleiding(afbreken){
+  const laag=document.getElementById('rondLaag'); if(laag) laag.remove();
+  if(afbreken){
+    const ov=document.getElementById('onbOverlay');
+    if(ov){ ov.style.display=''; onbStap=ONB_LAATSTE+1; onbRender(); }
+  }
+}
+addEventListener('resize', ()=>{ if(document.getElementById('rondLaag')) toonRondleiding(); });
+
+/* ── Afronden: onthouden dat deze gebruiker de rondleiding heeft gehad ── */
+async function onbAfronden(overgeslagen){
+  state.onboardingKlaar=true; save();
+  if(account){
+    account.onboarding_klaar=true;
+    /* Zonder await verstuurt Supabase de opdracht niet: dan begint de
+       rondleiding bij elke keer inloggen opnieuw. */
+    try{
+      const {error}=await sb.from('accounts').update({onboarding_klaar:true}).eq('id',account.id);
+      if(error) console.error('onboarding opslaan:', error);
+    }catch(e){ console.error('onboarding opslaan:', e); }
+  }
+  stopRondleiding();
+  const o=document.getElementById('onbOverlay'); if(o) o.remove();
+  if(!overgeslagen) toast('Je winkel staat klaar.','ok');
+  renderInstellingen();
+}
 save();
 pasHuisstijlToe();
 renderScanLog(); updateBadge(); renderDashboard();

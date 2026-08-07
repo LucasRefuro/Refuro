@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status van je reparatie</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Volg de voortgang van je reparatie.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#0B5B52; --donker:#123F39; --bg:#F7F6F3; --tekst:#17201E;
+    --card:#FFFFFF; --rand:#ECEAE4; --zacht:#F0EEE8; --muted:#5B6663; --muted-l:#8A938F;
+    --groen:#1E9E6A; --groen-zacht:#E3F4EC; --groen-tekst:#177A51;
+    --geel:#E8B31D; --geel-zacht:#FAF0D8; --geel-tekst:#946C07;
+    --rood:#D64545; --rood-zacht:#FAE4E4; --rood-tekst:#A33333;
+    --pil:100px; --radius:24px;
+    --schaduw:0 6px 24px rgba(23,32,30,.07);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--tekst); line-height:1.55; -webkit-font-smoothing:antialiased;
+    padding:24px 16px 48px;}
+  .wrap{max-width:640px; margin:0 auto;}
+  h1,h2,h3,.sora{font-family:'Sora',sans-serif; letter-spacing:-.01em;}
+
+  /* kop met het merk van de winkel */
+  header{background:var(--donker); border-radius:var(--radius); padding:28px 30px; margin-bottom:20px;
+    display:flex; align-items:center; gap:16px; color:#fff;}
+  header .mk{width:54px; height:54px; border-radius:15px; background:#fff; display:flex; align-items:center;
+    justify-content:center; flex:none; overflow:hidden; font-family:'Sora',sans-serif; font-weight:800;
+    font-size:24px; color:var(--accent);}
+  header .mk img{width:100%; height:100%; object-fit:cover;}
+  header h1{font-size:21px; font-weight:800;}
+  header .sub{font-size:14px; opacity:.8; margin-top:2px;}
+
+  .kaart{background:var(--card); border-radius:var(--radius); padding:26px 28px; margin-bottom:18px; box-shadow:var(--schaduw);}
+  .kaart h2{font-size:17px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:10px;}
+  .i{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none;}
+
+  /* de kern: waar staat het nu */
+  .nu{display:flex; align-items:flex-start; gap:16px; margin-bottom:6px;}
+  .nu .ring{width:52px; height:52px; border-radius:50%; background:var(--groen-zacht); color:var(--groen-tekst);
+    display:flex; align-items:center; justify-content:center; flex:none;}
+  .nu .ring .i{width:26px; height:26px; stroke-width:2.4;}
+  .nu h2{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; margin:0 0 4px; display:block;}
+  .nu p{color:var(--muted); font-size:15px;}
+  .balk{height:8px; background:var(--zacht); border-radius:var(--pil); overflow:hidden; margin:22px 0 4px;}
+  .balk i{display:block; height:100%; background:var(--accent); border-radius:var(--pil); transition:width .8s cubic-bezier(.4,0,.2,1);}
+  .balktekst{font-size:12.5px; color:var(--muted-l); text-align:right;}
+
+  /* tijdlijn */
+  .tl{position:relative; padding-left:34px; margin-top:6px;}
+  .tl::before{content:''; position:absolute; left:11px; top:10px; bottom:14px; width:2px; background:var(--zacht);}
+  .stap{position:relative; padding-bottom:26px;}
+  .stap:last-child{padding-bottom:0;}
+  .stap::before{content:''; position:absolute; left:-29px; top:2px; width:24px; height:24px; border-radius:50%;
+    background:var(--card); border:2.5px solid var(--zacht); z-index:1;}
+  .stap.gedaan::before{background:var(--accent); border-color:var(--accent);}
+  .stap.gedaan::after{content:''; position:absolute; left:-23px; top:9px; width:11px; height:6px;
+    border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg); z-index:2;}
+  .stap.nu::before{background:var(--accent); border-color:var(--accent);
+    box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 16%, transparent); animation:pols 2s ease-in-out infinite;}
+  @keyframes pols{0%,100%{box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 16%, transparent);}
+                  50%{box-shadow:0 0 0 11px color-mix(in srgb, var(--accent) 6%, transparent);}}
+  .stap .tt{font-weight:600; font-size:15.5px;}
+  .stap.todo .tt{color:var(--muted-l); font-weight:500;}
+  .stap .tm{font-size:13px; color:var(--muted-l); margin-top:2px;}
+  .stap .extra{margin-top:10px; background:var(--zacht); border-radius:14px; padding:12px 14px; font-size:14px; color:var(--muted);}
+
+  /* notities van de winkel */
+  .notitie{background:var(--zacht); border-radius:16px; padding:15px 17px; margin-bottom:10px; font-size:14.5px; line-height:1.6;}
+  .notitie:last-child{margin-bottom:0;}
+  .notitie.let-op{background:var(--geel-zacht); color:var(--geel-tekst);}
+  .notitie .meta{font-size:12px; color:var(--muted-l); margin-top:6px;}
+  .notitie.let-op .meta{color:var(--geel-tekst); opacity:.75;}
+
+  /* gegevens */
+  .rij{display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-bottom:1px solid var(--zacht); font-size:15px;}
+  .rij:last-child{border-bottom:none;}
+  .rij span:first-child{color:var(--muted-l);}
+  .rij b{font-weight:600; text-align:right;}
+
+  /* vragen */
+  .knoppen{display:flex; flex-direction:column; gap:10px;}
+  .knop{display:flex; align-items:center; gap:13px; padding:15px 18px; border-radius:16px; background:var(--zacht);
+    color:var(--tekst); text-decoration:none; font-weight:600; font-size:15px; transition:.16s;}
+  .knop:hover{transform:translateY(-1px); box-shadow:var(--schaduw);}
+  .knop .ic{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex:none; color:#fff;}
+  .knop small{display:block; font-weight:400; font-size:13px; color:var(--muted-l); margin-top:1px;}
+  .knop.wa .ic{background:#25D366;}
+  .knop.bel .ic{background:var(--accent);}
+  .knop.mail .ic{background:var(--donker);}
+
+  footer{text-align:center; color:var(--muted-l); font-size:12.5px; margin-top:26px; line-height:1.7;}
+  footer a{color:var(--muted-l);}
+
+  /* zoekscherm en foutmelding */
+  .midden{text-align:center; padding:40px 20px;}
+  .midden .ring{width:64px; height:64px; border-radius:50%; background:var(--zacht); color:var(--muted-l);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 20px;}
+  .midden .ring .i{width:30px; height:30px;}
+  .midden h2{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; margin-bottom:8px;}
+  .midden p{color:var(--muted); font-size:15px; max-width:38ch; margin:0 auto 22px;}
+  .zoekrij{display:flex; gap:10px; max-width:340px; margin:0 auto;}
+  input{flex:1; padding:14px 16px; border:1.5px solid var(--rand); border-radius:14px; font-size:16px;
+    font-family:inherit; background:#fff; color:var(--tekst); min-width:0;}
+  input:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);}
+  button{background:var(--accent); color:#fff; border:none; padding:14px 24px; border-radius:14px;
+    font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  button:hover{filter:brightness(.94);}
+
+  .laden{text-align:center; padding:60px 20px; color:var(--muted-l);}
+  .laden .bol{width:34px; height:34px; border:3px solid var(--zacht); border-top-color:var(--accent);
+    border-radius:50%; margin:0 auto 14px; animation:draai .8s linear infinite;}
+  @keyframes draai{to{transform:rotate(360deg)}}
+
+  @media(max-width:520px){
+    body{padding:16px 12px 36px;}
+    header{padding:22px; border-radius:20px;}
+    .kaart{padding:22px 20px; border-radius:20px;}
+    .nu h2{font-size:19px;}
+  }
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-klok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-bericht" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-telefoon" viewBox="0 0 24 24"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="i-doos" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-zoek" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></symbol>
+  <symbol id="i-telefoontje" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+</svg>
+
+<div class="wrap" id="inhoud">
+  <div class="laden"><div class="bol"></div>Even geduld</div>
+</div>
+
+<script>
+const FUNCTIE='https://ugilfxqolemxwssbpdwu.supabase.co/functions/v1/reparatie-status';
+
+/* Adres kan zijn: /r/<winkel>/<code>  of later  <winkel>.storvo.app/<code> */
+function leesAdres(){
+  const delen=location.pathname.split('/').filter(Boolean);
+  const host=location.hostname.split('.');
+  const opSubdomein = host.length>2 && !['www','storvo','login','admin','inloggen'].includes(host[0]);
+  if(opSubdomein) return {winkel:host[0], code:delen[0]||''};
+  if(delen[0]==='r') return {winkel:delen[1]||'', code:delen[2]||''};
+  return {winkel:delen[0]||'', code:delen[1]||''};
+}
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function datum(t){ return t? new Date(t).toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}) : ''; }
+function datumKort(t){ return t? new Date(t).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' om '+new Date(t).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) : ''; }
+function telefoonSchoon(t){ return String(t||'').replace(/[^0-9+]/g,'').replace(/^0/,'31'); }
+
+const STAPPEN=[
+  {id:'aangemeld', t:'Aangemeld',        d:'We hebben je toestel ingeboekt'},
+  {id:'inleveren', t:'Toestel inleveren',d:'Je kan je toestel langsbrengen'},
+  {id:'besteld',   t:'Onderdelen besteld',d:'De onderdelen zijn onderweg'},
+  {id:'binnen',    t:'Onderdelen binnen', d:'Alles ligt klaar om te beginnen'},
+  {id:'bezig',     t:'In reparatie',      d:'We zijn ermee bezig'},
+  {id:'klaar',     t:'Klaar om op te halen', d:'Je toestel staat voor je klaar'}
+];
+
+function toonFout(titel, uitleg, winkel){
+  document.getElementById('inhoud').innerHTML=`
+    <div class="kaart midden">
+      <div class="ring"><svg class="i"><use href="#i-zoek"/></svg></div>
+      <h2>${esc(titel)}</h2>
+      <p>${esc(uitleg)}</p>
+      ${winkel!==false?`<div class="zoekrij">
+        <input id="codeIn" placeholder="Reparatienummer" inputmode="numeric" onkeydown="if(event.key==='Enter')zoek()">
+        <button onclick="zoek()">Bekijken</button>
+      </div>`:''}
+    </div>
+    <footer>Volg je reparatie via <b>Storvo</b></footer>`;
+}
+function zoek(){
+  const c=(document.getElementById('codeIn').value||'').trim().replace(/[^0-9a-zA-Z]/g,'');
+  if(!c) return;
+  const {winkel}=leesAdres();
+  location.href = location.pathname.includes('/r/') ? '/r/'+winkel+'/'+c : '/'+c;
+}
+
+function stijlToepassen(m){
+  const r=document.documentElement.style;
+  r.setProperty('--accent', m.accent);
+  r.setProperty('--donker', m.donker);
+  r.setProperty('--bg', m.achtergrond);
+  r.setProperty('--tekst', m.tekst);
+}
+
+function teken(d){
+  stijlToepassen(d.merk);
+  document.title='Reparatie '+d.reparatie.nr+' · '+d.merk.naam;
+
+  const stappen=STAPPEN.filter(s=>s.id!=='inleveren' || d.reparatie.moetInleveren);
+  let idx=stappen.findIndex(s=>s.id===d.reparatie.status);
+  if(d.reparatie.status==='afgerond') idx=stappen.length-1;
+  if(idx<0) idx=0;
+  const pct=Math.round((idx+1)/stappen.length*100);
+  const nu=stappen[idx];
+  const gedaanOp={}; (d.tijdlijn||[]).forEach(l=>{ if(!gedaanOp[l.status]) gedaanOp[l.status]=l.t; });
+
+  const t=d.teksten||{};
+  const klaar = d.reparatie.status==='klaar' || d.reparatie.status==='afgerond';
+
+  document.getElementById('inhoud').innerHTML=`
+    <header>
+      <div class="mk">${d.merk.logo?`<img src="${esc(d.merk.logo)}" alt="">`:esc((d.merk.naam||'?').charAt(0).toUpperCase())}</div>
+      <div>
+        <h1>${esc(d.merk.naam)}</h1>
+        <div class="sub">Reparatie ${esc(d.reparatie.nr)}</div>
+      </div>
+    </header>
+
+    <div class="kaart">
+      <div class="nu">
+        <div class="ring"><svg class="i"><use href="#${klaar?'i-check':'i-wrench'}"/></svg></div>
+        <div>
+          <h2>${esc(nu.t)}</h2>
+          <p>${esc(nu.d)}${d.reparatie.klantVoornaam?', '+esc(d.reparatie.klantVoornaam):''}</p>
+        </div>
+      </div>
+      <div class="balk"><i style="width:${pct}%"></i></div>
+      <div class="balktekst">Stap ${idx+1} van ${stappen.length}</div>
+    </div>
+
+    <div class="kaart">
+      <h2><svg class="i"><use href="#i-klok"/></svg>Voortgang</h2>
+      <div class="tl">
+        ${stappen.map((s,n)=>{
+          const cls = n<idx?'gedaan':(n===idx?'nu':'todo');
+          const wanneer = gedaanOp[s.id]?datumKort(gedaanOp[s.id]):'';
+          let extra='';
+          if(s.id==='inleveren' && n===idx) extra=`<div class="extra">${esc(t.inleveren||'Breng je toestel langs in de winkel, dan gaan we ermee aan de slag.')}</div>`;
+          if(s.id==='bezig' && n===idx && d.reparatie.ophaal) extra=`<div class="extra">Verwacht klaar rond ${esc(d.reparatie.ophaal)}</div>`;
+          if(s.id==='klaar' && n===idx) extra=`<div class="extra">${esc(t.ophalen||'Je kan je toestel ophalen tijdens onze openingstijden.')}</div>`;
+          return `<div class="stap ${cls}">
+            <div class="tt">${esc(s.t)}</div>
+            <div class="tm">${wanneer||(n>idx?'nog niet':'')}</div>
+            ${extra}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${(d.notities||[]).length?`<div class="kaart">
+      <h2><svg class="i"><use href="#i-bericht"/></svg>Bericht van de winkel</h2>
+      ${d.notities.map(n=>`<div class="notitie${n.probleem?' let-op':''}">${esc(n.tekst)}<div class="meta">${datumKort(n.t)}</div></div>`).join('')}
+    </div>`:''}
+
+    <div class="kaart">
+      <h2><svg class="i"><use href="#i-telefoontje"/></svg>Je toestel</h2>
+      <div class="rij"><span>Toestel</span><b>${esc(d.reparatie.toestel||'onbekend')}</b></div>
+      <div class="rij"><span>Reparatie</span><b>${esc(d.reparatie.type||'onbekend')}</b></div>
+      <div class="rij"><span>Aangemeld</span><b>${esc(datum(d.reparatie.aangemeld))||'onbekend'}</b></div>
+      <div class="rij"><span>Reparatienummer</span><b>${esc(d.reparatie.nr)}</b></div>
+    </div>
+
+    <div class="kaart">
+      <h2><svg class="i"><use href="#i-bericht"/></svg>Vragen?</h2>
+      <p style="color:var(--muted); font-size:15px; margin-bottom:18px">${esc(t.vragen||'Stel ze gerust, we helpen je graag verder.')}</p>
+      <div class="knoppen">
+        ${d.winkel.whatsapp?`<a class="knop wa" href="https://wa.me/${telefoonSchoon(d.winkel.whatsapp)}?text=${encodeURIComponent('Hallo, ik heb een vraag over reparatie '+d.reparatie.nr)}" target="_blank" rel="noopener">
+          <span class="ic"><svg class="i"><use href="#i-bericht"/></svg></span>
+          <span>WhatsApp<small>Meestal binnen een uur antwoord</small></span></a>`:''}
+        ${d.winkel.telefoon?`<a class="knop bel" href="tel:${esc(d.winkel.telefoon.replace(/\s/g,''))}">
+          <span class="ic"><svg class="i"><use href="#i-telefoon"/></svg></span>
+          <span>Bellen<small>${esc(d.winkel.telefoon)}</small></span></a>`:''}
+        ${d.winkel.email?`<a class="knop mail" href="mailto:${esc(d.winkel.email)}?subject=${encodeURIComponent('Vraag over reparatie '+d.reparatie.nr)}">
+          <span class="ic"><svg class="i"><use href="#i-mail"/></svg></span>
+          <span>E-mail<small>${esc(d.winkel.email)}</small></span></a>`:''}
+      </div>
+      ${d.winkel.openingstijden?`<div class="notitie" style="margin-top:16px"><b>Openingstijden</b><br>${esc(d.winkel.openingstijden)}</div>`:''}
+      ${d.winkel.adres?`<div class="notitie" style="margin-top:10px"><b>Adres</b><br>${esc(d.winkel.adres)}</div>`:''}
+    </div>
+
+    <footer>${esc(d.merk.naam)} gebruikt <b>Storvo</b> om reparaties te volgen<br>
+      <a href="https://storvo.app">storvo.app</a></footer>`;
+}
+
+(async function(){
+  const {winkel, code}=leesAdres();
+  if(!winkel){ toonFout('Onvolledige link','Vraag je winkel om de juiste link naar je reparatie.', false); return; }
+  if(!code){ toonFout('Welke reparatie?','Vul je reparatienummer in, dan laten we de status zien.'); return; }
+  try{
+    const res=await fetch(FUNCTIE+'?winkel='+encodeURIComponent(winkel)+'&code='+encodeURIComponent(code));
+    const d=await res.json();
+    if(!res.ok){
+      toonFout(res.status===404?'Niet gevonden':'Er ging iets mis',
+        d.error||'Controleer het reparatienummer en probeer het opnieuw.');
+      return;
+    }
+    teken(d);
+  }catch(e){
+    toonFout('Geen verbinding','Controleer je internetverbinding en probeer het opnieuw.');
+  }
+})();
+</script>
+</body>
+</html>
