@@ -1357,6 +1357,22 @@
     <div id="wa_koppel" class="wakaart" style="margin-bottom:22px"></div>
 
     <div id="ber_lijst"></div>
+
+    <div style="margin-top:26px; padding-top:22px; border-top:1px solid var(--soft-2)">
+      <h3 style="font-family:'Sora',system-ui,sans-serif; font-size:16px; margin:0 0 6px">Prijzen vergelijken</h3>
+      <p class="muted" style="font-size:13.5px; line-height:1.6; margin-bottom:14px">
+        Als je meedoet, stuurt Storvo bij elke afgerekende reparatie één regel door:
+        het toestel, het soort reparatie en het bedrag. <b>Geen klantnaam, geen
+        telefoonnummer, geen reparatienummer.</b> Zodra genoeg winkels meedoen zie je
+        bij het aanmaken van een reparatie wat er in de markt gangbaar is. Wat jij
+        rekent is nooit tot jouw winkel te herleiden: we tonen pas iets vanaf vijf
+        verschillende winkels.
+      </p>
+      <label style="display:flex; align-items:center; gap:9px; margin:0 0 12px; text-transform:none; letter-spacing:0; font-size:14px; font-weight:500; color:var(--text); cursor:pointer">
+        <input type="checkbox" id="pd_aan" onchange="prijsDelenWissel(this.checked)"> Meedoen aan de prijsvergelijking
+      </label>
+      <div id="prijsDelen"></div>
+    </div>
   </div>
 
   <div class="card" id="inst-huisstijl"hidden>
@@ -3754,7 +3770,10 @@ function boekDienst(bet){
   state.log=state.log.slice(0,50);
   if(tx.repId){
     const r=state.reparaties.find(r=>r.id===tx.repId);
-    if(r){ r.status='afgerond'; r.betaal=bet; r.afgerondOp=Date.now(); }
+    if(r){
+      r.status='afgerond'; r.betaal=bet; r.afgerondOp=Date.now();
+      deelPrijspunt(r, tx.prijs, tx.kosten);
+    }
   }
   save(); sluitPopup(); piep(440);
   toast(''+(tx.repId?'Reparatie afgerekend':'Dienst verkocht')+' ('+betaalNaam(bet)+'): '+tx.naam+', '+euro(tx.prijs), true);
@@ -3764,6 +3783,55 @@ function boekDienst(bet){
     document.getElementById('ld_kosten').value=0;
   }
   renderScanLog(); herteken();
+}
+
+/* ---------- prijzen vergelijken ----------
+   Bij het afrekenen van een reparatie sturen we één regel naar Storvo: welk
+   toestel, wat voor reparatie, en welk bedrag. Geen klantnaam, geen nummer,
+   geen adres. Daarmee kunnen winkels straks zien wat in de markt gangbaar is.
+   Wie niet meedoet zet het uit bij Instellingen.                            */
+
+function prijsDelenAan(){
+  const kp=state.klantpagina||{};
+  return kp.prijsDelen!==false;      /* standaard aan */
+}
+
+async function deelPrijspunt(r, prijs, kosten){
+  if(!account || !prijsDelenAan()) return;
+  if(!r || !r.toestel || !(prijs>0)) return;
+  try{
+    await sb.rpc('prijspunt_opslaan', {
+      toestel_input: String(r.toestel).slice(0,80),
+      soort_input:   String(r.type||'').slice(0,80),
+      prijs_input:   Number(prijs),
+      kosten_input:  kosten>0 ? Number(kosten) : null
+    });
+  }catch(e){ /* stil: dit mag het afrekenen nooit ophouden */ }
+}
+
+function prijsDelenWissel(aan){
+  const kp=klantpagina();
+  kp.prijsDelen=aan;
+  save();
+  renderPrijsDelen();
+  toast(aan ? 'Je doet mee aan de prijsvergelijking.'
+            : 'Je gegevens blijven voortaan bij jou.', 'ok');
+}
+
+async function renderPrijsDelen(){
+  const vak=document.getElementById('prijsDelen'); if(!vak) return;
+  const aan=prijsDelenAan();
+  const schakel=document.getElementById('pd_aan');
+  if(schakel) schakel.checked=aan;
+
+  let eigen=null;
+  if(account){
+    try{ const {data}=await sb.rpc('prijspunten_eigen'); eigen=data; }catch(e){}
+  }
+  vak.innerHTML = eigen===null || eigen===0
+    ? '<p class="muted klein" style="margin:0">Zodra je je eerste reparatie afrekent, telt die mee.</p>'
+    : '<p class="muted klein" style="margin:0">Je hebt tot nu toe <b>'+eigen+
+      '</b> '+(eigen===1?'reparatie':'reparaties')+' bijgedragen.</p>';
 }
 
 /* ---------- reparaties ---------- */
@@ -4358,6 +4426,7 @@ function renderBerichten(){
   const em=document.getElementById('ber_email'); if(em) em.checked=kp.kanaalEmail!==false;
   const wa=document.getElementById('ber_whatsapp'); if(wa) wa.checked=kp.kanaalWhatsapp!==false;
   renderWhatsapp();
+  renderPrijsDelen();
 
   vak.innerHTML=BER_STAPPEN.map(s=>{
     const inst=b[s.id]; const open=s.id===berStapOpen;

@@ -481,6 +481,18 @@ Object.assign(WOORDEN, {
 'Log in met je gebruikersnaam of e-mailadres':'Log in with your username or email address'
 });
 
+
+/* ---------- prijzen vergelijken ---------- */
+Object.assign(WOORDEN, {
+'Prijzen vergelijken':'Compare prices',
+'Meedoen aan de prijsvergelijking':'Take part in the price comparison',
+'Als je meedoet, stuurt Storvo bij elke afgerekende reparatie \u00e9\u00e9n regel door: het toestel, het soort reparatie en het bedrag. Geen klantnaam, geen telefoonnummer, geen reparatienummer. Zodra genoeg winkels meedoen zie je bij het aanmaken van een reparatie wat er in de markt gangbaar is. Wat jij rekent is nooit tot jouw winkel te herleiden: we tonen pas iets vanaf vijf verschillende winkels.':
+  'If you take part, Storvo sends one line for every repair you settle: the device, the type of repair and the amount. No customer name, no phone number, no repair number. Once enough shops take part, you will see what is usual in the market when you create a repair. What you charge can never be traced back to your shop: we only show figures from five different shops upwards.',
+'Zodra je je eerste reparatie afrekent, telt die mee.':'Your first settled repair will be the first to count.',
+'Je doet mee aan de prijsvergelijking.':'You are taking part in the price comparison.',
+'Je gegevens blijven voortaan bij jou.':'Your figures stay with you from now on.'
+});
+
 /* ══════════ de motor ══════════ */
 
 let taal = 'nl';

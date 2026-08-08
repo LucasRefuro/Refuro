@@ -35,7 +35,64 @@ Wat je ziet bepaalt wat je doet:
 
 ---
 
-## Onderdeel 2 — E-mail activeren
+## Onderdeel 2 — De DNS-records toevoegen in Vercel
+
+Belangrijk om te snappen: de nameservers van storvo.nl wijzen naar **Vercel**,
+niet naar Hostinger. Hostinger laat je wel netjes zien wat er moet gebeuren,
+maar hij beheert die DNS niet. Wat je daar invult heeft geen effect.
+
+Ga dus naar **vercel.com** → je project → **Settings** → **Domains** → klik op
+`storvo.nl` → **DNS Records**.
+
+Vul bij Name alleen het linkerdeel in, zonder `.storvo.nl` erachter. Vercel
+plakt je domeinnaam er zelf aan vast. Waar hieronder *(leeg)* staat, laat je
+het veld leeg; dat is het hoofddomein.
+
+### Post ontvangen
+
+| Type | Name | Value | Priority |
+|---|---|---|---|
+| MX | *(leeg)* | `mx1.hostinger.com` | 5 |
+| MX | *(leeg)* | `mx2.hostinger.com` | 10 |
+
+### Voorkomen dat anderen namens jou mailen
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | *(leeg)* | `v=spf1 include:_spf.mail.hostinger.com ~all` |
+
+### Uit de spamfolder blijven
+
+Hostinger ondertekent elke uitgaande mail met een sleutel. De publieke helft
+daarvan zet je hier neer, zodat Gmail en Outlook die handtekening kunnen
+controleren.
+
+| Type | Name | Value |
+|---|---|---|
+| CNAME | `hostingermail-a._domainkey` | `hostingermail-a.dkim.mail.hostinger.com` |
+| CNAME | `hostingermail-b._domainkey` | `hostingermail-b.dkim.mail.hostinger.com` |
+| CNAME | `hostingermail-c._domainkey` | `hostingermail-c.dkim.mail.hostinger.com` |
+
+Er zijn er drie omdat Hostinger tussen die sleutels wisselt. Staan ze niet
+alle drie in je DNS, dan gaat het na zo'n wisseling stil mis.
+
+### Bewijzen dat je mail echt van jou is
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:info@storvo.nl` |
+
+`p=none` betekent: alleen meekijken, nog niets blokkeren. Verstandig zolang je
+zowel via Hostinger als via Resend verstuurt.
+
+Klik daarna in Hostinger op **Controleer de status**. Reken op een kwartier tot
+een paar uur voordat alle bolletjes groen worden.
+
+---
+
+## Onderdeel 2b — E-mail activeren bij Hostinger
+
+Heb je nog geen e-maildienst op storvo.nl:
 
 1. Klik bij **E-mails** op **E-mail beheren** of **E-maildienst kiezen**.
 2. Kies je domein `storvo.nl`.
@@ -43,11 +100,9 @@ Wat je ziet bepaalt wat je doet:
    - **Gratis e-mail** (zit soms bij je hosting): één mailbox, genoeg om te beginnen.
    - **Zakelijke e-mail**: rond de één euro per mailbox per maand, meer opslag.
 4. Reken af als dat nodig is.
-5. Hostinger vraagt of hij de MX-records automatisch mag instellen. **Zeg ja.**
 
-> Zegt Hostinger dat je domein bij een andere partij staat? Dat klopt niet:
-> je domeinen staan bij Hostinger, alleen de website draait op Vercel. Je hoeft
-> daar niets aan te veranderen.
+Biedt Hostinger aan de records automatisch te zetten, dan kan hij dat niet
+waarmaken zolang de DNS bij Vercel ligt. Doe het handmatig zoals hierboven.
 
 ---
 
@@ -72,8 +127,10 @@ Wachten tot de DNS is doorgevoerd duurt meestal een kwartier, soms een paar uur.
 3. Kijk of hij binnenkomt.
 
 Komt hij niet aan, wacht dan een paar uur en probeer opnieuw. Blijft het stil,
-kijk dan bij Hostinger onder **Domeinen → DNS** of er MX-records voor
-storvo.nl staan die naar Hostinger wijzen.
+kijk dan in **Vercel** onder DNS Records of de twee MX-regels er echt staan.
+Je kunt het ook zelf nakijken via dnschecker.org: vul `storvo.nl` in en kies
+type MX. Zie je daar `mx1.hostinger.com` staan, dan is de DNS in orde en ligt
+het aan de mailbox zelf.
 
 ---
 
