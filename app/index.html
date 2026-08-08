@@ -2668,7 +2668,7 @@ async function ladAccountEnStart(session){
     try{ await sb.auth.signOut(); }catch(e){}
     toonAuthLogin();
     authMelding(error ? 'Kon je gegevens niet laden. Probeer opnieuw in te loggen.'
-      : 'Je inlog bestaat, maar er hangt nog geen Storvo-profiel aan. Neem contact op via info@storvo.app.');
+      : 'Je inlog bestaat, maar er hangt nog geen Storvo-profiel aan. Neem contact op via info@storvo.nl.');
     return;
   }
   account=acc;
@@ -2757,7 +2757,7 @@ const ABO_TEKSTEN={
   },
   geen_winkel:{
     kop:'Er hangt geen winkel aan dit account',
-    uitleg:'Neem contact op via info@storvo.app, dan zetten we het recht.',
+    uitleg:'Neem contact op via info@storvo.nl, dan zetten we het recht.',
     knop:''
   }
 };
@@ -2776,7 +2776,7 @@ function toonSlot(){
       : `<p class="muted klein" style="margin-bottom:16px">Vraag de eigenaar van de winkel om dit te regelen.</p>`) : ''}
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="uitloggen()">Uitloggen</button>
     <p class="muted klein" style="margin-top:16px">Vragen? Mail ons op
-      <a href="mailto:info@storvo.app">info@storvo.app</a>.</p>
+      <a href="mailto:info@storvo.nl">info@storvo.nl</a>.</p>
   `);
 }
 
@@ -4500,7 +4500,7 @@ async function renderWhatsapp(){
       </ul>
       <div class="wavoet">
         ${!inst||!inst.beschikbaar
-          ? '<span class="muted klein">Je eigen nummer koppelen kan binnenkort. Vraag ernaar via info@storvo.app.</span>'
+          ? '<span class="muted klein">Je eigen nummer koppelen kan binnenkort. Vraag ernaar via info@storvo.nl.</span>'
           : mag
             ? `<button class="btn ghost" id="wa_knop" onclick="waStartKoppelen()">${ico('i-message')}Mijn eigen nummer koppelen</button>
                <span class="muted klein">Duurt ongeveer twee minuten. Houd je telefoon bij de hand.</span>`

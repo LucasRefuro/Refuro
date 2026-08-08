@@ -397,8 +397,8 @@ Object.assign(WOORDEN, {
   'Your customers get their updates over WhatsApp, sent by Storvo with the name of your shop included. There is nothing to set up.',
 'Wil je liever je eigen nummer? Dan zien klanten het nummer dat ze al kennen en blijf je de WhatsApp Business-app op je telefoon gewoon gebruiken.':
   'Would you rather use your own number? Then customers see the number they already know, and you keep using the WhatsApp Business app on your phone.',
-'Je eigen nummer koppelen kan binnenkort. Vraag ernaar via info@storvo.app.':
-  'Connecting your own number is coming soon. Ask us about it at info@storvo.app.',
+'Je eigen nummer koppelen kan binnenkort. Vraag ernaar via info@storvo.nl.':
+  'Connecting your own number is coming soon. Ask us about it at info@storvo.nl.',
 'Mijn eigen nummer koppelen':'Connect my own number',
 'Opnieuw koppelen':'Connect again',
 'Duurt ongeveer twee minuten. Houd je telefoon bij de hand.':
