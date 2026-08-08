@@ -311,8 +311,14 @@ footer{padding:60px 0 44px; border-top:1px solid var(--rand); margin-top:72px; b
 @media(max-width:860px){ .fkolommen{grid-template-columns:1fr 1fr; gap:32px;} .fmerk{grid-column:1/-1;} }
 @media(max-width:540px){ .fkolommen{grid-template-columns:1fr;} .fonder .rechts{margin-left:0;} }
 
-/* taalknop */
-#taalKnop{font-family:'Sora',sans-serif; font-weight:700; letter-spacing:.04em; min-width:52px;}
+/* taalkiezer: geen omlijning, alleen vlag, code en een klein pijltje */
+.taalkies{display:flex; align-items:center; gap:7px; background:transparent; border:none;
+  padding:8px 9px; border-radius:12px; cursor:pointer; font-family:inherit; font-size:14px;
+  font-weight:600; color:var(--muted-l); transition:.15s; line-height:1; flex:none;}
+.taalkies:hover{background:var(--ijsgroen); color:var(--groen);}
+.taalkies .vlag{font-size:17px; line-height:1;}
+.taalkies .pijl{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.6;
+  stroke-linecap:round; stroke-linejoin:round; opacity:.55;}
 
 /* scroll-animatie */
 .op{opacity:0; transform:translateY(24px); transition:opacity .7s cubic-bezier(.22,.8,.3,1), transform .7s cubic-bezier(.22,.8,.3,1);}
@@ -413,7 +419,10 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
       <a href="#prijzen" data-t="nav_prijzen">Prijzen</a>
       <a href="#vragen" data-t="nav_vragen">Vragen</a>
     </div>
-    <button class="btn lijn klein" id="taalKnop" onclick="wisselTaal()" style="cursor:pointer">EN</button>
+    <button class="taalkies" id="taalKnop" onclick="wisselTaal()" aria-label="Taal / Language">
+      <span class="vlag" id="taalVlag">&#127475;&#127473;</span><span id="taalCode">NL</span>
+      <svg class="pijl" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
     <a href="/app/" class="btn lijn klein" data-t="nav_login">Inloggen</a>
     <a href="/proberen" class="btn groen klein" data-t="nav_try">Gratis proberen</a>
     <button id="menuKnop" onclick="wisselMenu()" aria-label="Menu" aria-expanded="false">
@@ -1083,8 +1092,9 @@ function zetTaal(t){
     const v=dict[el.dataset.t];
     if(v!==undefined) el.innerHTML=v;
   });
-  const knop=document.getElementById('taalKnop');
-  if(knop) knop.textContent=(t==='nl')?'EN':'NL';
+  const vlag=document.getElementById('taalVlag'), code=document.getElementById('taalCode');
+  if(vlag) vlag.innerHTML = t==='nl' ? '&#127475;&#127473;' : '&#127468;&#127463;';
+  if(code) code.textContent = t==='nl' ? 'NL' : 'EN';
   try{ localStorage.setItem('storvo_taal',t); }catch(e){}
   /* De demo staat los van de HTML, dus die tekenen we opnieuw. */
   if(typeof demoStart==='function') demoStart();

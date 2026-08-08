@@ -20,6 +20,10 @@ body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;}
 a{color:var(--groen); text-decoration:none;}
 a:hover{text-decoration:underline;}
+/* de voettekst hoort onderaan het scherm, ook als de pagina kort is */
+body{min-height:100vh; display:flex; flex-direction:column;}
+main{flex:1 0 auto;}
+footer{flex:none;}
 .wrap{max-width:1000px; margin:0 auto; padding:0 24px;}
 
 header.bar{padding:22px 0; border-bottom:1px solid var(--rand); background:var(--card);}
@@ -28,12 +32,9 @@ header.bar .in{display:flex; align-items:center; gap:14px;}
 .mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex; align-items:center; justify-content:center; flex:none;}
 .mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
 .wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em; color:var(--ink);}
-#taalKnop{margin-left:auto; background:transparent; color:var(--groen); border:1.5px solid rgba(11,91,82,.28);
-  border-radius:var(--pil); padding:8px 16px; font-family:'Sora',sans-serif; font-weight:700; font-size:13px;
-  letter-spacing:.04em; cursor:pointer; min-width:50px; transition:.16s;}
-#taalKnop:hover{background:var(--ijsgroen); border-color:var(--groen);}
+#taalKnop{margin-left:auto;}
 
-main{padding:76px 0 30px;}
+main{padding:78px 0 40px;}
 .kolommen{display:grid; grid-template-columns:1fr 1.15fr; gap:56px; align-items:start;}
 .label{font-size:12.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--groen); margin-bottom:13px;}
 h1{font-family:'Sora',sans-serif; font-size:clamp(31px,4.6vw,42px); font-weight:800; letter-spacing:-.03em; line-height:1.13; margin-bottom:16px;}
@@ -103,6 +104,15 @@ footer .rechts{margin-left:auto;}
   .veldrij{grid-template-columns:1fr; gap:0;}
   footer .rechts{margin-left:0;}
 }
+
+/* taalkiezer: geen omlijning, alleen vlag, code en een klein pijltje */
+.taalkies{display:flex; align-items:center; gap:7px; background:transparent; border:none;
+  padding:8px 8px; border-radius:12px; cursor:pointer; font-family:inherit; font-size:14px;
+  font-weight:600; color:var(--muted); transition:.15s; line-height:1;}
+.taalkies:hover{background:var(--ijsgroen); color:var(--groen);}
+.taalkies .vlag{font-size:17px; line-height:1;}
+.taalkies .pijl{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.6;
+  stroke-linecap:round; stroke-linejoin:round; opacity:.55;}
 </style>
 </head>
 <body>
@@ -113,7 +123,10 @@ footer .rechts{margin-left:auto;}
       <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
       <span class="wm">storvo</span>
     </a>
-    <button id="taalKnop" onclick="wisselTaal()">EN</button>
+    <button class="taalkies" id="taalKnop" onclick="wisselTaal()" aria-label="Taal / Language">
+      <span class="vlag" id="taalVlag">&#127475;&#127473;</span><span id="taalCode">NL</span>
+      <svg class="pijl" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
   </div>
 </header>
 
@@ -274,8 +287,13 @@ function zetTaal(t){
     const v=d[el.dataset.tPh]; if(v!==undefined) el.placeholder=v;
   });
   document.title=d.title;
-  document.getElementById('taalKnop').textContent = t==='nl'?'EN':'NL';
+  toonTaalKnop(t);
   try{ localStorage.setItem('storvo_taal',t); }catch(e){}
+}
+function toonTaalKnop(t){
+  const vlag=document.getElementById('taalVlag'), code=document.getElementById('taalCode');
+  if(vlag) vlag.innerHTML = t==='nl' ? '&#127475;&#127473;' : '&#127468;&#127463;';
+  if(code) code.textContent = t==='nl' ? 'NL' : 'EN';
 }
 function wisselTaal(){ zetTaal(taal==='nl'?'en':'nl'); }
 (function(){

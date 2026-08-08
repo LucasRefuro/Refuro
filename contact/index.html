@@ -20,15 +20,21 @@ body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;}
 a{color:var(--groen); text-decoration:none;}
 a:hover{text-decoration:underline;}
+/* de voettekst hoort onderaan het scherm, ook als de pagina kort is */
+body{min-height:100vh; display:flex; flex-direction:column;}
+main{flex:1 0 auto;}
+footer{flex:none;}
 .wrap{max-width:900px; margin:0 auto; padding:0 24px;}
 
-header.bar{padding:26px 0; border-bottom:1px solid var(--rand); background:var(--card);}
+header.bar{padding:22px 0; border-bottom:1px solid var(--rand); background:var(--card);}
+header.bar .in{display:flex; align-items:center; gap:14px;}
+#taalKnop{margin-left:auto;}
 .merk{display:flex; align-items:center; gap:11px;}
 .mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex; align-items:center; justify-content:center;}
 .mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
 .wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em; color:var(--ink);}
 
-main{padding:86px 0 24px;}
+main{padding:78px 0 40px;}
 .label{font-size:12.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--groen); margin-bottom:12px;}
 h1{font-family:'Sora',sans-serif; font-size:clamp(32px,5vw,44px); font-weight:800; letter-spacing:-.03em; line-height:1.12; margin-bottom:14px;}
 .lead{font-size:18px; color:var(--body); max-width:560px; margin-bottom:40px;}
@@ -67,48 +73,61 @@ footer{border-top:1px solid var(--rand); background:var(--card); padding:52px 0 
 @media(max-width:820px){ .fkolommen{grid-template-columns:1fr 1fr; gap:30px;} .fmerk{grid-column:1/-1;} }
 @media(max-width:520px){ .fkolommen{grid-template-columns:1fr;} .fonder .rechts{margin-left:0;}
   .gegevens dl{grid-template-columns:1fr; gap:2px 0;} .gegevens dd{margin-bottom:10px;} }
+
+/* taalkiezer: geen omlijning, alleen vlag, code en een klein pijltje */
+.taalkies{display:flex; align-items:center; gap:7px; background:transparent; border:none;
+  padding:8px 8px; border-radius:12px; cursor:pointer; font-family:inherit; font-size:14px;
+  font-weight:600; color:var(--muted); transition:.15s; line-height:1;}
+.taalkies:hover{background:var(--ijsgroen); color:var(--groen);}
+.taalkies .vlag{font-size:17px; line-height:1;}
+.taalkies .pijl{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.6;
+  stroke-linecap:round; stroke-linejoin:round; opacity:.55;}
 </style>
 </head>
 <body>
 
 <header class="bar">
-  <div class="wrap">
+  <div class="wrap in">
     <a href="/" class="merk">
       <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
       <span class="wm">storvo</span>
     </a>
+    <button class="taalkies" id="taalKnop" onclick="wisselTaal()" aria-label="Taal / Language">
+      <span class="vlag" id="taalVlag">&#127475;&#127473;</span><span id="taalCode">NL</span>
+      <svg class="pijl" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
   </div>
 </header>
 
 <main class="wrap">
-  <div class="label">Contact</div>
-  <h1>Een vraag? Stel hem gerust.</h1>
-  <p class="lead">Storvo is klein. Je mailt geen helpdesk maar de maker, en op werkdagen krijg je
+  <div class="label" data-t="label">Contact</div>
+  <h1 data-t="h1">Een vraag? Stel hem gerust.</h1>
+  <p class="lead" data-t="lead">Storvo is klein. Je mailt geen helpdesk maar de maker, en op werkdagen krijg je
     binnen één werkdag antwoord.</p>
 
   <div class="kaarten">
     <div class="kaart">
       <div class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></div>
-      <h2>Vragen over de software</h2>
-      <p>Loop je vast, mist er iets, of werkt er iets niet zoals verwacht? Schrijf zo concreet
+      <h2 data-t="k1_h">Vragen over de software</h2>
+      <p data-t="k1_p">Loop je vast, mist er iets, of werkt er iets niet zoals verwacht? Schrijf zo concreet
         mogelijk op wat je deed en wat je zag.</p>
-      <a class="knop" href="mailto:info@storvo.app?subject=Vraag%20over%20Storvo">Mail ons</a>
+      <a class="knop" href="mailto:info@storvo.app?subject=Vraag%20over%20Storvo" data-t="k1_btn">Mail ons</a>
     </div>
     <div class="kaart">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="m5 8 2.5 2.5"/><path d="m19 8-2.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 10a4 4 0 0 0-2 7.5V18h4v-.5A4 4 0 0 0 12 10z"/></svg></div>
-      <h2>Denk je met ons mee?</h2>
-      <p>Storvo groeit met de winkels die hem gebruiken. Mis je iets, kan iets handiger, of heb je
+      <h2 data-t="k2_h">Denk je met ons mee?</h2>
+      <p data-t="k2_p">Storvo groeit met de winkels die hem gebruiken. Mis je iets, kan iets handiger, of heb je
         een idee voor een nieuwe module? Laat het weten. De beste ideeën komen van de werkvloer.</p>
-      <a class="knop" href="mailto:info@storvo.app?subject=Idee%20voor%20Storvo">Deel je idee</a>
+      <a class="knop" href="mailto:info@storvo.app?subject=Idee%20voor%20Storvo" data-t="k2_btn">Deel je idee</a>
     </div>
   </div>
 
   <div class="gegevens">
-    <h2>Bedrijfsgegevens</h2>
+    <h2 data-t="bg_h">Bedrijfsgegevens</h2>
     <dl>
-      <dt>Handelsnaam</dt><dd>Storvo</dd>
-      <dt>Adres</dt><dd>Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</dd>
-      <dt>E-mail</dt><dd><a href="mailto:info@storvo.app">info@storvo.app</a></dd>
+      <dt data-t="bg_naam">Handelsnaam</dt><dd>Storvo</dd>
+      <dt data-t="bg_adres">Adres</dt><dd data-t="bg_adresw">Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</dd>
+      <dt data-t="bg_mail">E-mail</dt><dd><a href="mailto:info@storvo.app">info@storvo.app</a></dd>
     </dl>
   </div>
 </main>
@@ -121,32 +140,32 @@ footer{border-top:1px solid var(--rand); background:var(--card); padding:52px 0 
           <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span class="wm">storvo</span>
         </a>
-        <div class="tag">Alles geregeld.</div>
-        <p>Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.</p>
+        <div class="tag" data-t="tagline">Alles geregeld.</div>
+        <p data-t="f_over">Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.</p>
       </div>
       <div>
-        <h4>Product</h4>
+        <h4 data-t="f_k_product">Product</h4>
         <ul>
-          <li><a href="/#functies">Functies</a></li>
-          <li><a href="/#prijzen">Prijzen</a></li>
-          <li><a href="/#vragen">Veelgestelde vragen</a></li>
-          <li><a href="https://storvo.app/app/">Inloggen</a></li>
+          <li><a href="/#functies" data-t="nav_functies">Functies</a></li>
+          <li><a href="/#prijzen" data-t="nav_prijzen">Prijzen</a></li>
+          <li><a href="/#vragen" data-t="f_vragen">Veelgestelde vragen</a></li>
+          <li><a href="https://storvo.app/app/" data-t="f_inloggen">Inloggen</a></li>
         </ul>
       </div>
       <div>
-        <h4>Support</h4>
+        <h4 data-t="f_k_support">Support</h4>
         <ul>
-          <li><a href="/contact">Contact</a></li>
+          <li><a href="/contact" data-t="f_contact">Contact</a></li>
           <li><a href="mailto:info@storvo.app">info@storvo.app</a></li>
-          <li><a href="/proberen">Proefperiode aanvragen</a></li>
+          <li><a href="/proberen" data-t="f_proef">Proefperiode aanvragen</a></li>
         </ul>
       </div>
       <div>
-        <h4>Juridisch</h4>
+        <h4 data-t="f_k_juridisch">Juridisch</h4>
         <ul>
-          <li><a href="/voorwaarden">Algemene voorwaarden</a></li>
-          <li><a href="/privacy">Privacyverklaring</a></li>
-          <li><a href="/verwerkersovereenkomst">Verwerkersovereenkomst</a></li>
+          <li><a href="/voorwaarden" data-t="f_voorwaarden">Algemene voorwaarden</a></li>
+          <li><a href="/privacy" data-t="f_privacy">Privacyverklaring</a></li>
+          <li><a href="/verwerkersovereenkomst" data-t="f_vwo">Verwerkersovereenkomst</a></li>
         </ul>
       </div>
     </div>
@@ -154,10 +173,81 @@ footer{border-top:1px solid var(--rand); background:var(--card); padding:52px 0 
       <span>&copy; 2026 Storvo</span>
       <span>KvK 82379920</span>
       <span>Btw NL003671243B93</span>
-      <span class="rechts">Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</span>
+      <span class="rechts" data-t="f_adres">Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</span>
     </div>
   </div>
 </footer>
 
+
+<script>
+const T={
+ nl:{
+  title:'Contact · Storvo', label:'Contact', h1:'Een vraag? Stel hem gerust.',
+  lead:'Storvo is klein. Je mailt geen helpdesk maar de maker, en op werkdagen krijg je binnen één werkdag antwoord.',
+  k1_h:'Vragen over de software',
+  k1_p:'Loop je vast, mist er iets, of werkt er iets niet zoals verwacht? Schrijf zo concreet mogelijk op wat je deed en wat je zag.',
+  k1_btn:'Mail ons',
+  k2_h:'Denk je met ons mee?',
+  k2_p:'Storvo groeit met de winkels die hem gebruiken. Mis je iets, kan iets handiger, of heb je een idee voor een nieuwe module? Laat het weten. De beste ideeën komen van de werkvloer.',
+  k2_btn:'Deel je idee',
+  bg_h:'Bedrijfsgegevens', bg_naam:'Handelsnaam', bg_adres:'Adres', bg_mail:'E-mail',
+  bg_adresw:'Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)',
+  tagline:'Alles geregeld.',
+  f_over:'Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.',
+  f_k_product:'Product', f_k_support:'Support', f_k_juridisch:'Juridisch',
+  nav_functies:'Functies', nav_prijzen:'Prijzen', f_vragen:'Veelgestelde vragen',
+  f_inloggen:'Inloggen', f_contact:'Contact', f_proef:'Proefperiode aanvragen',
+  f_voorwaarden:'Algemene voorwaarden', f_privacy:'Privacyverklaring', f_vwo:'Verwerkersovereenkomst',
+  f_adres:'Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)'
+ },
+ en:{
+  title:'Contact · Storvo', label:'Contact', h1:'Got a question? Just ask.',
+  lead:'Storvo is small. You are not emailing a help desk but the person who built it, and on working days you get an answer within one day.',
+  k1_h:'Questions about the software',
+  k1_p:'Stuck, missing something, or does something not work as expected? Describe as precisely as you can what you did and what you saw.',
+  k1_btn:'Email us',
+  k2_h:'Want to think along?',
+  k2_p:'Storvo grows with the shops that use it. Missing something, could something be easier, or do you have an idea for a new module? Let us know. The best ideas come from the shop floor.',
+  k2_btn:'Share your idea',
+  bg_h:'Company details', bg_naam:'Trade name', bg_adres:'Address', bg_mail:'Email',
+  bg_adresw:'Ericssonstraat 2a, 5121 ML Rijen, the Netherlands (no visiting address)',
+  tagline:'All sorted.',
+  f_over:'Inventory, repairs and customer updates for phone shops. One system, no hassle.',
+  f_k_product:'Product', f_k_support:'Support', f_k_juridisch:'Legal',
+  nav_functies:'Features', nav_prijzen:'Pricing', f_vragen:'Frequently asked questions',
+  f_inloggen:'Log in', f_contact:'Contact', f_proef:'Request a trial',
+  f_voorwaarden:'Terms and conditions', f_privacy:'Privacy statement', f_vwo:'Data processing agreement',
+  f_adres:'Ericssonstraat 2a, 5121 ML Rijen, the Netherlands (no visiting address)'
+ }
+};
+let taal='nl';
+function toonTaalKnop(t){
+  const v=document.getElementById('taalVlag'), c=document.getElementById('taalCode');
+  if(v) v.innerHTML = t==='nl' ? '&#127475;&#127473;' : '&#127468;&#127463;';
+  if(c) c.textContent = t==='nl' ? 'NL' : 'EN';
+}
+function zetTaal(t){
+  taal=t; document.documentElement.lang=t;
+  const d=T[t];
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const v=d[el.dataset.t]; if(v!==undefined) el.innerHTML=v;
+  });
+  document.title=d.title;
+  toonTaalKnop(t);
+  try{ localStorage.setItem('storvo_taal',t); }catch(e){}
+}
+function wisselTaal(){ zetTaal(taal==='nl'?'en':'nl'); }
+(function(){
+  let t=null;
+  try{ t=localStorage.getItem('storvo_taal'); }catch(e){}
+  if(t!=='nl' && t!=='en'){
+    const h=location.hostname;
+    if(h.endsWith('.nl')) t='nl';
+    else if(h.endsWith('storvo.app')) t='en';
+    else t=(navigator.language||'nl').toLowerCase().startsWith('nl')?'nl':'en';
+  }
+  zetTaal(t);
+})();
+</script>
 </body>
 </html>
