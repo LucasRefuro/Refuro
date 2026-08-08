@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title data-t="title">Gratis proberen · Storvo</title>
+<meta name="description" content="Vraag dertig dagen gratis Storvo aan. We nemen binnen één werkdag contact op.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --groen:#0B5B52; --petrol:#123F39; --amber:#E88A1D; --amber-d:#CE7811;
+  --warmwit:#F7F6F3; --ink:#17201E; --ijsgroen:#E7F1EE; --mint:#7FC4B6;
+  --card:#FFFFFF; --rand:#ECEAE4; --muted:#5B6663; --muted-l:#8A938F; --body:#475350;
+  --st-rood:#D64545;
+  --radius:24px; --pil:100px; --schaduw:0 6px 24px rgba(23,32,30,.07);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;}
+a{color:var(--groen); text-decoration:none;}
+a:hover{text-decoration:underline;}
+.wrap{max-width:1000px; margin:0 auto; padding:0 24px;}
+
+header.bar{padding:22px 0; border-bottom:1px solid var(--rand); background:var(--card);}
+header.bar .in{display:flex; align-items:center; gap:14px;}
+.merk{display:flex; align-items:center; gap:11px;}
+.mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex; align-items:center; justify-content:center; flex:none;}
+.mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
+.wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em; color:var(--ink);}
+#taalKnop{margin-left:auto; background:transparent; color:var(--groen); border:1.5px solid rgba(11,91,82,.28);
+  border-radius:var(--pil); padding:8px 16px; font-family:'Sora',sans-serif; font-weight:700; font-size:13px;
+  letter-spacing:.04em; cursor:pointer; min-width:50px; transition:.16s;}
+#taalKnop:hover{background:var(--ijsgroen); border-color:var(--groen);}
+
+main{padding:76px 0 30px;}
+.kolommen{display:grid; grid-template-columns:1fr 1.15fr; gap:56px; align-items:start;}
+.label{font-size:12.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--groen); margin-bottom:13px;}
+h1{font-family:'Sora',sans-serif; font-size:clamp(31px,4.6vw,42px); font-weight:800; letter-spacing:-.03em; line-height:1.13; margin-bottom:16px;}
+.lead{font-size:17.5px; color:var(--body); margin-bottom:30px;}
+
+.punten{list-style:none;}
+.punten li{display:flex; gap:13px; align-items:flex-start; margin-bottom:15px; font-size:15px; color:var(--body);}
+.punten .v{width:24px; height:24px; border-radius:8px; background:var(--ijsgroen); color:var(--groen); flex:none;
+  display:flex; align-items:center; justify-content:center; margin-top:1px;}
+.punten .v svg{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;}
+.punten b{color:var(--ink);}
+
+.paneel{background:var(--card); border:1.5px solid var(--rand); border-radius:var(--radius);
+  padding:32px 34px; box-shadow:var(--schaduw);}
+.veldrij{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.veld{margin-bottom:16px;}
+label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px;}
+label .opt{font-weight:400; color:var(--muted-l);}
+input,select,textarea{width:100%; padding:13px 15px; border:1.5px solid var(--rand); border-radius:14px;
+  font-family:inherit; font-size:15px; color:var(--ink); background:#fff; transition:.15s;}
+textarea{resize:vertical; min-height:96px; line-height:1.6;}
+select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A938F' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center; background-size:17px; padding-right:42px; cursor:pointer;}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--groen); box-shadow:0 0 0 4px rgba(11,91,82,.1);}
+input.mis,textarea.mis{border-color:var(--st-rood); box-shadow:0 0 0 4px rgba(214,69,69,.09);}
+.pot{position:absolute; left:-9999px; width:1px; height:1px; opacity:0;}
+
+.verstuur{width:100%; background:var(--amber); color:#fff; border:none; border-radius:var(--pil);
+  padding:16px 28px; font-family:inherit; font-size:15.5px; font-weight:700; cursor:pointer; margin-top:6px;
+  box-shadow:0 6px 18px rgba(232,138,29,.26); transition:.18s;}
+.verstuur:hover:not(:disabled){background:var(--amber-d); transform:translateY(-2px); box-shadow:0 12px 26px rgba(232,138,29,.3);}
+.verstuur:disabled{opacity:.6; cursor:default; transform:none;}
+.klein{font-size:13px; color:var(--muted-l); margin-top:14px; line-height:1.6;}
+.melding{margin-top:16px; padding:13px 16px; border-radius:14px; font-size:14.5px; line-height:1.55;
+  background:#FDECF1; color:#8E1033; border:1.5px solid #F3C7D5;}
+.melding[hidden]{display:none;}
+
+/* bedankscherm */
+.klaar{text-align:center; padding:14px 0 6px;}
+.klaar .vink{width:64px; height:64px; border-radius:20px; background:var(--ijsgroen); color:var(--groen);
+  display:flex; align-items:center; justify-content:center; margin:0 auto 22px;
+  animation:pop .5s cubic-bezier(.22,1.2,.4,1) both;}
+.klaar .vink svg{width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:30; stroke-dashoffset:30; animation:teken .5s .22s ease-out forwards;}
+.klaar h2{font-family:'Sora',sans-serif; font-size:23px; font-weight:800; letter-spacing:-.02em; margin-bottom:12px;}
+.klaar p{color:var(--body); margin-bottom:22px;}
+@keyframes pop{from{opacity:0; transform:scale(.7)} to{opacity:1; transform:scale(1)}}
+@keyframes teken{to{stroke-dashoffset:0}}
+
+.op{opacity:0; transform:translateY(22px); animation:opkomen .7s cubic-bezier(.22,.8,.3,1) both;}
+.op.d1{animation-delay:.06s} .op.d2{animation-delay:.13s} .op.d3{animation-delay:.2s}
+@keyframes opkomen{to{opacity:1; transform:none}}
+@media(prefers-reduced-motion:reduce){ .op,.klaar .vink,.klaar .vink svg{animation:none; opacity:1; transform:none; stroke-dashoffset:0;} }
+
+footer{border-top:1px solid var(--rand); background:var(--card); padding:34px 0 40px; margin-top:64px;
+  font-size:13.5px; color:var(--muted-l);}
+footer .rij{display:flex; gap:12px 24px; flex-wrap:wrap;}
+footer a{color:var(--muted);}
+footer .rechts{margin-left:auto;}
+
+@media(max-width:880px){
+  .kolommen{grid-template-columns:1fr; gap:38px;}
+  main{padding:56px 0 20px;}
+}
+@media(max-width:560px){
+  .paneel{padding:24px 20px; border-radius:20px;}
+  .veldrij{grid-template-columns:1fr; gap:0;}
+  footer .rechts{margin-left:0;}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap in">
+    <a href="/" class="merk">
+      <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="wm">storvo</span>
+    </a>
+    <button id="taalKnop" onclick="wisselTaal()">EN</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="kolommen">
+
+    <div class="op">
+      <div class="label" data-t="label">Gratis proberen</div>
+      <h1 data-t="h1">Dertig dagen, alles erop en eraan</h1>
+      <p class="lead" data-t="lead">Laat je gegevens achter, dan zetten we je winkel klaar en bellen of
+        mailen we binnen één werkdag. Geen creditcard, geen opzegtermijn.</p>
+
+      <ul class="punten">
+        <li><span class="v"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span data-t="u1"><b>Alle functies</b> tijdens de proef, ook die van het duurste pakket.</span></li>
+        <li><span class="v"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span data-t="u2"><b>Wij richten het in.</b> Je merken, modellen en prijzen staan klaar voordat je begint.</span></li>
+        <li><span class="v"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span data-t="u3"><b>Stopt vanzelf.</b> Bevalt het niet, dan hoef je niets op te zeggen.</span></li>
+        <li><span class="v"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span data-t="u4"><b>Je gegevens blijven van jou.</b> Exporteren kan op elk moment.</span></li>
+      </ul>
+    </div>
+
+    <div class="paneel op d2">
+      <form id="formulier" onsubmit="return verstuur(event)" novalidate>
+        <div class="veldrij">
+          <div class="veld">
+            <label for="f_winkel" data-t="l_winkel">Naam van je winkel</label>
+            <input id="f_winkel" name="winkel" autocomplete="organization" required>
+          </div>
+          <div class="veld">
+            <label for="f_naam" data-t="l_naam">Jouw naam</label>
+            <input id="f_naam" name="naam" autocomplete="name" required>
+          </div>
+        </div>
+        <div class="veldrij">
+          <div class="veld">
+            <label for="f_email" data-t="l_email">E-mailadres</label>
+            <input id="f_email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="veld">
+            <label for="f_tel" data-t="l_tel">Telefoon <span class="opt" data-t="l_opt">(optioneel)</span></label>
+            <input id="f_tel" name="telefoon" type="tel" autocomplete="tel">
+          </div>
+        </div>
+        <div class="veld">
+          <label for="f_mw" data-t="l_mw">Hoeveel mensen werken er?</label>
+          <select id="f_mw" name="medewerkers">
+            <option value="1" data-t="mw1">Alleen ik</option>
+            <option value="2-3" data-t="mw2">2 tot 3</option>
+            <option value="4-8" data-t="mw3">4 tot 8</option>
+            <option value="9+" data-t="mw4">Meer dan 8</option>
+            <option value="meerdere vestigingen" data-t="mw5">Meerdere vestigingen</option>
+          </select>
+        </div>
+        <div class="veld">
+          <label for="f_bericht" data-t="l_bericht">Waar loop je nu tegenaan? <span class="opt" data-t="l_opt">(optioneel)</span></label>
+          <textarea id="f_bericht" name="bericht" data-t-ph="ph_bericht"
+            placeholder="Bijvoorbeeld: ik houd reparaties nu bij in een schrift en bel klanten zelf."></textarea>
+        </div>
+
+        <input class="pot" type="text" id="f_website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <button type="submit" class="verstuur" id="knop" data-t="knop">Vraag je proefperiode aan</button>
+        <div class="melding" id="melding" hidden></div>
+        <p class="klein" data-t="voet">We gebruiken je gegevens alleen om contact op te nemen. Zie de
+          <a href="/privacy">privacyverklaring</a>. Door te versturen ga je akkoord met onze
+          <a href="/voorwaarden">voorwaarden</a>.</p>
+      </form>
+
+      <div class="klaar" id="klaar" hidden>
+        <div class="vink"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h2 data-t="k_h">Je aanvraag staat genoteerd</h2>
+        <p data-t="k_p">We nemen binnen één werkdag contact op. Je krijgt zo een bevestiging per e-mail;
+          zit die er niet bij, kijk dan even in je ongewenste post.</p>
+        <a href="/" class="klein" data-t="k_terug">Terug naar de website</a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap rij">
+    <span>&copy; 2026 Storvo</span>
+    <a href="/contact" data-t="f_contact">Contact</a>
+    <a href="/voorwaarden" data-t="f_voorwaarden">Voorwaarden</a>
+    <a href="/privacy" data-t="f_privacy">Privacy</a>
+    <span class="rechts" data-t="f_adres">Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</span>
+  </div>
+</footer>
+
+<script>
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+
+const T={
+ nl:{
+  title:'Gratis proberen · Storvo',
+  label:'Gratis proberen', h1:'Dertig dagen, alles erop en eraan',
+  lead:'Laat je gegevens achter, dan zetten we je winkel klaar en bellen of mailen we binnen één werkdag. Geen creditcard, geen opzegtermijn.',
+  u1:'<b>Alle functies</b> tijdens de proef, ook die van het duurste pakket.',
+  u2:'<b>Wij richten het in.</b> Je merken, modellen en prijzen staan klaar voordat je begint.',
+  u3:'<b>Stopt vanzelf.</b> Bevalt het niet, dan hoef je niets op te zeggen.',
+  u4:'<b>Je gegevens blijven van jou.</b> Exporteren kan op elk moment.',
+  l_winkel:'Naam van je winkel', l_naam:'Jouw naam', l_email:'E-mailadres',
+  l_tel:'Telefoon <span class="opt">(optioneel)</span>', l_opt:'(optioneel)',
+  l_mw:'Hoeveel mensen werken er?',
+  mw1:'Alleen ik', mw2:'2 tot 3', mw3:'4 tot 8', mw4:'Meer dan 8', mw5:'Meerdere vestigingen',
+  l_bericht:'Waar loop je nu tegenaan? <span class="opt">(optioneel)</span>',
+  ph_bericht:'Bijvoorbeeld: ik houd reparaties nu bij in een schrift en bel klanten zelf.',
+  knop:'Vraag je proefperiode aan',
+  voet:'We gebruiken je gegevens alleen om contact op te nemen. Zie de <a href="/privacy">privacyverklaring</a>. Door te versturen ga je akkoord met onze <a href="/voorwaarden">voorwaarden</a>.',
+  k_h:'Je aanvraag staat genoteerd',
+  k_p:'We nemen binnen één werkdag contact op. Je krijgt zo een bevestiging per e-mail; zit die er niet bij, kijk dan even in je ongewenste post.',
+  k_terug:'Terug naar de website',
+  f_contact:'Contact', f_voorwaarden:'Voorwaarden', f_privacy:'Privacy',
+  f_adres:'Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)',
+  bezig:'Even bezig…', velden:'Vul je winkel, naam en e-mailadres in.', mailfout:'Dat e-mailadres klopt niet.',
+  misgegaan:'Er ging iets mis. Mail ons gerust op info@storvo.app.'
+ },
+ en:{
+  title:'Free trial · Storvo',
+  label:'Free trial', h1:'Thirty days, everything included',
+  lead:'Leave your details and we will set up your shop and get back to you within one working day. No credit card, no notice period.',
+  u1:'<b>Every feature</b> during the trial, including those of the top plan.',
+  u2:'<b>We set it up.</b> Your brands, models and prices are ready before you start.',
+  u3:'<b>Ends by itself.</b> Not for you? Then there is nothing to cancel.',
+  u4:'<b>Your data stays yours.</b> Export it whenever you like.',
+  l_winkel:'Name of your shop', l_naam:'Your name', l_email:'Email address',
+  l_tel:'Phone <span class="opt">(optional)</span>', l_opt:'(optional)',
+  l_mw:'How many people work there?',
+  mw1:'Just me', mw2:'2 to 3', mw3:'4 to 8', mw4:'More than 8', mw5:'Several locations',
+  l_bericht:'What are you struggling with? <span class="opt">(optional)</span>',
+  ph_bericht:'For example: I track repairs in a notebook and call customers myself.',
+  knop:'Request your free trial',
+  voet:'We only use your details to get in touch. See the <a href="/privacy">privacy statement</a>. By submitting you agree to our <a href="/voorwaarden">terms</a>.',
+  k_h:'Your request is in',
+  k_p:'We will get back to you within one working day. A confirmation email is on its way; if you do not see it, check your junk folder.',
+  k_terug:'Back to the website',
+  f_contact:'Contact', f_voorwaarden:'Terms', f_privacy:'Privacy',
+  f_adres:'Ericssonstraat 2a, 5121 ML Rijen, the Netherlands (no visiting address)',
+  bezig:'One moment…', velden:'Please fill in shop, name and email.', mailfout:'That email address looks wrong.',
+  misgegaan:'Something went wrong. Please email us at info@storvo.app.'
+ }
+};
+
+let taal='nl';
+function zetTaal(t){
+  taal=t;
+  document.documentElement.lang=t;
+  const d=T[t];
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const v=d[el.dataset.t]; if(v!==undefined) el.innerHTML=v;
+  });
+  document.querySelectorAll('[data-t-ph]').forEach(el=>{
+    const v=d[el.dataset.tPh]; if(v!==undefined) el.placeholder=v;
+  });
+  document.title=d.title;
+  document.getElementById('taalKnop').textContent = t==='nl'?'EN':'NL';
+  try{ localStorage.setItem('storvo_taal',t); }catch(e){}
+}
+function wisselTaal(){ zetTaal(taal==='nl'?'en':'nl'); }
+(function(){
+  let t=null;
+  try{ t=localStorage.getItem('storvo_taal'); }catch(e){}
+  if(t!=='nl' && t!=='en'){
+    const h=location.hostname;
+    if(h.endsWith('.nl')) t='nl';
+    else if(h.endsWith('storvo.app')) t='en';
+    else t=(navigator.language||'nl').toLowerCase().startsWith('nl')?'nl':'en';
+  }
+  zetTaal(t);
+})();
+
+function toonFout(tekst){
+  const m=document.getElementById('melding');
+  m.textContent=tekst; m.hidden=false;
+}
+
+async function verstuur(e){
+  e.preventDefault();
+  const d=T[taal];
+  const knop=document.getElementById('knop');
+  const m=document.getElementById('melding');
+  m.hidden=true;
+
+  const lees=id=>document.getElementById(id).value.trim();
+  const winkel=lees('f_winkel'), naam=lees('f_naam'), email=lees('f_email');
+
+  ['f_winkel','f_naam','f_email'].forEach(id=>document.getElementById(id).classList.remove('mis'));
+  const leeg=['f_winkel','f_naam','f_email'].filter(id=>!lees(id));
+  if(leeg.length){
+    leeg.forEach(id=>document.getElementById(id).classList.add('mis'));
+    document.getElementById(leeg[0]).focus();
+    toonFout(d.velden); return false;
+  }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){
+    document.getElementById('f_email').classList.add('mis');
+    document.getElementById('f_email').focus();
+    toonFout(d.mailfout); return false;
+  }
+
+  const oud=knop.textContent;
+  knop.disabled=true; knop.textContent=d.bezig;
+
+  try{
+    const res=await fetch(SUPABASE_URL+'/functions/v1/proefaanvraag',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+SUPABASE_ANON_KEY},
+      body:JSON.stringify({
+        winkel, naam, email,
+        telefoon:lees('f_tel'),
+        medewerkers:document.getElementById('f_mw').value,
+        bericht:lees('f_bericht'),
+        website:lees('f_website'),
+        taal
+      })
+    });
+    const uit=await res.json();
+    if(uit.ok){
+      document.getElementById('formulier').hidden=true;
+      document.getElementById('klaar').hidden=false;
+      document.getElementById('klaar').scrollIntoView({behavior:'smooth',block:'center'});
+      return false;
+    }
+    toonFout(uit.error||d.misgegaan);
+  }catch(err){
+    toonFout(d.misgegaan);
+  }
+  knop.disabled=false; knop.textContent=oud;
+  return false;
+}
+</script>
+</body>
+</html>

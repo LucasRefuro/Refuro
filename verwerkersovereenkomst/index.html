@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verwerkersovereenkomst · Storvo</title>
+<meta name="description" content="De verwerkersovereenkomst tussen Storvo en de winkels die de software gebruiken.">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --groen:#0B5B52; --petrol:#123F39; --amber:#E88A1D;
+  --warmwit:#F7F6F3; --ink:#17201E; --ijsgroen:#E7F1EE;
+  --card:#FFFFFF; --rand:#ECEAE4; --muted:#5B6663; --muted-l:#8A938F; --body:#475350;
+  --radius:24px; --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;}
+a{color:var(--groen); text-decoration:none;}
+a:hover{text-decoration:underline;}
+.wrap{max-width:760px; margin:0 auto; padding:0 24px;}
+
+header{padding:26px 0; border-bottom:1px solid var(--rand); background:var(--card);}
+.merk{display:flex; align-items:center; gap:11px;}
+.mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex; align-items:center; justify-content:center;}
+.mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
+.wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em;}
+
+main{padding:52px 0 40px;}
+.label{font-size:12.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--groen); margin-bottom:12px;}
+h1{font-family:'Sora',sans-serif; font-size:clamp(30px,5vw,40px); font-weight:800; letter-spacing:-.03em; line-height:1.15; margin-bottom:14px;}
+.datum{color:var(--muted-l); font-size:14px; margin-bottom:34px;}
+h2{font-family:'Sora',sans-serif; font-size:20px; font-weight:700; letter-spacing:-.015em; margin:38px 0 12px;}
+h3{font-size:16px; font-weight:700; margin:22px 0 8px;}
+p{margin-bottom:14px; color:var(--body);}
+ul,ol{margin:0 0 16px 22px; color:var(--body);}
+li{margin-bottom:7px;}
+.kaart{background:var(--card); border:1.5px solid var(--rand); border-radius:var(--radius); padding:24px 26px; margin-bottom:30px;}
+.kaart p:last-child{margin-bottom:0;}
+.uitgelicht{background:var(--ijsgroen); border:none; border-radius:var(--radius); padding:22px 26px; margin:26px 0;}
+.uitgelicht p:last-child{margin-bottom:0;}
+table{width:100%; border-collapse:collapse; margin-bottom:18px; font-size:14.5px;}
+th,td{text-align:left; padding:11px 12px; border-bottom:1px solid var(--rand); vertical-align:top;}
+th{font-weight:700; color:var(--ink); background:var(--ijsgroen);}
+th:first-child{border-radius:12px 0 0 0;} th:last-child{border-radius:0 12px 0 0;}
+td{color:var(--body);}
+.inv{background:#FEF4E2; color:#7A5307; padding:1px 7px; border-radius:6px; font-weight:600; font-size:.94em;}
+
+footer{border-top:1px solid var(--rand); padding:34px 0 44px; margin-top:56px; font-size:14px; color:var(--muted);}
+footer .rij{display:flex; gap:20px; flex-wrap:wrap; align-items:center;}
+footer .rechts{margin-left:auto; display:flex; gap:20px;}
+footer .c{margin-top:16px; font-size:13px; color:var(--muted-l);}
+@media(max-width:640px){ table{font-size:13.5px;} th,td{padding:9px 8px;} }
+@media(max-width:560px){ footer .rechts{margin-left:0;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a href="/" class="merk">
+      <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="wm">storvo</span>
+    </a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="label">Juridisch</div>
+  <h1>Verwerkersovereenkomst</h1>
+  <p class="datum">Versie 1.0 &middot; geldig vanaf 8 augustus 2026</p>
+
+  <div class="uitgelicht">
+    <p>Deze overeenkomst gaat over de gegevens van <b>jouw klanten</b>: de mensen die hun toestel bij
+      je laten repareren. Jij bepaalt wat er met die gegevens gebeurt, wij voeren het alleen uit.
+      Hieronder staat wat wij daarmee wel en niet mogen.</p>
+    <p style="margin-top:12px">Je hoeft deze overeenkomst niet apart te ondertekenen. Hij hoort bij de
+      <a href="/voorwaarden">algemene voorwaarden</a> en geldt zodra je Storvo gaat gebruiken. Wil je
+      toch een ondertekend exemplaar voor je eigen dossier, mail dan
+      <a href="mailto:info@storvo.app">info@storvo.app</a>.</p>
+  </div>
+
+  <h2>1. Wie is wie</h2>
+  <table>
+    <tr><th>Rol</th><th>Wie</th><th>Wat dat betekent</th></tr>
+    <tr>
+      <td>Verwerkings&shy;verantwoordelijke</td>
+      <td>De winkel die Storvo gebruikt</td>
+      <td>Jij bepaalt welke gegevens je van je klanten vastlegt en waarvoor</td>
+    </tr>
+    <tr>
+      <td>Verwerker</td>
+      <td>Storvo (eenmanszaak)</td>
+      <td>Wij bewaren en verwerken die gegevens, uitsluitend in jouw opdracht</td>
+    </tr>
+  </table>
+
+  <h2>2. Waar het over gaat</h2>
+  <h3>Onderwerp en doel</h3>
+  <p>Wij verwerken persoonsgegevens voor één doel: het leveren van Storvo. Dat betekent reparaties
+    vastleggen en volgen, klanten op de hoogte houden via e-mail en WhatsApp, de publieke
+    statuspagina tonen en jouw gegevens veilig bewaren en synchroniseren.</p>
+
+  <h3>Om welke mensen het gaat</h3>
+  <ul>
+    <li>Klanten van de winkel die een reparatie of aankoop hebben gedaan.</li>
+    <li>Medewerkers van de winkel, voor zover hun naam bij een reparatie of verkoop staat.</li>
+  </ul>
+
+  <h3>Om welke gegevens het gaat</h3>
+  <table>
+    <tr><th>Soort</th><th>Wat</th></tr>
+    <tr><td>Contactgegevens</td><td>Naam, telefoonnummer, e-mailadres</td></tr>
+    <tr><td>Reparatiegegevens</td><td>Toestel, merk, model, klacht, notities, status, prijs, reparatienummer</td></tr>
+    <tr><td>Berichtgegevens</td><td>Welke berichten wanneer naar welk adres of nummer zijn gestuurd, en of dat lukte</td></tr>
+    <tr><td>WhatsApp-gesprekken</td><td>Alleen als de winkel een eigen WhatsApp-nummer heeft gekoppeld: de berichten die via dat nummer binnenkomen en uitgaan</td></tr>
+    <tr><td>Aankoopgegevens</td><td>Wat er verkocht is, wanneer en voor welk bedrag</td></tr>
+  </table>
+  <p>Bijzondere persoonsgegevens horen niet in Storvo thuis. Zet er dus geen medische gegevens,
+    strafrechtelijke gegevens of kopieën van identiteitsbewijzen in.</p>
+
+  <h3>Hoe lang</h3>
+  <p>Zolang je abonnement loopt. Daarna nog negentig dagen, zodat je terug kunt komen of een export
+    kunt opvragen. Daarna verwijderen wij alles definitief.</p>
+
+  <h2>3. Wij doen alleen wat jij opdraagt</h2>
+  <p>Wij verwerken de gegevens uitsluitend volgens jouw instructies. Het gebruik van de software geldt
+    als die instructie. Wij gebruiken de gegevens niet voor eigen doeleinden, verkopen ze niet en
+    gebruiken ze niet om onze software te trainen of te verbeteren.</p>
+  <p>Moeten wij op grond van de wet iets doen waar jij geen opdracht toe hebt gegeven, dan melden wij
+    dat vooraf, tenzij die wet dat verbiedt.</p>
+  <p>Vinden wij dat een instructie van jou in strijd is met de privacywetgeving, dan zeggen wij dat.</p>
+
+  <h2>4. Wat jij regelt</h2>
+  <p>Een paar dingen kunnen wij niet voor je doen. Jij bent verantwoordelijk voor:</p>
+  <ul>
+    <li>Een geldige grondslag om de gegevens van je klanten te verwerken.</li>
+    <li>Je klanten vertellen dat je Storvo gebruikt en wat je met hun gegevens doet.</li>
+    <li>Toestemming vragen voordat je aanvinkt dat een klant updates per e-mail of WhatsApp wil.</li>
+    <li>Alleen die gegevens invoeren die je echt nodig hebt.</li>
+    <li>Zorgvuldig omgaan met accounts: elke medewerker een eigen account, en een account intrekken
+      als iemand uit dienst gaat.</li>
+  </ul>
+
+  <h2>5. Geheimhouding</h2>
+  <p>Iedereen die bij ons met deze gegevens werkt is tot geheimhouding verplicht, ook nadat hij bij
+    ons weg is. Toegang tot productiegegevens krijgt alleen wie dat voor zijn werk nodig heeft.</p>
+
+  <h2>6. Beveiliging</h2>
+  <p>Wij nemen passende technische en organisatorische maatregelen. Concreet:</p>
+  <ul>
+    <li>Al het verkeer loopt versleuteld over https.</li>
+    <li>Gegevens staan versleuteld opgeslagen.</li>
+    <li>Elke winkel is in de database afgeschermd van elke andere winkel. Dat is afgedwongen op
+      databaseniveau, niet alleen in de software, zodat een fout in de app niet tot inzage in
+      andermans gegevens kan leiden.</li>
+    <li>Wachtwoorden bewaren wij alleen versleuteld; wij kunnen ze niet lezen.</li>
+    <li>Tweestapsverificatie is beschikbaar voor elk account.</li>
+    <li>Wij maken dagelijks back-ups en bewaren die dertig dagen.</li>
+    <li>Wij houden logboeken bij van toegang en fouten.</li>
+    <li>Wij testen bij elke wijziging of de afscherming tussen winkels nog klopt.</li>
+  </ul>
+
+  <h2>7. Partijen die wij inschakelen</h2>
+  <p>Wij mogen andere partijen inschakelen om Storvo te laten werken. Met elk van hen sluiten wij een
+    overeenkomst met minstens dezelfde afspraken als deze. Wij blijven tegenover jou verantwoordelijk
+    voor wat zij doen.</p>
+  <table>
+    <tr><th>Partij</th><th>Waarvoor</th><th>Waar</th></tr>
+    <tr><td>Supabase</td><td>Database, inloggen en opslag</td><td>Ierland, binnen de EU</td></tr>
+    <tr><td>Vercel</td><td>De software serveren</td><td>Europa</td></tr>
+    <tr><td>Resend</td><td>E-mails aan klanten versturen</td><td>Europa en Verenigde Staten</td></tr>
+    <tr><td>Meta Platforms</td><td>WhatsApp-berichten aan klanten versturen</td><td>Europa en Verenigde Staten</td></tr>
+    <tr><td>Stripe</td><td>Betalingen. Verwerkt geen gegevens van je eindklanten</td><td>Europa en Verenigde Staten</td></tr>
+  </table>
+  <p>Willen wij een partij toevoegen of vervangen, dan laten wij dat minstens dertig dagen van tevoren
+    weten. Heb je daar bezwaar tegen, laat het ons binnen die dertig dagen weten. Komen we er niet
+    uit, dan mag je opzeggen zonder kosten voor de rest van de periode.</p>
+
+  <h3>Doorgifte buiten de Europese Unie</h3>
+  <p>Resend en Meta verwerken deels buiten de EU. Dat gebeurt op basis van de standaardcontract&shy;bepalingen
+    van de Europese Commissie, aangevuld met het EU-VS Data Privacy Framework voor zover die partijen
+    daarbij aangesloten zijn.</p>
+
+  <h2>8. Als een klant zijn rechten inroept</h2>
+  <p>Vraagt een klant van jou om inzage, correctie of verwijdering, dan beantwoord jij dat verzoek.
+    Het meeste kun je zelf in Storvo doen.</p>
+  <p>Komt zo'n verzoek bij ons binnen, dan sturen wij het door naar jou en beantwoorden wij het niet
+    zelf. Heb je onze hulp nodig, dan helpen wij binnen tien werkdagen, kosteloos.</p>
+
+  <h2>9. Als er iets misgaat</h2>
+  <p>Ontdekken wij een datalek dat jouw gegevens raakt, dan melden wij dat aan jou zonder onredelijke
+    vertraging en in elk geval binnen 24 uur nadat wij het ontdekten. Je hoort van ons:</p>
+  <ul>
+    <li>wat er is gebeurd en wanneer;</li>
+    <li>om welke gegevens en hoeveel mensen het gaat;</li>
+    <li>wat de gevolgen kunnen zijn;</li>
+    <li>wat wij eraan gedaan hebben en nog doen.</li>
+  </ul>
+  <p>Melden bij de Autoriteit Persoonsgegevens doe jij, want jij bent verantwoordelijk. Wij leveren
+    alles aan wat je daarvoor nodig hebt.</p>
+
+  <h2>10. Controle</h2>
+  <p>Je mag één keer per jaar controleren of wij ons aan deze afspraken houden. Kondig dat dertig
+    dagen van tevoren aan. De controle mag de dienstverlening niet verstoren en de kosten zijn voor
+    jou, tenzij er iets uitkomt wat niet in orde is.</p>
+  <p>Wij mogen in plaats daarvan een recente onafhankelijke rapportage overleggen als die dezelfde
+    vragen beantwoordt.</p>
+
+  <h2>11. Als het stopt</h2>
+  <p>Eindigt je abonnement, dan kun je binnen negentig dagen een volledige export opvragen, of die
+    zelf maken onder Instellingen bij Back-up. Daarna verwijderen wij alle persoonsgegevens uit onze
+    systemen en uit de back-ups, behalve wat wij wettelijk moeten bewaren.</p>
+  <p>Op verzoek bevestigen wij de verwijdering schriftelijk.</p>
+
+  <h2>12. Aansprakelijkheid en vrijwaring</h2>
+  <p>Op de aansprakelijkheid tussen ons geldt artikel 18 van de
+    <a href="/voorwaarden">algemene voorwaarden</a>, met alle daarin genoemde uitsluitingen en
+    maximumbedragen. Die beperkingen gelden ook voor schade die verband houdt met de verwerking van
+    persoonsgegevens.</p>
+  <p>Wij zijn als verwerker uitsluitend aansprakelijk voor schade die is ontstaan doordat wij ons niet
+    hebben gehouden aan de verplichtingen die de Algemene verordening gegevensbescherming specifiek
+    aan verwerkers oplegt, of doordat wij buiten of in strijd met jouw rechtmatige instructies hebben
+    gehandeld. Dat volgt uit artikel 82 lid 2 van die verordening.</p>
+  <p>Wij zijn niet aansprakelijk voor:</p>
+  <ul>
+    <li>gegevens die jij of je medewerkers hebben ingevoerd, inclusief gegevens die daar niet
+      thuishoren;</li>
+    <li>het ontbreken van een grondslag of van toestemming voor het versturen van berichten;</li>
+    <li>het niet of te laat beantwoorden van een verzoek van een betrokkene door jou;</li>
+    <li>boetes of maatregelen die voortvloeien uit een tekortkoming aan jouw kant;</li>
+    <li>verlies of beschadiging van gegevens, waarvoor artikel 11 van de algemene voorwaarden geldt.</li>
+  </ul>
+  <p>Je vrijwaart ons tegen aanspraken van betrokkenen, van de Autoriteit Persoonsgegevens en van
+    andere derden, voor zover die aanspraken voortvloeien uit een tekortkoming aan jouw kant of uit
+    het opvolgen van jouw instructies. Die vrijwaring omvat ook onze kosten van verweer en is niet
+    beperkt in omvang.</p>
+  <p>Word je aangesproken voor schade waarvoor wij naar verhouding mede verantwoordelijk zijn, dan
+    dragen wij daarin bij naar rato van ons aandeel, binnen de grenzen van artikel 18 van de algemene
+    voorwaarden.</p>
+
+  <h2>13. Slot</h2>
+  <p>Deze overeenkomst loopt zolang wij persoonsgegevens voor jou verwerken. Wijzigen wij hem, dan
+    laten wij dat minstens dertig dagen van tevoren weten. Op deze overeenkomst is Nederlands recht
+    van toepassing.</p>
+  <p>Spreekt deze overeenkomst de algemene voorwaarden tegen op het punt van persoonsgegevens, dan
+    gaat deze overeenkomst voor.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="rij">
+      <div>Storvo &middot; Alles geregeld.</div>
+      <div class="rechts">
+        <a href="/">Home</a>
+        <a href="/voorwaarden">Voorwaarden</a>
+        <a href="/privacy">Privacy</a>
+        <a href="mailto:info@storvo.app">Contact</a>
+      </div>
+    </div>
+    <div class="c">&copy; 2026 Storvo &middot; KvK 82379920 &middot; btw NL003671243B93 &middot; Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</div>
+  </div>
+</footer>
+
+</body>
+</html>

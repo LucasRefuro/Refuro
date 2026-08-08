@@ -128,8 +128,104 @@ h1 .grad{color:var(--groen);}
 .mockbars i.aan{background:var(--groen);}
 .tooltip{position:absolute; background:var(--petrol); color:var(--warmwit); padding:6px 14px; border-radius:var(--pil);
   font-family:'Sora',sans-serif; font-size:12px; font-weight:700; box-shadow:var(--schaduw-l); opacity:0;
-  transform:translateY(6px); transition:.4s;}
+  transform:translateY(6px); transition:.3s; pointer-events:none; left:52%; top:44px;}
 .tooltip.zie{opacity:1; transform:none;}
+
+/* ---------- interactieve demo ---------- */
+.demohint{display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:13.5px;
+  color:var(--muted); font-weight:600;}
+.demohint .stip{width:9px; height:9px; border-radius:50%; background:var(--st-groen); flex:none;
+  box-shadow:0 0 0 0 rgba(30,158,106,.5); animation:pols 2.4s infinite;}
+@keyframes pols{0%{box-shadow:0 0 0 0 rgba(30,158,106,.45)} 70%{box-shadow:0 0 0 10px rgba(30,158,106,0)} 100%{box-shadow:0 0 0 0 rgba(30,158,106,0)}}
+
+.mocknav button{width:100%; text-align:left; padding:9px 14px; border:none; background:transparent;
+  border-radius:var(--pil); font-family:inherit; font-size:12px; color:var(--muted-l); font-weight:600;
+  cursor:pointer; transition:.15s;}
+.mocknav button:hover{background:var(--rand-zacht); color:var(--groen);}
+.mocknav button.aan{background:var(--ijsgroen); color:var(--groen);}
+button.mockactie{border:none; font-family:inherit; cursor:pointer; transition:.16s;}
+button.mockactie:hover{background:var(--amber-d); transform:translateY(-1px);}
+button.mockactie:active{transform:translateY(0);}
+
+.demopaneel{display:none;}
+.demopaneel.aan{display:block; animation:demoIn .34s cubic-bezier(.22,.8,.3,1) both;}
+@keyframes demoIn{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+.demokop{display:flex; align-items:center; gap:16px; padding:18px 20px; border-bottom:1.5px solid var(--rand);}
+.demokop > div:first-child{flex:1;}
+.demosub{font-size:13px; color:var(--muted-l); margin:4px 0 0;}
+.demosub.klein{font-size:12px;}
+.demoknop{display:inline-flex; align-items:center; gap:8px; background:var(--amber); color:#fff; border:none;
+  border-radius:var(--pil); padding:10px 20px; font-family:inherit; font-size:13px; font-weight:700;
+  cursor:pointer; transition:.16s; flex:none;}
+.demoknop:hover{background:var(--amber-d); transform:translateY(-1px);}
+.demoknop.groen{background:var(--groen);}
+.demoknop.groen:hover{background:var(--petrol);}
+.demoknop:disabled{opacity:.45; cursor:default; transform:none;}
+.demoknop svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
+.demobadge{background:var(--ijsgroen); color:var(--groen); border-radius:var(--pil); padding:6px 14px;
+  font-size:12px; font-weight:700; flex:none; transition:.25s;}
+
+.demolijst{padding:8px 20px 20px; max-height:236px; overflow-y:auto;}
+.demorij{display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--rand-zacht); font-size:13.5px;}
+.demorij:last-child{border-bottom:none;}
+.demorij .ico{width:34px; height:34px; border-radius:10px; background:var(--ijsgroen); color:var(--groen); flex:none;
+  display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; font-weight:800; font-size:13px;}
+.demorij .nm{flex:1; font-weight:600;}
+.demorij .nm span{display:block; font-weight:400; font-size:12px; color:var(--muted-l);}
+.demorij .aant{font-family:'Sora',sans-serif; font-weight:800; font-size:15px; min-width:34px; text-align:right;}
+.demorij .aant.laag{color:var(--st-rood);}
+.demorij.nieuw{animation:rijIn .45s cubic-bezier(.22,1.1,.4,1) both;}
+@keyframes rijIn{from{opacity:0; transform:translateX(-14px); background:var(--ijsgroen)} to{opacity:1; transform:none}}
+.demorij .aant.tik{animation:tik .5s ease;}
+@keyframes tik{0%{transform:scale(1)} 40%{transform:scale(1.35); color:var(--st-groen)} 100%{transform:scale(1)}}
+
+.tijdlijn{padding:20px 20px 6px; display:flex; flex-direction:column; gap:0;}
+.tstap{display:flex; gap:14px; align-items:flex-start; position:relative; padding-bottom:16px;}
+.tstap:last-child{padding-bottom:4px;}
+.tstap::before{content:''; position:absolute; left:11px; top:24px; bottom:0; width:2px; background:var(--rand);}
+.tstap:last-child::before{display:none;}
+.tstap .bol{width:24px; height:24px; border-radius:50%; border:2px solid var(--rand); background:#fff; flex:none;
+  display:flex; align-items:center; justify-content:center; transition:.3s; z-index:1;}
+.tstap .bol svg{width:12px; height:12px; fill:none; stroke:#fff; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; opacity:0;}
+.tstap.klaar .bol{background:var(--groen); border-color:var(--groen);}
+.tstap.klaar .bol svg{opacity:1;}
+.tstap.nu .bol{border-color:var(--amber); box-shadow:0 0 0 5px rgba(232,138,29,.16);}
+.tstap .tk{font-size:13.5px; font-weight:600; color:var(--muted-l); padding-top:2px; transition:.3s;}
+.tstap.klaar .tk, .tstap.nu .tk{color:var(--ink);}
+.tstap .tk span{display:block; font-size:11.5px; font-weight:400; color:var(--muted-l);}
+.demovoet{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 20px 20px; border-top:1.5px solid var(--rand);}
+
+.klantvenster{margin:20px; border:1.5px solid var(--rand); border-radius:18px; overflow:hidden; background:var(--warmwit);}
+.klantbalk{display:flex; align-items:center; gap:12px; padding:14px 18px; background:#fff; border-bottom:1.5px solid var(--rand);}
+.klantlogo{width:34px; height:34px; border-radius:10px; background:var(--groen); color:#fff; flex:none;
+  display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif; font-weight:800;}
+.klantbalk b{font-family:'Sora',sans-serif; font-size:15px; display:block;}
+.klantbody{padding:18px;}
+.klantbalkje{height:7px; border-radius:4px; background:var(--rand); overflow:hidden; margin-bottom:18px;}
+.klantbalkje i{display:block; height:100%; background:var(--groen); border-radius:4px;
+  transition:width .7s cubic-bezier(.22,.8,.3,1);}
+.klantstappen{display:flex; flex-direction:column; gap:9px; margin-bottom:16px;}
+.kpstap{display:flex; align-items:center; gap:11px; font-size:13px; color:var(--muted-l); transition:.3s;}
+.kpstap .b{width:16px; height:16px; border-radius:50%; border:2px solid var(--rand); flex:none; transition:.3s;}
+.kpstap.klaar{color:var(--ink); font-weight:600;}
+.kpstap.klaar .b{background:var(--groen); border-color:var(--groen);}
+.kpstap.nu .b{border-color:var(--amber); animation:pols2 1.8s infinite;}
+.kpstap.nu{color:var(--ink); font-weight:600;}
+@keyframes pols2{0%{box-shadow:0 0 0 0 rgba(232,138,29,.4)} 70%{box-shadow:0 0 0 8px rgba(232,138,29,0)} 100%{box-shadow:0 0 0 0 rgba(232,138,29,0)}}
+.klantvraag{display:flex; align-items:center; gap:12px; padding:13px 15px; background:#fff;
+  border-radius:14px; font-size:13px; color:var(--muted);}
+.klantvraag .wa{margin-left:auto; background:#25D366; color:#fff; border-radius:var(--pil);
+  padding:6px 14px; font-size:12px; font-weight:700; flex:none;}
+
+.demotoasts{position:absolute; right:18px; bottom:18px; display:flex; flex-direction:column;
+  gap:9px; align-items:flex-end; pointer-events:none; z-index:5;}
+.demotoast{display:flex; align-items:center; gap:10px; background:var(--petrol); color:var(--warmwit);
+  border-radius:14px; padding:11px 16px; font-size:13px; font-weight:600; box-shadow:var(--schaduw-l);
+  animation:toastIn .4s cubic-bezier(.22,1.1,.4,1) both; max-width:290px;}
+.demotoast svg{width:15px; height:15px; fill:none; stroke:var(--mint); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; flex:none;}
+.demotoast.weg{animation:toastUit .35s ease forwards;}
+@keyframes toastIn{from{opacity:0; transform:translateY(14px) scale(.94)} to{opacity:1; transform:none}}
+@keyframes toastUit{to{opacity:0; transform:translateY(8px) scale(.96)}}
 
 /* ---------- secties: links uitgelijnd ---------- */
 section{padding:92px 0;}
@@ -199,10 +295,21 @@ section{padding:92px 0;}
 .cta p{color:#A8C5BE; max-width:540px; margin-bottom:30px; position:relative; z-index:2; font-size:18px;}
 .cta .btn{position:relative; z-index:2;}
 
-footer{padding:54px 0 44px; border-top:1px solid var(--rand); margin-top:72px;}
-footer .in{display:flex; gap:22px; align-items:center; flex-wrap:wrap; font-size:14px; color:var(--muted);}
-footer .rechts{margin-left:auto; display:flex; gap:22px;}
-footer a:hover{color:var(--groen);}
+footer{padding:60px 0 44px; border-top:1px solid var(--rand); margin-top:72px; background:var(--card);}
+.fkolommen{display:grid; grid-template-columns:1.5fr repeat(3,1fr); gap:40px; margin-bottom:40px;}
+.fkolommen h4{font-size:12px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--muted-l); margin-bottom:15px;}
+.fkolommen ul{list-style:none;}
+.fkolommen li{margin-bottom:10px; font-size:14.5px;}
+.fkolommen a{color:var(--muted); transition:.14s;}
+.fkolommen a:hover{color:var(--groen);}
+.fmerk .tag{font-family:'Sora',sans-serif; font-size:14px; font-weight:700; color:var(--groen); margin:12px 0 12px;}
+.fmerk p{font-size:14px; color:var(--muted); max-width:290px; line-height:1.6;}
+.fonder{border-top:1px solid var(--rand); padding-top:24px; display:flex; gap:10px 26px;
+  flex-wrap:wrap; font-size:13px; color:var(--muted-l);}
+.fonder .rechts{margin-left:auto;}
+@media(max-width:860px){ .fkolommen{grid-template-columns:1fr 1fr; gap:32px;} .fmerk{grid-column:1/-1;} }
+@media(max-width:540px){ .fkolommen{grid-template-columns:1fr;} .fonder .rechts{margin-left:0;} }
 
 /* taalknop */
 #taalKnop{font-family:'Sora',sans-serif; font-weight:700; letter-spacing:.04em; min-width:52px;}
@@ -210,17 +317,73 @@ footer a:hover{color:var(--groen);}
 /* scroll-animatie */
 .op{opacity:0; transform:translateY(24px); transition:opacity .7s cubic-bezier(.22,.8,.3,1), transform .7s cubic-bezier(.22,.8,.3,1);}
 .op.zie{opacity:1; transform:none;}
+.op.tr1{transition-delay:.08s} .op.tr2{transition-delay:.16s} .op.tr3{transition-delay:.24s} .op.tr4{transition-delay:.32s}
 .voortgang{position:fixed; top:0; left:0; height:3px; background:var(--groen); z-index:200; width:0;}
-@media(prefers-reduced-motion:reduce){ .op{opacity:1; transform:none; transition:none;} html{scroll-behavior:auto;} }
 
+/* zachte beweging die de aandacht stuurt, nooit afleidt */
+.zweef{animation:zweef 7s ease-in-out infinite;}
+@keyframes zweef{0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)}}
+.f:hover .ic{transform:translateY(-3px) scale(1.06);}
+.f .ic{transition:transform .3s cubic-bezier(.22,1.1,.4,1);}
+.p{transition:transform .25s cubic-bezier(.22,.8,.3,1), box-shadow .25s;}
+.p:hover{transform:translateY(-5px); box-shadow:var(--schaduw-l);}
+.btn:focus-visible,.mocknav button:focus-visible,.demoknop:focus-visible,
+a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outline-offset:3px; border-radius:var(--pil);}
+
+/* ---------- menu op klein scherm ---------- */
+#menuKnop{display:none; background:transparent; border:1.5px solid rgba(11,91,82,.28); border-radius:14px;
+  width:42px; height:42px; align-items:center; justify-content:center; cursor:pointer; flex:none; margin-left:auto;}
+#menuKnop svg{width:20px; height:20px; fill:none; stroke:var(--groen); stroke-width:2.2; stroke-linecap:round;}
+#menuKnop .kruis{display:none;}
+#menuKnop.open .streep{display:none;} #menuKnop.open .kruis{display:block;}
+#mobielMenu{position:fixed; inset:64px 0 auto; z-index:99; background:rgba(247,246,243,.98);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-bottom:1px solid var(--rand);
+  padding:18px 28px 26px; display:none; flex-direction:column; gap:4px;
+  box-shadow:0 14px 34px rgba(23,32,30,.1);}
+#mobielMenu.open{display:flex; animation:menuIn .26s cubic-bezier(.22,.8,.3,1) both;}
+@keyframes menuIn{from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:none}}
+#mobielMenu a{padding:13px 4px; font-size:16px; font-weight:600; color:var(--ink); border-bottom:1px solid var(--rand-zacht);}
+#mobielMenu a:last-of-type{border-bottom:none;}
+#mobielMenu .knoppen{display:flex; gap:10px; margin-top:14px;}
+#mobielMenu .knoppen a{flex:1; text-align:center; border:none; padding:13px 10px;}
+
+@media(prefers-reduced-motion:reduce){
+  .op{opacity:1; transform:none; transition:none;} html{scroll-behavior:auto;}
+  .zweef,.demohint .stip,.kpstap.nu .b{animation:none;}
+  .demopaneel.aan,.demorij.nieuw,.demotoast{animation:none;}
+}
+
+@media(max-width:900px){
+  #menuKnop{display:flex;}
+  nav.top .in > .btn.lijn.klein[data-t="nav_login"], nav.top .in > .btn.groen.klein{display:none;}
+}
 @media(max-width:760px){
-  header.hero{padding:130px 0 70px;}
-  section{padding:70px 0;}
+  header.hero{padding:118px 0 60px;}
+  section{padding:64px 0;}
+  .wrap{padding:0 20px;}
+  h1{font-size:clamp(32px,8.2vw,44px);}
+  .lead{font-size:17px;}
+  .heroknoppen{gap:10px;}
+  .heroknoppen .btn{flex:1 1 100%; text-align:center;}
+  .mock{margin-top:44px;}
   .mockbody{flex-direction:column;}
-  .mocknav{width:100%; flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1.5px solid var(--rand);}
+  .mocknav{width:100%; flex-direction:row; overflow-x:auto; gap:6px; border-right:none;
+    border-bottom:1.5px solid var(--rand); padding:12px; -webkit-overflow-scrolling:touch;}
+  .mocknav::-webkit-scrollbar{display:none;}
+  .mocknav button{width:auto; white-space:nowrap; flex:none;}
   .mockkpi{grid-template-columns:repeat(2,1fr);}
   .mockkpi div:nth-child(2){border-right:none;}
-  .cijfers,.cta{padding:40px 28px;}
+  .mockkpi .v{font-size:20px;}
+  .demokop{flex-wrap:wrap;}
+  .demotoasts{left:14px; right:14px; align-items:stretch;}
+  .demotoast{max-width:none;}
+  .cijfers,.cta{padding:40px 24px;}
+  .demolijst{max-height:none;}
+}
+@media(max-width:420px){
+  .mockkpi{grid-template-columns:1fr 1fr;}
+  .klantvenster{margin:14px;}
+  .demokop{padding:14px;}
 }
 </style>
 </head>
@@ -252,9 +415,25 @@ footer a:hover{color:var(--groen);}
     </div>
     <button class="btn lijn klein" id="taalKnop" onclick="wisselTaal()" style="cursor:pointer">EN</button>
     <a href="/app/" class="btn lijn klein" data-t="nav_login">Inloggen</a>
-    <a href="#prijzen" class="btn groen klein" data-t="nav_try">Gratis proberen</a>
+    <a href="/proberen" class="btn groen klein" data-t="nav_try">Gratis proberen</a>
+    <button id="menuKnop" onclick="wisselMenu()" aria-label="Menu" aria-expanded="false">
+      <svg class="streep" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <svg class="kruis" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
   </div>
 </nav>
+
+<div id="mobielMenu">
+  <a href="#functies" onclick="sluitMenu()" data-t="nav_functies">Functies</a>
+  <a href="#werkwijze" onclick="sluitMenu()" data-t="nav_werkwijze">Hoe het werkt</a>
+  <a href="#prijzen" onclick="sluitMenu()" data-t="nav_prijzen">Prijzen</a>
+  <a href="#vragen" onclick="sluitMenu()" data-t="nav_vragen">Vragen</a>
+  <a href="/contact" data-t="f_contact">Contact</a>
+  <div class="knoppen">
+    <a href="/app/" class="btn lijn klein" data-t="nav_login">Inloggen</a>
+    <a href="/proberen" class="btn groen klein" data-t="nav_try">Gratis proberen</a>
+  </div>
+</div>
 
 <header class="hero">
   <div class="blob b1" data-par="0.16"></div>
@@ -265,41 +444,111 @@ footer a:hover{color:var(--groen);}
     <h1 class="op" data-t="hero_h1">Je hele winkel in <span class="grad">één overzicht</span></h1>
     <p class="lead op" data-t="hero_lead">Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.</p>
     <div class="heroknoppen op">
-      <a href="#prijzen" class="btn" data-t="hero_cta1">14 dagen gratis proberen</a>
+      <a href="/proberen" class="btn" data-t="hero_cta1">30 dagen gratis proberen</a>
       <a href="#werkwijze" class="btn lijn" data-t="hero_cta2">Bekijk hoe het werkt</a>
     </div>
     <div class="klein-note op" data-t="hero_note">Geen creditcard nodig. Binnen tien minuten ingericht.</div>
   </div>
 
   <div class="mock wrap op" id="mock">
+    <div class="demohint">
+      <span class="stip"></span><span data-t="demo_hint">Dit is de echte software, vereenvoudigd. Klik gerust rond.</span>
+    </div>
     <div class="mockvenster">
       <div class="mockbalk">
         <div class="merk" style="gap:9px"><span class="mk" style="width:30px;height:30px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="wm" style="font-size:19px">storvo</span></div>
-        <span class="mockactie" data-t="mock_actie">Nieuwe reparatie</span>
+        <button class="mockactie" onclick="demoNieuweReparatie()" data-t="mock_actie">Nieuwe reparatie</button>
       </div>
       <div class="mockbody">
-        <div class="mocknav">
-          <div class="aan" data-t="mock_dash">Vandaag</div><div data-t="mock_scan">Voorraad</div><div data-t="mock_rep">Reparaties</div>
-          <div data-t="mock_diensten">Diensten</div><div data-t="mock_best">Bestellingen</div><div data-t="mock_prod">Rapporten</div><div>Team</div>
+        <div class="mocknav" id="demoNav">
+          <button class="aan" data-s="dash" onclick="demoTab('dash')" data-t="mock_dash">Vandaag</button>
+          <button data-s="voorraad" onclick="demoTab('voorraad')" data-t="mock_scan">Voorraad</button>
+          <button data-s="rep" onclick="demoTab('rep')" data-t="mock_rep">Reparaties</button>
+          <button data-s="klant" onclick="demoTab('klant')" data-t="mock_klantpagina">Klantpagina</button>
         </div>
+
         <div class="mockmain">
-          <div class="mockkpi">
-            <div><div class="l" data-t="mock_rep2">Reparaties open</div><div class="v">14</div></div>
-            <div><div class="l" data-t="mock_tebestellen">Lage voorraad</div><div class="v" style="color:var(--st-rood)">6</div></div>
-            <div><div class="l" data-t="mock_winst">Marge deze week</div><div class="v" style="color:var(--st-groen)">38%</div></div>
-            <div><div class="l" data-t="mock_omzet">Omzet</div><div class="v">€ 2.847</div></div>
-          </div>
-          <div class="mockgraf" style="position:relative">
-            <div class="kop-k" data-t="mock_grafiek">Omzet deze week</div>
-            <div class="tooltip" id="tt" style="left:52%; top:44px">€ 640</div>
-            <div class="mockbars" id="bars">
-              <i style="height:36%"></i><i style="height:52%"></i><i style="height:44%"></i>
-              <i class="aan" style="height:82%"></i><i style="height:58%"></i><i style="height:66%"></i><i style="height:40%"></i>
+
+          <!-- Vandaag -->
+          <div class="demopaneel aan" id="demo-dash">
+            <div class="mockkpi">
+              <div><div class="l" data-t="mock_rep2">Reparaties open</div><div class="v" id="dOpen">5</div></div>
+              <div><div class="l" data-t="mock_tebestellen">Lage voorraad</div><div class="v" id="dLaag" style="color:var(--st-rood)">6</div></div>
+              <div><div class="l" data-t="mock_winst">Marge deze week</div><div class="v" style="color:var(--st-groen)">38%</div></div>
+              <div><div class="l" data-t="mock_omzet">Omzet vandaag</div><div class="v" id="dOmzet">€ 640</div></div>
+            </div>
+            <div class="mockgraf" style="position:relative">
+              <div class="kop-k" data-t="mock_grafiek">Omzet deze week</div>
+              <div class="tooltip" id="tt">€ 640</div>
+              <div class="mockbars" id="bars">
+                <i style="height:36%" data-b="410" data-d="ma"></i><i style="height:52%" data-b="520" data-d="di"></i>
+                <i style="height:44%" data-b="470" data-d="wo"></i><i class="aan" style="height:82%" data-b="640" data-d="do"></i>
+                <i style="height:58%" data-b="545" data-d="vr"></i><i style="height:66%" data-b="590" data-d="za"></i>
+                <i style="height:40%" data-b="430" data-d="zo"></i>
+              </div>
             </div>
           </div>
+
+          <!-- Voorraad -->
+          <div class="demopaneel" id="demo-voorraad">
+            <div class="demokop">
+              <div>
+                <div class="kop-k" data-t="v_kop">Voorraad</div>
+                <p class="demosub" data-t="v_sub">Scan een barcode, de rest gaat vanzelf.</p>
+              </div>
+              <button class="demoknop" onclick="demoScan()" id="scanKnop">
+                <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+                <span data-t="v_scan">Scan</span>
+              </button>
+            </div>
+            <div class="demolijst" id="voorraadLijst"></div>
+          </div>
+
+          <!-- Reparaties -->
+          <div class="demopaneel" id="demo-rep">
+            <div class="demokop">
+              <div>
+                <div class="kop-k" id="repNr">R26-014</div>
+                <p class="demosub"><b id="repToestel">iPhone 14</b> &middot; <span id="repKlant">Sara Jansen</span></p>
+              </div>
+              <span class="demobadge" id="repBadge" data-t="r_status1">Aangemeld</span>
+            </div>
+            <div class="tijdlijn" id="tijdlijn"></div>
+            <div class="demovoet">
+              <button class="demoknop groen" onclick="demoVolgendeStap()" id="stapKnop">
+                <span data-t="r_volgende">Zet op volgende stap</span>
+              </button>
+              <span class="demosub klein" data-t="r_hint">De klant krijgt bij elke stap automatisch bericht.</span>
+            </div>
+          </div>
+
+          <!-- Klantpagina -->
+          <div class="demopaneel" id="demo-klant">
+            <div class="klantvenster">
+              <div class="klantbalk">
+                <span class="klantlogo">R</span>
+                <div>
+                  <b>Refuro</b>
+                  <span class="demosub klein" id="kpNr">Reparatie R26-014</span>
+                </div>
+              </div>
+              <div class="klantbody">
+                <div class="klantbalkje"><i id="kpBalk" style="width:20%"></i></div>
+                <div class="klantstappen" id="kpStappen"></div>
+                <div class="klantvraag">
+                  <span data-t="k_vraag">Vragen over je reparatie?</span>
+                  <span class="wa">WhatsApp</span>
+                </div>
+              </div>
+            </div>
+            <p class="demosub klein" style="margin-top:14px" data-t="k_uitleg">Dit ziet jouw klant, met jouw logo en kleuren.
+              De pagina loopt mee met wat jij in de software doet.</p>
+          </div>
+
         </div>
       </div>
     </div>
+    <div class="demotoasts" id="demoToasts"></div>
   </div>
 </header>
 
@@ -340,7 +589,7 @@ footer a:hover{color:var(--groen);}
 <section>
   <div class="wrap">
     <div class="cijfers op">
-      <div class="c"><div class="n" data-tel="12">0</div><div class="t" data-t="c1">minuten per dag bespaard aan administratie</div></div>
+      <div class="c"><div class="n" data-tel="2" data-suf=" uur">0</div><div class="t" data-t="c1">per dag minder kwijt aan administratie</div></div>
       <div class="c"><div class="n" data-tel="98" data-suf="%">0</div><div class="t" data-t="c2">van de klanten weet zelf de status van hun reparatie</div></div>
       <div class="c"><div class="n" data-tel="0" data-pre="€ " data-suf=",-">0</div><div class="t" data-t="c3">opstartkosten, maandelijks opzegbaar</div></div>
       <div class="c"><div class="n" data-tel="10">0</div><div class="t" data-t="c4">minuten om je hele winkel in te richten</div></div>
@@ -353,27 +602,27 @@ footer a:hover{color:var(--groen);}
     <div class="kop op">
       <div class="tag" data-t="p_tag">Prijzen</div>
       <h2 data-t="p_h2">Eerlijke prijs, geen verrassingen</h2>
-      <p data-t="p_p">Alle bedragen per maand, exclusief btw. Eerst 14 dagen gratis proberen, daarna maandelijks opzegbaar.</p>
+      <p data-t="p_p">Alle bedragen per maand, exclusief btw. Eerst 30 dagen gratis proberen, daarna maandelijks opzegbaar.</p>
     </div>
     <div class="prijzen">
       <div class="p op">
         <div class="pn">Start</div><div class="pd" data-t="p1_d">Voor de eenmanszaak</div>
         <div class="pp">€ 19,95<span data-t="p_mnd">/mnd</span></div>
         <ul data-t="p1_ul"><li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li></ul>
-        <a href="https://buy.stripe.com/7sY00l4Tg18pczaaRp33W00" class="btn lijn" data-t="p_cta">Gratis proberen</a>
+        <a href="/proberen" class="btn lijn" data-t="p_cta">30 dagen gratis proberen</a>
       </div>
       <div class="p pop op">
         <div class="badge" data-t="p_badge">Meest gekozen</div>
         <div class="pn">Pro</div><div class="pd" data-t="p2_d">Voor de winkel die groeit</div>
         <div class="pp">€ 44,95<span data-t="p_mnd">/mnd</span></div>
         <ul data-t="p2_ul"><li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li></ul>
-        <a href="https://buy.stripe.com/7sY4gB2L804l0Qs7Fd33W01" class="btn" data-t="p_cta">Gratis proberen</a>
+        <a href="/proberen" class="btn" data-t="p_cta">30 dagen gratis proberen</a>
       </div>
       <div class="p op">
         <div class="pn">Enterprise</div><div class="pd" data-t="p3_d">Voor meerdere vestigingen</div>
         <div class="pp">€ 79,95<span data-t="p_mnd">/mnd</span></div>
-        <ul data-t="p3_ul"><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>30 dagen proberen</li></ul>
-        <a href="https://buy.stripe.com/6oU4gBdpMg3j2YA5x533W02" class="btn lijn" data-t="p_cta">Gratis proberen</a>
+        <ul data-t="p3_ul"><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>Hulp bij het overzetten van je gegevens</li></ul>
+        <a href="/proberen" class="btn lijn" data-t="p_cta">30 dagen gratis proberen</a>
       </div>
     </div>
   </div>
@@ -401,23 +650,53 @@ footer a:hover{color:var(--groen);}
     <div class="cta op">
       <div class="label" style="color:var(--mint); margin-bottom:14px" data-t="cta_label">Alles geregeld</div>
       <h2 data-t="cta_h2">Klaar om je winkel rustiger te maken?</h2>
-      <p data-t="cta_p">Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.</p>
-      <a href="mailto:info@storvo.app?subject=Ik%20wil%20het%20graag%20proberen" class="btn" data-t="cta_btn">Start je proefperiode</a>
+      <p data-t="cta_p">Probeer het 30 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.</p>
+      <a href="/proberen" class="btn" data-t="cta_btn">Start je proefperiode</a>
     </div>
   </div>
 </section>
 
 <footer>
-  <div class="wrap in">
-    <div>
-      <div class="merk"><span class="mk" style="width:32px;height:32px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="wm" style="font-size:21px">storvo</span></div>
-      <div class="sora" style="font-size:14px; font-weight:700; color:var(--groen); margin-top:8px" data-t="tagline">Alles geregeld.</div>
+  <div class="wrap">
+    <div class="fkolommen">
+      <div class="fmerk">
+        <div class="merk"><span class="mk" style="width:32px;height:32px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M20 6 9 17l-5-5"/></svg></span><span class="wm" style="font-size:21px">storvo</span></div>
+        <div class="tag" data-t="tagline">Alles geregeld.</div>
+        <p data-t="f_over">Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.</p>
+      </div>
+      <div>
+        <h4 data-t="f_k_product">Product</h4>
+        <ul>
+          <li><a href="#functies" data-t="nav_functies">Functies</a></li>
+          <li><a href="#prijzen" data-t="nav_prijzen">Prijzen</a></li>
+          <li><a href="#vragen" data-t="f_vragen">Veelgestelde vragen</a></li>
+          <li><a href="/app/" data-t="f_inloggen">Inloggen</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-t="f_k_support">Support</h4>
+        <ul>
+          <li><a href="/contact" data-t="f_contact">Contact</a></li>
+          <li><a href="mailto:info@storvo.app">info@storvo.app</a></li>
+          <li><a href="mailto:info@storvo.app?subject=Ik%20wil%20het%20graag%20proberen" data-t="f_proef">Proefperiode aanvragen</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-t="f_k_juridisch">Juridisch</h4>
+        <ul>
+          <li><a href="/voorwaarden" data-t="f_voorwaarden">Algemene voorwaarden</a></li>
+          <li><a href="/privacy" data-t="f_privacy">Privacyverklaring</a></li>
+          <li><a href="/verwerkersovereenkomst" data-t="f_vwo">Verwerkersovereenkomst</a></li>
+        </ul>
+      </div>
     </div>
-    <div class="rechts">
-      <a href="#functies" data-t="nav_functies">Functies</a><a href="#prijzen" data-t="nav_prijzen">Prijzen</a><a href="mailto:info@storvo.app">Contact</a>
+    <div class="fonder">
+      <span>&copy; 2026 Storvo</span>
+      <span>KvK 82379920</span>
+      <span>Btw NL003671243B93</span>
+      <span class="rechts" data-t="f_adres">Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</span>
     </div>
   </div>
-  <div class="wrap" style="margin-top:22px; font-size:13px; color:var(--muted-l)" data-t="footer_c">© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.</div>
 </footer>
 
 <script>
@@ -499,6 +778,164 @@ const mockIo=new IntersectionObserver(es=>{
 const mock=document.getElementById('mock'); if(mock) mockIo.observe(mock);
 }else{ const tt=document.getElementById('tt'); if(tt) tt.classList.add('zie'); }
 
+/* ---------- interactieve demo ----------
+   Een uitgeklede versie van de echte software. Alles wat je hier doet werkt,
+   het staat alleen niet in een database. Bedoeld om te laten voelen hoe het
+   werkt zonder dat iemand eerst een account hoeft te maken.               */
+
+const DEMO_VOORRAAD=[
+  {code:'SCR-14',  merk:'iPhone 14',        soort:'Scherm',   aantal:7},
+  {code:'BAT-13',  merk:'iPhone 13',        soort:'Accu',     aantal:4},
+  {code:'SCR-S23', merk:'Samsung S23',      soort:'Scherm',   aantal:2},
+  {code:'CAM-14P', merk:'iPhone 14 Pro',    soort:'Camera',   aantal:5},
+  {code:'SCR-A54', merk:'Samsung A54',      soort:'Scherm',   aantal:1}
+];
+const DEMO_NIEUW=[
+  {code:'BAT-15',  merk:'iPhone 15',        soort:'Accu',     aantal:6},
+  {code:'SCR-P8',  merk:'Pixel 8',          soort:'Scherm',   aantal:3},
+  {code:'LDR-14',  merk:'iPhone 14',        soort:'Laadpoort',aantal:8}
+];
+const DEMO_STAPPEN=['aangemeld','besteld','binnen','bezig','klaar'];
+
+let demoVoorraad=DEMO_VOORRAAD.map(p=>Object.assign({},p));
+let demoScanTeller=0;
+let demoStap=0;
+
+/* De woordenlijst staat verderop in dit bestand. Hij is er dus nog niet als
+   de demo voor het eerst tekent; dan vallen we terug op de tekst in de HTML. */
+function demoT(sleutel){
+  try{
+    const d=VERTALINGEN[taal];
+    if(d && d[sleutel]!==undefined) return d[sleutel];
+  }catch(e){ /* nog niet geladen */ }
+  const el=document.querySelector('[data-t="'+sleutel+'"]');
+  return el ? el.textContent.trim() : '';
+}
+
+function demoTab(s){
+  document.querySelectorAll('#demoNav button').forEach(b=>b.classList.toggle('aan', b.dataset.s===s));
+  document.querySelectorAll('.demopaneel').forEach(p=>p.classList.toggle('aan', p.id==='demo-'+s));
+  if(s==='voorraad') tekenVoorraad();
+  if(s==='rep') tekenTijdlijn();
+  if(s==='klant') tekenKlantpagina();
+}
+
+function demoToast(tekst){
+  const vak=document.getElementById('demoToasts'); if(!vak) return;
+  const t=document.createElement('div');
+  t.className='demotoast';
+  t.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span></span>';
+  t.querySelector('span').textContent=tekst;
+  vak.appendChild(t);
+  setTimeout(()=>{ t.classList.add('weg'); setTimeout(()=>t.remove(),350); }, 3200);
+  while(vak.children.length>3) vak.firstChild.remove();
+}
+
+function tekenVoorraad(nieuweCode){
+  const vak=document.getElementById('voorraadLijst'); if(!vak) return;
+  vak.innerHTML=demoVoorraad.map(p=>`
+    <div class="demorij${p.code===nieuweCode?' nieuw':''}">
+      <span class="ico">${p.soort.charAt(0)}</span>
+      <span class="nm">${p.merk}<span>${p.soort} &middot; ${p.code}</span></span>
+      <span class="aant${p.aantal<=2?' laag':''}" data-c="${p.code}">${p.aantal}</span>
+    </div>`).join('');
+  const laag=demoVoorraad.filter(p=>p.aantal<=2).length;
+  const el=document.getElementById('dLaag'); if(el) el.textContent=laag+5;
+}
+
+function demoScan(){
+  const knop=document.getElementById('scanKnop');
+  if(knop) knop.disabled=true;
+  setTimeout(()=>{ if(knop) knop.disabled=false; }, 500);
+
+  if(demoScanTeller<DEMO_NIEUW.length){
+    const p=Object.assign({}, DEMO_NIEUW[demoScanTeller]);
+    demoScanTeller++;
+    demoVoorraad.unshift(p);
+    tekenVoorraad(p.code);
+    demoToast(p.merk+' '+p.soort.toLowerCase()+' '+demoT('demo_toegevoegd'));
+  } else {
+    const p=demoVoorraad[Math.floor(Math.random()*Math.min(4,demoVoorraad.length))];
+    p.aantal++;
+    tekenVoorraad();
+    const cel=document.querySelector('[data-c="'+p.code+'"]');
+    if(cel){ cel.classList.add('tik'); setTimeout(()=>cel.classList.remove('tik'),520); }
+    demoToast(p.merk+': '+p.aantal+' '+demoT('demo_opvoorraad'));
+  }
+}
+
+function tekenTijdlijn(){
+  const vak=document.getElementById('tijdlijn'); if(!vak) return;
+  const namen=DEMO_STAPPEN.map((s,i)=>demoT('r_status'+(i+1)));
+  const tijden=[demoT('demo_zojuist'),'09:14','11:02','13:40','15:25'];
+  vak.innerHTML=DEMO_STAPPEN.map((s,i)=>`
+    <div class="tstap${i<demoStap?' klaar':(i===demoStap?' nu':'')}">
+      <span class="bol"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="tk">${namen[i]}${i<=demoStap?`<span>${tijden[i]}</span>`:''}</span>
+    </div>`).join('');
+  const badge=document.getElementById('repBadge');
+  if(badge) badge.textContent=namen[demoStap];
+  const knop=document.getElementById('stapKnop');
+  if(knop) knop.disabled = demoStap>=DEMO_STAPPEN.length-1;
+  const open=document.getElementById('dOpen');
+  if(open) open.textContent = demoStap>=DEMO_STAPPEN.length-1 ? '4' : '5';
+}
+
+function demoVolgendeStap(){
+  if(demoStap>=DEMO_STAPPEN.length-1) return;
+  demoStap++;
+  tekenTijdlijn();
+  tekenKlantpagina();
+  demoToast(demoT('demo_bericht'+demoStap) || demoT('demo_berichtuit'));
+}
+
+function demoNieuweReparatie(){
+  demoStap=0;
+  demoTab('rep');
+  demoToast(demoT('demo_nieuwerep'));
+}
+
+function tekenKlantpagina(){
+  const vak=document.getElementById('kpStappen'); if(!vak) return;
+  const namen=DEMO_STAPPEN.map((s,i)=>demoT('r_status'+(i+1)));
+  vak.innerHTML=namen.map((n,i)=>`
+    <div class="kpstap${i<demoStap?' klaar':(i===demoStap?' nu':'')}">
+      <span class="b"></span><span>${n}</span>
+    </div>`).join('');
+  const balk=document.getElementById('kpBalk');
+  if(balk) balk.style.width=Math.round((demoStap/(DEMO_STAPPEN.length-1))*100)+'%';
+}
+
+function demoStart(){ tekenVoorraad(); tekenTijdlijn(); tekenKlantpagina(); }
+
+/* ---------- menu op klein scherm ---------- */
+function wisselMenu(){
+  const knop=document.getElementById('menuKnop');
+  const menu=document.getElementById('mobielMenu');
+  const open=!menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+  knop.classList.toggle('open', open);
+  knop.setAttribute('aria-expanded', open?'true':'false');
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function sluitMenu(){
+  const menu=document.getElementById('mobielMenu');
+  if(!menu.classList.contains('open')) return;
+  menu.classList.remove('open');
+  document.getElementById('menuKnop').classList.remove('open');
+  document.getElementById('menuKnop').setAttribute('aria-expanded','false');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') sluitMenu(); });
+window.addEventListener('resize', ()=>{ if(window.innerWidth>900) sluitMenu(); });
+
+/* De rijen in een groep komen na elkaar in beeld in plaats van tegelijk. */
+document.querySelectorAll('.functies, .prijzen, .stappen, .vragenlijst').forEach(groep=>{
+  [...groep.children].forEach((kind,i)=>{
+    if(kind.classList.contains('op') && i<4) kind.classList.add('tr'+(i+1));
+  });
+});
+
 /* ---------- taal NL / EN ---------- */
 const VERTALINGEN={
 nl:{
@@ -508,9 +945,24 @@ nl:{
   hero_pill:'<b>Nieuw</b> Je klant volgt de reparatie live mee',
   hero_h1:'Je hele winkel in <span class="grad">één overzicht</span>',
   hero_lead:'Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.',
-  hero_cta1:'14 dagen gratis proberen', hero_cta2:'Bekijk hoe het werkt',
+  hero_cta1:'30 dagen gratis proberen', hero_cta2:'Bekijk hoe het werkt',
   hero_note:'Geen creditcard nodig. Binnen tien minuten ingericht.',
   mock_actie:'Nieuwe reparatie',
+  demo_hint:'Dit is de echte software, vereenvoudigd. Klik gerust rond.',
+  mock_klantpagina:'Klantpagina',
+  v_kop:'Voorraad', v_sub:'Scan een barcode, de rest gaat vanzelf.', v_scan:'Scan',
+  r_status1:'Aangemeld', r_status2:'Onderdelen besteld', r_status3:'Onderdelen binnen',
+  r_status4:'In reparatie', r_status5:'Klaar om op te halen',
+  r_volgende:'Zet op volgende stap', r_hint:'De klant krijgt bij elke stap automatisch bericht.',
+  k_vraag:'Vragen over je reparatie?',
+  k_uitleg:'Dit ziet jouw klant, met jouw logo en kleuren. De pagina loopt mee met wat jij in de software doet.',
+  demo_toegevoegd:'toegevoegd aan je voorraad', demo_opvoorraad:'op voorraad',
+  demo_zojuist:'zojuist', demo_nieuwerep:'Reparatie aangemaakt, klant is op de hoogte',
+  demo_bericht1:'Bericht verstuurd: onderdelen besteld',
+  demo_bericht2:'Bericht verstuurd: onderdelen binnen',
+  demo_bericht3:'Bericht verstuurd: we zijn begonnen',
+  demo_bericht4:'Bericht verstuurd: je toestel is klaar',
+  demo_berichtuit:'Bericht naar de klant verstuurd',
   mock_dash:'Vandaag', mock_scan:'Voorraad', mock_diensten:'Diensten', mock_rep:'Reparaties', mock_prod:'Rapporten', mock_best:'Bestellingen',
   mock_omzet:'Omzet', mock_winst:'Marge deze week', mock_rep2:'Reparaties open', mock_tebestellen:'Lage voorraad', mock_grafiek:'Omzet deze week',
   f_tag:'Functies', f_h2:'Alles wat je nodig hebt, niets wat je afleidt',
@@ -526,17 +978,17 @@ nl:{
   w2_h:'Bestellen', w2_p:'Ligt het onderdeel er niet, dan komt het op de bestellijst vóór 16:30, met de verwachte leverdatum voor je klant.',
   w3_h:'Repareren', w3_p:'Onderdelen binnen en reparatie starten met een verwachte ophaaltijd. Loopt iets anders, dan zet je er een opmerking bij.',
   w4_h:'Ophalen', w4_p:'De klant krijgt bericht dat het klaar is en jij rekent af met pin of cash. De omzet staat meteen in je dashboard.',
-  c1:'minuten per dag bespaard aan administratie', c2:'van de klanten weet zelf de status van hun reparatie',
+  c1:'per dag minder kwijt aan administratie', c2:'van de klanten weet zelf de status van hun reparatie',
   c3:'opstartkosten, maandelijks opzegbaar', c4:'minuten om je hele winkel in te richten',
   p_tag:'Prijzen', p_h2:'Eerlijke prijs, geen verrassingen',
-  p_p:'Alle bedragen per maand, exclusief btw. Eerst 14 dagen gratis proberen, daarna maandelijks opzegbaar.',
-  p_mnd:'/mnd', p_cta:'Gratis proberen', p_badge:'Meest gekozen',
+  p_p:'Alle bedragen per maand, exclusief btw. Eerst 30 dagen gratis proberen, daarna maandelijks opzegbaar.',
+  p_mnd:'/mnd', p_cta:'30 dagen gratis proberen', p_badge:'Meest gekozen',
   p1_d:'Voor de eenmanszaak',
   p1_ul:'<li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li>',
   p2_d:'Voor de winkel die groeit',
   p2_ul:'<li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li>',
   p3_d:'Voor meerdere vestigingen',
-  p3_ul:'<li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>30 dagen proberen</li>',
+  p3_ul:'<li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>Hulp bij het overzetten van je gegevens</li>',
   q_tag:'Vragen', q_h2:'Goed om te weten',
   q1_s:'Kan ik mijn huidige voorraad overzetten?', q1_p:'Ja. Je kunt losse producten aanmaken, maar sneller gaat het met "snel toevoegen": kies een producttype, scan per telefoonmodel de barcode en het staat erin. Honderden hoesjes of screenprotectors heb je zo ingevoerd.',
   q2_s:'Werkt het met mijn barcodescanner?', q2_p:'Vrijwel elke USB- of bluetoothscanner werkt, omdat die zich gedraagt als toetsenbord. Je hoeft niets te installeren: scan gewoon, waar je ook bent in de app.',
@@ -545,9 +997,14 @@ nl:{
   q5_s:'Wat gebeurt er met mijn gegevens als ik stop?', q5_p:'Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.',
   q6_s:'Zitten er kosten aan het opstarten?', q6_p:'Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.',
   cta_label:'Alles geregeld', tagline:'Alles geregeld.',
-  cta_h2:'Klaar om je winkel rustiger te maken?', cta_p:'Probeer het 14 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.',
+  cta_h2:'Klaar om je winkel rustiger te maken?', cta_p:'Probeer het 30 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.',
   cta_btn:'Start je proefperiode',
-  footer_c:'© 2026 Storvo. Voorraad en reparatiesoftware voor telefoonwinkels.'
+  f_over:'Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.',
+  f_k_product:'Product', f_k_support:'Support', f_k_juridisch:'Juridisch',
+  f_vragen:'Veelgestelde vragen', f_inloggen:'Inloggen', f_contact:'Contact',
+  f_proef:'Proefperiode aanvragen', f_voorwaarden:'Algemene voorwaarden',
+  f_privacy:'Privacyverklaring', f_vwo:'Verwerkersovereenkomst',
+  f_adres:'Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)'
 },
 en:{
   title:'Storvo · Inventory &amp; repairs for phone shops',
@@ -556,9 +1013,24 @@ en:{
   hero_pill:'<b>New</b> Your customer follows the repair live',
   hero_h1:'Your whole shop in <span class="grad">one overview</span>',
   hero_lead:'Scan inventory, track repairs, keep customers informed and see exactly what you earn. Built for phone shops, together with phone shops.',
-  hero_cta1:'Try free for 14 days', hero_cta2:'See how it works',
+  hero_cta1:'Try free for 30 days', hero_cta2:'See how it works',
   hero_note:'No credit card required. Set up in ten minutes.',
   mock_actie:'New repair',
+  demo_hint:'This is the real software, simplified. Feel free to click around.',
+  mock_klantpagina:'Customer page',
+  v_kop:'Stock', v_sub:'Scan a barcode, the rest happens by itself.', v_scan:'Scan',
+  r_status1:'Registered', r_status2:'Parts ordered', r_status3:'Parts arrived',
+  r_status4:'Being repaired', r_status5:'Ready for pickup',
+  r_volgende:'Move to next step', r_hint:'Your customer is notified at every step.',
+  k_vraag:'Questions about your repair?',
+  k_uitleg:'This is what your customer sees, with your logo and colours. The page follows whatever you do in the software.',
+  demo_toegevoegd:'added to your stock', demo_opvoorraad:'in stock',
+  demo_zojuist:'just now', demo_nieuwerep:'Repair created, customer notified',
+  demo_bericht1:'Message sent: parts ordered',
+  demo_bericht2:'Message sent: parts arrived',
+  demo_bericht3:'Message sent: we have started',
+  demo_bericht4:'Message sent: your device is ready',
+  demo_berichtuit:'Message sent to the customer',
   mock_dash:'Today', mock_scan:'Stock', mock_diensten:'Services', mock_rep:'Repairs', mock_prod:'Reports', mock_best:'Orders',
   mock_omzet:'Revenue', mock_winst:'Margin this week', mock_rep2:'Repairs open', mock_tebestellen:'Low stock', mock_grafiek:'Revenue this week',
   f_tag:'Features', f_h2:'Everything you need, nothing that distracts',
@@ -574,17 +1046,17 @@ en:{
   w2_h:'Order', w2_p:'If the part is not in stock, it goes on the order list before 4:30 PM, with the expected delivery date for your customer.',
   w3_h:'Repair', w3_p:'Parts arrive and you start the repair with an expected pickup time. If something changes, you add a note.',
   w4_h:'Pickup', w4_p:'The customer gets a message that it is ready and you check out by card or cash. The revenue shows up in your dashboard right away.',
-  c1:'minutes saved on admin every day', c2:'of customers check their repair status themselves',
+  c1:'less time on admin every day', c2:'of customers check their repair status themselves',
   c3:'setup costs, cancel monthly', c4:'minutes to set up your entire shop',
   p_tag:'Pricing', p_h2:'A fair price, no surprises',
-  p_p:'All amounts per month, excluding VAT. Try free for 14 days first, then cancel monthly.',
-  p_mnd:'/mo', p_cta:'Try for free', p_badge:'Most popular',
+  p_p:'All amounts per month, excluding VAT. Try free for 30 days first, then cancel monthly.',
+  p_mnd:'/mo', p_cta:'Try free for 30 days', p_badge:'Most popular',
   p1_d:'For the one-person shop',
   p1_ul:'<li>Inventory &amp; scanning</li><li>Repairs with customer page</li><li>Order list and deliveries</li><li>Up to 2 employees</li><li>1 location</li>',
   p2_d:'For the growing shop',
   p2_ul:'<li>Everything in Start</li><li>Dashboard with profit per category</li><li>Automatic customer messages</li><li>Your own logo and colours</li><li>Up to 8 employees</li>',
   p3_d:'For multiple locations',
-  p3_ul:'<li>Everything in Pro</li><li>Unlimited locations and teams</li><li>Numbers per location</li><li>Priority support</li><li>30-day trial</li>',
+  p3_ul:'<li>Everything in Pro</li><li>Unlimited locations and teams</li><li>Numbers per location</li><li>Priority support</li><li>Help migrating your data</li>',
   q_tag:'FAQ', q_h2:'Good to know',
   q1_s:'Can I transfer my current inventory?', q1_p:'Yes. You can create individual products, but "quick add"is faster: pick a product type, scan the barcode per phone model and it is in. Hundreds of cases or screen protectors are entered in no time.',
   q2_s:'Does it work with my barcode scanner?', q2_p:'Almost every USB or Bluetooth scanner works, because it behaves like a keyboard. Nothing to install: just scan, wherever you are in the app.',
@@ -593,9 +1065,14 @@ en:{
   q5_s:'What happens to my data if I stop?', q5_p:'You can download a full backup at any time. If you cancel, your data stays available for 30 days so you can export everything.',
   q6_s:'Are there any setup costs?', q6_p:'No. No setup costs and no annual contract. You pay per month and cancel whenever you want.',
   cta_label:'All taken care of', tagline:'All taken care of.',
-  cta_h2:'Ready to make your shop calmer?', cta_p:'Try it free for 14 days. Not happy? Then you stop without any hassle.',
+  cta_h2:'Ready to make your shop calmer?', cta_p:'Try it free for 30 days. Not happy? Then you stop without any hassle.',
   cta_btn:'Start your free trial',
-  footer_c:'© 2026 Storvo. Inventory and repair software for phone shops.'
+  f_over:'Inventory, repairs and customer updates for phone shops. One system, no hassle.',
+  f_k_product:'Product', f_k_support:'Support', f_k_juridisch:'Legal',
+  f_vragen:'Frequently asked questions', f_inloggen:'Log in', f_contact:'Contact',
+  f_proef:'Request a trial', f_voorwaarden:'Terms and conditions',
+  f_privacy:'Privacy statement', f_vwo:'Data processing agreement',
+  f_adres:'Ericssonstraat 2a, 5121 ML Rijen, the Netherlands (no visiting address)'
 }};
 let taal='nl';
 function zetTaal(t){
@@ -609,6 +1086,8 @@ function zetTaal(t){
   const knop=document.getElementById('taalKnop');
   if(knop) knop.textContent=(t==='nl')?'EN':'NL';
   try{ localStorage.setItem('storvo_taal',t); }catch(e){}
+  /* De demo staat los van de HTML, dus die tekenen we opnieuw. */
+  if(typeof demoStart==='function') demoStart();
 }
 function wisselTaal(){ zetTaal(taal==='nl'?'en':'nl'); }
 (function(){
@@ -621,6 +1100,7 @@ function wisselTaal(){ zetTaal(taal==='nl'?'en':'nl'); }
     else t=(navigator.language||'nl').toLowerCase().startsWith('nl')?'nl':'en';
   }
   if(t!=='nl') zetTaal(t); else zetTaal('nl');
+  demoStart();
 })();
 
 /* zachte ankerscroll */

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algemene voorwaarden · Storvo</title>
+<meta name="description" content="De algemene voorwaarden van Storvo, software voor telefoonreparatiewinkels.">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --groen:#0B5B52; --petrol:#123F39; --amber:#E88A1D;
+  --warmwit:#F7F6F3; --ink:#17201E; --ijsgroen:#E7F1EE;
+  --card:#FFFFFF; --rand:#ECEAE4; --muted:#5B6663; --muted-l:#8A938F; --body:#475350;
+  --radius:24px; --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;}
+a{color:var(--groen); text-decoration:none;}
+a:hover{text-decoration:underline;}
+.wrap{max-width:760px; margin:0 auto; padding:0 24px;}
+
+header{padding:26px 0; border-bottom:1px solid var(--rand); background:var(--card);}
+.merk{display:flex; align-items:center; gap:11px;}
+.mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex; align-items:center; justify-content:center;}
+.mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
+.wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em;}
+
+main{padding:52px 0 40px;}
+.label{font-size:12.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--groen); margin-bottom:12px;}
+h1{font-family:'Sora',sans-serif; font-size:clamp(30px,5vw,40px); font-weight:800; letter-spacing:-.03em; line-height:1.15; margin-bottom:14px;}
+.datum{color:var(--muted-l); font-size:14px; margin-bottom:30px;}
+h2{font-family:'Sora',sans-serif; font-size:20px; font-weight:700; letter-spacing:-.015em; margin:40px 0 12px; scroll-margin-top:20px;}
+h3{font-size:16px; font-weight:700; margin:22px 0 8px;}
+p{margin-bottom:14px; color:var(--body);}
+ul,ol{margin:0 0 16px 22px; color:var(--body);}
+li{margin-bottom:7px;}
+ol.lid{list-style:none; margin-left:0; counter-reset:lid;}
+ol.lid > li{counter-increment:lid; position:relative; padding-left:38px; margin-bottom:12px;}
+ol.lid[start] > li:first-child{counter-increment:none;}
+ol.lid > li::before{content:counter(lid); position:absolute; left:0; top:2px; width:26px; height:22px;
+  font-size:12.5px; font-weight:700; color:var(--groen); background:var(--ijsgroen);
+  border-radius:7px; display:flex; align-items:center; justify-content:center;}
+.kaart{background:var(--card); border:1.5px solid var(--rand); border-radius:var(--radius); padding:24px 26px; margin-bottom:30px;}
+.kaart p:last-child{margin-bottom:0;}
+.kaart dl{display:grid; grid-template-columns:auto 1fr; gap:8px 18px; font-size:15px;}
+.kaart dt{font-weight:600; color:var(--ink);}
+.kaart dd{color:var(--body);}
+.uitgelicht{background:var(--ijsgroen); border-radius:var(--radius); padding:22px 26px; margin:24px 0;}
+.uitgelicht p:last-child{margin-bottom:0;}
+.inhoud{background:var(--card); border:1.5px solid var(--rand); border-radius:var(--radius); padding:22px 26px; margin-bottom:36px;}
+.inhoud ol{columns:2; column-gap:32px; margin:0 0 0 20px; font-size:14.5px;}
+.inhoud li{margin-bottom:5px; break-inside:avoid;}
+table{width:100%; border-collapse:collapse; margin-bottom:18px; font-size:14.5px;}
+th,td{text-align:left; padding:11px 12px; border-bottom:1px solid var(--rand); vertical-align:top;}
+th{font-weight:700; color:var(--ink); background:var(--ijsgroen);}
+th:first-child{border-radius:12px 0 0 0;} th:last-child{border-radius:0 12px 0 0;}
+td{color:var(--body);}
+
+footer{border-top:1px solid var(--rand); padding:34px 0 44px; margin-top:56px; font-size:14px; color:var(--muted);}
+footer .rij{display:flex; gap:20px; flex-wrap:wrap; align-items:center;}
+footer .rechts{margin-left:auto; display:flex; gap:20px;}
+footer .c{margin-top:16px; font-size:13px; color:var(--muted-l);}
+@media(max-width:640px){ table{font-size:13.5px;} th,td{padding:9px 8px;} .inhoud ol{columns:1;} }
+@media(max-width:560px){ footer .rechts{margin-left:0;} .kaart dl{grid-template-columns:1fr; gap:2px 0;} .kaart dd{margin-bottom:10px;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a href="/" class="merk">
+      <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="wm">storvo</span>
+    </a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="label">Juridisch</div>
+  <h1>Algemene voorwaarden</h1>
+  <p class="datum">Versie 2.0 &middot; geldig vanaf 8 augustus 2026 &middot; Storvo, KvK 82379920</p>
+
+  <div class="kaart">
+    <dl>
+      <dt>Aanbieder</dt><dd>Storvo</dd>
+      <dt>Rechtsvorm</dt><dd>Eenmanszaak</dd>
+      <dt>Adres</dt><dd>Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</dd>
+      <dt>KvK-nummer</dt><dd>82379920</dd>
+      <dt>Btw-nummer</dt><dd>NL003671243B93</dd>
+      <dt>E-mail</dt><dd><a href="mailto:info@storvo.app">info@storvo.app</a></dd>
+    </dl>
+  </div>
+
+  <nav class="inhoud">
+    <ol>
+      <li><a href="#a1">Definities</a></li>
+      <li><a href="#a2">Toepasselijkheid en rangorde</a></li>
+      <li><a href="#a3">Totstandkoming en proefperiode</a></li>
+      <li><a href="#a4">Aard en reikwijdte van de dienst</a></li>
+      <li><a href="#a5">Duur, verlenging en opzegging</a></li>
+      <li><a href="#a6">Prijzen, facturatie en betaling</a></li>
+      <li><a href="#a7">Verplichtingen van de gebruiker</a></li>
+      <li><a href="#a8">Accounts en beveiliging</a></li>
+      <li><a href="#a9">Beschikbaarheid en onderhoud</a></li>
+      <li><a href="#a10">Wijzigingen in de dienst</a></li>
+      <li><a href="#a11">Gegevens en back-ups</a></li>
+      <li><a href="#a12">Prijzen, berekeningen en gegevens van derden</a></li>
+      <li><a href="#a13">Berichten aan eindklanten</a></li>
+      <li><a href="#a14">Diensten en storingen van derden</a></li>
+      <li><a href="#a15">Intellectuele eigendom</a></li>
+      <li><a href="#a16">Geheimhouding</a></li>
+      <li><a href="#a17">Vrijwaring</a></li>
+      <li><a href="#a18">Aansprakelijkheid</a></li>
+      <li><a href="#a19">Overmacht</a></li>
+      <li><a href="#a20">Opschorting en beëindiging door Storvo</a></li>
+      <li><a href="#a21">Gevolgen van beëindiging</a></li>
+      <li><a href="#a22">Persoonsgegevens</a></li>
+      <li><a href="#a23">Klachten en verval van rechten</a></li>
+      <li><a href="#a24">Overdracht</a></li>
+      <li><a href="#a25">Wijziging van deze voorwaarden</a></li>
+      <li><a href="#a26">Nietigheid en conversie</a></li>
+      <li><a href="#a27">Toepasselijk recht en geschillen</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="a1">Artikel 1 &middot; Definities</h2>
+  <ol class="lid">
+    <li><b>Storvo</b>: de eenmanszaak Storvo, gevestigd te Rijen, ingeschreven bij de Kamer van Koophandel onder nummer 82379920, gebruiker van deze algemene voorwaarden.</li>
+    <li><b>Gebruiker</b>: de rechtspersoon of natuurlijke persoon die handelt in de uitoefening van beroep of bedrijf en met Storvo een overeenkomst aangaat.</li>
+    <li><b>Overeenkomst</b>: de overeenkomst tussen Storvo en gebruiker op grond waarvan Storvo de dienst ter beschikking stelt, inclusief deze voorwaarden en alle bijlagen.</li>
+    <li><b>Dienst</b>: de door Storvo als software as a service aangeboden webapplicatie op storvo.app, met alle bijbehorende onderdelen, waaronder de publieke statuspagina voor eindklanten en het verzenden van berichten namens gebruiker.</li>
+    <li><b>Account</b>: de aan gebruiker of aan een medewerker van gebruiker toegekende toegang tot de dienst.</li>
+    <li><b>Gebruikersgegevens</b>: alle gegevens die gebruiker of diens medewerkers in de dienst invoeren, uploaden, genereren of laten verwerken, waaronder voorraad, reparaties, verkopen, instellingen en gegevens van eindklanten.</li>
+    <li><b>Eindklant</b>: de klant van gebruiker, in het bijzonder degene wiens toestel door gebruiker wordt gerepareerd.</li>
+    <li><b>Schriftelijk</b>: op papier of langs elektronische weg, waaronder e-mail en mededelingen in de dienst.</li>
+    <li><b>Werkdag</b>: maandag tot en met vrijdag, met uitzondering van in Nederland erkende feestdagen.</li>
+  </ol>
+
+  <h2 id="a2">Artikel 2 &middot; Toepasselijkheid en rangorde</h2>
+  <ol class="lid">
+    <li>Deze voorwaarden zijn van toepassing op elk aanbod van Storvo, op elke overeenkomst en op alle daaruit voortvloeiende rechtsverhoudingen, ook nadat de overeenkomst is geëindigd.</li>
+    <li>De dienst wordt uitsluitend geleverd aan partijen die handelen in de uitoefening van beroep of bedrijf. Storvo contracteert niet met consumenten. Bepalingen van consumentenrecht zijn niet van toepassing.</li>
+    <li>Toepasselijkheid van door gebruiker gehanteerde inkoop- of andere voorwaarden wordt uitdrukkelijk van de hand gewezen, ook indien daarnaar in enig document van gebruiker wordt verwezen en ook indien Storvo daartegen niet uitdrukkelijk heeft geprotesteerd.</li>
+    <li>Bij tegenstrijdigheid geldt de volgende rangorde: (a) een uitdrukkelijk schriftelijk overeengekomen afwijking, (b) de verwerkersovereenkomst voor zover het de verwerking van persoonsgegevens betreft, (c) deze algemene voorwaarden, (d) overige documenten.</li>
+    <li>Afwijkingen van deze voorwaarden gelden uitsluitend indien zij uitdrukkelijk en schriftelijk door Storvo zijn aanvaard, en alleen voor de overeenkomst waarvoor zij zijn gemaakt.</li>
+    <li>Deze voorwaarden worden vóór of bij het aangaan van de overeenkomst langs elektronische weg ter beschikking gesteld en zijn op elk moment raadpleegbaar en op te slaan via storvo.app/voorwaarden. Op verzoek zendt Storvo kosteloos een exemplaar toe.</li>
+  </ol>
+
+  <h2 id="a3">Artikel 3 &middot; Totstandkoming en proefperiode</h2>
+  <ol class="lid">
+    <li>Elk aanbod van Storvo is vrijblijvend en kan tot aanvaarding worden herroepen. Kennelijke vergissingen en verschrijvingen binden Storvo niet.</li>
+    <li>De overeenkomst komt tot stand op het moment waarop gebruiker een account aanmaakt of een abonnement afsluit, dan wel op het moment waarop Storvo met de uitvoering aanvangt.</li>
+    <li>Storvo kan een kosteloze proefperiode van dertig dagen aanbieden. Deze eindigt van rechtswege zonder dat opzegging nodig is. Per gebruiker en per onderneming wordt ten hoogste één proefperiode verstrekt.</li>
+    <li>Tijdens de proefperiode wordt de dienst geleverd op basis van "as is". Storvo geeft daarbij geen enkele garantie ten aanzien van beschikbaarheid, geschiktheid of behoud van gegevens, en is voor die periode niet aansprakelijk behoudens opzet of bewuste roekeloosheid.</li>
+    <li>Storvo mag een proefperiode of een aanvraag daartoe zonder opgaaf van reden weigeren of voortijdig beëindigen.</li>
+  </ol>
+
+  <h2 id="a4">Artikel 4 &middot; Aard en reikwijdte van de dienst</h2>
+  <ol class="lid">
+    <li>Storvo levert een gestandaardiseerde webapplicatie die via internet ter beschikking wordt gesteld. Er wordt geen software geleverd, verkocht of geïnstalleerd op apparatuur van gebruiker, en er vindt geen overdracht van enig recht plaats.</li>
+    <li>Alle verbintenissen van Storvo zijn inspanningsverbintenissen, tenzij en voor zover in de overeenkomst uitdrukkelijk een resultaat is toegezegd.</li>
+    <li>De dienst wordt geleverd zoals deze op enig moment beschikbaar is. Storvo garandeert niet dat de dienst foutloos is, ononderbroken werkt, vrij is van gebreken, geschikt is voor een specifiek doel van gebruiker of voldoet aan verwachtingen die niet uitdrukkelijk zijn overeengekomen.</li>
+    <li>Storvo is geen boekhoudpakket, geen kassasysteem in de zin van fiscale bewaarplicht, geen fiscaal adviseur en geen juridisch adviseur. De dienst vervangt geen administratie, geen accountant en geen advies. Gebruiker blijft volledig zelf verantwoordelijk voor zijn administratie, zijn aangiften, zijn bewaarplicht en zijn naleving van wet- en regelgeving.</li>
+    <li>Maatwerk, koppelingen met systemen van derden, migratie van bestaande gegevens, opleiding en advies behoren niet tot de dienst, tenzij daarover een afzonderlijke schriftelijke afspraak is gemaakt.</li>
+    <li>Beschrijvingen op de website, in demonstraties, in verkoopmateriaal of in gesprekken zijn indicatief en scheppen geen verplichting, tenzij zij uitdrukkelijk schriftelijk zijn bevestigd.</li>
+  </ol>
+
+  <h2 id="a5">Artikel 5 &middot; Duur, verlenging en opzegging</h2>
+  <ol class="lid">
+    <li>Het abonnement wordt aangegaan voor de duur van één maand en wordt telkens stilzwijgend met één maand verlengd, tenzij het wordt opgezegd.</li>
+    <li>Gebruiker kan op elk moment opzeggen via de daarvoor bestemde functie in de dienst of per e-mail aan info@storvo.app. De opzegging gaat in aan het einde van de lopende, reeds betaalde periode. Tot dat moment blijft de dienst beschikbaar.</li>
+    <li>Reeds betaalde bedragen worden niet gerestitueerd, ook niet bij tussentijdse opzegging of bij verminderd gebruik.</li>
+    <li>Storvo kan de overeenkomst opzeggen met inachtneming van een opzegtermijn van twee maanden, zonder tot enige schadevergoeding gehouden te zijn.</li>
+    <li>Beide partijen kunnen de overeenkomst met onmiddellijke ingang ontbinden indien de andere partij in staat van faillissement wordt verklaard, surseance van betaling aanvraagt of verkrijgt, haar onderneming staakt of onder bewind wordt gesteld.</li>
+  </ol>
+
+  <h2 id="a6">Artikel 6 &middot; Prijzen, facturatie en betaling</h2>
+  <ol class="lid">
+    <li>De actuele tarieven staan op storvo.app. Alle bedragen zijn per maand en exclusief btw en eventuele andere heffingen van overheidswege.</li>
+    <li>Betaling geschiedt vooraf, per automatische incasso of creditcard, via de betaaldienstverlener van Storvo. Gebruiker verleent daartoe de benodigde machtiging en draagt zorg voor voldoende saldo.</li>
+    <li>Facturen worden uitsluitend elektronisch beschikbaar gesteld in het betaalportaal. Gebruiker gaat akkoord met elektronische facturatie.</li>
+    <li>Bezwaar tegen een factuur dient binnen veertien dagen na factuurdatum schriftelijk en gemotiveerd te worden gemeld. Daarna geldt de factuur als aanvaard. Bezwaar schort de betalingsverplichting niet op.</li>
+    <li>Bij een mislukte incasso onderneemt Storvo gedurende veertien dagen ten minste één nieuwe poging. Slaagt de betaling binnen die termijn niet, dan is gebruiker van rechtswege in verzuim zonder dat ingebrekestelling is vereist.</li>
+    <li>Vanaf het moment van verzuim is gebruiker de wettelijke handelsrente verschuldigd als bedoeld in artikel 6:119a BW, alsmede alle redelijke gerechtelijke en buitengerechtelijke incassokosten, met een minimum van € 40 conform de Wet normering buitengerechtelijke incassokosten.</li>
+    <li>Storvo is bij verzuim gerechtigd de toegang tot de dienst geheel of gedeeltelijk op te schorten. Opschorting laat de betalingsverplichting onverlet en geeft geen recht op restitutie, korting of schadevergoeding.</li>
+    <li>Verrekening of opschorting door gebruiker is uitgesloten.</li>
+    <li>Storvo mag de tarieven jaarlijks per 1 januari verhogen conform de consumentenprijsindex van het Centraal Bureau voor de Statistiek, zonder dat dit gebruiker een recht op beëindiging geeft.</li>
+    <li>Overige tariefwijzigingen kondigt Storvo ten minste dertig dagen van tevoren aan. Gebruiker mag het abonnement dan opzeggen tegen de datum waarop de wijziging ingaat. Gebruikt gebruiker de dienst na die datum, dan geldt het nieuwe tarief als aanvaard.</li>
+  </ol>
+
+  <h2 id="a7">Artikel 7 &middot; Verplichtingen van de gebruiker</h2>
+  <ol class="lid">
+    <li>Gebruiker draagt zorg voor de voor het gebruik benodigde apparatuur, software, internetverbinding en randapparatuur, alsmede voor de kosten daarvan.</li>
+    <li>Gebruiker verstrekt Storvo tijdig alle gegevens en medewerking die redelijkerwijs nodig zijn voor de uitvoering van de overeenkomst, en staat in voor de juistheid en volledigheid daarvan.</li>
+    <li>Gebruiker onthoudt zich van elk gebruik van de dienst dat:
+      <ul>
+        <li>in strijd is met wet- of regelgeving, de openbare orde of de goede zeden;</li>
+        <li>inbreuk maakt op rechten van derden, waaronder intellectuele eigendomsrechten en privacyrechten;</li>
+        <li>de dienst, de infrastructuur of andere gebruikers schade toebrengt, overbelast of hindert;</li>
+        <li>bestaat uit het geautomatiseerd of buitensporig bevragen van de dienst, het omzeilen van beveiligingsmaatregelen of het uitvoeren van beveiligingsonderzoek zonder voorafgaande schriftelijke toestemming;</li>
+        <li>bestaat uit het verveelvoudigen, decompileren, reverse engineeren of anderszins achterhalen van de broncode, behoudens dwingendrechtelijke uitzonderingen;</li>
+        <li>bestaat uit het aan derden ter beschikking stellen, doorverkopen, verhuren of als eigen dienst aanbieden van de dienst.</li>
+      </ul>
+    </li>
+    <li>Gebruiker is volledig verantwoordelijk voor de gebruikersgegevens en voor al het gebruik van de dienst dat via zijn accounts plaatsvindt, ook wanneer dat gebruik door medewerkers of derden geschiedt.</li>
+    <li>Gebruiker vrijwaart Storvo overeenkomstig artikel 17 voor de gevolgen van schending van dit artikel.</li>
+  </ol>
+
+  <h2 id="a8">Artikel 8 &middot; Accounts en beveiliging</h2>
+  <ol class="lid">
+    <li>Voor iedere natuurlijke persoon die de dienst gebruikt wordt een afzonderlijk account aangemaakt. Het delen van inloggegevens is niet toegestaan.</li>
+    <li>Gebruiker is verantwoordelijk voor het geheimhouden van inloggegevens, voor het intrekken van accounts van medewerkers die uit dienst treden en voor het beheer van de rechten binnen zijn organisatie.</li>
+    <li>Storvo biedt tweestapsverificatie aan. Gebruiker wordt dringend geadviseerd deze te activeren. Schade die het gevolg is van het niet activeren daarvan komt voor rekening van gebruiker.</li>
+    <li>Gebruiker meldt een vermoeden van misbruik of ongeautoriseerde toegang onverwijld aan Storvo. Tot het moment van die melding komt alle schade voortvloeiend uit dat misbruik voor rekening van gebruiker.</li>
+    <li>Storvo mag een account blokkeren indien dat naar haar redelijk oordeel noodzakelijk is voor de veiligheid of de integriteit van de dienst.</li>
+  </ol>
+
+  <h2 id="a9">Artikel 9 &middot; Beschikbaarheid en onderhoud</h2>
+  <ol class="lid">
+    <li>Storvo spant zich in de dienst beschikbaar te houden, maar geeft geen beschikbaarheidsgarantie en hanteert geen service level agreement, tenzij uitdrukkelijk schriftelijk anders is overeengekomen.</li>
+    <li>Storvo mag de dienst tijdelijk buiten gebruik stellen voor onderhoud, aanpassing of verbetering. Storvo tracht dit buiten reguliere winkeltijden te plannen en kondigt merkbaar onderhoud vooraf aan, maar is daartoe niet gehouden bij spoedeisend onderhoud of beveiligingsmaatregelen.</li>
+    <li>Buitengebruikstelling, onderbrekingen en storingen geven geen recht op restitutie, korting, ontbinding of schadevergoeding.</li>
+    <li>De dienst kent een voorziening waarmee gebruiker bij een onderbroken internetverbinding kan doorwerken. Deze voorziening is een hulpmiddel; Storvo garandeert niet dat gegevens die zijn ingevoerd tijdens een onderbreking volledig of correct worden bewaard of gesynchroniseerd.</li>
+    <li>Storvo verricht ondersteuning per e-mail op werkdagen en streeft naar een reactie binnen één werkdag. Dit is een streeftermijn en geen resultaatsverbintenis. Ondersteuning omvat geen advies over de bedrijfsvoering, de administratie of de fiscale positie van gebruiker.</li>
+  </ol>
+
+  <h2 id="a10">Artikel 10 &middot; Wijzigingen in de dienst</h2>
+  <ol class="lid">
+    <li>Storvo mag de dienst te allen tijde wijzigen, uitbreiden of onderdelen daarvan beëindigen. Storvo houdt daarbij rekening met de redelijke belangen van gebruiker.</li>
+    <li>Vervalt een functionaliteit die voor gebruiker van wezenlijk belang is, dan kondigt Storvo dat ten minste dertig dagen van tevoren aan en mag gebruiker opzeggen tegen de datum van inwerkingtreding. Verdergaande aanspraken heeft gebruiker niet.</li>
+    <li>Storvo is niet gehouden een functionaliteit te ontwikkelen, te behouden of aan te passen op verzoek van gebruiker.</li>
+  </ol>
+
+  <h2 id="a11">Artikel 11 &middot; Gegevens en back-ups</h2>
+  <ol class="lid">
+    <li>De gebruikersgegevens blijven eigendom van gebruiker. Storvo verkrijgt daarop uitsluitend een gebruiksrecht voor zover nodig om de dienst te leveren en verplichtingen uit de overeenkomst na te komen.</li>
+    <li>Storvo verkoopt gebruikersgegevens niet, gebruikt ze niet voor advertentiedoeleinden en gebruikt ze niet voor het trainen van modellen.</li>
+    <li>Storvo mag geanonimiseerde en geaggregeerde gegevens, die niet herleidbaar zijn tot gebruiker of tot enige natuurlijke persoon, gebruiken voor het verbeteren en beveiligen van de dienst.</li>
+    <li><b>Gebruiker is en blijft zelf verantwoordelijk voor het maken en bewaren van back-ups van de gebruikersgegevens.</b> De dienst biedt daartoe een exportfunctie waarmee gebruiker op elk moment kosteloos een volledige kopie kan opvragen. Gebruiker wordt geadviseerd die export periodiek te maken en buiten de dienst te bewaren.</li>
+    <li>Storvo maakt voor eigen bedrijfsvoering dagelijks back-ups en bewaart deze dertig dagen. Deze back-ups zijn uitsluitend bedoeld voor calamiteitenherstel van de dienst als geheel. Gebruiker kan daaraan geen recht ontlenen op herstel, terugplaatsing of levering van zijn individuele gegevens.</li>
+    <li><b>Storvo is niet aansprakelijk voor verlies, beschadiging, onvolledigheid, onjuistheid of ontoegankelijkheid van gebruikersgegevens</b>, ongeacht de oorzaak, behoudens opzet of bewuste roekeloosheid van Storvo. Dit geldt uitdrukkelijk mede voor verlies als gevolg van een storing, een fout in de dienst, een handeling van gebruiker of diens medewerkers, een handeling van een derde, een onderbroken verbinding, of het niet of niet tijdig maken van een export door gebruiker.</li>
+    <li>Herstelt Storvo onverplicht gegevens, dan geschiedt dat op basis van een inspanningsverbintenis en zonder enige garantie op volledigheid.</li>
+  </ol>
+
+  <h2 id="a12">Artikel 12 &middot; Prijzen, berekeningen en gegevens van derden</h2>
+  <div class="uitgelicht">
+    <p>Dit artikel is van wezenlijk belang. De dienst rekent met wat erin gezet wordt. Storvo controleert die getallen niet en kan dat ook niet.</p>
+  </div>
+  <ol class="lid">
+    <li>Alle bedragen, prijzen, marges, winstcijfers, voorraadstanden, btw-berekeningen, kortingen, totalen en overige uitkomsten die de dienst toont zijn <b>indicatief</b> en worden uitsluitend berekend op basis van de door gebruiker ingevoerde of door derden aangeleverde gegevens.</li>
+    <li>De dienst verstrekt geen prijsadvies, geen taxatie, geen offerte en geen fiscaal advies. De getoonde uitkomsten vormen geen aanbod aan enige eindklant en scheppen geen verplichting voor Storvo.</li>
+    <li>Gebruiker is verplicht iedere prijs, offerte, bon, factuur en btw-berekening zelf te controleren voordat deze aan een eindklant of aan de Belastingdienst wordt verstrekt. Storvo mag ervan uitgaan dat gebruiker die controle uitvoert.</li>
+    <li>Toont de dienst prijzen of gegevens die afkomstig zijn van leveranciers of andere externe bronnen, waaronder websites van onderdelenleveranciers, dan geldt daarvoor het volgende:
+      <ul>
+        <li>die gegevens worden ongewijzigd en uitsluitend als hulpmiddel weergegeven;</li>
+        <li>Storvo staat niet in voor de juistheid, volledigheid, actualiteit of beschikbaarheid daarvan;</li>
+        <li>de bron kan de gegevens op elk moment wijzigen, onjuist weergeven of niet meer aanbieden;</li>
+        <li>gebruiker dient elke prijs vóór bestelling bij de leverancier zelf te verifiëren.</li>
+      </ul>
+    </li>
+    <li><b>Storvo is niet aansprakelijk voor schade die voortvloeit uit een onjuiste, verouderde of onvolledige prijs of berekening</b>, noch voor de gevolgen van een op basis daarvan gedane inkoop, verkoop, offerte, prijsafspraak of aangifte. Verkoopt gebruiker onder de kostprijs, koopt hij te duur in, hanteert hij een onjuist btw-tarief of lijdt hij anderszins verlies naar aanleiding van een in de dienst getoond bedrag, dan komt dat volledig voor rekening en risico van gebruiker.</li>
+    <li>Storvo is evenmin aansprakelijk voor kosten, verplichtingen of verbintenissen die gebruiker jegens derden aangaat, waaronder bestellingen bij leveranciers, toezeggingen aan eindklanten en afspraken over levertijden, ongeacht of die zijn gedaan naar aanleiding van informatie uit de dienst.</li>
+  </ol>
+
+  <h2 id="a13">Artikel 13 &middot; Berichten aan eindklanten</h2>
+  <ol class="lid">
+    <li>De dienst kan namens gebruiker berichten verzenden aan eindklanten per e-mail en via WhatsApp. Gebruiker treedt daarbij op als afzender; Storvo is uitsluitend het technische doorgeefkanaal.</li>
+    <li>Gebruiker is er als enige verantwoordelijk voor dat voor die berichten een geldige grondslag bestaat, dat de eindklant daarvoor toestemming heeft gegeven voor zover vereist, en dat de inhoud voldoet aan wet- en regelgeving, waaronder de Telecommunicatiewet en de Algemene verordening gegevensbescherming.</li>
+    <li>WhatsApp-berichten worden standaard verzonden vanaf een zakelijk nummer van Storvo, met vermelding van de naam van gebruiker. Koppelt gebruiker een eigen nummer, dan verloopt verzending daarvandaan.</li>
+    <li>Op verzending via WhatsApp zijn tevens de voorwaarden en het beleid van Meta Platforms van toepassing. Meta kan sjablonen afkeuren, de doorvoersnelheid beperken, verzendlimieten hanteren of een nummer blokkeren. Storvo heeft daarop geen invloed en is voor de gevolgen daarvan niet aansprakelijk.</li>
+    <li>Storvo garandeert niet dat een bericht wordt afgeleverd, wordt gelezen of tijdig aankomt. Aflevering is mede afhankelijk van derden, van het toestel van de eindklant en van diens instellingen.</li>
+    <li>Gebruiker gebruikt de berichtfunctie uitsluitend voor het informeren van een eindklant over diens eigen reparatie of aankoop. Gebruik voor reclame, aanbiedingen of ongevraagde communicatie is niet toegestaan. Storvo mag de functie bij overtreding met onmiddellijke ingang uitschakelen.</li>
+    <li>Boetes, claims of kosten die voortvloeien uit door gebruiker verzonden berichten komen volledig voor rekening van gebruiker, die Storvo daarvoor vrijwaart overeenkomstig artikel 17.</li>
+  </ol>
+
+  <h2 id="a14">Artikel 14 &middot; Diensten en storingen van derden</h2>
+  <ol class="lid">
+    <li>Storvo maakt voor de levering van de dienst gebruik van derden, waaronder aanbieders van hosting, database, e-mailverzending, berichtendiensten en betalingsverwerking.</li>
+    <li>Storvo is niet aansprakelijk voor tekortkomingen, storingen, prijswijzigingen, beleidswijzigingen of beëindiging van dienstverlening door die derden, noch voor de gevolgen daarvan voor gebruiker.</li>
+    <li>Storvo is evenmin aansprakelijk voor de internetverbinding van gebruiker, voor diens apparatuur, browser of randapparatuur, of voor storingen in het openbare telecommunicatienetwerk.</li>
+    <li>Storvo mag een derde vervangen door een andere partij, mits het niveau van de dienstverlening daardoor niet wezenlijk verslechtert.</li>
+  </ol>
+
+  <h2 id="a15">Artikel 15 &middot; Intellectuele eigendom</h2>
+  <ol class="lid">
+    <li>Alle intellectuele eigendomsrechten op de dienst, de software, de broncode, de vormgeving, de documentatie, de handelsnaam Storvo en het logo berusten uitsluitend bij Storvo of haar licentiegevers.</li>
+    <li>Gebruiker verkrijgt uitsluitend een niet-exclusief, niet-overdraagbaar en niet-sublicentieerbaar gebruiksrecht voor de duur van de overeenkomst. Dat recht eindigt van rechtswege bij het einde van de overeenkomst.</li>
+    <li>Gebruiker mag geen aanduidingen van intellectuele eigendom verwijderen of wijzigen.</li>
+    <li>Doet gebruiker een suggestie, verbetervoorstel of idee, dan mag Storvo dat vrijelijk en zonder vergoeding gebruiken, zonder dat daaruit enig recht voor gebruiker ontstaat.</li>
+    <li>Bij inbreuk op de rechten van Storvo verbeurt gebruiker een direct opeisbare boete van € 5.000 per overtreding, vermeerderd met € 500 per dag dat de overtreding voortduurt, onverminderd het recht van Storvo op volledige schadevergoeding en nakoming.</li>
+  </ol>
+
+  <h2 id="a16">Artikel 16 &middot; Geheimhouding</h2>
+  <ol class="lid">
+    <li>Partijen houden alle vertrouwelijke informatie die zij van elkaar ontvangen geheim en gebruiken die uitsluitend voor de uitvoering van de overeenkomst.</li>
+    <li>Deze verplichting geldt niet voor informatie die reeds openbaar was, die zonder schending openbaar wordt, of die op grond van wet of rechterlijk bevel openbaar gemaakt moet worden.</li>
+    <li>De verplichting blijft van kracht na het einde van de overeenkomst.</li>
+    <li>Storvo mag de naam en het logo van gebruiker vermelden als referentie, tenzij gebruiker daartegen schriftelijk bezwaar maakt.</li>
+  </ol>
+
+  <h2 id="a17">Artikel 17 &middot; Vrijwaring</h2>
+  <ol class="lid">
+    <li>Gebruiker vrijwaart Storvo volledig tegen alle aanspraken van derden, waaronder eindklanten, medewerkers van gebruiker, leveranciers en toezichthouders, die verband houden met of voortvloeien uit:
+      <ul>
+        <li>de gebruikersgegevens of de inhoud daarvan;</li>
+        <li>het gebruik van de dienst door gebruiker of diens medewerkers;</li>
+        <li>berichten die namens gebruiker aan eindklanten zijn verzonden;</li>
+        <li>prijzen, offertes, facturen of toezeggingen die gebruiker heeft gedaan;</li>
+        <li>een tekortkoming van gebruiker in de nakoming van de overeenkomst of van wet- en regelgeving, waaronder de privacywetgeving.</li>
+      </ul>
+    </li>
+    <li>De vrijwaring omvat mede alle door Storvo gemaakte kosten van juridische bijstand en van verweer, alsmede opgelegde boetes, en geldt ongeacht of de aanspraak gegrond is.</li>
+    <li>Gebruiker stelt Storvo onverwijld op de hoogte van een aanspraak en verleent alle redelijke medewerking. Storvo bepaalt zelf de wijze van verweer en is niet gehouden een schikking te aanvaarden.</li>
+    <li>De vrijwaringsverplichting van gebruiker is niet beperkt in omvang en valt niet onder de beperkingen van artikel 18.</li>
+  </ol>
+
+  <h2 id="a18">Artikel 18 &middot; Aansprakelijkheid</h2>
+
+  <div class="uitgelicht">
+    <p>Dit artikel is opgebouwd in trappen. Het uitgangspunt in lid 2 is dat Storvo niet aansprakelijk
+      is. Mocht een rechter oordelen dat die uitsluiting in een concreet geval niet geheel in stand
+      kan blijven, dan gelden achtereenvolgens de beperkingen in lid 7, 8 en 9. Elke volgende trap
+      geldt uitsluitend voor zover de voorgaande geen stand houdt.</p>
+  </div>
+
+  <h3>Uitgangspunt</h3>
+  <ol class="lid">
+    <li>Storvo levert een gestandaardiseerde softwaredienst tegen een lage, vaste maandvergoeding die in geen enkele verhouding staat tot de omzet, de bedrijfsrisico's en de mogelijke schade aan de zijde van gebruiker. De in dit artikel opgenomen uitsluiting en beperkingen vormen een wezenlijke voorwaarde waaronder Storvo bereid is te contracteren, zijn uitdrukkelijk in de prijs verdisconteerd en zijn tussen partijen een bewuste risicoverdeling.</li>
+
+    <li><b>Storvo is niet aansprakelijk voor enige schade van gebruiker of van derden, uit welken hoofde dan ook, die verband houdt met de dienst, met het gebruik of de onmogelijkheid van gebruik daarvan, of met de overeenkomst.</b> Iedere aansprakelijkheid van Storvo is uitgesloten, ongeacht de grondslag van de vordering.</li>
+
+    <li>De uitsluiting in lid 2 omvat in elk geval, maar niet uitsluitend, schade bestaande uit of verband houdend met:
+      <ul>
+        <li>verlies, beschadiging, onvolledigheid, onjuistheid of ontoegankelijkheid van gegevens, alsmede de kosten van reconstructie daarvan;</li>
+        <li>onjuiste, verouderde of onvolledige prijzen, marges, voorraadstanden, btw-berekeningen of andere uitkomsten die de dienst toont, en de gevolgen van inkoop, verkoop, offertes of aangiften die daarop zijn gebaseerd;</li>
+        <li>gegevens die afkomstig zijn van leveranciers of andere externe bronnen;</li>
+        <li>berichten aan eindklanten die niet, niet tijdig, onjuist of dubbel zijn afgeleverd;</li>
+        <li>het niet beschikbaar zijn van de dienst, onderbrekingen, storingen, vertraging of onderhoud;</li>
+        <li>gedragingen, storingen, beleidswijzigingen of beëindiging van dienstverlening door derden waarvan Storvo afhankelijk is;</li>
+        <li>ongeautoriseerde toegang tot een account, misbruik van inloggegevens of handelingen van medewerkers van gebruiker;</li>
+        <li>gederfde winst, gemiste omzet, gemiste besparingen, bedrijfsstagnatie, stilstand, vertraging, verlies van klanten, verminderde goodwill en reputatieschade;</li>
+        <li>boetes, dwangsommen of maatregelen van toezichthouders, en aanspraken van derden waaronder eindklanten;</li>
+        <li>alle overige indirecte schade en gevolgschade.</li>
+      </ul>
+    </li>
+
+    <li>De uitsluiting geldt eveneens ten gunste van personen voor wie Storvo verantwoordelijk is en van door Storvo ingeschakelde derden, en geldt ongeacht of de vordering wordt gegrond op wanprestatie, onrechtmatige daad, onverschuldigde betaling, ongerechtvaardigde verrijking of enige andere grondslag.</li>
+
+    <li>Gebruiker heeft de mogelijkheid om met Storvo tegen een hogere vergoeding een ruimere aansprakelijkheid overeen te komen. Gebruiker kan daartoe voorafgaand aan of tijdens de overeenkomst een schriftelijk verzoek doen. Maakt gebruiker van die mogelijkheid geen gebruik, dan aanvaardt hij de risicoverdeling van dit artikel.</li>
+
+    <li>Aansprakelijkheid van Storvo ontstaat in geen geval voordat gebruiker Storvo onverwijld en deugdelijk schriftelijk in gebreke heeft gesteld, daarbij een redelijke termijn tot herstel heeft gesteld van ten minste dertig dagen, en Storvo ook na afloop van die termijn toerekenbaar tekortschiet. De ingebrekestelling bevat een zo volledig en gedetailleerd mogelijke omschrijving van de tekortkoming. Gebruiker is bovendien gehouden zijn schade zoveel mogelijk te beperken; nalaten daarvan komt voor zijn rekening.</li>
+  </ol>
+
+  <h3>Eerste terugvalregeling</h3>
+  <ol class="lid" start="7" style="counter-reset:lid 6">
+    <li>Voor zover een bevoegde rechter oordeelt dat de uitsluiting in lid 2 in een concreet geval geheel of gedeeltelijk geen stand houdt, geldt in plaats daarvan het volgende. Storvo is dan uitsluitend aansprakelijk voor directe schade, waaronder uitsluitend wordt verstaan: (a) redelijke kosten ter vaststelling van de oorzaak en de omvang van de schade, (b) redelijke kosten gemaakt om de gebrekkige prestatie van Storvo aan de overeenkomst te laten beantwoorden, en (c) redelijke kosten ter voorkoming of beperking van de schade, mits gebruiker aantoont dat die kosten daadwerkelijk tot beperking van directe schade hebben geleid. Iedere aansprakelijkheid voor de in lid 3 genoemde schadeposten blijft ook in dat geval uitgesloten. De aansprakelijkheid is daarbij per gebeurtenis, waarbij een reeks samenhangende gebeurtenissen als één gebeurtenis geldt, beperkt tot het bedrag dat gebruiker in de twaalf maanden voorafgaand aan de schadeveroorzakende gebeurtenis exclusief btw aan Storvo heeft betaald, met een absoluut maximum van € 250.</li>
+  </ol>
+
+  <h3>Tweede terugvalregeling</h3>
+  <ol class="lid" start="8" style="counter-reset:lid 7">
+    <li>Voor zover ook lid 7 geheel of gedeeltelijk geen stand houdt, is de totale aansprakelijkheid van Storvo in alle gevallen beperkt tot € 500 per kalenderjaar, over alle gebeurtenissen in dat jaar tezamen.</li>
+    <li>Voor zover ook lid 8 geen stand houdt, geldt de meest verstrekkende beperking van aansprakelijkheid die naar het oordeel van de rechter wel geldig kan worden overeengekomen, waarbij partijen uitdrukkelijk beogen de aansprakelijkheid van Storvo tot het uiterste te beperken.</li>
+    <li>Is Storvo voor de schade verzekerd, dan is haar aansprakelijkheid in aanvulling op het voorgaande in alle gevallen beperkt tot het bedrag dat de verzekeraar in het betreffende geval daadwerkelijk uitkeert, vermeerderd met het eigen risico.</li>
+  </ol>
+
+  <h3>Grenzen</h3>
+  <ol class="lid" start="11" style="counter-reset:lid 10">
+    <li>Het in dit artikel bepaalde blijft buiten toepassing voor zover de schade het gevolg is van opzet of bewuste roekeloosheid van Storvo zelf, dan wel voor zover dwingend recht zich tegen toepassing verzet. In dat geval geldt de meest vergaande beperking die wel is toegestaan.</li>
+    <li>Iedere vordering van gebruiker vervalt overeenkomstig artikel 23.</li>
+  </ol>
+
+  <h2 id="a19">Artikel 19 &middot; Overmacht</h2>
+  <ol class="lid">
+    <li>Storvo is niet gehouden tot nakoming en niet aansprakelijk indien zij daartoe verhinderd wordt door overmacht.</li>
+    <li>Onder overmacht wordt in elk geval begrepen: storingen of uitval bij hosting-, netwerk-, database-, e-mail-, berichten- of betaaldienstverleners; storingen in het internet of in het openbare telecommunicatienetwerk; stroomuitval; cyberaanvallen, gijzelsoftware, virussen en pogingen tot ongeautoriseerde toegang; wijzigingen in het beleid, de voorwaarden of de beschikbaarheid van platforms van derden waaronder Meta Platforms en Stripe; overheidsmaatregelen; epidemieën en pandemieën; oorlog, terrorisme en maatschappelijke onrust; natuurrampen, brand en wateroverlast; staking of ziekte, ook bij toeleveranciers; en elke andere omstandigheid buiten de redelijke invloedssfeer van Storvo.</li>
+    <li>Duurt de overmacht langer dan dertig dagen, dan mag ieder der partijen de overeenkomst schriftelijk ontbinden voor het niet-uitgevoerde deel, zonder tot enige schadevergoeding gehouden te zijn.</li>
+    <li>Heeft Storvo bij het intreden van de overmacht al gedeeltelijk gepresteerd, dan is zij gerechtigd dat deel afzonderlijk in rekening te brengen.</li>
+  </ol>
+
+  <h2 id="a20">Artikel 20 &middot; Opschorting en beëindiging door Storvo</h2>
+  <ol class="lid">
+    <li>Storvo mag de dienst met onmiddellijke ingang geheel of gedeeltelijk opschorten of de overeenkomst ontbinden, zonder ingebrekestelling en zonder tot schadevergoeding gehouden te zijn, indien:
+      <ul>
+        <li>gebruiker in verzuim is met betaling;</li>
+        <li>gebruiker in strijd handelt met artikel 7, 8 of 13;</li>
+        <li>er een redelijk vermoeden bestaat van fraude, misbruik of onrechtmatig gebruik;</li>
+        <li>de veiligheid of integriteit van de dienst of van andere gebruikers dat vereist;</li>
+        <li>een bevoegde autoriteit of een derde waarvan Storvo afhankelijk is daartoe verplicht.</li>
+      </ul>
+    </li>
+    <li>Storvo stelt gebruiker van opschorting zo spoedig mogelijk op de hoogte, tenzij dat redelijkerwijs niet mogelijk is of wettelijk niet is toegestaan.</li>
+    <li>Opschorting geeft geen recht op restitutie, korting of schadevergoeding en laat de betalingsverplichting onverlet.</li>
+    <li>Alle vorderingen van Storvo worden bij ontbinding onmiddellijk opeisbaar.</li>
+  </ol>
+
+  <h2 id="a21">Artikel 21 &middot; Gevolgen van beëindiging</h2>
+  <ol class="lid">
+    <li>Bij het einde van de overeenkomst vervalt het gebruiksrecht van gebruiker onmiddellijk.</li>
+    <li>Storvo houdt de gebruikersgegevens gedurende negentig dagen na het einde beschikbaar, zodat gebruiker een export kan maken of opvragen. Deze termijn geldt niet indien de overeenkomst is beëindigd wegens misbruik of onrechtmatig gebruik; in dat geval kan Storvo de gegevens na dertig dagen verwijderen.</li>
+    <li>Na afloop van die termijn verwijdert Storvo de gebruikersgegevens definitief, behoudens wat zij op grond van de wet moet bewaren. Gebruiker kan Storvo daarvoor niet aansprakelijk houden.</li>
+    <li>Bepalingen die naar hun aard bestemd zijn om na het einde voort te duren blijven van kracht, waaronder de artikelen 11, 12, 15, 16, 17, 18, 23 en 27.</li>
+  </ol>
+
+  <h2 id="a22">Artikel 22 &middot; Persoonsgegevens</h2>
+  <ol class="lid">
+    <li>Bij de verwerking van persoonsgegevens van eindklanten is gebruiker verwerkingsverantwoordelijke en Storvo verwerker in de zin van de Algemene verordening gegevensbescherming.</li>
+    <li>De daarbij geldende afspraken zijn vastgelegd in de <a href="/verwerkersovereenkomst">verwerkersovereenkomst</a>, die integraal onderdeel uitmaakt van de overeenkomst en waarmee gebruiker bij het aangaan van de overeenkomst instemt.</li>
+    <li>Voor de verwerking van gegevens van gebruiker zelf is Storvo verwerkingsverantwoordelijke. Zie de <a href="/privacy">privacyverklaring</a>.</li>
+    <li>Gebruiker staat ervoor in dat hij gerechtigd is de gegevens die hij invoert te verwerken en door Storvo te laten verwerken.</li>
+  </ol>
+
+  <h2 id="a23">Artikel 23 &middot; Klachten en verval van rechten</h2>
+  <ol class="lid">
+    <li>Gebruiker dient een gebrek in de dienst schriftelijk te melden binnen dertig dagen nadat hij het heeft ontdekt of redelijkerwijs had moeten ontdekken. Bij niet tijdige melding vervalt elke aanspraak.</li>
+    <li>Iedere vordering van gebruiker jegens Storvo vervalt in ieder geval door verloop van twaalf maanden na het ontstaan daarvan.</li>
+    <li>Een klacht schort de betalingsverplichting niet op.</li>
+  </ol>
+
+  <h2 id="a24">Artikel 24 &middot; Overdracht</h2>
+  <ol class="lid">
+    <li>Gebruiker mag zijn rechten en verplichtingen uit de overeenkomst niet overdragen zonder voorafgaande schriftelijke toestemming van Storvo. Deze bepaling heeft goederenrechtelijke werking als bedoeld in artikel 3:83 lid 2 BW.</li>
+    <li>Storvo mag haar rechten en verplichtingen overdragen aan een derde in het kader van een overname, fusie of omzetting van de onderneming, waaronder inbreng in een besloten vennootschap. Storvo stelt gebruiker daarvan schriftelijk op de hoogte. Gebruiker verleent daarvoor bij voorbaat toestemming.</li>
+  </ol>
+
+  <h2 id="a25">Artikel 25 &middot; Wijziging van deze voorwaarden</h2>
+  <ol class="lid">
+    <li>Storvo mag deze voorwaarden wijzigen. Wijzigingen treden in werking dertig dagen na aankondiging per e-mail en in de dienst.</li>
+    <li>Betreft de wijziging een voor gebruiker wezenlijke verslechtering, dan mag gebruiker de overeenkomst opzeggen tegen de datum van inwerkingtreding. Doet hij dat niet en blijft hij de dienst gebruiken, dan gelden de gewijzigde voorwaarden als aanvaard.</li>
+    <li>Wijzigingen van ondergeschikt belang, waaronder verbeteringen van taal, verwijzingen en vormgeving, alsmede wijzigingen die voortvloeien uit gewijzigde wetgeving, mag Storvo direct doorvoeren.</li>
+  </ol>
+
+  <h2 id="a26">Artikel 26 &middot; Nietigheid en conversie</h2>
+  <ol class="lid">
+    <li>Is een bepaling van deze voorwaarden nietig, vernietigbaar of anderszins onverbindend, dan blijven de overige bepalingen onverkort van kracht.</li>
+    <li>Partijen treden in dat geval in overleg om de betreffende bepaling te vervangen door een geldige bepaling die de strekking daarvan zoveel mogelijk benadert. Komt dat overleg niet tot stand, dan geldt van rechtswege de geldige bepaling die de oorspronkelijke bedoeling het dichtst benadert.</li>
+    <li>Dit geldt in het bijzonder voor de artikelen 11, 12, 17 en 18: wordt een beperking daarin geheel of gedeeltelijk onverbindend geoordeeld, dan geldt de meest verstrekkende beperking die wel geldig is.</li>
+  </ol>
+
+  <h2 id="a27">Artikel 27 &middot; Toepasselijk recht en geschillen</h2>
+  <ol class="lid">
+    <li>Op de overeenkomst en op deze voorwaarden is uitsluitend Nederlands recht van toepassing. Toepasselijkheid van het Weens Koopverdrag is uitgesloten.</li>
+    <li>Partijen spannen zich in een geschil eerst in onderling overleg op te lossen.</li>
+    <li>Lukt dat niet, dan worden geschillen bij uitsluiting voorgelegd aan de bevoegde rechter van de rechtbank Zeeland-West-Brabant, locatie Breda, onverminderd het recht van Storvo om te procederen bij de volgens de wet bevoegde rechter.</li>
+    <li>De Nederlandse tekst van deze voorwaarden is bindend. Een vertaling dient uitsluitend het gemak.</li>
+  </ol>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="rij">
+      <div>Storvo &middot; Alles geregeld.</div>
+      <div class="rechts">
+        <a href="/">Home</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/verwerkersovereenkomst">Verwerkersovereenkomst</a>
+        <a href="mailto:info@storvo.app">Contact</a>
+      </div>
+    </div>
+    <div class="c">&copy; 2026 Storvo &middot; KvK 82379920 &middot; btw NL003671243B93 &middot; Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)</div>
+  </div>
+</footer>
+
+</body>
+</html>
