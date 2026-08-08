@@ -131,7 +131,55 @@ const WOORDEN = {
 'Sms de klant':'Text the customer', 'Mail de klant':'Email the customer',
 'Als probleem':'As a problem', 'Intern opslaan':'Save internally',
 'Ook voor klant':'Also for the customer',
-'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Alle modellen':'All models',
+'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Zoeken op gsm-world':'Search gsm-world',
+
+/* ---------- welke uitvoering is het toestel? ---------- */
+'Welke uitvoering is het? Kies er een, anders bestel je straks een onderdeel dat niet past.':
+  'Which version is it? Pick one, otherwise you will end up ordering a part that does not fit.',
+'Bedoel je deze uitvoering?':'Do you mean this version?',
+'Van dit toestel bestaan ook andere uitvoeringen.':'This device also comes in other versions.',
+'Kies eerst welke uitvoering het toestel is':'First pick which version the device is',
+'De 14 en 14 Plus hebben een ander scherm dan de Pro-modellen.':
+  'The 14 and 14 Plus have a different screen from the Pro models.',
+'De 12 en 12 Pro delen hetzelfde scherm, de mini en Pro Max niet.':
+  'The 12 and 12 Pro share the same screen, the mini and Pro Max do not.',
+'De 11 heeft LCD, de Pro-modellen OLED. Andere onderdelen.':
+  'The 11 has an LCD, the Pro models OLED. Different parts.',
+'Er zijn drie SE-generaties. De 2016 lijkt op een iPhone 5s, de 2020 en 2022 op een iPhone 8.':
+  'There are three SE generations. The 2016 looks like an iPhone 5s, the 2020 and 2022 like an iPhone 8.',
+'Twee verschillende toestellen met een ander scherm en een andere behuizing.':
+  'Two different devices with a different screen and a different housing.',
+'De 4G heeft een PLS LCD, de 5G een ander paneel. Niet uitwisselbaar.':
+  'The 4G has a PLS LCD, the 5G a different panel. Not interchangeable.',
+'De 4G heeft AMOLED, de 5G een LCD en een groter scherm. Echt andere onderdelen.':
+  'The 4G has AMOLED, the 5G an LCD and a bigger screen. Genuinely different parts.',
+'Van de A25 bestaat alleen een 5G-versie.':'The A25 only exists as a 5G version.',
+'Van de A26 bestaat alleen een 5G-versie.':'The A26 only exists as a 5G version.',
+'De 4G heeft een Super AMOLED van 6,4 inch, de 5G een TFT-LCD van 6,5 inch. Schermen passen niet over en weer.':
+  'The 4G has a 6.4 inch Super AMOLED, the 5G a 6.5 inch TFT LCD. The screens do not swap over.',
+'Van de A33 bestaat alleen een 5G-versie.':'The A33 only exists as a 5G version.',
+'Van de A34 bestaat alleen een 5G-versie.':'The A34 only exists as a 5G version.',
+'Van de A35 bestaat alleen een 5G-versie.':'The A35 only exists as a 5G version.',
+'Van de A36 bestaat alleen een 5G-versie.':'The A36 only exists as a 5G version.',
+'Van de A42 bestaat alleen een 5G-versie.':'The A42 only exists as a 5G version.',
+'De 5G is een ander toestel met een groter scherm.':'The 5G is a different device with a bigger screen.',
+'Drie uitvoeringen. De 52s is weer net anders dan de 52 5G.':
+  'Three versions. The 52s differs again from the 52 5G.',
+'Van de A53 bestaat alleen een 5G-versie. Zoeken op "A53" levert daarom niets op.':
+  'The A53 only exists as a 5G version, which is why searching for "A53" turns up nothing.',
+'Van de A54 bestaat alleen een 5G-versie.':'The A54 only exists as a 5G version.',
+'Van de A55 bestaat alleen een 5G-versie.':'The A55 only exists as a 5G version.',
+'Van de A56 bestaat alleen een 5G-versie.':'The A56 only exists as a 5G version.',
+'Van de A73 bestaat alleen een 5G-versie.':'The A73 only exists as a 5G version.',
+'Zeg er de generatie bij, de vouwschermen verschillen per jaar volledig.':
+  'Add the generation: the folding screens differ completely from year to year.',
+'De 4G en 5G zijn andere toestellen. Let ook op: sommige leveranciers verkopen LCD waar AMOLED in hoort.':
+  'The 4G and 5G are different devices. Also watch out: some suppliers sell an LCD where an AMOLED belongs.',
+'De 4G heeft een AMOLED van 6,43 inch, de 5G een LCD van 6,5 inch. Ze delen vrijwel geen onderdelen.':
+  'The 4G has a 6.43 inch AMOLED, the 5G a 6.5 inch LCD. They share almost no parts.',
+'Zeg er de generatie bij.':'Add the generation.',
+'De 4G en 5G hebben een ander scherm.':'The 4G and 5G have a different screen.',
+'De 4G heeft AMOLED, de 5G een LCD.':'The 4G has AMOLED, the 5G an LCD.',
 'Voorraad foneday':'Foneday stock',
 'Open foneday login':'Open Foneday login', 'Open mobileparts login':'Open Mobileparts login',
 'Verwachte ophaaltijd voor de klant':'Expected pickup time for the customer',

@@ -400,6 +400,22 @@
   .ondItem{padding:12px 15px; background:var(--soft-2); border-radius:14px;}
   .warnbox{background:var(--amber-soft); border:none; border-radius:var(--radius-s); padding:16px 18px; line-height:1.6; color:var(--amber-tekst);}
   .infobox{background:var(--lblauw); border:none; border-radius:var(--radius-s); padding:16px 18px; line-height:1.65; color:var(--muted);}
+
+  /* keuzevak onder het toestelveld: welke uitvoering is het? */
+  .tstbox{border-radius:var(--radius-s); padding:14px 16px; margin:-4px 0 12px; max-width:82ch;
+    animation:tstop .22s cubic-bezier(.22,1,.36,1) both;}
+  .tstbox.vraag{background:var(--amber-soft); color:var(--amber-tekst);}
+  .tstbox.tip{background:var(--soft-2); color:var(--muted);}
+  .tsttxt{font-size:13.5px; line-height:1.6;}
+  .tstlet{display:inline-block; margin-top:4px; opacity:.85;}
+  .tstrij{display:flex; flex-wrap:wrap; gap:8px; margin-top:11px;}
+  .tstknop{background:var(--card); border:1.5px solid var(--border); color:var(--tekst);
+    padding:8px 15px; border-radius:var(--pil); font:inherit; font-size:13.5px; font-weight:600;
+    cursor:pointer; transition:.15s;}
+  .tstknop:hover{border-color:var(--oranje); color:var(--oranje); background:var(--lblauw); transform:translateY(-1px);}
+  input.mistoestel{border-color:var(--amber); box-shadow:0 0 0 3px rgba(232,179,29,.15);}
+  @keyframes tstop{from{opacity:0; transform:translateY(-5px)} to{opacity:1; transform:none}}
+  @media(prefers-reduced-motion:reduce){ .tstbox{animation:none;} }
   .infobox b{color:var(--oranje);}
   .sneltijd button{background:var(--card); border:1.5px solid var(--border); padding:9px 15px; border-radius:var(--pil); transition:.15s;}
   .sneltijd button:hover{border-color:var(--oranje); color:var(--oranje); background:var(--lblauw);}
@@ -1005,13 +1021,14 @@
     <div class="card">
       <h2><svg class="i"><use href="#i-phone"/></svg>Toestel en reparatie</h2>
       <div class="grid" style="margin-bottom:12px">
-        <div><label>Toestel</label><input id="r_toestel" list="modellenList" placeholder="bijv. iPhone 14" oninput="updateZoekLinks()"><datalist id="modellenList"></datalist></div>
+        <div><label>Toestel</label><input id="r_toestel" list="modellenList" placeholder="bijv. iPhone 14" oninput="updateZoekLinks(); toestelTeken()" onchange="toestelAanvullen()"><datalist id="modellenList"></datalist></div>
         <div><label>Reparatie</label><input id="r_type" placeholder="bijv. scherm, batterij, laadpoort" oninput="checkSeal(); updateZoekLinks()"></div>
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
       </div>
+      <div id="toestelKeuze" hidden></div>
       <div class="row" style="margin-bottom:8px">
         <a class="btn ghost small" id="zoekGsm" href="https://gsm-world.nl/reparaties/" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Prijs op gsm-world.nl</a>
-        <a class="btn ghost small" href="https://gsm-world.nl/reparaties/" target="_blank" title="Alle toestellen op gsm-world.nl">Alle modellen</a>
+        <a class="btn ghost small" id="zoekGsmZoek" href="https://gsm-world.nl/reparaties/" target="_blank" title="Zoeken op gsm-world.nl als de pagina niet klopt">Zoeken op gsm-world</a>
         <a class="btn ghost small" id="zoekFoneday" href="https://www.foneday.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Voorraad foneday</a>
         <a class="btn ghost small" id="zoekMobileparts" href="https://www.mobileparts.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Mobileparts <b>(ex. btw)</b></a>
       </div>
@@ -3935,21 +3952,283 @@ function repLeverTekst(ts){
   return dstr;
 }
 function vulRepDatalists(){
-  document.getElementById('modellenList').innerHTML=state.modellen.map(m=>`<option value="${esc(m.naam)}">`).join('');
+  /* Eerst de modellen van de winkel zelf, daarna de landelijke lijst. Wat de
+     winkel zelf heeft ingevoerd staat dus bovenaan bij het typen.           */
+  const eigen=state.modellen.map(m=>m.naam);
+  const eigenPlat=new Set(eigen.map(tstNorm));
+  const rest=tstAlleNamen().filter(n=>!eigenPlat.has(tstNorm(n)));
+  document.getElementById('modellenList').innerHTML=eigen.concat(rest).map(n=>`<option value="${esc(n)}">`).join('');
   document.getElementById('ondList').innerHTML=state.onderdelen.map(o=>`<option value="${esc(o.naam)}">`).join('');
 }
-/* gsm-world heeft per toestel een eigen pagina, bijvoorbeeld
-   gsm-world.nl/iphone-16. Zoeken op "iPhone 16 scherm" levert daar niets op;
-   je moet naar het model zelf. Foneday en mobileparts zijn wél zoekpagina's,
-   die krijgen toestel én onderdeel mee.                                     */
+/* gsm-world heeft per toestel een eigen pagina: gsm-world.nl/iphone-16,
+   gsm-world.nl/galaxy-a53-5g. Zoeken op "iPhone 16 scherm" levert daar niets
+   op, want de reparatiesoort staat óp die pagina. We sturen dus alleen het
+   model mee. Twee dingen vallen op aan hun adressen: het merk staat er niet
+   voor (galaxy-a53-5g, niet samsung-galaxy-a53-5g) en 4G-toestellen krijgen
+   geen achtervoegsel, alleen de 5G-versies. Daar houden we rekening mee.
+   Lukt het toch niet, dan staat de zoekknop ernaast.                        */
 function gsmModelPad(toestel){
-  const m=String(toestel||'').toLowerCase()
+  return String(toestel||'').toLowerCase()
     .replace(/[àáâä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
     .replace(/[òóôö]/g,'o').replace(/[ùúûü]/g,'u')
     .replace(/\+/g,' plus ')
     .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^(samsung|apple|xiaomi|google|motorola)-/,'')
+    .replace(/-4g$/,'')
     .replace(/^-+|-+$/g,'');
-  return m;
+}
+
+/* ═══════════════════ TOESTELLEN ═══════════════════
+   Veel telefoons bestaan in uitvoeringen die er hetzelfde uitzien maar heel
+   andere onderdelen hebben. De Galaxy A32 4G heeft een AMOLED-scherm, de
+   A32 5G een LCD; bestel je de verkeerde, dan past hij niet en ben je je geld
+   kwijt. Van de A53 bestaat juist alleen een 5G-versie, dus zoeken op "A53"
+   levert nergens iets op.
+
+   Deze lijst kent die valkuilen. Typt de winkel een naam die niet af is, dan
+   vraagt de software welke uitvoering het is voordat de reparatie erdoor kan.
+
+   kies:true  = de kale naam bestaat niet als product, er moet gekozen worden
+   kies:false = de kale naam is een echt model, de rest tonen we als tip
+   let        = korte waarschuwing waarom het uitmaakt                        */
+const TOESTELDB=[
+
+/* ---------- Apple ---------- */
+{m:'Apple', f:'iPhone 17', v:['iPhone 17','iPhone 17 Air','iPhone 17 Pro','iPhone 17 Pro Max']},
+{m:'Apple', f:'iPhone 16', v:['iPhone 16','iPhone 16 Plus','iPhone 16 Pro','iPhone 16 Pro Max']},
+{m:'Apple', f:'iPhone 16e', v:['iPhone 16e']},
+{m:'Apple', f:'iPhone 15', v:['iPhone 15','iPhone 15 Plus','iPhone 15 Pro','iPhone 15 Pro Max']},
+{m:'Apple', f:'iPhone 14', v:['iPhone 14','iPhone 14 Plus','iPhone 14 Pro','iPhone 14 Pro Max'],
+  let:'De 14 en 14 Plus hebben een ander scherm dan de Pro-modellen.'},
+{m:'Apple', f:'iPhone 13', v:['iPhone 13','iPhone 13 mini','iPhone 13 Pro','iPhone 13 Pro Max']},
+{m:'Apple', f:'iPhone 12', v:['iPhone 12','iPhone 12 mini','iPhone 12 Pro','iPhone 12 Pro Max'],
+  let:'De 12 en 12 Pro delen hetzelfde scherm, de mini en Pro Max niet.'},
+{m:'Apple', f:'iPhone 11', v:['iPhone 11','iPhone 11 Pro','iPhone 11 Pro Max'],
+  let:'De 11 heeft LCD, de Pro-modellen OLED. Andere onderdelen.'},
+{m:'Apple', f:'iPhone XS', v:['iPhone XS','iPhone XS Max']},
+{m:'Apple', f:'iPhone XR', v:['iPhone XR']},
+{m:'Apple', f:'iPhone X', v:['iPhone X']},
+{m:'Apple', f:'iPhone SE', kies:true, v:['iPhone SE 2016 (1e generatie)','iPhone SE 2020 (2e generatie)','iPhone SE 2022 (3e generatie)'],
+  let:'Er zijn drie SE-generaties. De 2016 lijkt op een iPhone 5s, de 2020 en 2022 op een iPhone 8.'},
+{m:'Apple', f:'iPhone 8', v:['iPhone 8','iPhone 8 Plus']},
+{m:'Apple', f:'iPhone 7', v:['iPhone 7','iPhone 7 Plus']},
+{m:'Apple', f:'iPhone 6s', v:['iPhone 6s','iPhone 6s Plus']},
+{m:'Apple', f:'iPhone 6', v:['iPhone 6','iPhone 6 Plus']},
+
+/* ---------- Samsung Galaxy A: hier zit de meeste verwarring ---------- */
+{m:'Samsung', f:'Galaxy A06', kies:true, v:['Galaxy A06 4G','Galaxy A06 5G']},
+{m:'Samsung', f:'Galaxy A05', v:['Galaxy A05','Galaxy A05s']},
+{m:'Samsung', f:'Galaxy A04', v:['Galaxy A04','Galaxy A04s','Galaxy A04e']},
+{m:'Samsung', f:'Galaxy A03', v:['Galaxy A03','Galaxy A03s']},
+{m:'Samsung', f:'Galaxy A02s', v:['Galaxy A02s']},
+{m:'Samsung', f:'Galaxy A12', v:['Galaxy A12']},
+{m:'Samsung', f:'Galaxy A13', kies:true, v:['Galaxy A13 4G','Galaxy A13 5G'],
+  let:'Twee verschillende toestellen met een ander scherm en een andere behuizing.'},
+{m:'Samsung', f:'Galaxy A14', kies:true, v:['Galaxy A14 4G','Galaxy A14 5G'],
+  let:'De 4G heeft een PLS LCD, de 5G een ander paneel. Niet uitwisselbaar.'},
+{m:'Samsung', f:'Galaxy A15', kies:true, v:['Galaxy A15 4G','Galaxy A15 5G']},
+{m:'Samsung', f:'Galaxy A16', kies:true, v:['Galaxy A16 4G','Galaxy A16 5G']},
+{m:'Samsung', f:'Galaxy A22', kies:true, v:['Galaxy A22 4G','Galaxy A22 5G'],
+  let:'De 4G heeft AMOLED, de 5G een LCD en een groter scherm. Echt andere onderdelen.'},
+{m:'Samsung', f:'Galaxy A23', kies:true, v:['Galaxy A23 4G','Galaxy A23 5G']},
+{m:'Samsung', f:'Galaxy A24', v:['Galaxy A24 4G']},
+{m:'Samsung', f:'Galaxy A25', kies:true, v:['Galaxy A25 5G'], let:'Van de A25 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A26', kies:true, v:['Galaxy A26 5G'], let:'Van de A26 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A32', kies:true, v:['Galaxy A32 4G','Galaxy A32 5G'],
+  let:'De 4G heeft een Super AMOLED van 6,4 inch, de 5G een TFT-LCD van 6,5 inch. Schermen passen niet over en weer.'},
+{m:'Samsung', f:'Galaxy A33', kies:true, v:['Galaxy A33 5G'], let:'Van de A33 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A34', kies:true, v:['Galaxy A34 5G'], let:'Van de A34 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A35', kies:true, v:['Galaxy A35 5G'], let:'Van de A35 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A36', kies:true, v:['Galaxy A36 5G'], let:'Van de A36 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A42', kies:true, v:['Galaxy A42 5G'], let:'Van de A42 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A51', kies:true, v:['Galaxy A51 4G','Galaxy A51 5G'],
+  let:'De 5G is een ander toestel met een groter scherm.'},
+{m:'Samsung', f:'Galaxy A52', kies:true, v:['Galaxy A52 4G','Galaxy A52 5G','Galaxy A52s 5G'],
+  let:'Drie uitvoeringen. De 52s is weer net anders dan de 52 5G.'},
+{m:'Samsung', f:'Galaxy A53', kies:true, v:['Galaxy A53 5G'], let:'Van de A53 bestaat alleen een 5G-versie. Zoeken op "A53" levert daarom niets op.'},
+{m:'Samsung', f:'Galaxy A54', kies:true, v:['Galaxy A54 5G'], let:'Van de A54 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A55', kies:true, v:['Galaxy A55 5G'], let:'Van de A55 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A56', kies:true, v:['Galaxy A56 5G'], let:'Van de A56 bestaat alleen een 5G-versie.'},
+{m:'Samsung', f:'Galaxy A71', kies:true, v:['Galaxy A71 4G','Galaxy A71 5G']},
+{m:'Samsung', f:'Galaxy A72', v:['Galaxy A72 4G']},
+{m:'Samsung', f:'Galaxy A73', kies:true, v:['Galaxy A73 5G'], let:'Van de A73 bestaat alleen een 5G-versie.'},
+
+/* ---------- Samsung Galaxy S, Note en Z ---------- */
+{m:'Samsung', f:'Galaxy S25', v:['Galaxy S25','Galaxy S25 Plus','Galaxy S25 Ultra','Galaxy S25 Edge']},
+{m:'Samsung', f:'Galaxy S24', v:['Galaxy S24','Galaxy S24 Plus','Galaxy S24 Ultra','Galaxy S24 FE']},
+{m:'Samsung', f:'Galaxy S23', v:['Galaxy S23','Galaxy S23 Plus','Galaxy S23 Ultra','Galaxy S23 FE']},
+{m:'Samsung', f:'Galaxy S22', v:['Galaxy S22','Galaxy S22 Plus','Galaxy S22 Ultra']},
+{m:'Samsung', f:'Galaxy S21', v:['Galaxy S21','Galaxy S21 Plus','Galaxy S21 Ultra','Galaxy S21 FE']},
+{m:'Samsung', f:'Galaxy S20', v:['Galaxy S20','Galaxy S20 Plus','Galaxy S20 Ultra','Galaxy S20 FE']},
+{m:'Samsung', f:'Galaxy S10', v:['Galaxy S10','Galaxy S10 Plus','Galaxy S10e','Galaxy S10 Lite']},
+{m:'Samsung', f:'Galaxy S9', v:['Galaxy S9','Galaxy S9 Plus']},
+{m:'Samsung', f:'Galaxy S8', v:['Galaxy S8','Galaxy S8 Plus']},
+{m:'Samsung', f:'Galaxy Note 20', v:['Galaxy Note 20','Galaxy Note 20 Ultra']},
+{m:'Samsung', f:'Galaxy Note 10', v:['Galaxy Note 10','Galaxy Note 10 Plus','Galaxy Note 10 Lite']},
+{m:'Samsung', f:'Galaxy Z Flip', kies:true, v:['Galaxy Z Flip 3','Galaxy Z Flip 4','Galaxy Z Flip 5','Galaxy Z Flip 6','Galaxy Z Flip 7'],
+  let:'Zeg er de generatie bij, de vouwschermen verschillen per jaar volledig.'},
+{m:'Samsung', f:'Galaxy Z Fold', kies:true, v:['Galaxy Z Fold 3','Galaxy Z Fold 4','Galaxy Z Fold 5','Galaxy Z Fold 6','Galaxy Z Fold 7'],
+  let:'Zeg er de generatie bij, de vouwschermen verschillen per jaar volledig.'},
+
+/* ---------- Xiaomi, Redmi en Poco ---------- */
+{m:'Xiaomi', f:'Redmi Note 14', kies:true, v:['Redmi Note 14 4G','Redmi Note 14 5G','Redmi Note 14 Pro 4G','Redmi Note 14 Pro 5G','Redmi Note 14 Pro Plus 5G']},
+{m:'Xiaomi', f:'Redmi Note 13', kies:true, v:['Redmi Note 13 4G','Redmi Note 13 5G','Redmi Note 13 Pro 4G','Redmi Note 13 Pro 5G','Redmi Note 13 Pro Plus 5G'],
+  let:'De 4G en 5G zijn andere toestellen. Let ook op: sommige leveranciers verkopen LCD waar AMOLED in hoort.'},
+{m:'Xiaomi', f:'Redmi Note 12', kies:true, v:['Redmi Note 12 4G','Redmi Note 12 5G','Redmi Note 12S','Redmi Note 12 Pro 4G','Redmi Note 12 Pro 5G','Redmi Note 12 Pro Plus 5G']},
+{m:'Xiaomi', f:'Redmi Note 11', kies:true, v:['Redmi Note 11 4G','Redmi Note 11 5G','Redmi Note 11S','Redmi Note 11 Pro 4G','Redmi Note 11 Pro 5G']},
+{m:'Xiaomi', f:'Redmi Note 10', kies:true, v:['Redmi Note 10 4G','Redmi Note 10 5G','Redmi Note 10S','Redmi Note 10 Pro'],
+  let:'De 4G heeft een AMOLED van 6,43 inch, de 5G een LCD van 6,5 inch. Ze delen vrijwel geen onderdelen.'},
+{m:'Xiaomi', f:'Redmi Note 9', v:['Redmi Note 9','Redmi Note 9S','Redmi Note 9 Pro','Redmi Note 9T']},
+{m:'Xiaomi', f:'Redmi 13', kies:true, v:['Redmi 13 4G','Redmi 13 5G','Redmi 13C']},
+{m:'Xiaomi', f:'Redmi 12', kies:true, v:['Redmi 12 4G','Redmi 12 5G','Redmi 12C']},
+{m:'Xiaomi', f:'Redmi 10', v:['Redmi 10','Redmi 10 5G','Redmi 10C']},
+{m:'Xiaomi', f:'Redmi 9', v:['Redmi 9','Redmi 9A','Redmi 9C','Redmi 9T']},
+{m:'Xiaomi', f:'Poco X6', kies:true, v:['Poco X6','Poco X6 Pro']},
+{m:'Xiaomi', f:'Poco X5', kies:true, v:['Poco X5','Poco X5 Pro']},
+{m:'Xiaomi', f:'Poco M5', kies:true, v:['Poco M5','Poco M5s']},
+
+/* ---------- Google Pixel ---------- */
+{m:'Google', f:'Pixel 9', v:['Pixel 9','Pixel 9 Pro','Pixel 9 Pro XL','Pixel 9a']},
+{m:'Google', f:'Pixel 8', v:['Pixel 8','Pixel 8 Pro','Pixel 8a']},
+{m:'Google', f:'Pixel 7', v:['Pixel 7','Pixel 7 Pro','Pixel 7a']},
+{m:'Google', f:'Pixel 6', v:['Pixel 6','Pixel 6 Pro','Pixel 6a']},
+{m:'Google', f:'Pixel 5', v:['Pixel 5','Pixel 5a']},
+{m:'Google', f:'Pixel 4', v:['Pixel 4','Pixel 4 XL','Pixel 4a']},
+
+/* ---------- OnePlus ---------- */
+{m:'OnePlus', f:'Nord 3', v:['OnePlus Nord 3']},
+{m:'OnePlus', f:'Nord 2', v:['OnePlus Nord 2','OnePlus Nord 2T']},
+{m:'OnePlus', f:'Nord CE', kies:true, v:['OnePlus Nord CE 2','OnePlus Nord CE 3','OnePlus Nord CE 4'],
+  let:'Zeg er de generatie bij.'},
+{m:'OnePlus', f:'OnePlus 12', v:['OnePlus 12','OnePlus 12R']},
+{m:'OnePlus', f:'OnePlus 11', v:['OnePlus 11']},
+{m:'OnePlus', f:'OnePlus 9', v:['OnePlus 9','OnePlus 9 Pro']},
+
+/* ---------- Oppo ---------- */
+{m:'Oppo', f:'Oppo A54', kies:true, v:['Oppo A54 4G','Oppo A54 5G'],
+  let:'De 4G en 5G hebben een ander scherm.'},
+{m:'Oppo', f:'Oppo A74', kies:true, v:['Oppo A74 4G','Oppo A74 5G'],
+  let:'De 4G heeft AMOLED, de 5G een LCD.'},
+{m:'Oppo', f:'Oppo A94', v:['Oppo A94']},
+{m:'Oppo', f:'Reno 8', v:['Oppo Reno 8','Oppo Reno 8 Lite','Oppo Reno 8 Pro']},
+{m:'Oppo', f:'Reno 10', v:['Oppo Reno 10','Oppo Reno 10 Pro']},
+
+/* ---------- Motorola ---------- */
+{m:'Motorola', f:'Moto G54', v:['Moto G54']},
+{m:'Motorola', f:'Moto G84', v:['Moto G84']},
+{m:'Motorola', f:'Moto G14', v:['Moto G14']},
+{m:'Motorola', f:'Edge 40', v:['Motorola Edge 40','Motorola Edge 40 Pro','Motorola Edge 40 Neo']},
+
+/* ---------- Huawei en Honor ---------- */
+{m:'Huawei', f:'P30', v:['Huawei P30','Huawei P30 Pro','Huawei P30 Lite']},
+{m:'Huawei', f:'P40', v:['Huawei P40','Huawei P40 Pro','Huawei P40 Lite']},
+{m:'Honor', f:'Honor 90', v:['Honor 90','Honor 90 Lite']}
+];
+
+/* Namen worden plat geslagen: hoofdletters, spaties en streepjes weg. Zo is
+   "samsung a53", "Samsung A-53" en "SAMSUNG   A53" allemaal hetzelfde.      */
+function tstNorm(s){
+  return String(s||'').toLowerCase()
+    .replace(/[àáâä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
+    .replace(/[òóôö]/g,'o').replace(/[ùúûü]/g,'u')
+    .replace(/\+/g,'plus')
+    .replace(/[^a-z0-9]/g,'');
+}
+/* Winkels laten het merkwoord vaak weg: "A53" in plaats van "Galaxy A53".
+   Daarom kennen we van elke naam ook de korte vorm, met en zonder merk.     */
+function tstAliassen(merk, naam){
+  const uit=new Set();
+  const n=tstNorm(naam), mk=tstNorm(merk);
+  const zet=v=>{ if(v.length>=2 && !/^\d+$/.test(v)) uit.add(v); };
+  zet(n); zet(mk+n);
+  const kern=n.replace(/^(galaxy|redmi|poco|moto|motorola|oneplus|nord|reno|nova|mate|honor|huawei|oppo|xiaomi|pixel)/,'');
+  zet(kern); zet(mk+kern);
+  return [...uit];
+}
+let TST_INDEX=null;
+function tstIndex(){
+  if(TST_INDEX) return TST_INDEX;
+  const fam=new Map(), varianten=new Map();
+  TOESTELDB.forEach(e=>{
+    tstAliassen(e.m, e.f).forEach(a=>{ if(!fam.has(a)) fam.set(a,e); });
+    e.v.forEach(naam=>{
+      tstAliassen(e.m, naam).forEach(a=>{ if(!varianten.has(a)) varianten.set(a,{e,naam}); });
+    });
+  });
+  TST_INDEX={fam,varianten};
+  return TST_INDEX;
+}
+function tstAlleNamen(){
+  const uit=[]; TOESTELDB.forEach(e=>e.v.forEach(n=>uit.push(n))); return uit;
+}
+/* Wat is er aan de hand met wat de winkel typte?
+   goed = compleet   ·   tip = compleet maar er zijn buren
+   vul  = één logische aanvulling   ·   kies = er moet echt gekozen worden    */
+function toestelCheck(waarde){
+  const n=tstNorm(waarde);
+  if(n.length<2) return null;
+  const ix=tstIndex();
+  const hit=ix.varianten.get(n);
+  if(hit){
+    const buren=hit.e.v.filter(x=>x!==hit.naam);
+    /* Bij een familie waar sowieso gekozen moet worden is de keuze nu gemaakt.
+       Dan zwijgen we; anders zou het vak meteen weer opduiken.              */
+    if(!buren.length || hit.e.kies) return {soort:'goed', naam:hit.naam, e:hit.e};
+    return {soort:'tip', naam:hit.naam, e:hit.e, ook:buren};
+  }
+  const e=ix.fam.get(n);
+  if(!e) return null;
+  if(e.v.length===1) return {soort:'vul', naam:e.v[0], e};
+  return {soort:'kies', e};
+}
+/* Is er maar één logische uitvoering, dan vullen we hem aan zodra de winkel
+   het veld verlaat. Typen wordt niet onderbroken, kiezen hoeft niet.        */
+function toestelAanvullen(){
+  const i=document.getElementById('r_toestel');
+  if(!i) return;
+  const u=toestelCheck(i.value);
+  if(u && u.soort==='vul'){
+    i.value=u.naam;
+    updateZoekLinks();
+    if(typeof toast==='function') toast('Aangevuld naar '+u.naam);
+  }
+  toestelTeken();
+}
+function toestelKiesKnop(naam){
+  const i=document.getElementById('r_toestel');
+  if(!i) return;
+  i.value=naam;
+  toestelTeken(); updateZoekLinks();
+  const t=document.getElementById('r_type'); if(t) t.focus();
+}
+function toestelTeken(){
+  const inp=document.getElementById('r_toestel');
+  const box=document.getElementById('toestelKeuze');
+  if(!inp || !box) return;
+  const u=toestelCheck(inp.value);
+  inp.classList.toggle('mistoestel', !!(u && (u.soort==='kies'||u.soort==='vul')));
+  if(!u || u.soort==='goed'){ box.hidden=true; box.innerHTML=''; return; }
+
+  /* De modelnamen staan alleen op de knoppen. De zinnen eromheen blijven zo
+     kale, vaste teksten, die de vertaalmodule netjes kan omzetten.          */
+  const knoppen=lijst=>lijst.map(n=>
+    `<button type="button" class="tstknop" data-onvertaald onclick="toestelKiesKnop('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('');
+  const uitleg=u.e.let?`<div class="tstlet">${esc(u.e.let)}</div>`:'';
+
+  if(u.soort==='tip'){
+    box.hidden=false;
+    box.className='tstbox tip';
+    box.innerHTML=`<div class="tsttxt">Van dit toestel bestaan ook andere uitvoeringen.</div>`+
+      uitleg+`<div class="tstrij">${knoppen(u.ook)}</div>`;
+    return;
+  }
+  box.hidden=false;
+  box.className='tstbox vraag';
+  const kop = u.soort==='vul'
+    ? 'Bedoel je deze uitvoering?'
+    : 'Welke uitvoering is het? Kies er een, anders bestel je straks een onderdeel dat niet past.';
+  box.innerHTML=`<div class="tsttxt">${kop}</div>`+uitleg+
+    `<div class="tstrij">${knoppen(u.e.v)}</div>`;
 }
 
 function updateZoekLinks(){
@@ -3962,6 +4241,10 @@ function updateZoekLinks(){
   gsm.href = pad ? 'https://gsm-world.nl/'+pad+'/' : 'https://gsm-world.nl/reparaties/';
   gsm.title = pad ? 'Reparatieprijzen voor '+toestel+' op gsm-world.nl'
                   : 'Vul eerst het toestel in';
+
+  const zoek=document.getElementById('zoekGsmZoek');
+  zoek.href = toestel ? 'https://gsm-world.nl/?s='+encodeURIComponent(toestel)
+                      : 'https://gsm-world.nl/reparaties/';
 
   document.getElementById('zoekFoneday').href='https://www.foneday.shop/en/search?q='+q;
   document.getElementById('zoekMobileparts').href='https://www.mobileparts.shop/catalogsearch/result/?q='+q;
@@ -4042,6 +4325,10 @@ function resetRepForm(){
   repOnd=[]; renderRepOnd();
   document.getElementById('sealHint').innerHTML='';
   document.getElementById('ondHint').textContent='';
+  const tb=document.getElementById('toestelKeuze');
+  if(tb){ tb.hidden=true; tb.innerHTML=''; }
+  document.getElementById('r_toestel').classList.remove('mistoestel');
+  updateZoekLinks();
 }
 function maakReparatie(){
   const naam=document.getElementById('r_naam').value.trim();
@@ -4049,6 +4336,16 @@ function maakReparatie(){
   const prijs=Number(document.getElementById('r_prijs').value)||0;
   if(!naam || !tel){ alert('Naam en telefoonnummer zijn verplicht.'); return; }
   if(prijs<=0){ alert('Vul de prijs voor de klant in.'); return; }
+  /* Zonder de juiste uitvoering bestel je straks een onderdeel dat niet past.
+     Daarom komt de reparatie er pas door als de keuze gemaakt is.           */
+  const tc=toestelCheck(document.getElementById('r_toestel').value);
+  if(tc && (tc.soort==='kies' || tc.soort==='vul')){
+    toestelTeken();
+    const box=document.getElementById('toestelKeuze');
+    if(box && box.scrollIntoView) box.scrollIntoView({block:'center', behavior:'smooth'});
+    toast('Kies eerst welke uitvoering het toestel is', 'let-op');
+    return;
+  }
   state.repNr++;
   const nr='R'+new Date().getFullYear().toString().slice(2)+'-'+String(state.repNr).padStart(3,'0');
   // onderdelen op voorraad reserveren
