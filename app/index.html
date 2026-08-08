@@ -1565,18 +1565,86 @@ function showTab(t){
 }
 
 /* ---------- globaal zoeken ---------- */
+/* ---------- zoeken dat meedenkt ----------
+   Niet iedereen noemt hetzelfde ding hetzelfde. De een typt "batterij", de
+   ander heeft het product "Accu iPhone 14" genoemd. Ook "iphone14" en
+   "iPhone 14" moeten elkaar vinden, en de volgorde van de woorden mag niet
+   uitmaken: "14 scherm" hoort "Scherm iPhone 14" te vinden.               */
+
+const ZOEK_SYNONIEMEN=[
+  ['scherm','screen','display','lcd','oled','glas','ruit','frontglas','beeldscherm'],
+  ['accu','batterij','battery','bat'],
+  ['laadpoort','laadconnector','oplaadpoort','charging','chargingport','dock','connector','usb'],
+  ['camera','lens','cam','achtercamera','frontcamera','selfie'],
+  ['achterkant','achterglas','backglass','behuizing','backcover','achterklep'],
+  ['speaker','luidspreker','oorspeaker','earpiece','buzzer','ringer'],
+  ['microfoon','micro','mic'],
+  ['trilmotor','vibrator','taptic'],
+  ['knop','button','powerknop','volumeknop','homeknop','aanuitknop'],
+  ['simkaart','sim','simtray','simhouder','simlade'],
+  ['hoesje','hoes','case','cover','bumper'],
+  ['screenprotector','protector','tempered','glasplaatje','beschermglas'],
+  ['oplader','lader','charger','adapter','stekker'],
+  ['kabel','cable','snoer','lightning','usbc'],
+  ['oortjes','earbuds','airpods','koptelefoon','headphone','buds'],
+  ['powerbank','accupack','batterypack'],
+  ['iphone','apple'],
+  ['samsung','galaxy'],
+  ['pixel','google'],
+  ['xiaomi','redmi','poco'],
+  ['huawei','honor'],
+  ['oppo','realme'],
+  ['moederbord','logicboard','board','print'],
+  ['waterschade','vocht','natgeworden'],
+  ['dataoverdracht','overzetten','datatransfer','backup']
+];
+
+function zoekNorm(tekst){
+  return String(tekst||'').toLowerCase()
+    .replace(/[àáâä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
+    .replace(/[òóôö]/g,'o').replace(/[ùúûü]/g,'u').replace(/ç/g,'c')
+    .replace(/[^a-z0-9+]/g,' ')
+    .replace(/([a-z])([0-9])/g,'$1 $2')
+    .replace(/([0-9])([a-z])/g,'$1 $2')
+    .replace(/\s+/g,' ').trim();
+}
+
+/* Per getypt woord alle woorden die hetzelfde kunnen betekenen. */
+function zoekVarianten(woord){
+  const uit=new Set([woord]);
+  ZOEK_SYNONIEMEN.forEach(groep=>{
+    if(groep.some(w => w.startsWith(woord) || woord.startsWith(w)))
+      groep.forEach(w=>uit.add(w));
+  });
+  return [...uit];
+}
+
+/* Elk getypt woord moet ergens in de tekst terugkomen, in welke vorm dan ook. */
+function zoekPast(tekst, groepen){
+  if(!groepen.length) return false;
+  const n=' '+zoekNorm(tekst)+' ';
+  const plat=n.replace(/ /g,'');
+  return groepen.every(varianten =>
+    varianten.some(v => n.includes(v) || plat.includes(v)));
+}
+
+function zoekGroepen(q){
+  return zoekNorm(q).split(' ').filter(w=>w.length>=2).map(zoekVarianten);
+}
+
 function globaalZoeken(){
   const inp=document.getElementById('globaalZoek');
   const q=inp.value.trim().toLowerCase();
   let res=document.getElementById('zoekRes');
   if(res) res.remove();
   if(q.length<2) return;
+  const g=zoekGroepen(q);
   const treffers=[];
-  state.producten.filter(p=>p.naam.toLowerCase().includes(q)||p.barcode.includes(q)).slice(0,5)
+  state.producten.filter(p=>zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||''), g)||String(p.barcode||'').includes(q)).slice(0,5)
     .forEach(p=>treffers.push({t:`<svg class="i s"><use href="#i-box"/></svg> ${esc(p.naam)} <span class="muted">· voorraad ${p.voorraad} · ${euro(p.verkoop)}</span>`, fn:()=>{ showTab('producten'); document.getElementById('zoek').value=p.naam; renderProducten(); }}));
-  (state.reparaties||[]).filter(r=>r.nr.toLowerCase().includes(q)||r.klant.naam.toLowerCase().includes(q)||(r.toestel||'').toLowerCase().includes(q)||(r.klant.tel||'').includes(q)).slice(0,5)
+  (state.reparaties||[]).filter(r=>zoekPast(r.nr+' '+r.klant.naam+' '+(r.toestel||'')+' '+(r.type||''), g)||String(r.klant.tel||'').includes(q)).slice(0,5)
     .forEach(r=>treffers.push({t:`<svg class="i s"><use href="#i-wrench"/></svg> ${esc(r.nr)} <span class="muted">· ${esc(r.klant.naam)} · ${esc(r.toestel)} ${esc(r.type)}</span>`, fn:()=>{ showTab('reparaties'); repDetail(r.id); }}));
-  state.diensten.filter(d=>d.naam.toLowerCase().includes(q)).slice(0,3)
+  state.diensten.filter(d=>zoekPast(d.naam, g)).slice(0,3)
     .forEach(d=>treffers.push({t:`<svg class="i s"><use href="#i-tool"/></svg> ${esc(d.naam)} <span class="muted">· ${euro(d.prijs)}</span>`, fn:()=>{ showTab('diensten'); }}));
   if(!treffers.length) treffers.push({t:'<span class="muted">Niets gevonden</span>', fn:()=>{}});
   res=document.createElement('div');
@@ -2106,7 +2174,7 @@ function renderProducten(){
   const q=(document.getElementById('zoek').value||'').toLowerCase();
   const fc=document.getElementById('filterCat').value;
   const rows=state.producten
-    .filter(p=>(!q || p.naam.toLowerCase().includes(q) || p.barcode.includes(q)) && (!fc || p.cat===Number(fc)))
+    .filter(p=>(!q || zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||''), zoekGroepen(q)) || String(p.barcode||'').includes(q)) && (!fc || p.cat===Number(fc)))
     .sort((a,b)=>a.naam.localeCompare(b.naam))
     .map(p=>`<tr><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
