@@ -709,6 +709,56 @@
   .verzico{width:32px; height:32px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center;}
   .verzico.ok{background:var(--green-soft); color:var(--green-tekst);}
   .verzico.fout{background:var(--red-soft); color:var(--red-tekst);}
+
+  /* ---------- WhatsApp koppelen ---------- */
+  .wakaart{border:1.5px solid var(--border); border-radius:20px; padding:22px 24px; background:var(--soft);}
+  .wakaart.aan{border-color:var(--green-tekst); background:var(--green-soft);}
+  .wakop{display:flex; align-items:flex-start; gap:14px;}
+  .wabadge{width:42px; height:42px; border-radius:13px; flex:none; display:flex; align-items:center;
+    justify-content:center; background:var(--lblauw); color:var(--oranje);}
+  .wakaart.aan .wabadge{background:#fff; color:var(--green-tekst);}
+  .watitel{flex:1;}
+  .watitel b{display:block; font-family:'Sora',system-ui,sans-serif; font-size:16px; letter-spacing:-.01em;}
+  .watitel .muted{font-size:13.5px; line-height:1.6; display:block; margin-top:3px;}
+  .wastempel{font-size:12.5px; color:var(--muted-l); margin-top:2px;}
+  .wafeiten{list-style:none; padding:0; margin:16px 0 0; display:grid; gap:8px;}
+  .wafeiten li{display:flex; gap:9px; align-items:flex-start; font-size:13.5px; line-height:1.6; color:var(--muted);}
+  .wafeiten li svg{flex:none; margin-top:3px; color:var(--muted-l);}
+  .wavoet{margin-top:18px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+
+  /* ---------- abonnement: slotscherm en balk ---------- */
+  .slotico{width:52px; height:52px; border-radius:16px; margin:0 auto 16px; display:flex;
+    align-items:center; justify-content:center; background:var(--amber-soft,#FEF4E2); color:#96650a;}
+  .slotico .i{width:24px; height:24px;}
+  .slotkop{font-family:'Sora',system-ui,sans-serif; font-size:19px; font-weight:700;
+    letter-spacing:-.015em; margin:0 0 10px; color:var(--text);}
+
+  .abokaart{border-radius:18px; padding:20px 22px; border:1.5px solid var(--border); background:var(--soft);}
+  .abokaart.ok{background:var(--green-soft); border-color:#BEE3CE;}
+  .abokaart.let-op{background:#FEF4E2; border-color:#F0D9A8;}
+  .abokaart.fout{background:var(--red-soft); border-color:#F3C7D5;}
+  .abokop{display:flex; align-items:center; gap:16px;}
+  .abokop > div{flex:1;}
+  .abokop b{display:block; font-family:'Sora',system-ui,sans-serif; font-size:16.5px; letter-spacing:-.01em;}
+  .abokop .muted{display:block; font-size:13.5px; margin-top:4px; line-height:1.55;}
+  .abopakket{flex:none; background:#fff; border-radius:var(--pil); padding:7px 15px;
+    font-size:13px; font-weight:700; color:var(--text);}
+
+  .abobalk{position:fixed; left:50%; transform:translateX(-50%); top:14px; z-index:900;
+    display:flex; align-items:center; gap:12px; max-width:min(680px, calc(100vw - 32px));
+    padding:12px 14px 12px 16px; border-radius:16px; font-size:14px; line-height:1.45;
+    box-shadow:0 10px 30px rgba(23,32,30,.14); background:#fff; border:1.5px solid var(--border);}
+  .abobalk.let-op{background:#FEF4E2; border-color:#F0D9A8; color:#7A5307;}
+  .abobalk.fout{background:var(--red-soft,#FDECF1); border-color:#F3C7D5; color:#8E1033;}
+  .abobalk span{flex:1;}
+  .abobalk button{border:none; border-radius:var(--pil); padding:8px 15px; font-family:inherit;
+    font-size:13px; font-weight:700; cursor:pointer; background:currentColor; color:#fff; flex:none;}
+  .abobalk button:hover{opacity:.88;}
+  .abobalk .abosluit{background:none; color:inherit; font-size:20px; padding:0 4px; font-weight:400; opacity:.55;}
+  @media(max-width:640px){
+    .abobalk{flex-wrap:wrap; top:auto; bottom:14px;}
+    .abobalk span{flex:1 1 100%;}
+  }
 </style>
 </head>
 <body>
@@ -1304,9 +1354,7 @@
         <input type="checkbox" id="ber_whatsapp" onchange="berKanaal('whatsapp',this.checked)"> Versturen via WhatsApp
       </label>
     </div>
-    <div id="ber_wa_info" class="infobox" style="margin-bottom:20px">
-      <b>WhatsApp koppelen</b><br>Neem contact op via info@storvo.app om je eigen WhatsApp-nummer aan je winkel te koppelen. De teksten voor WhatsApp liggen vast, omdat Meta die vooraf goedkeurt.
-    </div>
+    <div id="wa_koppel" class="wakaart" style="margin-bottom:22px"></div>
 
     <div id="ber_lijst"></div>
   </div>
@@ -1352,20 +1400,7 @@
 
   <div class="card" id="inst-abonnement"hidden>
     <h2><svg class="i"><use href="#i-card"/></svg>Abonnement</h2>
-    <div id="aboStatus" style="margin-bottom:16px"></div>
-    <div class="grid" style="margin-bottom:14px">
-      <div><label>Pakket</label><select id="ab_plan" onchange="slaAboOp()"><option value="Start">Start</option><option value="Pro">Pro</option><option value="Enterprise">Enterprise</option></select></div>
-      <div><label>Status</label><select id="ab_status" onchange="slaAboOp()">
-        <option value="proef">Proefperiode</option><option value="actief">Actief</option>
-        <option value="achterstallig">Betaling mislukt</option><option value="opgezegd">Opgezegd</option></select></div>
-      <div><label>Licentiecode</label><input id="ab_licentie" placeholder="wordt online toegekend" onchange="slaAboOp()"></div>
-      <div><label>Verlengt op</label><input id="ab_datum" type="date" onchange="slaAboOp()"></div>
-    </div>
-    <div class="row">
-      <a class="btn" id="ab_portaal" href="https://billing.stripe.com" target="_blank"><svg class="i s"><use href="#i-card"/></svg>Abonnement beheren</a>
-      <button class="btn ghost" onclick="toast('Facturen komen in de online versie automatisch uit Stripe.')"><svg class="i s"><use href="#i-receipt"/></svg>Facturen</button>
-    </div>
-    <div class="infobox" style="margin-top:16px">Deze gegevens vul je nu handmatig in. In de online versie worden pakket, status en verlengdatum automatisch bijgewerkt door Stripe en zijn ze hier niet te wijzigen. Beheer je meerdere winkels, gebruik dan het losse beheerpaneel.</div>
+    <div id="aboStatus"></div>
   </div>
 
   <div class="card" id="inst-backup"hidden>
@@ -2652,13 +2687,139 @@ async function ladAccountEnStart(session){
     }catch(e){}
   }
 
+  /* Mag deze winkel de software nog gebruiken? Dat bepaalt de server, niet
+     het apparaat, anders kan iemand na opzeggen gewoon doorwerken. */
+  await haalAbonnement();
+  if(abonnement && abonnement.geblokkeerd){ toonSlot(); return; }
+
   document.body.classList.add('ingelogd');
   authSluit();
   pasRechtenToe();
   showTab(mag('dashboard')?'dashboard':'scan');
   renderInstellingen();
+  toonAboBalk();
   syncStart();
   if(!account.onboarding_klaar) toonOnboarding();
+  aboBewaking();
+}
+
+/* ---------- abonnement bewaken ----------
+   Loopt een proefperiode af terwijl de app openstaat, dan gaat het slot er
+   vanzelf op. Niet elke minuut vragen; een keer per half uur is genoeg.   */
+
+let abonnement=null;
+let aboTimer=null;
+
+async function haalAbonnement(){
+  try{
+    const {data,error}=await sb.rpc('abonnement_status');
+    if(error){ console.error('abonnement ophalen:', error); return null; }
+    abonnement=(data&&data[0])||null;
+  }catch(e){ console.error('abonnement ophalen:', e); }
+  return abonnement;
+}
+
+function aboBewaking(){
+  if(aboTimer) clearInterval(aboTimer);
+  aboTimer=setInterval(async()=>{
+    if(!account) return;
+    await haalAbonnement();
+    if(abonnement && abonnement.geblokkeerd){ syncStop(); toonSlot(); }
+    else toonAboBalk();
+  }, 30*60*1000);
+}
+
+const ABO_TEKSTEN={
+  proef_verlopen:{
+    kop:'Je proefperiode is voorbij',
+    uitleg:'Je hebt Storvo veertien dagen kunnen proberen. Sluit een abonnement af om verder te gaan. Je gegevens staan er nog gewoon, er gaat niets verloren.',
+    knop:'Abonnement afsluiten'
+  },
+  betaling_mislukt:{
+    kop:'De betaling is niet gelukt',
+    uitleg:'We hebben het de afgelopen twee weken een paar keer geprobeerd. Werk je betaalgegevens bij, dan kan je meteen weer verder. Je gegevens blijven bewaard.',
+    knop:'Betaalgegevens bijwerken'
+  },
+  opgezegd:{
+    kop:'Je abonnement is gestopt',
+    uitleg:'Je hebt Storvo opgezegd en de betaalde periode is voorbij. Wil je weer verder, dan zet je het abonnement met een paar klikken opnieuw aan. Je gegevens staan klaar.',
+    knop:'Abonnement hervatten'
+  },
+  geen_winkel:{
+    kop:'Er hangt geen winkel aan dit account',
+    uitleg:'Neem contact op via info@storvo.app, dan zetten we het recht.',
+    knop:''
+  }
+};
+
+function toonSlot(){
+  document.body.classList.remove('ingelogd');
+  syncStop();
+  const t=ABO_TEKSTEN[(abonnement&&abonnement.reden)||'proef_verlopen']||ABO_TEKSTEN.proef_verlopen;
+  const eigenaar=account && account.rol==='eigenaar';
+  authWrap(`
+    <div class="slotico"><svg class="i"><use href="#i-bell"/></svg></div>
+    <h3 class="slotkop">${esc(t.kop)}</h3>
+    <p class="muted" style="line-height:1.65; margin-bottom:20px">${esc(t.uitleg)}</p>
+    ${t.knop ? (eigenaar
+      ? `<button class="btn amber" style="width:100%" onclick="openPortaal(this)">${esc(t.knop)}</button>`
+      : `<p class="muted klein" style="margin-bottom:16px">Vraag de eigenaar van de winkel om dit te regelen.</p>`) : ''}
+    <button class="btn ghost" style="width:100%; margin-top:8px" onclick="uitloggen()">Uitloggen</button>
+    <p class="muted klein" style="margin-top:16px">Vragen? Mail ons op
+      <a href="mailto:info@storvo.app">info@storvo.app</a>.</p>
+  `);
+}
+
+async function openPortaal(knop){
+  const oud=knop?knop.textContent:'';
+  if(knop){ knop.disabled=true; knop.textContent='Even geduld…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/stripe-portaal',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token}
+    });
+    const uit=await res.json();
+    if(uit.ok && uit.url){ location.href=uit.url; return; }
+    if(document.getElementById('authFout')) authMelding(uit.error||'Het portaal kon niet worden geopend.');
+    else toast(uit.error||'Het portaal kon niet worden geopend.','fout');
+  }catch(e){
+    toast('Het portaal kon niet worden geopend.','fout');
+  }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+}
+
+const ABO_BALK={
+  proef_bijna_om:a=>({soort:'let-op',
+    tekst:a.dagen_over<=0 ? 'Je proefperiode loopt vandaag af.'
+      : 'Je proefperiode loopt over '+a.dagen_over+(a.dagen_over===1?' dag':' dagen')+' af.',
+    knop:'Abonnement afsluiten'}),
+  betaling_mislukt:a=>({soort:'fout',
+    tekst:'De laatste betaling is mislukt. Werk je gegevens bij, anders sluit de app over '+
+      a.dagen_over+(a.dagen_over===1?' dag':' dagen')+'.',
+    knop:'Betaalgegevens bijwerken'}),
+  opgezegd_loopt_af:a=>({soort:'let-op',
+    tekst:'Je abonnement is opgezegd. Je kan Storvo nog '+a.dagen_over+
+      (a.dagen_over===1?' dag':' dagen')+' gebruiken.',
+    knop:'Toch doorgaan'})
+};
+
+function toonAboBalk(){
+  let balk=document.getElementById('aboBalk');
+  const w=abonnement&&abonnement.waarschuwing;
+  if(!w || !ABO_BALK[w]){ if(balk) balk.remove(); return; }
+  const m=ABO_BALK[w](abonnement);
+  if(!balk){
+    balk=document.createElement('div'); balk.id='aboBalk';
+    document.body.appendChild(balk);
+  }
+  balk.className='abobalk '+m.soort;
+  balk.innerHTML=`<svg class="i s"><use href="#i-bell"/></svg>
+    <span>${esc(m.tekst)}</span>
+    ${account&&account.rol==='eigenaar'
+      ? `<button onclick="openPortaal(this)">${esc(m.knop)}</button>` : ''}
+    <button class="abosluit" onclick="this.parentNode.remove()" title="Verbergen">&times;</button>`;
 }
 
 function toonAuthLogin(fout){
@@ -3289,36 +3450,62 @@ Vermeld je reparatienummer <b>${esc(r.nr)}</b>.</div></div>
   toast('Klantpagina geopend en gedownload. Stuur dit bestand naar de klant.', true);
 }
 
-/* ---------- abonnement ---------- */
-function abo(){
-  if(!state.abonnement) state.abonnement={plan:'Pro', status:'proef', licentie:'', datum:'', start:Date.now()};
-  return state.abonnement;
+/* ---------- abonnement ----------
+   Alles komt van de server. De winkel kan hier niets aanpassen; betalen en
+   opzeggen gebeurt in het portaal van Stripe.                              */
+
+function aboDatum(d){
+  if(!d) return '';
+  return new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
 }
-function slaAboOp(){
-  const a=abo();
-  a.plan=document.getElementById('ab_plan').value;
-  a.status=document.getElementById('ab_status').value;
-  a.licentie=document.getElementById('ab_licentie').value.trim();
-  a.datum=document.getElementById('ab_datum').value;
-  save(); renderAbo();
-  toast('Abonnementsgegevens opgeslagen', true);
-}
-function renderAbo(){
-  const a=abo();
-  document.getElementById('ab_plan').value=a.plan;
-  document.getElementById('ab_status').value=a.status;
-  document.getElementById('ab_licentie').value=a.licentie||'';
-  document.getElementById('ab_datum').value=a.datum||'';
-  const proefDagen=14;
-  const over=Math.max(0, proefDagen-Math.floor((Date.now()-(a.start||Date.now()))/864e5));
-  const kleuren={actief:['#E8F7EE','#0f6b38','Actief'], proef:['#FEF4E2','#96650a','Proefperiode, nog '+over+' dagen'],
-    achterstallig:['#FDECF1','#a3123c','Betaling mislukt, herstel je betaalgegevens'], opgezegd:['#EDF3FB','#7A8BA8','Opgezegd']};
-  const k=kleuren[a.status]||kleuren.proef;
-  document.getElementById('aboStatus').innerHTML=
-    `<div style="background:${k[0]}; color:${k[1]}; border-radius:12px; padding:16px 18px; font-size:14px; font-weight:600">`+
-    `${k[2]}<div style="font-weight:500; font-size:12.5px; margin-top:4px">Pakket <b>${esc(a.plan)}</b>`+
-    `${a.datum?' · verlengt op '+new Date(a.datum+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}):''}`+
-    `${a.licentie?' · licentie '+esc(a.licentie):''}</div></div>`;
+
+async function renderAbo(){
+  const vak=document.getElementById('aboStatus'); if(!vak) return;
+  if(!account){
+    vak.innerHTML='<p class="muted" style="margin:0">Log in om je abonnement te zien.</p>';
+    return;
+  }
+  if(!abonnement) await haalAbonnement();
+  const a=abonnement;
+  if(!a){
+    vak.innerHTML='<p class="muted" style="margin:0">De abonnementsgegevens konden niet worden opgehaald. Probeer het later nog eens.</p>';
+    return;
+  }
+
+  const beeld={
+    proef:      {kleur:'let-op', kop:a.dagen_over>0
+                  ? 'Proefperiode, nog '+a.dagen_over+(a.dagen_over===1?' dag':' dagen')
+                  : 'Proefperiode loopt vandaag af',
+                 sub:a.proef_tot?'Loopt af op '+aboDatum(a.proef_tot):''},
+    actief:     {kleur:'ok', kop:'Actief',
+                 sub:a.periode_tot?'Verlengt op '+aboDatum(a.periode_tot):''},
+    achterstallig:{kleur:'fout', kop:'Betaling mislukt',
+                 sub:'Werk je betaalgegevens bij, anders sluit de app over '+
+                     a.dagen_over+(a.dagen_over===1?' dag':' dagen')+'.'},
+    opgezegd:   {kleur:'uit', kop:'Opgezegd',
+                 sub:a.dagen_over>0
+                   ? 'Je kan Storvo nog '+a.dagen_over+(a.dagen_over===1?' dag':' dagen')+' gebruiken.'
+                   : 'De betaalde periode is voorbij.'}
+  }[a.status] || {kleur:'uit', kop:'Onbekend', sub:''};
+
+  const eigenaar=account.rol==='eigenaar';
+  vak.innerHTML=`
+    <div class="abokaart ${beeld.kleur}">
+      <div class="abokop">
+        <div>
+          <b>${esc(beeld.kop)}</b>
+          ${beeld.sub?`<span class="muted">${esc(beeld.sub)}</span>`:''}
+        </div>
+        <span class="abopakket">${esc(a.plan||'Start')}</span>
+      </div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      ${eigenaar
+        ? `<button class="btn" onclick="openPortaal(this)"><svg class="i s"><use href="#i-card"/></svg>Abonnement en facturen beheren</button>`
+        : '<span class="muted klein">Alleen de eigenaar kan het abonnement beheren.</span>'}
+    </div>
+    <p class="muted klein" style="margin-top:14px">In het portaal van Stripe wijzig je je pakket en
+      betaalgegevens, download je facturen en zeg je op. Wij bewaren zelf geen betaalgegevens.</p>`;
 }
 
 function slaLeveranciersOp(){
@@ -4119,17 +4306,17 @@ const BER_STAPPEN=[
 ];
 const BER_STANDAARD={
   aangemeld:{aan:true,  onderwerp:'We hebben je toestel in ontvangst genomen',
-    tekst:'Hoi {naam},\n\nWe hebben je {toestel} in ontvangst genomen voor reparatie {nummer}. We gaan ermee aan de slag en houden je op de hoogte.\n\nGroeten van {winkel}'},
+    tekst:'Beste {naam},\n\nWe hebben je {toestel} in ontvangst genomen voor reparatie {nummer}. We gaan ermee aan de slag en houden je op de hoogte.\n\nGroeten van {winkel}'},
   inleveren:{aan:true,  onderwerp:'Breng je toestel langs',
-    tekst:'Hoi {naam},\n\nJe reparatie {nummer} staat klaar in ons systeem. Breng je {toestel} langs in de winkel, dan gaan we er meteen mee aan de slag.\n\nGroeten van {winkel}'},
+    tekst:'Beste {naam},\n\nJe reparatie {nummer} staat klaar in ons systeem. Breng je {toestel} langs in de winkel, dan gaan we er meteen mee aan de slag.\n\nGroeten van {winkel}'},
   besteld:{aan:true,    onderwerp:'De onderdelen zijn besteld',
-    tekst:'Hoi {naam},\n\nDe onderdelen voor je {toestel} zijn besteld. Zodra ze binnen zijn, plannen we de reparatie in.\n\nGroeten van {winkel}'},
+    tekst:'Beste {naam},\n\nDe onderdelen voor je {toestel} zijn besteld. Zodra ze binnen zijn, plannen we de reparatie in.\n\nGroeten van {winkel}'},
   binnen:{aan:true,     onderwerp:'De onderdelen zijn binnen',
-    tekst:'Hoi {naam},\n\nGoed nieuws: de onderdelen voor je {toestel} zijn binnen. We plannen de reparatie zo snel mogelijk in.\n\nGroeten van {winkel}'},
+    tekst:'Beste {naam},\n\nGoed nieuws: de onderdelen voor je {toestel} zijn binnen. We plannen de reparatie zo snel mogelijk in.\n\nGroeten van {winkel}'},
   bezig:{aan:false,     onderwerp:'We zijn begonnen aan je reparatie',
-    tekst:'Hoi {naam},\n\nWe zijn begonnen aan de reparatie van je {toestel}.\n\nGroeten van {winkel}'},
+    tekst:'Beste {naam},\n\nWe zijn begonnen aan de reparatie van je {toestel}.\n\nGroeten van {winkel}'},
   klaar:{aan:true,      onderwerp:'Je toestel is klaar',
-    tekst:'Hoi {naam},\n\nJe {toestel} is klaar en kan opgehaald worden. Reparatie {nummer}.\n\nGroeten van {winkel}'}
+    tekst:'Beste {naam},\n\nJe {toestel} is klaar en kan opgehaald worden. Reparatie {nummer}.\n\nGroeten van {winkel}'}
 };
 
 function berInstellingen(){
@@ -4143,7 +4330,7 @@ function berInstellingen(){
     if(!b.tekst) b.tekst=BER_STANDAARD[s.id].tekst;
   });
   if(kp.kanaalEmail===undefined) kp.kanaalEmail=true;
-  if(kp.kanaalWhatsapp===undefined) kp.kanaalWhatsapp=false;
+  if(kp.kanaalWhatsapp===undefined) kp.kanaalWhatsapp=true;
   return kp.berichten;
 }
 
@@ -4152,7 +4339,8 @@ function renderBerichten(){
   const vak=document.getElementById('ber_lijst'); if(!vak) return;
   const kp=klantpagina(); const b=berInstellingen();
   const em=document.getElementById('ber_email'); if(em) em.checked=kp.kanaalEmail!==false;
-  const wa=document.getElementById('ber_whatsapp'); if(wa) wa.checked=kp.kanaalWhatsapp===true;
+  const wa=document.getElementById('ber_whatsapp'); if(wa) wa.checked=kp.kanaalWhatsapp!==false;
+  renderWhatsapp();
 
   vak.innerHTML=BER_STAPPEN.map(s=>{
     const inst=b[s.id]; const open=s.id===berStapOpen;
@@ -4202,6 +4390,217 @@ function berKanaal(welk,aan){
   save();
 }
 
+/* ---------- WhatsApp koppelen ----------
+   De winkel houdt zijn eigen nummer en de app op de telefoon. Meta noemt dat
+   coexistence: het koppelen gebeurt in een venster van Meta zelf, wij vangen
+   alleen de uitkomst op. Het token belandt nooit in de browser.            */
+
+let waInstelling=null;   /* app-id en configuratie van Meta */
+let waHuidig=null;       /* koppelstatus van deze winkel    */
+let waBezig=false;
+
+async function waHaalInstelling(){
+  if(waInstelling) return waInstelling;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) return null;
+    const res=await fetch(SUPABASE_URL+'/functions/v1/whatsapp-status',{
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token}
+    });
+    waInstelling=await res.json();
+  }catch(e){ waInstelling={beschikbaar:false}; }
+  return waInstelling;
+}
+
+async function waHaalStatus(){
+  try{
+    const {data,error}=await sb.rpc('whatsapp_status');
+    if(error) return null;
+    return (data&&data[0])||null;
+  }catch(e){ return null; }
+}
+
+async function renderWhatsapp(){
+  const vak=document.getElementById('wa_koppel'); if(!vak) return;
+  if(!account){
+    vak.className='wakaart';
+    vak.innerHTML='<p class="muted" style="margin:0">Log in om WhatsApp te koppelen.</p>';
+    return;
+  }
+  const [inst,status]=await Promise.all([waHaalInstelling(), waHaalStatus()]);
+  waHuidig=status;
+  const gekoppeld=!!(status&&status.gekoppeld&&status.status==='actief');
+  const ontkoppeld=!!(status&&status.gekoppeld&&status.status!=='actief');
+  const mag=account.rol==='eigenaar';
+
+  const ico=n=>`<svg class="i s"><use href="#${n}"/></svg>`;
+  let inhoud;
+
+  if(gekoppeld){
+    const sinds=status.gekoppeld_op
+      ? new Date(status.gekoppeld_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) : '';
+    inhoud=`<div class="wakop">
+        <span class="wabadge">${ico('i-check')}</span>
+        <div class="watitel">
+          <b>WhatsApp is gekoppeld</b>
+          <span class="muted">Berichten gaan uit vanaf ${esc(status.nummer||'je zakelijke nummer')}.
+            ${status.biz_app?'Je blijft de WhatsApp Business-app gewoon gebruiken.':''}</span>
+          ${sinds?`<div class="wastempel">Gekoppeld op ${sinds}</div>`:''}
+        </div>
+      </div>
+      <div class="wavoet">
+        <span class="muted klein">Ontkoppelen doe je in de WhatsApp Business-app onder
+          Instellingen &rsaquo; Account &rsaquo; Business-platform.</span>
+      </div>`;
+  } else if(ontkoppeld){
+    inhoud=`<div class="wakop">
+        <span class="wabadge">${ico('i-bell')}</span>
+        <div class="watitel">
+          <b>Je eigen nummer is losgekoppeld</b>
+          <span class="muted">${esc(waRedenTekst(status.reden))} Je klanten krijgen hun berichten gewoon door,
+            alleen weer vanaf het nummer van Storvo.</span>
+        </div>
+      </div>
+      <div class="wavoet">
+        ${mag?`<button class="btn" onclick="waStartKoppelen()">${ico('i-message')}Opnieuw koppelen</button>`
+             :'<span class="muted klein">Vraag de eigenaar om opnieuw te koppelen.</span>'}
+      </div>`;
+  } else {
+    inhoud=`<div class="wakop">
+        <span class="wabadge">${ico('i-check')}</span>
+        <div class="watitel">
+          <b>WhatsApp werkt</b>
+          <span class="muted">Je klanten krijgen hun updates via WhatsApp, verstuurd door Storvo
+            met de naam van je winkel erbij. Je hoeft hier niets voor in te stellen.</span>
+        </div>
+      </div>
+      <ul class="wafeiten">
+        <li>${ico('i-check')}<span>Wil je liever je eigen nummer? Dan zien klanten het nummer dat ze al kennen
+          en blijf je de WhatsApp Business-app op je telefoon gewoon gebruiken.</span></li>
+        <li>${ico('i-bell')}<span>Bij het koppelen zet WhatsApp een paar dingen uit op je 1&#8209;op&#8209;1 chats:
+          verdwijnende berichten, &eacute;&eacute;n keer bekijken, live locatie en broadcastlijsten.
+          Groepen blijven buiten Storvo.</span></li>
+      </ul>
+      <div class="wavoet">
+        ${!inst||!inst.beschikbaar
+          ? '<span class="muted klein">Je eigen nummer koppelen kan binnenkort. Vraag ernaar via info@storvo.app.</span>'
+          : mag
+            ? `<button class="btn ghost" id="wa_knop" onclick="waStartKoppelen()">${ico('i-message')}Mijn eigen nummer koppelen</button>
+               <span class="muted klein">Duurt ongeveer twee minuten. Houd je telefoon bij de hand.</span>`
+            : '<span class="muted klein">Alleen de eigenaar kan een eigen nummer koppelen.</span>'}
+      </div>`;
+  }
+  vak.className='wakaart'+(gekoppeld?' aan':'');
+  vak.innerHTML=inhoud;
+}
+
+function waRedenTekst(reden){
+  const uitleg={
+    ACCOUNT_DISCONNECTED:'Het account is losgekoppeld bij WhatsApp.',
+    BUSINESS_DOWNGRADE:'Het nummer is overgezet naar de gewone WhatsApp-app.',
+    CHANGE_NUMBER:'Het telefoonnummer is gewijzigd.',
+    COMPANION_INACTIVITY:'Een gekoppeld apparaat was te lang inactief.',
+    PRIMARY_INACTIVITY:'De telefoon was ongeveer twee weken niet online.',
+    USER_RE_REGISTERED:'Het nummer is op een nieuw toestel geregistreerd.'
+  };
+  return uitleg[reden]||'De koppeling is bij WhatsApp beëindigd.';
+}
+
+/* Het venster van Meta openen. De Facebook-bibliotheek laden we pas hier,
+   zodat de app zelf niets extern hoeft te laden om te werken. */
+function waLaadSdk(appId){
+  return new Promise((klaar,mis)=>{
+    if(window.FB){ klaar(); return; }
+    window.fbAsyncInit=function(){
+      FB.init({appId:appId, autoLogAppEvents:true, xfbml:false, version:'v21.0'});
+      klaar();
+    };
+    const s=document.createElement('script');
+    s.src='https://connect.facebook.net/en_US/sdk.js';
+    s.async=true; s.defer=true; s.crossOrigin='anonymous';
+    s.onerror=()=>mis(new Error('sdk'));
+    document.head.appendChild(s);
+    setTimeout(()=>{ if(!window.FB) mis(new Error('traag')); }, 12000);
+  });
+}
+
+let waSessie=null;
+function waLuisteraar(e){
+  if(!/facebook\.com$/.test(new URL(e.origin).hostname)) return;
+  let bericht;
+  try{ bericht=typeof e.data==='string'?JSON.parse(e.data):e.data; }catch(x){ return; }
+  if(!bericht || bericht.type!=='WA_EMBEDDED_SIGNUP') return;
+  if(bericht.event==='FINISH' || bericht.event==='FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
+     || bericht.event==='FINISH_ONLY_WABA'){
+    waSessie={waba_id:bericht.data&&bericht.data.waba_id, nummer_id:bericht.data&&bericht.data.phone_number_id};
+  }
+  if(bericht.event==='CANCEL'){
+    waSessie=null;
+    if(bericht.data&&bericht.data.current_step)
+      console.warn('koppelen afgebroken bij stap', bericht.data.current_step);
+  }
+}
+
+async function waStartKoppelen(){
+  if(waBezig) return;
+  const inst=await waHaalInstelling();
+  if(!inst||!inst.beschikbaar){ toast('WhatsApp is nog niet vrijgegeven.','let-op'); return; }
+
+  waBezig=true; waSessie=null;
+  const knop=document.getElementById('wa_knop');
+  if(knop){ knop.disabled=true; knop.textContent='Venster openen…'; }
+
+  try{
+    await waLaadSdk(inst.app_id);
+  }catch(e){
+    waBezig=false; if(knop) knop.disabled=false;
+    toast('Het koppelvenster kon niet laden. Controleer je internetverbinding.','fout');
+    renderWhatsapp(); return;
+  }
+
+  window.addEventListener('message', waLuisteraar);
+  FB.login(async (reactie)=>{
+    window.removeEventListener('message', waLuisteraar);
+    waBezig=false;
+    const code=reactie&&reactie.authResponse&&reactie.authResponse.code;
+    if(!code||!waSessie||!waSessie.waba_id||!waSessie.nummer_id){
+      toast('Het koppelen is niet afgerond.','let-op');
+      renderWhatsapp(); return;
+    }
+    await waRondAf(code, waSessie);
+  },{
+    config_id: inst.config_id,
+    response_type: 'code',
+    override_default_response_type: true,
+    extras: { setup:{}, featureType:'whatsapp_business_app_onboarding', sessionInfoVersion:'3' }
+  });
+}
+
+async function waRondAf(code, sessie){
+  const vak=document.getElementById('wa_koppel');
+  if(vak) vak.innerHTML='<p class="muted" style="margin:0">Bezig met koppelen. Houd de WhatsApp Business-app even open, dit kan een paar minuten duren.</p>';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/whatsapp-koppelen',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({code, waba_id:sessie.waba_id, nummer_id:sessie.nummer_id})
+    });
+    const uit=await res.json();
+    if(uit.ok){
+      const kp=klantpagina(); kp.kanaalWhatsapp=true; save();
+      const wa=document.getElementById('ber_whatsapp'); if(wa) wa.checked=true;
+      toast('WhatsApp gekoppeld op '+(uit.nummer||'je nummer')+'.','ok');
+    } else {
+      toast(uit.error||'Het koppelen is niet gelukt.','fout');
+    }
+  }catch(e){
+    toast('Het koppelen is niet gelukt.','fout');
+  }
+  renderWhatsapp();
+}
+
 /* ---------- versturen ---------- */
 async function verstuurKlantbericht(r, status, stil){
   const kp=klantpagina();
@@ -4210,7 +4609,7 @@ async function verstuurKlantbericht(r, status, stil){
   if(!r.notify) return;                       /* klant wil geen updates */
   if(!account){ return; }
 
-  const kanalen={ email:kp.kanaalEmail!==false, whatsapp:kp.kanaalWhatsapp===true };
+  const kanalen={ email:kp.kanaalEmail!==false, whatsapp:kp.kanaalWhatsapp!==false };
   if(!kanalen.email && !kanalen.whatsapp) return;
 
   try{
