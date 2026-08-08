@@ -1010,12 +1010,13 @@
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
       </div>
       <div class="row" style="margin-bottom:8px">
-        <a class="btn ghost small" id="zoekGsm" href="https://gsm-world.nl" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Prijs op gsm-world.nl</a>
+        <a class="btn ghost small" id="zoekGsm" href="https://gsm-world.nl/reparaties/" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Prijs op gsm-world.nl</a>
+        <a class="btn ghost small" href="https://gsm-world.nl/reparaties/" target="_blank" title="Alle toestellen op gsm-world.nl">Alle modellen</a>
         <a class="btn ghost small" id="zoekFoneday" href="https://www.foneday.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Voorraad foneday</a>
         <a class="btn ghost small" id="zoekMobileparts" href="https://www.mobileparts.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Mobileparts <b>(ex. btw)</b></a>
       </div>
       <div class="warnbox"> <b>Let op: foneday en mobileparts tonen prijzen exclusief btw.</b> Pas in de checkout komt daar 21% bij. Neem je een prijs van die sites over, vink dan "ex. btw (+21%)"aan bij het onderdeel. De software rekent de btw er dan automatisch bij, zodat je winstberekening klopt. Prijzen op gsm-world.nl zijn consumentenprijzen inclusief btw.</div>
-      <p class="muted" style="margin-top:10px; line-height:1.7">De links openen de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.</p>
+      <p class="muted" style="margin-top:10px; line-height:1.7">gsm-world opent de pagina van het toestel zelf, want daar staan de reparatieprijzen per model. Foneday en mobileparts openen de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.</p>
     </div>
     <div class="card breed">
       <h2><svg class="i"><use href="#i-layers"/></svg>Onderdelen en winst</h2>
@@ -3937,9 +3938,31 @@ function vulRepDatalists(){
   document.getElementById('modellenList').innerHTML=state.modellen.map(m=>`<option value="${esc(m.naam)}">`).join('');
   document.getElementById('ondList').innerHTML=state.onderdelen.map(o=>`<option value="${esc(o.naam)}">`).join('');
 }
+/* gsm-world heeft per toestel een eigen pagina, bijvoorbeeld
+   gsm-world.nl/iphone-16. Zoeken op "iPhone 16 scherm" levert daar niets op;
+   je moet naar het model zelf. Foneday en mobileparts zijn wél zoekpagina's,
+   die krijgen toestel én onderdeel mee.                                     */
+function gsmModelPad(toestel){
+  const m=String(toestel||'').toLowerCase()
+    .replace(/[àáâä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
+    .replace(/[òóôö]/g,'o').replace(/[ùúûü]/g,'u')
+    .replace(/\+/g,' plus ')
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+  return m;
+}
+
 function updateZoekLinks(){
-  const q=encodeURIComponent((document.getElementById('r_toestel').value+' '+document.getElementById('r_type').value).trim());
-  document.getElementById('zoekGsm').href='https://gsm-world.nl/?s='+q+'&post_type=product';
+  const toestel=document.getElementById('r_toestel').value.trim();
+  const type=document.getElementById('r_type').value.trim();
+  const q=encodeURIComponent((toestel+' '+type).trim());
+
+  const gsm=document.getElementById('zoekGsm');
+  const pad=gsmModelPad(toestel);
+  gsm.href = pad ? 'https://gsm-world.nl/'+pad+'/' : 'https://gsm-world.nl/reparaties/';
+  gsm.title = pad ? 'Reparatieprijzen voor '+toestel+' op gsm-world.nl'
+                  : 'Vul eerst het toestel in';
+
   document.getElementById('zoekFoneday').href='https://www.foneday.shop/en/search?q='+q;
   document.getElementById('zoekMobileparts').href='https://www.mobileparts.shop/catalogsearch/result/?q='+q;
 }

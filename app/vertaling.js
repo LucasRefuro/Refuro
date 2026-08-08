@@ -131,7 +131,8 @@ const WOORDEN = {
 'Sms de klant':'Text the customer', 'Mail de klant':'Email the customer',
 'Als probleem':'As a problem', 'Intern opslaan':'Save internally',
 'Ook voor klant':'Also for the customer',
-'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Voorraad foneday':'Foneday stock',
+'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Alle modellen':'All models',
+'Voorraad foneday':'Foneday stock',
 'Open foneday login':'Open Foneday login', 'Open mobileparts login':'Open Mobileparts login',
 'Verwachte ophaaltijd voor de klant':'Expected pickup time for the customer',
 'of typ zelf, bijv. vandaag 15:30':'or type it yourself, e.g. today 15:30',
@@ -141,8 +142,8 @@ const WOORDEN = {
 'Probleem gemarkeerd als opgelost':'Problem marked as solved',
 'Laat het de klant weten via Reparaties.':'Let the customer know via Repairs.',
 'Vergeet niet de klant te informeren (/)':'Do not forget to let the customer know (/)',
-'De links openen de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.':
-  'The links open the search page with the device and repair filled in. You log in to Foneday or Mobileparts yourself in that tab. Automatic lookup of stock and prices is coming in the online version. You can already store your login details under Settings, Suppliers.',
+'gsm-world opent de pagina van het toestel zelf, want daar staan de reparatieprijzen per model. Foneday en mobileparts openen de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.':
+  'gsm-world opens the page of the device itself, because that is where the repair prices per model live. Foneday and Mobileparts open their search page with the device and repair filled in. You log in to Foneday or Mobileparts yourself in that tab. Automatic lookup of stock and prices is coming in the online version. You can already store your login details under Settings, Suppliers.',
 'Pas in de checkout komt daar 21% bij. Neem je een prijs van die sites over, vink dan "ex. btw (+21%)"aan bij het onderdeel. De software rekent de btw er dan automatisch bij, zodat je winstberekening klopt. Prijzen op gsm-world.nl zijn consumentenprijzen inclusief btw.':
   'VAT of 21% is only added at checkout. If you copy a price from those sites, tick "excl. VAT (+21%)" on the part. The software then adds the VAT itself so your profit stays correct. Prices on gsm-world.nl are consumer prices including VAT.',
 'Let op: foneday en mobileparts tonen prijzen exclusief btw.':
