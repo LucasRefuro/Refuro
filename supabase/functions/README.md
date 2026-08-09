@@ -25,6 +25,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `whatsapp-webhook` | ja | Ontvangt berichten en meldingen van Meta |
 | `whatsapp-koppelen` | nee | Rondt het koppelen van een eigen nummer af |
 | `whatsapp-status` | nee | Geeft de browser het app-ID voor de koppelflow |
+| `product-herkennen` | nee | Leest een foto van een productdoosje en zegt wat erin zit |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.
@@ -46,3 +47,5 @@ Zet ze nooit in de code en nooit in een chat.
 | `META_APP_SECRET` | Controleert of een melding echt van Meta komt |
 | `META_ES_CONFIG_ID` | De koppelflow van Meta |
 | `META_VERIFY_TOKEN` | Bevestigt het webhook-adres bij Meta |
+| `ANTHROPIC_API_KEY` | Het lezen van productdoosjes |
+| `ANTHROPIC_MODEL` | Optioneel, om een ander model te kiezen |

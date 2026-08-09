@@ -414,6 +414,56 @@
     cursor:pointer; transition:.15s;}
   .tstknop:hover{border-color:var(--oranje); color:var(--oranje); background:var(--lblauw); transform:translateY(-1px);}
   input.mistoestel{border-color:var(--amber); box-shadow:0 0 0 3px rgba(232,179,29,.15);}
+
+  /* nieuw product: koppelen met de telefoon en scannen */
+  .npstart{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .npstart p.muted{flex-basis:100%; margin:6px 0 0; line-height:1.65;}
+  .npkoppel{display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start;}
+  .npqr{background:#fff; border:1.5px solid var(--border); border-radius:var(--radius-s);
+    padding:14px; line-height:0; flex:none; min-width:190px; min-height:190px;
+    display:flex; align-items:center; justify-content:center;}
+  .npqr img, .npqr canvas{display:block; width:190px; height:190px;}
+  .npuitleg{flex:1; min-width:260px;}
+  .npuitleg h3{font-size:15.5px; font-weight:700; margin-bottom:8px;}
+  .npuitleg p.muted{line-height:1.7; margin-bottom:14px; max-width:60ch;}
+  .npwachtrij{display:inline-flex; align-items:center; gap:9px; background:var(--amber-soft);
+    color:var(--amber-tekst); border-radius:var(--pil); padding:8px 16px; font-size:13.5px; font-weight:600;}
+  .nplink{font-size:12.5px; color:var(--muted); margin:14px 0; word-break:break-all; line-height:1.6;}
+  .nplink b{font-weight:600; color:var(--tekst);}
+  .npspin{width:14px; height:14px; border:2.4px solid currentColor; border-top-color:transparent;
+    border-radius:50%; display:inline-block; animation:npdraai .7s linear infinite; opacity:.75;}
+  @keyframes npdraai{to{transform:rotate(360deg)}}
+
+  .npvolg{display:flex; flex-wrap:wrap; gap:10px 22px; margin-bottom:14px;}
+  .npstap{display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--muted);}
+  .npstap.af{color:var(--green-tekst); font-weight:600;}
+  .npbol{width:22px; height:22px; border-radius:50%; background:var(--soft-2); flex:none;
+    display:flex; align-items:center; justify-content:center;}
+  .npstap.af .npbol{background:var(--green-soft); color:var(--green-tekst);}
+  .npbol svg{width:12px; height:12px;}
+
+  .npmelding{border-radius:var(--radius-s); padding:13px 16px; font-size:13.5px; line-height:1.6; margin:12px 0;
+    display:flex; align-items:center; gap:10px;}
+  .npmelding.goed{background:var(--green-soft); color:var(--green-tekst);}
+  .npmelding.mis{background:var(--red-soft); color:var(--red-tekst);}
+  .npmelding.bezig{background:var(--amber-soft); color:var(--amber-tekst);}
+  .npvondst{background:var(--lblauw); border-radius:var(--radius-s); padding:13px 16px;
+    font-size:14.5px; margin-bottom:14px;}
+
+  .npcam{width:100%; max-width:430px; aspect-ratio:4/3; background:#0d1211; border-radius:var(--radius-s);
+    overflow:hidden; display:flex; align-items:center; justify-content:center;}
+  .npcam video, .npcam canvas{width:100%; height:100%; object-fit:cover;}
+  .npcam #npCam{width:100%;}
+  .npwacht{color:#8A938F; font-size:13px; padding:18px; text-align:center; line-height:1.6;}
+
+  .npbron{background:var(--green-soft); color:var(--green-tekst); border-radius:var(--radius-s);
+    padding:14px 17px; margin-bottom:16px; font-size:13.5px; line-height:1.65;}
+  .npbron.twijfel{background:var(--amber-soft); color:var(--amber-tekst);}
+  .npbronkop{font-weight:700; margin-bottom:6px;}
+  .npbron ul{margin:0; padding-left:18px;}
+  .npbron li{margin-bottom:2px;}
+  .npgelezen{margin-top:8px; opacity:.8; font-style:italic;}
+  @media(max-width:700px){ .npkoppel{gap:18px;} .npqr{margin:0 auto;} }
   @keyframes tstop{from{opacity:0; transform:translateY(-5px)} to{opacity:1; transform:none}}
   @media(prefers-reduced-motion:reduce){ .tstbox{animation:none;} }
   .infobox b{color:var(--oranje);}
@@ -781,6 +831,7 @@
 <svg style="display:none" aria-hidden="true">
   <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></symbol>
   <symbol id="i-scan" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><circle cx="12" cy="13" r="3.5"/><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.2-2h6.6l1.2 2h1.8A2.5 2.5 0 0 1 20.5 8.5v9A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5z"/></symbol>
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
   <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
   <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
@@ -833,7 +884,6 @@
     <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
-    <button data-tab="nieuw"><svg class="i"><use href="#i-plus"/></svg> Los product</button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
     <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
@@ -1076,7 +1126,10 @@
 
 <!-- PRODUCTEN -->
 <section id="tab-producten"hidden>
-  <div class="pagehead"><h1>Producten</h1></div>
+  <div class="pagehead">
+    <h1>Producten</h1>
+    <button class="btn actie" onclick="startNieuwProduct()"><svg class="i"><use href="#i-plus"/></svg> Nieuw product toevoegen</button>
+  </div>
   <div class="card">
     <div class="row" style="margin-bottom:12px">
       <div style="flex:2"><input id="zoek" placeholder="Zoek op naam of barcode" oninput="renderProducten()"></div>
@@ -1091,10 +1144,18 @@
   </div>
 </section>
 
-<!-- LOS PRODUCT -->
+<!-- NIEUW PRODUCT -->
 <section id="tab-nieuw"hidden>
-  <div class="pagehead"><h1 id="formTitel">Los product toevoegen</h1></div>
+  <div class="pagehead">
+    <h1 id="formTitel">Nieuw product toevoegen</h1>
+    <button class="btn ghost" onclick="showTab('producten')">Terug naar producten</button>
+  </div>
+  <div class="card" id="npKaart">
+    <h2><svg class="i"><use href="#i-scan"/></svg>Scannen</h2>
+    <div id="npPaneel"></div>
+  </div>
   <div class="card">
+    <div id="npHerkomst"></div>
     <div class="grid" style="margin-bottom:12px">
       <div><label>Barcode</label><input id="f_barcode" placeholder="Scan of typ barcode"></div>
       <div><label>Naam</label><input id="f_naam" placeholder="bijv. iPhone 15 hoesje zwart"></div>
@@ -1569,7 +1630,11 @@ function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
 /* ---------- navigatie ---------- */
 document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 function showTab(t){
-  document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  /* Nieuw product heeft geen eigen menuknop meer; hij hangt onder Producten.
+     Daarom blijft die knop oplichten zolang je in het formulier zit.        */
+  const menu = t==='nieuw' ? 'producten' : t;
+  document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
+  if(t!=='nieuw' && typeof npStop==='function') npStop();
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   if(t==='dashboard') renderDashboard();
   if(t==='scan') focusScan();
@@ -1579,7 +1644,11 @@ function showTab(t){
   if(t==='producten') renderProducten();
   if(t==='bestellen') renderBestellen();
   if(t==='instellingen') renderInstellingen();
-  if(t==='nieuw' && !editId) resetForm();
+  if(t==='nieuw'){
+    if(!editId) resetForm();
+    const k=document.getElementById('npKaart');
+    if(k){ k.hidden=!!editId; if(!editId) npTeken(); }
+  }
 }
 
 /* ---------- globaal zoeken ---------- */
@@ -2200,7 +2269,7 @@ function renderProducten(){
       `<td class="num${p.voorraad<=p.min?'low':''}">${p.voorraad}</td><td class="num">${p.min}</td>`+
       `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="8" class="muted">Nog geen producten. Gebruik Snel toevoegen of Los product.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="8" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
   const sel=document.getElementById('filterCat');
   const cur=sel.value;
   sel.innerHTML='<option value="">Alle categorieën</option>'+state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
@@ -2258,7 +2327,8 @@ function vulStandaard(){
 }
 function resetForm(){
   editId=null;
-  document.getElementById('formTitel').textContent='Los product toevoegen';
+  document.getElementById('formTitel').textContent='Nieuw product toevoegen';
+  const hk=document.getElementById('npHerkomst'); if(hk) hk.innerHTML='';
   document.getElementById('formOpslaan').textContent='Product toevoegen';
   vulCatSelect();
   document.getElementById('f_barcode').value='';
@@ -2266,6 +2336,329 @@ function resetForm(){
   document.getElementById('f_voorraad').value=0;
   vulStandaard();
 }
+/* ═══════════════ NIEUW PRODUCT MET DE TELEFOON ═══════════════
+   Op de computer laten we een QR-code zien. Scan je die met je telefoon, dan
+   opent daar een scanpagina en staan de twee schermen met elkaar in verbinding.
+   De telefoon maakt een foto van het doosje en scant daarna de streepjescode;
+   de computer leest de foto en vult het formulier in.
+
+   Werk je op de telefoon zelf, dan hoeft er niets gekoppeld te worden. Dan
+   draait diezelfde scanmodule gewoon in dit scherm.
+
+   De koppelcode is elke keer nieuw en tien tekens lang. Over de verbinding
+   gaan alleen de foto en de streepjescode heen, geen winkelgegevens.        */
+
+const NP_QRBIB='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+let np={modus:'uit', code:null, kanaal:null, verbonden:false, herkend:null,
+        bezig:false, fout:'', lezer:null, stap:'doosje'};
+
+function npOpTelefoon(){
+  try{ return window.matchMedia('(pointer:coarse)').matches && window.innerWidth<900; }
+  catch(e){ return false; }
+}
+function npCode(){
+  const t='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const a=new Uint8Array(10); crypto.getRandomValues(a);
+  return [...a].map(x=>t[x%t.length]).join('');
+}
+function npLink(){
+  return location.origin+location.pathname.replace(/[^/]*$/,'')+'scan.html?s='+np.code;
+}
+
+function startNieuwProduct(){
+  editId=null;
+  showTab('nieuw');
+  resetForm();
+  np.herkend=null; np.fout=''; np.stap='doosje';
+  npTeken();
+}
+
+/* ---------- de verbinding ---------- */
+function npStop(){
+  if(np.kanaal){ try{ sb.removeChannel(np.kanaal); }catch(e){} np.kanaal=null; }
+  if(np.lezer){ np.lezer.stop(); np.lezer=null; }
+  np.modus='uit'; np.verbonden=false; np.code=null;
+}
+function npZeg(gebeurtenis, lading){
+  if(np.kanaal) np.kanaal.send({type:'broadcast', event:gebeurtenis, payload:lading||{}});
+}
+function npKoppel(){
+  if(!navigator.onLine){ toast('Koppelen kan alleen als je online bent','let-op'); return; }
+  npStop();
+  np.code=npCode(); np.modus='koppelen'; np.fout='';
+  np.kanaal=sb.channel('scan-'+np.code, {config:{broadcast:{self:false}}});
+  np.kanaal
+    .on('broadcast',{event:'hallo'}, ()=>{
+      const was=np.verbonden;
+      np.verbonden=true;
+      npZeg('welkom',{winkel:(state.bedrijf&&state.bedrijf.naam)||'Storvo'});
+      if(!was) npTeken();
+    })
+    .on('broadcast',{event:'foto'},    ({payload})=>npFoto(payload&&payload.beeld))
+    .on('broadcast',{event:'barcode'}, ({payload})=>npBarcode(payload))
+    .on('broadcast',{event:'opnieuw'}, ()=>{ np.herkend=null; resetForm(); npTeken(); })
+    .subscribe();
+  npTeken();
+}
+
+/* ---------- de foto laten lezen ---------- */
+async function npFoto(beeld){
+  if(!beeld) return;
+  np.bezig=true; np.fout=''; npTeken();
+  try{
+    const s=await sb.auth.getSession();
+    const token=s && s.data && s.data.session ? s.data.session.access_token : null;
+    if(!token) throw new Error('Niet ingelogd');
+
+    const res=await fetch(SUPABASE_URL+'/functions/v1/product-herkennen',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+token},
+      body:JSON.stringify({
+        beeld,
+        categorieen: state.categorieen.map(c=>c.naam),
+        voorbeelden: state.producten.slice(-25).map(p=>p.naam)
+      })
+    });
+    const uit=await res.json();
+    if(!res.ok) throw new Error(uit && uit.fout ? uit.fout : 'De herkenning lukte niet');
+    if(!uit.naam) throw new Error('Op deze foto is geen product te herkennen');
+
+    np.herkend=uit;
+    npSlimInvullen(uit, null);
+    npZeg('herkend', {naam:uit.naam, categorie:uit.categorie});
+    np.stap='barcode';
+  }catch(e){
+    np.fout=e.message||'De herkenning lukte niet';
+    npZeg('herkendmis', {reden:np.fout});
+  }
+  np.bezig=false;
+  npTeken();
+}
+function npBarcode(lading){
+  const code=lading && lading.code ? String(lading.code).trim() : '';
+  if(!code) return;
+  const bestaat=state.producten.find(p=>p.barcode===code);
+  if(bestaat){
+    np.fout='Deze code hoort al bij '+bestaat.naam+'. Bewerk dat product of scan een andere code.';
+    npTeken();
+    return;
+  }
+  document.getElementById('f_barcode').value=code;
+  np.fout=''; np.stap='klaar';
+  npZeg('opgeslagen',{});
+  npTeken();
+  toast('Streepjescode ontvangen van je telefoon', true);
+}
+
+/* ---------- werken op de telefoon zelf ---------- */
+async function npCameraHier(){
+  np.modus='hier'; np.stap='doosje'; np.fout=''; npTeken();
+}
+async function npFotoHier(invoer){
+  const b=invoer.files && invoer.files[0]; invoer.value='';
+  if(!b) return;
+  try{
+    const beeld=await window.StorvoScan.fotoKlein(b);
+    await npFoto(beeld);
+  }catch(e){ np.fout='De foto kon niet verwerkt worden'; npTeken(); }
+}
+async function npLeesHier(){
+  const houder=document.getElementById('npCam');
+  if(!houder || !window.StorvoScan) return;
+  np.lezer=window.StorvoScan.maakLezer();
+  const uit=await np.lezer.start(houder, c=>{
+    if(np.lezer){ np.lezer.stop(); np.lezer=null; }
+    npBarcode({code:c});
+  });
+  if(uit==='geen') houder.innerHTML='<div class="npwacht">De camera is niet beschikbaar. Typ de code hieronder in.</div>';
+}
+function npHandmatig(){
+  const v=document.getElementById('npHand');
+  if(v && v.value.trim()) npBarcode({code:v.value.trim()});
+}
+
+/* ---------- slim invullen ----------
+   De herkenning zegt wát het is. Wat het móét kosten weet de winkel zelf al,
+   want die verkoopt dit soort dingen dagelijks. We zoeken daarom eerst in de
+   eigen producten naar het meest verwante artikel en nemen de prijzen daarvan
+   over. Alleen als er niets vergelijkbaars is vallen we terug op de standaard
+   van de categorie, en bij accessoires desnoods op de schatting.            */
+function npWoorden(s){ return zoekNorm(s).split(' ').filter(w=>w.length>2); }
+
+function npGelijkende(h){
+  const kern=[...new Set(npWoorden(h.soort||'').concat(npWoorden(h.naam||'')))];
+  if(!kern.length) return [];
+  return state.producten
+    .map(p=>{
+      const w=new Set(npWoorden(p.naam));
+      return {p, score:kern.reduce((n,k)=>n+(w.has(k)?1:0),0)};
+    })
+    .filter(x=>x.score>0)
+    .sort((a,b)=>b.score-a.score || b.p.id-a.p.id)
+    .slice(0,8).map(x=>x.p);
+}
+function npMediaan(getallen){
+  const g=getallen.filter(n=>n>0).sort((a,b)=>a-b);
+  if(!g.length) return 0;
+  const m=Math.floor(g.length/2);
+  return g.length%2 ? g[m] : Math.round(((g[m-1]+g[m])/2)*100)/100;
+}
+function npCategorie(h, buren){
+  const opNaam=state.categorieen.find(c=>zoekNorm(c.naam)===zoekNorm(h.categorie||''));
+  if(opNaam) return {cat:opNaam, waarom:'herkend'};
+  if(buren.length){
+    const tel={};
+    buren.forEach(p=>{ tel[p.cat]=(tel[p.cat]||0)+1; });
+    const beste=Object.keys(tel).sort((a,b)=>tel[b]-tel[a])[0];
+    const c=state.categorieen.find(c=>c.id===Number(beste));
+    if(c) return {cat:c, waarom:'buren'};
+  }
+  return {cat:state.categorieen[0]||null, waarom:'geen'};
+}
+function npSlimInvullen(h, barcode){
+  const buren=npGelijkende(h);
+  const kc=npCategorie(h, buren);
+  const bronnen=[];
+
+  if(barcode) document.getElementById('f_barcode').value=barcode;
+  document.getElementById('f_naam').value = h.naam || [h.soort, h.model].filter(Boolean).join(' ');
+
+  if(kc.cat){
+    document.getElementById('f_cat').value=kc.cat.id;
+    vulStandaard();                       /* zet eerst de standaard van de categorie */
+    bronnen.push(kc.waarom==='herkend' ? 'Categorie uit de foto gehaald'
+               : kc.waarom==='buren'   ? 'Categorie overgenomen van vergelijkbare producten'
+               : 'Categorie geraden, kijk hem even na');
+  }
+
+  const zelfdeCat=buren.filter(p=>!kc.cat || p.cat===kc.cat.id);
+  const bron=zelfdeCat.length?zelfdeCat:buren;
+  if(bron.length){
+    const inkoop =npMediaan(bron.map(p=>p.inkoop));
+    const verkoop=npMediaan(bron.map(p=>p.verkoop));
+    const min    =npMediaan(bron.map(p=>p.min));
+    const bestel =npMediaan(bron.map(p=>p.bestel));
+    if(inkoop>0)  document.getElementById('f_inkoop').value=inkoop;
+    if(verkoop>0) document.getElementById('f_verkoop').value=verkoop;
+    if(min>0)     document.getElementById('f_min').value=Math.round(min);
+    if(bestel>0)  document.getElementById('f_bestel').value=Math.round(bestel);
+    /* De namen zelf laten we met rust; alleen de zin eromheen wordt vertaald. */
+    bronnen.push('Prijzen overgenomen van <span data-onvertaald>'+
+      bron.slice(0,2).map(p=>esc(p.naam)).join(' · ')+'</span>');
+  }else if(h.accessoire && h.verkoop>0){
+    document.getElementById('f_verkoop').value=h.verkoop;
+    bronnen.push('Verkoopprijs is een schatting, kijk hem na');
+  }
+
+  document.getElementById('f_voorraad').value=0;
+  npHerkomst(h, bronnen);
+}
+function npHerkomst(h, bronnen){
+  const el=document.getElementById('npHerkomst');
+  if(!el) return;
+  if(!h){ el.innerHTML=''; return; }
+  const twijfel = h.zeker==='laag';
+  el.innerHTML=`<div class="npbron${twijfel?' twijfel':''}">`+
+    `<div class="npbronkop">${twijfel?'Storvo weet het niet zeker, kijk alles even na':'Storvo heeft dit alvast ingevuld'}</div>`+
+    (bronnen.length?`<ul>${bronnen.map(b=>'<li>'+b+'</li>').join('')}</ul>`:'')+
+    (h.gelezen?`<div class="npgelezen"><span>Op het doosje gelezen</span>: <span data-onvertaald>${esc(h.gelezen)}</span></div>`:'')+
+    `</div>`;
+}
+
+/* ---------- het paneel tekenen ---------- */
+function npQr(el, tekst){
+  const maak=()=>{
+    el.innerHTML='';
+    try{
+      new window.QRCode(el, {text:tekst, width:190, height:190,
+        colorDark:'#17201E', colorLight:'#ffffff',
+        correctLevel:window.QRCode.CorrectLevel.M});
+    }catch(e){ el.innerHTML='<div class="npwacht">De QR-code kon niet getekend worden.</div>'; }
+  };
+  if(window.QRCode) return maak();
+  const s=document.createElement('script');
+  s.src=NP_QRBIB; s.onload=maak;
+  s.onerror=()=>{ el.innerHTML='<div class="npwacht">De QR-code kon niet geladen worden. Typ de link hieronder over op je telefoon.</div>'; };
+  document.head.appendChild(s);
+}
+function npTeken(){
+  const p=document.getElementById('npPaneel');
+  if(!p) return;
+  if(np.lezer && np.stap!=='barcode'){ np.lezer.stop(); np.lezer=null; }
+  const melding = np.fout ? `<div class="npmelding mis">${esc(np.fout)}</div>` : '';
+
+  if(np.modus==='uit'){
+    p.innerHTML=`<div class="npstart">
+      <button class="btn actie" onclick="${npOpTelefoon()?'npCameraHier()':'npKoppel()'}">
+        <svg class="i"><use href="#i-scan"/></svg>${npOpTelefoon()?'Camera openen':'Scannen met je telefoon'}</button>
+      ${npOpTelefoon()?'':'<button class="btn ghost" onclick="npCameraHier()">Camera van dit apparaat gebruiken</button>'}
+      <p class="muted">Twee scans en het formulier hieronder staat vol: eerst een foto van het doosje, dan de streepjescode. Liever met de hand? Vul hieronder gewoon zelf in.</p>
+    </div>${melding}`;
+    return;
+  }
+
+  if(np.modus==='koppelen' && !np.verbonden){
+    p.innerHTML=`<div class="npkoppel">
+      <div class="npqr" id="npQrVak"></div>
+      <div class="npuitleg">
+        <h3>Scan deze code met je telefoon</h3>
+        <p class="muted">Richt gewoon je camera erop, er is geen app voor nodig. Daarna maak je een foto van het doosje en scan je de streepjescode. Alles komt hier vanzelf terecht.</p>
+        <div class="npwachtrij"><span class="npspin"></span>Wachten op je telefoon</div>
+        <div class="nplink">Lukt scannen niet? Typ over: <b>${esc(npLink())}</b></div>
+        <button class="btn ghost small" onclick="npStop(); npTeken()">Annuleren</button>
+      </div>
+    </div>${melding}`;
+    npQr(document.getElementById('npQrVak'), npLink());
+    return;
+  }
+
+  if(np.modus==='koppelen'){
+    const stappen=[
+      ['Telefoon verbonden', true],
+      ['Foto van het doosje', !!np.herkend],
+      ['Streepjescode', np.stap==='klaar']
+    ];
+    p.innerHTML=`<div class="npvolg">
+      ${stappen.map(([t,af])=>`<div class="npstap${af?' af':''}">
+        <span class="npbol">${af?'<svg class="i s"><use href="#i-check"/></svg>':''}</span>${esc(t)}</div>`).join('')}
+    </div>
+    ${np.bezig?'<div class="npmelding bezig"><span class="npspin"></span>Storvo kijkt naar de foto</div>':''}
+    ${np.herkend?`<div class="npvondst"><b>${esc(np.herkend.naam)}</b>${np.herkend.categorie?' · '+esc(np.herkend.categorie):''}</div>`:''}
+    ${np.stap==='klaar'?'<div class="npmelding goed">Klaar. Kijk het formulier hieronder na en sla het op.</div>':''}
+    <button class="btn ghost small" onclick="npStop(); npTeken()">Telefoon loskoppelen</button>
+    ${melding}`;
+    return;
+  }
+
+  /* op dit apparaat zelf scannen */
+  if(np.stap==='doosje'){
+    p.innerHTML=`<div class="npstart">
+      <button class="btn actie" onclick="document.getElementById('npFotoIn').click()">
+        <svg class="i"><use href="#i-camera"/></svg>Foto van het doosje</button>
+      <input type="file" id="npFotoIn" accept="image/*" capture="environment" style="display:none" onchange="npFotoHier(this)">
+      <button class="btn ghost" onclick="np.stap='barcode'; npTeken()">Overslaan, alleen de code scannen</button>
+      <p class="muted">Houd de kant met de productnaam naar de camera.</p>
+    </div>
+    ${np.bezig?'<div class="npmelding bezig"><span class="npspin"></span>Storvo kijkt naar de foto</div>':''}
+    ${melding}`;
+    return;
+  }
+  if(np.stap==='barcode'){
+    p.innerHTML=`${np.herkend?`<div class="npvondst"><b>${esc(np.herkend.naam)}</b>${np.herkend.categorie?' · '+esc(np.herkend.categorie):''}</div>`:''}
+    <div class="npcam" id="npCam"><div class="npwacht">Camera wordt gestart…</div></div>
+    <div class="row" style="margin-top:12px">
+      <div style="flex:1"><label>Of typ de streepjescode</label><input id="npHand" inputmode="numeric"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); npHandmatig();}"></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn ghost" onclick="npHandmatig()">Gebruiken</button></div>
+    </div>${melding}`;
+    npLeesHier();
+    return;
+  }
+  p.innerHTML=`<div class="npmelding goed">Klaar. Kijk het formulier hieronder na en sla het op.</div>
+    <button class="btn ghost small" onclick="np.herkend=null; np.stap='doosje'; resetForm(); npTeken()">Volgend product</button>${melding}`;
+}
+
 function opslaanProduct(){
   const barcode=document.getElementById('f_barcode').value.trim();
   const naam=document.getElementById('f_naam').value.trim();
@@ -5528,6 +5921,7 @@ pasHuisstijlToe();
 renderScanLog(); updateBadge(); renderDashboard();
 authBoot();
 </script>
+<script src="scanner.js"></script>
 <script src="vertaling.js"></script>
 </body>
 </html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Scannen · Storvo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --groen:#0B5B52; --amber:#E88A1D; --amber-d:#CE7811; --warmwit:#F7F6F3;
+  --ink:#17201E; --ijsgroen:#E7F1EE; --card:#FFFFFF; --rand:#ECEAE4;
+  --muted:#5B6663; --muted-l:#8A938F; --rood:#D64545; --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.6;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);}
+.wrap{max-width:520px; margin:0 auto; padding:20px 18px 40px;}
+
+header{display:flex; align-items:center; gap:11px; margin-bottom:22px;}
+.mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex;
+  align-items:center; justify-content:center; flex:none;}
+.mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
+.wm{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; letter-spacing:-.03em;}
+.winkel{margin-left:auto; font-size:13px; color:var(--muted-l); text-align:right; max-width:45%;}
+
+.stappen{display:flex; gap:8px; margin-bottom:20px;}
+.stappen i{flex:1; height:5px; border-radius:var(--pil); background:var(--rand);}
+.stappen i.nu{background:var(--amber);}
+.stappen i.klaar{background:var(--groen);}
+
+.kaart{background:var(--card); border:1.5px solid var(--rand); border-radius:22px;
+  padding:24px 22px; box-shadow:0 6px 24px rgba(23,32,30,.06); margin-bottom:16px;}
+h1{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.02em;
+  line-height:1.25; margin-bottom:9px;}
+p.lead{color:var(--muted); font-size:15px; margin-bottom:20px;}
+
+.knop{display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+  background:var(--amber); color:#fff; border:none; border-radius:var(--pil);
+  padding:18px 24px; font-family:inherit; font-size:16.5px; font-weight:700; cursor:pointer;
+  box-shadow:0 6px 18px rgba(232,138,29,.28); transition:.16s;}
+.knop:active{transform:scale(.98);}
+.knop:disabled{opacity:.55; box-shadow:none;}
+.knop svg{width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
+.knop.stil{background:var(--card); color:var(--muted); border:1.5px solid var(--rand);
+  box-shadow:none; font-size:15px; padding:14px 20px; margin-top:11px;}
+input[type=file]{display:none;}
+
+.cam{width:100%; aspect-ratio:4/3; background:#0d1211; border-radius:18px; overflow:hidden;
+  position:relative; margin-bottom:16px; display:flex; align-items:center; justify-content:center;}
+.cam video, .cam canvas{width:100%; height:100%; object-fit:cover;}
+.cam #scanCam{width:100%;}
+.cam .wacht{color:#8A938F; font-size:14px; padding:20px; text-align:center;}
+.mikker{position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to bottom, rgba(0,0,0,.32) 0 30%, transparent 30% 70%, rgba(0,0,0,.32) 70% 100%);}
+.mikker::after{content:''; position:absolute; left:8%; right:8%; top:50%; height:2px;
+  background:var(--amber); box-shadow:0 0 12px rgba(232,138,29,.8); animation:zoek 1.6s ease-in-out infinite alternate;}
+@keyframes zoek{from{transform:translateY(-52px)} to{transform:translateY(52px)}}
+
+.melding{border-radius:14px; padding:13px 16px; font-size:14.5px; line-height:1.55; margin-top:14px;}
+.melding.goed{background:var(--ijsgroen); color:var(--groen);}
+.melding.mis{background:#FDECF1; color:#8E1033;}
+.melding.bezig{background:#FAF0D8; color:#946C07;}
+
+.vondst{background:var(--ijsgroen); border-radius:16px; padding:16px 18px; margin-bottom:6px;}
+.vondst .lbl{font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--groen); margin-bottom:5px;}
+.vondst .val{font-size:17px; font-weight:700; line-height:1.35; word-break:break-word;}
+.vondst .bij{font-size:13.5px; color:var(--muted); margin-top:3px;}
+
+.handmatig{margin-top:16px;}
+.handmatig label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px;}
+.handmatig input{width:100%; padding:14px 16px; border:1.5px solid var(--rand); border-radius:14px;
+  font-family:inherit; font-size:16px; background:#fff; color:var(--ink);}
+.handmatig input:focus{outline:none; border-color:var(--groen);}
+
+.klaarvink{width:66px; height:66px; border-radius:21px; background:var(--ijsgroen); color:var(--groen);
+  display:flex; align-items:center; justify-content:center; margin:4px auto 20px;}
+.klaarvink svg{width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; stroke-linejoin:round;}
+.midden{text-align:center;}
+.spin{display:inline-block; width:16px; height:16px; border:2.5px solid rgba(148,108,7,.25);
+  border-top-color:#946C07; border-radius:50%; animation:draai .7s linear infinite; vertical-align:-3px; margin-right:8px;}
+@keyframes draai{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){ .spin,.mikker::after{animation:none;} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+    <span class="wm">storvo</span>
+    <span class="winkel" id="winkelNaam"></span>
+  </header>
+
+  <div class="stappen" id="stappen"><i class="nu"></i><i></i><i></i></div>
+  <div id="scherm"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="scanner.js"></script>
+<script>
+'use strict';
+
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+
+const code=new URLSearchParams(location.search).get('s')||'';
+const scherm=document.getElementById('scherm');
+const balk=document.getElementById('stappen');
+
+let kanaal=null, verbonden=false, lezer=null;
+let stap='verbinden';          /* verbinden · doosje · wachten · barcode · klaar */
+let herkend=null, barcode=null, fout='';
+
+/* ---------- kleine hulpjes ---------- */
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icoon={
+  camera:'<circle cx="12" cy="13" r="3.5"/><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.2-2h6.6l1.2 2h1.8A2.5 2.5 0 0 1 20.5 8.5v9A2.5 2.5 0 0 1 18 20H6a2.5 2.5 0 0 1-2.5-2.5z"/>',
+  scan:'<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10"/>',
+  vink:'<path d="M20 6 9 17l-5-5"/>'
+};
+function zetBalk(n, af){
+  [...balk.children].forEach((i,ix)=>{
+    i.className = ix<n ? 'klaar' : (ix===n && !af ? 'nu' : (af?'klaar':''));
+  });
+}
+function zeg(gebeurtenis, lading){
+  if(!kanaal) return;
+  kanaal.send({type:'broadcast', event:gebeurtenis, payload:lading||{}});
+}
+
+/* ---------- verbinden met de pc ---------- */
+function verbind(){
+  if(!code){ stap='geencode'; teken(); return; }
+  const sb=window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  kanaal=sb.channel('scan-'+code, {config:{broadcast:{self:false}}});
+  kanaal
+    .on('broadcast',{event:'welkom'}, ({payload})=>{
+      verbonden=true;
+      if(payload && payload.winkel) document.getElementById('winkelNaam').textContent=payload.winkel;
+      if(stap==='verbinden'){ stap='doosje'; teken(); }
+    })
+    .on('broadcast',{event:'herkend'}, ({payload})=>{
+      herkend=payload||{}; fout='';
+      stap='barcode'; teken();
+    })
+    .on('broadcast',{event:'herkendmis'}, ({payload})=>{
+      fout=(payload&&payload.reden)||'De foto kon niet gelezen worden.';
+      stap='doosje'; teken();
+    })
+    .on('broadcast',{event:'opgeslagen'}, ()=>{ stap='klaar'; teken(); })
+    .subscribe(status=>{
+      if(status==='SUBSCRIBED'){
+        zeg('hallo',{});
+        /* De pc kan net even later zijn; we roepen nog een paar keer. */
+        let n=0; const t=setInterval(()=>{ if(verbonden||n++>8){ clearInterval(t); return; } zeg('hallo',{}); }, 1200);
+        setTimeout(()=>{ if(!verbonden){ stap='geenpc'; teken(); } }, 12000);
+      }
+    });
+}
+
+/* ---------- stap 1: foto van het doosje ---------- */
+async function fotoGekozen(invoer){
+  const bestand=invoer.files && invoer.files[0];
+  invoer.value='';
+  if(!bestand) return;
+  stap='wachten'; fout=''; teken();
+  try{
+    const beeld=await window.StorvoScan.fotoKlein(bestand);
+    zeg('foto',{beeld});
+    setTimeout(()=>{ if(stap==='wachten'){ fout='De pc reageert niet. Probeer het opnieuw.'; stap='doosje'; teken(); } }, 45000);
+  }catch(e){
+    fout='De foto kon niet verwerkt worden. Probeer het nog eens.';
+    stap='doosje'; teken();
+  }
+}
+
+/* ---------- stap 2: de streepjescode ---------- */
+async function startLezen(){
+  const houder=document.getElementById('camera');
+  if(!houder) return;
+  lezer=window.StorvoScan.maakLezer();
+  const uit=await lezer.start(houder, gevonden);
+  if(uit==='geen'){
+    houder.innerHTML='<div class="wacht">De camera is niet beschikbaar. Typ de code hieronder in.</div>';
+  }
+}
+function gevonden(c){
+  if(barcode) return;
+  barcode=c;
+  if(lezer){ lezer.stop(); lezer=null; }
+  if(navigator.vibrate) navigator.vibrate(60);
+  zeg('barcode',{code:c, herkend});
+  stap='klaar'; teken();
+}
+function handmatigOk(){
+  const v=document.getElementById('handcode').value.trim();
+  if(v) gevonden(v);
+}
+
+/* ---------- tekenen ---------- */
+function stopLezen(){ if(lezer){ lezer.stop(); lezer=null; } }
+
+function teken(){
+  if(stap!=='barcode') stopLezen();
+  const melding = fout ? `<div class="melding mis">${esc(fout)}</div>` : '';
+
+  if(stap==='geencode'){
+    zetBalk(0);
+    scherm.innerHTML=`<div class="kaart"><h1>Deze link is niet compleet</h1>
+      <p class="lead">Scan de QR-code opnieuw vanaf je computer. Dan komt de koppelcode er vanzelf bij.</p></div>`;
+    return;
+  }
+  if(stap==='geenpc'){
+    zetBalk(0);
+    scherm.innerHTML=`<div class="kaart"><h1>Geen verbinding met de computer</h1>
+      <p class="lead">De computer reageert niet. Staat het scherm met de QR-code nog open? Vernieuw die pagina en scan de code opnieuw.</p>
+      <button class="knop stil" onclick="location.reload()">Opnieuw proberen</button></div>`;
+    return;
+  }
+  if(stap==='verbinden'){
+    zetBalk(0);
+    scherm.innerHTML=`<div class="kaart"><h1>Verbinden met je computer</h1>
+      <p class="lead"><span class="spin"></span>Een ogenblik, we zoeken je scherm.</p></div>`;
+    return;
+  }
+  if(stap==='doosje'){
+    zetBalk(0);
+    scherm.innerHTML=`<div class="kaart">
+      <h1>Maak een foto van het doosje</h1>
+      <p class="lead">Houd de kant met de productnaam naar de camera. Storvo leest er zelf uit wat het is.</p>
+      <button class="knop" onclick="document.getElementById('fotoIn').click()">
+        <svg viewBox="0 0 24 24">${icoon.camera}</svg>Foto maken</button>
+      <input type="file" id="fotoIn" accept="image/*" capture="environment" onchange="fotoGekozen(this)">
+      <button class="knop stil" onclick="stap='barcode'; herkend=null; teken()">Overslaan en meteen de code scannen</button>
+      ${melding}</div>`;
+    return;
+  }
+  if(stap==='wachten'){
+    zetBalk(0);
+    scherm.innerHTML=`<div class="kaart"><h1>Storvo kijkt naar de foto</h1>
+      <p class="lead"><span class="spin"></span>Dit duurt een paar tellen.</p></div>`;
+    return;
+  }
+  if(stap==='barcode'){
+    zetBalk(1);
+    const vondst = herkend && herkend.naam
+      ? `<div class="vondst"><div class="lbl">Herkend</div><div class="val">${esc(herkend.naam)}</div>`+
+        (herkend.categorie?`<div class="bij">${esc(herkend.categorie)}</div>`:'')+`</div>`
+      : '';
+    scherm.innerHTML=`<div class="kaart">
+      ${vondst}
+      <h1${vondst?' style="margin-top:18px"':''}>Scan nu de streepjescode</h1>
+      <p class="lead">Houd de code in beeld. Zodra hij scherp is pakt Storvo hem vanzelf.</p>
+      <div class="cam" id="camera"><div class="wacht">Camera wordt gestart…</div><div class="mikker"></div></div>
+      <div class="handmatig">
+        <label>Lukt het scannen niet? Typ de code</label>
+        <input id="handcode" inputmode="numeric" autocomplete="off" placeholder="bijv. 8712345678901"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); handmatigOk();}">
+        <button class="knop stil" onclick="handmatigOk()">Deze code gebruiken</button>
+      </div>
+      ${melding}</div>`;
+    startLezen();
+    return;
+  }
+  /* klaar */
+  zetBalk(3, true);
+  scherm.innerHTML=`<div class="kaart midden">
+    <div class="klaarvink"><svg viewBox="0 0 24 24">${icoon.vink}</svg></div>
+    <h1>Gelukt</h1>
+    <p class="lead">Het staat op je computer. Vul daar de rest aan en sla het op.</p>
+    <button class="knop" onclick="opnieuw()"><svg viewBox="0 0 24 24">${icoon.scan}</svg>Volgend product</button>
+  </div>`;
+}
+function opnieuw(){
+  herkend=null; barcode=null; fout='';
+  stap='doosje'; teken();
+  zeg('opnieuw',{});
+}
+
+teken();
+verbind();
+window.addEventListener('pagehide', stopLezen);
+</script>
+</body>
+</html>

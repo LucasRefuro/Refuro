@@ -133,6 +133,40 @@ const WOORDEN = {
 'Ook voor klant':'Also for the customer',
 'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Zoeken op gsm-world':'Search gsm-world',
 
+/* ---------- nieuw product scannen ---------- */
+'Nieuw product toevoegen':'Add a new product', 'Terug naar producten':'Back to products',
+'Scannen met je telefoon':'Scan with your phone', 'Camera openen':'Open the camera',
+'Camera van dit apparaat gebruiken':'Use this device’s camera',
+'Twee scans en het formulier hieronder staat vol: eerst een foto van het doosje, dan de streepjescode. Liever met de hand? Vul hieronder gewoon zelf in.':
+  'Two scans and the form below fills itself: first a photo of the box, then the barcode. Rather do it by hand? Just fill in the form below.',
+'Scan deze code met je telefoon':'Scan this code with your phone',
+'Richt gewoon je camera erop, er is geen app voor nodig. Daarna maak je een foto van het doosje en scan je de streepjescode. Alles komt hier vanzelf terecht.':
+  'Just point your camera at it, no app needed. Then take a photo of the box and scan the barcode. Everything lands here by itself.',
+'Wachten op je telefoon':'Waiting for your phone', 'Annuleren':'Cancel',
+'Lukt scannen niet? Typ over:':'Scanning not working? Type this instead:',
+'Telefoon verbonden':'Phone connected', 'Foto van het doosje':'Photo of the box',
+'Streepjescode':'Barcode', 'Telefoon loskoppelen':'Disconnect the phone',
+'Storvo kijkt naar de foto':'Storvo is looking at the photo',
+'Klaar. Kijk het formulier hieronder na en sla het op.':'Done. Check the form below and save it.',
+'Overslaan, alleen de code scannen':'Skip, just scan the barcode',
+'Houd de kant met de productnaam naar de camera.':'Hold the side with the product name towards the camera.',
+'Of typ de streepjescode':'Or type the barcode', 'Gebruiken':'Use this',
+'Camera wordt gestart…':'Starting the camera…',
+'De camera is niet beschikbaar. Typ de code hieronder in.':'The camera is not available. Type the code below.',
+'Volgend product':'Next product',
+'Storvo heeft dit alvast ingevuld':'Storvo filled this in for you',
+'Storvo weet het niet zeker, kijk alles even na':'Storvo is not sure, please check everything',
+'Categorie uit de foto gehaald':'Category taken from the photo',
+'Categorie overgenomen van vergelijkbare producten':'Category copied from similar products',
+'Categorie geraden, kijk hem even na':'Category is a guess, please check it',
+'Prijzen overgenomen van':'Prices copied from',
+'Verkoopprijs is een schatting, kijk hem na':'The selling price is an estimate, please check it',
+'Op het doosje gelezen':'Read on the box',
+'Streepjescode ontvangen van je telefoon':'Barcode received from your phone',
+'Koppelen kan alleen als je online bent':'Connecting only works when you are online',
+'Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.':
+  'No products yet. Use the Add a new product button, or Quick add under Settings for a whole run.',
+
 /* ---------- welke uitvoering is het toestel? ---------- */
 'Welke uitvoering is het? Kies er een, anders bestel je straks een onderdeel dat niet past.':
   'Which version is it? Pick one, otherwise you will end up ordering a part that does not fit.',
