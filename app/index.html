@@ -255,11 +255,15 @@
   }
 
   /* de pakketkeuze */
-  .pakketpop{width:min(980px,96vw); max-height:92vh; overflow-y:auto;}
+  /* Twee klassen in plaats van één, anders wint de bredere .popup-regel
+     verderop in dit blad en wordt dit scherm 460px breed. */
+  .popup.pakketpop{width:min(980px,96vw); max-height:92vh; overflow-y:auto;}
   .pakketpop h3{font-family:'Sora',sans-serif; font-size:25px; font-weight:800;
     letter-spacing:-.02em; margin-bottom:8px;}
   .pakketpop > .pv{font-size:15px; line-height:1.7; margin-bottom:24px; max-width:74ch;}
-  .pakketten{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-bottom:18px;}
+  /* Past er geen kaart van 240px meer naast, dan gaan ze vanzelf onder elkaar. */
+  .pakketten{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:16px; margin-bottom:18px;}
   .pakket{background:var(--soft-2); border-radius:var(--radius-s); padding:22px 20px;
     display:flex; flex-direction:column; position:relative; border:2px solid transparent;}
   .pakket.nu{background:var(--card); border-color:var(--oranje); box-shadow:var(--schaduw);}
@@ -271,7 +275,7 @@
   .pknaam{font-family:'Sora',sans-serif; font-size:20px; font-weight:800; margin-top:4px;}
   .pkbij{font-size:12.5px; color:var(--muted); margin-bottom:12px;}
   .pkprijs{font-family:'Sora',sans-serif; font-size:27px; font-weight:800; letter-spacing:-.02em;
-    margin-bottom:16px;}
+    margin-bottom:16px; white-space:nowrap;}
   .pkprijs span{font-family:inherit; font-size:13px; font-weight:600; color:var(--muted-l);}
   .pklijst{list-style:none; font-size:13.5px; line-height:1.45; margin-bottom:18px;}
   .pklijst li{display:flex; align-items:flex-start; gap:9px; padding:6px 0;}
@@ -281,10 +285,15 @@
   .pklijst li.aan .pkteken svg{stroke:var(--green-tekst);}
   .pklijst li.uit{color:var(--muted-l);}
   .pklijst li.uit .pkteken svg{stroke:var(--red);}
-  .pakket .btn{margin-top:auto; width:100%; justify-content:center;}
+  .pakket .btn{margin-top:auto; width:100%; justify-content:center; white-space:nowrap;}
   @media(max-width:860px){
     .pakketten{grid-template-columns:1fr; gap:22px;}
-    .pakketpop{padding:24px 20px;}
+    .popup.pakketpop{padding:22px 18px;}
+    .pakketpop h3{font-size:21px;}
+    .pakketpop > .pv{font-size:14px; margin-bottom:18px;}
+    /* Onder elkaar mag de kaart wat compacter: je scrollt anders eindeloos. */
+    .pakket{padding:20px 18px;}
+    .pklijst li{padding:5px 0;}
   }
 
   .kortingbadge{display:inline-block; font-family:'Sora',sans-serif; font-weight:800; font-size:15px;
