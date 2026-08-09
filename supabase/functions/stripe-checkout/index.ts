@@ -48,8 +48,6 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return fout("Alleen POST", 405);
 
   if (!Deno.env.get("STRIPE_SECRET_KEY")) return fout("Stripe is nog niet ingesteld", 503);
-  const prijsId = Deno.env.get("STRIPE_PRIJS_ID");
-  if (!prijsId) return fout("Er is nog geen abonnementsprijs ingesteld", 503);
 
   const bevoegd = req.headers.get("Authorization") || "";
   if (!bevoegd.startsWith("Bearer ")) return fout("Niet ingelogd", 401);
@@ -73,9 +71,19 @@ Deno.serve(async (req) => {
   if (acc.rol !== "eigenaar") return fout("Alleen de eigenaar kan het abonnement regelen", 403);
 
   const { data: winkel } = await admin.from("klanten")
-    .select("id, naam, email, stripe_customer_id, status").eq("id", acc.team_id).maybeSingle();
+    .select("id, naam, email, stripe_customer_id, status, plan").eq("id", acc.team_id).maybeSingle();
   if (!winkel) return fout("Je winkel is niet gevonden", 404);
   if (winkel.status === "actief") return fout("Je hebt al een lopend abonnement", 409);
+
+  // Elke winkel zit op een pakket. Welke prijs daarbij hoort staat als
+  // instelling in Supabase, zodat je in Stripe kunt schuiven zonder de code
+  // aan te raken. Kiest de winkel bij het afrekenen een ander pakket, dan mag
+  // dat: die keuze gaat voor wat er in de administratie stond.
+  const pakket = String(lijf?.plan || winkel.plan || "Start");
+  const prijsId =
+    Deno.env.get("STRIPE_PRIJS_" + pakket.toUpperCase()) ||
+    Deno.env.get("STRIPE_PRIJS_ID");
+  if (!prijsId) return fout("Voor het pakket " + pakket + " is nog geen prijs ingesteld", 503);
 
   try {
     // Eén Stripe-klant per winkel, zodat facturen bij elkaar blijven.

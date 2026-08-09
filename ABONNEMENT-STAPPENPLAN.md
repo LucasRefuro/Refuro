@@ -36,17 +36,23 @@ invalt hoeft hier niets van te merken.
 
 ---
 
-## Onderdeel 1 — Het abonnement in Stripe
+## Onderdeel 1 — De prijs-ID's ophalen
 
-1. Ga naar **dashboard.stripe.com** en log in.
-2. Klik in het linkermenu op **Producten** → **Product toevoegen**.
-3. Naam: `Storvo`. Beschrijving: `Voorraad, reparaties en klantberichten.`
-4. Bij **Prijs**: kies **Terugkerend**, per **maand**, en vul je bedrag in.
-5. Klik op **Opslaan**.
-6. Klik op de prijs die je net maakte. Bovenin staat een code die begint met
-   `price_`. Kopieer die.
+Je hebt Start, Pro en Enterprise al staan in Stripe. Van elk heb je de code
+nodig die begint met `price_`.
 
-**Gelukt als:** je een code hebt die begint met `price_`.
+1. Klik in de lijst op **Start**.
+2. Scroll naar het blok **Tarieven** (of **Prijzen**).
+3. Klik rechts op de regel op de drie puntjes **⋯**.
+4. Kies **Prijs-ID kopiëren** (of *Copy price ID*).
+5. Plak hem in een tekstbestandje.
+
+Herhaal dit voor **Pro** en **Enterprise**.
+
+> Zie je de drie puntjes niet? Klik dan gewoon op de prijsregel zelf. Bovenaan
+> de pagina die opent staat de code, met een kopieerknopje ernaast.
+
+**Gelukt als:** je drie codes hebt die beginnen met `price_`.
 
 ---
 
@@ -78,13 +84,19 @@ Klik op **Add new secret** en voeg deze toe:
 
 | Naam | Waarde |
 |---|---|
-| `STRIPE_PRIJS_ID` | de code uit onderdeel 1, begint met `price_` |
+| `STRIPE_PRIJS_START` | de `price_` code van Start |
+| `STRIPE_PRIJS_PRO` | de `price_` code van Pro |
+| `STRIPE_PRIJS_ENTERPRISE` | de `price_` code van Enterprise |
 | `STRIPE_KORTING_COUPON` | de couponcode uit onderdeel 2 |
 | `APP_URL` | `https://storvo.app` |
 
+Storvo kijkt bij het afrekenen welk pakket de winkel heeft en pakt de
+bijbehorende prijs. Verkoop je later een vierde pakket, dan zet je er gewoon
+`STRIPE_PRIJS_<NAAM>` bij; aan de code hoeft niets te veranderen.
+
 `STRIPE_SECRET_KEY` en `STRIPE_WEBHOOK_SECRET` staan er al.
 
-**Gelukt als:** alle drie in de lijst staan.
+**Gelukt als:** alle vijf in de lijst staan.
 
 ---
 
