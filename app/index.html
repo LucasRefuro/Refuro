@@ -40,6 +40,8 @@
   aside nav button .badge{margin-left:auto; background:#fff; color:var(--oranje); font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px;}
   aside nav button.active .badge{background:#fff; color:var(--oranje);}
   aside .foot{font-size:10.5px; color:var(--menutekst); opacity:.65; padding:0 8px;}
+  aside .foot a{color:inherit; text-decoration:underline; text-underline-offset:2px;}
+  aside .foot a:hover{opacity:1; color:var(--oranje);}
 
   main{margin-left:230px; flex:1; padding:26px 30px; max-width:1250px;}
   .pagehead{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;}
@@ -216,6 +218,42 @@
   .proefpop .acts{flex-direction:row; flex-wrap:wrap; gap:10px;}
   .proefpop .acts .btn{flex:1; min-width:180px; width:auto;}
   .proefklein{font-size:12.5px; color:var(--muted-l); margin-top:16px; line-height:1.6;}
+  /* feedback en reviews */
+  .fbpop{width:min(520px,94vw);}
+  .fbpop h3{font-family:'Sora',sans-serif; font-size:22px; font-weight:800;
+    letter-spacing:-.02em; margin-bottom:8px;}
+  .fbpop .pv{font-size:14.5px; line-height:1.7; margin-bottom:18px;}
+  .fbpop textarea{width:100%; padding:13px 15px; border:1.5px solid var(--border);
+    border-radius:var(--radius-s); font-family:inherit; font-size:14.5px; line-height:1.6;
+    resize:vertical; background:var(--card); color:var(--tekst);}
+  .fbpop textarea:focus{outline:none; border-color:var(--oranje);}
+  .fbcheck{display:flex; align-items:center; gap:10px; margin-top:14px; font-size:13.5px;
+    color:var(--muted); cursor:pointer;}
+  .fbcheck input{width:18px; height:18px; accent-color:var(--oranje); cursor:pointer;}
+  .fbpop .acts{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+  .fbpop .acts .btn{flex:1; min-width:150px; justify-content:center;}
+
+  .sterren{display:flex; gap:6px; justify-content:center; margin:6px 0 4px;}
+  .sterren button{background:none; border:none; padding:5px; cursor:pointer; line-height:0;}
+  .sterren svg{width:38px; height:38px; fill:var(--soft-2); stroke:var(--border);
+    stroke-width:1.5; transition:.15s;}
+  .sterren button:hover svg{transform:scale(1.1);}
+  .sterren button.aan svg{fill:var(--amber); stroke:var(--amber);}
+  .fbvervolg{margin-top:16px; padding-top:16px; border-top:1px solid var(--border);
+    animation:popin .22s cubic-bezier(.34,1.4,.64,1);}
+  .fbkop{font-weight:700; font-size:16px; margin-bottom:6px;}
+
+  .redenen{display:flex; flex-direction:column; gap:8px; margin-bottom:16px;}
+  .redenen label{display:flex; align-items:center; gap:11px; padding:12px 15px;
+    background:var(--soft-2); border-radius:var(--radius-s); cursor:pointer;
+    font-size:14px; transition:.15s;}
+  .redenen label:hover{background:var(--lblauw);}
+  .redenen input{width:18px; height:18px; accent-color:var(--oranje); flex:none; cursor:pointer;}
+  @media(max-width:560px){
+    .fbpop .acts .btn{flex-basis:100%;}
+    .sterren svg{width:32px; height:32px;}
+  }
+
   /* de pakketkeuze */
   .pakketpop{width:min(980px,96vw); max-height:92vh; overflow-y:auto;}
   .pakketpop h3{font-family:'Sora',sans-serif; font-size:25px; font-weight:800;
@@ -1254,7 +1292,7 @@
     <nav class="onder">
       <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
     </nav>
-    <div class="foot" id="sidebarFoot">Versie 1.0</div>
+    <div class="foot" id="sidebarFoot">Versie 1.0 · <a href="#" onclick="feedbackPopup(); return false;">Feedback</a></div>
   </div>
 </aside>
 <main>
@@ -1812,6 +1850,7 @@
       <button data-s="bedrijf">Bedrijf</button>
       <button data-s="voorraad">Voorraad</button>
       <button data-s="aanvragen">Aanvragen</button>
+      <button data-s="feedback">Feedback</button>
       <button data-s="kassa">Kassa</button>
       <button data-s="paginas">Pagina's</button>
       <button data-s="huisstijl">Huisstijl</button>
@@ -1897,6 +1936,15 @@
       <div style="max-width:220px"><label>Moet standaard hangen</label><input id="s_schap" type="number" min="0" step="1" onchange="slaSchapOp()"></div>
     </div>
     <p class="muted" style="margin-top:10px">Dit geldt voor alle producten waarbij je niets aparts hebt ingevuld. Per product kun je er bij Producten van afwijken, bijvoorbeeld vier voor je best verkopende hoesje.</p>
+  </div>
+
+  <div class="card" id="inst-feedback"hidden>
+    <h2><svg class="i"><use href="#i-message"/></svg>Feedback en reviews</h2>
+    <p class="muted" style="margin-bottom:18px; max-width:80ch">Storvo wordt gebouwd op wat winkels ons vertellen. Loop je ergens tegenaan of mis je iets, laat het weten. We lezen alles zelf en je krijgt antwoord van een mens.</p>
+    <div class="row">
+      <button class="btn actie" onclick="feedbackPopup()"><svg class="i s"><use href="#i-message"/></svg>Iets doorgeven</button>
+      <button class="btn ghost" onclick="reviewPopup(false)"><svg class="i s"><use href="#i-check"/></svg>Storvo beoordelen</button>
+    </div>
   </div>
 
   <div class="card" id="inst-aanvragen"hidden>
@@ -4335,7 +4383,7 @@ document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('cli
 }));
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','voorraad','aanvragen','kassa','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
@@ -4970,6 +5018,7 @@ async function ladAccountEnStart(session){
   renderInstellingen();
   toonAboBalk();
   proefNudge();
+  reviewMoment();
   syncStart();
   if(!account.onboarding_klaar) toonOnboarding();
   aboBewaking();
@@ -5189,7 +5238,7 @@ function toonKortingAanbod(){
     <p class="pv">Snap ik, het is een uitgave. Daarom dit: je eerste maand met zeventig procent korting, zodat je rustig verder kunt zonder dat het meteen geld kost. Daarna gewoon de normale prijs, en je kunt elke maand stoppen.</p>
     <div class="acts">
       <button class="btn actie" onclick="toonPakketten(true)">Ja, met korting doorgaan</button>
-      <button class="btn ghost" onclick="sluitProefScherm()">Nee, laat maar</button>
+      <button class="btn ghost" onclick="vertrekPopup()">Nee, laat maar</button>
     </div>
     <p class="proefklein">Je gegevens blijven bewaard, ook als je stopt. Bedenk je je later, dan pak je gewoon de draad weer op.</p>
   </div>`;
@@ -5197,6 +5246,179 @@ function toonKortingAanbod(){
   try{ localStorage.setItem('storvo_korting_aangeboden','1'); }catch(e){}
 }
 function kortingAangeboden(){ try{ return localStorage.getItem('storvo_korting_aangeboden')==='1'; }catch(e){ return false; } }
+
+/* ═══════════════ FEEDBACK EN REVIEWS ═══════════════
+   Drie momenten, één luik:
+
+     · vanuit de instellingen, wanneer iemand zelf iets kwijt wil
+     · na een tijdje gebruiken: hoe bevalt het, en wil je dat ergens delen
+     · bij vertrek: waarom ga je weg
+
+   Over dat delen: we vragen het aan iedereen en tonen de reviewlink aan
+   iedereen, ook aan wie een lage score geeft. Alleen tevreden klanten om een
+   review vragen is in strijd met de voorwaarden van Google en Trustpilot, en
+   het is bovendien een slecht idee: je leert er niets van. Wat we wél doen is
+   de toon aanpassen. Bij een lage score staat het tekstvak vooraan, bij een
+   hoge score de reviewknop.                                                  */
+
+const REVIEW_URL='https://g.page/r/storvo/review';   /* aan te passen als je van reviewsite wisselt */
+
+async function feedbackOpslaan(rij){
+  if(!account) return false;
+  try{
+    const {error}=await sb.from('feedback').insert(Object.assign({
+      team_id:account.team_id, account_id:account.id,
+      plan:(abonnement&&abonnement.plan)||null,
+      winkel:(state.instellingen&&state.instellingen.naam)||null
+    }, rij));
+    if(error){ console.error('feedback opslaan:', error); return false; }
+    return true;
+  }catch(e){ console.error('feedback opslaan:', e); return false; }
+}
+
+function sluitFeedback(){ const o=document.getElementById('fbOverlay'); if(o) o.remove(); }
+
+/* ---------- losse opmerking vanuit de instellingen ---------- */
+function feedbackPopup(){
+  sluitFeedback();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='fbOverlay';
+  ov.onclick=e=>{ if(e.target===ov) sluitFeedback(); };
+  ov.innerHTML=`<div class="popup fbpop">
+    <h3>Wat kan er beter?</h3>
+    <p class="pv">Loop je ergens tegenaan, mis je iets, of werkt er iets niet zoals je zou verwachten? Schrijf het hier op. We lezen alles zelf.</p>
+    <textarea id="fbTekst" rows="6" placeholder="Bijvoorbeeld: ik zou graag een overzicht per medewerker willen zien."></textarea>
+    <label class="fbcheck"><input type="checkbox" id="fbContact" checked>
+      <span>Je mag mij hierover mailen</span></label>
+    <div class="acts">
+      <button class="btn actie" onclick="feedbackVerstuur(this)">Versturen</button>
+      <button class="btn ghost" onclick="sluitFeedback()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const t=document.getElementById('fbTekst'); if(t) t.focus();
+}
+async function feedbackVerstuur(knop){
+  const tekst=document.getElementById('fbTekst').value.trim();
+  if(tekst.length<3){ toast('Schrijf even kort op wat je bedoelt','let-op'); return; }
+  knop.disabled=true; knop.textContent='Versturen…';
+  const gelukt=await feedbackOpslaan({soort:'opmerking', tekst,
+    mag_contact:document.getElementById('fbContact').checked});
+  sluitFeedback();
+  toast(gelukt ? 'Dank je, het is bij ons binnen.' : 'Het versturen lukte niet. Probeer het zo nog eens.',
+        gelukt?'ok':'fout');
+}
+
+/* ---------- hoe bevalt het ---------- */
+let reviewSter=0;
+function reviewPopup(vanzelf){
+  sluitFeedback();
+  reviewSter=0;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='fbOverlay';
+  ov.onclick=e=>{ if(e.target===ov) sluitFeedback(); };
+  ov.innerHTML=`<div class="popup fbpop">
+    <h3>Hoe bevalt Storvo?</h3>
+    <p class="pv">Eén klik, en je bent er vanaf. Het helpt ons enorm om te weten waar we staan.</p>
+    <div class="sterren" id="sterRij">${[1,2,3,4,5].map(n=>
+      `<button type="button" data-n="${n}" onclick="kiesSter(${n})" aria-label="${n} van 5">
+        <svg viewBox="0 0 24 24"><path d="m12 2.5 2.9 6.1 6.6.9-4.8 4.7 1.2 6.6L12 17.7 6.1 20.8l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
+      </button>`).join('')}</div>
+    <div id="reviewVervolg"></div>
+    <div class="acts" style="margin-top:16px">
+      <button class="btn ghost" onclick="reviewLater(${vanzelf?'true':'false'})">${vanzelf?'Nu even niet':'Sluiten'}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  if(vanzelf){ try{ localStorage.setItem('storvo_review_gevraagd', new Date().toISOString().slice(0,10)); }catch(e){} }
+}
+function kiesSter(n){
+  reviewSter=n;
+  document.querySelectorAll('#sterRij button').forEach(b=>
+    b.classList.toggle('aan', Number(b.dataset.n)<=n));
+  const blij=n>=4;
+  document.getElementById('reviewVervolg').innerHTML=`
+    <div class="fbvervolg">
+      <p class="fbkop">${blij ? 'Wat fijn om te horen.' : 'Dat is jammer. Vertel het ons.'}</p>
+      <p class="pv">${blij
+        ? 'Zou je dat ergens willen delen? Voor een klein bedrijf als het onze maakt één review echt verschil. En heb je nog een tip, schrijf hem er gerust bij.'
+        : 'Schrijf op wat er misgaat, dan gaan we ermee aan de slag. Je mag natuurlijk ook een review achterlaten.'}</p>
+      <textarea id="fbTekst" rows="4" placeholder="${blij?'Optioneel: wat werkt er goed, of wat mist er nog?':'Wat gaat er mis?'}"></textarea>
+      <div class="acts" style="margin-top:14px">
+        ${blij?`<a class="btn actie" href="${REVIEW_URL}" target="_blank" rel="noopener" onclick="reviewVerstuur(true)">Review achterlaten</a>
+                <button class="btn ghost" onclick="reviewVerstuur(false, this)">Alleen versturen</button>`
+              :`<button class="btn actie" onclick="reviewVerstuur(false, this)">Versturen</button>
+                <a class="btn ghost" href="${REVIEW_URL}" target="_blank" rel="noopener" onclick="reviewVerstuur(true)">Toch een review achterlaten</a>`}
+      </div>
+    </div>`;
+  const t=document.getElementById('fbTekst'); if(t) t.focus();
+}
+async function reviewVerstuur(naarSite, knop){
+  const vak=document.getElementById('fbTekst');
+  const tekst=vak?vak.value.trim():'';
+  if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
+  await feedbackOpslaan({soort:'review', sterren:reviewSter||null, tekst:tekst||null, mag_contact:true});
+  try{ localStorage.setItem('storvo_review_gedaan','1'); }catch(e){}
+  if(!naarSite){ sluitFeedback(); toast('Dank je wel.','ok'); }
+  else setTimeout(sluitFeedback, 300);
+}
+function reviewLater(vanzelf){
+  if(reviewSter) reviewVerstuur(false);
+  else { sluitFeedback(); if(vanzelf) toast('Prima, misschien een andere keer.'); }
+}
+
+/* Na een maand of twee actief gebruik vragen we het één keer. Niet eerder:
+   iemand die net begint heeft nog geen oordeel. En daarna nooit meer.       */
+function reviewMoment(){
+  if(!account || account.rol!=='eigenaar') return;
+  if(!abonnement || abonnement.status!=='actief') return;
+  try{
+    if(localStorage.getItem('storvo_review_gedaan')==='1') return;
+    if(localStorage.getItem('storvo_review_gevraagd')) return;
+  }catch(e){ return; }
+  /* Genoeg gebruikt om er iets van te vinden? */
+  const genoeg=(state.verkopen||[]).length>=25 || (state.reparaties||[]).length>=10;
+  if(!genoeg) return;
+  setTimeout(()=>{ if(!document.querySelector('.overlay')) reviewPopup(true); }, 1500);
+}
+
+/* ---------- waarom ga je weg ---------- */
+const VERTREK_REDENEN=[
+  'Te duur voor wat ik ermee doe',
+  'Ik miste functies die ik nodig heb',
+  'Te ingewikkeld of te veel gedoe',
+  'Ik ben overgestapt naar iets anders',
+  'Ik stop met de winkel of heb het niet meer nodig',
+  'Iets anders'
+];
+function vertrekPopup(){
+  sluitFeedback(); sluitProefScherm();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='fbOverlay';
+  ov.onclick=e=>{ if(e.target===ov) sluitFeedback(); };
+  ov.innerHTML=`<div class="popup fbpop">
+    <h3>Voor je gaat</h3>
+    <p class="pv">Mogen we vragen wat de doorslag gaf? Twee tellen werk, en het helpt ons om Storvo beter te maken voor de volgende winkel.</p>
+    <div class="redenen">${VERTREK_REDENEN.map((r,i)=>
+      `<label><input type="radio" name="vertrekreden" value="${esc(r)}"${i===0?'':''}><span>${esc(r)}</span></label>`).join('')}</div>
+    <textarea id="fbTekst" rows="3" placeholder="Wil je het toelichten? Graag."></textarea>
+    <div class="acts">
+      <button class="btn actie" onclick="vertrekVerstuur(this)">Versturen</button>
+      <button class="btn ghost" onclick="sluitFeedback()">Liever niet</button>
+    </div>
+    <p class="proefklein">Je gegevens blijven bewaard. Bedenk je je later, dan pak je gewoon de draad weer op.</p>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function vertrekVerstuur(knop){
+  const gekozen=document.querySelector('input[name="vertrekreden"]:checked');
+  const tekst=document.getElementById('fbTekst').value.trim();
+  if(!gekozen && !tekst){ toast('Kies een reden of schrijf er iets bij','let-op'); return; }
+  knop.disabled=true; knop.textContent='Versturen…';
+  await feedbackOpslaan({soort:'vertrek', reden:gekozen?gekozen.value:null, tekst:tekst||null, mag_contact:true});
+  sluitFeedback();
+  toast('Dank je wel, daar hebben we wat aan.','ok');
+}
 
 /* ---------- de pakketten ----------
    Tijdens de proefperiode krijgt iedereen Enterprise. Je wilt dat een winkel

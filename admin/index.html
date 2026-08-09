@@ -230,6 +230,14 @@
   img, svg{max-width:100%;}
   .tabelrol{overflow-x:auto; overflow-y:hidden; max-width:100%; -webkit-overflow-scrolling:touch;}
 
+  /* feedback van winkels */
+  .fbrij{padding:16px 0; border-bottom:1px solid var(--border);}
+  .fbrij:last-child{border:none;}
+  .fbrij .fbkop{display:flex; align-items:center; gap:9px; flex-wrap:wrap; font-size:14px; margin-bottom:7px;}
+  .fbster{color:#E8B31D; letter-spacing:2px; font-size:14px;}
+  .fbreden{font-weight:600; font-size:14px; margin-bottom:5px;}
+  .fbtekst{font-size:14px; line-height:1.65; color:var(--muted); white-space:pre-wrap;}
+
   /* ---------- het beheerpaneel op een telefoon ----------
      Je kijkt hier ook weleens even snel op je mobiel of er iets binnen is
      gekomen. Dan moet het menu een rij worden, moeten de tabellen kunnen
@@ -344,6 +352,7 @@
     <button data-tab="overzicht" class="active"><svg class="i"><use href="#i-chart"/></svg> Overzicht</button>
     <button data-tab="klanten"><svg class="i"><use href="#i-shop"/></svg> Klanten</button>
     <button data-tab="teams"><svg class="i"><use href="#i-shop"/></svg> Teams &amp; accounts</button>
+    <button data-tab="feedback"><svg class="i"><use href="#i-message"/></svg> Feedback</button>
     <button data-tab="plannen"><svg class="i"><use href="#i-card"/></svg> Abonnementen</button>
     <button data-tab="stripe"><svg class="i"><use href="#i-plug"/></svg> Stripe-koppeling</button>
     <button data-tab="live"><svg class="i"><use href="#i-rocket"/></svg> Live gaan</button>
@@ -475,6 +484,22 @@
   </div>
 </section>
 
+<section id="tab-feedback"hidden>
+  <div class="pagehead">
+    <h1>Feedback</h1>
+    <div class="periodesel" id="fbFilter">
+      <button data-s="alles" class="active">Alles</button>
+      <button data-s="review">Beoordelingen</button>
+      <button data-s="opmerking">Opmerkingen</button>
+      <button data-s="vertrek">Vertrek</button>
+    </div>
+  </div>
+  <div class="kpis" id="fbKpis"></div>
+  <div class="card">
+    <div id="fbLijst">Bezig met laden…</div>
+  </div>
+</section>
+
 <section id="tab-live"hidden>
   <div class="pagehead"><h1>Live gaan</h1></div>
   <div class="card">
@@ -548,6 +573,7 @@ async function adminPoortBoot(){
   adminLoginScherm();
   const ok=await controleerAdmin();
   if(ok){ const el=document.getElementById('adminPoort'); if(el) el.remove(); tekenTeams(); }
+  return ok;
 }
 let teamsData={teams:[], accounts:[]};
 let teamsGeladen=false;
@@ -824,10 +850,64 @@ function rolTabellen(){
     bak.appendChild(t);
   });
 }
+/* ---------- feedback van winkels ---------- */
+let fbData=null, fbSoort='alles';
+async function laadFeedback(){
+  const vak=document.getElementById('fbLijst');
+  if(!vak) return;
+  try{
+    const {data:{session}}=await sbAdmin.auth.getSession();
+    if(!session) return;
+    const res=await fetch(SUPABASE_URL+'/functions/v1/admin-feedback',{
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token}});
+    const uit=await res.json();
+    if(!res.ok || !uit.ok) throw new Error(uit.error||'Laden mislukt');
+    fbData=uit;
+  }catch(e){
+    vak.innerHTML='<p class="muted">Kon de feedback niet laden: '+esc(e.message)+'</p>';
+    return;
+  }
+  tekenFeedback();
+}
+const FB_SOORT={review:'Beoordeling', opmerking:'Opmerking', vertrek:'Vertrek'};
+function tekenFeedback(){
+  const vak=document.getElementById('fbLijst');
+  if(!vak || !fbData) return;
+  const k=document.getElementById('fbKpis');
+  const tel=(s)=>fbData.rijen.filter(r=>r.soort===s).length;
+  if(k) k.innerHTML=
+    `<div class="kpi"><div class="l">Beoordelingen</div><div class="v">${tel('review')}</div></div>`+
+    `<div class="kpi"><div class="l">Gemiddeld</div><div class="v">${fbData.gemiddeld!=null?fbData.gemiddeld:'—'}</div></div>`+
+    `<div class="kpi"><div class="l">Opmerkingen</div><div class="v">${tel('opmerking')}</div></div>`+
+    `<div class="kpi"><div class="l">Vertrokken</div><div class="v">${tel('vertrek')}</div></div>`;
+
+  const rijen=fbData.rijen.filter(r=>fbSoort==='alles'||r.soort===fbSoort);
+  vak.innerHTML = rijen.length ? rijen.map(r=>{
+    const d=new Date(r.aangemaakt_op);
+    const sterren=r.sterren?'★'.repeat(r.sterren)+'☆'.repeat(5-r.sterren):'';
+    return `<div class="fbrij">
+      <div class="fbkop">
+        <b>${esc(r.winkel||'Onbekende winkel')}</b>
+        <span class="tag">${esc(FB_SOORT[r.soort]||r.soort)}</span>
+        ${r.plan?`<span class="tag">${esc(r.plan)}</span>`:''}
+        ${sterren?`<span class="fbster">${sterren}</span>`:''}
+        <span class="muted" style="margin-left:auto">${d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      ${r.reden?`<div class="fbreden">${esc(r.reden)}</div>`:''}
+      ${r.tekst?`<div class="fbtekst">${esc(r.tekst)}</div>`:''}
+      ${r.mag_contact?'':'<div class="muted" style="font-size:12px; margin-top:6px">Wil geen contact hierover</div>'}
+    </div>`;
+  }).join('') : '<p class="muted">Nog niets binnengekomen in deze categorie.</p>';
+}
+document.querySelectorAll('#fbFilter button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#fbFilter button').forEach(x=>x.classList.toggle('active', x===b));
+  fbSoort=b.dataset.s; tekenFeedback();
+}));
+
 function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); rolTabellen(); }
 save(); teken();
 syncKlantenVanSupabase();
-adminPoortBoot();
+adminPoortBoot().then(ok=>{ if(ok) laadFeedback(); });
 setInterval(syncKlantenVanSupabase, 60000);
 </script>
 </body>

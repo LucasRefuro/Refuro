@@ -18,6 +18,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `redeem-invite` | ja | Werknemer maakt zijn account via een uitnodigingslink |
 | `team-admin` | nee | Wachtwoorden en uitnodigingen binnen een winkel |
 | `admin-teams` | nee | Beheerpaneel van Storvo zelf |
+| `admin-feedback` | nee | Leest de feedback van winkels uit voor het beheerpaneel |
 | `stripe-webhook` | ja | Verwerkt betalingen en houdt de abonnementsstatus bij |
 | `stripe-portaal` | nee | Opent het betaalportaal voor de winkel |
 | `stripe-checkout` | nee | Start het afrekenen van proef naar abonnement, met of zonder korting |

@@ -136,6 +136,41 @@ const WOORDEN = {
 /* ---------- de balk onderin op de telefoon ---------- */
 'Bestellen':'Ordering',
 
+/* ---------- feedback en reviews ---------- */
+'Feedback':'Feedback', 'Feedback en reviews':'Feedback and reviews',
+'Storvo wordt gebouwd op wat winkels ons vertellen. Loop je ergens tegenaan of mis je iets, laat het weten. We lezen alles zelf en je krijgt antwoord van een mens.':
+  'Storvo is built on what shops tell us. If you run into something or miss something, let us know. We read everything ourselves and you get an answer from a human.',
+'Iets doorgeven':'Send us something', 'Storvo beoordelen':'Rate Storvo',
+'Wat kan er beter?':'What could be better?',
+'Loop je ergens tegenaan, mis je iets, of werkt er iets niet zoals je zou verwachten? Schrijf het hier op. We lezen alles zelf.':
+  'Are you running into something, missing something, or does something not work the way you expect? Write it down here. We read everything ourselves.',
+'Je mag mij hierover mailen':'You may email me about this',
+'Versturen':'Send', 'Annuleren':'Cancel',
+'Hoe bevalt Storvo?':'How is Storvo working out?',
+'Eén klik, en je bent er vanaf. Het helpt ons enorm om te weten waar we staan.':
+  'One click and you are done. It helps us enormously to know where we stand.',
+'Nu even niet':'Not right now', 'Sluiten':'Close',
+'Wat fijn om te horen.':'That is good to hear.', 'Dat is jammer. Vertel het ons.':'That is a shame. Tell us.',
+'Zou je dat ergens willen delen? Voor een klein bedrijf als het onze maakt één review echt verschil. En heb je nog een tip, schrijf hem er gerust bij.':
+  'Would you share that somewhere? For a small company like ours one review genuinely makes a difference. And if you have a tip, do add it.',
+'Schrijf op wat er misgaat, dan gaan we ermee aan de slag. Je mag natuurlijk ook een review achterlaten.':
+  'Write down what is going wrong and we will get to work on it. You are of course welcome to leave a review too.',
+'Review achterlaten':'Leave a review', 'Alleen versturen':'Just send it',
+'Toch een review achterlaten':'Leave a review anyway',
+'Voor je gaat':'Before you go',
+'Mogen we vragen wat de doorslag gaf? Twee tellen werk, en het helpt ons om Storvo beter te maken voor de volgende winkel.':
+  'May we ask what tipped the balance? Two seconds of work, and it helps us make Storvo better for the next shop.',
+'Wil je het toelichten? Graag.':'Would you explain? Please do.',
+'Liever niet':'Rather not',
+'Te duur voor wat ik ermee doe':'Too expensive for what I do with it',
+'Ik miste functies die ik nodig heb':'It was missing features I need',
+'Te ingewikkeld of te veel gedoe':'Too complicated or too much hassle',
+'Ik ben overgestapt naar iets anders':'I moved to something else',
+'Ik stop met de winkel of heb het niet meer nodig':'I am closing the shop or no longer need it',
+'Iets anders':'Something else',
+'Je gegevens blijven bewaard. Bedenk je je later, dan pak je gewoon de draad weer op.':
+  'Your data stays saved. Change your mind later and you just pick up where you left off.',
+
 /* ---------- kassa ---------- */
 'Kassa':'Till', 'In de lade':'In the drawer', 'Geld erin of eruit':'Money in or out',
 'Bedrag (€)':'Amount (€)', 'Waarvoor':'What for', '(optioneel)':'(optional)',
