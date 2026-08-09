@@ -5234,14 +5234,14 @@ function proefNudge(){
   setTimeout(()=>toonProefScherm(d), 600);
 }
 
+/* Let op bij het aanpassen: de server rondt de resterende tijd naar boven af.
+   Zolang iemand nog binnen kan is het dus minstens 1 dag; wordt het 0, dan is
+   hij al geblokkeerd en ziet hij het slotscherm. De laatste dag is daarom
+   d===1, niet d===0. */
 function proefTekst(d){
-  if(d<=0) return {
+  if(d<=1) return {
     kop:'Vandaag is de laatste dag',
-    lead:'Na vanavond kun je niet meer bij Storvo. Je gegevens blijven staan, maar je komt er niet meer in tot je een abonnement afsluit.',
-    knop:'Abonnement afsluiten', soort:'urgent'};
-  if(d===1) return {
-    kop:'Nog één dag',
-    lead:'Morgen loopt je proefperiode af. Regel het nu even, dan sta je maandagochtend niet voor een dichte deur.',
+    lead:'Na vandaag kun je niet meer bij Storvo. Je gegevens blijven staan, maar je komt er niet meer in tot je een abonnement afsluit.',
     knop:'Abonnement afsluiten', soort:'urgent'};
   if(d<=4) return {
     kop:'Nog '+d+' dagen',
@@ -5260,11 +5260,11 @@ function proefTekst(d){
 function toonProefScherm(d){
   const t=proefTekst(d);
   const opbouw=proefOpbouw();
-  const laatst=d<=0;
+  const laatst=d<=1;
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='aboAanbod';
   ov.innerHTML=`<div class="popup groot proefpop ${t.soort}">
-    <div class="proefdagen">${d<=0?'Laatste dag':d+(d===1?' dag':' dagen')}</div>
+    <div class="proefdagen">${laatst?'Laatste dag':d+' dagen'}</div>
     <h3>${esc(t.kop)}</h3>
     <p class="pv">${esc(t.lead)}</p>
     ${opbouw.length?`<div class="proefopbouw">
