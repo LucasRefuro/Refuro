@@ -136,6 +136,51 @@ const WOORDEN = {
 /* ---------- de balk onderin op de telefoon ---------- */
 'Bestellen':'Ordering',
 
+/* ---------- kassa ---------- */
+'Kassa':'Till', 'In de lade':'In the drawer', 'Geld erin of eruit':'Money in or out',
+'Bedrag (€)':'Amount (€)', 'Waarvoor':'What for', '(optioneel)':'(optional)',
+'bijv. wisselgeld gehaald':'e.g. fetched change',
+'Erin':'In', 'Eruit':'Out', 'Naar de kluis':'To the safe', 'Kassa tellen':'Count the till',
+'Tel wat er echt in de lade zit. Storvo boekt het verschil weg, zodat het saldo weer klopt. Je ziet altijd terug dát er een verschil was.':
+  'Count what is really in the drawer. Storvo books the difference away so the balance is right again. You can always see afterwards that there was a difference.',
+'Geteld bedrag (€)':'Counted amount (€)', 'Verschil wegboeken':'Book the difference away',
+'Kasboek':'Cash book',
+'Contante verkopen komen hier vanzelf in te staan. Pinbetalingen niet, die gaan rechtstreeks naar je rekening.':
+  'Cash sales appear here by themselves. Card payments do not, those go straight to your bank account.',
+'Nog geen kasboekingen.':'No cash entries yet.',
+'Verkoop':'Sale', 'Telverschil':'Counting difference', 'Startgeld':'Float',
+'Waarschuw boven (€)':'Warn above (€)',
+'Storvo houdt bij hoeveel contant geld er in de lade zit. Kom je boven deze grens, dan krijg je een melding. Handig om te voorkomen dat er aan het eind van de week achthonderd euro in een la ligt.':
+  'Storvo keeps track of how much cash is in the drawer. Go above this limit and you get a warning. Useful to avoid eight hundred euros sitting in a drawer by the end of the week.',
+'Op nul zetten schakelt de melding uit.':'Setting it to zero turns the warning off.',
+'Vul een bedrag in':'Fill in an amount',
+'Vul in hoeveel er echt in de kassa zit':'Fill in how much is really in the till',
+'Contant verkocht':'Sold for cash', 'Erin geboekt':'Booked in', 'Eruit gehaald':'Taken out',
+'Het kasboek, wat er in de lade zit en een melding als het te veel wordt.':
+  'The cash book, what is in the drawer and a warning when it gets to be too much.',
+
+/* ---------- aanvragen ---------- */
+'Aanvragen':'Requests', 'Nieuwe aanvraag':'New request', 'Aanvraag aanmaken':'Create the request',
+'Lopende aanvragen':'Open requests', 'Afgehandeld':'Handled',
+'Geen lopende aanvragen. Maak er een aan bij Nieuwe aanvraag.':'No open requests. Create one under New request.',
+'Nog niets afgehandeld.':'Nothing handled yet.',
+'Wat wil de klant?':'What does the customer want?', 'Omschrijving *':'Description *',
+'bijv. iPhone 16 Pro 256GB zwart':'e.g. iPhone 16 Pro 256GB black',
+'Inkoopprijs (€)':'Purchase price (€)', 'Marge (%)':'Margin (%)', 'Aanbetaling (€)':'Deposit (€)',
+'Klant betaalt':'Customer pays', 'Jouw winst':'Your profit', 'Al aanbetaald':'Already paid',
+'Nog te betalen bij ophalen':'Still to pay on collection', 'Nog te betalen':'Still to pay',
+'Inkoop':'Purchase', 'Marge':'Margin', 'Aanbetaald':'Deposit paid',
+'Aangevraagd':'Requested', 'Besteld':'Ordered', 'Binnen':'Arrived',
+'Opgehaald':'Collected', 'Geannuleerd':'Cancelled',
+'Besteld bij leverancier':'Ordered from the supplier', 'Binnengekomen':'Has arrived',
+'Afrekenen en meegeven':'Take payment and hand over',
+'Ligt klaar.':'Ready for collection.', 'Annuleren':'Cancel', 'Sluiten':'Close',
+'Standaardmarge (%)':'Default margin (%)',
+'Bestel je iets speciaal voor een klant, dan gaat er een percentage over je inkoopprijs heen. Bij 50% wordt een toestel van 500 euro dus 750 voor de klant. Per aanvraag kun je er altijd van afwijken.':
+  'When you order something specially for a customer, a percentage goes on top of your purchase price. At 50%, a 500 euro device becomes 750 for the customer. You can always deviate per request.',
+'Bestellingen op aanvraag voor klanten, met marge en aanbetaling.':
+  'Special orders for customers, with margin and deposit.',
+
 /* ---------- bijhangen met de scanner ---------- */
 'Uit het magazijn de winkel in':'From the storeroom onto the shop floor',
 'Deze liggen achter maar hangen niet in de winkel. Wat niet hangt wordt niet gekocht.':

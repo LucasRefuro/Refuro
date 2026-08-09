@@ -495,6 +495,57 @@
     .bijvulrij .btn{grid-column:1/-1;}
   }
 
+  /* aanvragen */
+  .aanvrij{display:grid; grid-template-columns:130px 1fr 140px 120px; gap:16px; align-items:center;
+    padding:14px 16px; border-radius:var(--radius-s); background:var(--soft-2); margin-bottom:8px;
+    cursor:pointer; transition:.15s;}
+  .aanvrij:hover{background:var(--lblauw); transform:translateX(2px);}
+  .avnr b{font-family:'Sora',sans-serif; font-weight:700;}
+  .avwat{font-size:14px; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  .avgeld{text-align:right;}
+  .avgeld b{font-family:'Sora',sans-serif; font-size:16px; font-weight:700;}
+  .aanvreken{margin-top:16px; background:var(--soft-2); border-radius:var(--radius-s); padding:14px 17px;}
+  .avdetail{background:var(--soft-2); border-radius:var(--radius-s); padding:14px 17px; margin:16px 0;}
+  .arrij{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:6px 0;
+    font-size:14px; color:var(--muted);}
+  .arrij b{font-family:'Sora',sans-serif; font-weight:700; color:var(--text); font-size:15px;}
+  .arrij b.groot{font-size:21px; color:var(--oranje);}
+  .arrij.rest{border-top:1px solid var(--border); margin-top:6px; padding-top:11px;}
+  .arrij.rest b{color:var(--green-tekst); font-size:18px;}
+  .avtijd{font-size:13px; line-height:1.9;}
+  .avtijd > div{display:flex; gap:10px; justify-content:space-between; padding:4px 0;
+    border-bottom:1px solid var(--soft-2);}
+  .avtijd > div:last-child{border:none;}
+  @media(max-width:760px){
+    .aanvrij{grid-template-columns:1fr auto; gap:9px;}
+    .avwat{grid-column:1/-1;}
+    .avgeld{text-align:right;}
+  }
+
+  /* kassa */
+  .kassaldo{font-family:'Sora',sans-serif; font-size:42px; font-weight:800; letter-spacing:-.03em;
+    color:var(--green-tekst); line-height:1;}
+  .kassaldo.vol{color:var(--red-tekst);}
+  .kasvakken{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  .kasvak{background:var(--soft-2); border-radius:var(--radius-s); padding:13px 15px;}
+  .kasvak span{display:block; font-size:11px; color:var(--muted-l); text-transform:uppercase;
+    letter-spacing:.06em; margin-bottom:5px;}
+  .kasvak b{font-family:'Sora',sans-serif; font-size:17px; font-weight:700;}
+  .kaslijst{max-height:60vh; overflow-y:auto;}
+  .kasrij{display:flex; align-items:center; gap:13px; padding:11px 0; border-bottom:1px solid var(--soft-2);}
+  .kasrij:last-child{border:none;}
+  .kasico{width:32px; height:32px; border-radius:10px; background:var(--soft-2); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; flex:none;}
+  .kastekst{flex:1; min-width:0; font-size:13.5px;}
+  .kasbedrag{font-family:'Sora',sans-serif; font-weight:700; font-size:15px; flex:none;
+    font-variant-numeric:tabular-nums;}
+  .kasbedrag.plus{color:var(--green-tekst);} .kasbedrag.min{color:var(--red-tekst);}
+  @media(max-width:560px){
+    .kassaldo{font-size:34px;}
+    .kasvakken{grid-template-columns:1fr;}
+    .kasrij{gap:10px;} .kasico{width:28px; height:28px;}
+  }
+
   /* bijhangen met de scanner */
   .hangpop{max-height:88vh; overflow-y:auto;}
   .hangkop{display:flex; align-items:flex-start; gap:14px; margin-bottom:18px;}
@@ -1097,6 +1148,8 @@
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
+    <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
+    <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
   </nav>
@@ -1403,6 +1456,99 @@
   </div>
 </section>
 
+<!-- AANVRAGEN -->
+<section id="tab-aanvragen"hidden>
+  <div class="pagehead">
+    <h1>Aanvragen</h1>
+    <div class="periodesel" id="aanvTabs">
+      <button data-s="overzicht" class="active">Overzicht</button>
+      <button data-s="nieuw">Nieuwe aanvraag</button>
+    </div>
+  </div>
+
+  <div id="aanv-overzicht">
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-clipboard"/></svg>Lopende aanvragen <span class="muted" id="aanvTelling"></span></h2>
+      <div id="aanvLijst"></div>
+    </div>
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-check"/></svg>Afgehandeld</h2>
+      <div id="aanvKlaar"></div>
+    </div>
+  </div>
+
+  <div id="aanv-nieuw" hidden>
+    <div class="modules">
+    <div class="card">
+      <h2><svg class="i"><use href="#i-user"/></svg>Klant</h2>
+      <div class="grid">
+        <div><label>Naam *</label><input id="a_naam" placeholder="Voor- en achternaam"></div>
+        <div><label>Telefoonnummer *</label><input id="a_tel" placeholder="06 12345678"></div>
+        <div><label>E-mailadres</label><input id="a_email" type="email" placeholder="klant@voorbeeld.nl"></div>
+        <div><label>Op de hoogte houden</label><select id="a_notify"><option value="1">Ja, bericht bij elke stap</option><option value="0">Nee, ik bel zelf</option></select></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><svg class="i"><use href="#i-package"/></svg>Wat wil de klant?</h2>
+      <div><label>Omschrijving *</label><input id="a_wat" placeholder="bijv. iPhone 16 Pro 256GB zwart"></div>
+      <div class="grid" style="margin-top:12px">
+        <div><label>Inkoopprijs (€)</label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+        <div><label>Marge (%)</label><input id="a_marge" type="number" step="1" min="0" oninput="aanvReken()"></div>
+        <div><label>Aanbetaling (€)</label><input id="a_aanbet" type="number" step="0.01" min="0" value="0" oninput="aanvReken()"></div>
+      </div>
+      <div class="aanvreken" id="aanvReken"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn actie" onclick="maakAanvraag()"><svg class="i"><use href="#i-check"/></svg>Aanvraag aanmaken</button>
+        <button class="btn ghost" onclick="resetAanvraag()">Leegmaken</button>
+      </div>
+      <p class="muted" style="margin-top:10px">De marge staat standaard op <b id="aanvStdMarge">50</b>%, aan te passen bij Instellingen. Per aanvraag mag je er altijd van afwijken.</p>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- KASSA -->
+<section id="tab-kassa"hidden>
+  <div class="pagehead"><h1>Kassa</h1></div>
+
+  <div class="modules">
+  <div class="card">
+    <h2><svg class="i"><use href="#i-cash"/></svg>In de lade</h2>
+    <div class="kassaldo" id="kasSaldo">€ 0,00</div>
+    <div id="kasStand" style="margin-top:12px"></div>
+    <div class="kasvakken" id="kasVandaag" style="margin-top:18px"></div>
+  </div>
+
+  <div class="card">
+    <h2><svg class="i"><use href="#i-euro"/></svg>Geld erin of eruit</h2>
+    <div class="row" style="margin-bottom:12px">
+      <div style="flex:1; min-width:120px"><label>Bedrag (€)</label><input id="kas_bedrag" type="number" step="0.01" min="0" placeholder="0,00"></div>
+      <div style="flex:2; min-width:180px"><label>Waarvoor <span class="muted">(optioneel)</span></label><input id="kas_tekst" placeholder="bijv. wisselgeld gehaald"></div>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="kasInvoer('in')"><svg class="i s"><use href="#i-down"/></svg>Erin</button>
+      <button class="btn ghost" onclick="kasInvoer('uit')"><svg class="i s"><use href="#i-up"/></svg>Eruit</button>
+      <button class="btn ghost" onclick="kasInvoer('kluis')"><svg class="i s"><use href="#i-lock"/></svg>Naar de kluis</button>
+    </div>
+    <hr style="border:none; border-top:1px solid var(--border); margin:22px 0">
+    <h2><svg class="i"><use href="#i-clipboard"/></svg>Kassa tellen</h2>
+    <p class="muted" style="margin-bottom:12px">Tel wat er echt in de lade zit. Storvo boekt het verschil weg, zodat het saldo weer klopt. Je ziet altijd terug dát er een verschil was.</p>
+    <div class="row">
+      <div style="flex:1; min-width:140px"><label>Geteld bedrag (€)</label><input id="kas_geteld" type="number" step="0.01" min="0" placeholder="0,00"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); kasTellen();}"></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn actie" onclick="kasTellen()">Verschil wegboeken</button></div>
+    </div>
+  </div>
+  </div>
+
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-clipboard"/></svg>Kasboek</h2>
+    <div id="kasLijst" class="kaslijst"></div>
+    <p class="muted" style="margin-top:12px">Contante verkopen komen hier vanzelf in te staan. Pinbetalingen niet, die gaan rechtstreeks naar je rekening.</p>
+  </div>
+</section>
+
 <!-- VOORRAAD -->
 <section id="tab-voorraad"hidden>
   <div class="pagehead">
@@ -1549,6 +1695,8 @@
       <button data-s="cats">Categorieën</button>
       <button data-s="bedrijf">Bedrijf</button>
       <button data-s="voorraad">Voorraad</button>
+      <button data-s="aanvragen">Aanvragen</button>
+      <button data-s="kassa">Kassa</button>
       <button data-s="paginas">Pagina's</button>
       <button data-s="huisstijl">Huisstijl</button>
       <button data-s="klantpagina">Klantpagina</button>
@@ -1633,6 +1781,23 @@
       <div style="max-width:220px"><label>Moet standaard hangen</label><input id="s_schap" type="number" min="0" step="1" onchange="slaSchapOp()"></div>
     </div>
     <p class="muted" style="margin-top:10px">Dit geldt voor alle producten waarbij je niets aparts hebt ingevuld. Per product kun je er bij Producten van afwijken, bijvoorbeeld vier voor je best verkopende hoesje.</p>
+  </div>
+
+  <div class="card" id="inst-aanvragen"hidden>
+    <h2><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</h2>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Bestel je iets speciaal voor een klant, dan gaat er een percentage over je inkoopprijs heen. Bij 50% wordt een toestel van 500 euro dus 750 voor de klant. Per aanvraag kun je er altijd van afwijken.</p>
+    <div class="row">
+      <div style="max-width:220px"><label>Standaardmarge (%)</label><input id="s_marge" type="number" min="0" step="1" onchange="slaMargeOp()"></div>
+    </div>
+  </div>
+
+  <div class="card" id="inst-kassa"hidden>
+    <h2><svg class="i"><use href="#i-cash"/></svg>Kassa</h2>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Storvo houdt bij hoeveel contant geld er in de lade zit. Kom je boven deze grens, dan krijg je een melding. Handig om te voorkomen dat er aan het eind van de week achthonderd euro in een la ligt.</p>
+    <div class="row">
+      <div style="max-width:220px"><label>Waarschuw boven (€)</label><input id="s_kasmax" type="number" min="0" step="10" onchange="slaKasMaxOp()"></div>
+    </div>
+    <p class="muted" style="margin-top:10px">Op nul zetten schakelt de melding uit.</p>
   </div>
 
   <div class="card" id="inst-paginas"hidden>
@@ -1882,6 +2047,11 @@ function load(){
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
   if(!Array.isArray(s.verborgen)) s.verborgen=[];
   if(s.schapNorm==null) s.schapNorm=2;
+  if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
+  if(!s.aanvNr) s.aanvNr=0;
+  if(s.marge==null) s.marge=50;
+  if(!Array.isArray(s.kasboek)) s.kasboek=[];
+  if(s.kasMax==null) s.kasMax=500;
   /* Producten van voor deze module hebben nog geen winkelvoorraad. We
      verdelen wat er is: het schap eerst vol, de rest ligt achter. */
   (s.producten||[]).forEach(p=>{
@@ -1939,6 +2109,8 @@ function showTab(t){
   if(t==='team') renderTeam();
   if(t==='producten') renderProducten();
   if(t==='voorraad') renderVoorraad();
+  if(t==='aanvragen') renderAanvragen();
+  if(t==='kassa') renderKassa();
   if(t==='bestellen') renderBestellen();
   if(t==='instellingen') renderInstellingen();
   if(t==='nieuw'){
@@ -2426,6 +2598,7 @@ function boekIn(p,n){
 function boekVerkoop(p,n,bet){
   const id=uid();
   const uitMagazijn=haalUitVoorraad(p,n);
+  kasVerkoop(p.verkoop*n, bet, p.naam);
   if(uitMagazijn>0) toast(uitMagazijn+'× '+p.naam+' kwam uit het magazijn. Hang bij.','let-op');
   state.verkopen.unshift({id, t:Date.now(), naam:p.naam, verkoop:p.verkoop*n, inkoop:p.inkoop*n, aantal:n, betaal:bet, cat:p.cat, door:gebruiker?gebruiker.naam:null});
   if(state.verkopen.length>5000) state.verkopen.length=5000;
@@ -2495,6 +2668,8 @@ function herteken(){
   if(!document.getElementById('tab-dashboard').hidden) renderDashboard();
   if(!document.getElementById('tab-producten').hidden) renderProducten();
   if(!document.getElementById('tab-voorraad').hidden) renderVoorraad();
+  if(!document.getElementById('tab-kassa').hidden) renderKassa();
+  if(!document.getElementById('tab-aanvragen').hidden) renderAanvragen();
   if(!document.getElementById('tab-bestellen').hidden) renderBestellen();
   if(!document.getElementById('tab-reparaties').hidden) renderReparaties();
   if(typeof mobielBijwerken==='function') mobielBijwerken();
@@ -3283,6 +3458,316 @@ function hangKoppel(){
   npQr(document.getElementById('hangQrVak'), link);
 }
 
+/* ═══════════════ AANVRAGEN ═══════════════
+   Een klant wil iets wat je niet op voorraad hebt: een nieuw toestel, een
+   hoesje in een kleur die je niet voert. Dat bestel je op aanvraag.
+
+   Werkt als een reparatie: er is een nummer, een status die opschuift, en de
+   klant krijgt bij elke stap bericht. Wat erbij komt is de prijsopbouw. Je
+   vult in wat het jou kost, er gaat een percentage overheen, en je ziet direct
+   wat de klant betaalt. Heeft hij aanbetaald, dan zie je bij binnenkomst nog
+   precies wat er aan de balie moet worden afgerekend.                       */
+
+const AANV_STATUS={
+  aangevraagd:{label:'Aangevraagd', volgende:'besteld',  knop:'Besteld bij leverancier', ico:'i-cart',    bericht:null},
+  besteld:    {label:'Besteld',     volgende:'binnen',   knop:'Binnengekomen',           ico:'i-truck',   bericht:'besteld'},
+  binnen:     {label:'Binnen',      volgende:'opgehaald',knop:'Afrekenen en meegeven',   ico:'i-package', bericht:'klaar'},
+  opgehaald:  {label:'Opgehaald',   volgende:null,       knop:null,                      ico:'i-check',   bericht:null},
+  geannuleerd:{label:'Geannuleerd', volgende:null,       knop:null,                      ico:'i-x',       bericht:null}
+};
+
+function aanvragen(){ return Array.isArray(state.aanvragen)?state.aanvragen:(state.aanvragen=[]); }
+function stdMarge(){ return state.marge!=null ? Number(state.marge) : 50; }
+/* Het percentage gaat over de inkoopprijs heen: 500 met 50% wordt 750. */
+function aanvVerkoop(inkoop, marge){
+  return Math.round((Number(inkoop)||0) * (1 + (Number(marge)||0)/100) * 100)/100;
+}
+function aanvRestant(a){
+  return Math.round((aanvVerkoop(a.inkoop,a.marge) - (Number(a.aanbetaling)||0))*100)/100;
+}
+function aanvLopend(){ return aanvragen().filter(a=>a.status!=='opgehaald' && a.status!=='geannuleerd'); }
+
+function aanvReken(){
+  const inkoop=Number(document.getElementById('a_inkoop').value)||0;
+  const marge=Number(document.getElementById('a_marge').value)||0;
+  const aanbet=Number(document.getElementById('a_aanbet').value)||0;
+  const verkoop=aanvVerkoop(inkoop,marge);
+  const winst=Math.round((verkoop-inkoop)*100)/100;
+  const rest=Math.round((verkoop-aanbet)*100)/100;
+  const el=document.getElementById('aanvReken');
+  if(!el) return;
+  el.innerHTML=`
+    <div class="arrij"><span>Klant betaalt</span><b class="groot">${euro(verkoop)}</b></div>
+    <div class="arrij"><span>Jouw winst</span><b>${euro(winst)}</b></div>
+    ${aanbet>0?`<div class="arrij"><span>Al aanbetaald</span><b>${euro(aanbet)}</b></div>
+    <div class="arrij rest"><span>Nog te betalen bij ophalen</span><b>${euro(rest)}</b></div>`:''}`;
+}
+function resetAanvraag(){
+  ['a_naam','a_tel','a_email','a_wat','a_inkoop'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('a_aanbet').value=0;
+  document.getElementById('a_marge').value=stdMarge();
+  document.getElementById('a_notify').value='1';
+  aanvReken();
+}
+function maakAanvraag(){
+  const naam=document.getElementById('a_naam').value.trim();
+  const tel=document.getElementById('a_tel').value.trim();
+  const wat=document.getElementById('a_wat').value.trim();
+  const inkoop=Number(document.getElementById('a_inkoop').value)||0;
+  if(!naam || !tel){ alert('Naam en telefoonnummer zijn verplicht.'); return; }
+  if(!wat){ alert('Vul in wat de klant wil hebben.'); return; }
+  if(inkoop<=0){ alert('Vul de inkoopprijs in, anders kan Storvo niet uitrekenen wat de klant betaalt.'); return; }
+
+  state.aanvNr=(state.aanvNr||0)+1;
+  const nr='A'+new Date().getFullYear().toString().slice(2)+'-'+String(state.aanvNr).padStart(3,'0');
+  const a={
+    id:uid(), nr, t:Date.now(),
+    klant:{naam, tel, email:document.getElementById('a_email').value.trim()},
+    notify:document.getElementById('a_notify').value==='1',
+    wat, inkoop,
+    marge:Number(document.getElementById('a_marge').value)||stdMarge(),
+    aanbetaling:Number(document.getElementById('a_aanbet').value)||0,
+    status:'aangevraagd', door:gebruiker?gebruiker.naam:null,
+    tijdlijn:[{status:'aangevraagd', t:Date.now()}], notities:[]
+  };
+  aanvragen().unshift(a);
+  /* Een aanbetaling is contant geld dat de lade in gaat. */
+  if(a.aanbetaling>0) kasBoek(a.aanbetaling, 'in', 'Aanbetaling '+a.nr+' · '+naam, true);
+  save(); renderAanvragen(); updateBadge(); renderKassa();
+  resetAanvraag();
+  document.querySelector('#aanvTabs button[data-s="overzicht"]').click();
+  toast('Aanvraag '+nr+' aangemaakt voor '+naam, true);
+}
+
+function aanvStap(id){
+  const a=aanvragen().find(a=>a.id===id);
+  if(!a) return;
+  const nu=AANV_STATUS[a.status];
+  if(!nu || !nu.volgende) return;
+  if(nu.volgende==='opgehaald'){ aanvAfrekenen(id); return; }
+  a.status=nu.volgende;
+  a.tijdlijn.push({status:a.status, t:Date.now(), door:gebruiker?gebruiker.naam:null});
+  save(); renderAanvragen(); updateBadge();
+  const ber=AANV_STATUS[a.status].bericht;
+  if(ber) verstuurKlantbericht({nr:a.nr, klant:a.klant, toestel:a.wat, notify:a.notify}, ber);
+  toast(a.nr+': '+AANV_STATUS[a.status].label, true);
+  if(document.getElementById('aanvDetail')) toonAanvraag(id);
+}
+function aanvAfrekenen(id){
+  const a=aanvragen().find(a=>a.id===id);
+  if(!a) return;
+  sluitAanvraag();
+  /* Alleen het restant gaat nog over de toonbank; de aanbetaling had je al. */
+  betaalPopup('Aanvraag '+a.nr+' · '+a.wat, aanvRestant(a), a.inkoop-(a.aanbetaling||0), false, null);
+  aanvAfrekenen.bezig=id;
+}
+function aanvAnnuleer(id){
+  const a=aanvragen().find(a=>a.id===id);
+  if(!a) return;
+  if(!confirm('Aanvraag '+a.nr+' annuleren?')) return;
+  a.status='geannuleerd';
+  a.tijdlijn.push({status:'geannuleerd', t:Date.now(), door:gebruiker?gebruiker.naam:null});
+  save(); renderAanvragen(); updateBadge(); sluitAanvraag();
+  toast(a.nr+' geannuleerd','let-op');
+}
+
+function aanvRij(a){
+  const s=AANV_STATUS[a.status];
+  const rest=aanvRestant(a);
+  return `<div class="aanvrij" onclick="toonAanvraag(${a.id})">
+    <div class="avnr"><b>${esc(a.nr)}</b><div class="muted" style="font-size:12px">${esc(a.klant.naam)}</div></div>
+    <div class="avwat">${esc(a.wat)}</div>
+    <div><span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span></div>
+    <div class="avgeld"><b>${euro(aanvVerkoop(a.inkoop,a.marge))}</b>
+      ${a.aanbetaling>0?`<div class="muted" style="font-size:12px">nog ${euro(rest)}</div>`:''}</div>
+  </div>`;
+}
+function renderAanvragen(){
+  const lopend=aanvLopend();
+  const t=document.getElementById('aanvTelling');
+  if(t) t.textContent = lopend.length ? '('+lopend.length+')' : '';
+  const el=document.getElementById('aanvLijst');
+  if(!el) return;
+  el.innerHTML = lopend.length ? lopend.map(aanvRij).join('')
+    : '<div class="muted">Geen lopende aanvragen. Maak er een aan bij Nieuwe aanvraag.</div>';
+  const klaar=document.getElementById('aanvKlaar');
+  if(klaar){
+    const af=aanvragen().filter(a=>a.status==='opgehaald'||a.status==='geannuleerd').slice(0,20);
+    klaar.innerHTML = af.length ? af.map(aanvRij).join('') : '<div class="muted">Nog niets afgehandeld.</div>';
+  }
+  const sm=document.getElementById('aanvStdMarge');
+  if(sm) sm.textContent=stdMarge();
+}
+
+function toonAanvraag(id){
+  const a=aanvragen().find(a=>a.id===id);
+  if(!a) return;
+  sluitAanvraag();
+  const s=AANV_STATUS[a.status];
+  const verkoop=aanvVerkoop(a.inkoop,a.marge);
+  const rest=aanvRestant(a);
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='aanvDetail';
+  ov.onclick=e=>{ if(e.target===ov) sluitAanvraag(); };
+  ov.innerHTML=`<div class="popup groot">
+    <div class="hangkop">
+      <div><h3>${esc(a.nr)} · ${esc(a.wat)}</h3>
+        <div class="pv">${esc(a.klant.naam)} · ${esc(a.klant.tel)}${a.klant.email?' · '+esc(a.klant.email):''}</div></div>
+      <span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span>
+    </div>
+
+    ${a.status==='binnen' ? `<div class="npmelding goed" style="font-size:15px">
+      <b>Ligt klaar.</b> De klant moet nog ${euro(rest)} betalen${a.aanbetaling>0?' (er is '+euro(a.aanbetaling)+' aanbetaald)':''}.</div>` : ''}
+
+    <div class="avdetail">
+      <div class="arrij"><span>Inkoop</span><b>${euro(a.inkoop)}</b></div>
+      <div class="arrij"><span>Marge</span><b>${a.marge}%</b></div>
+      <div class="arrij"><span>Klant betaalt</span><b class="groot">${euro(verkoop)}</b></div>
+      <div class="arrij"><span>Jouw winst</span><b>${euro(Math.round((verkoop-a.inkoop)*100)/100)}</b></div>
+      ${a.aanbetaling>0?`<div class="arrij"><span>Aanbetaald</span><b>${euro(a.aanbetaling)}</b></div>
+      <div class="arrij rest"><span>Nog te betalen</span><b>${euro(rest)}</b></div>`:''}
+    </div>
+
+    <div class="avtijd">${a.tijdlijn.map(x=>{
+      const d=new Date(x.t);
+      return `<div><b>${AANV_STATUS[x.status]?AANV_STATUS[x.status].label:x.status}</b>
+        <span class="muted">${d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}${x.door?' · '+esc(x.door):''}</span></div>`;
+    }).join('')}</div>
+
+    <div class="row" style="margin-top:18px">
+      ${s.volgende?`<button class="btn actie" onclick="aanvStap(${a.id})"><svg class="i s"><use href="#${AANV_STATUS[s.volgende].ico}"/></svg>${esc(s.knop)}</button>`:''}
+      ${a.status!=='opgehaald'&&a.status!=='geannuleerd'?`<button class="btn ghost" onclick="aanvAnnuleer(${a.id})">Annuleren</button>`:''}
+      <button class="btn ghost" onclick="sluitAanvraag()">Sluiten</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function sluitAanvraag(){ const o=document.getElementById('aanvDetail'); if(o) o.remove(); }
+
+function slaMargeOp(){
+  const v=Math.max(0, Number(document.getElementById('s_marge').value)||0);
+  state.marge=v; save(); renderAanvragen();
+  const m=document.getElementById('a_marge');
+  if(m && !m.value) m.value=v;
+  toast('Standaardmarge aangepast naar '+v+'%', true);
+}
+
+/* ═══════════════ DE KASSA ═══════════════
+   Contant geld is het enige in de winkel dat zomaar kan verdwijnen zonder dat
+   iemand het merkt. Daarom houdt Storvo een kasboek bij: elke contante verkoop
+   komt er vanzelf in, en wat jij eruit haalt boek je zelf.
+
+   Het saldo is niets meer dan de som van alle regels. Geen apart getal dat uit
+   de pas kan lopen met de geschiedenis.
+
+   Wordt het te vol, dan zegt hij er wat van. Een lade met achthonderd euro is
+   een uitnodiging, en de meeste verzekeringen dekken maar een deel.          */
+
+function kasboek(){ return Array.isArray(state.kasboek) ? state.kasboek : (state.kasboek=[]); }
+function kasSaldo(){ return kasboek().reduce((n,r)=>n+(Number(r.bedrag)||0), 0); }
+function kasMax(){ return state.kasMax!=null ? Number(state.kasMax) : 500; }
+function kasTeVol(){ return kasMax()>0 && kasSaldo()>kasMax(); }
+
+/* bedrag positief is erin, negatief is eruit */
+function kasBoek(bedrag, soort, tekst, stil){
+  bedrag=Math.round((Number(bedrag)||0)*100)/100;
+  if(!bedrag) return null;
+  const r={id:uid(), t:Date.now(), bedrag, soort, tekst:String(tekst||''),
+           door:gebruiker?gebruiker.naam:null};
+  kasboek().unshift(r);
+  if(state.kasboek.length>2000) state.kasboek.length=2000;
+  if(!stil){ save(); renderKassa(); updateBadge(); }
+  return r;
+}
+/* Een contante verkoop gaat automatisch de lade in. Pin niet, die komt op de
+   rekening. */
+function kasVerkoop(bedrag, bet, naam){
+  if(bet!=='cash' && bet!=='bon') return;
+  kasBoek(bedrag, 'verkoop', naam||'Verkoop', true);
+  if(kasTeVol()) setTimeout(kasWaarschuw, 400);
+}
+function kasWaarschuw(){
+  const vandaag=new Date().toISOString().slice(0,10)+'-'+Math.floor(kasSaldo()/100);
+  if(kasWaarschuw.laatst===vandaag) return;
+  kasWaarschuw.laatst=vandaag;
+  toast('Er zit '+euro(kasSaldo())+' in de kassa, meer dan je grens van '+euro(kasMax())+'. Breng wat weg.','let-op');
+}
+
+const KAS_SOORT={
+  verkoop:{label:'Verkoop', ico:'i-euro'},
+  in:     {label:'Erin',    ico:'i-down'},
+  uit:    {label:'Eruit',   ico:'i-up'},
+  kluis:  {label:'Naar de kluis', ico:'i-lock'},
+  telling:{label:'Telverschil', ico:'i-clipboard'},
+  start:  {label:'Startgeld', ico:'i-play'}
+};
+
+function renderKassa(){
+  const saldo=kasSaldo();
+  const el=document.getElementById('kasSaldo');
+  if(!el) return;
+  el.textContent=euro(saldo);
+  el.className='kassaldo'+(kasTeVol()?' vol':'');
+  const st=document.getElementById('kasStand');
+  if(st) st.innerHTML = kasTeVol()
+    ? `<div class="npmelding mis">Boven je grens van ${euro(kasMax())}. Breng ${euro(saldo-kasMax())} naar de kluis of de bank.</div>`
+    : `<div class="muted">Je grens staat op ${euro(kasMax())}. Aan te passen bij Instellingen, Kassa.</div>`;
+
+  const vandaag=new Date(); vandaag.setHours(0,0,0,0);
+  const vd=kasboek().filter(r=>r.t>=vandaag.getTime());
+  const som=(f)=>vd.filter(f).reduce((n,r)=>n+r.bedrag,0);
+  const d=document.getElementById('kasVandaag');
+  if(d) d.innerHTML=
+    `<div class="kasvak"><span>Contant verkocht</span><b>${euro(som(r=>r.soort==='verkoop'))}</b></div>`+
+    `<div class="kasvak"><span>Erin geboekt</span><b>${euro(som(r=>r.bedrag>0&&r.soort!=='verkoop'))}</b></div>`+
+    `<div class="kasvak"><span>Eruit gehaald</span><b>${euro(Math.abs(som(r=>r.bedrag<0)))}</b></div>`;
+
+  const lijst=document.getElementById('kasLijst');
+  if(lijst) lijst.innerHTML = kasboek().slice(0,60).map(r=>{
+    const s=KAS_SOORT[r.soort]||{label:r.soort, ico:'i-euro'};
+    const dt=new Date(r.t);
+    return `<div class="kasrij">
+      <span class="kasico"><svg class="i s"><use href="#${s.ico}"/></svg></span>
+      <div class="kastekst"><b>${esc(r.tekst||s.label)}</b>
+        <div class="muted" style="font-size:12px">${s.label}${r.door?' · '+esc(r.door):''} · ${dt.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${dt.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div class="kasbedrag ${r.bedrag<0?'min':'plus'}">${r.bedrag<0?'−':'+'}${euro(Math.abs(r.bedrag))}</div>
+    </div>`;
+  }).join('') || '<div class="muted">Nog geen kasboekingen.</div>';
+}
+
+function kasInvoer(soort){
+  const bedrag=Number(document.getElementById('kas_bedrag').value)||0;
+  const tekst=document.getElementById('kas_tekst').value.trim();
+  if(bedrag<=0){ toast('Vul een bedrag in','let-op'); return; }
+  if(soort!=='in' && bedrag>kasSaldo()){
+    if(!confirm('Er zit maar '+euro(kasSaldo())+' in de kassa. Toch boeken?')) return;
+  }
+  kasBoek(soort==='in'?bedrag:-bedrag, soort, tekst||KAS_SOORT[soort].label);
+  document.getElementById('kas_bedrag').value='';
+  document.getElementById('kas_tekst').value='';
+  toast(KAS_SOORT[soort].label+': '+euro(bedrag)+' · saldo '+euro(kasSaldo()), true);
+}
+/* Tellen: je typt wat er echt in de lade zit en Storvo boekt het verschil weg.
+   Zo blijft het saldo kloppen met de werkelijkheid zonder de geschiedenis te
+   vervalsen; je ziet altijd terug dát er een verschil was.                   */
+function kasTellen(){
+  const echt=Number(document.getElementById('kas_geteld').value);
+  if(isNaN(echt) || echt<0){ toast('Vul in hoeveel er echt in de kassa zit','let-op'); return; }
+  const verschil=Math.round((echt-kasSaldo())*100)/100;
+  if(!verschil){ toast('Geteld: het klopt precies met '+euro(echt), true);
+                 document.getElementById('kas_geteld').value=''; return; }
+  kasBoek(verschil, 'telling', 'Geteld op '+euro(echt)+', verschil '+(verschil>0?'+':'')+euro(verschil));
+  document.getElementById('kas_geteld').value='';
+  toast(verschil>0 ? euro(verschil)+' meer in de kassa dan verwacht'
+                   : euro(Math.abs(verschil))+' minder in de kassa dan verwacht', verschil>0?true:'let-op');
+}
+function slaKasMaxOp(){
+  const v=Math.max(0, Number(document.getElementById('s_kasmax').value)||0);
+  state.kasMax=v; save(); renderKassa(); updateBadge();
+  toast('Grens aangepast naar '+euro(v), true);
+}
+
 function slaSchapOp(){
   const v=Math.max(0, Math.floor(Number(document.getElementById('s_schap').value)||0));
   state.schapNorm=v;
@@ -3486,6 +3971,12 @@ function updateBadge(){
   rb.textContent=rn; rb.style.display=rn?'':'none';
   rb.classList.toggle('rood', lopend.some(r=>heeftProbleem(r)));
   rb.title=rn?rn+' reparatie(s) vragen actie':'';
+  const av=aanvLopend().filter(a=>a.status==='binnen').length;
+  const ab=document.getElementById('aanvBadge');
+  if(ab){ ab.textContent=av; ab.style.display=av?'':'none';
+          ab.title=av?av+' aanvraag/aanvragen liggen klaar voor de klant':''; }
+  const kb=document.getElementById('kasBadge');
+  if(kb){ kb.style.display=kasTeVol()?'':'none'; kb.title=kasTeVol()?'Te veel contant geld in de kassa':''; }
   const bv=bijvulLijst().length;
   const vb=document.getElementById('vrdBadge');
   if(vb){
@@ -3495,9 +3986,15 @@ function updateBadge(){
 }
 
 /* ---------- instellingen ---------- */
+document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#aanvTabs button').forEach(x=>x.classList.toggle('active', x===b));
+  document.getElementById('aanv-overzicht').hidden = b.dataset.s!=='overzicht';
+  document.getElementById('aanv-nieuw').hidden = b.dataset.s!=='nieuw';
+  if(b.dataset.s==='nieuw') resetAanvraag();
+}));
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','voorraad','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','voorraad','aanvragen','kassa','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
@@ -3505,8 +4002,8 @@ document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('cli
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','voorraad','bestellen','instellingen','team'],
-  medewerker:['scan','diensten','reparaties','producten','nieuw','voorraad','bestellen']
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','kassa','bestellen','instellingen','team'],
+  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','kassa','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -3521,6 +4018,8 @@ const UITZETBAAR=[
   {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
   {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
   {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en de nulmeting.'},
+  {tab:'aanvragen',   naam:'Aanvragen',    uitleg:'Bestellingen op aanvraag voor klanten, met marge en aanbetaling.'},
+  {tab:'kassa',       naam:'Kassa',        uitleg:'Het kasboek, wat er in de lade zit en een melding als het te veel wordt.'},
   {tab:'bestellen',   naam:'Bestellingen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
   {tab:'team',        naam:'Team',         uitleg:'Medewerkers, rollen en wachtwoorden.'}
 ];
@@ -3568,12 +4067,14 @@ const MOB={
   reparaties:  {naam:'Reparaties',   ico:'i-wrench'},
   producten:   {naam:'Producten',    ico:'i-box'},
   voorraad:    {naam:'Voorraad',     ico:'i-package'},
+  aanvragen:   {naam:'Aanvragen',    ico:'i-clipboard'},
+  kassa:       {naam:'Kassa',        ico:'i-cash'},
   bestellen:   {naam:'Bestellen',    ico:'i-cart'},
   diensten:    {naam:'Diensten',     ico:'i-tool'},
   team:        {naam:'Team',         ico:'i-users'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','reparaties','producten','voorraad','bestellen','diensten','team','instellingen'];
+const MOB_VOLGORDE=['dashboard','scan','reparaties','aanvragen','producten','voorraad','kassa','bestellen','diensten','team','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
@@ -3589,6 +4090,7 @@ function tekenOnderbalk(){
   const nu=huidigeTab();
   const tel=(t)=>{
     if(t==='reparaties'){ const n=(typeof repTeDoen==='function')?repTeDoen().length:0; return n||0; }
+    if(t==='aanvragen'){ const n=(typeof aanvLopend==='function')?aanvLopend().length:0; return n||0; }
     if(t==='voorraad'){ const n=(typeof bijvulLijst==='function')?bijvulLijst().length:0; return n||0; }
     if(t==='bestellen'){ const n=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0; return n||0; }
     return 0;
@@ -4950,6 +5452,8 @@ function slaBedrijfOp(){
 function renderInstellingen(){
   renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
   document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:2;
+  document.getElementById('s_kasmax').value=kasMax();
+  document.getElementById('s_marge').value=stdMarge();
   const i=state.instellingen||{};
   document.getElementById('b_naam').value=i.naam||'';
   document.getElementById('b_email').value=i.email||'';
@@ -5155,9 +5659,19 @@ function boekDienst(bet){
   const id=uid();
   const cat=tx.repId ? vasteCat('Reparaties').id : dienstCat().id;
   state.verkopen.unshift({id, t:Date.now(), naam:tx.naam, verkoop:tx.prijs, inkoop:tx.kosten||0, aantal:1, betaal:bet, cat, door:gebruiker?gebruiker.naam:null});
+  kasVerkoop(tx.prijs, bet, tx.naam);
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   state.log.unshift({id, t:Date.now(), naam:tx.naam, m:'uit', v:null, aantal:1, pid:null});
   state.log=state.log.slice(0,50);
+  if(aanvAfrekenen.bezig){
+    const a=aanvragen().find(x=>x.id===aanvAfrekenen.bezig);
+    aanvAfrekenen.bezig=null;
+    if(a){
+      a.status='opgehaald'; a.betaal=bet; a.opgehaaldOp=Date.now();
+      a.tijdlijn.push({status:'opgehaald', t:Date.now(), door:gebruiker?gebruiker.naam:null});
+      renderAanvragen();
+    }
+  }
   if(tx.repId){
     const r=state.reparaties.find(r=>r.id===tx.repId);
     if(r){
