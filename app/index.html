@@ -216,6 +216,39 @@
   .proefpop .acts{flex-direction:row; flex-wrap:wrap; gap:10px;}
   .proefpop .acts .btn{flex:1; min-width:180px; width:auto;}
   .proefklein{font-size:12.5px; color:var(--muted-l); margin-top:16px; line-height:1.6;}
+  /* de pakketkeuze */
+  .pakketpop{width:min(980px,96vw); max-height:92vh; overflow-y:auto;}
+  .pakketpop h3{font-family:'Sora',sans-serif; font-size:25px; font-weight:800;
+    letter-spacing:-.02em; margin-bottom:8px;}
+  .pakketpop > .pv{font-size:15px; line-height:1.7; margin-bottom:24px; max-width:74ch;}
+  .pakketten{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-bottom:18px;}
+  .pakket{background:var(--soft-2); border-radius:var(--radius-s); padding:22px 20px;
+    display:flex; flex-direction:column; position:relative; border:2px solid transparent;}
+  .pakket.nu{background:var(--card); border-color:var(--oranje); box-shadow:var(--schaduw);}
+  .pakket.pop{background:var(--lblauw);}
+  .pkbadge{position:absolute; top:-11px; left:20px; font-size:10.5px; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase; padding:4px 12px; border-radius:var(--pil);
+    background:var(--muted); color:#fff;}
+  .pkbadge.nu{background:var(--oranje); color:var(--actieftekst);}
+  .pknaam{font-family:'Sora',sans-serif; font-size:20px; font-weight:800; margin-top:4px;}
+  .pkbij{font-size:12.5px; color:var(--muted); margin-bottom:12px;}
+  .pkprijs{font-family:'Sora',sans-serif; font-size:27px; font-weight:800; letter-spacing:-.02em;
+    margin-bottom:16px;}
+  .pkprijs span{font-family:inherit; font-size:13px; font-weight:600; color:var(--muted-l);}
+  .pklijst{list-style:none; font-size:13.5px; line-height:1.45; margin-bottom:18px;}
+  .pklijst li{display:flex; align-items:flex-start; gap:9px; padding:6px 0;}
+  .pkteken{flex:none; width:16px; height:16px; margin-top:1px;}
+  .pkteken svg{width:16px; height:16px; fill:none; stroke-width:2.6;
+    stroke-linecap:round; stroke-linejoin:round;}
+  .pklijst li.aan .pkteken svg{stroke:var(--green-tekst);}
+  .pklijst li.uit{color:var(--muted-l);}
+  .pklijst li.uit .pkteken svg{stroke:var(--red);}
+  .pakket .btn{margin-top:auto; width:100%; justify-content:center;}
+  @media(max-width:860px){
+    .pakketten{grid-template-columns:1fr; gap:22px;}
+    .pakketpop{padding:24px 20px;}
+  }
+
   .kortingbadge{display:inline-block; font-family:'Sora',sans-serif; font-weight:800; font-size:15px;
     padding:8px 18px; border-radius:var(--pil); background:var(--oranje); color:var(--actieftekst);
     margin-bottom:16px;}
@@ -1139,8 +1172,13 @@
   .abobalk.let-op{background:#FEF4E2; border-color:#F0D9A8; color:#7A5307;}
   .abobalk.fout{background:var(--red-soft,#FDECF1); border-color:#F3C7D5; color:#8E1033;}
   .abobalk span{flex:1;}
+  /* Stond hier eerst background:currentColor met color:#fff erachter. Dat is
+     dezelfde kleur: currentColor kijkt naar de kleur die het element zélf
+     krijgt, dus de knop werd wit op wit en de tekst verdween. */
   .abobalk button{border:none; border-radius:var(--pil); padding:8px 15px; font-family:inherit;
-    font-size:13px; font-weight:700; cursor:pointer; background:currentColor; color:#fff; flex:none;}
+    font-size:13px; font-weight:700; cursor:pointer; background:#7A5307; color:#fff; flex:none;
+    white-space:nowrap;}
+  .abobalk.fout button{background:#8E1033;}
   .abobalk button:hover{opacity:.88;}
   .abobalk .abosluit{background:none; color:inherit; font-size:20px; padding:0 4px; font-weight:400; opacity:.55;}
   @media(max-width:640px){
@@ -4967,7 +5005,7 @@ const ABO_TEKSTEN={
   proef_verlopen:{
     kop:'Je proefperiode is voorbij',
     uitleg:'Je hebt Storvo dertig dagen kunnen proberen. Sluit een abonnement af om verder te gaan. Je gegevens staan er nog gewoon, er gaat niets verloren.',
-    knop:'Abonnement afsluiten'
+    knop:'Abonnement afsluiten', pakketten:true
   },
   betaling_mislukt:{
     kop:'De betaling is niet gelukt',
@@ -4996,7 +5034,7 @@ function toonSlot(){
     <h3 class="slotkop">${esc(t.kop)}</h3>
     <p class="muted" style="line-height:1.65; margin-bottom:20px">${esc(t.uitleg)}</p>
     ${t.knop ? (eigenaar
-      ? `<button class="btn amber" style="width:100%" onclick="openPortaal(this)">${esc(t.knop)}</button>`
+      ? `<button class="btn amber" style="width:100%" onclick="${t.pakketten?'toonPakketten(false)':'openPortaal(this)'}">${esc(t.knop)}</button>`
       : `<p class="muted klein" style="margin-bottom:16px">Vraag de eigenaar van de winkel om dit te regelen.</p>`) : ''}
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="uitloggen()">Uitloggen</button>
     <p class="muted klein" style="margin-top:16px">Vragen? Mail ons op
@@ -5129,7 +5167,7 @@ function toonProefScherm(d){
       <ul>${opbouw.map(p=>'<li>'+esc(p)+'</li>').join('')}</ul>
     </div>`:''}
     <div class="acts">
-      <button class="btn actie" onclick="startAbonnement(false, this)">${esc(t.knop)}</button>
+      <button class="btn actie" onclick="toonPakketten(false)">${esc(t.knop)}</button>
       <button class="btn ghost" onclick="${laatst?'toonKortingAanbod()':'sluitProefScherm()'}">${laatst?'Nee, bedankt':'Later'}</button>
     </div>
     <p class="proefklein">Maandelijks opzegbaar. Je gegevens blijven altijd van jou.</p>
@@ -5150,7 +5188,7 @@ function toonKortingAanbod(){
     <h3>Blijf voor een derde van de prijs</h3>
     <p class="pv">Snap ik, het is een uitgave. Daarom dit: je eerste maand met zeventig procent korting, zodat je rustig verder kunt zonder dat het meteen geld kost. Daarna gewoon de normale prijs, en je kunt elke maand stoppen.</p>
     <div class="acts">
-      <button class="btn actie" onclick="startAbonnement(true, this)">Ja, met korting doorgaan</button>
+      <button class="btn actie" onclick="toonPakketten(true)">Ja, met korting doorgaan</button>
       <button class="btn ghost" onclick="sluitProefScherm()">Nee, laat maar</button>
     </div>
     <p class="proefklein">Je gegevens blijven bewaard, ook als je stopt. Bedenk je je later, dan pak je gewoon de draad weer op.</p>
@@ -5160,7 +5198,80 @@ function toonKortingAanbod(){
 }
 function kortingAangeboden(){ try{ return localStorage.getItem('storvo_korting_aangeboden')==='1'; }catch(e){ return false; } }
 
-async function startAbonnement(korting, knop){
+/* ---------- de pakketten ----------
+   Tijdens de proefperiode krijgt iedereen Enterprise. Je wilt dat een winkel
+   ervaart wat er allemaal kan; iemand die dertig dagen op de kale versie heeft
+   gezeten weet niet wat hij mist en kiest daarna het goedkoopste.
+
+   Bij het afsluiten laten we alle drie zien, met het huidige pakket vooraan en
+   per goedkopere versie erbij wát er dan wegvalt. Eerlijk, en het werkt beter
+   dan verstoppen: mensen die zelf kiezen zeggen minder snel weer op.        */
+const PAKKETTEN=[
+  {naam:'Start',      prijs:'€ 19,95', bij:'Voor de eenmanszaak'},
+  {naam:'Pro',        prijs:'€ 44,95', bij:'Voor de winkel die groeit', populair:true},
+  {naam:'Enterprise', prijs:'€ 79,95', bij:'Voor meerdere vestigingen'}
+];
+/* Eén lijst voor alle drie, met per pakket een vinkje of een kruisje. Zo zie
+   je in één oogopslag waar het verschil zit, zonder dat er ergens een rood
+   blok staat te roepen wat je kwijtraakt.                                   */
+const PK_FUNCTIES=[
+  {t:'Voorraad en scannen',               Start:1, Pro:1, Enterprise:1},
+  {t:'Reparaties met klantpagina',        Start:1, Pro:1, Enterprise:1},
+  {t:'Bestellijst en leveringen',         Start:1, Pro:1, Enterprise:1},
+  {t:'Kassa en aanvragen',                Start:1, Pro:1, Enterprise:1},
+  {t:'Dashboard met winst per categorie', Start:0, Pro:1, Enterprise:1},
+  {t:'Automatische klantberichten',       Start:0, Pro:1, Enterprise:1},
+  {t:'Eigen logo en kleuren',             Start:0, Pro:1, Enterprise:1},
+  {t:'Medewerkers',                       Start:'2', Pro:'8', Enterprise:'onbeperkt'},
+  {t:'Meerdere vestigingen',              Start:0, Pro:0, Enterprise:1},
+  {t:'Cijfers per vestiging',             Start:0, Pro:0, Enterprise:1},
+  {t:'Voorrang bij support',              Start:0, Pro:0, Enterprise:1}
+];
+function huidigPakket(){ return (abonnement && abonnement.plan) || 'Enterprise'; }
+
+function toonPakketten(korting){
+  sluitProefScherm();
+  const nu=huidigPakket();
+  const nuIx=PAKKETTEN.findIndex(p=>p.naam===nu);
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='aboAanbod';
+  ov.innerHTML=`<div class="popup pakketpop">
+    <h3>Welk pakket past bij je?</h3>
+    <p class="pv">Je hebt dertig dagen op <b>${esc(nu)}</b> gewerkt, alles aan. Kies wat je nodig hebt; je kunt later altijd wisselen.
+      ${korting?'<b>De korting van 70% op je eerste maand geldt bij elk pakket.</b>':''}</p>
+    <div class="pakketten">
+      ${PAKKETTEN.map(p=>{
+        const isNu=p.naam===nu;
+        return `<div class="pakket${isNu?' nu':''}${p.populair&&!isNu?' pop':''}">
+          ${isNu?'<div class="pkbadge nu">Dit gebruik je nu</div>'
+                :(p.populair?'<div class="pkbadge">Meest gekozen</div>':'')}
+          <div class="pknaam">${esc(p.naam)}</div>
+          <div class="pkbij">${esc(p.bij)}</div>
+          <div class="pkprijs">${p.prijs}<span>/mnd</span></div>
+          <ul class="pklijst">${PK_FUNCTIES.map(f=>{
+            const w=f[p.naam];
+            const aan=w!==0;
+            const tekst=typeof w==='string' ? f.t+': '+w : f.t;
+            return `<li class="${aan?'aan':'uit'}">
+              <span class="pkteken">${aan
+                ? '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'
+                : '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>'}</span>${esc(tekst)}</li>`;
+          }).join('')}</ul>
+          <button class="btn ${isNu?'actie':'ghost'}" onclick="startAbonnement(${korting?'true':'false'}, this, '${p.naam}')">
+            ${isNu?'Hiermee doorgaan':'Kies '+esc(p.naam)}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="row" style="justify-content:center; margin-top:6px">
+      <button class="btn ghost" onclick="sluitProefScherm()">Later beslissen</button>
+    </div>
+    <p class="proefklein" style="text-align:center">Maandelijks opzegbaar. Alle bedragen exclusief btw.</p>
+  </div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) sluitProefScherm(); });
+  document.body.appendChild(ov);
+}
+
+async function startAbonnement(korting, knop, pakket){
   const oud=knop?knop.textContent:'';
   if(knop){ knop.disabled=true; knop.textContent='Even geduld…'; }
   try{
@@ -5169,7 +5280,7 @@ async function startAbonnement(korting, knop){
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
                'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({korting:!!korting})
+      body:JSON.stringify({korting:!!korting, plan:pakket||undefined})
     });
     const uit=await res.json();
     if(uit.ok && uit.url){ location.href=uit.url; return; }
@@ -5193,7 +5304,7 @@ function toonAboBalk(){
   balk.innerHTML=`<svg class="i s"><use href="#i-bell"/></svg>
     <span>${esc(m.tekst)}</span>
     ${account&&account.rol==='eigenaar'
-      ? `<button onclick="${m.nieuw?'startAbonnement(false, this)':'openPortaal(this)'}">${esc(m.knop)}</button>` : ''}
+      ? `<button onclick="${m.nieuw?'toonPakketten(false)':'openPortaal(this)'}">${esc(m.knop)}</button>` : ''}
     <button class="abosluit" onclick="this.parentNode.remove()" title="Verbergen">&times;</button>`;
 }
 
