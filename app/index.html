@@ -303,7 +303,10 @@
   /* Het bedrag is het argument, dus dat mag groot. */
   .kortingprijs{background:var(--soft-2); border-radius:var(--radius-s);
     padding:20px 22px; margin:18px 0; text-align:center;}
-  .kpvan{font-size:13.5px; color:var(--muted); margin-bottom:4px;}
+  .kppakket{display:inline-block; font-family:'Sora',sans-serif; font-size:12px; font-weight:800;
+    letter-spacing:.1em; text-transform:uppercase; padding:5px 14px; border-radius:var(--pil);
+    background:var(--navy); color:var(--actieftekst); margin-bottom:10px;}
+  .kpvan{font-size:13.5px; color:var(--muted); margin-bottom:6px;}
   .kpvan s{opacity:.75;}
   .kpnu{font-family:'Sora',sans-serif; font-size:44px; font-weight:800; line-height:1.05;
     letter-spacing:-.03em; color:var(--navy);}
@@ -5342,23 +5345,25 @@ function toonKortingAanbod(){
   ov.className='overlay'; ov.id='aboAanbod';
   ov.innerHTML=`<div class="popup groot proefpop korting">
     <div class="kortingbadge">70% korting op je eerste maand</div>
-    <h3>Wacht — dan doen we dit</h3>
+    <h3>Wacht, dan doen we dit</h3>
     <p class="pv">Je hebt Storvo dertig dagen gebruikt en je hele voorraad staat erin. Zonde om dat weg te gooien om de prijs. Daarom je eerste maand voor bijna niets.</p>
 
     <div class="kortingprijs">
-      <div class="kpvan">${b.pakket} normaal <s>${euro(b.vol)}</s></div>
-      <div class="kpnu">${euro(b.nu)}<span>eerste maand</span></div>
+      <div class="kppakket">Pakket ${esc(b.pakket)}</div>
+      <div class="kpvan">normaal <s>${euro(b.vol)}</s> per maand</div>
+      <div class="kpnu">${euro(b.nu)}<span>jouw eerste maand</span></div>
       <div class="kpbespaar">Je bespaart ${euro(b.bespaard)}</div>
     </div>
 
     <ul class="kortinglijst">
+      <li>Je houdt ${esc(b.pakket)} met alles erop en eraan</li>
       <li>Alles blijft staan zoals het nu is</li>
       <li>Daarna ${euro(b.vol)} per maand, elke maand opzegbaar</li>
       <li>Dit aanbod krijg je één keer</li>
     </ul>
 
     <div class="acts">
-      <button class="btn ghost" onclick="vertrekPopup()">Nee, laat maar</button>
+      <button class="btn ghost" onclick="vertrekPopup()">Nee, ik wil stoppen</button>
       <button class="btn actie" onclick="toonPakketten(true)">Ja, ${euro(b.nu)} de eerste maand</button>
     </div>
     <p class="proefklein">Je gegevens blijven bewaard, ook als je stopt. Bedenk je je later, dan pak je gewoon de draad weer op.</p>
