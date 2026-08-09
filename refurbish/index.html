@@ -232,6 +232,35 @@ tr.klikbaar{cursor:pointer;}
 .accurij{background:var(--soft-2); border-radius:var(--radius-s); padding:16px 18px;}
 .accurij label{margin-bottom:8px;}
 
+/* de accugrens */
+.accuwaarschuwing{background:var(--amber-soft); color:var(--amber-tekst);
+  border-radius:12px; padding:14px 16px; margin-top:12px; font-size:13.5px; line-height:1.6;}
+.accuknop{display:inline-flex; align-items:center; gap:9px; margin-top:10px; cursor:pointer;
+  background:var(--card); border:1.5px solid var(--amber); border-radius:var(--pil);
+  padding:8px 15px; font-weight:700; font-size:13.5px; color:var(--amber-tekst);}
+.accuknop input{width:auto;}
+.accugoed{margin-top:10px; font-size:13.5px; font-weight:700; color:var(--green-tekst);}
+
+/* het wachtscherm tijdens de installatie */
+.bezigvak{text-align:center; padding:20px 0 8px;}
+.bezigvak h2{justify-content:center; margin-bottom:8px;}
+.bezigvak .pv{max-width:56ch; margin:0 auto;}
+.spinner{width:52px; height:52px; margin:0 auto 20px; border-radius:50%;
+  border:5px solid var(--soft-2); border-top-color:var(--groen);
+  animation:draai 900ms linear infinite;}
+@keyframes draai{to{transform:rotate(360deg);}}
+@media(prefers-reduced-motion:reduce){ .spinner{animation-duration:2.4s;} }
+
+/* de uitvoeringen van een model */
+.uitvoeringen{background:var(--soft-2); border-radius:var(--radius-s); padding:18px 20px; margin-bottom:18px;}
+.uitrooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px;}
+.uitknop{text-align:left; padding:14px 16px; border:1.5px solid var(--border); border-radius:14px;
+  background:var(--card); font-family:inherit; cursor:pointer; transition:.15s;}
+.uitknop:hover{border-color:var(--mint);}
+.uitknop.aan{border-color:var(--groen); background:var(--lblauw);}
+.uitcpu{font-size:14px; font-weight:700; margin-bottom:3px;}
+.uitrest{font-size:12.5px; color:var(--muted);}
+
 .specvak{background:var(--lblauw); border-radius:var(--radius-s); padding:18px 20px; margin-bottom:18px;}
 .specrooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px;}
 .specveld .sl{font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
@@ -559,6 +588,16 @@ tr.klikbaar{cursor:pointer;}
         <h1>Checklists</h1>
         <button class="btn actie" onclick="clNieuw()"><svg class="i"><use href="#i-plus"/></svg>Checklist maken</button>
       </div>
+
+      <div class="card">
+        <h2><svg class="i"><use href="#i-check"/></svg>Wanneer is een accu nog goed</h2>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Onder deze grens krijgt de medewerker bij de controle het advies om de accu te vervangen, met een knop om hem meteen op de reparatielijst te zetten.</p>
+        <div class="row">
+          <input id="in_accu" type="number" min="0" max="100" style="max-width:130px">
+          <span class="muted">procent van nieuw</span>
+          <button class="btn ghost small" onclick="instelOpslaan(this)">Opslaan</button>
+        </div>
+      </div>
       <div class="card">
         <p class="muted" style="margin-bottom:16px; max-width:80ch">Een checklist hangt aan een categorie, en eventueel aan één model. Laat je het model leeg, dan geldt hij voor alles in die categorie. Bij een controle worden beide lijsten achter elkaar gezet.</p>
         <div id="clLijst"></div>
@@ -587,6 +626,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 let account=null, abonnement=null;
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[];
+let instel={accu_min:80};
 let tab='werkbank';
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -668,15 +708,17 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
-  const [a,o,c,r,m]=await Promise.all([
+  const [a,o,c,r,m,i]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_checklists').select('*').order('categorie'),
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
-    sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600)
+    sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
+    sb.from('refurbish_instellingen').select('*').maybeSingle()
   ]);
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
+  if(i && i.data) instel=i.data;
   tekenAlles();
 }
 
@@ -1159,17 +1201,24 @@ const SPEC_VRAGEN={
 };
 
 /* Wat er functioneel getest wordt zodra hij aan gaat. */
+/* Sommige dingen kun je zonder werkend Windows niet fatsoenlijk testen. Die
+   krijgen een derde antwoord: later nakijken. Ze komen dan vanzelf terug zodra
+   de installatie klaar is. */
+const NA_WINDOWS='Na Windows';
 const HARDWARE_CHECKS=[
-  {v:'Werkt het toetsenbord, alle toetsen?', a:['Ja','Nee'], deel:'Toetsenbord'},
-  {v:'Werkt het touchpad?',                  a:['Ja','Nee'], deel:'Touchpad'},
+  {v:'Werkt het toetsenbord, alle toetsen?', a:['Ja','Nee',NA_WINDOWS], deel:'Toetsenbord'},
+  {v:'Werkt het touchpad?',                  a:['Ja','Nee',NA_WINDOWS], deel:'Touchpad'},
   {v:'Werkt het scherm zonder strepen of vlekken?', a:['Ja','Nee'], deel:'Scherm'},
   {v:'Werkt de webcam?',                     a:['Ja','Nee'], deel:'Webcam'},
   {v:'Houdt de accu lading vast?',           a:['Ja','Nee'], deel:'Accu'},
   {v:'Laadt hij op via de lader?',           a:['Ja','Nee'], deel:'Laadpoort'},
-  {v:'Werken wifi en bluetooth?',            a:['Ja','Nee'], deel:'Wifi-kaart'},
-  {v:'Werkt het geluid?',                    a:['Ja','Nee'], deel:'Luidsprekers'},
+  {v:'Werken wifi en bluetooth?',            a:['Ja','Nee',NA_WINDOWS], deel:'Wifi-kaart'},
+  {v:'Werkt het geluid?',                    a:['Ja','Nee',NA_WINDOWS], deel:'Luidsprekers'},
   {v:'Werken alle poorten?',                 a:['Ja','Nee'], deel:'Poorten'}
 ];
+function ctrUitgesteld(){
+  return ctrHardwareVragen().filter(q=>ctr.antwoord[q.v]===NA_WINDOWS);
+}
 
 /* De visuele inspectie met strafpunten. Hoe minder punten, hoe beter de grade.
    Zo hoeft niemand op gevoel te bepalen of iets nog een A is. */
@@ -1210,7 +1259,8 @@ function appOpen(id){
     a, stap: a.status==='installeren' ? 'specs' : 'start',
     antwoord:{}, punten:{}, delen:{}, notities:{},
     specs:Object.assign({}, a.specs||{}),
-    accu:a.accu||'', notitie:a.notitie||'', tijdEinde:null
+    accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
+    notitie:a.notitie||'', variant:null, varianten:[], tijdEinde:null
   };
   /* Was hij al eens langs de controle geweest, dan pakken we op waar het
      gebleven was in plaats van alles opnieuw te vragen. */
@@ -1306,7 +1356,7 @@ function ctrVraag(vraag, opties, sleutel){
 function ctrNotitie(sleutel, tekst){ ctr.notities[sleutel]=String(tekst||'').slice(0,120); }
 function kleurVan(opt){
   if(['Ja','Goed','Als nieuw','Gaaf','Stevig'].includes(opt)) return 'goed';
-  if(['Ontbreekt','Onbekend'].includes(opt)) return 'mist';
+  if(['Ontbreekt','Onbekend',NA_WINDOWS].includes(opt)) return 'mist';
   if(['Nee','Barst of vlek','Deuken of schade','Los of beschadigd'].includes(opt)) return 'fout';
   return 'mist';
 }
@@ -1322,8 +1372,6 @@ function ctrVeldBewaar(){
   if(Object.keys(specs).length) ctr.specs=Object.assign({}, ctr.specs, specs);
   const t=document.getElementById('c_touch');
   if(t) ctr.specs['Touchscreen']=t.checked?'ja':'';
-  const acc=document.getElementById('c_accu');
-  if(acc) ctr.accu=acc.value.trim();
   const not=document.getElementById('c_notitie');
   if(not) ctr.notitie=not.value;
 }
@@ -1435,15 +1483,7 @@ const CTR_STAPPEN={
       ${eigen.length?'<div class="clkop">Eigen controles</div>'+eigen.map(q=>ctrVraag(q.v, q.a)).join(''):''}
 
       <div class="clkop">Accu</div>
-      <div class="accurij">
-        <label>Hoeveel van de accu is er nog over?</label>
-        <div class="row">
-          <input id="c_accu" type="number" min="0" max="100" value="${esc(ctr.accu)}"
-            placeholder="bijvoorbeeld 87" style="max-width:130px" onchange="ctrVeldBewaar()">
-          <span class="muted">procent van nieuw</span>
-        </div>
-        <p class="muted klein" style="margin-top:6px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag.</p>
-      </div>
+      ${ctrAccublok()}
 
       <div class="clkop">Notitie</div>
       ${ctrNotitieVeld()}`;
@@ -1478,7 +1518,7 @@ const CTR_STAPPEN={
      onder Te controleren met de stand 'installeren'. */
   windows:{ balk:'windows', inhoud:()=>`
     <h2><svg class="i"><use href="#i-windows"/></svg>Windows installeren</h2>
-    <p class="pv">Zet de installatie aan en leg het apparaat weg. Je kunt gewoon door met de volgende; deze blijft in de lijst staan tot je hem hervat.</p>
+    <p class="pv">Zet de installatie aan. Zolang hij bezig is kun je gewoon door met de volgende laptop; deze blijft in de lijst staan tot je hem hervat.</p>
     <ol class="stappenlijst">
       <li>Start op vanaf de installatiestick</li>
       <li>Verwijder de bestaande partities en installeer schoon</li>
@@ -1486,9 +1526,43 @@ const CTR_STAPPEN={
     </ol>
     <div class="tip">Pas als Windows draait kun je de specificaties uitlezen. Daarom staat die stap hierna en niet ervoor.</div>
   `, knoppen:()=>[
-      {tekst:'Uitvoeren en volgende pakken', klasse:'actie', doe:(k)=>ctrInstalleren(k)},
-      {tekst:'Al klaar, specificaties uitlezen', klasse:'', doe:()=>ctrGa('specs')}
+      {tekst:'Installatie gestart', klasse:'actie', doe:()=>ctrGa('bezig')},
+      {tekst:'Windows later installeren', klasse:'', doe:(k)=>ctrInstalleren(k, true)}
   ] },
+
+  /* Het wachtscherm. Een draaiend rondje is hier geen versiering: het is het
+     verschil tussen "staat stil" en "staat te werken", en dat scheelt vragen
+     van wie er langsloopt. */
+  bezig:{ balk:'windows', inhoud:()=>`
+    <div class="bezigvak">
+      <div class="spinner" aria-hidden="true"></div>
+      <h2>Bezig met Windows installeren</h2>
+      <p class="pv">Je hoeft er niet bij te blijven. Pak de volgende laptop; deze staat in de lijst onder <b>Windows installeren</b> en je klikt hem later gewoon weer aan.</p>
+    </div>
+  `, knoppen:()=>[
+      {tekst:'Windows is klaar', klasse:'actie', doe:()=>ctrGa('nawindows')},
+      {tekst:'Volgende laptop pakken', klasse:'', doe:(k)=>ctrInstalleren(k)}
+  ] },
+
+  /* Na de installatie eerst bevestigen dat het gelukt is, en pas dan de
+     onderdelen nalopen die je zonder Windows niet kon testen. */
+  nawindows:{ balk:'windows', inhoud:()=>{
+    const uit=ctrUitgesteld();
+    return `
+      <h2><svg class="i"><use href="#i-check"/></svg>Windows nakijken</h2>
+      <p class="pv">Eerst even bevestigen dat de installatie goed is gegaan.</p>
+      ${ctrVraag('Start Windows op en is hij bijgewerkt?', ['Ja','Nee'], 'windowsgoed')}
+      ${ctr.antwoord['windowsgoed']==='Nee'
+        ? '<div class="tip">Los het eerst op en zet hem daarna op ja. Een half geïnstalleerde laptop verkoop je niet.</div>' : ''}
+
+      ${uit.length ? `<div class="clkop">Dit kon nog niet getest worden</div>
+        ${uit.map(q=>ctrVraag(q.v, ['Ja','Nee'], q.v)).join('')}`
+        : '<p class="muted klein" style="margin-top:14px">Er stond niets meer open om na te kijken.</p>'}`;
+  }, knoppen:()=>{
+    const uit=ctrUitgesteld();
+    const klaar = ctr.antwoord['windowsgoed']==='Ja' && !uit.length;
+    return klaar ? [{tekst:'Door naar de specificaties', klasse:'actie', doe:()=>ctrGa('specs')}] : [];
+  }},
 
   specs:{ balk:'specs', inhoud:()=>{
     const sp=ctr.specs||{};
@@ -1501,6 +1575,16 @@ const CTR_STAPPEN={
           <svg class="i s"><use href="#i-sparkles"/></svg>Specificaties opzoeken</button>
         <span class="muted klein" id="specsBron">${esc(ctr.specsBron||'')}</span>
       </div>
+
+      ${(ctr.varianten||[]).length ? `<div class="uitvoeringen">
+        <div class="hkkop">Welke uitvoering heb je voor je?</div>
+        <div class="uitrooster">${ctr.varianten.map((v,i)=>`
+          <button type="button" class="uitknop${ctr.variant===i?' aan':''}" onclick="ctrVariant(${i})">
+            <div class="uitcpu">${esc(v.Processor||'—')}</div>
+            <div class="uitrest">${[v.Geheugen, v.Opslag].filter(Boolean).map(esc).join(' · ')}</div>
+          </button>`).join('')}</div>
+        <p class="muted klein" style="margin-top:10px">Kies er een, dan worden de velden hieronder ingevuld. Klopt er iets niet, pas het gewoon aan.</p>
+      </div>` : ''}
 
       ${gevonden.length ? `<div class="specvak">
         <div class="hkkop">Wat we nu weten</div>
@@ -1536,6 +1620,42 @@ const CTR_STAPPEN={
   `, knoppen:()=>[{tekst:'Naar de onderdelen', klasse:'actie', doe:(k)=>ctrSlopen(k)}] }
 };
 
+/* De accu is het onderdeel waar een koper als eerste naar vraagt en waar je
+   het meest op terugkrijgt. Onder de grens die de winkel zelf instelt komt er
+   meteen een advies, en met één klik zet je hem op de reparatielijst. */
+function ctrAccublok(){
+  const grens=Number(instel.accu_min)||80;
+  const w=Number(ctr.accu);
+  const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
+  return `<div class="accurij">
+    <label>Hoeveel van de accu is er nog over?</label>
+    <div class="row">
+      <input id="c_accu" type="number" min="0" max="100" value="${esc(ctr.accu)}"
+        placeholder="bijvoorbeeld 87" style="max-width:130px" oninput="ctrAccu(this.value)">
+      <span class="muted">procent van nieuw &middot; grens staat op ${grens}%</span>
+    </div>
+    ${laag ? `<div class="accuwaarschuwing">
+        <div><b>Advies: accu vervangen.</b> ${w}% is onder jouw grens van ${grens}%.
+          Een koper merkt dat meteen en dat komt terug.</div>
+        <label class="accuknop">
+          <input type="checkbox" ${ctr.accuVervangen?'checked':''}
+            onchange="ctrAccuVervangen(this.checked)">
+          <span>Accu moet vervangen worden</span>
+        </label>
+      </div>`
+      : (ctr.accu!=='' && !isNaN(w) ? '<div class="accugoed">Prima, dat is boven de grens.</div>' : '')}
+    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag.</p>
+  </div>`;
+}
+function ctrAccu(waarde){
+  ctr.accu=String(waarde||'').trim();
+  const grens=Number(instel.accu_min)||80;
+  const w=Number(ctr.accu);
+  if(!(ctr.accu!=='' && !isNaN(w) && w<grens)) ctr.accuVervangen=false;
+  ctrTeken();
+}
+function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; }
+
 /* Een notitie mag maar zo lang zijn als er op de sticker past. Liever een
    afgekapte zin dan een label waar de helft van afvalt. */
 function ctrNotitieVeld(){
@@ -1555,7 +1675,7 @@ function ctrNotitieTel(){
   t.textContent=over; t.classList.toggle('krap', over<10);
 }
 
-async function ctrInstalleren(knop){
+async function ctrInstalleren(knop, later){
   const a=ctr.a;
   ctrVeldBewaar();
   await bezig(knop, async()=>{
@@ -1570,7 +1690,7 @@ async function ctrInstalleren(knop){
     ctr=null;
     await allesLaden();
     showTab('controle');
-    toast('Staat te installeren. Pak de volgende maar.', true);
+    toast(later ? 'Staat klaar om te installeren' : 'Staat te installeren. Pak de volgende maar.', true);
   });
 }
 
@@ -1616,6 +1736,17 @@ function piepje(){
 
 /* ---------- specificaties opzoeken ---------- */
 
+function ctrVariant(i){
+  const v=(ctr.varianten||[])[i]; if(!v) return;
+  ctr.variant=i;
+  ctr.specs=Object.assign({}, ctr.specs, {
+    Processor:v.Processor||ctr.specs.Processor||'',
+    Geheugen:v.Geheugen||ctr.specs.Geheugen||'',
+    Opslag:v.Opslag||ctr.specs.Opslag||''
+  });
+  ctrTeken();
+}
+
 async function specsZoeken(knop){
   const a=ctr.a;
   await bezig(knop, async()=>{
@@ -1637,6 +1768,8 @@ async function specsZoeken(knop){
     const t=document.getElementById('c_touch');
     if(t && String(sp['Touchscreen']||'').toLowerCase()==='ja') t.checked=true;
     ctrVeldBewaar();
+    ctr.varianten = Array.isArray(uit.varianten) ? uit.varianten : [];
+    ctr.variant = null;
     ctr.specsBron = uit.melding ? uit.melding
       : (uit.bron==='lijst' ? 'Uit de modellenlijst. Leg het naast wat Windows zegt.'
                             : 'Opgezocht met AI en onthouden. Leg het naast wat Windows zegt.');
@@ -1649,6 +1782,7 @@ async function specsZoeken(knop){
 function ctrDefecten(){
   const uit=[];
   HARDWARE_CHECKS.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
+  if(ctr.accuVervangen) uit.push({vraag:'Accu vervangen, capaciteit te laag', deel:'Accu'});
   Object.keys(SPEC_VRAGEN).forEach(k=>{
     if(!ctr.specs[k]) return;
     SPEC_VRAGEN[k].forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:k}); });
@@ -1725,7 +1859,8 @@ async function ctrSlopen(knop){
    apparaat dat al op slopen staat nog wel kunnen openen. */
 function sloopOpen(a){
   ctr={a, stap:'slopen', antwoord:{}, punten:{}, delen:{}, notities:{},
-       specs:Object.assign({}, a.specs||{}), accu:a.accu||'', notitie:a.notitie||''};
+       specs:Object.assign({}, a.specs||{}), accu:a.accu!=null?String(a.accu):'',
+       accuVervangen:false, notitie:a.notitie||'', varianten:[]};
   (a.goede_delen||[]).forEach(d=>ctr.delen[d]=true);
   showTab('controleren');
 }
@@ -2112,6 +2247,8 @@ async function orderKlaar(knop, id){
 /* ═══════════════ checklists ═══════════════ */
 
 function tekenChecklists(){
+  const acc=document.getElementById('in_accu');
+  if(acc && document.activeElement!==acc) acc.value=Number(instel.accu_min)||80;
   document.getElementById('clLijst').innerHTML=checklists.length
     ? checklists.map(c=>`
       <div class="clrij">
@@ -2127,6 +2264,18 @@ function tekenChecklists(){
       </div>`).join('')
     : leeg('i-tag','Nog geen eigen checklists',
         'De standaardcontroles staan er altijd bij. Hier voeg je vragen toe die alleen voor jouw modellen gelden.');
+}
+
+async function instelOpslaan(knop){
+  const e=document.getElementById('in_accu');
+  const w=Math.max(0, Math.min(100, Number(e.value)||0));
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_instellingen')
+      .upsert({team_id:account.team_id, accu_min:w, bijgewerkt_op:new Date().toISOString()});
+    if(error) throw new Error('Opslaan mislukt');
+    instel.accu_min=w;
+    toast('Grens staat op '+w+'%', true);
+  });
 }
 
 function clNieuw(){

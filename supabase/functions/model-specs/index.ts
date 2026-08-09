@@ -69,14 +69,15 @@ Deno.serve(async (req) => {
 
   // 1. Staat het er al?
   const { data: bekend } = await admin.from("hardware_modellen")
-    .select("merk, model, categorie, specs")
+    .select("merk, model, categorie, specs, varianten")
     .ilike("model", model)
     .ilike("merk", merk || "%")
     .maybeSingle();
 
   if (bekend && Object.keys(bekend.specs || {}).length) {
     return new Response(JSON.stringify({
-      ok: true, bron: "lijst", merk: bekend.merk, model: bekend.model, specs: bekend.specs,
+      ok: true, bron: "lijst", merk: bekend.merk, model: bekend.model,
+      specs: bekend.specs, varianten: bekend.varianten || [],
     }), { headers: cors });
   }
 
@@ -93,8 +94,13 @@ Soort: ${categorie}
 Geef de meest voorkomende uitvoering. Weet je het niet zeker, laat het veld dan
 weg; een leeg veld is beter dan een verzonnen antwoord.
 
+Dit model is vaak in meerdere uitvoeringen verkocht. Geef de twee tot vier
+uitvoeringen die je het meest tegenkomt, van de kleinste naar de grootste.
+
 Antwoord uitsluitend met JSON:
-{"merk":"...","model":"...","specs":{"Processor":"...","Geheugen":"...","Opslag":"...","Scherm":"...","Videokaart":"...","Touchscreen":"ja of nee","Bouwjaar":"..."}}
+{"merk":"...","model":"...",
+ "specs":{"Processor":"...","Geheugen":"...","Opslag":"...","Scherm":"...","Videokaart":"...","Touchscreen":"ja of nee","Bouwjaar":"..."},
+ "varianten":[{"Processor":"...","Geheugen":"...","Opslag":"..."}]}
 
 Schrijf het geheugen als "16 GB", de opslag als "512 GB SSD" en het scherm als
 "14 inch Full HD". Corrigeer een typefout in het model als je zeker weet welk
@@ -123,12 +129,20 @@ apparaat bedoeld wordt.`;
     const j = JSON.parse(m[0]);
 
     const specs = opschonen(j.specs);
+    const varianten = (Array.isArray(j.varianten) ? j.varianten : [])
+      .map((v: any) => ({
+        Processor: String(v?.Processor || "").trim().slice(0, 80),
+        Geheugen: String(v?.Geheugen || "").trim().slice(0, 40),
+        Opslag: String(v?.Opslag || "").trim().slice(0, 40),
+      }))
+      .filter((v: any) => v.Processor || v.Geheugen || v.Opslag)
+      .slice(0, 6);
     const merkUit = String(j.merk || merk || "").trim().slice(0, 60);
     const modelUit = String(j.model || model).trim().slice(0, 120);
 
     if (!Object.keys(specs).length) {
       return new Response(JSON.stringify({
-        ok: true, bron: "ai", merk: merkUit, model: modelUit, specs: {},
+        ok: true, bron: "ai", merk: merkUit, model: modelUit, specs: {}, varianten: [],
         melding: "Dit model is niet herkend, vul het zelf even in",
       }), { headers: cors });
     }
@@ -140,9 +154,14 @@ apparaat bedoeld wordt.`;
       merk_in: merkUit || "Onbekend", model_in: modelUit,
       categorie_in: categorie, specs_in: specs,
     });
+    if (varianten.length) {
+      await admin.rpc("model_varianten_bewaren", {
+        merk_in: merkUit || "Onbekend", model_in: modelUit, varianten_in: varianten,
+      });
+    }
 
     return new Response(JSON.stringify({
-      ok: true, bron: "ai", merk: merkUit, model: modelUit, specs,
+      ok: true, bron: "ai", merk: merkUit, model: modelUit, specs, varianten,
     }), { headers: cors });
   } catch (e) {
     console.error("model-specs", e);

@@ -21,7 +21,8 @@ const zichtbaar=(w,el)=> el && w.getComputedStyle(el).display!=='none';
 // 1. niet ingelogd: slot zichtbaar met tekst, zijbalk niet
 const w1=bouw(bron('refurbish/index.html'),{createClient:()=>({
   auth:{getSession:async()=>({data:{session:null}})},
-  from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null})}),
+  from:()=>({select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
+    maybeSingle:async()=>({data:null}), then(r){ r({data:[],error:null}); }}),
   rpc:async()=>({data:[]})})});
 setTimeout(()=>{
   const d=w1.document;
@@ -33,7 +34,7 @@ setTimeout(()=>{
   // 2. ingelogd met module: slot weg, zijbalk en werkvlak in beeld
   const TEAM='t1';
   const leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
-    then(r){ r({data:[],error:null}); }};
+    maybeSingle:async()=>({data:null}), then(r){ r({data:[],error:null}); }};
   const w2=bouw(bron('refurbish/index.html'),{createClient:()=>({
     auth:{getSession:async()=>({data:{session:{user:{id:'u1'},access_token:'t'}}})},
     from:(n)=> n==='accounts'

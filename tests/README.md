@@ -20,7 +20,8 @@ npm test
 |---|---|
 | `winkelapp.js` | Hardwarepagina: lijst, filters, marge, kanalen, het bewerkvenster |
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
-| `refurbish-pagina.js` | De apparaatpagina, de printwachtrij, donoren en onderdelen per soort |
+| `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
+| `refurbish-pagina.js` | De apparaatpagina, donoren en onderdelen per soort |
 | `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |

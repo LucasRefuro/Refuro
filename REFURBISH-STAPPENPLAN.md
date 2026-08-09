@@ -153,23 +153,39 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    Bij die twee minuten loopt een wekker mee die piept als het klaar is.
 
    **Hardware.** De functionele test. Zet je ergens *nee*, dan verschijnt er een
-   veldje om erbij te zetten wát er dan mis is. Onderaan de accucapaciteit in
-   procenten (mag leeg) en een notitie van maximaal 60 tekens, want die moet op
-   de sticker passen.
+   veldje om erbij te zetten wát er dan mis is. Vier dingen kun je zonder
+   werkend Windows niet fatsoenlijk testen: toetsenbord, touchpad, wifi en
+   geluid. Die hebben een derde antwoord, *Na Windows*, en komen vanzelf terug
+   zodra de installatie klaar is.
+
+   Onderaan de accucapaciteit in procenten. Zit die onder de grens die de winkel
+   zelf instelt, dan verschijnt het advies om hem te vervangen, met een knop om
+   hem meteen op de reparatielijst te zetten. Die grens stel je in bij
+   Checklists en staat standaard op 80%.
+
+   Daaronder een notitie van maximaal 60 tekens, want die moet op de sticker
+   passen.
 
    **Staat.** De visuele inspectie met strafpunten: behuizing, scherm,
    toetsenbord en scharnieren. Nul tot twee punten is een A, tot en met zeven
    een B, daarboven een C. Een barst in het scherm telt voor acht, dus die haalt
    hem er in zijn eentje uit.
 
-   **Windows.** Zet de installatie aan en druk op *Uitvoeren en volgende pakken*.
-   Het apparaat blijft in de lijst staan met de stand "Windows installeren" en jij
-   pakt de volgende. Als hij klaar is klik je hem aan en hervat de controle
-   precies waar hij gebleven was.
+   **Windows.** Twee wegen: *Installatie gestart* brengt je naar een wachtscherm
+   met een draaiend rondje en de tekst "Bezig met Windows installeren", of
+   *Windows later installeren* als je hem nu niet aanzet. In beide gevallen komt
+   hij in de lijst te staan met de stand "Windows installeren" en pak jij de
+   volgende. Klik je hem later aan, dan land je weer op dat wachtscherm.
+
+   Is hij klaar, dan komt eerst de bevestiging: start Windows op en is hij
+   bijgewerkt? Pas daarna de vier checks die je had uitgesteld. Zolang daar iets
+   openstaat kun je niet door.
 
    **Specs.** Pas nu, want pas nu draait Windows en kun je uitlezen wat er
-   werkelijk in zit. Eén knop zoekt het model op, en wat gevonden is staat als
-   blok bovenaan zodat je het naast je scherm kunt leggen.
+   werkelijk in zit. Eén knop zoekt het model op. Omdat één model in meerdere
+   uitvoeringen is verkocht krijg je die als keuzeknoppen te zien: i5 met 8 GB en
+   256 GB, i7 met 16 GB en 512 GB, enzovoort. Klik de juiste aan en de velden
+   vullen zich; klopt er iets niet, dan pas je het gewoon aan.
 
    De uitkomst volgt uit de antwoorden: alles goed is klaar voor verkoop met
    grade, één kapotte toets stuurt hem naar de reparatielijst, en een apparaat
