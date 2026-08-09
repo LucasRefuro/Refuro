@@ -1,4 +1,4 @@
-// De accugrens, het Windows-pad met wachtscherm, en de uitvoeringen bij het opzoeken.
+// De accugrens, het Windows-pad en de uitvoeringen per onderdeel.
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
@@ -102,38 +102,67 @@ setTimeout(async()=>{
   ok('windowsstap', /Windows installeren/.test(tekst()));
   ok('knop later installeren', !!knop('later installeren'));
 
-  knop('Installatie gestart').click();
-  ok('wachtscherm', /Bezig met Windows installeren/.test(tekst()));
-  ok('draaiend rondje', !!d().querySelector('#ctrPagina .spinner'));
-  ok('knop volgende laptop', !!knop('Volgende laptop'));
+  // ── de installatie loopt: het toestel gaat de lijst in met een rondje ──
+  await w.eval('ctrInstalleren(document.createElement("button"))');
+  const gestart=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
+  ok('geen wachtscherm meer, terug naar de lijst', !w.eval('!!ctr'));
+  ok('staat op installeren', gestart[2].status==='installeren');
+  ok('en weet dat hij echt draait', gestart[2].stap==='installeren');
 
-  knop('Windows is klaar').click();
-  ok('bevestigingsscherm', /Start Windows op en is hij bijgewerkt/.test(tekst()));
-  ok('uitgestelde checks terug', /wifi en bluetooth/.test(tekst()) && /Werkt het geluid/.test(tekst()));
+  w.eval(`apparaten=[{id:'a1', code:'A0001', merk:'HP', model:'ZBook 15', categorie:'Laptop',
+      specs:{}, status:'installeren', stap:'installeren', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()},
+    {id:'a2', code:'A0002', merk:'HP', model:'ZBook 17', categorie:'Laptop',
+      specs:{}, status:'installeren', stap:'wachten', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()}];
+    tekenControle();`);
+  const lijst=d().getElementById('ctrLijst').innerHTML;
+  ok('draaiend stipje in de lijst', /class="st installeren draait"/.test(lijst));
+  ok('met de tekst erbij', /Bezig met installeren/.test(lijst));
+  ok('wie nog moet wachten staat er anders bij', /Wacht op installatie/.test(lijst));
+
+  // ── terugklikken vraagt om bevestiging ──
+  w.eval("appOpen('a1')");
+  ok('landt op het nakijken', /Windows nakijken/.test(tekst()));
+  ok('vraagt of hij geinstalleerd is', /Is Windows geïnstalleerd/.test(tekst()));
+  ok('knop om later verder te gaan', !!knop('later verder'));
   ok('nog niet door zonder bevestiging', !knop('Door naar de specificaties'));
   w.eval("ctrKies('windowsgoed','Nee')");
-  ok('waarschuwing bij niet gelukt', /Los het eerst op/.test(tekst()));
+  ok('waarschuwing bij niet gelukt', /Maak het eerst af/.test(tekst()));
+  ok('bij nee nog geen drivervraag', !/stuurprogramma/.test(tekst()));
   w.eval("ctrKies('windowsgoed','Ja')");
-  ok('nog steeds niet door met open checks', !knop('Door naar de specificaties'));
-  w.eval("ctrKies('Werken wifi en bluetooth?','Ja'); ctrKies('Werkt het geluid?','Ja')");
+  ok('daarna de drivervraag', /stuurprogramma/.test(tekst()));
+  w.eval("ctrKies('drivers','Nee')");
+  ok('waarschuwing bij ontbrekende drivers', /ontbrekende stuurprogramma/.test(tekst()));
+  ok('en niet door', !knop('Door naar de specificaties'));
+  w.eval("ctrKies('drivers','Ja')");
   ok('nu wel door', !!knop('Door naar de specificaties'));
 
-  // ── uitvoeringen ──
+  // ── uitvoeringen per onderdeel ──
   knop('Door naar de specificaties').click();
   ok('specstap', /Windows draait/.test(tekst()));
-  w.eval(`ctr.varianten=[
-    {Processor:'Intel Core i5-8365U', Geheugen:'8 GB', Opslag:'256 GB SSD'},
-    {Processor:'Intel Core i7-8665U', Geheugen:'16 GB', Opslag:'512 GB SSD'}];
+  w.eval(`ctr.opties={
+      Processor:['Intel Core i5-8365U','Intel Core i7-8665U','Intel Xeon E-2176M'],
+      Geheugen:['8 GB','16 GB','32 GB','64 GB'],
+      Opslag:['256 GB SSD','512 GB SSD','1 TB SSD']};
     ctrTeken();`);
   const uit=d().getElementById('ctrPagina').innerHTML;
-  ok('uitvoeringen getoond', /Welke uitvoering heb je voor je/.test(uit));
-  ok('eerste uitvoering', /i5-8365U/.test(uit) && /8 GB · 256 GB SSD/.test(uit));
-  ok('tweede uitvoering', /i7-8665U/.test(uit) && /16 GB · 512 GB SSD/.test(uit));
-  w.eval('ctrVariant(1)');
-  ok('kiezen vult de velden', d().getElementById('c_ram').value==='16 GB');
-  ok('gekozen uitvoering gemarkeerd', !!d().querySelector('.uitknop.aan'));
+  ok('alle processors als knop', /i5-8365U/.test(uit) && /i7-8665U/.test(uit) && /Xeon E-2176M/.test(uit));
+  ok('alle geheugens als knop', /64 GB/.test(uit));
+  ok('aantal erbij vermeld', /4 uitvoeringen bekend/.test(uit));
+  w.eval("ctrSpecKies('Geheugen','16 GB')");
+  ok('aanklikken vult het veld', d().getElementById('c_ram').value==='16 GB');
+  ok('gekozen knop licht op', !!d().querySelector('.optieknop.aan'));
+  w.eval("ctrSpecKies('Geheugen','16 GB')");
+  ok('nog een keer klikken zet hem uit', d().getElementById('c_ram').value==='');
+  w.eval("ctrSpecKies('Geheugen','16 GB'); ctrSpecKies('Processor','Intel Core i7-8665U')");
+  ok('eigen invoer mag ook', (()=>{ w.eval("ctr.specs['Opslag']='2 TB SSD'; ctrTeken()");
+     return /optieknop aan eigen/.test(d().getElementById('ctrPagina').innerHTML); })());
 
   // ── afronden: accu telt als defect ──
+  // Dit toestel is opnieuw geopend, dus de accu zetten we er weer op zoals de
+  // monteur dat bij de hardwarestap zou doen.
+  w.eval("ctrAccu('72'); ctrAccuVervangen(true)");
   await w.eval('ctrAfronden(document.createElement("button"))');
   const af=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('accu maakt er een reparatie van', af[2].status==='te_repareren');

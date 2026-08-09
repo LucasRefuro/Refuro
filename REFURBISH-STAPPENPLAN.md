@@ -147,7 +147,22 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
    staan de specificaties er ook op.
 3. **De controle.** Een eigen pagina met een tijdlijn erboven: Start, Hardware,
-   Staat, Windows, Specs, Klaar. De knop om door te gaan staat rechts.
+   Staat, Windows, Specs, Klaar. De knop om door te gaan staat rechts, en
+   ernaast **Terug** zodra je een stap verder bent. Terug volgt de weg die je
+   gelopen hebt, dus vanaf het geheugen kom je terug bij de reset en niet bij
+   de start.
+
+   **Antwoorden gaat vanzelf door.** Klik je een vraag aan, dan schuift de
+   volgende openstaande vraag in beeld en licht hij op. Met dertig vragen op
+   één pagina ben je anders vooral aan het zoeken waar je gebleven was. Twee
+   uitzonderingen: zet je iets op *nee*, dan gaat de cursor naar het veldje
+   waarin je zegt wát er mis is, en is alles beantwoord, dan schuift de knop
+   waarmee je verder gaat in beeld.
+
+   Het scherm springt niet meer weg terwijl je typt. Bij het accupercentage
+   gebeurde dat wel: de pagina werd bij elke toetsaanslag opnieuw opgebouwd en
+   dan ben je je cursor kwijt. Nu wordt alleen hertekend als het advies
+   omslaat, en blijft de cursor staan waar hij stond.
 
    | Vraag | Ja | Nee |
    |---|---|---|
@@ -176,15 +191,21 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    een B, daarboven een C. Een barst in het scherm telt voor acht, dus die haalt
    hem er in zijn eentje uit.
 
-   **Windows.** Twee wegen: *Installatie gestart* brengt je naar een wachtscherm
-   met een draaiend rondje en de tekst "Bezig met Windows installeren", of
-   *Windows later installeren* als je hem nu niet aanzet. In beide gevallen komt
-   hij in de lijst te staan met de stand "Windows installeren" en pak jij de
-   volgende. Klik je hem later aan, dan land je weer op dat wachtscherm.
+   **Windows.** Twee knoppen: *Installatie gestart* of *Windows later
+   installeren*. In beide gevallen ga je meteen terug naar de lijst en pak je de
+   volgende laptop. Er is geen wachtscherm meer; dat hield een half beeldscherm
+   bezet met iets waar je toch niet naar kijkt. In de lijst staat de laptop
+   tussen de andere, met een kloppend stipje en **Bezig met installeren**, of
+   met **Wacht op installatie** als je hem nog moet aanzetten. Zo zie je in één
+   oogopslag wat er staat te draaien.
 
-   Is hij klaar, dan komt eerst de bevestiging: start Windows op en is hij
-   bijgewerkt? Pas daarna de vier checks die je had uitgesteld. Zolang daar iets
-   openstaat kun je niet door.
+   Klik je hem later aan, dan moet je het eerst bevestigen: is Windows
+   geïnstalleerd en start hij op? Daarna komt de vraag of alle
+   stuurprogramma's erop staan, zonder uitroeptekens in Apparaatbeheer. Dat is
+   niet dezelfde vraag: een laptop die opstart met een ontbrekende wifi- of
+   touchpaddriver is precies waarover een koper de dag erna belt. Pas daarna de
+   checks die je had uitgesteld. Zolang er iets openstaat kun je niet door, maar
+   *Nog niet klaar, later verder* blijft altijd staan.
 
    **Specs.** Pas nu, want pas nu draait Windows en kun je uitlezen wat er
    werkelijk in zit. Eén knop zoekt het model op. Omdat één model in meerdere
@@ -201,12 +222,25 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    voordat het toestel in Storvo bestond. Dat was een stap zonder werk erin. Het
    toestel is af en het ligt ergens; de prijs hoort bij het online zetten, niet
    bij het opbergen.
-3b. **De modellenlijst.** Bij de controle vul je in wat erin zit, of je drukt op
-   *Specificaties opzoeken*. Die kijkt eerst in een gedeelde lijst en vraagt het
-   pas aan AI als het model nieuw is. Wat eruit komt gaat de lijst in, dus het
-   wordt maar één keer opgezocht. Specificaties van een laptopmodel zijn
-   openbare feiten, dus die lijst is gedeeld met alle winkels; er staat niets in
-   wat naar een winkel of een klant te herleiden is.
+3b. **De modellenlijst: alle uitvoeringen, niet één.** Bij de specificaties
+   druk je op *Uitvoeringen opzoeken*. Je krijgt dan per onderdeel **alle**
+   uitvoeringen die van dat model verkocht zijn: elke processor, elk
+   geheugenformaat, elke opslagoptie, elke videokaart, elk scherm. Je klikt aan
+   wat je op het scherm van de laptop ziet staan.
+
+   Waarom niet één "meest voorkomende uitvoering": van een zakelijke laptop zijn
+   tien processors en vier schermen geleverd, en welke er voor je staat weet je
+   pas als Windows draait. Eén voorstel is dan altijd fout, en overtypen kost
+   tijd en levert bij elke medewerker een andere schrijfwijze op. Aanklikken is
+   sneller, preciezer, en houdt je advertenties consistent. Staat jouw
+   uitvoering er niet bij, dan typ je hem gewoon in het veld eronder; hij komt
+   er dan als losse knop bij te staan.
+
+   De lijst kijkt eerst in de gedeelde modellendatabase en vraagt het pas aan AI
+   als het model daar nog niet staat. Wat eruit komt gaat de database in, dus
+   het wordt per model één keer opgezocht en daarna is het voor iedereen
+   gratis en meteen goed. Specificaties van een laptopmodel zijn openbare
+   feiten; er staat niets in wat naar een winkel of een klant te herleiden is.
 4. **De apparaatpagina.** Elk apparaat heeft een eigen pagina: de feiten op een
    rij, wat erin zit, wat de controle opleverde, wat er mis is, wat eruit is
    gehaald, en het label als voorbeeld. Klikken op een regel brengt je er

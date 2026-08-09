@@ -32,6 +32,32 @@ function fout(bericht: string, code = 400) {
 // verkeerd antwoord niet van alles bijzetten.
 const VELDEN = ["Processor", "Geheugen", "Opslag", "Scherm", "Videokaart", "Touchscreen", "Bouwjaar"];
 
+// Per onderdeel alles wat er voor dit model verkocht is. Van een zakelijke
+// laptop bestaan tien processors en vier schermen; welke er voor je staat weet
+// je pas als Windows draait. Eén "meest voorkomende uitvoering" is dan precies
+// het verkeerde antwoord.
+const KEUZEVELDEN = ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm"];
+
+function optiesOpschonen(rauw: any) {
+  const uit: Record<string, string[]> = {};
+  if (!rauw || typeof rauw !== "object") return uit;
+  for (const veld of KEUZEVELDEN) {
+    const lijst = Array.isArray(rauw[veld]) ? rauw[veld] : [];
+    const schoon: string[] = [];
+    for (const w of lijst) {
+      const t = String(w ?? "").trim();
+      if (!t || t.length > 90) continue;
+      if (t.toLowerCase() === "onbekend") continue;
+      // Dubbelen eruit, hoofdletters ongevoelig: "16 GB" en "16 gb" is hetzelfde.
+      if (schoon.some((x) => x.toLowerCase() === t.toLowerCase())) continue;
+      schoon.push(t);
+      if (schoon.length >= 14) break;
+    }
+    if (schoon.length) uit[veld] = schoon;
+  }
+  return uit;
+}
+
 function opschonen(rauw: any) {
   const uit: Record<string, string> = {};
   if (!rauw || typeof rauw !== "object") return uit;
@@ -69,15 +95,19 @@ Deno.serve(async (req) => {
 
   // 1. Staat het er al?
   const { data: bekend } = await admin.from("hardware_modellen")
-    .select("merk, model, categorie, specs, varianten")
+    .select("merk, model, categorie, specs, varianten, opties")
     .ilike("model", model)
     .ilike("merk", merk || "%")
     .maybeSingle();
 
-  if (bekend && Object.keys(bekend.specs || {}).length) {
+  // Alleen teruggeven als we ook de keuzelijsten hebben. Staat er een model in
+  // van voor deze wijziging, dan halen we die er alsnog bij; anders zou een
+  // winkel voor altijd met één uitvoering blijven zitten.
+  if (bekend && Object.keys(bekend.specs || {}).length
+             && Object.keys(bekend.opties || {}).length) {
     return new Response(JSON.stringify({
       ok: true, bron: "lijst", merk: bekend.merk, model: bekend.model,
-      specs: bekend.specs, varianten: bekend.varianten || [],
+      specs: bekend.specs, opties: bekend.opties, varianten: bekend.varianten || [],
     }), { headers: cors });
   }
 
@@ -85,22 +115,32 @@ Deno.serve(async (req) => {
   const sleutel = Deno.env.get("ANTHROPIC_API_KEY");
   if (!sleutel) return fout("Dit model staat nog niet in de lijst", 404);
 
-  const prompt = `Wat zijn de gebruikelijke specificaties van dit apparaat?
+  const prompt = `Welke uitvoeringen bestaan er van dit apparaat?
 
 Merk: ${merk || "onbekend"}
 Model: ${model}
 Soort: ${categorie}
 
-Geef de meest voorkomende uitvoering. Weet je het niet zeker, laat het veld dan
-weg; een leeg veld is beter dan een verzonnen antwoord.
+Iemand staat met dit apparaat voor zich en leest op het scherm af wat erin zit.
+Hij moet zijn uitvoering kunnen aanklikken. Geef daarom per onderdeel ALLE
+uitvoeringen die van dit model zijn verkocht, niet alleen de meest voorkomende:
 
-Dit model is vaak in meerdere uitvoeringen verkocht. Geef de twee tot vier
-uitvoeringen die je het meest tegenkomt, van de kleinste naar de grootste.
+- Processor: elke processor die in dit model is geleverd, van traag naar snel
+- Geheugen: elke geheugengrootte, van klein naar groot
+- Opslag: elke opslagoptie, met soort erbij, van klein naar groot
+- Videokaart: elke videokaart, met de geïntegreerde erbij
+- Scherm: elke schermuitvoering, met maat en resolutie
+
+Liever een lijst te lang dan te kort: een uitvoering die er niet bij staat kan
+hij niet aanklikken. Maar verzin niets. Weet je van een onderdeel niets zeker,
+laat die lijst dan leeg.
+
+Geef daarnaast in "specs" de meest voorkomende uitvoering, als startpunt.
 
 Antwoord uitsluitend met JSON:
 {"merk":"...","model":"...",
  "specs":{"Processor":"...","Geheugen":"...","Opslag":"...","Scherm":"...","Videokaart":"...","Touchscreen":"ja of nee","Bouwjaar":"..."},
- "varianten":[{"Processor":"...","Geheugen":"...","Opslag":"..."}]}
+ "opties":{"Processor":["...","..."],"Geheugen":["...","..."],"Opslag":["...","..."],"Videokaart":["...","..."],"Scherm":["...","..."]}}
 
 Schrijf het geheugen als "16 GB", de opslag als "512 GB SSD" en het scherm als
 "14 inch Full HD". Corrigeer een typefout in het model als je zeker weet welk
@@ -116,7 +156,7 @@ apparaat bedoeld wordt.`;
       },
       body: JSON.stringify({
         model: Deno.env.get("ANTHROPIC_MODEL") || "claude-haiku-4-5-20251001",
-        max_tokens: 700,
+        max_tokens: 1600,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -129,20 +169,24 @@ apparaat bedoeld wordt.`;
     const j = JSON.parse(m[0]);
 
     const specs = opschonen(j.specs);
-    const varianten = (Array.isArray(j.varianten) ? j.varianten : [])
-      .map((v: any) => ({
-        Processor: String(v?.Processor || "").trim().slice(0, 80),
-        Geheugen: String(v?.Geheugen || "").trim().slice(0, 40),
-        Opslag: String(v?.Opslag || "").trim().slice(0, 40),
-      }))
-      .filter((v: any) => v.Processor || v.Geheugen || v.Opslag)
-      .slice(0, 6);
+    const opties = optiesOpschonen(j.opties);
+
+    // Wat als startpunt is gekozen hoort ook in de lijst te staan, anders staat
+    // het veld ingevuld met iets wat je niet kunt aanklikken.
+    for (const veld of KEUZEVELDEN) {
+      const w = specs[veld];
+      if (!w) continue;
+      if (!opties[veld]) opties[veld] = [];
+      if (!opties[veld].some((x) => x.toLowerCase() === w.toLowerCase())) {
+        opties[veld].unshift(w);
+      }
+    }
     const merkUit = String(j.merk || merk || "").trim().slice(0, 60);
     const modelUit = String(j.model || model).trim().slice(0, 120);
 
-    if (!Object.keys(specs).length) {
+    if (!Object.keys(specs).length && !Object.keys(opties).length) {
       return new Response(JSON.stringify({
-        ok: true, bron: "ai", merk: merkUit, model: modelUit, specs: {}, varianten: [],
+        ok: true, bron: "ai", merk: merkUit, model: modelUit, specs: {}, opties: {},
         melding: "Dit model is niet herkend, vul het zelf even in",
       }), { headers: cors });
     }
@@ -154,14 +198,14 @@ apparaat bedoeld wordt.`;
       merk_in: merkUit || "Onbekend", model_in: modelUit,
       categorie_in: categorie, specs_in: specs,
     });
-    if (varianten.length) {
-      await admin.rpc("model_varianten_bewaren", {
-        merk_in: merkUit || "Onbekend", model_in: modelUit, varianten_in: varianten,
+    if (Object.keys(opties).length) {
+      await admin.rpc("model_opties_bewaren", {
+        merk_in: merkUit || "Onbekend", model_in: modelUit, opties_in: opties,
       });
     }
 
     return new Response(JSON.stringify({
-      ok: true, bron: "ai", merk: merkUit, model: modelUit, specs, varianten,
+      ok: true, bron: "ai", merk: merkUit, model: modelUit, specs, opties,
     }), { headers: cors });
   } catch (e) {
     console.error("model-specs", e);

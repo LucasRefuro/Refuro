@@ -106,13 +106,58 @@ setTimeout(async()=>{
   ok('notitieveld in de hardwarestap', !!d.getElementById('c_notitie'));
   ok('nog niet door zonder antwoorden', !knop('Door naar de staat'));
   ok('geen touchscreenvraag zonder touchscreen', !/touchscreen overal/.test(tekst()));
+
+  // ── na een antwoord staat de volgende vraag klaar ──
+  const vragen=()=>[...d.querySelectorAll('#ctrPagina .clrij')];
+  ok('alle vragen staan nog open', vragen().every(r=>r.dataset.open==='1'));
+  const eerste=w.eval("ctrHardwareVragen()[0].v");
+  w.eval("ctrKies(ctrHardwareVragen()[0].v, 'Ja')");
+  ok('beantwoorde vraag is afgevinkt', vragen()[0].dataset.open==='0');
+  ok('en gemarkeerd als gedaan', vragen()[0].classList.contains('beantwoord'));
+  ok('de volgende is aan de beurt', vragen()[1].classList.contains('aandebeurt'));
+
+  // Bij 'nee' springt hij niet door, maar naar het veldje waarin je zegt wat
+  // er mis is; anders typ je die uitleg nooit.
+  w.eval("ctrKies(ctrHardwareVragen()[1].v, 'Nee')");
+  ok('bij nee komt er een veld voor de uitleg',
+     !!d.querySelector('#ctrPagina [data-vraagveld]'));
+  ok('en springt hij niet door', !vragen()[2].classList.contains('aandebeurt'));
+  w.eval("ctrKies(ctrHardwareVragen()[1].v, 'Ja')");
+
+  // ── het accuveld houdt de cursor vast ──
+  const accu=d.getElementById('c_accu');
+  accu.focus(); accu.value='8';
+  w.eval("ctrAccu('8')");
+  ok('cursor blijft in het accuveld', d.activeElement && d.activeElement.id==='c_accu');
+  w.eval("ctrAccu('87')");
+  ok('en de waarde blijft staan', w.eval("ctr.accu")==='87');
+  // Alleen hertekenen als het advies omslaat: anders bouw je bij elke
+  // toetsaanslag dertig vraagregels opnieuw op.
+  const rij=d.querySelector('#ctrPagina .clrij');
+  w.eval("ctrAccu('88')");
+  ok('geen hertekening bij een gelijk advies', d.querySelector('#ctrPagina .clrij')===rij);
+  w.eval("ctrAccu('40')");
+  ok('wel hertekend als het advies omslaat', d.querySelector('#ctrPagina .clrij')!==rij);
+  ok('met het advies erbij', /accu vervangen/i.test(tekst()));
+  w.eval("ctrAccu('87')");
   w.eval("HARDWARE_CHECKS.forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken();");
   ok('nu wel door', !!knop('Door naar de staat'));
   knop('Door naar de staat').click();
   ok('visuele stap', /Behuizing/.test(tekst()) && /Scharnieren/.test(tekst()));
+
+  // ── terug kunnen ──
+  const terug=()=>[...d.querySelectorAll('#ctrPagina .pagehead button')]
+    .find(b=>/Terug/.test(b.textContent));
+  ok('terugknop verschenen', !!terug());
+  terug().click();
+  ok('terug bij de hardware', /Werkt het toetsenbord/.test(tekst()));
+  ok('antwoorden staan er nog', w.eval("ctr.antwoord[ctrHardwareVragen()[0].v]")==='Ja');
+  knop('Door naar de staat').click();
   ok('nog geen grade', !d.querySelector('.gradeletter'));
   w.eval("ctrPunt('Behuizing','Als nieuw',0); ctrPunt('Scherm','Gaaf',0); ctrPunt('Toetsenbord','Letters gaaf',0); ctrPunt('Scharnieren en deksel','Stevig',0)");
   ok('grade A bij nul punten', d.querySelector('.gradeletter').textContent==='A');
+  ok('de staatvragen springen ook door',
+     [...d.querySelectorAll('#ctrPagina .clrij')].every(r=>r.dataset.open==='0'));
   knop('Door naar Windows').click();
   ok('windowsstap', /Windows installeren/.test(tekst()));
   d.getElementById('c_accu');
@@ -120,12 +165,19 @@ setTimeout(async()=>{
   const inst=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('gaat op installeren', inst[2].status==='installeren');
   ok('grade nu al bewaard', inst[2].grade==='A');
-  // hervatten pakt op bij de specificaties
+  // Hervatten landt op het nakijken, niet op de specificaties: eerst weten of
+  // de installatie echt gelukt is.
   w.eval("apparaten.find(x=>x.id==='a2').status='installeren'; appOpen('a2')");
-  ok('hervat bij de specificaties', /Windows draait/.test(tekst()));
-  d.getElementById('c_cpu').value='Intel Core i5-1235U';
-  d.getElementById('c_ram').value='16 GB';
-  w.eval('ctrVeldBewaar()');
+  ok('hervat bij het nakijken', /Windows nakijken/.test(tekst()));
+  ok('vraagt of hij is geinstalleerd', /Is Windows geïnstalleerd/.test(tekst()));
+  w.eval("ctrKies('windowsgoed','Ja')");
+  ok('vraagt daarna naar de stuurprogramma\'s', /stuurprogramma/.test(tekst()));
+  ok('nog niet door zonder drivers', !knop('Door naar de specificaties'));
+  w.eval("ctrKies('drivers','Ja')");
+  ok('knop later verder blijft staan', !!knop('later verder'));
+  knop('Door naar de specificaties').click();
+  ok('specstap', /Windows draait/.test(tekst()));
+  w.eval("ctrSpecKies('Processor','Intel Core i5-1235U'); ctrSpecKies('Geheugen','16 GB')");
   await w.eval('ctrAfronden(document.createElement("button"))');
   const af=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('status klaar', af[2].status==='klaar');
