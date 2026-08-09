@@ -3,8 +3,9 @@
 // Maakt een Stripe Checkout Session en stuurt de winkel daarheen. Er zijn twee
 // smaken: gewoon, en met de kortingsbon voor wie op het laatste moment twijfelt.
 //
-// De prijs en de bon staan als instelling in Supabase, niet in de code. Zo kun
-// je een actie starten of stoppen zonder iets opnieuw uit te rollen.
+// De prijzen, de bon en het btw-tarief staan als instelling in Supabase, niet
+// in de code. Zo kun je een actie starten of stoppen zonder iets opnieuw uit
+// te rollen.
 //
 // Wat er daarna gebeurt regelt de webhook: die zet de status op actief zodra
 // Stripe zegt dat er betaald is. Deze functie doet niets aan de administratie.
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
   if (!prijsId) return fout("Voor het pakket " + pakket + " is nog geen prijs ingesteld", 503);
 
   try {
-    // Eén Stripe-klant per winkel, zodat facturen bij elkaar blijven.
+    // Een Stripe-klant per winkel, zodat facturen bij elkaar blijven.
     let klantId = winkel.stripe_customer_id;
     if (!klantId) {
       const gemaakt = await stripe("customers", {
@@ -108,9 +109,29 @@ Deno.serve(async (req) => {
       cancel_url: basis + "/app/?abo=gestopt",
       locale: "nl",
       allow_promotion_codes: metKorting ? "false" : "true",
+
+      // Een factuur aan een ondernemer hoort zijn adres en btw-nummer te
+      // bevatten. Checkout vraagt er zelf om zodra dit aanstaat.
+      billing_address_collection: "required",
+      "tax_id_collection[enabled]": "true",
+
+      // Bij een bestaande klant werkt Checkout de gegevens alleen bij als je
+      // dat expliciet vraagt. Anders blijft het adres leeg op de factuur.
+      "customer_update[address]": "auto",
+      "customer_update[name]": "auto",
+
       "subscription_data[metadata][team_id]": winkel.id,
+      "subscription_data[metadata][plan]": pakket,
       "metadata[team_id]": winkel.id,
+      "metadata[plan]": pakket,
     };
+
+    // Het btw-tarief maak je eenmalig aan in Stripe; hier hoeft alleen het
+    // nummer ervan te staan. Ontbreekt het, dan gaat het afrekenen door zonder
+    // btw. Dat is niet goed, dus dat schrijven we wel in het logboek.
+    const btw = Deno.env.get("STRIPE_BTW_TARIEF");
+    if (btw) velden["subscription_data[default_tax_rates][0]"] = btw;
+    else console.error("LET OP: STRIPE_BTW_TARIEF ontbreekt, er wordt geen btw berekend");
 
     // De kortingsbon zit er alleen in als de winkel er recht op heeft. Staat
     // hij niet ingesteld, dan gaat het gewoon zonder korting door; beter dan
