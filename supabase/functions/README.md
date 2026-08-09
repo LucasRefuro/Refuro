@@ -20,6 +20,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `admin-teams` | nee | Beheerpaneel van Storvo zelf |
 | `stripe-webhook` | ja | Verwerkt betalingen en houdt de abonnementsstatus bij |
 | `stripe-portaal` | nee | Opent het betaalportaal voor de winkel |
+| `stripe-checkout` | nee | Start het afrekenen van proef naar abonnement, met of zonder korting |
 | `reparatie-status` | ja | Voedt de publieke klantpagina, alleen veilige velden |
 | `klantbericht` | ja | Stuurt e-mail en WhatsApp naar de klant |
 | `whatsapp-webhook` | ja | Ontvangt berichten en meldingen van Meta |
@@ -49,3 +50,6 @@ Zet ze nooit in de code en nooit in een chat.
 | `META_VERIFY_TOKEN` | Bevestigt het webhook-adres bij Meta |
 | `ANTHROPIC_API_KEY` | Het lezen van productdoosjes |
 | `ANTHROPIC_MODEL` | Optioneel, om een ander model te kiezen |
+| `STRIPE_PRIJS_ID` | Welk abonnement er verkocht wordt |
+| `STRIPE_KORTING_COUPON` | De bon voor het laatste aanbod, mag ontbreken |
+| `APP_URL` | Waarheen Stripe terugstuurt na het afrekenen |

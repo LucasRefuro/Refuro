@@ -198,6 +198,44 @@
   /* Storvo's eigen merk kleurt zichzelf, dus zonder vlak eronder. */
   .loginbox .mk.storvo{background:transparent; border-radius:0;}
   .loginbox .mk.storvo svg{width:100%; height:100%;}
+
+  /* van proef naar abonnement */
+  .proefpop{text-align:left;}
+  .proefdagen{display:inline-block; font-family:'Sora',sans-serif; font-weight:800; font-size:12px;
+    letter-spacing:.09em; text-transform:uppercase; padding:6px 14px; border-radius:var(--pil);
+    background:var(--soft-2); color:var(--muted); margin-bottom:14px;}
+  .proefpop.let-op .proefdagen{background:var(--amber-soft); color:var(--amber-tekst);}
+  .proefpop.urgent .proefdagen{background:var(--red-soft); color:var(--red-tekst);}
+  .proefpop h3{font-family:'Sora',sans-serif; font-size:25px; font-weight:800; letter-spacing:-.02em;
+    line-height:1.2; margin-bottom:10px;}
+  .proefpop .pv{font-size:15px; line-height:1.7; margin-bottom:20px;}
+  .proefopbouw{background:var(--green-soft); color:var(--green-tekst); border-radius:var(--radius-s);
+    padding:16px 19px; margin-bottom:22px; font-size:14px; line-height:1.75;}
+  .pokop{font-weight:700; margin-bottom:6px;}
+  .proefopbouw ul{margin:0; padding-left:19px;}
+  .proefpop .acts{flex-direction:row; flex-wrap:wrap; gap:10px;}
+  .proefpop .acts .btn{flex:1; min-width:180px; width:auto;}
+  .proefklein{font-size:12.5px; color:var(--muted-l); margin-top:16px; line-height:1.6;}
+  .kortingbadge{display:inline-block; font-family:'Sora',sans-serif; font-weight:800; font-size:15px;
+    padding:8px 18px; border-radius:var(--pil); background:var(--oranje); color:var(--actieftekst);
+    margin-bottom:16px;}
+  @media(max-width:560px){
+    .proefpop h3{font-size:21px;}
+    .proefpop .acts{flex-direction:column;} .proefpop .acts .btn{width:100%; min-width:0;}
+  }
+
+  /* het rustige openingsscherm */
+  .splash{display:flex; flex-direction:column; align-items:center; gap:26px;}
+  .splash .mk{width:64px; height:64px; border-radius:16px; background:var(--oranje);
+    color:var(--actieftekst); display:flex; align-items:center; justify-content:center;
+    font-family:'Sora',sans-serif; font-weight:800; font-size:28px; overflow:hidden;}
+  .splash .mk.storvo{background:transparent; border-radius:0;}
+  .splash .mk svg, .splash .mk img{width:100%; height:100%;}
+  .splashbalk{width:130px; height:4px; border-radius:var(--pil); background:rgba(255,255,255,.22); overflow:hidden;}
+  .splashbalk i{display:block; width:40%; height:100%; border-radius:var(--pil);
+    background:var(--oranje); animation:splashloop 1.1s ease-in-out infinite;}
+  @keyframes splashloop{0%{transform:translateX(-105%)} 100%{transform:translateX(260%)}}
+  @media(prefers-reduced-motion:reduce){ .splashbalk i{animation:none; width:100%;} }
   .loginbox .mk img{width:100%; height:100%; object-fit:cover;}
   .loginbox label{display:block; text-align:left; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:4px;}
   .authfout{margin-top:14px; padding:12px 14px; border-radius:14px; font-size:13.5px; line-height:1.5;
@@ -2162,6 +2200,16 @@ function showTab(t){
   /* Bij het wisselen van pagina weer bovenaan beginnen, met de kop in beeld. */
   const bar=document.querySelector('.topbar');
   if(bar) bar.classList.remove('weg');
+  /* Onthouden waar je was, zodat je na verversen niet terug op het dashboard
+     staat. Bewerk je net een product, dan wil je daar blijven. */
+  if(t!=='nieuw'){ try{ localStorage.setItem('storvo_tab', t); }catch(e){} }
+}
+function laatsteTab(){
+  try{
+    const t=localStorage.getItem('storvo_tab');
+    if(t && document.getElementById('tab-'+t) && mag(t)) return t;
+  }catch(e){}
+  return null;
 }
 
 /* ---------- globaal zoeken ---------- */
@@ -4776,9 +4824,24 @@ function authEnter(e){
   if(knop && !knop.disabled) knop.click();
 }
 
+/* Een rustig openingsscherm. Vroeger stond hier het inlogvenster, ook als je
+   allang was ingelogd; dan zag je bij elke verversing heel even een inlogbox
+   voorbijkomen. Dat is verwarrend. Nu zie je alleen het merk tot duidelijk is
+   waar je heen moet.                                                         */
+function authSplash(){
+  let el=document.getElementById('authScherm');
+  if(!el){ el=document.createElement('div'); el.id='authScherm'; document.body.appendChild(el); }
+  const h=huisstijl();
+  const isStorvo=(h.naam||'Storvo').trim().toLowerCase()==='storvo';
+  el.innerHTML=`<div class="splash">
+    <div class="mk${isStorvo&&!h.logo?' storvo':''}">${h.logo?`<img src="${h.logo}">`:(isStorvo?MERK:esc((h.naam||'S').trim().charAt(0).toUpperCase()))}</div>
+    <div class="splashbalk"><i></i></div>
+  </div>`;
+}
+
 async function authBoot(){
-  /* Meteen een scherm tonen, zodat de app er niet even 'open' uitziet voor het inloggen. */
-  authWrap(`<p class="muted">Even kijken of je al bent ingelogd…</p>`);
+  /* Meteen iets tonen, zodat de app er niet even 'open' uitziet. */
+  authSplash();
 
   const params=new URLSearchParams(location.search);
   const hashParams=new URLSearchParams(location.hash.replace(/^#/,''));
@@ -4863,9 +4926,12 @@ async function ladAccountEnStart(session){
   document.body.classList.add('ingelogd');
   authSluit();
   pasRechtenToe();
-  showTab(mag('dashboard')?'dashboard':'scan');
+  /* Terug waar je gebleven was. Stond je op een pagina die inmiddels uitstaat
+     of die deze rol niet mag zien, dan begin je gewoon bij het dashboard. */
+  showTab(laatsteTab() || (mag('dashboard')?'dashboard':'scan'));
   renderInstellingen();
   toonAboBalk();
+  proefNudge();
   syncStart();
   if(!account.onboarding_klaar) toonOnboarding();
   aboBewaking();
@@ -4893,7 +4959,7 @@ function aboBewaking(){
     if(!account) return;
     await haalAbonnement();
     if(abonnement && abonnement.geblokkeerd){ syncStop(); toonSlot(); }
-    else toonAboBalk();
+    else { toonAboBalk(); proefNudge(); }
   }, 30*60*1000);
 }
 
@@ -4959,10 +5025,10 @@ async function openPortaal(knop){
 }
 
 const ABO_BALK={
-  proef_bijna_om:a=>({soort:'let-op',
-    tekst:a.dagen_over<=0 ? 'Je proefperiode loopt vandaag af.'
+  proef_bijna_om:a=>({soort:a.dagen_over<=3?'fout':'let-op',
+    tekst:a.dagen_over<=0 ? 'Vandaag is de laatste dag van je proefperiode.'
       : 'Je proefperiode loopt over '+a.dagen_over+(a.dagen_over===1?' dag':' dagen')+' af.',
-    knop:'Abonnement afsluiten'}),
+    knop:'Abonnement afsluiten', nieuw:true}),
   betaling_mislukt:a=>({soort:'fout',
     tekst:'De laatste betaling is mislukt. Werk je gegevens bij, anders sluit de app over '+
       a.dagen_over+(a.dagen_over===1?' dag':' dagen')+'.',
@@ -4972,6 +5038,147 @@ const ABO_BALK={
       (a.dagen_over===1?' dag':' dagen')+' gebruiken.',
     knop:'Toch doorgaan'})
 };
+
+/* ═══════════════ VAN PROEF NAAR ABONNEMENT ═══════════════
+   De meeste proefperiodes lopen niet af omdat iemand nee zegt, maar omdat
+   niemand op tijd ja zegt. Daarom loopt er een schema mee dat harder gaat
+   praten naarmate de tijd korter wordt:
+
+     10 dagen   één keer, vriendelijk: dit is wat je nu hebt opgebouwd
+      5 dagen   één keer, met de nadruk op wat er stopt
+      4 t/m 1   elke dag één keer
+      laatste   elke dag, en wie dan afhaakt krijgt het aanbod
+
+   Nooit twee keer op een dag, en nooit terwijl iemand aan het afrekenen is.
+   Zegt hij op de laatste dag toch nee, dan komt de korting op tafel. Dat is
+   het moment: eerder weggeven is geld laten liggen bij wie sowieso zou
+   betalen.                                                                  */
+
+function proefDagen(){
+  if(!abonnement || abonnement.status!=='proef') return null;
+  return Math.max(0, Number(abonnement.dagen_over)||0);
+}
+function nudgeSleutel(d){
+  const vandaag=new Date().toISOString().slice(0,10);
+  return 'storvo_nudge_'+(d>5?'10':(d>4?'5':vandaag));
+}
+function nudgeGezien(k){ try{ return localStorage.getItem(k)==='1'; }catch(e){ return true; } }
+function nudgeZet(k){ try{ localStorage.setItem(k,'1'); }catch(e){} }
+
+/* Wat heeft de winkel intussen in Storvo staan? Dat is het sterkste argument
+   dat er is: niet wat het kost, maar wat je kwijtraakt als je stopt.        */
+function proefOpbouw(){
+  const rep=(state.reparaties||[]).length;
+  const prod=(state.producten||[]).length;
+  const verk=(state.verkopen||[]).length;
+  const omzet=(state.verkopen||[]).reduce((n,v)=>n+(v.verkoop||0),0);
+  const punten=[];
+  if(prod) punten.push(prod+' product'+(prod===1?'':'en')+' in je voorraad');
+  if(rep)  punten.push(rep+' reparatie'+(rep===1?'':'s')+' met de geschiedenis erbij');
+  if(verk) punten.push(verk+' verkoop'+(verk===1?'':'en')+' en '+euro(omzet)+' aan omzet');
+  return punten;
+}
+
+function proefNudge(){
+  const d=proefDagen();
+  if(d===null || d>10) return;
+  if(!account || account.rol!=='eigenaar') return;      /* alleen de eigenaar beslist */
+  if(document.getElementById('aboAanbod')||document.getElementById('scanOverlay')) return;
+  if(d>5 && d<10) return;                               /* tussen 10 en 5 stil blijven */
+  const k=nudgeSleutel(d);
+  if(nudgeGezien(k)) return;
+  nudgeZet(k);
+  setTimeout(()=>toonProefScherm(d), 600);
+}
+
+function proefTekst(d){
+  if(d<=0) return {
+    kop:'Vandaag is de laatste dag',
+    lead:'Na vanavond kun je niet meer bij Storvo. Je gegevens blijven staan, maar je komt er niet meer in tot je een abonnement afsluit.',
+    knop:'Abonnement afsluiten', soort:'urgent'};
+  if(d===1) return {
+    kop:'Nog één dag',
+    lead:'Morgen loopt je proefperiode af. Regel het nu even, dan sta je maandagochtend niet voor een dichte deur.',
+    knop:'Abonnement afsluiten', soort:'urgent'};
+  if(d<=4) return {
+    kop:'Nog '+d+' dagen',
+    lead:'Je proefperiode loopt bijna af. Sluit je nu af, dan verandert er verder niets: je werkt gewoon door waar je gebleven was.',
+    knop:'Abonnement afsluiten', soort:'let-op'};
+  if(d<=5) return {
+    kop:'Nog vijf dagen te gaan',
+    lead:'Daarna stopt de toegang. Alles wat je hebt ingericht blijft bewaard, maar je kunt er niet meer bij tot je een abonnement hebt.',
+    knop:'Abonnement afsluiten', soort:'let-op'};
+  return {
+    kop:'Je bent op de helft',
+    lead:'Nog tien dagen proefperiode. Kijk even of Storvo bevalt; wil je doorgaan, dan is het zo geregeld en merk je er verder niets van.',
+    knop:'Abonnement afsluiten', soort:'rustig'};
+}
+
+function toonProefScherm(d){
+  const t=proefTekst(d);
+  const opbouw=proefOpbouw();
+  const laatst=d<=0;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='aboAanbod';
+  ov.innerHTML=`<div class="popup groot proefpop ${t.soort}">
+    <div class="proefdagen">${d<=0?'Laatste dag':d+(d===1?' dag':' dagen')}</div>
+    <h3>${esc(t.kop)}</h3>
+    <p class="pv">${esc(t.lead)}</p>
+    ${opbouw.length?`<div class="proefopbouw">
+      <div class="pokop">Dit staat er nu in jouw Storvo</div>
+      <ul>${opbouw.map(p=>'<li>'+esc(p)+'</li>').join('')}</ul>
+    </div>`:''}
+    <div class="acts">
+      <button class="btn actie" onclick="startAbonnement(false, this)">${esc(t.knop)}</button>
+      <button class="btn ghost" onclick="${laatst?'toonKortingAanbod()':'sluitProefScherm()'}">${laatst?'Nee, bedankt':'Later'}</button>
+    </div>
+    <p class="proefklein">Maandelijks opzegbaar. Je gegevens blijven altijd van jou.</p>
+  </div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov && !laatst) sluitProefScherm(); });
+  document.body.appendChild(ov);
+}
+function sluitProefScherm(){ const o=document.getElementById('aboAanbod'); if(o) o.remove(); }
+
+/* Het laatste aanbod. Eén keer, duidelijk, en zonder trucjes: als hij hier
+   nee zegt is het klaar en zeuren we niet door.                             */
+function toonKortingAanbod(){
+  sluitProefScherm();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='aboAanbod';
+  ov.innerHTML=`<div class="popup groot proefpop korting">
+    <div class="kortingbadge">70% korting</div>
+    <h3>Blijf voor een derde van de prijs</h3>
+    <p class="pv">Snap ik, het is een uitgave. Daarom dit: je eerste maand met zeventig procent korting, zodat je rustig verder kunt zonder dat het meteen geld kost. Daarna gewoon de normale prijs, en je kunt elke maand stoppen.</p>
+    <div class="acts">
+      <button class="btn actie" onclick="startAbonnement(true, this)">Ja, met korting doorgaan</button>
+      <button class="btn ghost" onclick="sluitProefScherm()">Nee, laat maar</button>
+    </div>
+    <p class="proefklein">Je gegevens blijven bewaard, ook als je stopt. Bedenk je je later, dan pak je gewoon de draad weer op.</p>
+  </div>`;
+  document.body.appendChild(ov);
+  try{ localStorage.setItem('storvo_korting_aangeboden','1'); }catch(e){}
+}
+function kortingAangeboden(){ try{ return localStorage.getItem('storvo_korting_aangeboden')==='1'; }catch(e){ return false; } }
+
+async function startAbonnement(korting, knop){
+  const oud=knop?knop.textContent:'';
+  if(knop){ knop.disabled=true; knop.textContent='Even geduld…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/stripe-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({korting:!!korting})
+    });
+    const uit=await res.json();
+    if(uit.ok && uit.url){ location.href=uit.url; return; }
+    toast(uit.error||'Het afrekenen kon niet gestart worden.','fout');
+  }catch(e){
+    toast('Het afrekenen kon niet gestart worden.','fout');
+  }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+}
 
 function toonAboBalk(){
   let balk=document.getElementById('aboBalk');
@@ -4986,7 +5193,7 @@ function toonAboBalk(){
   balk.innerHTML=`<svg class="i s"><use href="#i-bell"/></svg>
     <span>${esc(m.tekst)}</span>
     ${account&&account.rol==='eigenaar'
-      ? `<button onclick="openPortaal(this)">${esc(m.knop)}</button>` : ''}
+      ? `<button onclick="${m.nieuw?'startAbonnement(false, this)':'openPortaal(this)'}">${esc(m.knop)}</button>` : ''}
     <button class="abosluit" onclick="this.parentNode.remove()" title="Verbergen">&times;</button>`;
 }
 
@@ -7596,6 +7803,17 @@ document.getElementById('onderBalk').hidden=false;
 tekenOnderbalk();
 rolTabellen();
 kopVolgen();
+
+/* Terug uit Stripe: even laten weten hoe het is afgelopen. */
+(function(){
+  const p=new URLSearchParams(location.search).get('abo');
+  if(!p) return;
+  history.replaceState(null,'',location.pathname);
+  setTimeout(()=>{
+    if(p==='gelukt') toast('Gelukt, je abonnement loopt. Bedankt.','ok');
+    else toast('Het afrekenen is afgebroken. Je proefperiode loopt gewoon door.','let-op');
+  }, 900);
+})();
 
 authBoot();
 </script>
