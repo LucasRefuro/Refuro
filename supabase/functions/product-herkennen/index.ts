@@ -34,6 +34,7 @@ type Uit = {
   model: string;
   categorie: string;
   soort: string;
+  artikelcode: string;
   accessoire: boolean;
   verkoop: number | null;
   zeker: "hoog" | "middel" | "laag";
@@ -55,6 +56,7 @@ Velden:
 - model: het telefoonmodel, bijvoorbeeld "iPhone 15" of "Galaxy A54 5G". Leeg als het universeel is.
 - categorie: kies er precies één uit deze lijst en verzin er geen: ${JSON.stringify(categorieen)}. Past er echt geen enkele, geef dan een lege string.
 - soort: het type product in één of twee woorden, bijvoorbeeld "hoesje", "screenprotector", "oplader", "kabel".
+- artikelcode: het artikelnummer van de fabrikant zoals het op de doos staat, bijvoorbeeld "XSS-12345" of "SKU 40213". Neem het precies over, met streepjes en hoofdletters. Dit is niet de streepjescode van dertien cijfers en ook niet een EAN. Zie je er geen, geef dan een lege string.
 - accessoire: true als dit een accessoire is dat je los verkoopt, false als het een reparatieonderdeel is.
 - verkoop: een realistische Nederlandse winkelprijs in euro's inclusief btw als getal, of null als je het echt niet kunt inschatten. Alleen invullen bij accessoires.
 - zeker: "hoog", "middel" of "laag", hoe zeker je bent.
@@ -163,6 +165,13 @@ Deno.serve(async (req) => {
     model: String(uit.model || "").trim().slice(0, 60),
     categorie: categorieen.includes(String(uit.categorie || "")) ? String(uit.categorie) : "",
     soort: String(uit.soort || "").trim().slice(0, 40),
+    // Een artikelnummer is kort en heeft letters. Staat er alleen een reeks
+    // cijfers, dan is het bijna zeker de streepjescode en die willen we hier
+    // niet, anders komt hij dubbel achter de titel te staan.
+    artikelcode: (() => {
+      const c = String(uit.artikelcode || "").trim().toUpperCase().slice(0, 30);
+      return /[A-Z]/.test(c) && c.length >= 3 ? c : "";
+    })(),
     accessoire: uit.accessoire !== false,
     verkoop: typeof uit.verkoop === "number" && uit.verkoop > 0 && uit.verkoop < 2000
       ? Math.round(uit.verkoop * 100) / 100

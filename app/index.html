@@ -454,6 +454,10 @@
     overflow:hidden; display:flex; align-items:center; justify-content:center;}
   .npcam video, .npcam canvas{width:100%; height:100%; object-fit:cover;}
   .npcam #npCam{width:100%;}
+  .npstand{display:flex; align-items:center; gap:9px; margin:10px 0 14px; font-size:13.5px;
+    font-weight:600; color:var(--muted);}
+  .npring{width:18px; height:18px; border-radius:50%; flex:none;
+    background:conic-gradient(var(--oranje) var(--vol,0%), var(--soft-2) 0); transition:background .15s linear;}
   .npwacht{color:#8A938F; font-size:13px; padding:18px; text-align:center; line-height:1.6;}
 
   .npbron{background:var(--green-soft); color:var(--green-tekst); border-radius:var(--radius-s);
@@ -461,6 +465,12 @@
   .npbron.twijfel{background:var(--amber-soft); color:var(--amber-tekst);}
   .npbronkop{font-weight:700; margin-bottom:6px;}
   .npbron ul{margin:0; padding-left:18px;}
+  .codeknop{display:inline-flex; align-items:center; gap:8px; background:var(--soft-2); border:none;
+    border-radius:var(--pil); padding:6px 12px; font:inherit; font-size:13px; font-weight:600;
+    color:var(--tekst); cursor:pointer; transition:.15s; font-variant-numeric:tabular-nums;}
+  .codeknop:hover{background:var(--lblauw); color:var(--oranje);}
+  .codeknop svg{opacity:.55;}
+  .codeknop:hover svg{opacity:1;}
   .npbron li{margin-bottom:2px;}
   .npgelezen{margin-top:8px; opacity:.8; font-style:italic;}
   @media(max-width:700px){ .npkoppel{gap:18px;} .npqr{margin:0 auto;} }
@@ -1132,7 +1142,7 @@
   </div>
   <div class="card">
     <div class="row" style="margin-bottom:12px">
-      <div style="flex:2"><input id="zoek" placeholder="Zoek op naam of barcode" oninput="renderProducten()"></div>
+      <div style="flex:2"><input id="zoek" placeholder="Zoek op naam, barcode of artikelcode" oninput="renderProducten()"></div>
       <div style="flex:1"><select id="filterCat" onchange="renderProducten()"><option value="">Alle categorieën</option></select></div>
     </div>
     <div style="overflow-x:auto">
@@ -1159,6 +1169,7 @@
     <div class="grid" style="margin-bottom:12px">
       <div><label>Barcode</label><input id="f_barcode" placeholder="Scan of typ barcode"></div>
       <div><label>Naam</label><input id="f_naam" placeholder="bijv. iPhone 15 hoesje zwart"></div>
+      <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
       <div><label>Categorie</label><select id="f_cat" onchange="vulStandaard()"></select></div>
     </div>
     <div class="grid" style="margin-bottom:16px">
@@ -1172,21 +1183,25 @@
       <button class="btn actie" id="formOpslaan" onclick="opslaanProduct()">Product toevoegen</button>
       <button class="btn ghost" onclick="resetForm()">Leegmaken</button>
     </div>
-    <p class="muted" style="margin-top:10px">Voor series van hetzelfde product op meerdere telefoonmodellen gebruik je Snel toevoegen bij Instellingen. Dat werkt een stuk sneller.</p>
+    <p class="muted" style="margin-top:10px">Moet hetzelfde product op tien of twintig telefoonmodellen? Dan werkt Snel toevoegen een stuk sneller: daar scan je alleen de barcodes achter elkaar. <a href="#" onclick="naarSnelToevoegen(); return false;">Naar Snel toevoegen</a></p>
   </div>
 </section>
 
 <!-- BESTELLINGEN -->
 <section id="tab-bestellen"hidden>
-  <div class="pagehead"><h1>Bestellingen</h1></div>
+  <div class="pagehead">
+    <h1>Bestellingen</h1>
+    <button class="btn ghost" onclick="kopieerBestellijst()"><svg class="i"><use href="#i-clipboard"/></svg>Hele lijst kopiëren</button>
+  </div>
   <div class="card">
     <h2>Te bestellen <span class="muted">(voorraad ≤ minimum)</span></h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th></th><th>Naam</th><th>Barcode</th><th class="num">Voorraad</th><th class="num">Min.</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
+      <thead><tr><th></th><th>Naam</th><th>Code</th><th class="num">Voorraad</th><th class="num">Min.</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
       <tbody id="bestelBody"></tbody>
     </table>
     </div>
+    <p class="muted" style="margin-top:10px">Klik op een code om hem te kopiëren en in het zoekvak van de webshop te plakken. Staat er een artikelcode van de leverancier bij het product, dan gebruikt Storvo die; anders de streepjescode. Met de knop bovenaan krijg je de hele lijst in één keer, met aantal en naam erbij.</p>
     <p class="muted" style="margin-top:10px">Vink aan wanneer je bestelt. Vóór 17:00 besteld betekent morgen binnen, daarna overmorgen. De verwachte leverdatum staat hier en op het dashboard, handig om aan klanten door te geven. Zodra de levering is ingescand en de voorraad boven het minimum komt, verdwijnt de regel.</p>
   </div>
 </section>
@@ -1302,6 +1317,11 @@
 
   <div class="card" id="inst-snel">
     <h2><svg class="i"><use href="#i-zap"/></svg>Snel toevoegen per model</h2>
+    <div class="npbron" style="background:var(--lblauw); color:var(--muted); margin-bottom:16px">
+      <div class="npbronkop" style="color:var(--tekst)">Eén product, of een hele serie?</div>
+      Voor één los product neem je de knop Nieuw product toevoegen: daar scan je het doosje met je telefoon en vult Storvo naam, categorie en prijzen zelf in. Deze pagina is voor het omgekeerde geval: hetzelfde product voor twintig verschillende telefoonmodellen achter elkaar.
+      <div style="margin-top:12px"><button class="btn ghost small" onclick="startNieuwProduct()"><svg class="i s"><use href="#i-camera"/></svg>Naar Nieuw product toevoegen</button></div>
+    </div>
     <div class="row" style="margin-bottom:6px">
       <div style="flex:2; min-width:220px"><label>Producttype</label><select id="snelType" onchange="renderSnelRows()"></select></div>
       <div style="flex:1; min-width:140px"><label>Beginvoorraad per model</label><input id="snelVoorraad" type="number" min="0" value="0"></div>
@@ -2261,7 +2281,7 @@ function renderProducten(){
   const q=(document.getElementById('zoek').value||'').toLowerCase();
   const fc=document.getElementById('filterCat').value;
   const rows=state.producten
-    .filter(p=>(!q || zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||''), zoekGroepen(q)) || String(p.barcode||'').includes(q)) && (!fc || p.cat===Number(fc)))
+    .filter(p=>(!q || zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||'')+' '+(p.sku||''), zoekGroepen(q)) || String(p.barcode||'').includes(q) || String(p.sku||'').toLowerCase().includes(q)) && (!fc || p.cat===Number(fc)))
     .sort((a,b)=>a.naam.localeCompare(b.naam))
     .map(p=>`<tr><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
@@ -2284,6 +2304,7 @@ function bewerk(id){
   vulCatSelect();
   document.getElementById('f_barcode').value=p.barcode;
   document.getElementById('f_naam').value=p.naam;
+  document.getElementById('f_sku').value=p.sku||'';
   document.getElementById('f_cat').value=p.cat;
   document.getElementById('f_inkoop').value=p.inkoop;
   document.getElementById('f_verkoop').value=p.verkoop;
@@ -2333,6 +2354,7 @@ function resetForm(){
   vulCatSelect();
   document.getElementById('f_barcode').value='';
   document.getElementById('f_naam').value='';
+  document.getElementById('f_sku').value='';
   document.getElementById('f_voorraad').value=0;
   vulStandaard();
 }
@@ -2350,7 +2372,7 @@ function resetForm(){
 
 const NP_QRBIB='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
 let np={modus:'uit', code:null, kanaal:null, verbonden:false, herkend:null,
-        bezig:false, fout:'', lezer:null, stap:'doosje'};
+        bezig:false, fout:'', lezer:null, fotolezer:null, stap:'doosje'};
 
 function npOpTelefoon(){
   try{ return window.matchMedia('(pointer:coarse)').matches && window.innerWidth<900; }
@@ -2379,6 +2401,15 @@ function npLink(){
   return location.origin+npMap()+'scan'+(schoon?'':'.html')+'?s='+np.code;
 }
 
+/* De twee manieren om producten toe te voegen verwijzen naar elkaar, zodat
+   je niet hoeft te onthouden waar het andere ook alweer stond.             */
+function naarSnelToevoegen(){
+  showTab('instellingen');
+  const knop=document.querySelector('#instTabs button[data-s="snel"]');
+  if(knop) knop.click();
+  const kaart=document.getElementById('snelType');
+  if(kaart && kaart.scrollIntoView) kaart.scrollIntoView({block:'center', behavior:'smooth'});
+}
 function startNieuwProduct(){
   editId=null;
   showTab('nieuw');
@@ -2391,6 +2422,7 @@ function startNieuwProduct(){
 function npStop(){
   if(np.kanaal){ try{ sb.removeChannel(np.kanaal); }catch(e){} np.kanaal=null; }
   if(np.lezer){ np.lezer.stop(); np.lezer=null; }
+  npStopFoto();
   np.modus='uit'; np.verbonden=false; np.code=null;
 }
 function npZeg(gebeurtenis, lading){
@@ -2469,6 +2501,29 @@ function npBarcode(lading){
 async function npCameraHier(){
   np.modus='hier'; np.stap='doosje'; np.fout=''; npTeken();
 }
+const NP_STAND={richten:'Richt op het doosje', beweegt:'Even stilhouden',
+                wazig:'Kom wat dichterbij', bijna:'Scherp, moment'};
+async function npStartFoto(){
+  const houder=document.getElementById('npFotoCam');
+  if(!houder || !window.StorvoScan) return;
+  np.fotolezer=window.StorvoScan.maakFotoLezer();
+  const gelukt=await np.fotolezer.start(houder,
+    beeld=>{ npStopFoto(); npFoto(beeld); },
+    (stand, deel)=>{
+      const t=document.getElementById('npStand'), r=document.getElementById('npRing');
+      if(t) t.textContent=NP_STAND[stand]||'';
+      if(r) r.style.setProperty('--vol', Math.round(deel*100)+'%');
+    });
+  if(!gelukt){
+    np.fotolezer=null;
+    houder.innerHTML='<div class="npwacht">De camera kan hier niet aan. Gebruik de knop hieronder.</div>';
+  }
+}
+function npStopFoto(){ if(np.fotolezer){ np.fotolezer.stop(); np.fotolezer=null; } }
+function npZelfAfdrukken(){
+  if(np.fotolezer) np.fotolezer.nu();
+  else document.getElementById('npFotoIn').click();
+}
 async function npFotoHier(invoer){
   const b=invoer.files && invoer.files[0]; invoer.value='';
   if(!b) return;
@@ -2536,7 +2591,16 @@ function npSlimInvullen(h, barcode){
   const bronnen=[];
 
   if(barcode) document.getElementById('f_barcode').value=barcode;
-  document.getElementById('f_naam').value = h.naam || [h.soort, h.model].filter(Boolean).join(' ');
+
+  /* Het artikelnummer van de leverancier zetten we achteraan de titel. Zo zie
+     je in elke lijst meteen waar je op moet zoeken in de webshop, en hij komt
+     ook los in het veld te staan zodat je hem kunt kopiëren.                */
+  const code=(h.artikelcode||'').trim().toUpperCase();
+  document.getElementById('f_sku').value=code;
+  const kaal = h.naam || [h.soort, h.model].filter(Boolean).join(' ');
+  document.getElementById('f_naam').value =
+    code && !zoekNorm(kaal).includes(zoekNorm(code)) ? (kaal+' '+code).trim() : kaal;
+  if(code) bronnen.push('Artikelcode van het doosje gelezen');
 
   if(kc.cat){
     document.getElementById('f_cat').value=kc.cat.id;
@@ -2600,6 +2664,7 @@ function npTeken(){
   const p=document.getElementById('npPaneel');
   if(!p) return;
   if(np.lezer && np.stap!=='barcode'){ np.lezer.stop(); np.lezer=null; }
+  if(np.fotolezer && np.stap!=='doosje') npStopFoto();
   const melding = np.fout ? `<div class="npmelding mis">${esc(np.fout)}</div>` : '';
 
   if(np.modus==='uit'){
@@ -2647,15 +2712,17 @@ function npTeken(){
 
   /* op dit apparaat zelf scannen */
   if(np.stap==='doosje'){
-    p.innerHTML=`<div class="npstart">
-      <button class="btn actie" onclick="document.getElementById('npFotoIn').click()">
-        <svg class="i"><use href="#i-camera"/></svg>Foto van het doosje</button>
+    p.innerHTML=`<p class="muted" style="margin-bottom:12px">Houd de kant met de productnaam naar de camera. Hij gaat vanzelf af zodra het scherp is.</p>
+    <div class="npcam" id="npFotoCam"><div class="npwacht">Camera wordt gestart…</div></div>
+    <div class="npstand"><span id="npRing" class="npring"></span><span id="npStand">Richten</span></div>
+    <div class="npstart">
+      <button class="btn actie" onclick="npZelfAfdrukken()"><svg class="i"><use href="#i-camera"/></svg>Nu maken</button>
       <input type="file" id="npFotoIn" accept="image/*" capture="environment" style="display:none" onchange="npFotoHier(this)">
       <button class="btn ghost" onclick="np.stap='barcode'; npTeken()">Overslaan, alleen de code scannen</button>
-      <p class="muted">Houd de kant met de productnaam naar de camera.</p>
     </div>
     ${np.bezig?'<div class="npmelding bezig"><span class="npspin"></span>Storvo kijkt naar de foto</div>':''}
     ${melding}`;
+    if(!np.bezig) npStartFoto();
     return;
   }
   if(np.stap==='barcode'){
@@ -2682,6 +2749,7 @@ function opslaanProduct(){
   if(dubbel){ alert('Barcode bestaat al bij: '+dubbel.naam); return; }
   const data={
     barcode, naam,
+    sku:document.getElementById('f_sku').value.trim().toUpperCase(),
     cat:Number(document.getElementById('f_cat').value),
     inkoop:Number(document.getElementById('f_inkoop').value)||0,
     verkoop:Number(document.getElementById('f_verkoop').value)||0,
@@ -2708,13 +2776,51 @@ function opslaanProduct(){
 
 /* ---------- bestellingen ---------- */
 function bestelLijst(){ return state.producten.filter(p=>p.voorraad<=p.min).sort((a,b)=>a.naam.localeCompare(b.naam)); }
+/* ---------- bestellen: codes klaarzetten om te plakken ----------
+   Bij de leverancier zoek je op de artikelcode, niet op de naam. Die staat
+   hier dus met een knop ernaast, zodat je hem in één klik in het zoekvak van
+   de webshop kunt plakken. Heeft een product geen artikelcode, dan pakken we
+   de streepjescode; daar kun je bij de meeste groothandels ook op zoeken.  */
+function bestelCode(p){ return (p.sku||'').trim() || p.barcode || ''; }
+
+function kopieer(tekst, melding){
+  const gelukt=()=>toast(melding||'Gekopieerd', true);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(tekst).then(gelukt, ()=>kopieerOuderwets(tekst, gelukt));
+  }else kopieerOuderwets(tekst, gelukt);
+}
+function kopieerOuderwets(tekst, gelukt){
+  const v=document.createElement('textarea');
+  v.value=tekst; v.style.position='fixed'; v.style.opacity='0';
+  document.body.appendChild(v); v.select();
+  try{ document.execCommand('copy'); gelukt(); }
+  catch(e){ toast('Kopiëren lukte niet, selecteer de code zelf','let-op'); }
+  document.body.removeChild(v);
+}
+function kopieerCode(id){
+  const p=state.producten.find(p=>p.id===id); if(!p) return;
+  const c=bestelCode(p);
+  if(!c){ toast('Dit product heeft geen code','let-op'); return; }
+  kopieer(c, 'Gekopieerd: '+c);
+}
+function kopieerBestellijst(){
+  const lijst=bestelLijst().filter(p=>!p.besteld);
+  if(!lijst.length){ toast('Er staat niets open om te bestellen','let-op'); return; }
+  const regels=lijst.map(p=>[bestelCode(p), p.bestel, p.naam].join('\t')).join('\n');
+  kopieer(regels, lijst.length+' regels gekopieerd, klaar om te plakken');
+}
+
 function renderBestellen(){
-  const rows=bestelLijst().map(p=>`<tr class="${p.besteld?'done':''}">`+
+  const rows=bestelLijst().map(p=>{
+    const c=bestelCode(p);
+    return `<tr class="${p.besteld?'done':''}">`+
     `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${p.besteld?'checked':''} onchange="toggleBesteld(${p.id})"></td>`+
-    `<td>${esc(p.naam)}</td><td>${esc(p.barcode)}</td>`+
+    `<td>${esc(p.naam)}</td>`+
+    `<td>${c?`<button class="codeknop" title="Code kopiëren om in de webshop te plakken" onclick="kopieerCode(${p.id})"><span data-onvertaald>${esc(c)}</span><svg class="i s"><use href="#i-clipboard"/></svg></button>`:'<span class="muted">geen code</span>'}</td>`+
     `<td class="num low">${p.voorraad}</td><td class="num">${p.min}</td>`+
     `<td class="num"><b>${p.bestel}</b></td>`+
-    `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`).join('');
+    `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
+  }).join('');
   document.getElementById('bestelBody').innerHTML = rows || '<tr><td colspan="7" class="muted">Alles is op voorraad, niets te bestellen.</td></tr>';
   updateBadge();
 }

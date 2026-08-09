@@ -135,6 +135,27 @@ const WOORDEN = {
 
 /* ---------- nieuw product scannen ---------- */
 'Nieuw product toevoegen':'Add a new product', 'Terug naar producten':'Back to products',
+'Artikelcode':'Article code', '(van de leverancier)':'(from the supplier)',
+'bijv. XSS-12345':'e.g. XSS-12345', 'Artikelcode van het doosje gelezen':'Article code read from the box',
+'Zoek op naam, barcode of artikelcode':'Search by name, barcode or article code',
+'Code':'Code', 'geen code':'no code', 'Hele lijst kopiëren':'Copy the whole list',
+'Klik op een code om hem te kopiëren en in het zoekvak van de webshop te plakken. Staat er een artikelcode van de leverancier bij het product, dan gebruikt Storvo die; anders de streepjescode. Met de knop bovenaan krijg je de hele lijst in één keer, met aantal en naam erbij.':
+  'Click a code to copy it and paste it into the shop’s search box. If the product has a supplier article code Storvo uses that, otherwise the barcode. The button at the top gives you the whole list at once, with quantity and name.',
+'Dit product heeft geen code':'This product has no code',
+'Er staat niets open om te bestellen':'There is nothing left to order',
+'Kopiëren lukte niet, selecteer de code zelf':'Copying failed, please select the code yourself',
+'Houd de kant met de productnaam naar de camera. Hij gaat vanzelf af zodra het scherp is.':
+  'Hold the side with the product name towards the camera. It fires by itself once the image is sharp.',
+'Nu maken':'Take it now', 'Richten':'Aim', 'Richt op het doosje':'Aim at the box',
+'Even stilhouden':'Hold still', 'Kom wat dichterbij':'Move a little closer',
+'Scherp, moment':'Sharp, one moment',
+'De camera kan hier niet aan. Gebruik de knop hieronder.':'The camera cannot start here. Use the button below.',
+'Eén product, of een hele serie?':'One product, or a whole run?',
+'Voor één los product neem je de knop Nieuw product toevoegen: daar scan je het doosje met je telefoon en vult Storvo naam, categorie en prijzen zelf in. Deze pagina is voor het omgekeerde geval: hetzelfde product voor twintig verschillende telefoonmodellen achter elkaar.':
+  'For a single product use the Add a new product button: you scan the box with your phone and Storvo fills in the name, category and prices. This page is for the opposite case: the same product for twenty different phone models in a row.',
+'Naar Nieuw product toevoegen':'Go to Add a new product', 'Naar Snel toevoegen':'Go to Quick add',
+'Moet hetzelfde product op tien of twintig telefoonmodellen? Dan werkt Snel toevoegen een stuk sneller: daar scan je alleen de barcodes achter elkaar.':
+  'Need the same product across ten or twenty phone models? Quick add is a lot faster: there you only scan the barcodes one after another.',
 'Scannen met je telefoon':'Scan with your phone', 'Camera openen':'Open the camera',
 'Camera van dit apparaat gebruiken':'Use this device’s camera',
 'Twee scans en het formulier hieronder staat vol: eerst een foto van het doosje, dan de streepjescode. Liever met de hand? Vul hieronder gewoon zelf in.':

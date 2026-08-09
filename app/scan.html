@@ -70,6 +70,12 @@ input[type=file]{display:none;}
 .vondst .val{font-size:17px; font-weight:700; line-height:1.35; word-break:break-word;}
 .vondst .bij{font-size:13.5px; color:var(--muted); margin-top:3px;}
 
+.camstand{display:flex; align-items:center; justify-content:center; gap:10px; margin:-4px 0 16px;
+  font-size:14px; font-weight:600; color:var(--muted);}
+.ring{width:20px; height:20px; border-radius:50%; flex:none;
+  background:conic-gradient(var(--amber) var(--vol,0%), var(--rand) 0);
+  transition:background .15s linear;}
+
 .handmatig{margin-top:16px;}
 .handmatig label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px;}
 .handmatig input{width:100%; padding:14px 16px; border:1.5px solid var(--rand); border-radius:14px;
@@ -111,7 +117,7 @@ const code=new URLSearchParams(location.search).get('s')||'';
 const scherm=document.getElementById('scherm');
 const balk=document.getElementById('stappen');
 
-let kanaal=null, verbonden=false, lezer=null;
+let kanaal=null, verbonden=false, lezer=null, fotolezer=null;
 let stap='verbinden';          /* verbinden · doosje · wachten · barcode · klaar */
 let herkend=null, barcode=null, fout='';
 
@@ -162,7 +168,46 @@ function verbind(){
     });
 }
 
-/* ---------- stap 1: foto van het doosje ---------- */
+/* ---------- stap 1: foto van het doosje ----------
+   De camera drukt zelf af zodra het beeld stil en scherp is. Lukt dat niet,
+   dan staat er een knop onder. En kan de camera helemaal niet, dan vallen we
+   terug op de gewone fotoknop van de telefoon.                             */
+async function startFoto(){
+  const houder=document.getElementById('doosjeCam');
+  if(!houder) return;
+  fotolezer=window.StorvoScan.maakFotoLezer();
+  const gelukt=await fotolezer.start(houder, fotoKlaar, fotoStand);
+  if(!gelukt){
+    fotolezer=null;
+    houder.innerHTML='<div class="wacht">De camera kan hier niet aan. Gebruik de knop hieronder.</div>';
+    const t=document.getElementById('zelfknop');
+    if(t) t.textContent='Foto maken';
+  }
+}
+const STANDTEKST={
+  richten:'Richt op het doosje',
+  beweegt:'Even stilhouden',
+  wazig:'Kom wat dichterbij',
+  bijna:'Scherp, moment'
+};
+function fotoStand(stand, deel){
+  const t=document.getElementById('camstand');
+  const r=document.getElementById('camring');
+  if(t) t.textContent=STANDTEKST[stand]||'';
+  if(r) r.style.setProperty('--vol', Math.round(deel*100)+'%');
+}
+function stopFoto(){ if(fotolezer){ fotolezer.stop(); fotolezer=null; } }
+function zelfAfdrukken(){
+  if(fotolezer) fotolezer.nu();
+  else document.getElementById('fotoIn').click();
+}
+async function fotoKlaar(beeld){
+  stopFoto();
+  stap='wachten'; fout=''; teken();
+  if(navigator.vibrate) navigator.vibrate(40);
+  zeg('foto',{beeld});
+  setTimeout(()=>{ if(stap==='wachten'){ fout='De pc reageert niet. Probeer het opnieuw.'; stap='doosje'; teken(); } }, 45000);
+}
 async function fotoGekozen(invoer){
   const bestand=invoer.files && invoer.files[0];
   invoer.value='';
@@ -206,6 +251,7 @@ function stopLezen(){ if(lezer){ lezer.stop(); lezer=null; } }
 
 function teken(){
   if(stap!=='barcode') stopLezen();
+  if(stap!=='doosje')  stopFoto();
   const melding = fout ? `<div class="melding mis">${esc(fout)}</div>` : '';
 
   if(stap==='geencode'){
@@ -230,13 +276,16 @@ function teken(){
   if(stap==='doosje'){
     zetBalk(0);
     scherm.innerHTML=`<div class="kaart">
-      <h1>Maak een foto van het doosje</h1>
-      <p class="lead">Houd de kant met de productnaam naar de camera. Storvo leest er zelf uit wat het is.</p>
-      <button class="knop" onclick="document.getElementById('fotoIn').click()">
-        <svg viewBox="0 0 24 24">${icoon.camera}</svg>Foto maken</button>
+      <h1>Houd het doosje voor de camera</h1>
+      <p class="lead">De kant met de productnaam naar voren. Hij gaat vanzelf af zodra het scherp is.</p>
+      <div class="cam" id="doosjeCam"><div class="wacht">Camera wordt gestart…</div></div>
+      <div class="camstand"><span id="camring" class="ring"></span><span id="camstand">Richten</span></div>
+      <button class="knop" id="zelfknop" onclick="zelfAfdrukken()">
+        <svg viewBox="0 0 24 24">${icoon.camera}</svg>Nu maken</button>
       <input type="file" id="fotoIn" accept="image/*" capture="environment" onchange="fotoGekozen(this)">
       <button class="knop stil" onclick="stap='barcode'; herkend=null; teken()">Overslaan en meteen de code scannen</button>
       ${melding}</div>`;
+    startFoto();
     return;
   }
   if(stap==='wachten'){
@@ -283,7 +332,7 @@ function opnieuw(){
 
 teken();
 verbind();
-window.addEventListener('pagehide', stopLezen);
+window.addEventListener('pagehide', ()=>{ stopLezen(); stopFoto(); });
 </script>
 </body>
 </html>
