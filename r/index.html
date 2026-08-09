@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Status van je reparatie</title>
+<link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
+<meta name="theme-color" content="#0B5B52">
 <meta name="robots" content="noindex">
 <meta name="description" content="Volg de voortgang van je reparatie.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +36,9 @@
     justify-content:center; flex:none; overflow:hidden; font-family:'Sora',sans-serif; font-weight:800;
     font-size:24px; color:var(--accent);}
   header .mk img{width:100%; height:100%; object-fit:cover;}
+  /* Storvo's eigen merk brengt zijn kleuren zelf mee, dus geen wit vlak. */
+  header .mk.storvo{background:transparent;}
+  header .mk.storvo svg{width:100%; height:100%;}
   header h1{font-size:21px; font-weight:800;}
   header .sub{font-size:14px; opacity:.8; margin-top:2px;}
 
@@ -155,6 +161,15 @@ function leesAdres(){
   return {winkel:delen[0]||'', code:delen[1]||''};
 }
 
+/* Het merk van Storvo. Winkels met een eigen naam of logo krijgen dat van
+   henzelf te zien; dit is alleen voor Storvo zelf.                          */
+const MERK='<svg viewBox="0 0 400 400" aria-hidden="true">'+
+  '<rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/>'+
+  '<rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/>'+
+  '<rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/>'+
+  '<path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52"'+
+  ' stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function datum(t){ return t? new Date(t).toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}) : ''; }
 function datumKort(t){ return t? new Date(t).toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' om '+new Date(t).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) : ''; }
@@ -214,7 +229,10 @@ function teken(d){
 
   document.getElementById('inhoud').innerHTML=`
     <header>
-      <div class="mk">${d.merk.logo?`<img src="${esc(d.merk.logo)}" alt="">`:esc((d.merk.naam||'?').charAt(0).toUpperCase())}</div>
+      <div class="mk${!d.merk.logo&&(d.merk.naam||'').trim().toLowerCase()==='storvo'?' storvo':''}">${
+        d.merk.logo ? `<img src="${esc(d.merk.logo)}" alt="">`
+        : (d.merk.naam||'').trim().toLowerCase()==='storvo' ? MERK
+        : esc((d.merk.naam||'?').charAt(0).toUpperCase())}</div>
       <div>
         <h1>${esc(d.merk.naam)}</h1>
         <div class="sub">Reparatie ${esc(d.reparatie.nr)}</div>

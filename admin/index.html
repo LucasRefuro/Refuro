@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beheerpaneel voor abonnementen en klanten</title>
+<link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
+<meta name="theme-color" content="#0B5B52">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -22,6 +25,8 @@
   aside{width:230px; background:var(--navy); color:#fff; padding:22px 14px; display:flex; flex-direction:column; gap:4px; position:fixed; top:0; bottom:0; left:0;}
   .logo{display:flex; align-items:center; gap:10px; padding:0 8px 22px;}
   .logo .mark{width:38px; height:38px; background:var(--paars); border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;}
+  .logo .mark.storvo{background:transparent; border-radius:0;}
+  .logo .mark.storvo svg{width:100%; height:100%;}
   .logo .name{font-weight:800; font-size:15px; line-height:1.1;}
   .logo .sub{font-size:10px; color:var(--lblauw); opacity:.8; letter-spacing:.12em; text-transform:uppercase;}
   aside nav{display:flex; flex-direction:column; gap:3px;}
@@ -278,7 +283,7 @@
 </svg>
 <aside>
   <div class="logo">
-    <div class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <div class="mark storvo"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div><div class="name">storvo</div><div class="sub">Beheerpaneel</div></div>
   </div>
   <nav>
@@ -450,9 +455,7 @@ function adminLoginScherm(fout){
     el.style.cssText='position:fixed;inset:0;z-index:500;background:radial-gradient(1100px 800px at 80% 15%,#0E4C44 0%,#123F39 62%);display:flex;align-items:center;justify-content:center;padding:20px;';
     document.body.appendChild(el); }
   el.innerHTML=`<div style="background:#fff;border-radius:24px;padding:38px 34px;width:min(400px,94vw);box-shadow:0 10px 34px rgba(23,32,30,.2)">
-    <div style="width:52px;height:52px;border-radius:13px;background:#0B5B52;display:flex;align-items:center;justify-content:center;margin-bottom:18px">
-      <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:#F7F6F3;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"/></svg>
-    </div>
+    <div style="width:52px;height:52px;margin-bottom:18px"><svg viewBox="0 0 400 400" aria-hidden="true" style="width:52px;height:52px"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <h2 style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.04em;margin-bottom:4px">storvo</h2>
     <p style="color:#5B6663;font-size:14px;margin-bottom:18px">Beheerpaneel. Alleen voor Storvo-medewerkers.</p>
     <label>E-mailadres</label><input id="ap_email" type="email" autocomplete="username" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')adminLogin(this)">

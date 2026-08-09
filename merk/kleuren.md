@@ -4,18 +4,21 @@
 | Naam | HEX | RGB | CMYK (indicatie) | Gebruik |
 | --- | --- | --- | --- | --- |
 | Storvo Groen | #0B5B52 | 11, 91, 82 | 88 / 0 / 10 / 64 | Merk, logo, koppen, primaire elementen |
-| Diep Petrol | #123F39 | 18, 63, 57 | 71 / 0 / 10 / 75 | Donkere vlakken, sectieachtergronden |
-| Amber | #E88A1D | 232, 138, 29 | 0 / 41 / 88 / 9 | Alléén de primaire actie (knop) |
-| Warm Wit | #F7F6F3 | 247, 246, 243 | 0 / 0 / 2 / 3 | Achtergrond / grond |
-| Ink | #17201E | 23, 32, 30 | 28 / 0 / 6 / 87 | Tekst |
+| Groen medium | #6A9C93 | 106, 156, 147 | 32 / 0 / 6 / 39 | Tweede vlak in het merk |
+| Groen licht | #A7C3BD | 167, 195, 189 | 14 / 0 / 3 / 24 | Derde vlak in het merk |
+| Diep Petrol | #123F39 | 18, 63, 57 | 71 / 0 / 10 / 75 | Donkere achtergronden |
+| Amber | #E88A1D | 232, 138, 29 | 0 / 41 / 88 / 9 | Alleen de primaire actie (knop) |
+| Warm Wit | #F7F6F3 | 247, 246, 243 | 0 / 0 / 2 / 3 | Grond |
+| Ink | #17201E | 23, 32, 30 | 28 / 0 / 6 / 87 | Tekst en woordmerk |
+| IJsgroen | #E7F1EE | 231, 241, 238 | 4 / 0 / 1 / 5 | Iconvlakken, zachte achtergronden |
+| Mint | #7FC4B6 | 127, 196, 182 | 35 / 0 / 7 / 23 | Accent op donkergroen |
 
-## Tinten & transparantie
-| Naam | Waarde | Gebruik |
+## Merk op donkere achtergrond
+| Naam | HEX | Gebruik |
 | --- | --- | --- |
-| Mint | #7FC4B6 (100%) | Accenten op donkergroen |
-| Mint 60% | #7FC4B6 op 60% opaciteit | Sectienummers (01, 02, 03) |
-| IJsgroen | #E7F1EE | Iconvlakken, zachte achtergronden |
-| Wit 25% | #F7F6F3 op 25% opaciteit | Lijnen op donkergroen |
+| Wit | #F7F6F3 | Eerste vlak en vinkje |
+| Wit medium | #B9D2CC | Tweede vlak |
+| Wit licht | #8FB0A9 | Derde vlak |
 
 ## Statuskleuren (nooit als merkkleur)
 | Naam | HEX | CMYK (indicatie) | Betekenis |
@@ -25,6 +28,6 @@
 | Rood | #D64545 | 0 / 68 / 68 / 16 | Urgent / voorraad op |
 
 ## Drukwerk
-- CMYK-waarden zijn omgerekend als indicatie; laat je drukker matchen op HEX/RGB of vraag een proefdruk.
+- CMYK is omgerekend als indicatie. Laat je drukker matchen op HEX/RGB of vraag een proefdruk.
 - Verhouding: 70% licht, 20% groen/petrol, 5% status, 5% amber.
-- Nooit verlopen in het logo; gradients alleen als achtergrondsfeer (zie brand book).
+- Geen verlopen in het logo.

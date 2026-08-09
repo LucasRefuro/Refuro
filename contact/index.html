@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact · Storvo</title>
+<link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
+<meta name="theme-color" content="#0B5B52">
 <meta name="description" content="Neem contact op met Storvo, software voor telefoonreparatiewinkels.">
 <meta name="robots" content="index, follow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,8 +33,8 @@ header.bar{padding:22px 0; border-bottom:1px solid var(--rand); background:var(-
 header.bar .in{display:flex; align-items:center; gap:14px;}
 #taalKnop{margin-left:auto;}
 .merk{display:flex; align-items:center; gap:11px;}
-.mk{width:34px; height:34px; border-radius:9px; background:var(--groen); display:flex; align-items:center; justify-content:center;}
-.mk svg{width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round;}
+.mk{width:34px; height:34px; display:flex; align-items:center; justify-content:center;}
+.mk svg{width:34px; height:34px;}
 .wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em; color:var(--ink);}
 
 main.wrap{padding:78px 24px 44px;}
@@ -90,7 +93,7 @@ footer{border-top:1px solid var(--rand); background:var(--card); padding:48px 0 
 <header class="bar">
   <div class="wrap in">
     <a href="/" class="merk">
-      <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="mk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="wm">storvo</span>
     </a>
     <button class="taalkies" id="taalKnop" onclick="wisselTaal()" aria-label="Taal / Language">
@@ -138,7 +141,7 @@ footer{border-top:1px solid var(--rand); background:var(--card); padding:48px 0 
     <div class="fkolommen">
       <div class="fmerk">
         <a href="/" class="merk">
-          <span class="mk"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span class="mk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <span class="wm">storvo</span>
         </a>
         <div class="tag" data-t="tagline">Alles geregeld.</div>

@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Storvo Winkel Stock</title>
+<link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
+<meta name="theme-color" content="#0B5B52">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -189,6 +192,9 @@
     flex-direction:column; align-items:center; justify-content:center; padding:24px; overflow:auto;}
   .loginbox{background:#fff; border-radius:18px; padding:30px; width:min(420px,94vw); text-align:center;}
   .loginbox .mk{width:56px; height:56px; border-radius:14px; background:var(--oranje); color:var(--actieftekst); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:26px; margin:0 auto 14px; overflow:hidden;}
+  /* Storvo's eigen merk kleurt zichzelf, dus zonder vlak eronder. */
+  .loginbox .mk.storvo{background:transparent; border-radius:0;}
+  .loginbox .mk.storvo svg{width:100%; height:100%;}
   .loginbox .mk img{width:100%; height:100%; object-fit:cover;}
   .loginbox label{display:block; text-align:left; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:4px;}
   .authfout{margin-top:14px; padding:12px 14px; border-radius:14px; font-size:13.5px; line-height:1.5;
@@ -270,6 +276,11 @@
   .logo .mark{width:40px; height:40px; border-radius:10px; background:var(--oranje); color:var(--actieftekst);
     font-family:'Sora',sans-serif; font-weight:800; font-size:19px; overflow:hidden; box-shadow:none;}
   .logo .mark .i{width:22px; height:22px; stroke-width:2.4;}
+  /* Storvo's eigen merk kleurt zichzelf, dus geen vlak eronder. */
+  .logo .mark.storvo{background:transparent; border-radius:0;}
+  .logo .mark.storvo svg{width:100%; height:100%;}
+  .onbmerk.storvo{background:transparent;}
+  .onbmerk.storvo svg{width:100%; height:100%;}
   .logo .name{font-family:'Sora',sans-serif; font-weight:800; font-size:22px; letter-spacing:-.04em; color:var(--text); line-height:1;}
   .logo .sub{font-size:10px; font-weight:700; color:var(--muted-l); letter-spacing:.12em; text-transform:uppercase; margin-top:4px;}
   aside nav{gap:2px;}
@@ -885,7 +896,7 @@
 </svg>
 <aside>
   <div class="logo">
-    <div class="mark" id="logoMark"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <div class="mark storvo" id="logoMark"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div><div class="name" id="logoNaam">storvo</div><div class="sub" id="logoSub">Alles geregeld</div></div>
   </div>
   <nav>
@@ -3171,7 +3182,7 @@ function authWrap(inner){
   const eigenNaam=(h.naam||'Storvo').trim();
   const isStorvo=eigenNaam.toLowerCase()==='storvo';
   el.innerHTML=`<div class="loginbox">
-    <div class="mk">${h.logo?`<img src="${h.logo}">`:(isStorvo?VINKJE:esc(eigenNaam.charAt(0).toUpperCase()))}</div>
+    <div class="mk${isStorvo&&!h.logo?' storvo':''}">${h.logo?`<img src="${h.logo}">`:(isStorvo?MERK:esc(eigenNaam.charAt(0).toUpperCase()))}</div>
     <h2>${isStorvo?'storvo':esc(eigenNaam)}</h2>
     ${inner}
     <div id="authFout" class="authfout" hidden></div>
@@ -3909,7 +3920,9 @@ function renderPrestaties(){
 
 /* ---------- huisstijl (white-label) ---------- */
 /* Het Storvo-monogram: het vinkje uit het brand book. Onder 28 px alleen dit teken. */
-const VINKJE='<svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+/* Het merk van Storvo. Winkels met een eigen naam krijgen hun eigen letter
+   of logo; alleen Storvo zelf toont het modulevierkant.                    */
+const MERK='<svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const HS_STANDAARD={naam:'Storvo', sub:'Alles geregeld', navy:'#123F39', oranje:'#0B5B52', menutekst:'#8A938F', actieftekst:'#F7F6F3', tekst:'#17201E', bg:'#F7F6F3', logo:'', v:4};
 const HS_KLEUREN=['navy','oranje','menutekst','actieftekst','tekst','bg'];
 function huisstijl(){
@@ -3936,9 +3949,9 @@ function pasHuisstijlToe(){
   document.getElementById('logoNaam').textContent = nm.trim().toLowerCase()==='storvo' ? 'storvo' : nm;
   document.getElementById('logoSub').textContent=h.sub||'';
   const mark=document.getElementById('logoMark');
-  if(h.logo){ mark.innerHTML=`<img src="${h.logo}" class="logoImg" alt="logo">`; mark.style.background='transparent'; }
-  else if((h.naam||'Storvo').trim().toLowerCase()==='storvo'){ mark.innerHTML=VINKJE; mark.style.background=''; }
-  else { mark.textContent=(h.naam||'S').trim().charAt(0).toUpperCase(); mark.style.background=''; }
+  if(h.logo){ mark.innerHTML=`<img src="${h.logo}" class="logoImg" alt="logo">`; mark.classList.add('storvo'); }
+  else if((h.naam||'Storvo').trim().toLowerCase()==='storvo'){ mark.innerHTML=MERK; mark.classList.add('storvo'); }
+  else { mark.textContent=(h.naam||'S').trim().charAt(0).toUpperCase(); mark.classList.remove('storvo'); }
   document.title=(h.naam||'Storvo')+' \u00b7 voorraad en reparaties';
 }
 function schaduw(hex, pct){
@@ -4032,6 +4045,8 @@ body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--t
 header{background:var(--navy);color:var(--actieftekst);border-radius:24px;padding:24px 26px;margin-bottom:20px;display:flex;align-items:center;gap:14px}
 header .s{color:var(--menutekst)}
 header .mk{width:46px;height:46px;border-radius:12px;background:var(--actieftekst);color:var(--oranje);display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:800;font-size:22px;overflow:hidden}
+header .mk.storvo{background:transparent}
+header .mk.storvo svg{width:100%;height:100%}
 header .mk svg{width:26px;height:26px;stroke:var(--oranje);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 header .mk img{width:100%;height:100%;object-fit:cover}
 header h1{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.01em}header .s{font-size:13px;opacity:.85}
@@ -4054,7 +4069,7 @@ h2{font-family:'Sora',sans-serif;font-size:16px;font-weight:700;margin-bottom:16
 .rij:last-child{border:none}.rij b{font-family:'Sora',sans-serif;font-weight:700}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:10px}
 </style></head><body><div class="wrap">
-<header><div class="mk">${h.logo?`<img src="${h.logo}">`:((h.naam||'Storvo').trim().toLowerCase()==='storvo'?'<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>':esc((h.naam||'S').charAt(0).toUpperCase()))}</div>
+<header><div class="mk${!h.logo&&(h.naam||'Storvo').trim().toLowerCase()==='storvo'?' storvo':''}">${h.logo?`<img src="${h.logo}">`:((h.naam||'Storvo').trim().toLowerCase()==='storvo'?MERK:esc((h.naam||'S').charAt(0).toUpperCase()))}</div>
 <div><h1>${esc(h.naam)}</h1><div class="s">Status van je reparatie</div></div></header>
 <div class="card">
   <h2>Reparatie ${esc(r.nr)}</h2>
@@ -5771,7 +5786,7 @@ function onbRender(){
   /* ── 0. Welkom ─────────────────────────────────────────────── */
   if(onbStap===0){
     inner=`<div class="onbwelkom">
-      <div class="onbmerk"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="onbmerk storvo"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <h2>Welkom bij Storvo${account&&account.naam?', '+esc(account.naam.split(' ')[0]):''}</h2>
       <p class="muted">We maken je winkel in een paar minuten startklaar. Je vult je gegevens in, kiest je kleuren en je assortiment, en krijgt daarna een korte rondleiding.</p>
       <div class="onbpunten">

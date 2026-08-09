@@ -57,15 +57,22 @@ function mailHtml(
   link: string,
 ) {
   const initiaal = (merk.naam || "?").charAt(0).toUpperCase();
+  // Heet de winkel gewoon Storvo, dan hoort daar ons eigen merk. Dat heeft
+  // eigen kleuren, dus het gekleurde vlak eronder moet dan weg. E-mail toont
+  // geen SVG, vandaar een PNG.
+  const eigenMerk = !merk.logo && (merk.naam || "").trim().toLowerCase() === "storvo";
+  const vlak = eigenMerk ? "transparent" : merk.accent;
   const logo = merk.logo
     ? `<img src="${merk.logo}" width="40" height="40" alt="" style="display:block;border-radius:10px;object-fit:cover">`
+    : eigenMerk
+    ? `<img src="https://storvo.app/merk/merk-160.png" width="40" height="40" alt="Storvo" style="display:block;border:0;">`
     : `<span style="font-family:'Sora','Segoe UI',Helvetica,Arial,sans-serif;font-size:19px;font-weight:800;color:#ffffff;line-height:40px;">${initiaal}</span>`;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F7F6F3;padding:40px 16px;font-family:'Instrument Sans','Segoe UI',Helvetica,Arial,sans-serif;">
   <tr><td align="center">
     <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;border-radius:24px;overflow:hidden;background-color:#ffffff;box-shadow:0 6px 24px rgba(23,32,30,0.07);">
       <tr><td style="padding:22px 32px;border-bottom:1.5px solid #ECEAE4;">
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td width="40" align="center" valign="middle" style="width:40px;height:40px;background-color:${merk.accent};border-radius:11px;">${logo}</td>
+          <td width="40" align="center" valign="middle" style="width:40px;height:40px;background-color:${vlak};border-radius:11px;">${logo}</td>
           <td style="padding-left:12px;font-family:'Sora','Segoe UI',Helvetica,Arial,sans-serif;font-size:20px;font-weight:800;color:#17201E;">${merk.naam}</td>
         </tr></table>
       </td></tr>
