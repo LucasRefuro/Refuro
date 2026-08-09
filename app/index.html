@@ -2361,8 +2361,13 @@ function npCode(){
   const a=new Uint8Array(10); crypto.getRandomValues(a);
   return [...a].map(x=>t[x%t.length]).join('');
 }
+/* Vercel draait met cleanUrls, dus het adres is /app/scan en niet
+   /app/scan.html. Die laatste geeft een 404. Op een gewone webserver zonder
+   die instelling werkt /app/scan niet, dus daar houden we de .html aan.     */
 function npLink(){
-  return location.origin+location.pathname.replace(/[^/]*$/,'')+'scan.html?s='+np.code;
+  const map=location.origin+location.pathname.replace(/[^/]*$/,'');
+  const schoon=/(^|\.)storvo\.(app|nl)$/.test(location.hostname);
+  return map+'scan'+(schoon?'':'.html')+'?s='+np.code;
 }
 
 function startNieuwProduct(){
