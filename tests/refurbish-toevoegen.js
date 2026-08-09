@@ -72,7 +72,9 @@ setTimeout(async()=>{
   ok('suggestie verschijnt', !lijstje.hidden && /ZBook 15 G6 Mobile/.test(lijstje.innerHTML));
   w.eval('modelPak(0)');
   ok('suggestie invullen', d.getElementById('t_model').value==='HP ZBook 15 G6 Mobile');
-  ok('categorie meegenomen', d.getElementById('t_cat').value==='Laptop');
+  ok('categorie meegenomen', w.eval('soortNu')==='Laptop');
+  ok('categoriekiezer met knoppen', d.querySelectorAll('.soortknop').length===6);
+  ok('laptop staat aan', !!d.querySelector('.soortknop.aan'));
   ok('hint bij bekend model', /kennen we al/.test(d.getElementById('modelHint').textContent));
 
   ok('splitsen bekend model', w.eval("JSON.stringify(splitsModel('HP ZBook 15 G6 Mobile'))")==='{"merk":"HP","model":"ZBook 15 G6 Mobile"}');
@@ -93,6 +95,7 @@ setTimeout(async()=>{
     ok('leverancier mee', r.leverancier==='Testleverancier');
     ok('inkoopprijs mee', r.inkoop===75);
     ok('specs uit de lijst voorgevuld', !!r.specs && r.specs.Processor==='Intel Core i7-9750H');
+    ok('geen serienummer gevraagd', !('serienummer' in r) || r.serienummer==null);
     ok('elk apparaat een eigen nummer', ins[2][0].code!==ins[2][1].code);
     ok('nummer leesbaar', /^A\d{4}$/.test(r.code));
   }
@@ -105,7 +108,7 @@ setTimeout(async()=>{
   ok('status bovenaan', /TE CONTROLEREN/.test(et));
   ok('merk en model groot', /HP ZBook 15 G6 Mobile/.test(et));
   ok('nummer op het label', /A0007/.test(et));
-  ok('serienummer op het label', /DEV-6PEUW3/.test(et));
+  ok('nummer staat onder de qr', et.indexOf('etqr')<et.indexOf('etcode'));
   ok('bekende gegevens op het label', /RAM: 16 GB/.test(et) && /Opslag: 512 GB/.test(et));
   ok('qr wijst naar dit apparaat', /apparaat%3Da1/.test(et));
 

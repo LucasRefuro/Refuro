@@ -88,7 +88,6 @@ setTimeout(()=>{
   const pag=d.getElementById('appPagina').innerHTML;
   ok('titel op de pagina', /EliteBook 840 G9/.test(pag));
   ok('nummer als feit', /A0001/.test(pag));
-  ok('serienummer als feit', /DEV-HRNP72/.test(pag));
   ok('grade als feit', /Grade A/.test(pag));
   ok('leverancier als feit', /Testleverancier/.test(pag));
   ok('inkoopprijs als feit', /75,00/.test(pag));
@@ -102,19 +101,12 @@ setTimeout(()=>{
   const pag2=d.getElementById('appPagina').innerHTML;
   ok('donorpagina toont wat eruit is', /Eruit gehaald/.test(pag2) && /deelpil/.test(pag2));
 
-  // ── printwachtrij ──
-  ok('wachtrij begint leeg', !d.getElementById('wachtrijBalk'));
-  w.eval("wachtrijBij('a1'); wachtrijBij('a2')");
-  const balk=d.getElementById('wachtrijBalk');
-  ok('wachtrijbalk verschijnt', !!balk);
-  ok('telt twee labels', /2 labels klaar/.test(balk.textContent));
-  w.eval("wachtrijBij('a1')");
-  ok('geen dubbele in de wachtrij', /2 labels klaar/.test(d.getElementById('wachtrijBalk').textContent));
-  w.eval('wachtrijPrinten()');
-  const venster=d.getElementById('venster');
-  ok('printen opent beide labels', !!venster && /Labels \(2\)/.test(venster.textContent));
-  w.eval('sluit(); wachtrijLeeg()');
-  ok('leegmaken verwijdert de balk', !d.getElementById('wachtrijBalk'));
+  // ── notitie op de pagina ──
+  w.eval("appPagina('a1')");
+  ok('notitieveld op de pagina', !!d.getElementById('pg_notitie'));
+  ok('geen serienummer meer als feit', !/DEV-HRNP72/.test(d.getElementById('appPagina').innerHTML));
+  ok('label opnieuw printen', /Label opnieuw printen/.test(d.getElementById('appPagina').innerHTML));
+  ok('geen wachtrij meer', !/wachtrij/i.test(d.getElementById('appPagina').innerHTML));
 
   // ── gescand label opent de pagina ──
   ok('label wijst naar het apparaat', /apparaat%3Da1/.test(w.eval("labelUrl('a1')").replace(/=/g,'%3D')) ||

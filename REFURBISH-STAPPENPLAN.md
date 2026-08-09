@@ -141,25 +141,39 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    in het proces staat, daaronder merk en model groot, het korte nummer, en een
    QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
    staan de specificaties er ook op.
-3. **De controle als stappenpad.** Geen lange lijst, maar een pad dat meebeweegt
-   met wat je antwoordt:
+3. **De controle.** Een eigen pagina met een tijdlijn erboven: Start, Hardware,
+   Staat, Windows, Specs, Klaar. De knop om door te gaan staat rechts.
 
    | Vraag | Ja | Nee |
    |---|---|---|
    | Start hij op? | door naar de hardware | brandt er een lampje? |
    | Brandt er een lampje? | geheugen nakijken | openmaken, accu en bios-batterij los, twee minuten wachten |
-   | Start hij nu op? | door naar de hardware | slopen voor onderdelen |
+   | Start hij nu op? | door naar de hardware | leeghalen voor onderdelen |
 
    Bij die twee minuten loopt een wekker mee die piept als het klaar is.
-   Daarna de functionele test, en dan de visuele inspectie met strafpunten:
-   behuizing, scherm, toetsenbord en scharnieren. Nul tot twee punten is een A,
-   tot en met zeven een B, daarboven een C. Een barst in het scherm telt voor
-   acht, dus die haalt hem er in zijn eentje uit.
+
+   **Hardware.** De functionele test. Zet je ergens *nee*, dan verschijnt er een
+   veldje om erbij te zetten wát er dan mis is. Onderaan de accucapaciteit in
+   procenten (mag leeg) en een notitie van maximaal 60 tekens, want die moet op
+   de sticker passen.
+
+   **Staat.** De visuele inspectie met strafpunten: behuizing, scherm,
+   toetsenbord en scharnieren. Nul tot twee punten is een A, tot en met zeven
+   een B, daarboven een C. Een barst in het scherm telt voor acht, dus die haalt
+   hem er in zijn eentje uit.
+
+   **Windows.** Zet de installatie aan en druk op *Uitvoeren en volgende pakken*.
+   Het apparaat blijft in de lijst staan met de stand "Windows installeren" en jij
+   pakt de volgende. Als hij klaar is klik je hem aan en hervat de controle
+   precies waar hij gebleven was.
+
+   **Specs.** Pas nu, want pas nu draait Windows en kun je uitlezen wat er
+   werkelijk in zit. Eén knop zoekt het model op, en wat gevonden is staat als
+   blok bovenaan zodat je het naast je scherm kunt leggen.
 
    De uitkomst volgt uit de antwoorden: alles goed is klaar voor verkoop met
    grade, één kapotte toets stuurt hem naar de reparatielijst, en een apparaat
-   dat niet meer aan gaat wordt gesloopt. Wat daar nog goed aan is vink je aan
-   en gaat meteen naar de onderdelenvoorraad, met een label waar dat op staat.
+   dat niet meer aan gaat wordt leeggehaald.
 3b. **De modellenlijst.** Bij de controle vul je in wat erin zit, of je drukt op
    *Specificaties opzoeken*. Die kijkt eerst in een gedeelde lijst en vraagt het
    pas aan AI als het model nieuw is. Wat eruit komt gaat de lijst in, dus het
@@ -170,9 +184,8 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    rij, wat erin zit, wat de controle opleverde, wat er mis is, wat eruit is
    gehaald, en het label als voorbeeld. Klikken op een regel brengt je er
    altijd heen, en de QR op het label ook.
-5. **Printwachtrij.** Je loopt met een stapel langs de tafel, zet er labels bij
-   in de wachtrij, en drukt aan het eind alles in één keer af. De wachtrij
-   staat in de browser van die werkplek.
+5. **Labels opnieuw printen.** Vanaf de apparaatpagina, uit de lijst van vandaag,
+   of in één keer voor alle laptops van vandaag.
 6. **Reparatie en onderdelen.** Wat zit erin, wat is stuk, wat ligt er op de
    plank. Onderdelen toewijzen of op de bestellijst zetten. De onderdelenlijst
    kun je per soort bekijken (heb ik nog een scherm?) of per stuk (waar kwam

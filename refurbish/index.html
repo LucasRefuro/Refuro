@@ -134,6 +134,7 @@ tr.klikbaar{cursor:pointer;}
 .st{display:inline-block; font-size:11.5px; font-weight:700; padding:4px 11px;
   border-radius:var(--pil); white-space:nowrap;}
 .st.te_controleren{background:var(--lblauw); color:var(--groen);}
+.st.installeren{background:var(--amber-soft); color:var(--amber-tekst);}
 .st.te_repareren{background:var(--amber-soft); color:var(--amber-tekst);}
 .st.repurpose{background:var(--red-soft); color:var(--red-tekst);}
 .st.klaar{background:var(--green-soft); color:var(--green-tekst);}
@@ -183,18 +184,60 @@ tr.klikbaar{cursor:pointer;}
 .labelvoorbeeld{display:flex; justify-content:center;}
 .num.rood{color:var(--red-tekst); font-weight:700;}
 
-/* De printwachtrij, rechtsonder in beeld. */
-.wachtrij{position:fixed; right:20px; bottom:20px; z-index:80;
-  display:flex; align-items:center; gap:12px; background:var(--tekst); color:#fff;
-  padding:10px 14px; border-radius:var(--pil); box-shadow:var(--schaduw-l); font-size:13.5px;}
-.wachtrij .btn{padding:6px 14px; font-size:12.5px;}
-.wachtrij .btn.ghost{background:transparent; border-color:rgba(255,255,255,.3); color:#fff;}
-.wachtrij .btn.ghost:hover{background:rgba(255,255,255,.12);}
-
 @media(max-width:900px){
   .tweekolom{grid-template-columns:1fr;}
   .feit{border-right:none; border-bottom:1px solid var(--border);}
 }
+
+/* ---------- wat voor apparaat ---------- */
+.soortkiezer{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px;}
+.soortknop{display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 10px;
+  border:1.5px solid var(--border); border-radius:16px; background:var(--card);
+  font-family:inherit; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;
+  transition:.15s;}
+.soortknop:hover{border-color:var(--mint); color:var(--tekst);}
+.soortknop .i{width:24px; height:24px;}
+.soortknop.aan{border-color:var(--groen); background:var(--lblauw); color:var(--groen);}
+
+/* ---------- de controle als pagina ---------- */
+.tijdlijn{list-style:none; display:flex; gap:0; margin:0 0 20px; padding:0; overflow-x:auto;}
+.tl{flex:1; min-width:104px; position:relative; padding:0 8px; text-align:center;}
+.tl::before{content:''; position:absolute; top:15px; left:-50%; width:100%; height:2px;
+  background:var(--border);}
+.tl:first-child::before{display:none;}
+.tl.gedaan::before,.tl.nu::before{background:var(--groen);}
+.tlbol{position:relative; z-index:1; display:flex; align-items:center; justify-content:center;
+  width:32px; height:32px; margin:0 auto 8px; border-radius:50%; background:var(--soft-2);
+  color:var(--muted-l); font-family:'Sora',sans-serif; font-weight:800; font-size:13px;}
+.tl.nu .tlbol{background:var(--groen); color:#fff;}
+.tl.gedaan .tlbol{background:var(--green-soft); color:var(--green-tekst);}
+.tlnaam{display:block; font-size:13px; font-weight:700; color:var(--muted-l);}
+.tl.nu .tlnaam{color:var(--tekst);}
+.tl.gedaan .tlnaam{color:var(--green-tekst);}
+.tluitleg{display:block; font-size:11.5px; color:var(--muted-l); margin-top:2px;}
+
+.ctrkaart{padding:28px 30px;}
+.ctrkaart h2{font-size:19px; margin-bottom:6px;}
+/* De knop om door te gaan staat rechts. Dat is waar het oog eindigt en waar in
+   elk formulier de bevestiging zit. */
+.ctrvoet{display:flex; justify-content:flex-end; align-items:center; gap:10px;
+  margin-top:24px; padding-top:20px; border-top:1.5px solid var(--border); flex-wrap:wrap;}
+
+.vraagnotitie{margin-top:10px; font-size:13.5px;}
+.notitievak{position:relative;}
+.notitievak input{padding-right:52px;}
+.tekens{position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font-size:12px; font-weight:700; color:var(--muted-l);}
+.tekens.krap{color:var(--red-tekst);}
+.accurij{background:var(--soft-2); border-radius:var(--radius-s); padding:16px 18px;}
+.accurij label{margin-bottom:8px;}
+
+.specvak{background:var(--lblauw); border-radius:var(--radius-s); padding:18px 20px; margin-bottom:18px;}
+.specrooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px;}
+.specveld .sl{font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted-l); margin-bottom:3px;}
+.specveld .sw{font-size:14.5px; font-weight:700;}
+.deelrooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px;}
 
 /* ---------- de controle in stappen ---------- */
 .stapbalk{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 18px;}
@@ -254,9 +297,14 @@ tr.klikbaar{cursor:pointer;}
   border:1.5pt solid #000; border-radius:2mm; padding:1mm 2.5mm; display:inline-block;}
 .etnaam{font-family:'Sora',sans-serif; font-size:15pt; font-weight:800; line-height:1.15;
   letter-spacing:-.02em; overflow-wrap:anywhere; margin-bottom:1.5mm;}
-.etcode{font-size:10pt; font-weight:700; letter-spacing:.04em; margin-bottom:1.5mm;}
-.etregels{font-size:9.5pt; line-height:1.45; margin-bottom:3mm;}
+.etregels{font-size:9.5pt; line-height:1.45; margin-bottom:2.5mm;}
+.etnotitie{font-size:9pt; font-style:italic; border-top:0.4mm solid #000; padding-top:1.5mm;
+  margin-bottom:2.5mm;}
 .etqr{width:34mm; height:34mm; display:block;}
+/* Het nummer staat onder de code, zodat je het kunt voorlezen als het scannen
+   niet lukt. */
+.etcode{font-family:'Sora',sans-serif; font-size:13pt; font-weight:800;
+  letter-spacing:.12em; margin-top:1.5mm; text-align:center; width:34mm;}
 
 /* zoeklijst onder het modelveld */
 .zoekveld{position:relative;}
@@ -303,7 +351,6 @@ tr.klikbaar{cursor:pointer;}
 @media print{
   /* Alles weg behalve de labels zelf. Zonder dit print je de halve app mee. */
   body *{visibility:hidden;}
-  .wachtrij{display:none !important;}
   #labelVel, #labelVel *{visibility:visible;}
   #labelVel{position:absolute; left:0; top:0; width:100%;}
   .overlay{position:static; background:none; padding:0; display:block;}
@@ -321,6 +368,12 @@ tr.klikbaar{cursor:pointer;}
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
   <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+  <symbol id="i-telefoon" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-tablet" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-desktop" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="4" rx="2"/><path d="M7 20h10M12 16v4"/></symbol>
+  <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.5 10 4.5v7H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7v7L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
   <symbol id="i-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/></symbol>
   <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
@@ -386,21 +439,20 @@ tr.klikbaar{cursor:pointer;}
 
       <div class="card">
         <h2><svg class="i"><use href="#i-plus"/></svg>Wat komt er binnen</h2>
-        <div class="grid">
-          <div class="zoekveld">
-            <label>Merk en model *</label>
-            <input id="t_model" autocomplete="off" placeholder="Typ bijvoorbeeld: HP ZBook 15"
-              oninput="modelTyp()" onfocus="modelTyp()" onkeydown="modelToets(event)">
-            <div class="zoeklijst" id="modelLijstje" hidden></div>
-          </div>
-          <div><label>Categorie</label><select id="t_cat">
-            <option>Laptop</option><option>Telefoon</option><option>Tablet</option>
-            <option>Desktop</option><option>Monitor</option><option>Overig</option>
-          </select></div>
+        <div class="zoekveld" style="margin-bottom:18px">
+          <label>Merk en model *</label>
+          <input id="t_model" autocomplete="off" placeholder="Typ bijvoorbeeld: HP ZBook 15"
+            oninput="modelTyp()" onfocus="modelTyp()" onkeydown="modelToets(event)">
+          <div class="zoeklijst" id="modelLijstje" hidden></div>
+        </div>
+
+        <label>Wat voor apparaat</label>
+        <div class="soortkiezer" id="t_cat_kiezer"></div>
+
+        <div class="grid" style="margin-top:18px">
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
           <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
           <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
-          <div><label>Serienummer</label><input id="t_serie" placeholder="Alleen bij één stuk"></div>
         </div>
         <div class="row" style="margin-top:18px">
           <button class="btn actie" onclick="toevoegen(this)"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen en labels maken</button>
@@ -437,6 +489,14 @@ tr.klikbaar{cursor:pointer;}
          link kunnen delen. -->
     <section id="tab-apparaat" hidden>
       <div id="appPagina"></div>
+    </section>
+
+    <!-- ── de controle ──
+         Een eigen pagina in plaats van een venster. Je bent hier minuten mee
+         bezig, met een laptop naast je toetsenbord; dan wil je ruimte en geen
+         scherm dat je per ongeluk wegklikt. -->
+    <section id="tab-controleren" hidden>
+      <div id="ctrPagina"></div>
     </section>
 
     <!-- ── klaar voor verkoop ── -->
@@ -544,6 +604,7 @@ function toast(bericht, soort){
 
 const STATUS={
   te_controleren:'Te controleren',
+  installeren:'Windows installeren',
   te_repareren:'Te repareren',
   repurpose:'Slopen voor onderdelen',
   klaar:'Klaar voor verkoop',
@@ -582,6 +643,7 @@ async function start(){
   document.getElementById('werkvlak').hidden=false;
   document.getElementById('wie').textContent=acc.naam||acc.email||'';
   merkTekenen();
+  tekenSoorten();
   await allesLaden();
   showTab('werkbank');
 }
@@ -637,12 +699,12 @@ function past(a){
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenKlaar(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
-  tekenChecklists(); tekenApparaat(); tekenBadges(); tekenWachtrij();
+  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges();
 }
 function tekenBadges(){
   const zet=(id,n)=>{ const e=document.getElementById(id); if(!e) return;
     e.textContent=n; e.hidden=!n; };
-  zet('bControle', apparaten.filter(a=>a.status==='te_controleren').length);
+  zet('bControle', apparaten.filter(a=>a.status==='te_controleren'||a.status==='installeren').length);
   zet('bRep',      apparaten.filter(a=>a.status==='te_repareren').length);
   zet('bBestel',   onderdelen.filter(o=>o.status==='te_bestellen').length);
   zet('bKlaar',    apparaten.filter(a=>a.status==='klaar').length);
@@ -680,7 +742,6 @@ function tabel(rijen){
         <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
         <td class="muted klein">${datum(a.aangemaakt_op)}</td>
         <td class="num hwact">
-          <button class="btn ghost small" onclick="event.stopPropagation(); wachtrijBij('${a.id}')">Wachtrij</button>
           <button class="btn ghost small" onclick="event.stopPropagation(); labelsTonen('${a.id}')">Label</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
@@ -700,6 +761,27 @@ function leeg(icoon, kop, uitleg){
    wordt iedereen beter van.                                                 */
 
 let modelKeuze=-1, modelTreffers=[];
+
+/* Wat voor apparaat het is, als knoppen met een icoon. Een uitklaplijst met
+   zes regels kost drie handelingen; dit kost er één, en je ziet in één oogopslag
+   waar je op staat. */
+const SOORTEN=[
+  {n:'Laptop',   i:'i-laptop'},
+  {n:'Telefoon', i:'i-telefoon'},
+  {n:'Tablet',   i:'i-tablet'},
+  {n:'Desktop',  i:'i-desktop'},
+  {n:'Monitor',  i:'i-monitor'},
+  {n:'Overig',   i:'i-box'}
+];
+let soortNu='Laptop';
+function tekenSoorten(){
+  const el=document.getElementById('t_cat_kiezer'); if(!el) return;
+  el.innerHTML=SOORTEN.map(s=>`
+    <button type="button" class="soortknop${s.n===soortNu?' aan':''}" onclick="soortKies('${s.n}')">
+      <svg class="i"><use href="#${s.i}"/></svg><span>${s.n}</span>
+    </button>`).join('');
+}
+function soortKies(n){ soortNu=n; tekenSoorten(); modelHint(); }
 
 function splitsModel(tekst){
   const t=String(tekst||'').trim();
@@ -732,8 +814,7 @@ function modelTyp(){
 function modelPak(i){
   const m=modelTreffers[i]; if(!m) return;
   document.getElementById('t_model').value=m.merk+' '+m.model;
-  const cat=document.getElementById('t_cat');
-  if(cat && m.categorie) cat.value=m.categorie;
+  if(m.categorie){ soortNu=m.categorie; tekenSoorten(); }
   document.getElementById('modelLijstje').hidden=true;
   modelHint();
 }
@@ -764,7 +845,7 @@ async function toevoegen(knop){
   const {merk, model}=splitsModel(v('t_model'));
   if(!model){ toast('Vul merk en model in','let-op'); return; }
   const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
-  const cat=v('t_cat');
+  const cat=soortNu;
   const bekend=modellen.find(m=>m.model.toLowerCase()===model.toLowerCase());
 
   await bezig(knop, async()=>{
@@ -773,7 +854,6 @@ async function toevoegen(knop){
       rijen.push({
         team_id:account.team_id,
         merk:merk||null, model, categorie:cat,
-        serienummer: aantal===1 ? (v('t_serie')||null) : null,
         inkoop:Number(v('t_inkoop'))||0,
         leverancier:v('t_lev')||null,
         code:volgendeCode(i),
@@ -790,7 +870,6 @@ async function toevoegen(knop){
       merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}
     });
 
-    document.getElementById('t_serie').value='';
     await allesLaden();
     toast(aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd', true);
     labelsTonen((data||[]).map(r=>r.id));
@@ -810,11 +889,24 @@ function tekenVandaag(){
   if(!el) return;
   const vandaag=new Date().toDateString();
   const rijen=apparaten.filter(a=>new Date(a.aangemaakt_op).toDateString()===vandaag);
-  el.innerHTML=rijen.length
-    ? tabel(rijen)+`<div class="row" style="margin-top:14px">
-        <button class="btn ghost small" onclick="labelsTonen(${JSON.stringify(rijen.map(r=>r.id)).replace(/"/g,'&quot;')})">
-          <svg class="i s"><use href="#i-print"/></svg>Alle labels van vandaag</button></div>`
-    : leeg('i-tag','Vandaag nog niets toegevoegd','Wat je hierboven invult verschijnt hier, met de labels erbij.');
+  if(!rijen.length){
+    el.innerHTML=leeg('i-tag','Vandaag nog niets toegevoegd',
+      'Wat je hierboven invult verschijnt hier, met de labels erbij.');
+    return;
+  }
+  el.innerHTML=`<div class="tabelrol"><table>
+      <thead><tr><th>Nummer</th><th>Apparaat</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
+        <td class="mono">${esc(a.code||'—')}</td>
+        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+            <div class="muted klein">${esc(a.categorie||'')}</div></td>
+        <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
+        <td class="num hwact"><button class="btn ghost small"
+          onclick="event.stopPropagation(); labelsTonen('${a.id}')">Label opnieuw</button></td>
+      </tr>`).join('')}</tbody></table></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost small" onclick="labelsTonen(${JSON.stringify(rijen.map(r=>r.id)).replace(/"/g,'&quot;')})">
+        <svg class="i s"><use href="#i-print"/></svg>Alle laptops van vandaag</button></div>`;
 }
 
 /* ═══════════════ labels ═══════════════
@@ -833,6 +925,7 @@ function labelUrl(id){
 
 const STATUS_KORT={
   te_controleren:'TE CONTROLEREN',
+  installeren:'WINDOWS INSTALLEREN',
   te_repareren:'TE REPAREREN',
   repurpose:'ONDERDELEN',
   klaar:'KLAAR VOOR VERKOOP',
@@ -852,7 +945,8 @@ function labelHtml(a){
         specs['Processor'] ? 'CPU: '+specs['Processor'] : null,
         specs['Geheugen']  ? 'RAM: '+specs['Geheugen']  : null,
         specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
-        specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null
+        specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null,
+        a.accu             ? 'Accu: '+a.accu+'%'        : null
       ].filter(Boolean);
   return `<div class="etiket">
     <div class="etkop">
@@ -860,9 +954,10 @@ function labelHtml(a){
       ${a.grade && a.status!=='repurpose' ? `<span class="etgrade">${esc(a.grade)}</span>` : ''}
     </div>
     <div class="etnaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
-    <div class="etcode">${esc(a.code||'')}${a.serienummer?' · '+esc(a.serienummer):''}</div>
     <div class="etregels">${regels.map(r=>`<div>${esc(r)}</div>`).join('')}</div>
+    ${a.notitie?`<div class="etnotitie">${esc(a.notitie)}</div>`:''}
     <img class="etqr" src="${labelUrl(a.id)}" alt="" loading="lazy">
+    <div class="etcode">${esc(a.code||'')}</div>
   </div>`;
 }
 
@@ -891,7 +986,7 @@ async function labelsKlaar(knop, ids){
 /* ═══════════════ controle ═══════════════ */
 
 function tekenControle(){
-  const rijen=apparaten.filter(a=>a.status==='te_controleren').filter(past);
+  const rijen=apparaten.filter(a=>a.status==='te_controleren'||a.status==='installeren').filter(past);
   document.getElementById('ctrLijst').innerHTML=rijen.length
     ? tabel(rijen)
     : leeg('i-check','Niets te controleren','Alles is nagekeken. Voeg een batch toe om verder te gaan.');
@@ -938,8 +1033,8 @@ function tekenApparaat(){
 
     <div class="feiten">
       ${feit('Nummer', a.code||'—', true)}
-      ${feit('Serienummer', a.serienummer||'—', true)}
       ${feit('Grade', a.grade||'—')}
+      ${feit('Accu', a.accu?a.accu+'%':'—')}
       ${feit('Leverancier', a.leverancier||'—')}
       ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}))}
       ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
@@ -948,12 +1043,13 @@ function tekenApparaat(){
     <div class="row" style="margin:0 0 22px">
       ${a.status==='te_controleren'
         ? `<button class="btn actie" onclick="appOpen('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Controle starten</button>`:''}
+      ${a.status==='installeren'
+        ? `<button class="btn actie" onclick="appOpen('${a.id}')"><svg class="i s"><use href="#i-windows"/></svg>Controle hervatten</button>`:''}
       ${a.status==='te_repareren'
         ? `<button class="btn actie" onclick="repOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie openen</button>`:''}
       ${a.status==='klaar'
         ? `<button class="btn actie" onclick="klaarOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-arrow"/></svg>Naar de winkelvoorraad</button>`:''}
-      <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label</button>
-      <button class="btn ghost" onclick="wachtrijBij('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>In de wachtrij</button>
+      <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
       <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
     </div>
 
@@ -967,10 +1063,21 @@ function tekenApparaat(){
             : '<p class="muted klein">Nog niets bekend. De specificaties worden ingevuld bij de controle.</p>'}
         </div>
 
+        <div class="card">
+          <h2><svg class="i"><use href="#i-note"/></svg>Notitie</h2>
+          <p class="muted klein" style="margin-bottom:10px">Komt op het label te staan, dus hou het kort. Maximaal ${MAX_NOTITIE} tekens.</p>
+          <div class="row">
+            <input id="pg_notitie" maxlength="${MAX_NOTITIE}" value="${esc(a.notitie||'')}"
+              placeholder="Bijvoorbeeld: kleine deuk linksachter" style="flex:1; min-width:200px">
+            <button class="btn ghost small" onclick="notitieOpslaan('${a.id}', this)">Opslaan</button>
+          </div>
+        </div>
+
         ${(a.checklist||[]).length ? `<div class="card">
           <h2><svg class="i"><use href="#i-check"/></svg>Wat de controle opleverde</h2>
           <table><tbody>${(a.checklist||[]).map(r=>`
-            <tr><td class="muted">${esc(r.v)}</td>
+            <tr><td class="muted">${esc(r.v)}
+                ${r.n?`<div class="klein" style="color:var(--red-tekst)">${esc(r.n)}</div>`:''}</td>
                 <td class="num"><span class="ant ${kleurVan(r.a)}">${esc(r.a)}</span></td></tr>`).join('')}
           </tbody></table>
           ${a.punten!=null?`<p class="muted klein" style="margin-top:12px">${a.punten} strafpunt${a.punten===1?'':'en'} bij de visuele inspectie.</p>`:''}
@@ -1008,49 +1115,20 @@ function feit(naam, waarde, mono){
 }
 function hardwareVan(a){ return a.hardware_id ? {id:a.hardware_id, verkoop:null} : null; }
 
+async function notitieOpslaan(id, knop){
+  const e=document.getElementById('pg_notitie'); if(!e) return;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({notitie:e.value.trim()||null, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw new Error('Opslaan mislukt');
+    await allesLaden(); toast('Notitie opgeslagen', true);
+  });
+}
+
 async function appWeg(id){
   if(!confirm('Dit apparaat helemaal verwijderen?')) return;
   await sb.from('refurbish_apparaten').delete().eq('id',id);
   await allesLaden(); showTab('werkbank'); toast('Verwijderd', true);
-}
-
-/* ═══════════════ printwachtrij ═══════════════
-   Je loopt met een stapel langs de tafel en drukt daarna alles in één keer af.
-   De wachtrij staat in deze browser, want het is een eigenschap van de
-   werkplek en niet van de winkel.                                           */
-
-const WACHTRIJ_SLEUTEL='storvo_labelwachtrij';
-function wachtrij(){
-  try{ return JSON.parse(localStorage.getItem(WACHTRIJ_SLEUTEL))||[]; }catch(e){ return []; }
-}
-function wachtrijZet(lijst){
-  try{ localStorage.setItem(WACHTRIJ_SLEUTEL, JSON.stringify(lijst)); }catch(e){}
-  tekenWachtrij();
-}
-function wachtrijBij(id){
-  const l=wachtrij();
-  if(l.includes(id)){ toast('Staat al in de wachtrij','let-op'); return; }
-  l.push(id); wachtrijZet(l);
-  toast('In de wachtrij gezet', true);
-}
-function wachtrijLeeg(){ wachtrijZet([]); toast('Wachtrij geleegd', true); }
-function wachtrijPrinten(){
-  const l=wachtrij().filter(id=>apparaten.some(a=>a.id===id));
-  if(!l.length){ toast('De wachtrij is leeg','let-op'); return; }
-  labelsTonen(l);
-}
-function tekenWachtrij(){
-  let el=document.getElementById('wachtrijBalk');
-  const l=wachtrij().filter(id=>apparaten.some(a=>a.id===id));
-  if(!l.length){ if(el) el.remove(); return; }
-  if(!el){
-    el=document.createElement('div'); el.id='wachtrijBalk'; el.className='wachtrij';
-    document.body.appendChild(el);
-  }
-  el.innerHTML=`<svg class="i s"><use href="#i-print"/></svg>
-    <span>${l.length} label${l.length===1?'':'s'} klaar</span>
-    <button class="btn small" onclick="wachtrijPrinten()">Printen</button>
-    <button class="btn ghost small" onclick="wachtrijLeeg()">Leegmaken</button>`;
 }
 
 /* ═══════════════ de controle als stappenpad ═══════════════
@@ -1129,49 +1207,103 @@ function appOpen(id){
   if(a.status==='klaar')        return klaarOpen(a);
   if(a.status==='repurpose')    return sloopOpen(a);
   ctr={
-    a, stap:'start', antwoord:{}, punten:{}, delen:{},
-    specs:Object.assign({}, a.specs||{}), serie:a.serienummer||'',
-    tijdEinde:null
+    a, stap: a.status==='installeren' ? 'specs' : 'start',
+    antwoord:{}, punten:{}, delen:{}, notities:{},
+    specs:Object.assign({}, a.specs||{}),
+    accu:a.accu||'', notitie:a.notitie||'', tijdEinde:null
   };
-  ctrTeken();
+  /* Was hij al eens langs de controle geweest, dan pakken we op waar het
+     gebleven was in plaats van alles opnieuw te vragen. */
+  (a.checklist||[]).forEach(r=>{
+    ctr.antwoord[r.v]=r.a;
+    if(r.n) ctr.notities[r.v]=r.n;
+  });
+  VISUEEL.forEach(v=>{
+    const r=(a.checklist||[]).find(x=>x.v===v.t);
+    if(r){ const o=v.opties.find(o=>o.l===r.a); if(o) ctr.punten[v.t]={l:o.l, p:o.p}; }
+  });
+  showTab('controleren');
 }
 
 /* ---------- tekenen ---------- */
 
-function ctrTeken(){
-  const a=ctr.a;
-  const stap=CTR_STAPPEN[ctr.stap];
-  venster(esc([a.merk,a.model].filter(Boolean).join(' ')), `
-    <div class="stapbalk">${CTR_BALK.map(b=>`
-      <span class="stapbol ${ctrBalkStand(b.id)}">${esc(b.naam)}</span>`).join('')}</div>
-    ${stap.inhoud()}
-  `, stap.knoppen(), 'groot');
-  if(stap.na) stap.na();
-}
-
 const CTR_BALK=[
-  {id:'start',    naam:'Start'},
-  {id:'hardware', naam:'Hardware'},
-  {id:'visueel',  naam:'Staat'},
-  {id:'klaar',    naam:'Uitkomst'}
+  {id:'start',    naam:'Start',    uitleg:'Gaat hij aan'},
+  {id:'hardware', naam:'Hardware', uitleg:'Werkt alles'},
+  {id:'visueel',  naam:'Staat',    uitleg:'Grade bepalen'},
+  {id:'windows',  naam:'Windows',  uitleg:'Installeren'},
+  {id:'specs',    naam:'Specs',    uitleg:'Uitlezen'},
+  {id:'klaar',    naam:'Klaar',    uitleg:'Uitkomst'}
 ];
+const CTR_VOLGORDE=CTR_BALK.map(b=>b.id);
 function ctrBalkStand(id){
-  const volgorde=['start','hardware','visueel','klaar'];
   const nu=CTR_STAPPEN[ctr.stap].balk;
-  const i=volgorde.indexOf(id), j=volgorde.indexOf(nu);
+  const i=CTR_VOLGORDE.indexOf(id), j=CTR_VOLGORDE.indexOf(nu);
   return i<j ? 'gedaan' : (i===j ? 'nu' : '');
 }
 
+function ctrTeken(){
+  const el=document.getElementById('ctrPagina');
+  if(!el) return;
+  if(!ctr){ el.innerHTML=leeg('i-check','Geen controle open','Kies een apparaat uit de lijst.'); return; }
+  const a=ctr.a;
+  const stap=CTR_STAPPEN[ctr.stap];
+
+  el.innerHTML=`
+    <div class="pagehead">
+      <div>
+        <div class="kruimel">
+          <a onclick="showTab('controle')">Te controleren</a> ›
+          <span>${esc(a.code||'')}</span>
+        </div>
+        <h1>${esc([a.merk,a.model].filter(Boolean).join(' '))}</h1>
+      </div>
+      <button class="btn ghost" onclick="ctrStoppen()">Later verder</button>
+    </div>
+
+    <ol class="tijdlijn">${CTR_BALK.map((b,i)=>`
+      <li class="tl ${ctrBalkStand(b.id)}">
+        <span class="tlbol">${ctrBalkStand(b.id)==='gedaan'
+          ? '<svg class="i s"><use href="#i-check"/></svg>' : (i+1)}</span>
+        <span class="tlnaam">${esc(b.naam)}</span>
+        <span class="tluitleg">${esc(b.uitleg)}</span>
+      </li>`).join('')}</ol>
+
+    <div class="card ctrkaart">
+      ${stap.inhoud()}
+      <div class="ctrvoet">${(stap.knoppen()||[]).length
+        ? stap.knoppen().map((k,i)=>`<button class="btn ${k.klasse||''}" data-knop="${i}">${esc(k.tekst)}</button>`).join('')
+        : '<span class="muted klein">Vul hierboven in wat er gevraagd wordt.</span>'}</div>
+    </div>`;
+
+  const knoppen=stap.knoppen()||[];
+  el.querySelectorAll('[data-knop]').forEach(b=>{
+    b.onclick=()=>knoppen[Number(b.dataset.knop)].doe(b);
+  });
+  if(stap.na) stap.na();
+}
+
+function ctrStoppen(){ ctr=null; showTab('controle'); }
+
 function ctrVraag(vraag, opties, sleutel){
-  const gekozen=ctr.antwoord[sleutel||vraag];
+  const k=sleutel||vraag;
+  const gekozen=ctr.antwoord[k];
+  /* Staat er ergens 'nee', dan wil je erbij kunnen zetten wát er dan mis is.
+     Anders staat er straks alleen "toetsenbord werkt niet" en mag de volgende
+     het zelf uitzoeken. */
+  const toon = gekozen && kleurVan(gekozen)!=='goed';
   return `<div class="clrij">
     <div class="clvraag">${esc(vraag)}</div>
     <div class="clknoppen">${opties.map(o=>`
       <button class="${gekozen===o?'gekozen '+kleurVan(o):''}"
-        onclick="ctrKies(${JSON.stringify(sleutel||vraag).replace(/"/g,'&quot;')}, ${JSON.stringify(o).replace(/"/g,'&quot;')})">${esc(o)}</button>`).join('')}
+        onclick="ctrKies(${JSON.stringify(k).replace(/"/g,'&quot;')}, ${JSON.stringify(o).replace(/"/g,'&quot;')})">${esc(o)}</button>`).join('')}
     </div>
+    ${toon?`<input class="vraagnotitie" placeholder="Wat is er precies aan de hand?"
+      value="${esc(ctr.notities[k]||'')}"
+      onchange="ctrNotitie(${JSON.stringify(k).replace(/"/g,'&quot;')}, this.value)">`:''}
   </div>`;
 }
+function ctrNotitie(sleutel, tekst){ ctr.notities[sleutel]=String(tekst||'').slice(0,120); }
 function kleurVan(opt){
   if(['Ja','Goed','Als nieuw','Gaaf','Stevig'].includes(opt)) return 'goed';
   if(['Ontbreekt','Onbekend'].includes(opt)) return 'mist';
@@ -1180,19 +1312,22 @@ function kleurVan(opt){
 }
 function ctrKies(sleutel, antwoord){
   ctr.antwoord[sleutel]=antwoord;
-  ctrBewaarVelden();
+  ctrVeldBewaar();
   ctrTeken();
 }
-function ctrBewaarVelden(){
-  ['c_serie','c_cpu','c_ram','c_ssd','c_scherm','c_gpu'].forEach(id=>{
-    const e=document.getElementById(id); if(!e) return;
-    if(id==='c_serie') ctr.serie=e.value.trim();
-  });
+/* Alles wat op het scherm staat terugzetten in het geheugen, zodat een
+   herteken je invoer niet opeet. */
+function ctrVeldBewaar(){
   const specs=ctrSpecsUitVelden();
   if(Object.keys(specs).length) ctr.specs=Object.assign({}, ctr.specs, specs);
   const t=document.getElementById('c_touch');
   if(t) ctr.specs['Touchscreen']=t.checked?'ja':'';
+  const acc=document.getElementById('c_accu');
+  if(acc) ctr.accu=acc.value.trim();
+  const not=document.getElementById('c_notitie');
+  if(not) ctr.notitie=not.value;
 }
+const ctrBewaarVelden=ctrVeldBewaar;
 function ctrSpecsUitVelden(){
   const uit={};
   const p=(id,naam)=>{ const e=document.getElementById(id); if(e && e.value.trim()) uit[naam]=e.value.trim(); };
@@ -1200,129 +1335,16 @@ function ctrSpecsUitVelden(){
   p('c_scherm','Scherm'); p('c_gpu','Videokaart');
   return uit;
 }
-function ctrGa(stap){ ctrBewaarVelden(); ctr.stap=stap; ctrTeken(); }
+function ctrSchoneSpecs(){
+  return Object.fromEntries(Object.entries(ctr.specs||{}).filter(([,w])=>String(w||'').trim()));
+}
+function ctrChecklist(){
+  return Object.keys(ctr.antwoord).map(k=>({v:k, a:ctr.antwoord[k], n:ctr.notities[k]||undefined}))
+    .concat(VISUEEL.filter(v=>ctr.punten[v.t]).map(v=>({v:v.t, a:ctr.punten[v.t].l})));
+}
+function ctrGa(stap){ ctrVeldBewaar(); ctr.stap=stap; ctrTeken(); }
 
 /* ---------- de stappen ---------- */
-
-const CTR_STAPPEN={
-
-  start:{ balk:'start', inhoud:()=>`
-    <p class="pv">${ctr.a.code?esc(ctr.a.code)+' · ':''}Sluit de lader aan en druk op de aanknop.</p>
-    ${ctrVraag('Start het apparaat op?', ['Ja','Nee'], 'start')}
-    <div class="clkop">Serienummer</div>
-    <input id="c_serie" value="${esc(ctr.serie)}" placeholder="Van de sticker op de onderkant">
-  `, knoppen:()=>{
-    const w=ctr.antwoord['start'];
-    if(w==='Ja')  return [{tekst:'Door naar de hardware', klasse:'actie', doe:()=>ctrGa('specs')}];
-    if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa('lampje')}];
-    return [];
-  }},
-
-  lampje:{ balk:'start', inhoud:()=>`
-    <p class="pv">Hij gaat niet aan. Eerst kijken of er nog leven in zit.</p>
-    ${ctrVraag('Brandt er een lampje als je de lader aansluit?', ['Ja','Nee'], 'lampje')}
-  `, knoppen:()=>{
-    const w=ctr.antwoord['lampje'];
-    if(w==='Nee') return [{tekst:'Naar de reset', klasse:'actie', doe:()=>ctrGa('reset')}];
-    if(w==='Ja')  return [{tekst:'Geheugen nakijken', klasse:'actie', doe:()=>ctrGa('geheugen')}];
-    return [];
-  }},
-
-  reset:{ balk:'start', inhoud:()=>`
-    <p class="pv">Geen lampje betekent meestal geen spanning, niet kapot. Deze reset haalt er verrassend veel weer bij.</p>
-    <ol class="stappenlijst">
-      <li>Haal de lader eruit en draai de onderkant open</li>
-      <li>Maak de accu los</li>
-      <li>Maak ook de bios-batterij los, het ronde knoopcelletje</li>
-      <li>Laat het twee minuten liggen zodat alles leegloopt</li>
-    </ol>
-    <div class="wekker" id="wekker">
-      <div class="wektijd" id="wekTijd">2:00</div>
-      <button class="btn ghost small" onclick="wekkerStart()">Twee minuten starten</button>
-    </div>
-  `, knoppen:()=>[{tekst:'Gedaan, weer in elkaar', klasse:'actie', doe:()=>ctrGa('geheugen')}] },
-
-  geheugen:{ balk:'start', inhoud:()=>`
-    <p class="pv">Een laptop zonder werkend geheugen geeft geen beeld en lijkt dood. Kijk het na voordat je hem afschrijft.</p>
-    ${ctrVraag('Zit er geheugen in, en zit het goed vast?', ['Ja','Nee'], 'geheugen')}
-    ${ctr.antwoord['geheugen']==='Nee'
-      ? '<p class="tip">Zet er geheugen in of druk het opnieuw aan, en probeer daarna opnieuw.</p>' : ''}
-    ${ctrVraag('Start hij nu op?', ['Ja','Nee'], 'nogmaals')}
-  `, knoppen:()=>{
-    const w=ctr.antwoord['nogmaals'];
-    if(w==='Ja')  return [{tekst:'Gelukt, door naar de hardware', klasse:'actie', doe:()=>ctrGa('specs')}];
-    if(w==='Nee') return [{tekst:'Slopen voor onderdelen', klasse:'', doe:()=>ctrGa('slopen')}];
-    return [];
-  }},
-
-  specs:{ balk:'hardware', inhoud:()=>{
-    const sp=ctr.specs||{};
-    return `
-    <p class="pv">Hij doet het. Noteer wat erin zit; dat komt straks op het label en in de webshop.</p>
-    <div class="row" style="margin-bottom:12px">
-      <button class="btn ghost small" onclick="specsZoeken(this)">
-        <svg class="i s"><use href="#i-sparkles"/></svg>Specificaties opzoeken</button>
-      <span class="muted klein" id="specsBron"></span>
-    </div>
-    <div class="grid">
-      <div><label>Serienummer</label><input id="c_serie" value="${esc(ctr.serie)}"></div>
-      <div><label>Processor</label><input id="c_cpu" value="${esc(sp['Processor']||'')}" placeholder="Intel Core i5-1135G7"></div>
-      <div><label>Geheugen</label><input id="c_ram" value="${esc(sp['Geheugen']||'')}" placeholder="16 GB"></div>
-      <div><label>Opslag</label><input id="c_ssd" value="${esc(sp['Opslag']||'')}" placeholder="512 GB SSD"></div>
-      <div><label>Scherm</label><input id="c_scherm" value="${esc(sp['Scherm']||'')}" placeholder="14 inch Full HD"></div>
-      <div><label>Videokaart</label><input id="c_gpu" value="${esc(sp['Videokaart']||'')}" placeholder="Alleen als hij er een heeft"></div>
-    </div>
-    <label style="margin-top:10px"><input type="checkbox" id="c_touch" style="width:auto"
-      ${String(sp['Touchscreen']||'').toLowerCase()==='ja'?'checked':''}> Heeft een touchscreen</label>`;
-  }, knoppen:()=>[{tekst:'Door naar de test', klasse:'actie', doe:()=>ctrGa('hardware')}] },
-
-  hardware:{ balk:'hardware', inhoud:()=>{
-    const alles=ctrHardwareVragen();
-    const open=alles.filter(q=>!ctr.antwoord[q.v]).length;
-    const eigen=ctrEigenVragen();
-    return `
-      <p class="pv">Loop alles na. Wat niet werkt gaat straks naar de reparatielijst.
-        ${open?`<b>Nog ${open} te doen.</b>`:'<b>Alles nagelopen.</b>'}</p>
-      ${HARDWARE_CHECKS.concat(ctrSpecVragen()).map(q=>ctrVraag(q.v, q.a)).join('')}
-      ${eigen.length?'<div class="clkop">Eigen controles</div>'+eigen.map(q=>ctrVraag(q.v, q.a)).join(''):''}`;
-  }, knoppen:()=>ctrHardwareVragen().every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] : [] },
-
-  visueel:{ balk:'visueel', inhoud:()=>{
-    const punten=ctrPunten();
-    return `
-      <p class="pv">Kijk het apparaat na en kies per onderdeel wat het dichtst in de buurt komt. Daar rolt de grade uit.</p>
-      ${VISUEEL.map(v=>`
-        <div class="clrij">
-          <div class="clvraag">${esc(v.t)}</div>
-          <div class="clknoppen">${v.opties.map(o=>`
-            <button class="${ctr.punten[v.t]===o.l?'gekozen '+(o.p===0?'goed':(o.p>=5?'fout':'mist')):''}"
-              onclick="ctrPunt(${JSON.stringify(v.t).replace(/"/g,'&quot;')}, ${JSON.stringify(o.l).replace(/"/g,'&quot;')}, ${o.p})">${esc(o.l)}</button>`).join('')}
-          </div>
-        </div>`).join('')}
-      ${ctrCompleet() ? `<div class="gradevak">
-        <div class="gradeletter">${gradeVan(punten)}</div>
-        <div>
-          <div class="gradekop">Grade ${gradeVan(punten)}</div>
-          <div class="muted klein">${esc((GRADES.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
-        </div>
-      </div>` : '<p class="muted klein" style="margin-top:12px">Kies bij alle vier iets, dan rekent hij de grade uit.</p>'}`;
-  }, knoppen:()=>ctrCompleet()
-      ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
-
-  slopen:{ balk:'klaar', inhoud:()=>`
-    <p class="pv">Hij gaat niet meer aan. Vink aan wat er nog wél goed is; dat gaat naar de onderdelenvoorraad en komt op het label te staan.</p>
-    ${SLOOPDELEN.map((d,i)=>`
-      <label class="deelrij">
-        <input type="checkbox" id="sl_${i}" data-naam="${esc(d)}" ${ctr.delen[d]?'checked':''}
-          onchange="ctrDeel(${JSON.stringify(d).replace(/"/g,'&quot;')}, this.checked)">
-        <span>${esc(d)}</span>
-      </label>`).join('')}
-    <div class="tip" style="margin-top:14px">${Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length
-      ? Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length+' onderdelen gaan naar de plank'
-      : 'Nog niets aangevinkt. Kan ook: dan gaat alleen het apparaat eruit.'}</div>
-  `, knoppen:()=>[{tekst:'Naar de onderdelen', klasse:'actie', doe:(k)=>ctrSlopen(k)}] }
-};
 
 /* De vragen die bij dit apparaat horen: de vaste lijst, de vragen die volgen
    uit wat erin zit, en de eigen controles van deze winkel. */
@@ -1344,6 +1366,212 @@ function ctrEigenVragen(){
 }
 function ctrHardwareVragen(){
   return HARDWARE_CHECKS.concat(ctrSpecVragen()).concat(ctrEigenVragen());
+}
+
+const MAX_NOTITIE=60;   /* wat er op een sticker past */
+
+const CTR_STAPPEN={
+
+  start:{ balk:'start', inhoud:()=>`
+    <h2><svg class="i"><use href="#i-laptop"/></svg>Gaat hij aan</h2>
+    <p class="pv">Sluit de lader aan en druk op de aanknop.</p>
+    ${ctrVraag('Start het apparaat op?', ['Ja','Nee'], 'start')}
+  `, knoppen:()=>{
+    const w=ctr.antwoord['start'];
+    if(w==='Ja')  return [{tekst:'Door naar de hardware', klasse:'actie', doe:()=>ctrGa('hardware')}];
+    if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa('lampje')}];
+    return [];
+  }},
+
+  lampje:{ balk:'start', inhoud:()=>`
+    <h2><svg class="i"><use href="#i-laptop"/></svg>Zit er nog leven in</h2>
+    <p class="pv">Hij gaat niet aan. Eerst kijken of er stroom bij komt.</p>
+    ${ctrVraag('Brandt er een lampje als je de lader aansluit?', ['Ja','Nee'], 'lampje')}
+  `, knoppen:()=>{
+    const w=ctr.antwoord['lampje'];
+    if(w==='Nee') return [{tekst:'Naar de reset', klasse:'actie', doe:()=>ctrGa('reset')}];
+    if(w==='Ja')  return [{tekst:'Geheugen nakijken', klasse:'actie', doe:()=>ctrGa('geheugen')}];
+    return [];
+  }},
+
+  reset:{ balk:'start', inhoud:()=>`
+    <h2><svg class="i"><use href="#i-wrench"/></svg>De reset</h2>
+    <p class="pv">Geen lampje betekent meestal geen spanning, niet kapot. Deze reset haalt er verrassend veel weer bij.</p>
+    <ol class="stappenlijst">
+      <li>Haal de lader eruit en draai de onderkant open</li>
+      <li>Maak de accu los</li>
+      <li>Maak ook de bios-batterij los, het ronde knoopcelletje</li>
+      <li>Laat het twee minuten liggen zodat alles leegloopt</li>
+    </ol>
+    <div class="wekker" id="wekker">
+      <div class="wektijd" id="wekTijd">2:00</div>
+      <button class="btn ghost small" onclick="wekkerStart()">Twee minuten starten</button>
+    </div>
+  `, knoppen:()=>[{tekst:'Gedaan, weer in elkaar', klasse:'actie', doe:()=>ctrGa('geheugen')}] },
+
+  geheugen:{ balk:'start', inhoud:()=>`
+    <h2><svg class="i"><use href="#i-cpu"/></svg>Geheugen</h2>
+    <p class="pv">Een laptop zonder werkend geheugen geeft geen beeld en lijkt dood. Kijk het na voordat je hem afschrijft.</p>
+    ${ctrVraag('Zit er geheugen in, en zit het goed vast?', ['Ja','Nee'], 'geheugen')}
+    ${ctr.antwoord['geheugen']==='Nee'
+      ? '<p class="tip">Zet er geheugen in of druk het opnieuw aan, en probeer daarna opnieuw.</p>' : ''}
+    ${ctrVraag('Start hij nu op?', ['Ja','Nee'], 'nogmaals')}
+  `, knoppen:()=>{
+    const w=ctr.antwoord['nogmaals'];
+    if(w==='Ja')  return [{tekst:'Gelukt, door naar de hardware', klasse:'actie', doe:()=>ctrGa('hardware')}];
+    if(w==='Nee') return [{tekst:'Leeghalen voor onderdelen', klasse:'', doe:()=>ctrGa('slopen')}];
+    return [];
+  }},
+
+  hardware:{ balk:'hardware', inhoud:()=>{
+    const alles=ctrHardwareVragen();
+    const open=alles.filter(q=>!ctr.antwoord[q.v]).length;
+    const eigen=ctrEigenVragen();
+    return `
+      <h2><svg class="i"><use href="#i-check"/></svg>Werkt alles</h2>
+      <p class="pv">Loop alles na. Wat niet werkt gaat straks naar de reparatielijst.
+        ${open?`<b>Nog ${open} te doen.</b>`:'<b>Alles nagelopen.</b>'}</p>
+      ${HARDWARE_CHECKS.concat(ctrSpecVragen()).map(q=>ctrVraag(q.v, q.a)).join('')}
+      ${eigen.length?'<div class="clkop">Eigen controles</div>'+eigen.map(q=>ctrVraag(q.v, q.a)).join(''):''}
+
+      <div class="clkop">Accu</div>
+      <div class="accurij">
+        <label>Hoeveel van de accu is er nog over?</label>
+        <div class="row">
+          <input id="c_accu" type="number" min="0" max="100" value="${esc(ctr.accu)}"
+            placeholder="bijvoorbeeld 87" style="max-width:130px" onchange="ctrVeldBewaar()">
+          <span class="muted">procent van nieuw</span>
+        </div>
+        <p class="muted klein" style="margin-top:6px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag.</p>
+      </div>
+
+      <div class="clkop">Notitie</div>
+      ${ctrNotitieVeld()}`;
+  }, knoppen:()=>ctrHardwareVragen().every(q=>ctr.antwoord[q.v])
+      ? [{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] : [] },
+
+  visueel:{ balk:'visueel', inhoud:()=>{
+    const punten=ctrPunten();
+    return `
+      <h2><svg class="i"><use href="#i-tag"/></svg>De staat</h2>
+      <p class="pv">Kijk het apparaat na en kies per onderdeel wat het dichtst in de buurt komt. Daar rolt de grade uit.</p>
+      ${VISUEEL.map(v=>`
+        <div class="clrij">
+          <div class="clvraag">${esc(v.t)}</div>
+          <div class="clknoppen">${v.opties.map(o=>`
+            <button class="${(ctr.punten[v.t]||{}).l===o.l?'gekozen '+(o.p===0?'goed':(o.p>=5?'fout':'mist')):''}"
+              onclick="ctrPunt(${JSON.stringify(v.t).replace(/"/g,'&quot;')}, ${JSON.stringify(o.l).replace(/"/g,'&quot;')}, ${o.p})">${esc(o.l)}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+      ${ctrCompleet() ? `<div class="gradevak">
+        <div class="gradeletter">${gradeVan(punten)}</div>
+        <div>
+          <div class="gradekop">Grade ${gradeVan(punten)}</div>
+          <div class="muted klein">${esc((GRADES.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
+        </div>
+      </div>` : '<p class="muted klein" style="margin-top:12px">Kies bij alle vier iets, dan rekent hij de grade uit.</p>'}`;
+  }, knoppen:()=>ctrCompleet()
+      ? [{tekst:'Door naar Windows', klasse:'actie', doe:()=>ctrGa('windows')}] : [] },
+
+  /* Windows duurt een half uur en je hoeft er niet bij te blijven. Zet hem aan,
+     leg hem weg, pak de volgende. Dit apparaat blijft ondertussen zichtbaar
+     onder Te controleren met de stand 'installeren'. */
+  windows:{ balk:'windows', inhoud:()=>`
+    <h2><svg class="i"><use href="#i-windows"/></svg>Windows installeren</h2>
+    <p class="pv">Zet de installatie aan en leg het apparaat weg. Je kunt gewoon door met de volgende; deze blijft in de lijst staan tot je hem hervat.</p>
+    <ol class="stappenlijst">
+      <li>Start op vanaf de installatiestick</li>
+      <li>Verwijder de bestaande partities en installeer schoon</li>
+      <li>Laat de installatie lopen</li>
+    </ol>
+    <div class="tip">Pas als Windows draait kun je de specificaties uitlezen. Daarom staat die stap hierna en niet ervoor.</div>
+  `, knoppen:()=>[
+      {tekst:'Uitvoeren en volgende pakken', klasse:'actie', doe:(k)=>ctrInstalleren(k)},
+      {tekst:'Al klaar, specificaties uitlezen', klasse:'', doe:()=>ctrGa('specs')}
+  ] },
+
+  specs:{ balk:'specs', inhoud:()=>{
+    const sp=ctr.specs||{};
+    const gevonden=Object.entries(sp).filter(([,w])=>String(w||'').trim());
+    return `
+      <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
+      <p class="pv">Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op en leg de verschillen naast wat je op het scherm ziet.</p>
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn ghost small" onclick="specsZoeken(this)">
+          <svg class="i s"><use href="#i-sparkles"/></svg>Specificaties opzoeken</button>
+        <span class="muted klein" id="specsBron">${esc(ctr.specsBron||'')}</span>
+      </div>
+
+      ${gevonden.length ? `<div class="specvak">
+        <div class="hkkop">Wat we nu weten</div>
+        <div class="specrooster">${gevonden.map(([k,w])=>`
+          <div class="specveld"><div class="sl">${esc(k)}</div><div class="sw">${esc(w)}</div></div>`).join('')}</div>
+      </div>` : ''}
+
+      <div class="grid">
+        <div><label>Processor</label><input id="c_cpu" value="${esc(sp['Processor']||'')}" placeholder="Intel Core i5-1135G7" onchange="ctrVeldBewaar()"></div>
+        <div><label>Geheugen</label><input id="c_ram" value="${esc(sp['Geheugen']||'')}" placeholder="16 GB" onchange="ctrVeldBewaar()"></div>
+        <div><label>Opslag</label><input id="c_ssd" value="${esc(sp['Opslag']||'')}" placeholder="512 GB SSD" onchange="ctrVeldBewaar()"></div>
+        <div><label>Scherm</label><input id="c_scherm" value="${esc(sp['Scherm']||'')}" placeholder="14 inch Full HD" onchange="ctrVeldBewaar()"></div>
+        <div><label>Videokaart</label><input id="c_gpu" value="${esc(sp['Videokaart']||'')}" placeholder="Alleen als hij er een heeft" onchange="ctrVeldBewaar()"></div>
+      </div>
+      <label style="margin-top:10px"><input type="checkbox" id="c_touch" style="width:auto"
+        ${String(sp['Touchscreen']||'').toLowerCase()==='ja'?'checked':''} onchange="ctrVeldBewaar()"> Heeft een touchscreen</label>`;
+  }, knoppen:()=>[{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] },
+
+  slopen:{ balk:'klaar', inhoud:()=>`
+    <h2><svg class="i"><use href="#i-recycle"/></svg>Leeghalen</h2>
+    <p class="pv">Hij gaat niet meer aan. Vink aan wat er nog wél goed is; dat gaat naar de onderdelenvoorraad en komt op het label te staan.</p>
+    <div class="deelrooster">${SLOOPDELEN.map((d,i)=>`
+      <label class="deelrij">
+        <input type="checkbox" id="sl_${i}" data-naam="${esc(d)}" ${ctr.delen[d]?'checked':''}
+          onchange="ctrDeel(${JSON.stringify(d).replace(/"/g,'&quot;')}, this.checked)">
+        <span>${esc(d)}</span>
+      </label>`).join('')}</div>
+    <div class="clkop">Notitie</div>
+    ${ctrNotitieVeld()}
+    <div class="tip" style="margin-top:14px">${Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length
+      ? Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length+' onderdelen gaan naar de plank'
+      : 'Nog niets aangevinkt. Kan ook: dan gaat alleen het apparaat eruit.'}</div>
+  `, knoppen:()=>[{tekst:'Naar de onderdelen', klasse:'actie', doe:(k)=>ctrSlopen(k)}] }
+};
+
+/* Een notitie mag maar zo lang zijn als er op de sticker past. Liever een
+   afgekapte zin dan een label waar de helft van afvalt. */
+function ctrNotitieVeld(){
+  const over=MAX_NOTITIE-(ctr.notitie||'').length;
+  return `<div class="notitievak">
+    <input id="c_notitie" maxlength="${MAX_NOTITIE}" value="${esc(ctr.notitie||'')}"
+      placeholder="Bijvoorbeeld: kleine deuk linksachter" oninput="ctrNotitieTel()">
+    <span class="tekens ${over<10?'krap':''}" id="notitieTel">${over}</span>
+  </div>
+  <p class="muted klein">Komt op het label te staan, dus hou het kort.</p>`;
+}
+function ctrNotitieTel(){
+  const e=document.getElementById('c_notitie'), t=document.getElementById('notitieTel');
+  if(!e||!t) return;
+  ctr.notitie=e.value;
+  const over=MAX_NOTITIE-e.value.length;
+  t.textContent=over; t.classList.toggle('krap', over<10);
+}
+
+async function ctrInstalleren(knop){
+  const a=ctr.a;
+  ctrVeldBewaar();
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten').update({
+      status:'installeren', stap:'windows',
+      checklist:ctrChecklist(), specs:ctrSchoneSpecs(),
+      accu:Number(ctr.accu)||null, notitie:ctr.notitie||null,
+      grade:gradeVan(ctrPunten()), punten:ctrPunten(),
+      bijgewerkt_op:new Date().toISOString()
+    }).eq('id',a.id);
+    if(error) throw new Error('Opslaan mislukt');
+    ctr=null;
+    await allesLaden();
+    showTab('controle');
+    toast('Staat te installeren. Pak de volgende maar.', true);
+  });
 }
 
 function ctrPunt(onderdeel, keuze, punten){
@@ -1408,12 +1636,11 @@ async function specsZoeken(knop){
     zet('c_gpu', sp['Videokaart']);
     const t=document.getElementById('c_touch');
     if(t && String(sp['Touchscreen']||'').toLowerCase()==='ja') t.checked=true;
-    ctrBewaarVelden();
-
-    const bron=document.getElementById('specsBron');
-    if(bron) bron.textContent = uit.melding ? uit.melding
-      : (uit.bron==='lijst' ? 'Uit de modellenlijst. Kijk het even na.'
-                            : 'Opgezocht met AI en onthouden. Kijk het even na.');
+    ctrVeldBewaar();
+    ctr.specsBron = uit.melding ? uit.melding
+      : (uit.bron==='lijst' ? 'Uit de modellenlijst. Leg het naast wat Windows zegt.'
+                            : 'Opgezocht met AI en onthouden. Leg het naast wat Windows zegt.');
+    ctrTeken();
   });
 }
 
@@ -1435,20 +1662,18 @@ function ctrDefecten(){
 
 async function ctrAfronden(knop){
   const a=ctr.a;
+  ctrVeldBewaar();
   const defecten=ctrDefecten();
   const punten=ctrPunten();
   const grade=gradeVan(punten);
   const status=defecten.length ? 'te_repareren' : 'klaar';
-  const lijst=Object.keys(ctr.antwoord).map(k=>({v:k, a:ctr.antwoord[k]}))
-    .concat(VISUEEL.filter(v=>ctr.punten[v.t]).map(v=>({v:v.t, a:ctr.punten[v.t].l})));
-  ctrBewaarVelden();
-  const specs=Object.fromEntries(Object.entries(ctr.specs).filter(([,w])=>String(w||'').trim()));
+  const specs=ctrSchoneSpecs();
 
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten').update({
-      status, checklist:lijst, specs, grade, punten,
+      status, checklist:ctrChecklist(), specs, grade, punten,
       defecten:defecten.map(d=>d.vraag),
-      serienummer:ctr.serie||a.serienummer||null,
+      accu:Number(ctr.accu)||null, notitie:ctr.notitie||null,
       stap:'af', bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
@@ -1460,7 +1685,7 @@ async function ctrAfronden(knop){
       });
     }
 
-    sluit(); await allesLaden();
+    ctr=null; await allesLaden(); showTab('controle');
     const bij=apparaten.find(x=>x.id===a.id);
     toast(status==='klaar'
       ? 'Goedgekeurd, grade '+grade
@@ -1472,7 +1697,7 @@ async function ctrAfronden(knop){
 async function ctrSlopen(knop){
   const a=ctr.a;
   const goed=Object.keys(ctr.delen).filter(k=>ctr.delen[k]);
-  ctrBewaarVelden();
+  ctrVeldBewaar();
   await bezig(knop, async()=>{
     if(goed.length){
       const rijen=goed.map(n=>({
@@ -1483,14 +1708,13 @@ async function ctrSlopen(knop){
       const {error}=await sb.from('refurbish_onderdelen').insert(rijen);
       if(error) throw new Error('Opslaan mislukt');
     }
-    const lijst=Object.keys(ctr.antwoord).map(k=>({v:k, a:ctr.antwoord[k]}));
     await sb.from('refurbish_apparaten').update({
-      status:'repurpose', checklist:lijst, goede_delen:goed,
-      serienummer:ctr.serie||a.serienummer||null,
+      status:'repurpose', checklist:ctrChecklist(), goede_delen:goed,
+      notitie:ctr.notitie||null,
       stap:'af', bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
 
-    sluit(); await allesLaden();
+    ctr=null; await allesLaden(); showTab('donoren');
     toast(goed.length?goed.length+' onderdelen naar de plank':'Apparaat afgeschreven', true);
     const bij=apparaten.find(x=>x.id===a.id);
     if(bij) labelsTonen(bij.id);
@@ -1500,10 +1724,10 @@ async function ctrSlopen(knop){
 /* Het oude sloopscherm is vervangen door de stap hierboven, maar je moet een
    apparaat dat al op slopen staat nog wel kunnen openen. */
 function sloopOpen(a){
-  ctr={a, stap:'slopen', antwoord:{}, punten:{}, delen:{},
-       specs:Object.assign({}, a.specs||{}), serie:a.serienummer||''};
+  ctr={a, stap:'slopen', antwoord:{}, punten:{}, delen:{}, notities:{},
+       specs:Object.assign({}, a.specs||{}), accu:a.accu||'', notitie:a.notitie||''};
   (a.goede_delen||[]).forEach(d=>ctr.delen[d]=true);
-  ctrTeken();
+  showTab('controleren');
 }
 
 /* ═══════════════ reparatie ═══════════════ */

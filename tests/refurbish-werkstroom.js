@@ -88,12 +88,12 @@ setTimeout(async()=>{
 
   // eigen checklistvraag komt terug in de hardwarestap
   w.eval("appOpen('a1'); ctrKies('start','Ja'); ctrGa('hardware')");
-  const hw=d.getElementById('venster').innerHTML;
+  const hw=d.getElementById('ctrPagina').innerHTML;
   ok('eigen controle in het pad', /dockingpoort/.test(hw));
   ok('touchscreenvraag bij een touchscreen', /touchscreen overal/.test(hw));
 
   // reparatiescherm
-  w.eval("sluit(); appOpen('a2')");
+  w.eval("ctr=null; sluit(); appOpen('a2')");
   const rep=d.getElementById('venster').innerHTML;
   ok('reparatiescherm opent', /Wat er mis is/.test(rep));
   ok('defect getoond', /toetsenbord/i.test(rep));

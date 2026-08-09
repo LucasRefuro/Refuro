@@ -47,8 +47,8 @@ const html=fs.readFileSync(bron('refurbish/index.html'),'utf8')
 const dom=new JSDOM(html,{runScripts:'dangerously', url:'https://storvo.app/refurbish/', pretendToBeVisual:true});
 const w=dom.window;
 const fouten=[]; w.onerror=(m)=>fouten.push(String(m));
-const tekst=()=>w.document.getElementById('venster').textContent;
-const knop=(deel)=>[...w.document.querySelectorAll('#vensterKnoppen button')]
+const tekst=()=>w.document.getElementById('ctrPagina').textContent;
+const knop=(deel)=>[...w.document.querySelectorAll('#ctrPagina .ctrvoet button')]
   .find(b=>b.textContent.includes(deel));
 
 setTimeout(async()=>{
@@ -63,7 +63,9 @@ setTimeout(async()=>{
   // ── pad 1: gaat niet aan, geen lampje, reset, blijft dood ──
   w.eval("appOpen('a1')");
   ok('stap 1 vraagt of hij opstart', /Start het apparaat op/.test(tekst()));
-  ok('stapbalk zichtbaar', !!d.querySelector('.stapbalk .stapbol.nu'));
+  ok('tijdlijn zichtbaar', !!d.querySelector('.tijdlijn .tl.nu'));
+  ok('zes stappen in de tijdlijn', d.querySelectorAll('.tijdlijn .tl').length===6);
+  ok('knoppen staan rechts', w.getComputedStyle(d.querySelector('.ctrvoet')).justifyContent==='flex-end');
   ok('geen knop zonder antwoord', !knop('Door') && !knop('Uitzoeken'));
 
   w.eval("ctrKies('start','Nee')");
@@ -83,8 +85,8 @@ setTimeout(async()=>{
   w.eval("ctrKies('geheugen','Nee')");
   ok('tip bij geen geheugen', /Zet er geheugen in/.test(tekst()));
   w.eval("ctrKies('nogmaals','Nee')");
-  knop('Slopen').click();
-  ok('sloopstap met onderdelen', /Nog goed|Vink aan wat er nog/.test(tekst()));
+  knop('Leeghalen').click();
+  ok('sloopstap met onderdelen', /Vink aan wat er nog/.test(tekst()));
   w.eval("ctrDeel('Scherm',true); ctrDeel('Accu',true)");
   ok('teller onderdelen', /2 onderdelen gaan naar de plank/.test(tekst()));
   await w.eval('ctrSlopen(document.createElement("button"))');
@@ -97,13 +99,11 @@ setTimeout(async()=>{
   ok('goede delen vastgelegd', !!sloop && sloop[2].goede_delen.length===2);
 
   // ── pad 2: start op, alles goed, grade A ──
-  w.eval("sluit(); appOpen('a2'); ctrKies('start','Ja')");
+  w.eval("appOpen('a2'); ctrKies('start','Ja')");
   knop('Door naar de hardware').click();
-  ok('specificatiestap', /Noteer wat erin zit/.test(tekst()));
-  d.getElementById('c_cpu').value='Intel Core i5-1235U';
-  d.getElementById('c_ram').value='16 GB';
-  knop('Door naar de test').click();
   ok('hardwarestap', /Werkt het toetsenbord/.test(tekst()));
+  ok('accuveld in de hardwarestap', !!d.getElementById('c_accu'));
+  ok('notitieveld in de hardwarestap', !!d.getElementById('c_notitie'));
   ok('nog niet door zonder antwoorden', !knop('Door naar de staat'));
   ok('geen touchscreenvraag zonder touchscreen', !/touchscreen overal/.test(tekst()));
   w.eval("HARDWARE_CHECKS.forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken();");
@@ -113,6 +113,19 @@ setTimeout(async()=>{
   ok('nog geen grade', !d.querySelector('.gradeletter'));
   w.eval("ctrPunt('Behuizing','Als nieuw',0); ctrPunt('Scherm','Gaaf',0); ctrPunt('Toetsenbord','Letters gaaf',0); ctrPunt('Scharnieren en deksel','Stevig',0)");
   ok('grade A bij nul punten', d.querySelector('.gradeletter').textContent==='A');
+  knop('Door naar Windows').click();
+  ok('windowsstap', /Windows installeren/.test(tekst()));
+  d.getElementById('c_accu');
+  await w.eval('ctrInstalleren(document.createElement("button"))');
+  const inst=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
+  ok('gaat op installeren', inst[2].status==='installeren');
+  ok('grade nu al bewaard', inst[2].grade==='A');
+  // hervatten pakt op bij de specificaties
+  w.eval("apparaten.find(x=>x.id==='a2').status='installeren'; appOpen('a2')");
+  ok('hervat bij de specificaties', /Windows draait/.test(tekst()));
+  d.getElementById('c_cpu').value='Intel Core i5-1235U';
+  d.getElementById('c_ram').value='16 GB';
+  w.eval('ctrVeldBewaar()');
   await w.eval('ctrAfronden(document.createElement("button"))');
   const af=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('status klaar', af[2].status==='klaar');
@@ -127,7 +140,7 @@ setTimeout(async()=>{
   ok('barst telt zwaar door', w.eval('gradeVan(8)')==='C');
 
   // ── pad 3: werkt, maar een kapotte toets → reparatie ──
-  w.eval(`sluit();
+  w.eval(`
     apparaten.push({id:'a3', code:'A0003', merk:'Lenovo', model:'ThinkPad T14',
       categorie:'Laptop', specs:{}, status:'te_controleren', checklist:[], defecten:[], goede_delen:[],
       aangemaakt_op:new Date().toISOString()});
@@ -136,27 +149,31 @@ setTimeout(async()=>{
     ctr.antwoord['Werkt het toetsenbord, alle toetsen?']='Nee';
     ctrGa('visueel');
     ctrPunt('Behuizing','Lichte gebruikssporen',1); ctrPunt('Scherm','Gaaf',0);
-    ctrPunt('Toetsenbord','Licht sleets',1); ctrPunt('Scharnieren en deksel','Stevig',0);`);
+    ctrPunt('Toetsenbord','Licht sleets',1); ctrPunt('Scharnieren en deksel','Stevig',0);
+    ctrNotitie('Werkt het toetsenbord, alle toetsen?','spatiebalk blijft hangen');`);
   ok('grade B bij twee punten', d.querySelector('.gradeletter').textContent==='A');
   await w.eval('ctrAfronden(document.createElement("button"))');
   const rep=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('kapotte toets stuurt naar reparatie', rep[2].status==='te_repareren');
   ok('defect vastgelegd', rep[2].defecten.some(x=>/toetsenbord/i.test(x)));
+  ok('notitie bij het defect bewaard', rep[2].checklist.some(r=>r.n==='spatiebalk blijft hangen'));
   ok('grade blijft berekend', rep[2].grade==='A');
 
   // ── label na afloop ──
-  w.eval(`sluit();
+  w.eval(`
     apparaten[0].status='repurpose'; apparaten[0].goede_delen=['Scherm','Accu'];
     labelsTonen('a1');`);
   const et=d.getElementById('venster').innerHTML;
   ok('label onderdelen', /ONDERDELEN/.test(et) && /Nog goed/.test(et) && /· Accu/.test(et));
-  w.eval(`sluit();
+  w.eval(`
     apparaten[1].status='klaar'; apparaten[1].grade='A';
-    apparaten[1].specs={Processor:'i5', Geheugen:'16 GB'};
+    apparaten[1].specs={Processor:'i5', Geheugen:'16 GB'}; apparaten[1].accu=88;
     labelsTonen('a2');`);
   const et2=d.getElementById('venster').innerHTML;
   ok('label met grade', /etgrade">A</.test(et2) && /KLAAR VOOR VERKOOP/.test(et2));
   ok('label met specs', /RAM: 16 GB/.test(et2));
+  ok('accu op het label', /Accu: 88%/.test(et2));
+  ok('code onder de qr', /etqr[\s\S]*etcode/.test(et2));
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);
