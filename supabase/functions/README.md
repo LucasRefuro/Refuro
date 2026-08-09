@@ -37,6 +37,8 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
 | `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
 | `productfotos` | nee | Haalt officiële productfoto's op bij Icecat |
+| `prijsadvies` | nee | Prijsvoorstel uit eigen geschiedenis en een marktschatting |
+| `scherm-hoeken` | nee | Zoekt met AI de vier hoeken van een beeldscherm in een foto |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.

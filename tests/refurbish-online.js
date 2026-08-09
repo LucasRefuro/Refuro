@@ -14,7 +14,8 @@ window.__db={
      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}
   ],
   refurbish_onderdelen:[], refurbish_checklists:[], refurbish_orders:[], hardware_modellen:[],
-  refurbish_instellingen:{team_id:'t1', accu_min:80, ad_sjabloon:null, ad_toon:'zakelijk en eerlijk'},
+  refurbish_instellingen:{team_id:'t1', accu_min:80, ad_sjabloon:null, ad_toon:'zakelijk en eerlijk', inscannen:false},
+  hardware_locaties:[{id:'l1', team_id:'t1', naam:'Winkel', soort:'winkel', volgorde:0}],
   refurbish_fotos:[
     {id:'f1', team_id:'t1', apparaat_id:'a1', aanzicht:'dicht', pad:'t1/a1/dicht-1.jpg', volgorde:0},
     {id:'f2', team_id:'t1', apparaat_id:'a1', aanzicht:'open',  pad:'t1/a1/open-1.jpg',  volgorde:1}
@@ -42,6 +43,13 @@ window.__fetches=[];
 const echteFetch=window.fetch;
 window.fetch=async(url, opties)=>{
   window.__fetches.push([String(url), opties]);
+  if(String(url).includes('/prijsadvies')){
+    return {ok:true, json:async()=>({ok:true, advies:349.95, bron:'markt',
+      uitleg:'Schatting van de Nederlandse refurbished-markt.',
+      eigen:null, markt:{advies:350, laag:299, hoog:399, zeker:'midden'},
+      links:[{naam:'Back Market', url:'https://x'},{naam:'Refurbed', url:'https://y'}],
+      let_op:'Een schatting, geen actuele prijzen.'})};
+  }
   if(String(url).includes('/advertentie')){
     return {ok:true, json:async()=>({ok:true, titel:'HP EliteBook 840 G9 · i5 · 16 GB',
       tekst:'Specificaties\\n- Processor: i5', zoekwoorden:['elitebook','i5']})};
@@ -143,10 +151,12 @@ setTimeout(async()=>{
   await w.eval('onlPubliceren(document.createElement("button"))');
   ok('zonder prijs niet gepubliceerd', !w.__geschreven.some(g=>g[0]==='hardware'));
 
-  w.eval('onlPrijsvoorstel(document.createElement("button"))');
-  ok('prijsvoorstel ingevuld', Number(d().getElementById('onl_prijs').value)>0);
-  ok('voorstel is meer dan de inkoop', Number(d().getElementById('onl_prijs').value)>75);
-  ok('bron van het voorstel genoemd', /Ruwe schatting|Wat je zelf vroeg/.test(pag()));
+  await w.eval('onlPrijsvoorstel(document.createElement("button"))');
+  ok('prijsvoorstel ingevuld', Number(d().getElementById('onl_prijs').value)===349.95);
+  ok('bron van het voorstel genoemd', /refurbished-markt/.test(pag()));
+  ok('prijsband getoond', /299,00/.test(pag()) && /399,00/.test(pag()));
+  ok('zoeklinks erbij', /Back Market/.test(pag()) && /Refurbed/.test(pag()));
+  ok('waarschuwing dat het een schatting is', /schatting, geen actuele prijzen/.test(pag()));
 
   d().getElementById('onl_prijs').value='349';
   w.eval('onlVeld()');
@@ -162,6 +172,28 @@ setTimeout(async()=>{
   }
   const bij=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('apparaat op overgedragen', !!bij && bij[2].status==='overgedragen');
+
+  // ── instellingen: locaties en inscannen ──
+  ok('inscanschakelaar', !!d().getElementById('in_scan'));
+  ok('locatielijst', /Winkel/.test(d().getElementById('locLijst').innerHTML));
+  d().getElementById('loc_naam').value='Vitrine voor';
+  await w.eval('locToevoegen(document.createElement("button"))');
+  const loc=w.__geschreven.find(g=>g[0]==='hardware_locaties' && g[1]==='insert');
+  ok('locatie toegevoegd', !!loc && loc[2].naam==='Vitrine voor');
+  await w.eval('scanInstelling(true)');
+  const sc=w.__geschreven.filter(g=>g[0]==='refurbish_instellingen').pop();
+  ok('inscannen aangezet', !!sc && sc[2].inscannen===true);
+  ok('accugrens blijft staan', !!sc && sc[2].accu_min===80);
+
+  // met inscannen aan gaat een gepubliceerd toestel op onderweg
+  w.eval("onlineZetten('a1')");
+  await new Promise(r=>setTimeout(r,60));
+  d().getElementById('onl_prijs').value='349';
+  w.eval('onlVeld()');
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  const hw2=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='insert').pop();
+  ok('gepubliceerd als onderweg', hw2[2].status==='onderweg');
+  ok('nummer meegegeven om te scannen', hw2[2].code==='A0001');
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);

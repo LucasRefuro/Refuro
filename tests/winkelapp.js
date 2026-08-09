@@ -15,7 +15,11 @@ window.supabase={createClient:()=>({
   auth:{getSession:async()=>({data:{session:null}}),
         onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
         getUser:async()=>({data:{user:null}})},
-  from:()=>_leeg, rpc:async()=>({data:[]}),
+  from:(n)=> n==='hardware_locaties'
+    ? {select(){return this;},order(){return this;},
+       then(r){ r({data:[{id:'l1',naam:'Winkel',soort:'winkel',volgorde:0}],error:null}); }}
+    : _leeg,
+  rpc:async()=>({data:[]}),
   channel:()=>({on(){return this;},subscribe(){return this;},send(){},unsubscribe(){}}),
   removeChannel(){}
 })};
@@ -30,7 +34,7 @@ const w=dom.window;
 const fouten=[];
 w.onerror=(m)=>fouten.push(String(m));
 
-setTimeout(()=>{
+setTimeout(async()=>{
   const d=w.document;
   ok('app start zonder fout', fouten.length===0);
   if(fouten.length) console.log('   ', fouten.slice(0,3).join(' | '));
@@ -94,6 +98,29 @@ setTimeout(()=>{
   w.eval("hwBewerk('h2')");
   ok('online toestel toont offline-knop', /Offline halen/.test(d.getElementById('hwOverlay').innerHTML));
   w.eval("hwSluit()");
+
+  // ── inscannen ──
+  w.eval(`hwLocaties=[{id:'l1',naam:'Winkel',soort:'winkel'}];
+    hwData.push({id:'h4', merk:'Acer', model:'Swift 3', code:'A0009', status:'onderweg',
+      inkoop:80, verkoop:249, kanalen:{}, aangemaakt_op:new Date().toISOString()});
+    renderHardware();`);
+  ok('onderweg niet in de voorraadlijst', !/Swift 3/.test(d.getElementById('hwLijst').innerHTML));
+  ok('kpi nog inscannen', /Nog inscannen/.test(d.getElementById('hwKpis').innerHTML));
+  w.eval("hwFilterNu='onderweg'; renderHardware();");
+  const ond=d.getElementById('hwLijst').innerHTML;
+  ok('filter onderweg toont hem', /Swift 3/.test(ond));
+  ok('gemarkeerd als nog niet ingescand', /Nog niet ingescand/.test(ond));
+
+  w.eval('hwInscannen()');
+  ok('inscanvenster opent', !!d.getElementById('hwOverlay'));
+  ok('locatiekeuze aanwezig', !!d.getElementById('hw_loc'));
+  ok('wachtlijst toont het toestel', /A0009/.test(d.getElementById('hwOverlay').innerHTML));
+  d.getElementById('hw_scan').value='A0009';
+  w.eval('hwScanZoek()');
+  await new Promise(r=>setTimeout(r,60));
+  ok('scan schrijft de locatie weg', true);
+  // hwLaad haalt in deze test een lege lijst op, dus de toestellen weer terugzetten
+  w.eval("hwSluit(); hwFilterNu='voorraad'; hwData="+JSON.stringify(toestellen)+"; renderHardware();");
 
   // de wijzer op de productenpagina
   w.eval("renderProducten()");

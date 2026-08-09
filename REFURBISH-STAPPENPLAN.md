@@ -220,19 +220,37 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
      scant een QR, de telefoon opent een lijstje met die zes en je werkt ze af.
      Die telefoon hoeft niet in te loggen; hij werkt op een code die een half
      uur geldig is.
-   - **De prijs**, met een voorstel op basis van wat je zelf eerder voor
-     hetzelfde model vroeg. Heb je dat nog niet, dan een ruwe opslag op de
-     inkoop. Er staat altijd bij waar het getal vandaan komt.
+   - **De prijs**, met een voorstel uit drie bronnen: wat jij zelf eerder voor
+     hetzelfde model vroeg, een schatting van de Nederlandse refurbished-markt,
+     en zoeklinks naar Back Market, Refurbed, Marktplaats en Tweakers om het in
+     tien seconden na te lopen. Je eigen prijzen wegen het zwaarst; er staat
+     altijd bij waar het getal vandaan komt.
+
+     Wat we bewust *niet* doen is die webshops leegtrekken. Dat mag niet van hun
+     voorwaarden en het breekt bij elke wijziging aan hun website, precies op het
+     moment dat je het nodig hebt. Vandaar de links.
    - **Fabrieksfoto's** uit Icecat: de catalogus waar fabrikanten zelf hun
      productfoto's in zetten. Die mag je gebruiken, in tegenstelling tot
      willekeurige plaatjes van internet. Je moet er wel een gratis account voor
      maken; zie onderaan.
-   - **Het scherm recht zetten.** Bij de foto *open, van voren* staat een knop
-     *Recht zetten*. Je sleept de vier hoeken van het beeldscherm op hun plek en
-     de foto wordt rechtgetrokken, zodat het scherm haaks in beeld staat zoals in
-     een webshop. De andere foto's mogen gewoon een hoek hebben; dat maakt ze
-     juist echt.
+   - **Het scherm recht zetten.** Bij de foto *open, van voren* staat *Recht
+     zetten*. De AI kijkt naar de foto en zet de vier punten op de hoeken van het
+     beeldscherm; jij kijkt het na en sleept ze desnoods bij. Daarna wordt de
+     foto rechtgetrokken zodat het scherm haaks in beeld staat, zoals in een
+     webshop. De andere foto's mogen gewoon een hoek hebben; dat maakt ze juist
+     echt.
+
+     Waarom het bijgesteld moet kunnen worden: het antwoord is meestal goed en
+     soms een centimeter naast, en dat merk je anders pas als de advertentie
+     online staat.
    - **De kanalen**: webshop, Marktplaats, winkel. Daarna **Publiceren**.
+
+   **Inscannen.** Publiceren en in de winkel leggen zijn twee verschillende
+   dingen; daartussen zit een busrit en een doos. Zet je bij Instellingen
+   *Inscannen* aan, dan komt een gepubliceerd toestel op **onderweg** te staan.
+   Pas als iemand in Storvo het nummer scant en een locatie kiest, telt hij mee
+   in de voorraad. Locaties beheer je op dezelfde pagina: winkel, magazijn,
+   werkplaats, vitrine voor.
 
    Daarna gaat het apparaat naar de winkelvoorraad in Storvo. Daar zit de knop
    om hem daadwerkelijk op Shopify te zetten, want daar zit ook de prijs.

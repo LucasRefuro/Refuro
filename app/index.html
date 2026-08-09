@@ -271,6 +271,13 @@
   .hwact{white-space:nowrap;}
   .kpi.hwattentie .v{color:var(--amber-tekst);}
   .hwoud{color:var(--red-tekst); font-weight:700;}
+  .onderweg{font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
+    background:var(--amber-soft); color:var(--amber-tekst); white-space:nowrap;}
+  .wachtlijst{margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);}
+  .wachtrij2{display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    padding:11px 14px; margin-bottom:6px; border:1.5px solid var(--border); border-radius:12px;
+    background:var(--card); font-family:inherit; font-size:14px; cursor:pointer;}
+  .wachtrij2:hover{background:var(--soft-2);}
   .winst{color:var(--green-tekst);}
   .verlies{color:var(--red-tekst);}
   /* Waar staat hij: kleine labels, elk kanaal een eigen kleur zodat je in één
@@ -1822,10 +1829,12 @@
     <div class="row" style="gap:10px">
       <div class="periodesel" id="hwFilter">
         <button data-f="voorraad" class="active">Op voorraad</button>
+        <button data-f="onderweg">Onderweg</button>
         <button data-f="online">Staat online</button>
         <button data-f="oud">Langer dan 30 dagen</button>
         <button data-f="verkocht">Verkocht</button>
       </div>
+      <button class="btn" onclick="hwInscannen()"><svg class="i"><use href="#i-scan"/></svg>Inscannen</button>
       <button class="btn actie" onclick="hwNieuw()"><svg class="i"><use href="#i-plus"/></svg>Toestel toevoegen</button>
     </div>
   </div>
@@ -5516,6 +5525,74 @@ function moduleAan(naam){
 }
 const HW_STAAT={A:'Als nieuw', B:'Gebruikt', C:'Zichtbare gebruikssporen'};
 
+let hwLocaties=[];
+function hwLocatieNaam(h){
+  const l=hwLocaties.find(x=>x.id===h.locatie_id);
+  return l?l.naam:null;
+}
+
+/* Inscannen: het toestel ligt pas echt in de winkel als iemand het label heeft
+   gescand en een plek heeft gekozen. Tot dat moment staat het op onderweg. */
+function hwInscannen(){
+  if(!hwLocaties.length){
+    toast('Voeg eerst een locatie toe bij Refurbishen → Instellingen','let-op'); return;
+  }
+  const wacht=hwData.filter(h=>h.status==='onderweg');
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='hwOverlay';
+  ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
+  ov.innerHTML=`<div class="popup groot">
+    <h3>Toestel inscannen</h3>
+    <p class="pv">Scan het label of typ het nummer. Kies waar je hem neerlegt; daarna telt hij mee in je voorraad.</p>
+    <label>Nummer van het label</label>
+    <input id="hw_scan" placeholder="Bijvoorbeeld A0007" autocomplete="off"
+      onkeydown="if(event.key==='Enter') hwScanZoek()">
+    <label style="margin-top:14px">Waar leg je hem</label>
+    <select id="hw_loc">${hwLocaties.map(l=>
+      `<option value="${l.id}">${esc(l.naam)}</option>`).join('')}</select>
+    <div class="acts">
+      <button class="btn actie" onclick="hwScanZoek()">Inscannen</button>
+      <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
+    </div>
+    ${wacht.length?`<div class="wachtlijst">
+      <div class="hkkop">Nog niet ingescand (${wacht.length})</div>
+      ${wacht.map(h=>`<button class="wachtrij2" onclick="hwScanNu('${h.id}')">
+        <span class="mono">${esc(h.code||'—')}</span>
+        <span>${esc([h.merk,h.model].filter(Boolean).join(' '))}</span>
+      </button>`).join('')}
+    </div>`:'<p class="muted klein" style="margin-top:16px">Er staat niets te wachten.</p>'}
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{ const e=document.getElementById('hw_scan'); if(e) e.focus(); }, 60);
+}
+
+function hwScanZoek(){
+  const code=(document.getElementById('hw_scan').value||'').trim().toUpperCase();
+  if(!code) return;
+  const h=hwData.find(x=>String(x.code||'').toUpperCase()===code ||
+                         String(x.serienummer||'').toUpperCase()===code);
+  if(!h){ toast('Dit nummer ken ik niet','fout'); return; }
+  if(h.status==='verkocht'){ toast('Dit toestel is al verkocht','let-op'); return; }
+  hwScanNu(h.id);
+}
+
+async function hwScanNu(id){
+  const loc=document.getElementById('hw_loc');
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const {error}=await sb.from('hardware').update({
+    status:'voorraad',
+    locatie_id: loc?loc.value:null,
+    ingescand_op:new Date().toISOString(),
+    bijgewerkt_op:new Date().toISOString()
+  }).eq('id',id);
+  if(error){ toast('Inscannen mislukt','fout'); return; }
+  const e=document.getElementById('hw_scan'); if(e){ e.value=''; e.focus(); }
+  await hwLaad(true);
+  piep(660);
+  toast([h.merk,h.model].filter(Boolean).join(' ')+' ligt nu in de winkel', true);
+  if(!hwData.some(x=>x.status==='onderweg')) hwSluit();
+}
+
 async function hwLaad(stil){
   if(!account) return;
   if(!stil){ const v=document.getElementById('hwLijst'); if(v) v.innerHTML='Bezig met laden…'; }
@@ -5524,6 +5601,8 @@ async function hwLaad(stil){
   if(error){ console.error('hardware laden:', error); const v=document.getElementById('hwLijst');
     if(v) v.innerHTML='<p class="muted">Kon de hardware niet laden.</p>'; return; }
   hwData=data||[];
+  const {data:locs}=await sb.from('hardware_locaties').select('*').order('volgorde');
+  hwLocaties=locs||[];
   renderHardware();
 }
 
@@ -5536,6 +5615,8 @@ function hwMarge(h){
 function hwZichtbaar(h){
   if(hwFilterNu==='verkocht') return h.status==='verkocht';
   if(h.status==='verkocht') return false;
+  if(hwFilterNu==='onderweg') return h.status==='onderweg';
+  if(h.status==='onderweg' && hwFilterNu==='voorraad') return false;
   if(hwFilterNu==='online')  return hwOnline(h);
   if(hwFilterNu==='oud')     return hwDagen(h)>=30;
   return true;
@@ -5545,7 +5626,8 @@ function renderHardware(){
   const vak=document.getElementById('hwLijst');
   if(!vak) return;
 
-  const opVoorraad=hwData.filter(h=>h.status!=='verkocht');
+  const opVoorraad=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg');
+  const onderweg=hwData.filter(h=>h.status==='onderweg');
   const waarde=opVoorraad.reduce((n,h)=>n+(Number(h.inkoop)||0),0);
   const online=opVoorraad.filter(hwOnline).length;
   const oud=opVoorraad.filter(h=>hwDagen(h)>=30).length;
@@ -5554,7 +5636,8 @@ function renderHardware(){
     `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${opVoorraad.length}</div></div>`+
     `<div class="kpi"><div class="l">Ingekocht voor</div><div class="v">${euro(waarde)}</div></div>`+
     `<div class="kpi"><div class="l">Staat online</div><div class="v">${online}</div></div>`+
-    `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`;
+    `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`+
+    (onderweg.length?`<div class="kpi hwattentie"><div class="l">Nog inscannen</div><div class="v">${onderweg.length}</div></div>`:'');
 
   const rijen=hwData.filter(hwZichtbaar);
   const tel=document.getElementById('hwTelling');
@@ -5569,7 +5652,7 @@ function renderHardware(){
 
   vak.innerHTML=`<table class="tabel">
     <thead><tr>
-      <th>Toestel</th><th>Serienummer</th><th>Staat</th>
+      <th>Toestel</th><th>Nummer</th><th>Waar</th>
       <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
       <th>Staat waar</th><th>Dagen</th><th></th>
     </tr></thead>
@@ -5579,8 +5662,10 @@ function renderHardware(){
       return `<tr>
         <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
             ${h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:''}</td>
-        <td class="mono">${esc(h.serienummer||'—')}</td>
-        <td>${esc(HW_STAAT[h.staat]||h.staat||'—')}</td>
+        <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
+        <td>${h.status==='onderweg'
+          ? '<span class="onderweg">Nog niet ingescand</span>'
+          : esc(hwLocatieNaam(h)||'—')}</td>
         <td class="num">${euro(h.inkoop||0)}</td>
         <td class="num">${h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>'}</td>
         <td class="num">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
