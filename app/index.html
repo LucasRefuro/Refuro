@@ -1033,7 +1033,7 @@
         <a class="btn ghost small" id="zoekMobileparts" href="https://www.mobileparts.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Mobileparts <b>(ex. btw)</b></a>
       </div>
       <div class="warnbox"> <b>Let op: foneday en mobileparts tonen prijzen exclusief btw.</b> Pas in de checkout komt daar 21% bij. Neem je een prijs van die sites over, vink dan "ex. btw (+21%)"aan bij het onderdeel. De software rekent de btw er dan automatisch bij, zodat je winstberekening klopt. Prijzen op gsm-world.nl zijn consumentenprijzen inclusief btw.</div>
-      <p class="muted" style="margin-top:10px; line-height:1.7">gsm-world opent de pagina van het toestel zelf, want daar staan de reparatieprijzen per model. Foneday en mobileparts openen de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.</p>
+      <p class="muted" style="margin-top:10px; line-height:1.7">gsm-world opent de pagina van het toestel zelf, want daar staan de reparatieprijzen per model. Foneday opent zijn catalogus voor precies dat toestel, want zoeken op onderdeelnamen werkt daar niet. Mobileparts opent de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.</p>
     </div>
     <div class="card breed">
       <h2><svg class="i"><use href="#i-layers"/></svg>Onderdelen en winst</h2>
@@ -4231,6 +4231,44 @@ function toestelTeken(){
     `<div class="tstrij">${knoppen(u.e.v)}</div>`;
 }
 
+/* Foneday heeft geen zoekpagina die op onderdeelnamen zoekt, maar een
+   catalogus per model: foneday.shop/nl/catalog/parts/Samsung/A-Series/Galaxy-A23-5G.
+   Kennen we het toestel, dan sturen we daar rechtstreeks heen. Kennen we
+   alleen het merk, dan naar de merkpagina. Verder naar de hele catalogus.
+   Twee eigenaardigheden: Apple heet daar "For-Apple", en bij Samsung krijgen
+   4G-toestellen geen achtervoegsel terwijl Xiaomi dat wel doet.             */
+const FONEDAY_MERK={
+  'Apple':   {pad:'For-Apple', serie:()=>'iPhone'},
+  'Samsung': {pad:'Samsung',   serie:n=> /^Galaxy A/.test(n) ? 'A-Series'
+                                       : /^Galaxy S/.test(n) ? 'S-Series'
+                                       : /^Galaxy Note/.test(n) ? 'Note-Series' : null},
+  'Xiaomi':  {pad:'Xiaomi',    serie:n=> /^Redmi Note/.test(n) ? 'Redmi-Note-Series'
+                                       : /^Redmi/.test(n) ? 'Redmi-Series'
+                                       : /^Poco/.test(n) ? 'Poco-Series' : null},
+  'Google':  {pad:'Google',    serie:()=>null},
+  'OnePlus': {pad:'Oneplus',   serie:()=>null},
+  'Oppo':    {pad:'Oppo',      serie:()=>null},
+  'Motorola':{pad:'Motorola',  serie:()=>null},
+  'Huawei':  {pad:'Huawei',    serie:()=>null},
+  'Honor':   {pad:'Honor',     serie:()=>null}
+};
+function fonedayModelPad(merk, naam){
+  let n=naam.replace(/\s*\([^)]*\)/g,'').trim();     /* "(2e generatie)" eraf */
+  if(merk==='Samsung') n=n.replace(/\s+4G$/,'');     /* Samsung laat 4G weg  */
+  return n.replace(/\s+/g,'-');
+}
+function fonedayLink(toestel){
+  const taal = document.documentElement.lang==='en' ? 'en' : 'nl';
+  const basis='https://foneday.shop/'+taal+'/catalog/parts';
+  const u=toestelCheck(toestel);
+  if(!u || !u.naam) return basis;
+  const merk=FONEDAY_MERK[u.e.m];
+  if(!merk) return basis;
+  const serie=merk.serie(u.naam);
+  if(!serie) return basis+'/'+merk.pad;
+  return basis+'/'+merk.pad+'/'+serie+'/'+fonedayModelPad(u.e.m, u.naam);
+}
+
 function updateZoekLinks(){
   const toestel=document.getElementById('r_toestel').value.trim();
   const type=document.getElementById('r_type').value.trim();
@@ -4246,7 +4284,10 @@ function updateZoekLinks(){
   zoek.href = toestel ? 'https://gsm-world.nl/?s='+encodeURIComponent(toestel)
                       : 'https://gsm-world.nl/reparaties/';
 
-  document.getElementById('zoekFoneday').href='https://www.foneday.shop/en/search?q='+q;
+  const fd=document.getElementById('zoekFoneday');
+  fd.href=fonedayLink(toestel);
+  fd.title = toestel ? 'Onderdelen voor '+toestel+' bij Foneday' : 'De catalogus van Foneday';
+
   document.getElementById('zoekMobileparts').href='https://www.mobileparts.shop/catalogsearch/result/?q='+q;
 }
 function ondVoorraadHint(){
