@@ -60,6 +60,7 @@ function __tabel(naam){
       return {select:()=>({single:async()=>({data:{id:'h1'}, error:null}),
                            then:(res)=>res({data:[{id:'h1'}], error:null})})}; },
     update(r){ window.__geschreven.push([naam,'update',r]); return api; },
+    upsert(r){ window.__geschreven.push([naam,'upsert',r]); return api; },
     delete(){ window.__geschreven.push([naam,'delete']); return api; },
     then(res){ res({data: Array.isArray(window.__db[naam])?window.__db[naam]:[], error:null}); }};
   return api;
@@ -134,9 +135,9 @@ setTimeout(async()=>{
   ok('venster opent', !!ov());
   ok('inch al ingevuld uit de specificaties', d().getElementById('acht_inch').value==='14');
   ok('resolutie al ingevuld', d().getElementById('acht_res').value==='1920 × 1080');
-  ok('vier achtergronden om uit te kiezen',
-     ov().querySelectorAll('.stijlknop').length===4);
-  ok('eigen afbeelding kan ook', /Eigen afbeelding/.test(ov().innerHTML));
+  ok('achtergrond komt uit de instellingen', /Komt uit je instellingen/.test(ov().innerHTML));
+  ok('met een link om ze aan te passen', /showTab\('checklists'\)/.test(ov().innerHTML));
+  ok('voor deze ene mag een eigen afbeelding', /een eigen afbeelding/.test(ov().innerHTML));
   ok('maat en glans zijn uit te zetten',
      !!d().getElementById('acht_maat') && !!d().getElementById('acht_glans'));
   ok('opslaan als hoofdfoto', /Opslaan als hoofdfoto/.test(ov().innerHTML));
@@ -174,6 +175,51 @@ setTimeout(async()=>{
   ok('en meteen de hoofdfoto', !!nieuw && nieuw[2].hoofd===true);
   ok('vooraan in de rij', !!nieuw && nieuw[2].volgorde===1);
   ok('venster sluit', !d().getElementById('achtOverlay'));
+
+  // ── de achtergrond instellen ──
+  w.eval("showTab('checklists')");
+  ok('kaart in de instellingen', !!d().getElementById('schermProef'));
+  ok('achtergrondkleur te kiezen', !!d().getElementById('in_schermkleur'));
+  ok('kleur van de maat te kiezen', !!d().getElementById('in_scherminkt'));
+  ok('logo te uploaden', /Logo kiezen/.test(d().getElementById('tab-checklists').innerHTML));
+  ok('grootte van het logo te regelen', !!d().getElementById('in_logobreed'));
+  ok('standaardkleur staat erin', d().getElementById('in_schermkleur').value==='#0b5b52');
+
+  w.__getekend.tekst.length=0;
+  d().getElementById('in_schermkleur').value='#7b2ff7';
+  d().getElementById('in_scherminkt').value='#ffee00';
+  w.eval('schermVeld()');
+  ok('kleur onthouden', w.eval("instel.scherm_kleur")==='#7b2ff7');
+  ok('inktkleur onthouden', w.eval("instel.scherm_inkt")==='#ffee00');
+  ok('voorbeeld tekent de maat', w.__getekend.tekst.indexOf('15,6"')>=0);
+  ok('hexveld loopt mee', d().getElementById('in_schermkleur_hex').value==='#7b2ff7');
+
+  // een hexcode intypen mag ook
+  d().getElementById('in_scherminkt_hex').value='ff0000';
+  w.eval("schermHex('inkt')");
+  ok('hex zonder hekje mag', w.eval("instel.scherm_inkt")==='#ff0000');
+  d().getElementById('in_scherminkt_hex').value='geen kleur';
+  w.eval("schermHex('inkt')");
+  ok('onzin wordt niet overgenomen', w.eval("instel.scherm_inkt")==='#ff0000');
+
+  // kleuren rekenen
+  ok('kleur lichter maken', w.eval("kleurMeng('#000000', 16)")==='#101010');
+  ok('kleur blijft binnen de grenzen', w.eval("kleurMeng('#ffffff', 40)")==='#ffffff');
+  ok('doorzichtig maken', w.eval("kleurAlfa('#0B5B52', .5)")==='rgba(11,91,82,0.5)');
+
+  w.__geschreven.length=0;
+  await w.eval('schermOpslaan(document.createElement("button"))');
+  const bew=w.__geschreven.filter(g=>g[0]==='refurbish_instellingen').pop();
+  ok('instellingen opgeslagen', !!bew);
+  ok('kleuren mee', !!bew && bew[2].scherm_kleur==='#7b2ff7' && bew[2].scherm_inkt==='#ff0000');
+  ok('accugrens blijft staan', !!bew && bew[2].accu_min===80);
+  ok('inscannen blijft staan', !!bew && bew[2].inscannen===false);
+
+  // resolutie uitzetten haalt hem van de achtergrond
+  w.__getekend.tekst.length=0;
+  d().getElementById('in_schermres').checked=false;
+  w.eval('schermVeld()');
+  ok('resolutie uit', w.__getekend.tekst.indexOf('1920 × 1080')<0);
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);

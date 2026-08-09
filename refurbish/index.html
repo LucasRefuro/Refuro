@@ -285,17 +285,18 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   background:var(--lblauw);}
 .achtergrondvak .knaam{font-weight:700; font-size:14.5px;}
 .achtergrondvak .kuit{font-size:13px; color:var(--muted); max-width:60ch; margin-top:2px;}
+.schermvak{display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,1fr); gap:22px; align-items:start;}
+@media(max-width:820px){ .schermvak{grid-template-columns:1fr;} }
+.schermproef canvas{width:100%; height:auto; border-radius:12px; display:block;
+  box-shadow:var(--schaduw);}
+.kleurrij{display:flex; gap:8px; align-items:center;}
+.kleurrij input[type=color]{width:46px; height:38px; padding:2px; border:1.5px solid var(--border);
+  border-radius:10px; background:var(--card); cursor:pointer;}
+.kleurrij input[type=text],.kleurrij input:not([type=color]){flex:1; min-width:0; font-family:ui-monospace,monospace;}
 .achtvak{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(240px,1fr); gap:18px; align-items:start;}
 @media(max-width:820px){ .achtvak{grid-template-columns:1fr;} }
 .achtdoek{background:var(--soft-2); border-radius:14px; padding:10px; text-align:center;}
 .achtdoek canvas{max-width:100%; height:auto; border-radius:8px; cursor:grab; touch-action:none;}
-.stijlkiezer{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
-.stijlknop{border:2px solid var(--border); border-radius:12px; padding:0; cursor:pointer;
-  overflow:hidden; background:none; font-family:inherit;}
-.stijlknop canvas{width:100%; height:52px; display:block;}
-.stijlknop span{display:block; font-size:11.5px; font-weight:700; padding:5px 4px; color:var(--muted);}
-.stijlknop.aan{border-color:var(--groen);}
-.stijlknop.aan span{color:var(--groen);}
 .rechtvak{background:var(--soft-2); border-radius:14px; padding:10px; text-align:center;}
 .rechtvak canvas{max-width:100%; height:auto; border-radius:8px; cursor:grab; touch-action:none;}
 .rechtknop{margin-left:8px; padding:3px 9px; font-size:11px;}
@@ -745,6 +746,62 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         </div>
       </div>
 
+      <!-- De achtergrond die op elk beeldscherm komt te staan. Eén keer
+           instellen; de maat is het enige wat per toestel verschilt. -->
+      <div class="card">
+        <h2><svg class="i"><use href="#i-camera"/></svg>Achtergrond op het beeldscherm</h2>
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Dit komt op de foto van elk toestel te staan, met linksboven de schermmaat van dat toestel. Zo lijken al je advertenties op elkaar, en dat is precies waarom een webshop er betrouwbaar uitziet.</p>
+        <div class="schermvak">
+          <div class="schermproef"><canvas id="schermProef"></canvas>
+            <div class="muted klein" style="margin-top:8px">Voorbeeld met 15,6 inch</div></div>
+          <div>
+            <div class="hkkop">Logo in het midden</div>
+            <div class="row">
+              <label class="btn ghost small" style="cursor:pointer">
+                <svg class="i s"><use href="#i-camera"/></svg>Logo kiezen
+                <input type="file" accept="image/png,image/svg+xml,image/jpeg" hidden onchange="schermLogoUpload(this)">
+              </label>
+              <button class="btn ghost small" id="schermLogoWeg" onclick="schermLogoWeghalen(this)" hidden>Weghalen</button>
+            </div>
+            <p class="muted klein" style="margin-top:6px">Een PNG met een doorzichtige achtergrond werkt het beste.</p>
+
+            <div class="grid" style="margin-top:16px">
+              <div>
+                <label>Achtergrondkleur</label>
+                <div class="kleurrij">
+                  <input type="color" id="in_schermkleur" onchange="schermVeld()" oninput="schermVeld()">
+                  <input id="in_schermkleur_hex" maxlength="7" onchange="schermHex('kleur')">
+                </div>
+              </div>
+              <div>
+                <label>Kleur van de maat</label>
+                <div class="kleurrij">
+                  <input type="color" id="in_scherminkt" onchange="schermVeld()" oninput="schermVeld()">
+                  <input id="in_scherminkt_hex" maxlength="7" onchange="schermHex('inkt')">
+                </div>
+              </div>
+            </div>
+
+            <label style="margin-top:14px">Hoe groot het logo staat</label>
+            <div class="row">
+              <input type="range" id="in_logobreed" min="10" max="70" oninput="schermVeld()" style="flex:1">
+              <span class="muted klein" id="logobreedTekst">34%</span>
+            </div>
+
+            <label class="schakelrij" style="margin-top:12px">
+              <input type="checkbox" id="in_schermres" onchange="schermVeld()">
+              <div><div class="knaam">Resolutie onder de maat</div>
+                   <div class="kuit">Alleen als die bij het model bekend is.</div></div>
+            </label>
+
+            <div class="row" style="margin-top:16px">
+              <button class="btn ghost small" onclick="schermOpslaan(this)">Opslaan</button>
+              <button class="btn ghost small" onclick="schermStandaard()">Terug naar standaard</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <h2><svg class="i"><use href="#i-check"/></svg>Wanneer is een accu nog goed</h2>
         <p class="muted" style="margin-bottom:14px; max-width:80ch">Onder deze grens krijgt de medewerker bij de controle het advies om de accu te vervangen, met een knop om hem meteen op de reparatielijst te zetten.</p>
@@ -885,6 +942,9 @@ async function allesLaden(){
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
   hardwares=h.data||[];
   if(i && i.data) instel=i.data;
+  /* Het logo hoort bij de instellingen, dus dat halen we hier ook op; anders
+     tekent het voorbeeld de eerste keer zonder logo. */
+  if(instel.scherm_logo && (!schermLogo || schermLogo.dataset_pad!==instel.scherm_logo)) schermLogoLaden();
   tekenAlles();
 }
 
@@ -3132,12 +3192,34 @@ async function rechtKlaar(knop){
 
 let acht=null;
 
-const ACHTERGRONDEN=[
-  {id:'mint',   naam:'Storvo',   donker:true},
-  {id:'nacht',  naam:'Nacht',    donker:true},
-  {id:'licht',  naam:'Licht',    donker:false},
-  {id:'eigen',  naam:'Eigen foto', donker:true}
-];
+/* De achtergrond komt uit de instellingen van de winkel: kleur, logo en de
+   kleur van de tekst. Per toestel verschilt alleen de maat, want dat is het
+   enige wat per toestel echt anders is. */
+const SCHERM_STANDAARD={kleur:'#0B5B52', inkt:'#FFFFFF', logo_breedte:34, resolutie:true};
+
+let schermLogo=null;      /* het geladen logo, of null */
+
+function schermInstel(){
+  return {
+    kleur: instel.scherm_kleur || SCHERM_STANDAARD.kleur,
+    inkt:  instel.scherm_inkt  || SCHERM_STANDAARD.inkt,
+    logo_breedte: Number(instel.scherm_logo_breedte)||SCHERM_STANDAARD.logo_breedte,
+    resolutie: instel.scherm_resolutie!==false
+  };
+}
+
+/* Het logo één keer laden en onthouden. Zonder dat zou elke keer opnieuw
+   tekenen een nieuwe download zijn, en dan flikkert het voorbeeld bij elke
+   sleepbeweging. */
+function schermLogoLaden(){
+  schermLogo=null;
+  if(!instel.scherm_logo){ schermProefTeken(); return; }
+  const b=new Image();
+  b.crossOrigin='anonymous';
+  b.onload=()=>{ b.dataset_pad=instel.scherm_logo; schermLogo=b; schermProefTeken(); if(acht) achtTeken(); };
+  b.onerror=()=>{ schermLogo=null; };
+  b.src=fotoUrl(instel.scherm_logo);
+}
 
 /* De schermmaat staat meestal ergens in de specificaties, maar altijd net
    anders opgeschreven: 15.6", 15,6 inch, 15.6-inch FHD. */
@@ -3158,8 +3240,7 @@ function achtOpen(fotoId){
   const f=(onl.fotos||[]).find(x=>x.id===fotoId);
   if(!f){ toast('Deze foto bestaat niet meer','let-op'); return; }
   const specs=onl.a.specs||{};
-  acht={foto:f, beeld:null, punten:null, sleept:-1,
-        stijl:'mint', eigen:null,
+  acht={foto:f, beeld:null, punten:null, sleept:-1, eigen:null,
         inch:inchUit(specs), resolutie:resolutieUit(specs),
         maat:true, glans:true, klaar:false};
 
@@ -3172,11 +3253,15 @@ function achtOpen(fotoId){
       <div class="achtdoek"><canvas id="achtDoek"></canvas></div>
       <div>
         <div class="hkkop">Achtergrond</div>
-        <div class="stijlkiezer" id="achtStijlen"></div>
-        <label class="btn ghost small" style="cursor:pointer; margin-top:8px; display:inline-flex">
-          <svg class="i s"><use href="#i-camera"/></svg>Eigen afbeelding
-          <input type="file" accept="image/*" hidden onchange="achtEigen(this)">
-        </label>
+        <p class="muted klein" style="margin:0 0 8px">Komt uit je instellingen, zodat elke foto er hetzelfde uitziet.
+          <a onclick="achtSluit(); showTab('checklists')" style="cursor:pointer; text-decoration:underline">Aanpassen</a></p>
+        <div class="row">
+          <label class="btn ghost small" style="cursor:pointer">
+            <svg class="i s"><use href="#i-camera"/></svg>Voor deze ene een eigen afbeelding
+            <input type="file" accept="image/*" hidden onchange="achtEigen(this)">
+          </label>
+          <button class="btn ghost small" id="achtEigenWeg" onclick="achtEigenWeg()" hidden>Terug naar standaard</button>
+        </div>
 
         <div class="hkkop" style="margin-top:18px">Schermmaat</div>
         <div class="row">
@@ -3210,7 +3295,6 @@ function achtOpen(fotoId){
     </div>
   </div>`;
   document.body.appendChild(ov);
-  achtStijlen();
   achtLaden(fotoUrl(f.pad));
 }
 
@@ -3248,142 +3332,109 @@ function achtVeld(){
   achtTeken();
 }
 
-function achtStijl(id){
-  if(!acht) return;
-  if(id==='eigen' && !acht.eigen){ toast('Kies eerst een eigen afbeelding','let-op'); return; }
-  acht.stijl=id; achtStijlen(); achtTeken();
-}
-
-function achtStijlen(){
-  const el=document.getElementById('achtStijlen'); if(!el||!acht) return;
-  el.innerHTML=ACHTERGRONDEN.map(a=>`
-    <button type="button" class="stijlknop${acht.stijl===a.id?' aan':''}" onclick="achtStijl('${a.id}')">
-      <canvas data-stijl="${a.id}"></canvas><span>${esc(a.naam)}</span></button>`).join('');
-  el.querySelectorAll('canvas').forEach(c=>{
-    c.width=200; c.height=104;
-    const bron=achtergrondDoek(200,104,{stijl:c.dataset.stijl, maat:false});
-    c.getContext('2d').drawImage(bron,0,0);
-  });
-}
-
 function achtEigen(invoer){
   const bestand=(invoer.files||[])[0]; invoer.value='';
   if(!bestand||!acht) return;
   const lezer=new FileReader();
   lezer.onload=()=>{
     const b=new Image();
-    b.onload=()=>{ acht.eigen=b; acht.stijl='eigen'; achtStijlen(); achtTeken(); };
+    b.onload=()=>{
+      acht.eigen=b;
+      const w=document.getElementById('achtEigenWeg'); if(w) w.hidden=false;
+      achtTeken();
+    };
     b.src=lezer.result;
   };
   lezer.readAsDataURL(bestand);
+}
+function achtEigenWeg(){
+  if(!acht) return;
+  acht.eigen=null;
+  const w=document.getElementById('achtEigenWeg'); if(w) w.hidden=true;
+  achtTeken();
 }
 
 /* De achtergrond zelf, getekend op de maat die het scherm in de foto heeft.
    Alles gebeurt hier in de browser: geen upload, geen wachten, en je kunt
    twintig keer iets veranderen zonder dat het wat kost.                    */
 function achtergrondDoek(breed, hoog, opties){
-  const o=Object.assign({stijl:'mint', maat:true, inch:'', resolutie:''}, opties||{});
+  const st=schermInstel();
+  const o=Object.assign({eigen:null, inch:'', resolutie:'', maat:true}, opties||{});
   const doek=document.createElement('canvas');
   doek.width=Math.max(2,Math.round(breed)); doek.height=Math.max(2,Math.round(hoog));
   const c=doek.getContext('2d');
   const B=doek.width, H=doek.height;
-  let licht=false;
 
-  if(o.stijl==='eigen' && acht && acht.eigen){
-    const b=acht.eigen;
+  if(o.eigen){
+    const b=o.eigen;
     const f=Math.max(B/b.width, H/b.height);
     c.drawImage(b, (B-b.width*f)/2, (H-b.height*f)/2, b.width*f, b.height*f);
-  }else if(o.stijl==='licht'){
-    licht=true;
-    const g=c.createLinearGradient(0,0,B,H);
-    g.addColorStop(0,'#FFFFFF'); g.addColorStop(1,'#E9E6DF');
-    c.fillStyle=g; c.fillRect(0,0,B,H);
-    const r=c.createRadialGradient(B*.7,H*.25,0,B*.7,H*.25,B*.7);
-    r.addColorStop(0,'rgba(127,196,182,.30)'); r.addColorStop(1,'rgba(127,196,182,0)');
-    c.fillStyle=r; c.fillRect(0,0,B,H);
-  }else if(o.stijl==='nacht'){
-    const g=c.createLinearGradient(0,0,B,H);
-    g.addColorStop(0,'#131A19'); g.addColorStop(1,'#05100E');
-    c.fillStyle=g; c.fillRect(0,0,B,H);
-    const r=c.createRadialGradient(B*.3,H*.2,0,B*.3,H*.2,B*.8);
-    r.addColorStop(0,'rgba(127,196,182,.22)'); r.addColorStop(1,'rgba(127,196,182,0)');
-    c.fillStyle=r; c.fillRect(0,0,B,H);
   }else{
+    /* Een vlakke kleur ziet er op een foto uit als een gat. Een klein verloop
+       en een zachte gloed geven het diepte, zonder dat het een ander kleurtje
+       wordt dan je hebt gekozen. */
     const g=c.createLinearGradient(0,H,B,0);
-    g.addColorStop(0,'#0B5B52'); g.addColorStop(.55,'#123F39'); g.addColorStop(1,'#0E6A5F');
+    g.addColorStop(0, kleurMeng(st.kleur, -12));
+    g.addColorStop(.55, st.kleur);
+    g.addColorStop(1, kleurMeng(st.kleur, 10));
     c.fillStyle=g; c.fillRect(0,0,B,H);
     const r=c.createRadialGradient(B*.72,H*.22,0,B*.72,H*.22,B*.75);
-    r.addColorStop(0,'rgba(127,196,182,.36)'); r.addColorStop(1,'rgba(127,196,182,0)');
+    r.addColorStop(0, kleurAlfa(kleurMeng(st.kleur, 46), .34));
+    r.addColorStop(1, kleurAlfa(kleurMeng(st.kleur, 46), 0));
     c.fillStyle=r; c.fillRect(0,0,B,H);
   }
 
+  if(schermLogo){
+    const bt=B*(st.logo_breedte/100);
+    const f=Math.min(bt/schermLogo.width, (H*0.55)/schermLogo.height);
+    const lb=schermLogo.width*f, lh=schermLogo.height*f;
+    c.drawImage(schermLogo, (B-lb)/2, (H-lh)/2, lb, lh);
+  }
+
   if(o.maat && String(o.inch||'').trim()){
-    tekenMaat(c, B, H, String(o.inch).trim(), String(o.resolutie||'').trim(), licht);
+    tekenMaat(c, B, H, String(o.inch).trim(),
+      st.resolutie ? String(o.resolutie||'').trim() : '', st.inkt);
   }
   return doek;
 }
 
-/* De maat zoals een webshop hem laat zien: een pijl van hoek tot hoek over de
-   diagonaal, met het getal in het midden. Meteen duidelijk dat het over de
-   diagonaal gaat en niet over de breedte, want dat is de vraag die anders
-   overblijft.                                                              */
-function tekenMaat(c, B, H, inch, resolutie, licht){
-  const lijn = licht ? 'rgba(18,63,57,.50)' : 'rgba(255,255,255,.58)';
-  const vol  = licht ? '#123F39' : '#FFFFFF';
-  const marge= Math.min(B,H)*0.13;
-  const a={x:marge, y:H-marge}, b={x:B-marge, y:marge};
-  const mx=B/2, my=H/2;
+/* Een hexkleur lichter of donkerder maken, en er doorzichtigheid op zetten.
+   Zo blijft alles in de kleur die de winkel heeft gekozen. */
+function kleurRgb(hex){
+  const h=String(hex||'').replace('#','').trim();
+  const v=h.length===3 ? h.split('').map(x=>x+x).join('') : h.padEnd(6,'0').slice(0,6);
+  const n=parseInt(v,16);
+  return isNaN(n) ? {r:11,g:91,b:82} : {r:(n>>16)&255, g:(n>>8)&255, b:n&255};
+}
+function kleurMeng(hex, stap){
+  const {r,g,b}=kleurRgb(hex);
+  const k=x=>Math.max(0,Math.min(255, Math.round(x+stap)));
+  return '#'+[k(r),k(g),k(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function kleurAlfa(hex, a){
+  const {r,g,b}=kleurRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
 
-  /* Eerst uitrekenen hoe groot het plaatje met het getal wordt, want de pijl
-     moet daar omheen. Een streep dwars door de tekst leest niet. */
-  const groot=Math.round(Math.min(B,H)*0.20);
-  const tekst=inch+'"';
+/* De maat linksboven, zoals op een prijskaartje: het eerste wat je leest.
+   In het midden staat het logo, dus daar houden we het leeg.              */
+function tekenMaat(c, B, H, inch, resolutie, inkt){
+  const marge=Math.min(B,H)*0.085;
+  const groot=Math.round(Math.min(B,H)*0.135);
   c.save();
+  c.textAlign='left'; c.textBaseline='top';
+  /* Een zachte schaduw eronder, want een lichte kleur op een lichte
+     achtergrond is anders niet te lezen en andersom net zo. */
+  c.shadowColor='rgba(0,0,0,.28)';
+  c.shadowBlur=Math.max(2, groot*0.16);
+  c.shadowOffsetY=Math.max(1, groot*0.04);
+  c.fillStyle=inkt;
   c.font='800 '+groot+'px Inter, system-ui, sans-serif';
-  const br=c.measureText(tekst).width;
-  const pb=br+groot*0.70, ph=groot*(resolutie?1.70:1.20);
-
-  const hoek=Math.atan2(b.y-a.y, b.x-a.x);
-  const lengte=Math.hypot(b.x-a.x, b.y-a.y);
-  /* Waar de diagonaal de pil verlaat, plus wat lucht. Niet de breedte en de
-     hoogte bij elkaar optellen: dan wordt het gat veel te groot en houd je
-     twee stompjes over in de hoeken. */
-  const co=Math.abs(Math.cos(hoek))||1e-6, si=Math.abs(Math.sin(hoek))||1e-6;
-  const gat=Math.min(lengte*0.40, Math.min(pb/2/co, ph/2/si) + groot*0.30);
-
-  c.strokeStyle=lijn; c.lineWidth=Math.max(1.5, Math.min(B,H)*0.006);
-  c.lineCap='round';
-  const langs=(p,afstand)=>({x:p.x+Math.cos(hoek)*afstand, y:p.y+Math.sin(hoek)*afstand});
-  const stop1=langs(a, lengte/2-gat), start2=langs(a, lengte/2+gat);
-  c.beginPath(); c.moveTo(a.x,a.y); c.lineTo(stop1.x,stop1.y); c.stroke();
-  c.beginPath(); c.moveTo(start2.x,start2.y); c.lineTo(b.x,b.y); c.stroke();
-
-  const pijl=Math.min(B,H)*0.045;
-  [[a,hoek],[b,hoek+Math.PI]].forEach(([p,r])=>{
-    c.beginPath();
-    c.moveTo(p.x,p.y);
-    c.lineTo(p.x+Math.cos(r-0.42)*pijl, p.y+Math.sin(r-0.42)*pijl);
-    c.lineTo(p.x+Math.cos(r+0.42)*pijl, p.y+Math.sin(r+0.42)*pijl);
-    c.closePath(); c.fillStyle=lijn; c.fill();
-  });
-
-  c.fillStyle = licht ? 'rgba(255,255,255,.90)' : 'rgba(5,22,20,.60)';
-  const r=ph/2;
-  c.beginPath();
-  c.moveTo(mx-pb/2+r, my-ph/2);
-  c.arcTo(mx+pb/2, my-ph/2, mx+pb/2, my+ph/2, r);
-  c.arcTo(mx+pb/2, my+ph/2, mx-pb/2, my+ph/2, r);
-  c.arcTo(mx-pb/2, my+ph/2, mx-pb/2, my-ph/2, r);
-  c.arcTo(mx-pb/2, my-ph/2, mx+pb/2, my-ph/2, r);
-  c.closePath(); c.fill();
-
-  c.fillStyle=vol; c.textAlign='center'; c.textBaseline='middle';
-  c.font='800 '+groot+'px Inter, system-ui, sans-serif';
-  c.fillText(tekst, mx, my - (resolutie?groot*0.24:0));
+  c.fillText(inch+'"', marge, marge);
   if(resolutie){
-    c.font='600 '+Math.round(groot*0.30)+'px Inter, system-ui, sans-serif';
-    c.fillStyle = licht ? 'rgba(18,63,57,.88)' : 'rgba(255,255,255,.80)';
-    c.fillText(resolutie, mx, my + groot*0.44);
+    c.font='600 '+Math.round(groot*0.36)+'px Inter, system-ui, sans-serif';
+    c.fillStyle=kleurAlfa(inkt, .82);
+    c.fillText(resolutie, marge, marge+groot*1.16);
   }
   c.restore();
 }
@@ -3446,7 +3497,7 @@ function achtSamenstellen(doek, fijn){
   if(breed<8||hoog<8) return;
 
   const bron=achtergrondDoek(breed, hoog,
-    {stijl:acht.stijl, maat:acht.maat, inch:acht.inch, resolutie:acht.resolutie});
+    {eigen:acht.eigen, maat:acht.maat, inch:acht.inch, resolutie:acht.resolutie});
   tekenInVierhoek(c, bron, P, fijn?26:14);
 
   c.save();
@@ -3789,6 +3840,7 @@ function tekenChecklists(){
   if(sj && document.activeElement!==sj) sj.value=instel.ad_sjabloon||'';
   const tn=document.getElementById('in_toon');
   if(tn && document.activeElement!==tn) tn.value=instel.ad_toon||'zakelijk en eerlijk';
+  schermVelden();
   document.getElementById('clLijst').innerHTML=checklists.length
     ? checklists.map(c=>`
       <div class="clrij">
@@ -3892,17 +3944,128 @@ async function sjabloonOpslaan(knop){
   });
 }
 
+/* ── de achtergrond instellen ──
+   Het voorbeeld tekent met dezelfde functie als de echte foto, dus wat je
+   hier ziet is wat er straks op het scherm van de laptop staat. */
+function schermProefTeken(){
+  const doek=document.getElementById('schermProef'); if(!doek) return;
+  doek.width=640; doek.height=400;
+  const c=doek.getContext('2d');
+  if(!c) return;
+  const bron=achtergrondDoek(640, 400, {inch:'15,6', resolutie:'1920 × 1080', maat:true});
+  c.clearRect(0,0,640,400);
+  c.drawImage(bron,0,0);
+}
+
+function schermVelden(){
+  const zet=(id,waarde)=>{ const e=document.getElementById(id);
+    if(e && document.activeElement!==e) e.value=waarde; };
+  const st=schermInstel();
+  zet('in_schermkleur', st.kleur);
+  zet('in_schermkleur_hex', st.kleur);
+  zet('in_scherminkt', st.inkt);
+  zet('in_scherminkt_hex', st.inkt);
+  zet('in_logobreed', st.logo_breedte);
+  const t=document.getElementById('logobreedTekst'); if(t) t.textContent=st.logo_breedte+'%';
+  const r=document.getElementById('in_schermres'); if(r) r.checked=st.resolutie;
+  const w=document.getElementById('schermLogoWeg'); if(w) w.hidden=!instel.scherm_logo;
+  schermProefTeken();
+}
+
+function schermVeld(){
+  const g=id=>document.getElementById(id);
+  instel.scherm_kleur=g('in_schermkleur').value;
+  instel.scherm_inkt=g('in_scherminkt').value;
+  instel.scherm_logo_breedte=Number(g('in_logobreed').value)||34;
+  instel.scherm_resolutie=g('in_schermres').checked;
+  g('in_schermkleur_hex').value=instel.scherm_kleur;
+  g('in_scherminkt_hex').value=instel.scherm_inkt;
+  const t=g('logobreedTekst'); if(t) t.textContent=instel.scherm_logo_breedte+'%';
+  schermProefTeken();
+}
+
+/* Een hexcode intypen mag ook; sommige mensen hebben hun kleur op een briefje
+   staan en gaan niet met een kleurenwiel zitten schuiven. */
+function schermHex(welk){
+  const veld=document.getElementById(welk==='inkt'?'in_scherminkt_hex':'in_schermkleur_hex');
+  let w=String(veld.value||'').trim();
+  if(w && w[0]!=='#') w='#'+w;
+  if(!/^#[0-9a-fA-F]{6}$/.test(w)){
+    toast('Dat is geen kleurcode, bijvoorbeeld #0B5B52','let-op'); schermVelden(); return;
+  }
+  document.getElementById(welk==='inkt'?'in_scherminkt':'in_schermkleur').value=w;
+  schermVeld();
+}
+
+async function schermLogoUpload(invoer){
+  const bestand=(invoer.files||[])[0]; invoer.value='';
+  if(!bestand) return;
+  if(bestand.size>3*1024*1024){ toast('Dit logo is te groot, houd het onder 3 MB','let-op'); return; }
+  const pad=`${account.team_id}/instellingen/logo-${Date.now()}`;
+  const {error}=await sb.storage.from('refurbish-fotos')
+    .upload(pad, bestand, {contentType:bestand.type||'image/png'});
+  if(error){ toast('Uploaden mislukt','fout'); return; }
+  const oud=instel.scherm_logo;
+  instel.scherm_logo=pad;
+  try{ await schermBewaren(); }catch(e){ toast(e.message,'fout'); return; }
+  if(oud) await sb.storage.from('refurbish-fotos').remove([oud]);
+  schermLogoLaden(); schermVelden();
+  toast('Logo staat erop', true);
+}
+
+async function schermLogoWeghalen(knop){
+  const oud=instel.scherm_logo;
+  if(!oud) return;
+  await bezig(knop, async()=>{
+    instel.scherm_logo=null;
+    await schermBewaren();
+    await sb.storage.from('refurbish-fotos').remove([oud]);
+    schermLogo=null; schermVelden();
+    toast('Logo weggehaald', true);
+  });
+}
+
+/* Alle instellingen samen wegschrijven. Zou ik alleen de gewijzigde velden
+   meesturen, dan wist een upsert de rest; dat is precies hoe je op een dinsdag
+   je advertentiesjabloon kwijtraakt. */
+async function schermBewaren(){
+  const st=schermInstel();
+  const {error}=await sb.from('refurbish_instellingen').upsert({
+    team_id:account.team_id,
+    accu_min:Number(instel.accu_min)||80,
+    ad_sjabloon:instel.ad_sjabloon||null,
+    ad_toon:instel.ad_toon||'zakelijk en eerlijk',
+    inscannen:!!instel.inscannen,
+    scherm_logo:instel.scherm_logo||null,
+    scherm_kleur:st.kleur, scherm_inkt:st.inkt,
+    scherm_logo_breedte:st.logo_breedte, scherm_resolutie:st.resolutie,
+    bijgewerkt_op:new Date().toISOString()
+  });
+  if(error) throw new Error('Opslaan mislukt');
+}
+
+async function schermOpslaan(knop){
+  await bezig(knop, async()=>{
+    await schermBewaren();
+    toast('Zo komt hij op elke foto te staan', true);
+  });
+}
+
+function schermStandaard(){
+  instel.scherm_kleur=SCHERM_STANDAARD.kleur;
+  instel.scherm_inkt=SCHERM_STANDAARD.inkt;
+  instel.scherm_logo_breedte=SCHERM_STANDAARD.logo_breedte;
+  instel.scherm_resolutie=SCHERM_STANDAARD.resolutie;
+  schermVelden();
+  toast('Terug op de standaardkleuren. Vergeet niet op te slaan.','let-op');
+}
+
 async function instelOpslaan(knop){
   const e=document.getElementById('in_accu');
   const w=Math.max(0, Math.min(100, Number(e.value)||0));
   await bezig(knop, async()=>{
-    const {error}=await sb.from('refurbish_instellingen')
-      .upsert({team_id:account.team_id, accu_min:w,
-               ad_sjabloon:instel.ad_sjabloon||null,
-               ad_toon:instel.ad_toon||'zakelijk en eerlijk',
-               bijgewerkt_op:new Date().toISOString()});
-    if(error) throw new Error('Opslaan mislukt');
     instel.accu_min=w;
+    await schermBewaren();
     toast('Grens staat op '+w+'%', true);
   });
 }

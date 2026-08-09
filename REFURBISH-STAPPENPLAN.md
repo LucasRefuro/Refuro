@@ -312,18 +312,32 @@ waarop elk scherm iets anders laat zien, de een uit met een spiegeling erin en
 de ander met een half bureaublad, ziet er rommelig uit, en rommelig leest een
 koper als onbetrouwbaar.
 
+**Hoe hij eruitziet stel je één keer in**, bij Instellingen onder *Achtergrond
+op het beeldscherm*: de achtergrondkleur, de kleur van de maat, en een **logo**
+dat je zelf uploadt en dat in het midden komt te staan. Daarnaast een schuif
+voor hoe groot dat logo staat en een schakelaar voor de resolutie. Naast de
+knoppen staat een voorbeeld dat met dezelfde tekencode wordt gemaakt als de
+echte foto, dus wat je daar ziet is wat er straks op het scherm staat.
+
+Het enige wat per toestel verschilt is de **schermmaat**, en die staat
+linksboven. Het getal komt uit de specificaties van dat model (15.6", 15,6 inch
+en 13.3-inch worden allemaal hetzelfde getal) en is per toestel aan te passen
+als het model iets raars in zijn specificaties heeft staan.
+
 Onder de foto's staat **Achtergrond vervangen**. Die pakt de hoofdfoto en opent
 een venster waarin:
 
 - de AI zelf de vier hoeken van het beeldscherm zoekt, en jij ze bijsleept als
   het net niet klopt;
-- je kiest uit Storvo-groen, nacht, licht, of een eigen afbeelding;
-- de **schermmaat** erop komt, met een pijl over de diagonaal zodat duidelijk is
-  dat het over de diagonaal gaat. Het getal wordt uit de specificaties gehaald
-  (15.6", 15,6 inch, 13.3-inch: allemaal hetzelfde getal) en is aan te passen.
-  De resolutie mag erbij;
+- de achtergrond uit je instellingen komt, met een link om ze aan te passen. Wil
+  je voor dit ene toestel een eigen afbeelding, dan kan dat ook;
+- je de maat kunt bijstellen of weglaten;
 - een lichte glans over het scherm gaat, want zonder dat ziet het eruit als een
   sticker.
+
+Een vlakke kleur ziet er op een foto uit als een gat, dus er komt een klein
+verloop en een zachte gloed overheen, afgeleid van de kleur die jij hebt
+gekozen. Het blijft dus jouw kleur, maar het krijgt diepte.
 
 Alles gebeurt in de browser, dus je ziet elke wijziging meteen en het kost niets
 om het twintig keer over te doen. Opslaan maakt er een nieuwe foto van en zet
