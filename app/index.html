@@ -1283,6 +1283,42 @@
   .verzico.fout{background:var(--red-soft); color:var(--red-tekst);}
 
   /* ---------- WhatsApp koppelen ---------- */
+  /* Het koppelscherm. Zes stappen die je in tien minuten doet, en daarna een
+     kaart die zegt of het goed staat. */
+  .shopstappen{counter-reset:sh; margin:0 0 22px; padding:0; list-style:none;}
+  .shopstappen li{position:relative; padding:0 0 16px 42px; counter-increment:sh;
+    font-size:14px; line-height:1.62;}
+  .shopstappen li::before{content:counter(sh); position:absolute; left:0; top:-1px;
+    width:28px; height:28px; border-radius:50%; background:var(--navy); color:#fff;
+    font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center;}
+  .shopstappen b{font-weight:700;}
+  .shoprechten{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    gap:6px 16px; margin:10px 0 4px; padding:14px 16px; background:var(--soft-2);
+    border-radius:14px;}
+  .shoprecht{display:flex; align-items:baseline; gap:8px; font-size:13px;}
+  .shoprecht code{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px;
+    font-weight:700; color:var(--navy);}
+  .shoprecht.mist code{color:var(--red-tekst);}
+  .shoprecht .waarvoor{color:var(--muted); font-size:12.5px;}
+  .shopkaart{border:1.5px solid var(--border); border-radius:20px; padding:22px 24px;
+    background:var(--soft);}
+  .shopkaart.aan{border-color:var(--green-tekst); background:var(--green-soft);}
+  .shopkaart.stuk{border-color:var(--red-tekst); background:var(--red-soft);}
+  .shopkop{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;}
+  .shopkop h3{font-family:'Sora',system-ui,sans-serif; font-size:17px; margin:0;}
+  .shopbadge{font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
+  .shopkaart.aan .shopbadge{background:#fff; color:var(--green-tekst);}
+  .shopkaart.stuk .shopbadge{background:#fff; color:var(--red-tekst);}
+  .shopfeiten{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:14px; margin:18px 0 4px;}
+  .shopfeit .l{font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--muted-l); margin-bottom:3px;}
+  .shopfeit .w{font-size:14px; font-weight:600;}
+  .shopuitslag{margin-top:16px; padding:14px 16px; border-radius:14px; font-size:14px;
+    background:var(--green-soft); color:var(--green-tekst);}
+  .shopuitslag.fout{background:var(--red-soft); color:var(--red-tekst);}
+  .shopuitslag.let{background:var(--amber-soft); color:var(--amber-tekst);}
   .wakaart{border:1.5px solid var(--border); border-radius:20px; padding:22px 24px; background:var(--soft);}
   .wakaart.aan{border-color:var(--green-tekst); background:var(--green-soft);}
   .wakop{display:flex; align-items:flex-start; gap:14px;}
@@ -2021,6 +2057,7 @@
       <button data-s="huisstijl">Huisstijl</button>
       <button data-s="klantpagina">Klantpagina</button>
       <button data-s="berichten">Berichten</button>
+      <button data-s="webshop">Webshop</button>
       <button data-s="leveranciers">Leveranciers</button>
       <button data-s="abonnement">Abonnement</button>
       <button data-s="backup">Back-up</button>
@@ -2250,7 +2287,17 @@
     <p class="muted" style="margin-top:10px">De kleuren worden direct doorgevoerd in de hele app én in de klantpagina van reparaties. Handig als je dit systeem later ook aan andere winkels levert.</p>
   </div>
 
-  <div class="card" id="inst-leveranciers"hidden>
+  <!-- ── de webshop koppelen ──
+       Dit is de enige plek in Storvo waar iemand een sleutel van buiten
+       invoert. Daarom staat er stap voor stap wat je waar moet aanklikken, en
+       controleren we het token voordat we het bewaren. -->
+  <div class="card" id="inst-webshop" hidden>
+    <h2><svg class="i"><use href="#i-globe"/></svg>Je webshop koppelen</h2>
+    <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Shopify-webshop, dan zet je een toestel met één knop online en gaat hij er vanzelf weer af zodra hij verkocht is. Zonder koppeling verkoop je een laptop twee keer en mag je een klant bellen dat het toch niet doorgaat.</p>
+    <div id="shopVak">Bezig met kijken…</div>
+  </div>
+
+  <div class="card" id="inst-leveranciers" hidden>
     <h2><svg class="i"><use href="#i-link"/></svg>Leveranciers <span class="muted">(voor automatisch zoeken)</span></h2>
     <div class="infobox" style="margin-bottom:18px"><b>Automatisch voorraad en prijzen zoeken</b> vereist de online versie van deze software. Browsers blokkeren het inloggen op andere websites vanuit een lokaal bestand. Sla je inloggegevens hier alvast op. Zodra de online versie er is, zoekt de software zelf bij foneday en mobileparts en zie je direct of een onderdeel op voorraad is. Tot die tijd openen de zoekknoppen bij een reparatie de shops met je zoekterm al ingevuld.</div>
     <div class="grid" style="margin-bottom:14px">
@@ -4572,11 +4619,220 @@ document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('cli
 }));
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
+  if(b.dataset.s==='webshop') shopStatus();
 }));
+
+/* ---------- de webshop koppelen ----------
+
+   Eén keer instellen, daarna nooit meer omkijken. Het lastige is niet de code
+   maar de uitleg: een winkelier die dit voor het eerst doet moet weten waar hij
+   in Shopify moet klikken, welke vinkjes hij aan moet zetten en waar dat token
+   staat. Vandaar dat de stappen hier gewoon staan en niet in een handleiding
+   die niemand leest.
+
+   Het token gaat rechtstreeks naar de server en komt daar versleuteld in de
+   database. Wij krijgen het nooit terug te zien; hooguit de laatste vier tekens,
+   zodat je herkent welk token er staat.                                      */
+
+let shopStand=null;
+
+async function shopRoep(lijf){
+  const {data:{session}}=await sb.auth.getSession();
+  const res=await fetch(SUPABASE_URL+'/functions/v1/shopify-koppelen',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+             'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(lijf)
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok){
+    const e=new Error(uit.error||'De koppeling reageerde niet');
+    e.mist=uit.mist; e.rechten=uit.rechten;
+    throw e;
+  }
+  return uit;
+}
+
+async function shopStatus(){
+  const vak=document.getElementById('shopVak'); if(!vak) return;
+  try{
+    shopStand=await shopRoep({actie:'status'});
+    shopTeken();
+  }catch(e){
+    vak.innerHTML=`<p class="muted">Kon de koppeling niet ophalen: ${esc(e.message)}</p>`;
+  }
+}
+
+function shopRechtenLijst(rechten, mist){
+  const m=mist||[];
+  return `<div class="shoprechten">${Object.entries(rechten||{}).map(([r,waarvoor])=>`
+    <div class="shoprecht${m.includes(r)?' mist':''}">
+      <code>${esc(r)}</code><span class="waarvoor">${esc(waarvoor)}</span>
+    </div>`).join('')}</div>`;
+}
+
+function shopTeken(uitslag){
+  const vak=document.getElementById('shopVak'); if(!vak||!shopStand) return;
+  const s=shopStand;
+
+  if(s.gekoppeld){
+    const stuk=s.status==='fout' || (s.mist||[]).length;
+    vak.innerHTML=`
+      <div class="shopkaart ${stuk?'stuk':'aan'}">
+        <div class="shopkop">
+          <h3>${esc(s.winkelnaam||s.domein)}</h3>
+          <span class="shopbadge">${stuk?'Kijk even na':'Gekoppeld'}</span>
+        </div>
+        <p class="muted" style="font-size:13.5px">${esc(s.domein)}</p>
+
+        <div class="shopfeiten">
+          <div class="shopfeit"><div class="l">Verkoopkanaal</div>
+            <div class="w">${s.publicatie?'Gevonden':'Niet gevonden'}</div></div>
+          <div class="shopfeit"><div class="l">Voorraadlocatie</div>
+            <div class="w">${s.locatie?'Gevonden':'Niet gevonden'}</div></div>
+          <div class="shopfeit"><div class="l">Verkoopmeldingen</div>
+            <div class="w">${(s.meldingen||[]).length?(s.meldingen.length+' aan'):'Geen'}</div></div>
+          <div class="shopfeit"><div class="l">Token</div>
+            <div class="w mono">••••${esc(s.token_staart||'')}</div></div>
+        </div>
+
+        ${(s.mist||[]).length?`<div class="shopuitslag fout">
+          Er ontbreken rechten in je Shopify-app. Zet ze daar aan, installeer de app
+          opnieuw en koppel hier nog een keer met het nieuwe token.
+          ${shopRechtenLijst(s.rechten, s.mist)}</div>`:''}
+        ${s.status==='fout'&&s.fout?`<div class="shopuitslag fout">${esc(s.fout)}</div>`:''}
+        ${!s.publicatie?`<div class="shopuitslag let">Er is geen verkoopkanaal gevonden, dus een toestel komt wel in je Shopify-beheer maar nog niet in de winkel te staan. Kijk of je Onlinewinkel-kanaal aanstaat en druk daarna op Opnieuw nakijken.</div>`:''}
+        ${!(s.meldingen||[]).length?`<div class="shopuitslag let">De verkoopmeldingen staan niet aan. Verkoop je iets online, dan gaat het toestel niet vanzelf uit je voorraad. Koppel opnieuw om ze alsnog aan te zetten.</div>`:''}
+        ${uitslag||''}
+
+        <div class="row" style="margin-top:20px; gap:10px">
+          <button class="btn" onclick="shopNakijken(this)">Opnieuw nakijken</button>
+          <button class="btn ghost" onclick="shopOpnieuw()">Ander token invoeren</button>
+          <button class="btn ghost" onclick="shopLos(this)">Loskoppelen</button>
+        </div>
+        <p class="muted" style="font-size:12.5px; margin-top:12px">
+          ${s.laatst_gecontroleerd?'Laatst nagekeken op '+new Date(s.laatst_gecontroleerd).toLocaleString('nl-NL',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):''}</p>
+      </div>`;
+    return;
+  }
+
+  vak.innerHTML=`
+    <ol class="shopstappen">
+      <li>Ga in je Shopify-beheer naar <b>Instellingen</b> → <b>Apps en verkoopkanalen</b>.</li>
+      <li>Klik rechtsboven op <b>Apps ontwikkelen</b> en daarna op <b>App maken</b>. Noem hem <b>Storvo</b>.</li>
+      <li>Open het tabblad <b>Configuratie</b> → <b>Admin API-integratie</b> → <b>Configureren</b>, en zet deze zes vinkjes aan:
+        ${shopRechtenLijst(s&&s.rechten, [])}
+        <span class="muted" style="font-size:13px">Precies deze zes. Meer rechten geven kan wel, maar hoeft niet, en hoe minder je weggeeft hoe beter.</span>
+      </li>
+      <li>Klik op <b>Opslaan</b> en daarna op <b>Installeren</b>.</li>
+      <li>Ga naar het tabblad <b>API-referenties</b> en klik bij <b>Admin API-toegangstoken</b> op <b>Onthullen</b>. Kopieer het token; het begint met <b>shpat_</b>.</li>
+      <li>Plak het hieronder. <b>Shopify laat dit token maar één keer zien</b>, dus doe het meteen. Ben je het kwijt, dan maak je gewoon een nieuw token aan.</li>
+    </ol>
+
+    <div class="grid" style="gap:14px">
+      <div>
+        <label>Adres van je winkel</label>
+        <input id="shop_domein" placeholder="jouwwinkel.myshopify.com" autocomplete="off"
+          onkeydown="if(event.key==='Enter') shopTesten(this)">
+        <p class="muted" style="font-size:12.5px; margin-top:5px">Het adres dat je in de adresbalk van je Shopify-beheer ziet, dus niet je eigen .nl-domein.</p>
+      </div>
+      <div>
+        <label>Admin API-toegangstoken</label>
+        <input id="shop_token" type="password" placeholder="shpat_..." autocomplete="off" spellcheck="false">
+        <p class="muted" style="font-size:12.5px; margin-top:5px">Gaat rechtstreeks naar de server en wordt versleuteld bewaard. Wij kunnen hem daarna zelf ook niet meer lezen.</p>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:18px; gap:10px">
+      <button class="btn" onclick="shopTesten(this)">Eerst uitproberen</button>
+      <button class="btn actie" onclick="shopOpslaan(this)">Koppelen</button>
+    </div>
+    <div id="shopUitslag">${uitslag||''}</div>`;
+}
+
+function shopOpnieuw(){
+  shopStand={gekoppeld:false, rechten:(shopStand&&shopStand.rechten)||{}};
+  shopTeken();
+}
+
+function shopVelden(){
+  return {
+    domein:(document.getElementById('shop_domein')||{}).value||'',
+    token:(document.getElementById('shop_token')||{}).value||''
+  };
+}
+
+/* Uitproberen zonder op te slaan. Je ziet dan meteen of het token werkt, welke
+   winkel eraan hangt en welke vinkjes je vergeten bent, in plaats van dat je
+   het merkt als je de eerste laptop online wilt zetten. */
+async function shopTesten(knop){
+  const v=shopVelden();
+  const uit=document.getElementById('shopUitslag');
+  if(uit) uit.innerHTML='<div class="shopuitslag let">Bezig met uitproberen…</div>';
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    const r=await shopRoep({actie:'testen', domein:v.domein, token:v.token});
+    const regels=[
+      `<b>${esc(r.winkelnaam||r.domein)}</b> gevonden op ${esc(r.domein)}.`,
+      r.publicatie?`Verkoopkanaal: ${esc(r.publicatie)}.`:'Geen verkoopkanaal gevonden.',
+      r.locatie?`Voorraad komt op: ${esc(r.locatie)}${r.aantalLocaties>1?' (van '+r.aantalLocaties+' locaties)':''}.`:'Geen voorraadlocatie gevonden.'
+    ];
+    if(uit) uit.innerHTML=(r.mist||[]).length
+      ? `<div class="shopuitslag fout"><b>Bijna goed.</b> Het token werkt, maar deze rechten staan nog niet aan:
+          ${shopRechtenLijst(r.rechten, r.mist)}
+          <span style="font-size:13px">Zet ze aan in je Shopify-app, sla op, installeer opnieuw en kopieer het nieuwe token hierheen.</span></div>`
+      : `<div class="shopuitslag"><b>Alles staat goed.</b><br>${regels.join('<br>')}<br>Druk op <b>Koppelen</b> om het vast te zetten.</div>`;
+  }catch(e){
+    if(uit) uit.innerHTML=`<div class="shopuitslag fout">${esc(e.message)}
+      ${(e.mist||[]).length?shopRechtenLijst(e.rechten, e.mist):''}</div>`;
+  }finally{
+    knop.disabled=false; knop.textContent=oud;
+  }
+}
+
+async function shopOpslaan(knop){
+  const v=shopVelden();
+  const uit=document.getElementById('shopUitslag');
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    shopStand=await shopRoep({actie:'opslaan', domein:v.domein, token:v.token});
+    const w=shopStand.waarschuwing;
+    shopTeken(w?`<div class="shopuitslag let">${esc(w)}</div>`
+               :'<div class="shopuitslag">De webshop is gekoppeld. Je kunt nu vanuit Hardware een toestel online zetten.</div>');
+    toast('Webshop gekoppeld', true);
+  }catch(e){
+    if(uit) uit.innerHTML=`<div class="shopuitslag fout">${esc(e.message)}
+      ${(e.mist||[]).length?shopRechtenLijst(e.rechten, e.mist):''}</div>`;
+    toast(e.message,'fout');
+  }finally{
+    knop.disabled=false; knop.textContent=oud;
+  }
+}
+
+async function shopNakijken(knop){
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    shopStand=await shopRoep({actie:'nakijken'});
+    shopTeken(shopStand.status==='fout'?'':'<div class="shopuitslag">Nagekeken, alles reageert nog.</div>');
+  }catch(e){ toast(e.message,'fout'); }
+  finally{ knop.disabled=false; knop.textContent=oud; }
+}
+
+async function shopLos(knop){
+  if(!confirm('De webshop loskoppelen? Toestellen die nu online staan blijven op Shopify staan; die haal je daar zelf weg.')) return;
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    shopStand=await shopRoep({actie:'loskoppelen'});
+    shopTeken();
+    toast('Losgekoppeld', true);
+  }catch(e){ toast(e.message,'fout'); }
+  finally{ knop.disabled=false; knop.textContent=oud; }
+}
+
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,

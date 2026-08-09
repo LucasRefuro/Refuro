@@ -94,35 +94,57 @@ verkoop je hem twee keer en mag je een klant bellen dat het toch niet doorgaat.
 | Verkocht aan de balie | Storvo zet hem meteen op onbeschikbaar in Shopify |
 | Prijs aangepast in Storvo | Gaat mee naar Shopify |
 
+Alles loopt via de **GraphQL Admin API** van Shopify. De oude REST-endpoints
+voor producten zijn door Shopify afgeschreven; daarop bouwen zou betekenen dat
+de koppeling binnen een jaar stilvalt zonder dat iemand iets veranderd heeft.
+
+De verkoopmelding van Shopify wordt niet op zijn woord geloofd. Het adres bevat
+een geheim dat bij één winkel hoort, het winkeladres in de melding moet daarmee
+kloppen, en daarna halen we de bestelling zélf op bij Shopify voordat er iets op
+verkocht gaat. Iemand die een valse melding stuurt krijgt dus niets voor elkaar,
+ook niet als dat geheim ooit uitlekt.
+
 Marktplaats kan dit niet; die hebben geen bruikbare koppeling voor gewone
 advertenties. Daar blijft het kopiëren, met een handmatig vinkje "staat op
 Marktplaats" zodat je wel ziet dat je hem daar nog weg moet halen.
 
-### Wat jij in Shopify moet doen
+### Je webshop koppelen
 
-Eén keer, ongeveer tien minuten.
+Eén keer, ongeveer tien minuten, en het staat in de app zelf: **Instellingen →
+Webshop**. Daar staan de zes stappen met de knoppen erbij die je in Shopify moet
+hebben. Kort samengevat:
 
 1. Shopify-beheer → **Instellingen** → **Apps en verkoopkanalen**
-2. Klik **Apps ontwikkelen** → **App maken** → noem hem `Storvo`
-3. Tabblad **Configuratie** → **Admin API** → geef deze rechten:
-   - `read_products`, `write_products`
-   - `read_inventory`, `write_inventory`
-   - `read_orders`
-4. **Installeren**
-5. Tabblad **API-referenties** → onthul het **Admin API-toegangstoken**
-   (begint met `shpat_`)
+2. **Apps ontwikkelen** → **App maken** → noem hem `Storvo`
+3. Tabblad **Configuratie** → **Admin API** → zet deze zes rechten aan:
+   `read_products`, `write_products`, `read_inventory`, `write_inventory`,
+   `read_orders`, `write_publications`
+4. **Opslaan**, dan **Installeren**
+5. Tabblad **API-referenties** → **Onthullen** bij het Admin API-toegangstoken
+   (begint met `shpat_`). Shopify laat dat token maar één keer zien.
+6. Plakken in Storvo, op **Eerst uitproberen** drukken, en dan **Koppelen**
 
-**Dat token is een sleutel tot je webshop.** Plak hem nergens in een chat. Je
-zet hem zelf in Supabase onder Project Settings → Edge Functions → Secrets:
+Dat `write_publications` is de makkelijkste om te vergeten en de vervelendste
+als hij mist: zonder dat recht komt een toestel wel in je Shopify-beheer te
+staan, maar ziet geen enkele klant het in je winkel. Vandaar dat Storvo je dat
+vóór het koppelen vertelt in plaats van bij de eerste laptop.
 
-| Naam | Wat erin komt |
-|---|---|
-| `SHOPIFY_WINKEL` | Je winkeladres, bijvoorbeeld `mijnwinkel.myshopify.com` |
-| `SHOPIFY_TOKEN` | Het token dat begint met `shpat_` |
+**Wat er met dat token gebeurt.** Het gaat rechtstreeks naar de server en wordt
+daar versleuteld bewaard. Wij kunnen het daarna zelf niet meer lezen, en de app
+laat je alleen de laatste vier tekens zien zodat je herkent welk token er staat.
+Plak hem nergens anders; een webshoptoken is een sleutel tot je hele winkel.
 
-Later, wanneer ook andere winkels hun eigen webshop koppelen, verhuist dit naar
-een koppelknop in de instellingen per winkel. Voor nu is jouw winkel genoeg om
-het werkend te krijgen.
+**Werkt het niet meer?** Op de koppelpagina staat **Opnieuw nakijken**. Die
+controleert of het token nog geldig is en of de rechten nog kloppen, en zegt het
+als er iets veranderd is. Handig voordat je een drukke zaterdag ingaat.
+
+### Waarom geen knop "verbind met één klik"
+
+Die knop werkt via OAuth en vraagt een Shopify Partner-account met een app die
+Shopify eerst moet goedkeuren. Dat duurt weken en het levert de winkelier
+precies één klik minder op. De weg hierboven werkt vandaag, voor iedere winkel.
+De code is er wel op voorbereid: alleen het stukje "hoe komen we aan een token"
+verandert als OAuth er later bij komt.
 
 ---
 

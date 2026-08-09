@@ -29,6 +29,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `whatsapp-koppelen` | nee | Rondt het koppelen van een eigen nummer af |
 | `whatsapp-status` | nee | Geeft de browser het app-ID voor de koppelflow |
 | `product-herkennen` | nee | Leest een foto van een productdoosje en zegt wat erin zit |
+| `shopify-koppelen` | nee | Koppelt de webshop van één winkel: uitproberen, opslaan, nakijken, loskoppelen |
 | `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf |
 | `shopify-webhook` | ja | Shopify meldt hier dat er iets verkocht is |
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
@@ -42,6 +43,36 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.
+
+## De webshopkoppeling
+
+Er stonden drie instellingen voor Shopify in deze lijst: één winkeladres, één
+token en één webhookgeheim voor het hele platform. Dat werkt zolang er één
+winkel is. Elke winkel koppelt nu zijn eigen webshop, bij Instellingen onder
+**Webshop**, en die gegevens staan in de tabel `winkel_koppelingen`.
+
+Wat er met het token gebeurt:
+
+- Het gaat vanuit de browser rechtstreeks naar `shopify-koppelen` en wordt daar
+  gecontroleerd bij Shopify voordat er iets bewaard wordt.
+- Het staat versleuteld in de kolom, met AES-GCM en `KOPPELING_SLEUTEL`. Een
+  databasedump of een back-up levert dus geen werkende webshopsleutels op.
+- De tabel heeft **geen policies**. Dat is geen vergissing: zonder policy komt
+  een ingelogde gebruiker er nooit bij, ook niet als er ergens per ongeluk een
+  `select` op losgelaten wordt. Alleen de service_role, die policies overslaat,
+  kan erbij.
+- De browser krijgt het token nooit terug, alleen de laatste vier tekens.
+
+`KOPPELING_SLEUTEL` maak je zelf aan, één keer, en zet je in Supabase onder
+Project Settings → Edge Functions → Secrets:
+
+```
+openssl rand -base64 32
+```
+
+Raak je die sleutel kwijt, dan zijn de opgeslagen tokens onleesbaar en moet
+iedere winkel opnieuw koppelen. Verder gebeurt er niets ergs; de webshops zelf
+blijven gewoon draaien.
 
 ## Instellingen die erbij horen
 
@@ -68,7 +99,5 @@ Zet ze nooit in de code en nooit in een chat.
 | `STRIPE_PRIJS_ENTERPRISE` | De prijs van het pakket Enterprise |
 | `STRIPE_KORTING_COUPON` | De bon voor het laatste aanbod, mag ontbreken |
 | `APP_URL` | Waarheen Stripe terugstuurt na het afrekenen |
-| `SHOPIFY_WINKEL` | Je winkeladres, bijvoorbeeld `mijnwinkel.myshopify.com` |
-| `SHOPIFY_TOKEN` | Het Admin API-token dat begint met `shpat_` |
-| `SHOPIFY_WEBHOOK_SECRET` | Controleert of een melding echt van Shopify komt |
+| `KOPPELING_SLEUTEL` | 32 bytes in base64. Hiermee worden webshoptokens versleuteld opgeslagen |
 | `ICECAT_GEBRUIKER` | Gebruikersnaam van je gratis Icecat-account, voor productfoto's |

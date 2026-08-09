@@ -5,53 +5,13 @@
 // overal offline. Anders verkoop je hem twee keer en mag je een klant bellen
 // dat het toch niet doorgaat.
 //
-// De sleutel van de webshop staat als instelling in Supabase en komt nooit in
-// de browser. Zodra meerdere winkels hun eigen webshop koppelen verhuist dat
-// naar een rij per winkel; de opzet hieronder is daar al op voorbereid.
+// Alles gaat via de GraphQL Admin API. De REST-endpoints voor producten zijn
+// door Shopify afgeschreven; daarop bouwen zou betekenen dat dit binnen een
+// jaar stilvalt.
+//
+// Het token komt uit de koppeling van díé winkel en komt nooit in de browser.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
-
-const admin = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
-
-const API = "2024-10";
-
-function fout(bericht: string, code = 400) {
-  return new Response(JSON.stringify({ ok: false, error: bericht }), { status: code, headers: cors });
-}
-
-async function shopify(pad: string, methode = "GET", lijf?: unknown) {
-  const winkel = Deno.env.get("SHOPIFY_WINKEL");
-  const token = Deno.env.get("SHOPIFY_TOKEN");
-  if (!winkel || !token) throw new Error("De webshop is nog niet gekoppeld");
-
-  const res = await fetch(`https://${winkel}/admin/api/${API}/${pad}`, {
-    method: methode,
-    headers: {
-      "X-Shopify-Access-Token": token,
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    },
-    body: lijf ? JSON.stringify(lijf) : undefined,
-  });
-  const tekst = await res.text();
-  let uit: any = {};
-  try { uit = tekst ? JSON.parse(tekst) : {}; } catch { /* leeg antwoord mag */ }
-  if (!res.ok) {
-    const m = uit?.errors ? JSON.stringify(uit.errors) : "Shopify gaf status " + res.status;
-    throw new Error(m);
-  }
-  return uit;
-}
+import { admin, cors, fout, wieBelt, graphql, letOp, koppelingVan } from "../_gedeeld/shopify.ts";
 
 // De omschrijving die op de webshop komt te staan. Specificaties als lijstje,
 // want dat is wat een koper van tweedehands hardware wil zien.
@@ -75,30 +35,35 @@ function beschrijving(h: any) {
   ].filter(Boolean).join("\n");
 }
 
+/* Een toestel is altijd één stuk met één uitvoering. Shopify wil toch een
+   optie hebben; die heet dan "Titel" met één waarde, precies zoals Shopify het
+   zelf doet bij een product zonder varianten. */
+const ENIGE_OPTIE = { optionName: "Title", name: "Default Title" };
+
+async function fotosVan(h: any) {
+  const lijst = Array.isArray(h.fotos) ? h.fotos.filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
+  return lijst.slice(0, 10).map((u: string) => ({
+    originalSource: u, alt: [h.merk, h.model].filter(Boolean).join(" "), contentType: "IMAGE",
+  }));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
 
-  const bevoegd = req.headers.get("Authorization") || "";
-  if (!bevoegd.startsWith("Bearer ")) return fout("Niet ingelogd", 401);
-
-  const klant = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: bevoegd } } },
-  );
-  const { data: wie } = await klant.auth.getUser();
-  if (!wie?.user) return fout("Niet ingelogd", 401);
-
-  const { data: acc } = await admin.from("accounts")
-    .select("team_id").eq("id", wie.user.id).maybeSingle();
-  if (!acc) return fout("Je account is niet gevonden", 403);
+  const acc = await wieBelt(req);
+  if (!acc) return fout("Niet ingelogd", 401);
 
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
   const actie = String(lijf?.actie || "");
   const id = String(lijf?.hardware_id || "");
   if (!id) return fout("Geen toestel meegegeven");
+
+  const k = await koppelingVan(acc.team_id);
+  if (!k) {
+    return fout("Er is nog geen webshop gekoppeld. Dat doe je bij Instellingen, onder Webshop.", 409);
+  }
 
   // Altijd zelf ophalen, zodat de browser niet kan bepalen wat er verkocht wordt.
   const { data: h } = await admin.from("hardware")
@@ -111,54 +76,83 @@ Deno.serve(async (req) => {
     if (actie === "online") {
       if (h.verkoop == null) return fout("Vul eerst een vraagprijs in");
       const titel = h.titel || [h.merk, h.model].filter(Boolean).join(" ");
+      const bestaand = kanalen.shopify?.id || null;
 
-      const gemaakt = await shopify("products.json", "POST", {
-        product: {
-          title: titel,
-          body_html: beschrijving(h),
-          vendor: h.merk || "Storvo",
-          product_type: h.categorie || "Laptop",
-          status: "active",
-          tags: ["refurbished", h.staat ? "staat-" + h.staat : ""].filter(Boolean).join(", "),
-          variants: [{
-            price: String(h.verkoop),
-            sku: h.serienummer || undefined,
-            inventory_management: "shopify",
-            inventory_policy: "deny",
-            requires_shipping: true,
-          }],
-        },
-      });
+      /* productSet doet in één keer wat vroeger vier aanroepen kostte: het
+         product, de variant, de prijs en de voorraad. Dat scheelt niet alleen
+         tijd; het scheelt vooral half-aangemaakte producten als er onderweg
+         iets misgaat. */
+      const invoer: any = {
+        title: titel,
+        descriptionHtml: beschrijving(h),
+        vendor: h.merk || "Storvo",
+        productType: h.categorie || "Laptop",
+        status: "ACTIVE",
+        tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || ""].filter(Boolean),
+        productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
+        variants: [{
+          price: String(h.verkoop),
+          sku: h.code || h.serienummer || undefined,
+          inventoryPolicy: "DENY",
+          optionValues: [ENIGE_OPTIE],
+          ...(k.locatie_id ? {
+            inventoryQuantities: [{ locationId: k.locatie_id, name: "available", quantity: 1 }],
+          } : {}),
+        }],
+      };
+      if (bestaand) invoer.id = bestaand;
 
-      const p = gemaakt.product;
-      const variant = p?.variants?.[0];
+      const files = await fotosVan(h);
+      if (files.length && !bestaand) invoer.files = files;
 
-      // Eén stuk op voorraad zetten. Zonder dit staat hij op nul en kan niemand
-      // hem kopen, wat een lastig te vinden fout is.
-      if (variant?.inventory_item_id) {
-        const loc = await shopify("locations.json");
-        const eerste = loc?.locations?.[0]?.id;
-        if (eerste) {
-          await shopify("inventory_levels/set.json", "POST", {
-            location_id: eerste,
-            inventory_item_id: variant.inventory_item_id,
-            available: 1,
-          });
-        }
+      const uit = await graphql(k, `
+        mutation($input: ProductSetInput!) {
+          productSet(input: $input, synchronous: true) {
+            product { id handle title onlineStoreUrl
+              variants(first: 1) { nodes { id } } }
+            userErrors { field message }
+          }
+        }`, { input: invoer });
+      const p = letOp(uit?.productSet, "Het aanmaken op de webshop").product;
+      if (!p?.id) throw new Error("Shopify gaf geen product terug");
+      const variant = p?.variants?.nodes?.[0]?.id || null;
+
+      /* Aanmaken is niet hetzelfde als zichtbaar zijn. Zonder deze stap staat
+         het toestel keurig in je Shopify-beheer en ziet geen enkele klant het.
+         Dat is de fout die je pas ontdekt als iemand vraagt waar die laptop
+         nou staat. */
+      let zichtbaar = false;
+      if (k.publicatie_id) {
+        const pub = await graphql(k, `
+          mutation($id: ID!, $input: [PublicationInput!]!) {
+            publishablePublish(id: $id, input: $input) {
+              userErrors { field message }
+            }
+          }`, { id: p.id, input: [{ publicationId: k.publicatie_id }] });
+        letOp(pub?.publishablePublish, "Het zichtbaar maken in de webshop");
+        zichtbaar = true;
       }
 
-      const winkel = Deno.env.get("SHOPIFY_WINKEL");
+      const nummer = String(p.id).split("/").pop();
       kanalen.shopify = {
         id: p.id,
-        variant: variant?.id || null,
-        url: p.handle ? `https://${winkel}/products/${p.handle}` : null,
+        nummer,
+        variant,
+        url: p.onlineStoreUrl || (p.handle ? `https://${k.domein}/products/${p.handle}` : null),
+        beheer: `https://${k.domein}/admin/products/${nummer}`,
+        zichtbaar,
         sinds: new Date().toISOString(),
       };
       await admin.from("hardware").update({
         kanalen, bijgewerkt_op: new Date().toISOString(),
       }).eq("id", id);
 
-      return new Response(JSON.stringify({ ok: true, kanalen }), { headers: cors });
+      return new Response(JSON.stringify({
+        ok: true, kanalen,
+        waarschuwing: zichtbaar ? null
+          : "Het toestel staat op Shopify maar is nog niet in de webshop gepubliceerd. " +
+            "Kijk bij Instellingen of de koppeling het verkoopkanaal heeft gevonden.",
+      }), { headers: cors });
     }
 
     if (actie === "offline") {
@@ -166,7 +160,14 @@ Deno.serve(async (req) => {
       if (s?.id) {
         // Verwijderen in plaats van op nul zetten: een verkocht toestel komt
         // nooit meer terug, en een lege productpagina is slechter dan geen.
-        try { await shopify(`products/${s.id}.json`, "DELETE"); } catch (e) {
+        try {
+          const uit = await graphql(k, `
+            mutation($input: ProductDeleteInput!) {
+              productDelete(input: $input) { deletedProductId userErrors { field message } }
+            }`, { input: { id: s.id } });
+          letOp(uit?.productDelete, "Het weghalen van de webshop");
+        } catch (e) {
+          // Al weg bij Shopify is geen fout: dan klopt onze administratie juist.
           console.error("shopify verwijderen", e);
         }
       }
@@ -179,16 +180,33 @@ Deno.serve(async (req) => {
 
     if (actie === "prijs") {
       const s = kanalen.shopify;
-      if (!s?.variant) return fout("Dit toestel staat niet op de webshop");
-      await shopify(`variants/${s.variant}.json`, "PUT", {
-        variant: { id: s.variant, price: String(h.verkoop ?? 0) },
+      if (!s?.id || !s?.variant) return fout("Dit toestel staat niet op de webshop");
+      const uit = await graphql(k, `
+        mutation($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+            productVariants { id price }
+            userErrors { field message }
+          }
+        }`, {
+        productId: s.id,
+        variants: [{ id: s.variant, price: String(h.verkoop ?? 0) }],
       });
+      letOp(uit?.productVariantsBulkUpdate, "Het bijwerken van de prijs");
       return new Response(JSON.stringify({ ok: true }), { headers: cors });
     }
 
     return fout("Onbekende actie");
   } catch (e) {
     console.error("shopify", actie, e);
-    return fout(e instanceof Error ? e.message : "De webshop reageerde niet", 502);
+    const melding = e instanceof Error ? e.message : "De webshop reageerde niet";
+    /* Een token dat niet meer werkt is geen incident maar een toestand. Zetten
+       we dat niet vast, dan blijft de winkelier het proberen zonder te weten
+       waarom het niet lukt. */
+    if (/token niet meer/i.test(melding)) {
+      await admin.from("winkel_koppelingen")
+        .update({ status: "fout", fout: melding, laatst_gecontroleerd: new Date().toISOString() })
+        .eq("team_id", acc.team_id).eq("kanaal", "shopify");
+    }
+    return fout(melding, 502);
   }
 });
