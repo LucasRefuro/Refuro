@@ -122,6 +122,7 @@ th{text-align:left; font-size:11px; font-weight:700; letter-spacing:.08em; text-
   color:var(--muted-l); padding:0 12px 10px; white-space:nowrap;}
 td{padding:12px; border-top:1px solid var(--border); vertical-align:middle;}
 tr:hover td{background:var(--soft);}
+tr.klikbaar{cursor:pointer;}
 .num{text-align:right; font-variant-numeric:tabular-nums;}
 .hwact{white-space:nowrap;}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
@@ -153,6 +154,36 @@ tr:hover td{background:var(--soft);}
 .acts{display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;}
 .acts .btn{flex:1; min-width:150px;}
 
+/* ---------- de controle in stappen ---------- */
+.stapbalk{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 18px;}
+.stapbol{font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:5px 13px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted-l);}
+.stapbol.nu{background:var(--groen); color:#fff;}
+.stapbol.gedaan{background:var(--green-soft); color:var(--green-tekst);}
+
+.stappenlijst{margin:0 0 18px 20px; font-size:14.5px; line-height:1.8;}
+.stappenlijst li{padding-left:4px;}
+
+.wekker{display:flex; align-items:center; gap:16px; background:var(--soft-2);
+  border-radius:var(--radius-s); padding:16px 20px;}
+.wektijd{font-family:'Sora',sans-serif; font-size:34px; font-weight:800;
+  letter-spacing:-.02em; font-variant-numeric:tabular-nums; min-width:110px;}
+.wektijd.klaar{color:var(--green-tekst); font-size:26px;}
+
+.tip{background:var(--amber-soft); color:var(--amber-tekst); border-radius:12px;
+  padding:11px 15px; font-size:13.5px; margin:10px 0;}
+
+.gradevak{display:flex; align-items:center; gap:18px; background:var(--lblauw);
+  border-radius:var(--radius-s); padding:18px 22px; margin-top:18px;}
+.gradeletter{font-family:'Sora',sans-serif; font-size:44px; font-weight:800;
+  line-height:1; color:var(--groen); width:56px; text-align:center;}
+.gradekop{font-family:'Sora',sans-serif; font-size:17px; font-weight:800;}
+
+.deelrij{display:flex; align-items:center; gap:11px; padding:9px 14px; margin-bottom:6px;
+  border:1.5px solid var(--border); border-radius:12px; cursor:pointer; font-size:14.5px;}
+.deelrij:hover{background:var(--soft);}
+.deelrij input{width:auto;}
+
 /* ---------- checklist ---------- */
 .clrij{border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:10px;}
 .clvraag{font-weight:600; font-size:14.5px; margin-bottom:10px;}
@@ -174,8 +205,11 @@ tr:hover td{background:var(--soft);}
 .etiket{width:58mm; border:1px dashed var(--muted-l); border-radius:6px;
   padding:5mm; background:#fff; color:#000; break-inside:avoid;
   font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
+.etkop{display:flex; align-items:center; gap:2.5mm; margin-bottom:2.5mm;}
+.etgrade{font-family:'Sora',sans-serif; font-size:15pt; font-weight:800; line-height:1;
+  border:1.5pt solid #000; border-radius:2mm; padding:0.8mm 2.5mm;}
 .etstatus{font-size:9pt; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
-  border:1.5pt solid #000; border-radius:2mm; padding:1mm 2.5mm; display:inline-block; margin-bottom:2.5mm;}
+  border:1.5pt solid #000; border-radius:2mm; padding:1mm 2.5mm; display:inline-block;}
 .etnaam{font-family:'Sora',sans-serif; font-size:15pt; font-weight:800; line-height:1.15;
   letter-spacing:-.02em; overflow-wrap:anywhere; margin-bottom:1.5mm;}
 .etcode{font-size:10pt; font-weight:700; letter-spacing:.04em; margin-bottom:1.5mm;}
@@ -555,16 +589,17 @@ function tabel(rijen){
   return `<div class="tabelrol"><table>
     <thead><tr><th>Apparaat</th><th>Nummer</th><th>Serienummer</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
     <tbody>${rijen.map(a=>{
-      return `<tr>
+      /* De hele regel is de knop. Je zoekt niet eerst een klein knopje op
+         als je met handschoenen aan achter een tafel vol laptops staat. */
+      return `<tr class="klikbaar" onclick="appOpen('${a.id}')">
         <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
-            <div class="muted klein">${esc(a.categorie||'')}${a.gelabeld?'':' · nog geen label'}</div></td>
+            <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}</div></td>
         <td class="mono">${esc(a.code||'—')}</td>
         <td class="mono">${esc(a.serienummer||'—')}</td>
         <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
         <td class="muted klein">${datum(a.aangemaakt_op)}</td>
         <td class="num hwact">
-          <button class="btn ghost small" onclick="labelsTonen('${a.id}')">Label</button>
-          <button class="btn ghost small" onclick="appOpen('${a.id}')">Openen</button></td>
+          <button class="btn ghost small" onclick="event.stopPropagation(); labelsTonen('${a.id}')">Label</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
 }
@@ -717,22 +752,31 @@ function labelUrl(id){
 const STATUS_KORT={
   te_controleren:'TE CONTROLEREN',
   te_repareren:'TE REPAREREN',
-  repurpose:'SLOPEN VOOR ONDERDELEN',
+  repurpose:'ONDERDELEN',
   klaar:'KLAAR VOOR VERKOOP',
   overgedragen:'IN DE WINKEL'
 };
 
 function labelHtml(a){
   const specs=a.specs||{};
-  const regels=[
-    a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie,
-    specs['Processor'] ? 'CPU: '+specs['Processor'] : null,
-    specs['Geheugen']  ? 'RAM: '+specs['Geheugen']  : null,
-    specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
-    specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null
-  ].filter(Boolean);
+  const goed=a.goede_delen||[];
+  /* Een apparaat dat gesloopt wordt heeft andere gegevens nodig dan een
+     apparaat dat verkocht wordt. Op het eerste hoort wat er nog goed aan is,
+     op het tweede de grade en de specificaties. */
+  const regels = a.status==='repurpose'
+    ? (goed.length ? ['Nog goed:'].concat(goed.map(d=>'· '+d)) : ['Niets meer bruikbaar'])
+    : [
+        a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie,
+        specs['Processor'] ? 'CPU: '+specs['Processor'] : null,
+        specs['Geheugen']  ? 'RAM: '+specs['Geheugen']  : null,
+        specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
+        specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null
+      ].filter(Boolean);
   return `<div class="etiket">
-    <div class="etstatus">${esc(STATUS_KORT[a.status]||a.status)}</div>
+    <div class="etkop">
+      <span class="etstatus">${esc(STATUS_KORT[a.status]||a.status)}</span>
+      ${a.grade && a.status!=='repurpose' ? `<span class="etgrade">${esc(a.grade)}</span>` : ''}
+    </div>
     <div class="etnaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
     <div class="etcode">${esc(a.code||'')}${a.serienummer?' · '+esc(a.serienummer):''}</div>
     <div class="etregels">${regels.map(r=>`<div>${esc(r)}</div>`).join('')}</div>
@@ -771,75 +815,219 @@ function tekenControle(){
     : leeg('i-check','Niets te controleren','Alles is nagekeken. Voeg een batch toe om verder te gaan.');
 }
 
-/* De checklist wordt op het moment zelf samengesteld: eerst de categorie, dan
-   het model, dan de vragen die horen bij wat er in dit apparaat zit. Zo staat
-   er nooit een vraag over een touchscreen bij een apparaat zonder. */
+/* ═══════════════ de controle als stappenpad ═══════════════
+
+   Niet één lange lijst met vragen, maar een pad dat meebeweegt met wat je
+   antwoordt. Dat scheelt tijd en, belangrijker, het zorgt dat iedereen dezelfde
+   volgorde aanhoudt. Een medewerker die twijfelt gooit een laptop weg die met
+   een resetje nog prima was.
+
+   Het pad:
+
+     start hij op?
+       ja  → hardware nalopen → visuele inspectie → grade → uitkomst
+       nee → brandt er een lampje?
+               nee → openmaken, accu en bios-batterij los, twee minuten wachten,
+                     geheugen nakijken, opnieuw proberen
+               ja  → geheugen nakijken, opnieuw proberen
+             start hij nu op? nee → slopen voor onderdelen
+
+   De uitkomst is nooit een oordeel van de app: het is de optelsom van wat de
+   medewerker heeft aangeklikt.                                              */
+
+/* Aanvullende vragen op basis van wat erin zit. Staat er geen touchscreen in,
+   dan komt de vraag over het touchscreen ook niet. */
 const SPEC_VRAGEN={
-  'Touchscreen':[{v:'Zit er een barst in het touchscreen?', a:['Nee','Ja','Ontbreekt']},
-                 {v:'Reageert het touchscreen overal?',     a:['Ja','Nee','Ontbreekt']}],
-  'Opslag':     [{v:'Wordt de opslag herkend en is hij leeg?', a:['Ja','Nee','Ontbreekt']}],
-  'Geheugen':   [{v:'Wordt al het geheugen herkend?',          a:['Ja','Nee','Ontbreekt']}]
+  'Touchscreen':[{v:'Reageert het touchscreen overal?', a:['Ja','Nee']}],
+  'Videokaart': [{v:'Wordt de videokaart herkend?',     a:['Ja','Nee']}]
 };
-const BASIS_VISUEEL=[
-  {v:'Hoe is de behuizing?',        a:['Goed','Krassen','Deuken']},
-  {v:'Hoe is het scherm optisch?',  a:['Goed','Krassen','Barst']},
-  {v:'Zijn alle toetsen aanwezig?', a:['Ja','Nee']},
-  {v:'Zijn de aansluitingen heel?', a:['Ja','Nee']}
-];
-const BASIS_FUNCTIE=[
-  {v:'Start het apparaat normaal op?', a:['Ja','Nee']},
-  {v:'Werkt het toetsenbord?',         a:['Ja','Nee','Ontbreekt']},
-  {v:'Werkt het touchpad of de touch?',a:['Ja','Nee','Ontbreekt']},
-  {v:'Werkt de webcam?',               a:['Ja','Nee','Ontbreekt']},
-  {v:'Werkt de accu en laden?',        a:['Ja','Nee','Ontbreekt']},
-  {v:'Werken wifi en bluetooth?',      a:['Ja','Nee']},
-  {v:'Werkt het geluid?',              a:['Ja','Nee']}
+
+/* Wat er functioneel getest wordt zodra hij aan gaat. */
+const HARDWARE_CHECKS=[
+  {v:'Werkt het toetsenbord, alle toetsen?', a:['Ja','Nee'], deel:'Toetsenbord'},
+  {v:'Werkt het touchpad?',                  a:['Ja','Nee'], deel:'Touchpad'},
+  {v:'Werkt het scherm zonder strepen of vlekken?', a:['Ja','Nee'], deel:'Scherm'},
+  {v:'Werkt de webcam?',                     a:['Ja','Nee'], deel:'Webcam'},
+  {v:'Houdt de accu lading vast?',           a:['Ja','Nee'], deel:'Accu'},
+  {v:'Laadt hij op via de lader?',           a:['Ja','Nee'], deel:'Laadpoort'},
+  {v:'Werken wifi en bluetooth?',            a:['Ja','Nee'], deel:'Wifi-kaart'},
+  {v:'Werkt het geluid?',                    a:['Ja','Nee'], deel:'Luidsprekers'},
+  {v:'Werken alle poorten?',                 a:['Ja','Nee'], deel:'Poorten'}
 ];
 
-function checklistVoor(a){
-  const eigen=checklists.filter(c=>c.categorie===a.categorie &&
-    (!c.model || c.model.toLowerCase()===String(a.model||'').toLowerCase()));
-  const extra=[];
-  eigen.forEach(c=>(c.items||[]).forEach(i=>extra.push(i)));
-  const specs=a.specs||{};
-  const uitSpecs=[];
-  Object.keys(SPEC_VRAGEN).forEach(k=>{
-    if(specs[k]) SPEC_VRAGEN[k].forEach(q=>uitSpecs.push(q));
-  });
-  return [
-    {kop:'Visuele inspectie', vragen:BASIS_VISUEEL},
-    {kop:'Werkt alles', vragen:BASIS_FUNCTIE.concat(uitSpecs)},
-    extra.length?{kop:'Eigen controles', vragen:extra}:null
-  ].filter(Boolean);
+/* De visuele inspectie met strafpunten. Hoe minder punten, hoe beter de grade.
+   Zo hoeft niemand op gevoel te bepalen of iets nog een A is. */
+const VISUEEL=[
+  {t:'Behuizing', opties:[
+    {l:'Als nieuw', p:0}, {l:'Lichte gebruikssporen', p:1},
+    {l:'Duidelijke krassen', p:3}, {l:'Deuken of schade', p:6}]},
+  {t:'Scherm', opties:[
+    {l:'Gaaf', p:0}, {l:'Lichte krassen', p:1},
+    {l:'Duidelijke krassen', p:3}, {l:'Barst of vlek', p:8}]},
+  {t:'Toetsenbord', opties:[
+    {l:'Letters gaaf', p:0}, {l:'Licht sleets', p:1}, {l:'Sterk sleets', p:3}]},
+  {t:'Scharnieren en deksel', opties:[
+    {l:'Stevig', p:0}, {l:'Wat speling', p:2}, {l:'Los of beschadigd', p:5}]}
+];
+const GRADES=[
+  {g:'A', tot:2,  uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},
+  {g:'B', tot:7,  uitleg:'Gebruikt, in nette staat'},
+  {g:'C', tot:99, uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}
+];
+function gradeVan(punten){
+  return (GRADES.find(g=>punten<=g.tot)||GRADES[GRADES.length-1]).g;
 }
 
-let ctrApparaat=null, ctrAntwoord={};
+/* De onderdelen die de moeite waard zijn om te bewaren als een apparaat wordt
+   gesloopt. */
+const SLOOPDELEN=['Scherm','Toetsenbord','Accu','Moederbord','Geheugen','Opslag',
+                  'Laadpoort','Luidsprekers','Wifi-kaart','Behuizing','Koeler','Webcam'];
+
+let ctr=null;   /* alles van de lopende controle staat hierin */
 
 function appOpen(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
   if(a.status==='te_repareren') return repOpen(a);
   if(a.status==='klaar')        return klaarOpen(a);
   if(a.status==='repurpose')    return sloopOpen(a);
-  ctrApparaat=a; ctrAntwoord={};
-  (a.checklist||[]).forEach(r=>{ ctrAntwoord[r.v]=r.a; });
+  ctr={
+    a, stap:'start', antwoord:{}, punten:{}, delen:{},
+    specs:Object.assign({}, a.specs||{}), serie:a.serienummer||'',
+    tijdEinde:null
+  };
   ctrTeken();
 }
 
-function ctrTeken(){
-  const a=ctrApparaat;
-  const groepen=checklistVoor(a);
-  const sp=a.specs||{};
-  venster('Controle: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
-    <p class="pv">${a.code?esc(a.code)+' · ':''}Vul eerst in wat erin zit, loop dan de lijst af. Wat je aanvinkt bepaalt wat er daarna met dit apparaat gebeurt.</p>
+/* ---------- tekenen ---------- */
 
-    <div class="clkop">Wat zit erin</div>
+function ctrTeken(){
+  const a=ctr.a;
+  const stap=CTR_STAPPEN[ctr.stap];
+  venster(esc([a.merk,a.model].filter(Boolean).join(' ')), `
+    <div class="stapbalk">${CTR_BALK.map(b=>`
+      <span class="stapbol ${ctrBalkStand(b.id)}">${esc(b.naam)}</span>`).join('')}</div>
+    ${stap.inhoud()}
+  `, stap.knoppen(), 'groot');
+  if(stap.na) stap.na();
+}
+
+const CTR_BALK=[
+  {id:'start',    naam:'Start'},
+  {id:'hardware', naam:'Hardware'},
+  {id:'visueel',  naam:'Staat'},
+  {id:'klaar',    naam:'Uitkomst'}
+];
+function ctrBalkStand(id){
+  const volgorde=['start','hardware','visueel','klaar'];
+  const nu=CTR_STAPPEN[ctr.stap].balk;
+  const i=volgorde.indexOf(id), j=volgorde.indexOf(nu);
+  return i<j ? 'gedaan' : (i===j ? 'nu' : '');
+}
+
+function ctrVraag(vraag, opties, sleutel){
+  const gekozen=ctr.antwoord[sleutel||vraag];
+  return `<div class="clrij">
+    <div class="clvraag">${esc(vraag)}</div>
+    <div class="clknoppen">${opties.map(o=>`
+      <button class="${gekozen===o?'gekozen '+kleurVan(o):''}"
+        onclick="ctrKies(${JSON.stringify(sleutel||vraag).replace(/"/g,'&quot;')}, ${JSON.stringify(o).replace(/"/g,'&quot;')})">${esc(o)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+function kleurVan(opt){
+  if(['Ja','Goed','Als nieuw','Gaaf','Stevig'].includes(opt)) return 'goed';
+  if(['Ontbreekt','Onbekend'].includes(opt)) return 'mist';
+  if(['Nee','Barst of vlek','Deuken of schade','Los of beschadigd'].includes(opt)) return 'fout';
+  return 'mist';
+}
+function ctrKies(sleutel, antwoord){
+  ctr.antwoord[sleutel]=antwoord;
+  ctrBewaarVelden();
+  ctrTeken();
+}
+function ctrBewaarVelden(){
+  ['c_serie','c_cpu','c_ram','c_ssd','c_scherm','c_gpu'].forEach(id=>{
+    const e=document.getElementById(id); if(!e) return;
+    if(id==='c_serie') ctr.serie=e.value.trim();
+  });
+  const specs=ctrSpecsUitVelden();
+  if(Object.keys(specs).length) ctr.specs=Object.assign({}, ctr.specs, specs);
+  const t=document.getElementById('c_touch');
+  if(t) ctr.specs['Touchscreen']=t.checked?'ja':'';
+}
+function ctrSpecsUitVelden(){
+  const uit={};
+  const p=(id,naam)=>{ const e=document.getElementById(id); if(e && e.value.trim()) uit[naam]=e.value.trim(); };
+  p('c_cpu','Processor'); p('c_ram','Geheugen'); p('c_ssd','Opslag');
+  p('c_scherm','Scherm'); p('c_gpu','Videokaart');
+  return uit;
+}
+function ctrGa(stap){ ctrBewaarVelden(); ctr.stap=stap; ctrTeken(); }
+
+/* ---------- de stappen ---------- */
+
+const CTR_STAPPEN={
+
+  start:{ balk:'start', inhoud:()=>`
+    <p class="pv">${ctr.a.code?esc(ctr.a.code)+' · ':''}Sluit de lader aan en druk op de aanknop.</p>
+    ${ctrVraag('Start het apparaat op?', ['Ja','Nee'], 'start')}
+    <div class="clkop">Serienummer</div>
+    <input id="c_serie" value="${esc(ctr.serie)}" placeholder="Van de sticker op de onderkant">
+  `, knoppen:()=>{
+    const w=ctr.antwoord['start'];
+    if(w==='Ja')  return [{tekst:'Door naar de hardware', klasse:'actie', doe:()=>ctrGa('specs')}];
+    if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa('lampje')}];
+    return [];
+  }},
+
+  lampje:{ balk:'start', inhoud:()=>`
+    <p class="pv">Hij gaat niet aan. Eerst kijken of er nog leven in zit.</p>
+    ${ctrVraag('Brandt er een lampje als je de lader aansluit?', ['Ja','Nee'], 'lampje')}
+  `, knoppen:()=>{
+    const w=ctr.antwoord['lampje'];
+    if(w==='Nee') return [{tekst:'Naar de reset', klasse:'actie', doe:()=>ctrGa('reset')}];
+    if(w==='Ja')  return [{tekst:'Geheugen nakijken', klasse:'actie', doe:()=>ctrGa('geheugen')}];
+    return [];
+  }},
+
+  reset:{ balk:'start', inhoud:()=>`
+    <p class="pv">Geen lampje betekent meestal geen spanning, niet kapot. Deze reset haalt er verrassend veel weer bij.</p>
+    <ol class="stappenlijst">
+      <li>Haal de lader eruit en draai de onderkant open</li>
+      <li>Maak de accu los</li>
+      <li>Maak ook de bios-batterij los, het ronde knoopcelletje</li>
+      <li>Laat het twee minuten liggen zodat alles leegloopt</li>
+    </ol>
+    <div class="wekker" id="wekker">
+      <div class="wektijd" id="wekTijd">2:00</div>
+      <button class="btn ghost small" onclick="wekkerStart()">Twee minuten starten</button>
+    </div>
+  `, knoppen:()=>[{tekst:'Gedaan, weer in elkaar', klasse:'actie', doe:()=>ctrGa('geheugen')}] },
+
+  geheugen:{ balk:'start', inhoud:()=>`
+    <p class="pv">Een laptop zonder werkend geheugen geeft geen beeld en lijkt dood. Kijk het na voordat je hem afschrijft.</p>
+    ${ctrVraag('Zit er geheugen in, en zit het goed vast?', ['Ja','Nee'], 'geheugen')}
+    ${ctr.antwoord['geheugen']==='Nee'
+      ? '<p class="tip">Zet er geheugen in of druk het opnieuw aan, en probeer daarna opnieuw.</p>' : ''}
+    ${ctrVraag('Start hij nu op?', ['Ja','Nee'], 'nogmaals')}
+  `, knoppen:()=>{
+    const w=ctr.antwoord['nogmaals'];
+    if(w==='Ja')  return [{tekst:'Gelukt, door naar de hardware', klasse:'actie', doe:()=>ctrGa('specs')}];
+    if(w==='Nee') return [{tekst:'Slopen voor onderdelen', klasse:'', doe:()=>ctrGa('slopen')}];
+    return [];
+  }},
+
+  specs:{ balk:'hardware', inhoud:()=>{
+    const sp=ctr.specs||{};
+    return `
+    <p class="pv">Hij doet het. Noteer wat erin zit; dat komt straks op het label en in de webshop.</p>
     <div class="row" style="margin-bottom:12px">
       <button class="btn ghost small" onclick="specsZoeken(this)">
         <svg class="i s"><use href="#i-sparkles"/></svg>Specificaties opzoeken</button>
       <span class="muted klein" id="specsBron"></span>
     </div>
     <div class="grid">
-      <div><label>Serienummer</label><input id="c_serie" value="${esc(a.serienummer||'')}" placeholder="Van de sticker"></div>
+      <div><label>Serienummer</label><input id="c_serie" value="${esc(ctr.serie)}"></div>
       <div><label>Processor</label><input id="c_cpu" value="${esc(sp['Processor']||'')}" placeholder="Intel Core i5-1135G7"></div>
       <div><label>Geheugen</label><input id="c_ram" value="${esc(sp['Geheugen']||'')}" placeholder="16 GB"></div>
       <div><label>Opslag</label><input id="c_ssd" value="${esc(sp['Opslag']||'')}" placeholder="512 GB SSD"></div>
@@ -847,56 +1035,123 @@ function ctrTeken(){
       <div><label>Videokaart</label><input id="c_gpu" value="${esc(sp['Videokaart']||'')}" placeholder="Alleen als hij er een heeft"></div>
     </div>
     <label style="margin-top:10px"><input type="checkbox" id="c_touch" style="width:auto"
-      ${String(sp['Touchscreen']||'').toLowerCase()==='ja'?'checked':''}> Heeft een touchscreen</label>
-    ${groepen.map(g=>`
-      <div class="clkop">${esc(g.kop)}</div>
-      ${g.vragen.map(q=>`
+      ${String(sp['Touchscreen']||'').toLowerCase()==='ja'?'checked':''}> Heeft een touchscreen</label>`;
+  }, knoppen:()=>[{tekst:'Door naar de test', klasse:'actie', doe:()=>ctrGa('hardware')}] },
+
+  hardware:{ balk:'hardware', inhoud:()=>{
+    const alles=ctrHardwareVragen();
+    const open=alles.filter(q=>!ctr.antwoord[q.v]).length;
+    const eigen=ctrEigenVragen();
+    return `
+      <p class="pv">Loop alles na. Wat niet werkt gaat straks naar de reparatielijst.
+        ${open?`<b>Nog ${open} te doen.</b>`:'<b>Alles nagelopen.</b>'}</p>
+      ${HARDWARE_CHECKS.concat(ctrSpecVragen()).map(q=>ctrVraag(q.v, q.a)).join('')}
+      ${eigen.length?'<div class="clkop">Eigen controles</div>'+eigen.map(q=>ctrVraag(q.v, q.a)).join(''):''}`;
+  }, knoppen:()=>ctrHardwareVragen().every(q=>ctr.antwoord[q.v])
+      ? [{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] : [] },
+
+  visueel:{ balk:'visueel', inhoud:()=>{
+    const punten=ctrPunten();
+    return `
+      <p class="pv">Kijk het apparaat na en kies per onderdeel wat het dichtst in de buurt komt. Daar rolt de grade uit.</p>
+      ${VISUEEL.map(v=>`
         <div class="clrij">
-          <div class="clvraag">${esc(q.v)}</div>
-          <div class="clknoppen">${q.a.map(opt=>`
-            <button class="${ctrAntwoord[q.v]===opt?'gekozen '+kleurVan(opt):''}"
-              onclick="ctrKies(${JSON.stringify(q.v).replace(/"/g,'&quot;')}, ${JSON.stringify(opt).replace(/"/g,'&quot;')})">${esc(opt)}</button>`).join('')}
+          <div class="clvraag">${esc(v.t)}</div>
+          <div class="clknoppen">${v.opties.map(o=>`
+            <button class="${ctr.punten[v.t]===o.l?'gekozen '+(o.p===0?'goed':(o.p>=5?'fout':'mist')):''}"
+              onclick="ctrPunt(${JSON.stringify(v.t).replace(/"/g,'&quot;')}, ${JSON.stringify(o.l).replace(/"/g,'&quot;')}, ${o.p})">${esc(o.l)}</button>`).join('')}
           </div>
         </div>`).join('')}
-    `).join('')}
-  `, [
-    {tekst:'Goedgekeurd', klasse:'actie', doe:(k)=>ctrAfronden(k,'klaar')},
-    {tekst:'Moet gerepareerd', klasse:'', doe:(k)=>ctrAfronden(k,'te_repareren')},
-    {tekst:'Slopen voor onderdelen', klasse:'ghost', doe:(k)=>ctrAfronden(k,'repurpose')}
-  ], 'groot');
-}
+      ${ctrCompleet() ? `<div class="gradevak">
+        <div class="gradeletter">${gradeVan(punten)}</div>
+        <div>
+          <div class="gradekop">Grade ${gradeVan(punten)}</div>
+          <div class="muted klein">${esc((GRADES.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
+        </div>
+      </div>` : '<p class="muted klein" style="margin-top:12px">Kies bij alle vier iets, dan rekent hij de grade uit.</p>'}`;
+  }, knoppen:()=>ctrCompleet()
+      ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
 
-function kleurVan(opt){
-  if(['Ja','Goed'].includes(opt)) return 'goed';
-  if(['Ontbreekt'].includes(opt)) return 'mist';
-  if(['Nee','Barst','Deuken'].includes(opt)) return 'fout';
-  return 'mist';
-}
-function ctrKies(vraag, antwoord){
-  ctrAntwoord[vraag]=antwoord;
-  /* Het scherm wordt opnieuw getekend, dus wat er al is ingetypt moet mee
-     terug. Anders ben je je specificaties kwijt bij elke klik. */
-  ctrApparaat.serienummer = v('c_serie') || ctrApparaat.serienummer;
-  ctrApparaat.specs = Object.assign({}, ctrApparaat.specs||{}, ctrSpecs());
-  ctrTeken();
-}
+  slopen:{ balk:'klaar', inhoud:()=>`
+    <p class="pv">Hij gaat niet meer aan. Vink aan wat er nog wél goed is; dat gaat naar de onderdelenvoorraad en komt op het label te staan.</p>
+    ${SLOOPDELEN.map((d,i)=>`
+      <label class="deelrij">
+        <input type="checkbox" id="sl_${i}" data-naam="${esc(d)}" ${ctr.delen[d]?'checked':''}
+          onchange="ctrDeel(${JSON.stringify(d).replace(/"/g,'&quot;')}, this.checked)">
+        <span>${esc(d)}</span>
+      </label>`).join('')}
+    <div class="tip" style="margin-top:14px">${Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length
+      ? Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length+' onderdelen gaan naar de plank'
+      : 'Nog niets aangevinkt. Kan ook: dan gaat alleen het apparaat eruit.'}</div>
+  `, knoppen:()=>[{tekst:'Naar de onderdelen', klasse:'actie', doe:(k)=>ctrSlopen(k)}] }
+};
 
-function ctrSpecs(){
-  const uit={};
-  if(v('c_cpu'))    uit['Processor']=v('c_cpu');
-  if(v('c_ram'))    uit['Geheugen']=v('c_ram');
-  if(v('c_ssd'))    uit['Opslag']=v('c_ssd');
-  if(v('c_scherm')) uit['Scherm']=v('c_scherm');
-  if(v('c_gpu'))    uit['Videokaart']=v('c_gpu');
-  const t=document.getElementById('c_touch');
-  if(t && t.checked) uit['Touchscreen']='ja';
+/* De vragen die bij dit apparaat horen: de vaste lijst, de vragen die volgen
+   uit wat erin zit, en de eigen controles van deze winkel. */
+function ctrSpecVragen(){
+  const uit=[];
+  Object.keys(SPEC_VRAGEN).forEach(k=>{
+    if(ctr.specs[k]) SPEC_VRAGEN[k].forEach(q=>uit.push(q));
+  });
   return uit;
 }
+function ctrEigenVragen(){
+  const a=ctr.a;
+  const uit=[];
+  checklists
+    .filter(c=>c.categorie===a.categorie &&
+      (!c.model || c.model.toLowerCase()===String(a.model||'').toLowerCase()))
+    .forEach(c=>(c.items||[]).forEach(i=>uit.push(i)));
+  return uit;
+}
+function ctrHardwareVragen(){
+  return HARDWARE_CHECKS.concat(ctrSpecVragen()).concat(ctrEigenVragen());
+}
 
-/* Eerst de gedeelde lijst, dan pas AI. Wat een andere winkel ooit heeft
-   ingevuld staat er al in en dat is gratis en meteen goed. */
+function ctrPunt(onderdeel, keuze, punten){
+  ctr.punten[onderdeel]={l:keuze, p:punten};
+  ctrTeken();
+}
+function ctrCompleet(){ return VISUEEL.every(v=>ctr.punten[v.t]); }
+function ctrPunten(){
+  return VISUEEL.reduce((n,v)=>n+((ctr.punten[v.t]||{}).p||0),0);
+}
+function ctrDeel(naam, aan){ ctr.delen[naam]=aan; ctrTeken(); }
+
+/* ---------- de wekker van twee minuten ---------- */
+let wekTimer=null;
+function wekkerStart(){
+  if(wekTimer) clearInterval(wekTimer);
+  ctr.tijdEinde=Date.now()+120000;
+  wekTik();
+  wekTimer=setInterval(wekTik, 250);
+}
+function wekTik(){
+  const el=document.getElementById('wekTijd');
+  if(!el || !ctr || !ctr.tijdEinde){ if(wekTimer) clearInterval(wekTimer); return; }
+  const over=Math.max(0, ctr.tijdEinde-Date.now());
+  const m=Math.floor(over/60000), sec=Math.floor((over%60000)/1000);
+  el.textContent=m+':'+String(sec).padStart(2,'0');
+  if(over<=0){
+    clearInterval(wekTimer); wekTimer=null;
+    el.classList.add('klaar');
+    el.textContent='Klaar';
+    try{ piepje(); }catch(e){}
+    toast('Twee minuten om, je kunt hem weer in elkaar zetten', true);
+  }
+}
+function piepje(){
+  const ac=new (window.AudioContext||window.webkitAudioContext)();
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.frequency.value=660; g.gain.value=.06;
+  o.start(); setTimeout(()=>{ o.stop(); ac.close(); }, 400);
+}
+
+/* ---------- specificaties opzoeken ---------- */
+
 async function specsZoeken(knop){
-  const a=ctrApparaat;
+  const a=ctr.a;
   await bezig(knop, async()=>{
     const {data:{session}}=await sb.auth.getSession();
     const res=await fetch(SUPABASE_URL+'/functions/v1/model-specs',{
@@ -915,30 +1170,51 @@ async function specsZoeken(knop){
     zet('c_gpu', sp['Videokaart']);
     const t=document.getElementById('c_touch');
     if(t && String(sp['Touchscreen']||'').toLowerCase()==='ja') t.checked=true;
+    ctrBewaarVelden();
 
     const bron=document.getElementById('specsBron');
-    if(bron) bron.textContent = uit.melding
-      ? uit.melding
+    if(bron) bron.textContent = uit.melding ? uit.melding
       : (uit.bron==='lijst' ? 'Uit de modellenlijst. Kijk het even na.'
                             : 'Opgezocht met AI en onthouden. Kijk het even na.');
   });
 }
 
-async function ctrAfronden(knop, status){
-  const a=ctrApparaat;
-  const lijst=Object.keys(ctrAntwoord).map(k=>({v:k, a:ctrAntwoord[k]}));
-  const defecten=lijst.filter(r=>kleurVan(r.a)!=='goed').map(r=>r.v);
-  const specs=ctrSpecs();
+/* ---------- afronden ---------- */
+
+function ctrDefecten(){
+  const uit=[];
+  HARDWARE_CHECKS.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
+  Object.keys(SPEC_VRAGEN).forEach(k=>{
+    if(!ctr.specs[k]) return;
+    SPEC_VRAGEN[k].forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:k}); });
+  });
+  ctrEigenVragen().forEach(q=>{
+    if(['Nee','Ontbreekt'].includes(ctr.antwoord[q.v])) uit.push({vraag:q.v, deel:null});
+  });
+  if((ctr.punten['Scherm']||{}).l==='Barst of vlek') uit.push({vraag:'Barst of vlek in het scherm', deel:'Scherm'});
+  return uit;
+}
+
+async function ctrAfronden(knop){
+  const a=ctr.a;
+  const defecten=ctrDefecten();
+  const punten=ctrPunten();
+  const grade=gradeVan(punten);
+  const status=defecten.length ? 'te_repareren' : 'klaar';
+  const lijst=Object.keys(ctr.antwoord).map(k=>({v:k, a:ctr.antwoord[k]}))
+    .concat(VISUEEL.filter(v=>ctr.punten[v.t]).map(v=>({v:v.t, a:ctr.punten[v.t].l})));
+  ctrBewaarVelden();
+  const specs=Object.fromEntries(Object.entries(ctr.specs).filter(([,w])=>String(w||'').trim()));
+
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten').update({
-      status, checklist:lijst, defecten, specs,
-      serienummer:v('c_serie')||a.serienummer||null,
-      bijgewerkt_op:new Date().toISOString()
+      status, checklist:lijst, specs, grade, punten,
+      defecten:defecten.map(d=>d.vraag),
+      serienummer:ctr.serie||a.serienummer||null,
+      stap:'af', bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
 
-    /* Wat je hier invult komt in de gedeelde modellenlijst. De volgende keer
-       dat iemand dit model binnenkrijgt staat het er al in. */
     if(Object.keys(specs).length){
       await sb.rpc('model_onthouden', {
         merk_in:a.merk||'Onbekend', model_in:a.model,
@@ -947,10 +1223,49 @@ async function ctrAfronden(knop, status){
     }
 
     sluit(); await allesLaden();
-    toast(status==='klaar'?'Goedgekeurd, klaar voor verkoop'
-        : status==='te_repareren'?'Naar de reparatielijst'
-        : 'Naar de sloop', true);
+    const bij=apparaten.find(x=>x.id===a.id);
+    toast(status==='klaar'
+      ? 'Goedgekeurd, grade '+grade
+      : defecten.length+' ding'+(defecten.length===1?'':'en')+' te repareren', true);
+    if(bij) labelsTonen(bij.id);
   });
+}
+
+async function ctrSlopen(knop){
+  const a=ctr.a;
+  const goed=Object.keys(ctr.delen).filter(k=>ctr.delen[k]);
+  ctrBewaarVelden();
+  await bezig(knop, async()=>{
+    if(goed.length){
+      const rijen=goed.map(n=>({
+        team_id:account.team_id,
+        naam:n+' uit '+[a.merk,a.model].filter(Boolean).join(' '),
+        soort:n, van_apparaat:a.id, status:'voorraad'
+      }));
+      const {error}=await sb.from('refurbish_onderdelen').insert(rijen);
+      if(error) throw new Error('Opslaan mislukt');
+    }
+    const lijst=Object.keys(ctr.antwoord).map(k=>({v:k, a:ctr.antwoord[k]}));
+    await sb.from('refurbish_apparaten').update({
+      status:'repurpose', checklist:lijst, goede_delen:goed,
+      serienummer:ctr.serie||a.serienummer||null,
+      stap:'af', bijgewerkt_op:new Date().toISOString()
+    }).eq('id',a.id);
+
+    sluit(); await allesLaden();
+    toast(goed.length?goed.length+' onderdelen naar de plank':'Apparaat afgeschreven', true);
+    const bij=apparaten.find(x=>x.id===a.id);
+    if(bij) labelsTonen(bij.id);
+  });
+}
+
+/* Het oude sloopscherm is vervangen door de stap hierboven, maar je moet een
+   apparaat dat al op slopen staat nog wel kunnen openen. */
+function sloopOpen(a){
+  ctr={a, stap:'slopen', antwoord:{}, punten:{}, delen:{},
+       specs:Object.assign({}, a.specs||{}), serie:a.serienummer||''};
+  (a.goede_delen||[]).forEach(d=>ctr.delen[d]=true);
+  ctrTeken();
 }
 
 /* ═══════════════ reparatie ═══════════════ */
@@ -1081,9 +1396,9 @@ function klaarOpen(a){
       <div><label>Inkoopprijs</label><input id="k_inkoop" type="number" step="0.01" value="${a.inkoop||0}"></div>
       <div><label>Vraagprijs</label><input id="k_verkoop" type="number" step="0.01" placeholder="Bijvoorbeeld 349"></div>
       <div><label>Staat</label><select id="k_staat">
-        <option value="A">A · als nieuw</option>
-        <option value="B" selected>B · gebruikt</option>
-        <option value="C">C · zichtbare sporen</option>
+        <option value="A"${a.grade==='A'?' selected':''}>A · als nieuw</option>
+        <option value="B"${!a.grade||a.grade==='B'?' selected':''}>B · gebruikt</option>
+        <option value="C"${a.grade==='C'?' selected':''}>C · zichtbare sporen</option>
       </select></div>
       <div><label>Garantie (maanden)</label><input id="k_gar" type="number" min="0" value="6"></div>
     </div>

@@ -19,7 +19,8 @@ npm test
 | Bestand | Wat het nakijkt |
 |---|---|
 | `winkelapp.js` | Hardwarepagina: lijst, filters, marge, kanalen, het bewerkvenster |
-| `refurbish-werkstroom.js` | Van binnenkomst tot overdracht, inclusief de checklist die meebeweegt met de specificaties |
+| `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
+| `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
 

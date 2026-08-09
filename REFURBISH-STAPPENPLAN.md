@@ -141,9 +141,25 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    in het proces staat, daaronder merk en model groot, het korte nummer, en een
    QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
    staan de specificaties er ook op.
-3. **Checklists.** Per categorie een basislijst, per model extra punten, en
-   vragen die meebewegen met de specificaties: staat er een touchscreen in, dan
-   komt de vraag over het touchscreen erbij.
+3. **De controle als stappenpad.** Geen lange lijst, maar een pad dat meebeweegt
+   met wat je antwoordt:
+
+   | Vraag | Ja | Nee |
+   |---|---|---|
+   | Start hij op? | door naar de hardware | brandt er een lampje? |
+   | Brandt er een lampje? | geheugen nakijken | openmaken, accu en bios-batterij los, twee minuten wachten |
+   | Start hij nu op? | door naar de hardware | slopen voor onderdelen |
+
+   Bij die twee minuten loopt een wekker mee die piept als het klaar is.
+   Daarna de functionele test, en dan de visuele inspectie met strafpunten:
+   behuizing, scherm, toetsenbord en scharnieren. Nul tot twee punten is een A,
+   tot en met zeven een B, daarboven een C. Een barst in het scherm telt voor
+   acht, dus die haalt hem er in zijn eentje uit.
+
+   De uitkomst volgt uit de antwoorden: alles goed is klaar voor verkoop met
+   grade, één kapotte toets stuurt hem naar de reparatielijst, en een apparaat
+   dat niet meer aan gaat wordt gesloopt. Wat daar nog goed aan is vink je aan
+   en gaat meteen naar de onderdelenvoorraad, met een label waar dat op staat.
 3b. **De modellenlijst.** Bij de controle vul je in wat erin zit, of je drukt op
    *Specificaties opzoeken*. Die kijkt eerst in een gedeelde lijst en vraagt het
    pas aan AI als het model nieuw is. Wat eruit komt gaat de lijst in, dus het
