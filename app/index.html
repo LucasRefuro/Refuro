@@ -299,9 +299,33 @@
   .kortingbadge{display:inline-block; font-family:'Sora',sans-serif; font-weight:800; font-size:15px;
     padding:8px 18px; border-radius:var(--pil); background:var(--oranje); color:var(--actieftekst);
     margin-bottom:16px;}
+
+  /* Het bedrag is het argument, dus dat mag groot. */
+  .kortingprijs{background:var(--soft-2); border-radius:var(--radius-s);
+    padding:20px 22px; margin:18px 0; text-align:center;}
+  .kpvan{font-size:13.5px; color:var(--muted); margin-bottom:4px;}
+  .kpvan s{opacity:.75;}
+  .kpnu{font-family:'Sora',sans-serif; font-size:44px; font-weight:800; line-height:1.05;
+    letter-spacing:-.03em; color:var(--navy);}
+  .kpnu span{display:block; font-family:inherit; font-size:12.5px; font-weight:600;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--muted-l); margin-top:6px;}
+  .kpbespaar{display:inline-block; margin-top:12px; font-size:13.5px; font-weight:700;
+    padding:5px 14px; border-radius:var(--pil); background:var(--green-soft);
+    color:var(--green-tekst);}
+  .kortinglijst{list-style:none; font-size:14px; line-height:1.6; margin-bottom:20px;}
+  .kortinglijst li{padding:4px 0 4px 22px; position:relative;}
+  .kortinglijst li::before{content:''; position:absolute; left:2px; top:12px;
+    width:6px; height:6px; border-radius:50%; background:var(--oranje);}
+  @media(max-width:560px){
+    .kpnu{font-size:36px;}
+    .kortingprijs{padding:18px;}
+  }
   @media(max-width:560px){
     .proefpop h3{font-size:21px;}
-    .proefpop .acts{flex-direction:column;} .proefpop .acts .btn{width:100%; min-width:0;}
+    /* Omgekeerd, zodat de ja-knop boven komt te staan: op een telefoon is dat
+       de plek waar het oog begint, niet rechtsonder. */
+    .proefpop .acts{flex-direction:column-reverse;}
+    .proefpop .acts .btn{width:100%; min-width:0;}
   }
 
   /* het rustige openingsscherm */
@@ -5283,18 +5307,48 @@ function toonProefScherm(d){
 function sluitProefScherm(){ const o=document.getElementById('aboAanbod'); if(o) o.remove(); }
 
 /* Het laatste aanbod. Eén keer, duidelijk, en zonder trucjes: als hij hier
-   nee zegt is het klaar en zeuren we niet door.                             */
+   nee zegt is het klaar en zeuren we niet door.
+
+   Wel zo concreet mogelijk. "70% korting" is een percentage en daar rekent
+   niemand mee; "€ 23,99 in plaats van € 79,95, je bespaart € 55,96" is een
+   bedrag en dat blijft hangen. We pakken het pakket waar hij nu op zit, want
+   dat is het bedrag dat hij in zijn hoofd heeft.
+
+   De ja-knop staat rechts. Dat is waar het oog eindigt en waar in vrijwel elk
+   dialoogvenster de bevestiging zit; links is de uitgang.                    */
+function kortingBedragen(){
+  const naam=(abonnement&&abonnement.plan)||'Enterprise';
+  const p=PAKKETTEN.find(x=>x.naam===naam)||PAKKETTEN[PAKKETTEN.length-1];
+  const vol=Number(String(p.prijs).replace(/[^0-9,]/g,'').replace(',','.'))||0;
+  const nu=Math.round(vol*0.30*100)/100;
+  return {pakket:p.naam, vol, nu, bespaard:Math.round((vol-nu)*100)/100};
+}
+
 function toonKortingAanbod(){
   sluitProefScherm();
+  const b=kortingBedragen();
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='aboAanbod';
   ov.innerHTML=`<div class="popup groot proefpop korting">
-    <div class="kortingbadge">70% korting</div>
-    <h3>Blijf voor een derde van de prijs</h3>
-    <p class="pv">Snap ik, het is een uitgave. Daarom dit: je eerste maand met zeventig procent korting, zodat je rustig verder kunt zonder dat het meteen geld kost. Daarna gewoon de normale prijs, en je kunt elke maand stoppen.</p>
+    <div class="kortingbadge">70% korting op je eerste maand</div>
+    <h3>Wacht — dan doen we dit</h3>
+    <p class="pv">Je hebt Storvo dertig dagen gebruikt en je hele voorraad staat erin. Zonde om dat weg te gooien om de prijs. Daarom je eerste maand voor bijna niets.</p>
+
+    <div class="kortingprijs">
+      <div class="kpvan">${b.pakket} normaal <s>${euro(b.vol)}</s></div>
+      <div class="kpnu">${euro(b.nu)}<span>eerste maand</span></div>
+      <div class="kpbespaar">Je bespaart ${euro(b.bespaard)}</div>
+    </div>
+
+    <ul class="kortinglijst">
+      <li>Alles blijft staan zoals het nu is</li>
+      <li>Daarna ${euro(b.vol)} per maand, elke maand opzegbaar</li>
+      <li>Dit aanbod krijg je één keer</li>
+    </ul>
+
     <div class="acts">
-      <button class="btn actie" onclick="toonPakketten(true)">Ja, met korting doorgaan</button>
       <button class="btn ghost" onclick="vertrekPopup()">Nee, laat maar</button>
+      <button class="btn actie" onclick="toonPakketten(true)">Ja, ${euro(b.nu)} de eerste maand</button>
     </div>
     <p class="proefklein">Je gegevens blijven bewaard, ook als je stopt. Bedenk je je later, dan pak je gewoon de draad weer op.</p>
   </div>`;
