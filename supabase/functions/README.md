@@ -56,6 +56,5 @@ Zet ze nooit in de code en nooit in een chat.
 | `STRIPE_PRIJS_START` | De prijs van het pakket Start |
 | `STRIPE_PRIJS_PRO` | De prijs van het pakket Pro |
 | `STRIPE_PRIJS_ENTERPRISE` | De prijs van het pakket Enterprise |
-| `STRIPE_BTW_TARIEF` | Het belastingtarief van 21% dat bij het afrekenen wordt opgeteld |
 | `STRIPE_KORTING_COUPON` | De bon voor het laatste aanbod, mag ontbreken |
 | `APP_URL` | Waarheen Stripe terugstuurt na het afrekenen |

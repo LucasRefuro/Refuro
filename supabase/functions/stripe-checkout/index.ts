@@ -110,8 +110,14 @@ Deno.serve(async (req) => {
       locale: "nl",
       allow_promotion_codes: metKorting ? "false" : "true",
 
+      // Onze prijzen zijn exclusief btw. Stripe Tax bepaalt per klant welk
+      // tarief erbovenop komt en past verlegging toe bij een buitenlandse
+      // ondernemer met een geldig btw-nummer.
+      "automatic_tax[enabled]": "true",
+
       // Een factuur aan een ondernemer hoort zijn adres en btw-nummer te
-      // bevatten. Checkout vraagt er zelf om zodra dit aanstaat.
+      // bevatten. Checkout vraagt er zelf om zodra dit aanstaat. Het adres is
+      // bovendien wat Stripe Tax gebruikt om het tarief te bepalen.
       billing_address_collection: "required",
       "tax_id_collection[enabled]": "true",
 
@@ -120,18 +126,15 @@ Deno.serve(async (req) => {
       "customer_update[address]": "auto",
       "customer_update[name]": "auto",
 
+      // Ook bij elke maandelijkse verlenging opnieuw laten rekenen, niet
+      // alleen bij de eerste betaling.
+      "subscription_data[automatic_tax][enabled]": "true",
+
       "subscription_data[metadata][team_id]": winkel.id,
       "subscription_data[metadata][plan]": pakket,
       "metadata[team_id]": winkel.id,
       "metadata[plan]": pakket,
     };
-
-    // Het btw-tarief maak je eenmalig aan in Stripe; hier hoeft alleen het
-    // nummer ervan te staan. Ontbreekt het, dan gaat het afrekenen door zonder
-    // btw. Dat is niet goed, dus dat schrijven we wel in het logboek.
-    const btw = Deno.env.get("STRIPE_BTW_TARIEF");
-    if (btw) velden["subscription_data[default_tax_rates][0]"] = btw;
-    else console.error("LET OP: STRIPE_BTW_TARIEF ontbreekt, er wordt geen btw berekend");
 
     // De kortingsbon zit er alleen in als de winkel er recht op heeft. Staat
     // hij niet ingesteld, dan gaat het gewoon zonder korting door; beter dan
