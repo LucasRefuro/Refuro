@@ -254,6 +254,35 @@
     .sterren svg{width:32px; height:32px;}
   }
 
+  /* Link naar de refurbish-app. Ziet eruit als een menuknop, maar is een link
+     naar een andere pagina; daarom een streepje erboven als scheiding. */
+  .refurblink{display:flex; align-items:center; gap:11px; width:100%; padding:11px 16px;
+    margin-top:6px; border-radius:var(--pil); color:var(--muted); font-size:14px;
+    font-weight:600; text-decoration:none; transition:.16s;}
+  .refurblink:hover{background:var(--soft-2); color:var(--tekst);}
+
+  /* ---------- hardware: unieke exemplaren ---------- */
+  .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
+  .hwact{white-space:nowrap;}
+  .kpi.hwattentie .v{color:var(--amber-tekst);}
+  .hwoud{color:var(--red-tekst); font-weight:700;}
+  .winst{color:var(--green-tekst);}
+  .verlies{color:var(--red-tekst);}
+  /* Waar staat hij: kleine labels, elk kanaal een eigen kleur zodat je in één
+     oogopslag ziet of iets nog ergens online staat. */
+  .kan{display:inline-block; font-size:11.5px; font-weight:700; padding:3px 9px;
+    border-radius:var(--pil); margin-right:4px; white-space:nowrap; text-decoration:none;}
+  .kan.winkel{background:var(--soft-2); color:var(--muted);}
+  .kan.shop{background:var(--green-soft); color:var(--green-tekst);}
+  .kan.mp{background:var(--amber-soft); color:var(--amber-tekst);}
+  a.kan.shop:hover{filter:brightness(.96);}
+  .hwpop textarea{width:100%; font-family:inherit; font-size:14px;}
+  .hwkanaal{background:var(--soft-2); border-radius:var(--radius-s); padding:14px 16px; margin-top:16px;}
+  .hkkop{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted-l); margin-bottom:8px;}
+  .hkrij{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:14px;}
+  .hkrij input[type=checkbox]{width:auto;}
+
   /* de pakketkeuze */
   /* Twee klassen in plaats van één, anders wint de bredere .popup-regel
      verderop in dit blad en wordt dit scherm 460px breed. */
@@ -1333,6 +1362,9 @@
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
+  <symbol id="i-recycle" viewBox="0 0 24 24"><path d="M7 19H4.8a1.8 1.8 0 0 1-1.6-2.7L7.2 9.5"/><path d="M11 19h8.2a1.8 1.8 0 0 0 1.6-2.7l-1.2-2.1"/><path d="m14 16-3 3 3 3"/><path d="M8.3 13.6 7.2 9.5 3.1 10.6"/><path d="m9.3 5.8 1.1-1.9A1.8 1.8 0 0 1 13.5 3.9l3.9 6.8"/><path d="m13.4 9.6 4.1 1.1 1.1-4.1"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect width="18" height="12" x="3" y="4" rx="2"/><path d="M2 20h20"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
   <symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/></symbol>
 </svg>
 <aside>
@@ -1347,6 +1379,8 @@
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
+    <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
+    <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
@@ -1768,6 +1802,32 @@
 </section>
 
 <!-- VOORRAAD -->
+<!-- Hardware: unieke exemplaren. Een hoesje tel je, een laptop niet: die heeft
+     een serienummer, een eigen inkoopprijs en een eigen geschiedenis. Daarom
+     staan ze niet tussen de gewone producten maar hier, met een kolom die laat
+     zien waar hij online staat. -->
+<section id="tab-hardware"hidden>
+  <div class="pagehead">
+    <h1>Hardware</h1>
+    <div class="row" style="gap:10px">
+      <div class="periodesel" id="hwFilter">
+        <button data-f="voorraad" class="active">Op voorraad</button>
+        <button data-f="online">Staat online</button>
+        <button data-f="oud">Langer dan 30 dagen</button>
+        <button data-f="verkocht">Verkocht</button>
+      </div>
+      <button class="btn actie" onclick="hwNieuw()"><svg class="i"><use href="#i-plus"/></svg>Toestel toevoegen</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="hwKpis"></div>
+
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-laptop"/></svg>Toestellen <span class="muted" id="hwTelling"></span></h2>
+    <div id="hwLijst">Bezig met laden…</div>
+  </div>
+</section>
+
 <section id="tab-voorraad"hidden>
   <div class="pagehead">
     <h1>Voorraad</h1>
@@ -2337,6 +2397,7 @@ function showTab(t){
   if(t==='team') renderTeam();
   if(t==='producten') renderProducten();
   if(t==='voorraad') renderVoorraad();
+  if(t==='hardware') hwLaad();
   if(t==='aanvragen') renderAanvragen();
   if(t==='kassa') renderKassa();
   if(t==='bestellen') renderBestellen();
@@ -4455,8 +4516,8 @@ document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('cli
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','kassa','bestellen','instellingen','team'],
-  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','kassa','bestellen']
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','kassa','bestellen','instellingen','team'],
+  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','kassa','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -4471,6 +4532,7 @@ const UITZETBAAR=[
   {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
   {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
   {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en de nulmeting.'},
+  {tab:'hardware',    naam:'Hardware',     uitleg:'Losse toestellen met een serienummer, zoals tweedehands laptops en telefoons.'},
   {tab:'aanvragen',   naam:'Aanvragen',    uitleg:'Bestellingen op aanvraag voor klanten, met marge en aanbetaling.'},
   {tab:'kassa',       naam:'Kassa',        uitleg:'Het kasboek, wat er in de lade zit en een melding als het te veel wordt.'},
   {tab:'bestellen',   naam:'Bestellingen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
@@ -4520,6 +4582,7 @@ const MOB={
   reparaties:  {naam:'Reparaties',   ico:'i-wrench'},
   producten:   {naam:'Producten',    ico:'i-box'},
   voorraad:    {naam:'Voorraad',     ico:'i-package'},
+  hardware:    {naam:'Hardware',     ico:'i-laptop'},
   aanvragen:   {naam:'Aanvragen',    ico:'i-clipboard'},
   kassa:       {naam:'Kassa',        ico:'i-cash'},
   bestellen:   {naam:'Bestellen',    ico:'i-cart'},
@@ -4527,7 +4590,7 @@ const MOB={
   team:        {naam:'Team',         ico:'i-users'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','reparaties','aanvragen','producten','voorraad','kassa','bestellen','diensten','team','instellingen'];
+const MOB_VOLGORDE=['dashboard','scan','reparaties','aanvragen','producten','voorraad','hardware','kassa','bestellen','diensten','team','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
@@ -5100,6 +5163,7 @@ async function ladAccountEnStart(session){
   showTab(laatsteTab() || (mag('dashboard')?'dashboard':'scan'));
   renderInstellingen();
   toonAboBalk();
+  moduleLinks();
   proefNudge();
   voorbeeldScherm();
   reviewMoment();
@@ -5391,6 +5455,344 @@ function toonKortingAanbod(){
   try{ localStorage.setItem('storvo_korting_aangeboden','1'); }catch(e){}
 }
 function kortingAangeboden(){ try{ return localStorage.getItem('storvo_korting_aangeboden')==='1'; }catch(e){ return false; } }
+
+/* ═══════════════ HARDWARE: UNIEKE EXEMPLAREN ═══════════════
+   Een hoesje tel je: vijf stuks is één regel met een vijf erachter. Een
+   tweedehands laptop tel je niet. Die heeft een serienummer, een eigen
+   inkoopprijs, een eigen staat en een eigen geschiedenis. Zet je die tussen de
+   gewone producten, dan klopt je marge niet meer en kun je nooit terugvinden
+   welk exemplaar je aan wie hebt verkocht.
+
+   Daarom een aparte lijst, en een aparte tabel in de database in plaats van in
+   het gedeelde winkelblok. Er schrijven namelijk drie kanten in: de winkelapp,
+   de refurbish-app en straks Shopify als daar iets verkocht wordt.          */
+
+let hwData=[], hwFilterNu='voorraad', hwBezig=false;
+
+/* De link naar de refurbish-app staat er alleen als de winkel die module
+   heeft. Wie hem niet heeft ziet niets; dat is rustiger dan een knop die
+   vervolgens zegt dat je hem moet kopen. */
+function moduleLinks(){
+  const l=document.getElementById('refurbLink');
+  if(l) l.hidden = !moduleAan('refurbish');
+}
+
+function moduleAan(naam){
+  return !!(abonnement && Array.isArray(abonnement.modules) && abonnement.modules.includes(naam));
+}
+const HW_STAAT={A:'Als nieuw', B:'Gebruikt', C:'Zichtbare gebruikssporen'};
+
+async function hwLaad(stil){
+  if(!account) return;
+  if(!stil){ const v=document.getElementById('hwLijst'); if(v) v.innerHTML='Bezig met laden…'; }
+  const {data,error}=await sb.from('hardware').select('*')
+    .order('aangemaakt_op',{ascending:false}).limit(500);
+  if(error){ console.error('hardware laden:', error); const v=document.getElementById('hwLijst');
+    if(v) v.innerHTML='<p class="muted">Kon de hardware niet laden.</p>'; return; }
+  hwData=data||[];
+  renderHardware();
+}
+
+function hwDagen(h){ return Math.floor((Date.now()-new Date(h.aangemaakt_op).getTime())/86400000); }
+function hwOnline(h){ return !!(h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id); }
+function hwMarge(h){
+  if(h.verkoop==null) return null;
+  return Math.round(((Number(h.verkoop)||0)-(Number(h.inkoop)||0))*100)/100;
+}
+function hwZichtbaar(h){
+  if(hwFilterNu==='verkocht') return h.status==='verkocht';
+  if(h.status==='verkocht') return false;
+  if(hwFilterNu==='online')  return hwOnline(h);
+  if(hwFilterNu==='oud')     return hwDagen(h)>=30;
+  return true;
+}
+
+function renderHardware(){
+  const vak=document.getElementById('hwLijst');
+  if(!vak) return;
+
+  const opVoorraad=hwData.filter(h=>h.status!=='verkocht');
+  const waarde=opVoorraad.reduce((n,h)=>n+(Number(h.inkoop)||0),0);
+  const online=opVoorraad.filter(hwOnline).length;
+  const oud=opVoorraad.filter(h=>hwDagen(h)>=30).length;
+  const k=document.getElementById('hwKpis');
+  if(k) k.innerHTML=
+    `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${opVoorraad.length}</div></div>`+
+    `<div class="kpi"><div class="l">Ingekocht voor</div><div class="v">${euro(waarde)}</div></div>`+
+    `<div class="kpi"><div class="l">Staat online</div><div class="v">${online}</div></div>`+
+    `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`;
+
+  const rijen=hwData.filter(hwZichtbaar);
+  const tel=document.getElementById('hwTelling');
+  if(tel) tel.textContent=rijen.length?'('+rijen.length+')':'';
+
+  if(!rijen.length){
+    vak.innerHTML=`<p class="muted">${hwFilterNu==='verkocht'
+      ? 'Nog niets verkocht.'
+      : 'Niets in deze lijst. Voeg een toestel toe, of laat de refurbish-app ze hierheen sturen zodra ze goedgekeurd zijn.'}</p>`;
+    return;
+  }
+
+  vak.innerHTML=`<table class="tabel">
+    <thead><tr>
+      <th>Toestel</th><th>Serienummer</th><th>Staat</th>
+      <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
+      <th>Staat waar</th><th>Dagen</th><th></th>
+    </tr></thead>
+    <tbody>${rijen.map(h=>{
+      const m=hwMarge(h);
+      const d=hwDagen(h);
+      return `<tr>
+        <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
+            ${h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:''}</td>
+        <td class="mono">${esc(h.serienummer||'—')}</td>
+        <td>${esc(HW_STAAT[h.staat]||h.staat||'—')}</td>
+        <td class="num">${euro(h.inkoop||0)}</td>
+        <td class="num">${h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>'}</td>
+        <td class="num">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
+        <td>${hwKanalen(h)}</td>
+        <td>${h.status==='verkocht'?'<span class="muted">verkocht</span>'
+              :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
+        <td class="num hwact">${h.status==='verkocht'?''
+          :`<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  if(typeof rolTabellen==='function') rolTabellen();
+}
+
+function hwKanalen(h){
+  const k=h.kanalen||{};
+  const b=[];
+  if(k.winkel!==false) b.push('<span class="kan winkel">Winkel</span>');
+  if(k.shopify && k.shopify.id){
+    b.push(k.shopify.url
+      ? `<a class="kan shop" href="${esc(k.shopify.url)}" target="_blank" rel="noopener">Webshop</a>`
+      : '<span class="kan shop">Webshop</span>');
+  }
+  if(k.marktplaats) b.push('<span class="kan mp">Marktplaats</span>');
+  return b.join(' ') || '<span class="muted">nergens</span>';
+}
+
+/* ---------- toestel toevoegen of openen ---------- */
+let hwOpen=null;
+
+function hwNieuw(){ hwVenster(null); }
+function hwBewerk(id){ hwVenster(hwData.find(h=>h.id===id)||null); }
+
+function hwVenster(h){
+  hwOpen=h;
+  const k=(h&&h.kanalen)||{};
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='hwOverlay';
+  ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
+  ov.innerHTML=`<div class="popup groot hwpop">
+    <h3>${h?esc([h.merk,h.model].filter(Boolean).join(' ')):'Toestel toevoegen'}</h3>
+    ${h?`<p class="pv">Binnengekomen ${new Date(h.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${h.herkomst?' &middot; '+esc(h.herkomst):''}</p>`:''}
+
+    <div class="grid">
+      <div><label>Merk</label><input id="hw_merk" value="${esc((h&&h.merk)||'')}" placeholder="Dell"></div>
+      <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430"></div>
+      <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
+      <div><label>Categorie</label><select id="hw_cat">
+        ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
+          `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
+      </select></div>
+      <div><label>Staat</label><select id="hw_staat">
+        ${Object.keys(HW_STAAT).map(s=>
+          `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
+      </select></div>
+      <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:6}"></div>
+      <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
+      <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
+    </div>
+
+    <label style="margin-top:14px">Titel voor online</label>
+    <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="Dell Latitude 5430 · i5 · 16 GB · 512 GB SSD">
+    <label>Omschrijving</label>
+    <textarea id="hw_oms" rows="4" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
+    ${h?`<div class="row" style="gap:8px; margin-top:8px">
+      <button class="btn ghost small" onclick="hwSchrijf(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Laat AI dit schrijven</button>
+      <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-copy"/></svg>Kopieer voor Marktplaats</button>
+    </div>`:''}
+
+    ${h?`<div class="hwkanaal">
+      <div class="hkkop">Waar staat hij</div>
+      <label class="hkrij"><input type="checkbox" id="hw_k_winkel" ${k.winkel!==false?'checked':''}> In de winkel</label>
+      <label class="hkrij"><input type="checkbox" id="hw_k_mp" ${k.marktplaats?'checked':''}> Op Marktplaats gezet</label>
+      <div class="hkrij">
+        <span>Webshop</span>
+        ${k.shopify&&k.shopify.id
+          ? `<button class="btn ghost small" onclick="hwShopify('${h.id}','offline',this)">Offline halen</button>
+             ${k.shopify.url?`<a class="btn ghost small" href="${esc(k.shopify.url)}" target="_blank" rel="noopener">Bekijken</a>`:''}`
+          : `<button class="btn ghost small" onclick="hwShopify('${h.id}','online',this)">Op Shopify zetten</button>`}
+      </div>
+    </div>`:''}
+
+    <div class="acts">
+      ${h&&h.status!=='verkocht'
+        ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
+      <button class="btn" onclick="hwOpslaan(this)">Opslaan</button>
+      <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
+    </div>
+    ${h?`<button class="btn ghost small" style="margin-top:10px" onclick="hwVerwijder('${h.id}')">Toestel verwijderen</button>`:''}
+  </div>`;
+  document.body.appendChild(ov);
+}
+function hwSluit(){ const o=document.getElementById('hwOverlay'); if(o) o.remove(); hwOpen=null; }
+
+function hwVeld(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
+function hwGetal(id){ const v=hwVeld(id); return v===''?null:Math.round(Number(v)*100)/100; }
+
+async function hwOpslaan(knop){
+  const model=hwVeld('hw_model');
+  if(!model){ toast('Vul in elk geval het model in','let-op'); return; }
+  const rij={
+    merk:hwVeld('hw_merk')||null,
+    model,
+    serienummer:hwVeld('hw_serie')||null,
+    categorie:hwVeld('hw_cat'),
+    staat:hwVeld('hw_staat'),
+    garantie:Number(hwVeld('hw_gar'))||0,
+    inkoop:hwGetal('hw_inkoop')||0,
+    verkoop:hwGetal('hw_verkoop'),
+    titel:hwVeld('hw_titel')||null,
+    omschrijving:hwVeld('hw_oms')||null,
+    bijgewerkt_op:new Date().toISOString()
+  };
+  if(hwOpen){
+    const k=Object.assign({}, hwOpen.kanalen||{});
+    const w=document.getElementById('hw_k_winkel'), m=document.getElementById('hw_k_mp');
+    if(w) k.winkel=w.checked;
+    if(m) k.marktplaats=m.checked;
+    rij.kanalen=k;
+  }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Opslaan…'; }
+  let fout=null;
+  if(hwOpen){
+    const {error}=await sb.from('hardware').update(rij).eq('id',hwOpen.id); fout=error;
+  }else{
+    rij.team_id=account.team_id;
+    const {error}=await sb.from('hardware').insert(rij); fout=error;
+  }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+  if(fout){ console.error('hardware opslaan:',fout); toast('Opslaan mislukt','fout'); return; }
+  hwSluit(); await hwLaad(true);
+  toast(hwOpen?'Toestel bijgewerkt':'Toestel toegevoegd', true);
+}
+
+async function hwVerwijder(id){
+  if(!confirm('Dit toestel helemaal verwijderen?')) return;
+  const {error}=await sb.from('hardware').delete().eq('id',id);
+  if(error){ toast('Verwijderen mislukt','fout'); return; }
+  hwSluit(); await hwLaad(true); toast('Toestel verwijderd', true);
+}
+
+/* ---------- verkopen aan de balie ----------
+   Gaat door dezelfde kassa als al het andere, zodat je omzet, je winst en je
+   kasboek kloppen. Daarna meteen offline halen bij Shopify: hetzelfde apparaat
+   twee keer verkopen is het ergste wat je kan overkomen.                    */
+function hwVerkoop(id){
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  if(h.verkoop==null){ toast('Vul eerst een vraagprijs in','let-op'); return; }
+  hwSluit();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='hwOverlay';
+  ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
+  const winst=(Number(h.verkoop)||0)-(Number(h.inkoop)||0);
+  ov.innerHTML=`<div class="popup">
+    <h3>${esc([h.merk,h.model].filter(Boolean).join(' '))}</h3>
+    <div class="pv">Prijs: <b>${euro(h.verkoop)}</b> &middot; ingekocht voor ${euro(h.inkoop||0)} &middot; winst <b>${euro(winst)}</b></div>
+    <div class="acts">
+      <div class="betaalrow">
+        <button class="btn" onclick="hwBoek('${h.id}','pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
+        <button class="btn" onclick="hwBoek('${h.id}','cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash bon</button>
+        <button class="btn" onclick="hwBoek('${h.id}','cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash</button>
+      </div>
+      <button class="btn ghost" onclick="hwSluit()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function hwBoek(id, bet){
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const naam=[h.merk,h.model].filter(Boolean).join(' ')+(h.serienummer?' ('+h.serienummer+')':'');
+  const vid=uid();
+  state.verkopen.unshift({id:vid, t:Date.now(), naam, verkoop:Number(h.verkoop)||0,
+    inkoop:Number(h.inkoop)||0, aantal:1, betaal:bet, cat:vasteCat('Hardware').id,
+    door:gebruiker?gebruiker.naam:null, hardware:h.id});
+  kasVerkoop(Number(h.verkoop)||0, bet, naam);
+  if(state.verkopen.length>5000) state.verkopen.length=5000;
+  save();
+
+  await sb.from('hardware').update({
+    status:'verkocht', verkocht_op:new Date().toISOString(), verkocht_via:'winkel',
+    bijgewerkt_op:new Date().toISOString()
+  }).eq('id',id);
+
+  hwSluit(); piep(440);
+  toast('Verkocht ('+betaalNaam(bet)+'): '+naam+', '+euro(h.verkoop), true);
+  if(hwOnline(h)) hwShopify(id,'offline');
+  await hwLaad(true); herteken();
+}
+
+/* ---------- Shopify ---------- */
+async function hwShopify(id, wat, knop){
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/shopify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:wat, hardware_id:id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Shopify gaf een fout');
+    toast(wat==='online'?'Staat op de webshop':'Van de webshop gehaald', true);
+    hwSluit(); await hwLaad(true);
+  }catch(e){
+    if(knop){ knop.disabled=false; knop.textContent=oud; }
+    toast(e.message,'fout');
+  }
+}
+
+/* ---------- AI-teksten ---------- */
+async function hwSchrijf(knop){
+  if(!hwOpen) return;
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Schrijven…';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/hardware-tekst',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({hardware_id:hwOpen.id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Het schrijven lukte niet');
+    const t=document.getElementById('hw_titel'), o=document.getElementById('hw_oms');
+    if(t&&uit.titel) t.value=uit.titel;
+    if(o&&uit.omschrijving) o.value=uit.omschrijving;
+    toast('Tekst geschreven, kijk hem even na', true);
+  }catch(e){ toast(e.message,'fout'); }
+  knop.disabled=false; knop.textContent=oud;
+}
+
+function hwKopieer(){
+  const t=hwVeld('hw_titel'), o=hwVeld('hw_oms');
+  const prijs=hwGetal('hw_verkoop');
+  const tekst=[t, '', o, '', prijs!=null?'Prijs: '+euro(prijs):''].filter(x=>x!==null).join('\n');
+  try{
+    navigator.clipboard.writeText(tekst);
+    toast('Gekopieerd, plak het in je advertentie', true);
+  }catch(e){ toast('Kopiëren lukte niet','fout'); }
+}
+
+document.querySelectorAll('#hwFilter button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#hwFilter button').forEach(x=>x.classList.toggle('active', x===b));
+  hwFilterNu=b.dataset.f; renderHardware();
+}));
 
 /* ═══════════════ FEEDBACK EN REVIEWS ═══════════════
    Drie momenten, één luik:

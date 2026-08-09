@@ -1,5 +1,8 @@
 # Refurbish als bijkoopmodule
 
+> **Stand van zaken: gebouwd.** Fase 0 tot en met 3 staan er. Wat jij nog moet
+> doen staat onderaan onder "Wat er nog van jou nodig is".
+
 Een tweede product naast Storvo, voor winkels die apparaten opknappen en
 doorverkopen. De meeste winkels hebben het niet nodig, dus het wordt geen
 onderdeel van de pakketten maar iets wat je erbij koopt.
@@ -167,8 +170,55 @@ het moet doen.
 
 ---
 
-## Volgorde
+## Wat er nog van jou nodig is
 
-Eerst Storvo echt live met WhatsApp en de eerste betalende winkel. Daarna fase 0
-en 1, want die staan los van alles en leveren meteen waarde. Dan Shopify, en
-als laatste de refurbish-app zelf.
+Alles hierboven is gebouwd. Drie dingen kan ik niet voor je doen.
+
+### 1. De Shopify-app aanmaken (tien minuten)
+
+De vijf stappen staan hierboven onder fase 2. Daarna zet je zelf drie
+instellingen in Supabase, onder Project Settings → Edge Functions → Secrets:
+
+| Naam | Wat erin komt |
+|---|---|
+| `SHOPIFY_WINKEL` | `mijnwinkel.myshopify.com` |
+| `SHOPIFY_TOKEN` | Het token dat begint met `shpat_` |
+| `SHOPIFY_WEBHOOK_SECRET` | Zie hieronder |
+
+### 2. De terugkoppeling van Shopify aanzetten
+
+Zodat een verkoop in de webshop het toestel hier uit de voorraad haalt.
+
+1. Shopify-beheer → **Instellingen** → **Meldingen** → **Webhooks**
+2. **Webhook maken**
+   - Gebeurtenis: **Bestelling aangemaakt**
+   - Indeling: **JSON**
+   - Adres: `https://ugilfxqolemxwssbpdwu.supabase.co/functions/v1/shopify-webhook`
+3. Na het opslaan toont Shopify een **ondertekeningssleutel**. Die zet je in
+   Supabase als `SHOPIFY_WEBHOOK_SECRET`.
+
+Zonder die sleutel weigert de functie elk bericht, en terecht: dan kan iedereen
+melden dat er iets verkocht is.
+
+### 3. De prijs bepalen
+
+Wat kost de module per maand? Zeg het, dan zet ik hem als tweede regel in
+Stripe en wordt hij bij het afrekenen automatisch meegenomen.
+
+---
+
+## Hoe je het nu al kunt proberen
+
+Je proefwinkel heeft de module aanstaan. In de winkelapp staat **Hardware** in
+het menu en daaronder **Refurbishen**, dat de werkbank opent.
+
+Een rondje om te zien of het klopt:
+
+1. Refurbishen → Inkoopbatches → **Nieuwe batch**
+2. **Apparaat erbij**, model invullen, een paar specificaties erbij
+3. **Labels** → printen of gewoon bekijken → **Labels zitten erop**
+4. Te controleren → klik het apparaat aan → loop de checklist af
+5. Kies **Goedgekeurd**, of **Moet gerepareerd** om die kant te zien
+6. Bij goedgekeurd: klik hem nog een keer aan, zet er een vraagprijs bij en
+   druk op **Naar de winkelvoorraad**
+7. Terug naar de winkel → **Hardware** → daar staat hij, met marge en al

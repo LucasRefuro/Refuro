@@ -237,6 +237,10 @@
   .fbster{color:#E8B31D; letter-spacing:2px; font-size:14px;}
   .fbreden{font-weight:600; font-size:14px; margin-bottom:5px;}
   .fbtekst{font-size:14px; line-height:1.65; color:var(--muted); white-space:pre-wrap;}
+  .modschak{display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:13px;}
+  .modschak input{width:auto;}
+  .modschak span{color:var(--muted);}
+
   /* alle schermen op een rij */
   .scgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px;}
   .scvak{border:1px solid var(--border); border-radius:14px; padding:16px 18px;
@@ -375,6 +379,7 @@
     <button data-tab="klanten"><svg class="i"><use href="#i-shop"/></svg> Klanten</button>
     <button data-tab="teams"><svg class="i"><use href="#i-shop"/></svg> Teams &amp; accounts</button>
     <button data-tab="feedback"><svg class="i"><use href="#i-message"/></svg> Feedback</button>
+    <button data-tab="modules"><svg class="i"><use href="#i-plug"/></svg> Modules</button>
     <button data-tab="schermen"><svg class="i"><use href="#i-eye"/></svg> Schermen</button>
     <button data-tab="plannen"><svg class="i"><use href="#i-card"/></svg> Abonnementen</button>
     <button data-tab="stripe"><svg class="i"><use href="#i-plug"/></svg> Stripe-koppeling</button>
@@ -521,6 +526,26 @@
   <div class="kpis" id="fbKpis"></div>
   <div class="card">
     <div id="fbLijst">Bezig met laden…</div>
+  </div>
+</section>
+
+<!-- Bijkoopmodules. Niet elke winkel heeft ze nodig, dus ze zitten niet in de
+     pakketten maar worden hier per winkel aangezet zodra iemand ervoor
+     betaalt. -->
+<section id="tab-modules"hidden>
+  <div class="pagehead"><h1>Modules</h1></div>
+  <div class="card">
+    <h2>Wat er te koop is</h2>
+    <p class="muted" style="font-size:13.5px; line-height:1.7">
+      <b>Refurbishen.</b> De hele werkbankkant: inkoopbatches, QR-labels, checklists,
+      controle, reparatie, onderdelenvoorraad en de overdracht naar de winkelvoorraad.
+      Voor winkels die apparaten opknappen en doorverkopen. Winkels in hun proefperiode
+      krijgen hem er automatisch bij, zodat ze kunnen zien wat het is.
+    </p>
+  </div>
+  <div class="card">
+    <h2>Per winkel</h2>
+    <div id="modLijst">Bezig met laden…</div>
   </div>
 </section>
 
@@ -996,6 +1021,65 @@ async function fbNotitie(id, veld){
   }catch(e){ alert('Kon de notitie niet opslaan: '+e.message); }
 }
 
+/* ---------- bijkoopmodules per winkel ---------- */
+let modData=null;
+async function laadModules(){
+  const vak=document.getElementById('modLijst');
+  if(!vak) return;
+  try{
+    const {data:{session}}=await sbAdmin.auth.getSession();
+    if(!session) return;
+    const res=await fetch(SUPABASE_URL+'/functions/v1/admin-modules',{
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token}});
+    const uit=await res.json();
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Laden mislukt');
+    modData=uit;
+  }catch(e){ vak.innerHTML='<p class="muted">Kon de winkels niet laden: '+esc(e.message)+'</p>'; return; }
+  tekenModules();
+}
+const MOD_NAAM={refurbish:'Refurbishen'};
+function tekenModules(){
+  const vak=document.getElementById('modLijst');
+  if(!vak||!modData) return;
+  const w=modData.winkels||[];
+  if(!w.length){ vak.innerHTML='<p class="muted">Nog geen winkels.</p>'; return; }
+  vak.innerHTML=`<div class="tabelrol"><table>
+    <thead><tr><th>Winkel</th><th>Pakket</th><th>Status</th>${
+      (modData.beschikbaar||[]).map(m=>`<th>${esc(MOD_NAAM[m]||m)}</th>`).join('')}</tr></thead>
+    <tbody>${w.map(k=>`<tr>
+      <td><b>${esc(k.naam||'')}</b></td>
+      <td>${esc(k.plan||'')}</td>
+      <td>${esc(k.status||'')}</td>
+      ${(modData.beschikbaar||[]).map(m=>{
+        const aan=Array.isArray(k.modules)&&k.modules.includes(m);
+        return `<td><label class="modschak"><input type="checkbox" ${aan?'checked':''}
+          onchange="modZet('${esc(k.id)}','${esc(m)}',this)"><span>${aan?'aan':'uit'}</span></label></td>`;
+      }).join('')}
+    </tr>`).join('')}</tbody></table></div>`;
+}
+async function modZet(teamId, module, vink){
+  vink.disabled=true;
+  try{
+    const {data:{session}}=await sbAdmin.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/admin-modules',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({team_id:teamId, module, aan:vink.checked})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Opslaan mislukt');
+    const k=(modData.winkels||[]).find(x=>x.id===teamId);
+    if(k) k.modules=uit.modules;
+    tekenModules();
+    toast(vink.checked?'Module aangezet':'Module uitgezet');
+  }catch(e){
+    vink.checked=!vink.checked;
+    alert('Kon het niet opslaan: '+e.message);
+  }
+  vink.disabled=false;
+}
+
 /* ---------- alle schermen op een rij ----------
    Bewust geen nagemaakte voorbeelden: we openen het echte scherm in de app.
    Een kopie zou binnen een maand achterlopen op de werkelijkheid.          */
@@ -1068,7 +1152,7 @@ document.querySelectorAll('#fbFilter button').forEach(b=>b.addEventListener('cli
 function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); tekenSchermen(); rolTabellen(); }
 save(); teken();
 syncKlantenVanSupabase();
-adminPoortBoot().then(ok=>{ if(ok) laadFeedback(); });
+adminPoortBoot().then(ok=>{ if(ok){ laadFeedback(); laadModules(); } });
 setInterval(syncKlantenVanSupabase, 60000);
 </script>
 </body>

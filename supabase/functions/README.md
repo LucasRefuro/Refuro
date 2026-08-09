@@ -29,6 +29,10 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `whatsapp-koppelen` | nee | Rondt het koppelen van een eigen nummer af |
 | `whatsapp-status` | nee | Geeft de browser het app-ID voor de koppelflow |
 | `product-herkennen` | nee | Leest een foto van een productdoosje en zegt wat erin zit |
+| `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf |
+| `shopify-webhook` | ja | Shopify meldt hier dat er iets verkocht is |
+| `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
+| `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.
@@ -58,3 +62,6 @@ Zet ze nooit in de code en nooit in een chat.
 | `STRIPE_PRIJS_ENTERPRISE` | De prijs van het pakket Enterprise |
 | `STRIPE_KORTING_COUPON` | De bon voor het laatste aanbod, mag ontbreken |
 | `APP_URL` | Waarheen Stripe terugstuurt na het afrekenen |
+| `SHOPIFY_WINKEL` | Je winkeladres, bijvoorbeeld `mijnwinkel.myshopify.com` |
+| `SHOPIFY_TOKEN` | Het Admin API-token dat begint met `shpat_` |
+| `SHOPIFY_WEBHOOK_SECRET` | Controleert of een melding echt van Shopify komt |

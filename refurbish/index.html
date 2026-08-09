@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Refurbishen · Storvo</title>
+<link rel="icon" href="/merk/app-icoon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Refurbishen — de werkbankkant van Storvo
+
+   Aparte pagina, met opzet. De winkelapp gaat over verkopen: prijs, klant,
+   kassa. Dit gaat over uitpakken, testen en schroeven. Twee verschillende
+   soorten werk, twee verschillende schermen, dezelfde inlog en dezelfde
+   database.
+
+   De grens ligt op één moment: zodra een apparaat is goedgekeurd wordt het een
+   uniek exemplaar in Storvo en verdwijnt het hier uit de lijst.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --navy:#123F39; --oranje:#E88A1D; --groen:#0B5B52; --mint:#7FC4B6;
+  --bg:#F7F6F3; --card:#FFFFFF; --soft:#F7F6F3; --soft-2:#F0EEE8; --border:#ECEAE4;
+  --tekst:#17201E; --muted:#5B6663; --muted-l:#8A938F; --actieftekst:#FFFFFF;
+  --green:#1E9E6A; --green-soft:#E3F4EC; --green-tekst:#177A51;
+  --amber:#E8B31D; --amber-soft:#FAF0D8; --amber-tekst:#946C07;
+  --red:#D64545;   --red-soft:#FAE4E4;   --red-tekst:#A33333;
+  --lblauw:#E7F1EE;
+  --radius:24px; --radius-s:18px; --pil:100px;
+  --schaduw:0 6px 24px rgba(23,32,30,.07);
+  --schaduw-l:0 10px 34px rgba(23,32,30,.10);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{overflow-x:clip;}
+body{font-family:'Instrument Sans',system-ui,sans-serif; font-size:15px; color:var(--tekst);
+  background:var(--bg); line-height:1.6; overflow-x:clip; max-width:100vw;}
+body.ingelogd{display:flex;}
+h1,h2,h3{font-family:'Sora',sans-serif; letter-spacing:-.01em;}
+a{color:inherit;}
+
+/* ---------- zijbalk ---------- */
+aside{width:246px; background:var(--card); border-right:1.5px solid var(--border);
+  padding:26px 16px 20px; display:flex; flex-direction:column; gap:4px;
+  position:fixed; top:0; bottom:0; left:0; z-index:20;}
+.logo{display:flex; align-items:center; gap:11px; padding:0 6px 26px;}
+.logo .mark{width:40px; height:40px; display:flex; align-items:center; justify-content:center;}
+.logo .mark svg{width:100%; height:100%;}
+.logo .name{font-family:'Sora',sans-serif; font-weight:800; font-size:17px; line-height:1.1;}
+.logo .sub{font-size:10px; font-weight:600; color:var(--muted-l); letter-spacing:.12em; text-transform:uppercase;}
+aside nav{display:flex; flex-direction:column; gap:3px;}
+aside nav button{display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  background:none; border:none; color:var(--muted); padding:11px 16px; border-radius:var(--pil);
+  font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:.16s;}
+aside nav button:hover{background:var(--soft-2); color:var(--tekst);}
+aside nav button.active{background:var(--lblauw); color:var(--groen);}
+aside nav .badge{margin-left:auto; background:var(--oranje); color:#fff; font-size:11px;
+  font-weight:800; padding:2px 8px; border-radius:var(--pil);}
+.onderin{margin-top:auto; padding-top:16px; border-top:1.5px solid var(--border);}
+.terug{display:flex; align-items:center; gap:10px; width:100%; padding:11px 16px;
+  border-radius:var(--pil); background:var(--soft-2); border:none; color:var(--tekst);
+  font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer; text-decoration:none;}
+.terug:hover{background:var(--border);}
+
+/* ---------- werkvlak ---------- */
+main{flex:1; margin-left:246px; min-width:0; overflow-x:clip;}
+.topbar{position:sticky; top:0; z-index:15; display:flex; align-items:center; gap:16px;
+  padding:16px 40px; background:var(--bg); border-bottom:1.5px solid var(--border);}
+.binnenbar{max-width:1640px; margin:0 auto; display:flex; align-items:center; gap:18px; width:100%;}
+.zoekvak{flex:1; max-width:460px; position:relative;}
+.zoekvak input{padding:12px 14px 12px 42px; font-size:14px; background:var(--card); border-radius:var(--pil);}
+.zoekvak .ic{position:absolute; left:15px; top:50%; transform:translateY(-50%); color:var(--muted-l); display:flex;}
+.wie{margin-left:auto; display:flex; align-items:center; gap:10px; font-size:13.5px; color:var(--muted);}
+.binnen{max-width:1640px; margin:0 auto; padding:26px 40px 60px;}
+.pagehead{display:flex; align-items:center; justify-content:space-between; gap:16px;
+  flex-wrap:wrap; margin-bottom:24px;}
+.pagehead h1{font-size:27px; font-weight:800;}
+
+.card{background:var(--card); border-radius:var(--radius); padding:26px 28px;
+  box-shadow:var(--schaduw); margin-bottom:18px;}
+.card h2{font-size:16px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:10px;}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px;}
+.kpi{background:var(--card); border-radius:var(--radius-s); padding:18px 22px; box-shadow:var(--schaduw);}
+.kpi .l{font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted-l);}
+.kpi .v{font-family:'Sora',sans-serif; font-size:27px; font-weight:800; margin-top:8px;}
+
+label{display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin:0 0 6px;}
+input,select,textarea{width:100%; padding:11px 14px; border:1.5px solid var(--border);
+  border-radius:12px; font-family:inherit; font-size:14.5px; color:var(--tekst); background:var(--card);}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--groen);}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px;}
+.row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 20px; border:none; border-radius:var(--pil); font-family:inherit;
+  font-size:14px; font-weight:700; cursor:pointer; background:var(--groen); color:#fff;
+  transition:.15s; text-decoration:none;}
+.btn:hover{transform:translateY(-1px); box-shadow:var(--schaduw);}
+.btn:disabled{opacity:.55; cursor:default; transform:none;}
+.btn.actie{background:var(--oranje); color:var(--actieftekst);}
+.btn.ghost{background:var(--card); color:var(--tekst); border:1.5px solid var(--border);}
+.btn.ghost:hover{background:var(--soft-2);}
+.btn.small{padding:8px 15px; font-size:13px;}
+.btn.rood{background:var(--red);}
+.i{width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.9;
+  stroke-linecap:round; stroke-linejoin:round; flex:none;}
+.i.s{width:16px; height:16px;}
+
+.periodesel{display:inline-flex; background:var(--soft-2); border-radius:var(--pil); padding:4px; gap:2px;}
+.periodesel button{border:none; background:none; padding:8px 16px; border-radius:var(--pil);
+  font-family:inherit; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;}
+.periodesel button.active{background:var(--card); color:var(--tekst); box-shadow:0 1px 4px rgba(23,32,30,.10);}
+
+table{width:100%; border-collapse:collapse; font-size:14px;}
+th{text-align:left; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted-l); padding:0 12px 10px; white-space:nowrap;}
+td{padding:12px; border-top:1px solid var(--border); vertical-align:middle;}
+tr:hover td{background:var(--soft);}
+.num{text-align:right; font-variant-numeric:tabular-nums;}
+.mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
+.tabelrol{overflow-x:auto; max-width:100%;}
+.muted{color:var(--muted);}
+.klein{font-size:12.5px;}
+
+/* statuslabels: de hele werkstroom in één kleur per stap */
+.st{display:inline-block; font-size:11.5px; font-weight:700; padding:4px 11px;
+  border-radius:var(--pil); white-space:nowrap;}
+.st.te_controleren{background:var(--lblauw); color:var(--groen);}
+.st.te_repareren{background:var(--amber-soft); color:var(--amber-tekst);}
+.st.repurpose{background:var(--red-soft); color:var(--red-tekst);}
+.st.klaar{background:var(--green-soft); color:var(--green-tekst);}
+.st.overgedragen{background:var(--soft-2); color:var(--muted);}
+.st.besteld{background:var(--amber-soft); color:var(--amber-tekst);}
+.st.ontvangen{background:var(--green-soft); color:var(--green-tekst);}
+.st.voorraad{background:var(--green-soft); color:var(--green-tekst);}
+.st.gebruikt{background:var(--soft-2); color:var(--muted);}
+.st.te_bestellen{background:var(--red-soft); color:var(--red-tekst);}
+
+.overlay{position:fixed; inset:0; background:rgba(23,32,30,.55); display:flex;
+  align-items:center; justify-content:center; z-index:900; padding:20px;}
+.popup{background:var(--card); border-radius:var(--radius); padding:30px;
+  width:min(560px,94vw); max-height:92vh; overflow:auto; box-shadow:var(--schaduw-l);}
+.popup.groot{width:min(820px,96vw);}
+.popup h3{font-size:21px; font-weight:800; margin-bottom:8px;}
+.popup .pv{font-size:14.5px; color:var(--muted); line-height:1.7; margin-bottom:18px;}
+.acts{display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;}
+.acts .btn{flex:1; min-width:150px;}
+
+/* ---------- checklist ---------- */
+.clrij{border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:10px;}
+.clvraag{font-weight:600; font-size:14.5px; margin-bottom:10px;}
+.clknoppen{display:flex; gap:8px; flex-wrap:wrap;}
+.clknoppen button{border:1.5px solid var(--border); background:var(--card); color:var(--muted);
+  padding:7px 16px; border-radius:var(--pil); font-family:inherit; font-size:13px;
+  font-weight:700; cursor:pointer;}
+.clknoppen button.gekozen.goed{background:var(--green-soft); border-color:var(--green); color:var(--green-tekst);}
+.clknoppen button.gekozen.fout{background:var(--red-soft); border-color:var(--red); color:var(--red-tekst);}
+.clknoppen button.gekozen.mist{background:var(--amber-soft); border-color:var(--amber); color:var(--amber-tekst);}
+.clkop{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted-l); margin:20px 0 10px;}
+
+/* ---------- labels om te printen ---------- */
+.labelvel{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px;}
+.label{border:1px dashed var(--muted-l); border-radius:10px; padding:12px;
+  display:flex; gap:12px; align-items:center; background:#fff;}
+.label img,.label canvas{width:74px; height:74px; flex:none;}
+.label .lt{font-size:12px; line-height:1.4; min-width:0;}
+.label .lt b{display:block; font-size:12.5px; overflow-wrap:anywhere;}
+
+.leeg{text-align:center; padding:40px 20px; color:var(--muted);}
+.leeg .i{width:34px; height:34px; margin-bottom:12px; color:var(--muted-l);}
+
+#toasts{position:fixed; right:20px; bottom:20px; display:flex; flex-direction:column;
+  gap:10px; z-index:1000; max-width:380px;}
+.toast{background:var(--tekst); color:#fff; padding:13px 18px; border-radius:14px;
+  font-size:14px; box-shadow:var(--schaduw-l); display:flex; align-items:center; gap:10px;}
+.toast.ok{background:var(--green-tekst);}
+.toast.fout{background:var(--red-tekst);}
+.toast.let-op{background:var(--amber-tekst);}
+
+#slot{position:fixed; inset:0; background:var(--bg); display:flex; align-items:center;
+  justify-content:center; padding:24px; z-index:950;}
+#slot .kaart{background:var(--card); border-radius:var(--radius); padding:34px;
+  width:min(440px,94vw); text-align:center; box-shadow:var(--schaduw-l);}
+#slot .kaart h3{font-size:20px; margin-bottom:10px;}
+
+@media(max-width:860px){
+  body.ingelogd{flex-direction:column;}
+  aside{position:static; width:100%; flex-direction:row; align-items:center; overflow-x:auto;
+    padding:12px; border-right:none; border-bottom:1.5px solid var(--border); gap:8px;}
+  aside nav{flex-direction:row;}
+  aside nav button{white-space:nowrap; padding:10px 15px;}
+  .logo{padding:0 14px 0 4px;}
+  .onderin{margin-top:0; padding-top:0; border-top:none;}
+  main{margin-left:0;}
+  .topbar{padding:12px 16px;}
+  .binnen{padding:20px 16px 60px;}
+  .card{padding:20px; border-radius:var(--radius-s);}
+  .pagehead h1{font-size:23px;}
+  .acts{flex-direction:column;} .acts .btn{width:100%;}
+}
+@media print{
+  aside,.topbar,.pagehead,.btn,#toasts{display:none !important;}
+  main{margin:0;} .card{box-shadow:none; padding:0;}
+  .label{break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+
+<svg style="display:none">
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect width="18" height="12" x="3" y="4" rx="2"/><path d="M2 20h20"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+  <symbol id="i-recycle" viewBox="0 0 24 24"><path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 7.196 9.5 3.1 10.598"/><path d="m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843"/><path d="m13.378 9.633 4.096 1.098 1.097-4.096"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+</svg>
+
+<aside hidden id="zijbalk">
+  <div class="logo">
+    <div class="mark" id="merkVlak"></div>
+    <div><div class="name">Refurbishen</div><div class="sub">Storvo</div></div>
+  </div>
+  <nav>
+    <button data-tab="werkbank" class="active"><svg class="i"><use href="#i-laptop"/></svg> Werkbank</button>
+    <button data-tab="inkoop"><svg class="i"><use href="#i-box"/></svg> Inkoopbatches</button>
+    <button data-tab="controle"><svg class="i"><use href="#i-check"/></svg> Te controleren<span class="badge" id="bControle" hidden>0</span></button>
+    <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
+    <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen</button>
+    <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
+    <button data-tab="checklists"><svg class="i"><use href="#i-tag"/></svg> Checklists</button>
+  </nav>
+  <div class="onderin">
+    <a class="terug" href="/app/"><svg class="i s"><use href="#i-left"/></svg> Terug naar de winkel</a>
+  </div>
+</aside>
+
+<main hidden id="werkvlak">
+  <div class="topbar">
+    <div class="binnenbar">
+      <div class="zoekvak">
+        <span class="ic"><svg class="i s"><use href="#i-search"/></svg></span>
+        <input id="zoek" placeholder="Zoek op model of serienummer" oninput="tekenAlles()">
+      </div>
+      <div class="wie" id="wie"></div>
+    </div>
+  </div>
+
+  <div class="binnen">
+
+    <!-- ── werkbank: alles wat er nu ligt ── -->
+    <section id="tab-werkbank">
+      <div class="pagehead"><h1>Werkbank</h1></div>
+      <div class="kpis" id="wbKpis"></div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-laptop"/></svg>Alles wat in behandeling is</h2>
+        <div id="wbLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── inkoopbatches ── -->
+    <section id="tab-inkoop" hidden>
+      <div class="pagehead">
+        <h1>Inkoopbatches</h1>
+        <button class="btn actie" onclick="batchNieuw()"><svg class="i"><use href="#i-plus"/></svg>Nieuwe batch</button>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-box"/></svg>Batches</h2>
+        <div id="batchLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── te controleren ── -->
+    <section id="tab-controle" hidden>
+      <div class="pagehead"><h1>Te controleren</h1></div>
+      <div class="card">
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Scan het label op het apparaat, of klik op een regel. De checklist wordt samengesteld uit de categorie, het model en de specificaties die bekend zijn.</p>
+        <div id="ctrLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── te repareren ── -->
+    <section id="tab-reparatie" hidden>
+      <div class="pagehead"><h1>Te repareren</h1></div>
+      <div class="card">
+        <div id="repLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── onderdelen ── -->
+    <section id="tab-onderdelen" hidden>
+      <div class="pagehead">
+        <h1>Onderdelen</h1>
+        <button class="btn actie" onclick="deelNieuw()"><svg class="i"><use href="#i-plus"/></svg>Onderdeel toevoegen</button>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-cpu"/></svg>Op de plank</h2>
+        <div id="deelLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── bestellen ── -->
+    <section id="tab-bestellen" hidden>
+      <div class="pagehead">
+        <h1>Bestellen</h1>
+        <button class="btn actie" onclick="orderMaken()"><svg class="i"><use href="#i-cart"/></svg>Inkooporder maken</button>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-cart"/></svg>Nog te bestellen</h2>
+        <div id="bestelLijst"></div>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-box"/></svg>Lopende inkooporders</h2>
+        <div id="orderLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── checklists ── -->
+    <section id="tab-checklists" hidden>
+      <div class="pagehead">
+        <h1>Checklists</h1>
+        <button class="btn actie" onclick="clNieuw()"><svg class="i"><use href="#i-plus"/></svg>Checklist maken</button>
+      </div>
+      <div class="card">
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Een checklist hangt aan een categorie, en eventueel aan één model. Laat je het model leeg, dan geldt hij voor alles in die categorie. Bij een controle worden beide lijsten achter elkaar gezet.</p>
+        <div id="clLijst"></div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="slot" hidden><div class="kaart" id="slotKaart"></div></div>
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Gegevens
+
+   Alles staat in Postgres, niet in de browser. Op de werkbank staan meerdere
+   mensen tegelijk te werken en er schrijft ook een webhook in; een blok in
+   localStorage zou dan constant botsen.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let account=null, abonnement=null;
+let batches=[], apparaten=[], onderdelen=[], checklists=[], orders=[];
+let tab='werkbank';
+
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const euro=n=>'€ '+(Number(n)||0).toFixed(2).replace('.',',');
+const datum=d=>new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
+
+function toast(bericht, soort){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast '+(soort===true?'ok':(soort||''));
+  t.textContent=bericht;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3200);
+}
+
+const STATUS={
+  te_controleren:'Te controleren',
+  te_repareren:'Te repareren',
+  repurpose:'Slopen voor onderdelen',
+  klaar:'Klaar voor verkoop',
+  overgedragen:'Naar de winkel'
+};
+const DEEL_STATUS={voorraad:'Op de plank', gebruikt:'Gebruikt', te_bestellen:'Te bestellen', besteld:'Besteld'};
+
+/* ═══════════════ opstarten ═══════════════ */
+
+async function start(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ slot('Even inloggen',
+    'Log eerst in bij Storvo, dan kun je hier verder.',
+    'Naar de inlog','/app/'); return; }
+
+  const {data:acc}=await sb.from('accounts').select('*').eq('id',session.user.id).maybeSingle();
+  if(!acc){ slot('Geen winkel gevonden',
+    'Er hangt nog geen winkel aan dit account. Neem contact op via info@storvo.nl.','Terug','/app/'); return; }
+  account=acc;
+
+  const {data:abo}=await sb.rpc('abonnement_status');
+  abonnement=(abo&&abo[0])||null;
+
+  if(abonnement && abonnement.geblokkeerd){
+    slot('Je abonnement staat stil',
+      'Zodra het abonnement weer loopt kun je hier verder werken.','Naar de winkel','/app/'); return;
+  }
+  if(!abonnement || !Array.isArray(abonnement.modules) || !abonnement.modules.includes('refurbish')){
+    slot('Refurbishen zit niet in je pakket',
+      'Deze module koop je erbij. Vraag hem aan via info@storvo.nl, dan zetten we hem voor je aan.',
+      'Terug naar de winkel','/app/'); return;
+  }
+
+  document.body.classList.add('ingelogd');
+  document.getElementById('zijbalk').hidden=false;
+  document.getElementById('werkvlak').hidden=false;
+  document.getElementById('wie').textContent=acc.naam||acc.email||'';
+  merkTekenen();
+  await allesLaden();
+  showTab('werkbank');
+}
+
+function slot(kop, tekst, knop, waar){
+  const s=document.getElementById('slot');
+  document.getElementById('slotKaart').innerHTML=
+    `<h3>${esc(kop)}</h3><p class="muted" style="margin-bottom:20px">${esc(tekst)}</p>
+     <a class="btn" href="${esc(waar)}" style="width:100%">${esc(knop)}</a>`;
+  s.hidden=false;
+}
+
+function merkTekenen(){
+  document.getElementById('merkVlak').innerHTML=
+    `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="19" height="19" rx="5" fill="#0B5B52"/>
+      <rect x="26" y="3" width="19" height="19" rx="5" fill="#6A9C93"/>
+      <rect x="3" y="26" width="19" height="19" rx="5" fill="#A7C3BD"/>
+      <path d="M28 36.5 L33 41.5 L44 28" fill="none" stroke="#0B5B52" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+}
+
+async function allesLaden(){
+  const [b,a,o,c,r]=await Promise.all([
+    sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
+    sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
+    sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
+    sb.from('refurbish_checklists').select('*').order('categorie'),
+    sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false})
+  ]);
+  batches=b.data||[]; apparaten=a.data||[]; onderdelen=o.data||[];
+  checklists=c.data||[]; orders=r.data||[];
+  tekenAlles();
+}
+
+function showTab(t){
+  tab=t;
+  document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
+  tekenAlles();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('aside nav button').forEach(b=>
+  b.addEventListener('click',()=>showTab(b.dataset.tab)));
+
+function zoekterm(){ const e=document.getElementById('zoek'); return (e?e.value:'').trim().toLowerCase(); }
+function past(a){
+  const q=zoekterm(); if(!q) return true;
+  return [a.merk,a.model,a.serienummer].filter(Boolean).join(' ').toLowerCase().includes(q);
+}
+
+function tekenAlles(){
+  tekenWerkbank(); tekenBatches(); tekenControle(); tekenReparatie();
+  tekenOnderdelen(); tekenBestellen(); tekenChecklists(); tekenBadges();
+}
+function tekenBadges(){
+  const zet=(id,n)=>{ const e=document.getElementById(id); if(!e) return;
+    e.textContent=n; e.hidden=!n; };
+  zet('bControle', apparaten.filter(a=>a.status==='te_controleren').length);
+  zet('bRep',      apparaten.filter(a=>a.status==='te_repareren').length);
+  zet('bBestel',   onderdelen.filter(o=>o.status==='te_bestellen').length);
+}
+
+/* ═══════════════ werkbank ═══════════════ */
+
+function tekenWerkbank(){
+  const bezig=apparaten.filter(a=>a.status!=='overgedragen');
+  const k=document.getElementById('wbKpis');
+  const tel=s=>apparaten.filter(a=>a.status===s).length;
+  k.innerHTML=
+    `<div class="kpi"><div class="l">In behandeling</div><div class="v">${bezig.length}</div></div>`+
+    `<div class="kpi"><div class="l">Te controleren</div><div class="v">${tel('te_controleren')}</div></div>`+
+    `<div class="kpi"><div class="l">Te repareren</div><div class="v">${tel('te_repareren')}</div></div>`+
+    `<div class="kpi"><div class="l">Klaar voor verkoop</div><div class="v">${tel('klaar')}</div></div>`;
+
+  const rijen=bezig.filter(past);
+  document.getElementById('wbLijst').innerHTML=rijen.length
+    ? tabel(rijen)
+    : leeg('i-laptop','Nog niets op de werkbank','Maak een inkoopbatch aan en hang daar apparaten onder.');
+}
+
+function tabel(rijen){
+  return `<div class="tabelrol"><table>
+    <thead><tr><th>Apparaat</th><th>Serienummer</th><th>Batch</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
+    <tbody>${rijen.map(a=>{
+      const b=batches.find(x=>x.id===a.batch_id);
+      return `<tr>
+        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+            <div class="muted klein">${esc(a.categorie||'')}${a.gelabeld?'':' · nog geen label'}</div></td>
+        <td class="mono">${esc(a.serienummer||'—')}</td>
+        <td class="muted klein">${esc(b?b.nummer:'—')}</td>
+        <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
+        <td class="muted klein">${datum(a.aangemaakt_op)}</td>
+        <td class="num"><button class="btn ghost small" onclick="appOpen('${a.id}')">Openen</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function leeg(icoon, kop, uitleg){
+  return `<div class="leeg"><svg class="i"><use href="#${icoon}"/></svg>
+    <div style="font-weight:700; color:var(--tekst); margin-bottom:4px">${esc(kop)}</div>
+    <div class="klein">${esc(uitleg)}</div></div>`;
+}
+
+/* ═══════════════ inkoopbatches ═══════════════ */
+
+function tekenBatches(){
+  const el=document.getElementById('batchLijst');
+  if(!batches.length){ el.innerHTML=leeg('i-box','Nog geen batches',
+    'Een batch is één inkoop bij één leverancier. Alle apparaten eronder horen bij dezelfde factuur.'); return; }
+  el.innerHTML=`<div class="tabelrol"><table>
+    <thead><tr><th>Batch</th><th>Leverancier</th><th class="num">Inkoop</th><th class="num">Apparaten</th><th>Datum</th><th></th></tr></thead>
+    <tbody>${batches.map(b=>{
+      const n=apparaten.filter(a=>a.batch_id===b.id).length;
+      return `<tr>
+        <td><b>${esc(b.nummer)}</b>${b.notitie?`<div class="muted klein">${esc(b.notitie)}</div>`:''}</td>
+        <td>${esc(b.leverancier||'—')}</td>
+        <td class="num">${euro(b.inkoopprijs)}</td>
+        <td class="num">${n}</td>
+        <td class="muted klein">${datum(b.aangemaakt_op)}</td>
+        <td class="num">
+          <button class="btn ghost small" onclick="appNieuw('${b.id}')">Apparaat erbij</button>
+          <button class="btn ghost small" onclick="labelsTonen('${b.id}')">Labels</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function batchNieuw(){
+  const nr='B'+String(batches.length+1).padStart(4,'0');
+  venster('Nieuwe inkoopbatch', `
+    <div class="grid">
+      <div><label>Batchnummer</label><input id="b_nr" value="${nr}"></div>
+      <div><label>Leverancier</label><input id="b_lev" placeholder="Naam van de leverancier"></div>
+      <div><label>Totale inkoopprijs</label><input id="b_prijs" type="number" step="0.01" value="0"></div>
+      <div><label>Factuurnummer</label><input id="b_fact" placeholder="Van de leverancier"></div>
+    </div>
+    <label style="margin-top:14px">Notitie</label>
+    <input id="b_not" placeholder="Bijvoorbeeld: partij van 12 laptops">
+  `, [{tekst:'Batch aanmaken', klasse:'actie', doe:batchOpslaan}]);
+}
+
+async function batchOpslaan(knop){
+  const nummer=v('b_nr'); if(!nummer){ toast('Vul een batchnummer in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_batches').insert({
+      team_id:account.team_id, nummer,
+      leverancier:v('b_lev')||null,
+      inkoopprijs:Number(v('b_prijs'))||0,
+      factuur:v('b_fact')||null,
+      notitie:v('b_not')||null
+    });
+    if(error) throw new Error('Opslaan mislukt');
+    sluit(); await allesLaden(); toast('Batch aangemaakt', true);
+  });
+}
+
+/* ═══════════════ apparaat toevoegen ═══════════════ */
+
+function appNieuw(batchId){
+  venster('Apparaat toevoegen', `
+    <p class="pv">Vul het model in. Ken je de specificaties nog niet, dan kun je ze later aanvullen; wat je invult wordt onthouden voor het volgende apparaat van hetzelfde model.</p>
+    <div class="grid">
+      <div><label>Merk</label><input id="a_merk" placeholder="Dell"></div>
+      <div><label>Model *</label><input id="a_model" placeholder="Latitude 5430"></div>
+      <div><label>Categorie</label><select id="a_cat">
+        ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>`<option>${c}</option>`).join('')}
+      </select></div>
+      <div><label>Serienummer</label><input id="a_serie" placeholder="Servicetag"></div>
+      <div><label>Inkoopprijs per stuk</label><input id="a_inkoop" type="number" step="0.01" value="0"></div>
+      <div><label>Aantal gelijk toevoegen</label><input id="a_aantal" type="number" min="1" value="1"></div>
+    </div>
+    <div class="clkop">Specificaties</div>
+    <div class="grid">
+      <div><label>Processor</label><input id="s_cpu" placeholder="Intel Core i5-1135G7"></div>
+      <div><label>Geheugen</label><input id="s_ram" placeholder="16 GB"></div>
+      <div><label>Opslag</label><input id="s_ssd" placeholder="512 GB SSD"></div>
+      <div><label>Scherm</label><input id="s_scherm" placeholder="14 inch Full HD"></div>
+    </div>
+    <label style="margin-top:12px"><input type="checkbox" id="a_touch" style="width:auto"> Heeft een touchscreen</label>
+  `, [{tekst:'Toevoegen', klasse:'actie', doe:(k)=>appOpslaan(k,batchId)}]);
+}
+
+async function appOpslaan(knop, batchId){
+  const model=v('a_model'); if(!model){ toast('Vul het model in','let-op'); return; }
+  const aantal=Math.max(1, Math.min(50, Number(v('a_aantal'))||1));
+  const specs={};
+  if(v('s_cpu')) specs['Processor']=v('s_cpu');
+  if(v('s_ram')) specs['Geheugen']=v('s_ram');
+  if(v('s_ssd')) specs['Opslag']=v('s_ssd');
+  if(v('s_scherm')) specs['Scherm']=v('s_scherm');
+  if(document.getElementById('a_touch').checked) specs['Touchscreen']='ja';
+
+  await bezig(knop, async()=>{
+    const rijen=[];
+    for(let i=0;i<aantal;i++){
+      rijen.push({
+        team_id:account.team_id, batch_id:batchId,
+        merk:v('a_merk')||null, model, categorie:v('a_cat'),
+        serienummer: aantal===1 ? (v('a_serie')||null) : null,
+        inkoop:Number(v('a_inkoop'))||0, specs, status:'te_controleren'
+      });
+    }
+    const {error}=await sb.from('refurbish_apparaten').insert(rijen);
+    if(error) throw new Error('Opslaan mislukt');
+    sluit(); await allesLaden();
+    toast(aantal===1?'Apparaat toegevoegd':aantal+' apparaten toegevoegd', true);
+  });
+}
+
+/* ═══════════════ labels ═══════════════
+   Een QR-code per apparaat, met het id erin. Scan je hem later, dan opent
+   meteen het juiste scherm. We gebruiken een openbare generator zodat er geen
+   bibliotheek van megabytes bij hoeft.                                       */
+
+function labelUrl(id){
+  const doel=location.origin+'/refurbish/?apparaat='+id;
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=0&data='+encodeURIComponent(doel);
+}
+
+function labelsTonen(batchId){
+  const b=batches.find(x=>x.id===batchId);
+  const lijst=apparaten.filter(a=>a.batch_id===batchId);
+  if(!lijst.length){ toast('Er hangen nog geen apparaten aan deze batch','let-op'); return; }
+  venster('Labels voor '+esc(b?b.nummer:''), `
+    <p class="pv">Print dit vel, knip de labels en plak ze op de apparaten. Scan je een label, dan opent het juiste apparaat meteen.</p>
+    <div class="labelvel">${lijst.map(a=>`
+      <div class="label">
+        <img src="${labelUrl(a.id)}" alt="" loading="lazy">
+        <div class="lt">
+          <b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+          <span class="muted">${esc(b?b.nummer:'')}</span>
+        </div>
+      </div>`).join('')}</div>
+  `, [
+    {tekst:'Printen', klasse:'', doe:()=>window.print()},
+    {tekst:'Labels zitten erop', klasse:'actie', doe:(k)=>labelsKlaar(k,batchId)}
+  ]);
+}
+
+async function labelsKlaar(knop, batchId){
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({gelabeld:true}).eq('batch_id',batchId);
+    if(error) throw new Error('Bijwerken mislukt');
+    sluit(); await allesLaden(); toast('Labels afgevinkt', true);
+  });
+}
+
+/* ═══════════════ controle ═══════════════ */
+
+function tekenControle(){
+  const rijen=apparaten.filter(a=>a.status==='te_controleren').filter(past);
+  document.getElementById('ctrLijst').innerHTML=rijen.length
+    ? tabel(rijen)
+    : leeg('i-check','Niets te controleren','Alles is nagekeken. Voeg een batch toe om verder te gaan.');
+}
+
+/* De checklist wordt op het moment zelf samengesteld: eerst de categorie, dan
+   het model, dan de vragen die horen bij wat er in dit apparaat zit. Zo staat
+   er nooit een vraag over een touchscreen bij een apparaat zonder. */
+const SPEC_VRAGEN={
+  'Touchscreen':[{v:'Zit er een barst in het touchscreen?', a:['Nee','Ja','Ontbreekt']},
+                 {v:'Reageert het touchscreen overal?',     a:['Ja','Nee','Ontbreekt']}],
+  'Opslag':     [{v:'Wordt de opslag herkend en is hij leeg?', a:['Ja','Nee','Ontbreekt']}],
+  'Geheugen':   [{v:'Wordt al het geheugen herkend?',          a:['Ja','Nee','Ontbreekt']}]
+};
+const BASIS_VISUEEL=[
+  {v:'Hoe is de behuizing?',        a:['Goed','Krassen','Deuken']},
+  {v:'Hoe is het scherm optisch?',  a:['Goed','Krassen','Barst']},
+  {v:'Zijn alle toetsen aanwezig?', a:['Ja','Nee']},
+  {v:'Zijn de aansluitingen heel?', a:['Ja','Nee']}
+];
+const BASIS_FUNCTIE=[
+  {v:'Start het apparaat normaal op?', a:['Ja','Nee']},
+  {v:'Werkt het toetsenbord?',         a:['Ja','Nee','Ontbreekt']},
+  {v:'Werkt het touchpad of de touch?',a:['Ja','Nee','Ontbreekt']},
+  {v:'Werkt de webcam?',               a:['Ja','Nee','Ontbreekt']},
+  {v:'Werkt de accu en laden?',        a:['Ja','Nee','Ontbreekt']},
+  {v:'Werken wifi en bluetooth?',      a:['Ja','Nee']},
+  {v:'Werkt het geluid?',              a:['Ja','Nee']}
+];
+
+function checklistVoor(a){
+  const eigen=checklists.filter(c=>c.categorie===a.categorie &&
+    (!c.model || c.model.toLowerCase()===String(a.model||'').toLowerCase()));
+  const extra=[];
+  eigen.forEach(c=>(c.items||[]).forEach(i=>extra.push(i)));
+  const specs=a.specs||{};
+  const uitSpecs=[];
+  Object.keys(SPEC_VRAGEN).forEach(k=>{
+    if(specs[k]) SPEC_VRAGEN[k].forEach(q=>uitSpecs.push(q));
+  });
+  return [
+    {kop:'Visuele inspectie', vragen:BASIS_VISUEEL},
+    {kop:'Werkt alles', vragen:BASIS_FUNCTIE.concat(uitSpecs)},
+    extra.length?{kop:'Eigen controles', vragen:extra}:null
+  ].filter(Boolean);
+}
+
+let ctrApparaat=null, ctrAntwoord={};
+
+function appOpen(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  if(a.status==='te_repareren') return repOpen(a);
+  if(a.status==='klaar')        return klaarOpen(a);
+  if(a.status==='repurpose')    return sloopOpen(a);
+  ctrApparaat=a; ctrAntwoord={};
+  (a.checklist||[]).forEach(r=>{ ctrAntwoord[r.v]=r.a; });
+  ctrTeken();
+}
+
+function ctrTeken(){
+  const a=ctrApparaat;
+  const groepen=checklistVoor(a);
+  venster('Controle: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
+    <p class="pv">${a.serienummer?'Serienummer '+esc(a.serienummer)+' · ':''}Loop de lijst af. Wat je aanvinkt bepaalt wat er daarna met dit apparaat gebeurt.</p>
+    <div style="margin-bottom:8px">
+      <label>Serienummer</label>
+      <input id="c_serie" value="${esc(a.serienummer||'')}" placeholder="Nog invullen">
+    </div>
+    ${groepen.map(g=>`
+      <div class="clkop">${esc(g.kop)}</div>
+      ${g.vragen.map(q=>`
+        <div class="clrij">
+          <div class="clvraag">${esc(q.v)}</div>
+          <div class="clknoppen">${q.a.map(opt=>`
+            <button class="${ctrAntwoord[q.v]===opt?'gekozen '+kleurVan(opt):''}"
+              onclick="ctrKies(${JSON.stringify(q.v).replace(/"/g,'&quot;')}, ${JSON.stringify(opt).replace(/"/g,'&quot;')})">${esc(opt)}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+    `).join('')}
+  `, [
+    {tekst:'Goedgekeurd', klasse:'actie', doe:(k)=>ctrAfronden(k,'klaar')},
+    {tekst:'Moet gerepareerd', klasse:'', doe:(k)=>ctrAfronden(k,'te_repareren')},
+    {tekst:'Slopen voor onderdelen', klasse:'ghost', doe:(k)=>ctrAfronden(k,'repurpose')}
+  ], 'groot');
+}
+
+function kleurVan(opt){
+  if(['Ja','Goed'].includes(opt)) return 'goed';
+  if(['Ontbreekt'].includes(opt)) return 'mist';
+  if(['Nee','Barst','Deuken'].includes(opt)) return 'fout';
+  return 'mist';
+}
+function ctrKies(vraag, antwoord){
+  ctrAntwoord[vraag]=antwoord;
+  const serie=v('c_serie'); ctrApparaat.serienummer=serie||ctrApparaat.serienummer;
+  ctrTeken();
+}
+
+async function ctrAfronden(knop, status){
+  const a=ctrApparaat;
+  const lijst=Object.keys(ctrAntwoord).map(k=>({v:k, a:ctrAntwoord[k]}));
+  const defecten=lijst.filter(r=>kleurVan(r.a)!=='goed').map(r=>r.v);
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten').update({
+      status, checklist:lijst, defecten,
+      serienummer:v('c_serie')||a.serienummer||null,
+      bijgewerkt_op:new Date().toISOString()
+    }).eq('id',a.id);
+    if(error) throw new Error('Opslaan mislukt');
+    sluit(); await allesLaden();
+    toast(status==='klaar'?'Goedgekeurd, klaar voor verkoop'
+        : status==='te_repareren'?'Naar de reparatielijst'
+        : 'Naar de sloop', true);
+  });
+}
+
+/* ═══════════════ reparatie ═══════════════ */
+
+function tekenReparatie(){
+  const rijen=apparaten.filter(a=>a.status==='te_repareren').filter(past);
+  document.getElementById('repLijst').innerHTML=rijen.length
+    ? tabel(rijen)
+    : leeg('i-wrench','Niets te repareren','Alles wat kapot was is hersteld.');
+}
+
+function repOpen(a){
+  const nodig=(a.defecten||[]);
+  const beschikbaar=onderdelen.filter(o=>o.status==='voorraad');
+  const toegewezen=onderdelen.filter(o=>o.voor_apparaat===a.id);
+  venster('Reparatie: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
+    <p class="pv">Dit kwam uit de controle. Wijs een onderdeel van de plank toe, of zet het op de bestellijst.</p>
+
+    <div class="clkop">Wat er mis is</div>
+    ${nodig.length ? nodig.map(d=>`<div class="clrij"><div class="clvraag">${esc(d)}</div></div>`).join('')
+                   : '<p class="muted klein">Geen defecten genoteerd bij de controle.</p>'}
+
+    <div class="clkop">Onderdelen voor dit apparaat</div>
+    ${toegewezen.length ? toegewezen.map(o=>`
+      <div class="clrij"><div class="row">
+        <b>${esc(o.naam)}</b><span class="st ${o.status}">${esc(DEEL_STATUS[o.status]||o.status)}</span>
+        <span style="margin-left:auto"></span>
+        ${o.status==='voorraad'?`<button class="btn small" onclick="deelInbouwen('${o.id}')">Ingebouwd</button>`:''}
+      </div></div>`).join('') : '<p class="muted klein">Nog niets toegewezen.</p>'}
+
+    <div class="clkop">Van de plank pakken</div>
+    ${beschikbaar.length ? `<select id="r_deel">
+        ${beschikbaar.map(o=>`<option value="${o.id}">${esc(o.naam)}${o.soort?' · '+esc(o.soort):''}</option>`).join('')}
+      </select>
+      <button class="btn ghost small" style="margin-top:10px" onclick="deelToewijzen('${a.id}')">Toewijzen aan dit apparaat</button>`
+    : '<p class="muted klein">Niets op de plank.</p>'}
+
+    <div class="clkop">Bestellen</div>
+    <div class="row">
+      <input id="r_bestel" placeholder="Welk onderdeel heb je nodig?" style="flex:1; min-width:200px">
+      <button class="btn ghost small" onclick="deelBestellen('${a.id}')">Op de bestellijst</button>
+    </div>
+  `, [
+    {tekst:'Reparatie klaar', klasse:'actie', doe:(k)=>repKlaar(k,a.id)}
+  ], 'groot');
+}
+
+async function deelToewijzen(apparaatId){
+  const id=v('r_deel'); if(!id) return;
+  const {error}=await sb.from('refurbish_onderdelen')
+    .update({voor_apparaat:apparaatId}).eq('id',id);
+  if(error){ toast('Toewijzen mislukt','fout'); return; }
+  await allesLaden(); sluit();
+  const a=apparaten.find(x=>x.id===apparaatId); if(a) repOpen(a);
+  toast('Toegewezen', true);
+}
+async function deelInbouwen(id){
+  const o=onderdelen.find(x=>x.id===id);
+  const {error}=await sb.from('refurbish_onderdelen').update({status:'gebruikt'}).eq('id',id);
+  if(error){ toast('Bijwerken mislukt','fout'); return; }
+  await allesLaden(); sluit();
+  const a=apparaten.find(x=>x.id===(o&&o.voor_apparaat)); if(a) repOpen(a);
+  toast('Ingebouwd en van de plank af', true);
+}
+async function deelBestellen(apparaatId){
+  const naam=v('r_bestel'); if(!naam){ toast('Vul in wat je nodig hebt','let-op'); return; }
+  const {error}=await sb.from('refurbish_onderdelen').insert({
+    team_id:account.team_id, naam, status:'te_bestellen', voor_apparaat:apparaatId
+  });
+  if(error){ toast('Opslaan mislukt','fout'); return; }
+  await allesLaden(); sluit();
+  const a=apparaten.find(x=>x.id===apparaatId); if(a) repOpen(a);
+  toast('Op de bestellijst gezet', true);
+}
+async function repKlaar(knop, id){
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({status:'klaar', bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw new Error('Bijwerken mislukt');
+    sluit(); await allesLaden(); toast('Gerepareerd, klaar voor verkoop', true);
+  });
+}
+
+/* ═══════════════ slopen voor onderdelen ═══════════════ */
+
+function sloopOpen(a){
+  const specs=Object.keys(a.specs||{});
+  venster('Slopen: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
+    <p class="pv">Vink aan wat er nog werkt. Die onderdelen komen op de plank te liggen en kun je later bij een reparatie gebruiken.</p>
+    ${(specs.length?specs:['Scherm','Accu','Toetsenbord','Moederbord']).map((s,i)=>`
+      <label class="clrij" style="display:block; cursor:pointer">
+        <input type="checkbox" id="sl_${i}" data-naam="${esc(s)}" style="width:auto"> ${esc(s)}
+        ${(a.specs||{})[s]?`<span class="muted klein"> · ${esc((a.specs||{})[s])}</span>`:''}
+      </label>`).join('')}
+  `, [{tekst:'Onderdelen op de plank', klasse:'actie', doe:(k)=>sloopKlaar(k,a)}]);
+}
+
+async function sloopKlaar(knop, a){
+  const gekozen=[...document.querySelectorAll('[id^="sl_"]')]
+    .filter(e=>e.checked).map(e=>e.dataset.naam);
+  await bezig(knop, async()=>{
+    if(gekozen.length){
+      const rijen=gekozen.map(n=>({
+        team_id:account.team_id,
+        naam:n+' uit '+[a.merk,a.model].filter(Boolean).join(' '),
+        soort:n, van_apparaat:a.id, status:'voorraad'
+      }));
+      const {error}=await sb.from('refurbish_onderdelen').insert(rijen);
+      if(error) throw new Error('Opslaan mislukt');
+    }
+    await sb.from('refurbish_apparaten')
+      .update({status:'overgedragen', notitie:'Gesloopt voor onderdelen',
+               bijgewerkt_op:new Date().toISOString()}).eq('id',a.id);
+    sluit(); await allesLaden();
+    toast(gekozen.length?gekozen.length+' onderdelen op de plank':'Apparaat afgevoerd', true);
+  });
+}
+
+/* ═══════════════ klaar: naar de winkel ═══════════════
+   Hier ligt de grens. Vanaf dit moment is het geen werkbank meer maar handel,
+   en hoort het thuis in Storvo.                                              */
+
+function klaarOpen(a){
+  const b=batches.find(x=>x.id===a.batch_id);
+  venster('Klaar voor verkoop', `
+    <p class="pv"><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${a.serienummer?' · '+esc(a.serienummer):''}<br>
+    Zet de vraagprijs erbij, dan gaat dit toestel naar je winkelvoorraad in Storvo. Daar reken je hem af en zet je hem eventueel op de webshop.</p>
+    <div class="grid">
+      <div><label>Inkoopprijs</label><input id="k_inkoop" type="number" step="0.01" value="${a.inkoop||0}"></div>
+      <div><label>Vraagprijs</label><input id="k_verkoop" type="number" step="0.01" placeholder="Bijvoorbeeld 349"></div>
+      <div><label>Staat</label><select id="k_staat">
+        <option value="A">A · als nieuw</option>
+        <option value="B" selected>B · gebruikt</option>
+        <option value="C">C · zichtbare sporen</option>
+      </select></div>
+      <div><label>Garantie (maanden)</label><input id="k_gar" type="number" min="0" value="6"></div>
+    </div>
+    <p class="muted klein" style="margin-top:14px">Herkomst wordt vastgelegd als ${esc(b?b.nummer:'onbekende batch')}, zodat je later kunt terugvinden uit welke inkoop dit toestel kwam.</p>
+  `, [{tekst:'Naar de winkelvoorraad', klasse:'actie', doe:(k)=>overdragen(k,a)}]);
+}
+
+async function overdragen(knop, a){
+  const verkoop=v('k_verkoop');
+  if(!verkoop){ toast('Vul een vraagprijs in','let-op'); return; }
+  const b=batches.find(x=>x.id===a.batch_id);
+  await bezig(knop, async()=>{
+    const {data, error}=await sb.from('hardware').insert({
+      team_id:account.team_id,
+      merk:a.merk, model:a.model, categorie:a.categorie,
+      serienummer:a.serienummer, specs:a.specs||{},
+      staat:v('k_staat'), inkoop:Number(v('k_inkoop'))||0,
+      verkoop:Number(verkoop)||0, garantie:Number(v('k_gar'))||0,
+      herkomst:b?('Batch '+b.nummer):null,
+      status:'voorraad', kanalen:{winkel:true}
+    }).select().single();
+    if(error) throw new Error('Overdragen mislukt');
+
+    await sb.from('refurbish_apparaten').update({
+      status:'overgedragen', hardware_id:data.id, bijgewerkt_op:new Date().toISOString()
+    }).eq('id',a.id);
+
+    sluit(); await allesLaden();
+    toast('Staat nu in je winkelvoorraad', true);
+  });
+}
+
+/* ═══════════════ onderdelen ═══════════════ */
+
+function tekenOnderdelen(){
+  const q=zoekterm();
+  const rijen=onderdelen.filter(o=>o.status!=='gebruikt')
+    .filter(o=>!q || String(o.naam).toLowerCase().includes(q));
+  document.getElementById('deelLijst').innerHTML=rijen.length
+    ? `<div class="tabelrol"><table>
+        <thead><tr><th>Onderdeel</th><th>Soort</th><th>Status</th><th>Voor</th><th class="num">Prijs</th><th></th></tr></thead>
+        <tbody>${rijen.map(o=>{
+          const voor=apparaten.find(a=>a.id===o.voor_apparaat);
+          return `<tr>
+            <td><b>${esc(o.naam)}</b></td>
+            <td class="muted klein">${esc(o.soort||'—')}</td>
+            <td><span class="st ${o.status}">${esc(DEEL_STATUS[o.status]||o.status)}</span></td>
+            <td class="muted klein">${voor?esc([voor.merk,voor.model].filter(Boolean).join(' ')):'—'}</td>
+            <td class="num">${o.prijs?euro(o.prijs):'—'}</td>
+            <td class="num"><button class="btn ghost small" onclick="deelWeg('${o.id}')">Weg</button></td>
+          </tr>`;
+        }).join('')}</tbody></table></div>`
+    : leeg('i-cpu','Niets op de plank','Onderdelen komen hier terecht als je een apparaat sloopt of een bestelling ontvangt.');
+}
+
+function deelNieuw(){
+  venster('Onderdeel toevoegen', `
+    <div class="grid">
+      <div><label>Naam *</label><input id="o_naam" placeholder="Scherm 14 inch Full HD"></div>
+      <div><label>Soort</label><input id="o_soort" placeholder="Scherm"></div>
+      <div><label>Inkoopprijs</label><input id="o_prijs" type="number" step="0.01" value="0"></div>
+      <div><label>Leverancier</label><input id="o_lev"></div>
+    </div>
+  `, [{tekst:'Toevoegen', klasse:'actie', doe:deelOpslaan}]);
+}
+async function deelOpslaan(knop){
+  const naam=v('o_naam'); if(!naam){ toast('Vul een naam in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_onderdelen').insert({
+      team_id:account.team_id, naam, soort:v('o_soort')||null,
+      prijs:Number(v('o_prijs'))||0, leverancier:v('o_lev')||null, status:'voorraad'
+    });
+    if(error) throw new Error('Opslaan mislukt');
+    sluit(); await allesLaden(); toast('Onderdeel toegevoegd', true);
+  });
+}
+async function deelWeg(id){
+  if(!confirm('Dit onderdeel verwijderen?')) return;
+  await sb.from('refurbish_onderdelen').delete().eq('id',id);
+  await allesLaden(); toast('Verwijderd', true);
+}
+
+/* ═══════════════ bestellen ═══════════════ */
+
+function tekenBestellen(){
+  const nodig=onderdelen.filter(o=>o.status==='te_bestellen');
+  document.getElementById('bestelLijst').innerHTML=nodig.length
+    ? `<div class="tabelrol"><table>
+        <thead><tr><th style="width:40px"></th><th>Onderdeel</th><th>Voor welk apparaat</th><th></th></tr></thead>
+        <tbody>${nodig.map(o=>{
+          const voor=apparaten.find(a=>a.id===o.voor_apparaat);
+          return `<tr>
+            <td><input type="checkbox" class="bestelvink" value="${o.id}" style="width:auto"></td>
+            <td><b>${esc(o.naam)}</b></td>
+            <td class="muted klein">${voor?esc([voor.merk,voor.model].filter(Boolean).join(' ')):'—'}</td>
+            <td class="num"><button class="btn ghost small" onclick="deelWeg('${o.id}')">Weg</button></td>
+          </tr>`;
+        }).join('')}</tbody></table></div>`
+    : leeg('i-cart','Niets te bestellen','Wat je bij een reparatie op de bestellijst zet komt hier terecht.');
+
+  const lopend=orders.filter(o=>o.status!=='ontvangen');
+  document.getElementById('orderLijst').innerHTML=lopend.length
+    ? `<div class="tabelrol"><table>
+        <thead><tr><th>Leverancier</th><th>Status</th><th class="num">Prijs</th><th>Datum</th><th></th></tr></thead>
+        <tbody>${lopend.map(o=>`<tr>
+          <td><b>${esc(o.leverancier||'—')}</b></td>
+          <td><span class="st ${o.status}">${esc(o.status)}</span></td>
+          <td class="num">${euro(o.prijs)}</td>
+          <td class="muted klein">${datum(o.aangemaakt_op)}</td>
+          <td class="num"><button class="btn small" onclick="orderOntvangen('${o.id}')">Ontvangen</button></td>
+        </tr>`).join('')}</tbody></table></div>`
+    : '<p class="muted klein">Geen lopende bestellingen.</p>';
+}
+
+function orderMaken(){
+  const gekozen=[...document.querySelectorAll('.bestelvink')].filter(e=>e.checked).map(e=>e.value);
+  if(!gekozen.length){ toast('Vink eerst aan wat je gaat bestellen','let-op'); return; }
+  venster('Inkooporder maken', `
+    <p class="pv">${gekozen.length} onderdeel${gekozen.length===1?'':'en'} in één bestelling.</p>
+    <div class="grid">
+      <div><label>Leverancier *</label><input id="io_lev" placeholder="Bij wie bestel je"></div>
+      <div><label>Totale prijs</label><input id="io_prijs" type="number" step="0.01" value="0"></div>
+      <div><label>Factuurnummer</label><input id="io_fact"></div>
+    </div>
+  `, [{tekst:'Bestelling vastleggen', klasse:'actie', doe:(k)=>orderOpslaan(k,gekozen)}]);
+}
+
+async function orderOpslaan(knop, ids){
+  const lev=v('io_lev'); if(!lev){ toast('Vul de leverancier in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {data, error}=await sb.from('refurbish_orders').insert({
+      team_id:account.team_id, leverancier:lev,
+      prijs:Number(v('io_prijs'))||0, factuur:v('io_fact')||null, status:'besteld'
+    }).select().single();
+    if(error) throw new Error('Opslaan mislukt');
+    await sb.from('refurbish_onderdelen')
+      .update({status:'besteld', order_id:data.id, leverancier:lev}).in('id',ids);
+    sluit(); await allesLaden(); toast('Bestelling vastgelegd', true);
+  });
+}
+
+async function orderOntvangen(id){
+  const deel=onderdelen.filter(o=>o.order_id===id);
+  venster('Bestelling ontvangen', `
+    <p class="pv">${deel.length} onderdeel${deel.length===1?'':'en'} binnengekomen. Print de labels, plak ze erop en bevestig dan.</p>
+    <div class="labelvel">${deel.map(o=>`
+      <div class="label">
+        <img src="${labelUrl(o.id)}" alt="" loading="lazy">
+        <div class="lt"><b>${esc(o.naam)}</b><span class="muted">${esc(o.soort||'')}</span></div>
+      </div>`).join('')}</div>
+  `, [
+    {tekst:'Printen', klasse:'', doe:()=>window.print()},
+    {tekst:'Labels zitten erop, op de plank', klasse:'actie', doe:(k)=>orderKlaar(k,id)}
+  ], 'groot');
+}
+
+async function orderKlaar(knop, id){
+  await bezig(knop, async()=>{
+    await sb.from('refurbish_orders').update({status:'ontvangen'}).eq('id',id);
+    await sb.from('refurbish_onderdelen').update({status:'voorraad'}).eq('order_id',id);
+    sluit(); await allesLaden(); toast('Onderdelen liggen op de plank', true);
+  });
+}
+
+/* ═══════════════ checklists ═══════════════ */
+
+function tekenChecklists(){
+  document.getElementById('clLijst').innerHTML=checklists.length
+    ? checklists.map(c=>`
+      <div class="clrij">
+        <div class="row">
+          <b>${esc(c.categorie)}</b>
+          ${c.model?`<span class="st te_controleren">${esc(c.model)}</span>`:'<span class="muted klein">hele categorie</span>'}
+          <span style="margin-left:auto"></span>
+          <span class="muted klein">${(c.items||[]).length} vragen</span>
+          <button class="btn ghost small" onclick="clWeg('${c.id}')">Weg</button>
+        </div>
+        ${(c.items||[]).length?`<div class="muted klein" style="margin-top:8px">${
+          (c.items||[]).map(i=>esc(i.v)).join(' · ')}</div>`:''}
+      </div>`).join('')
+    : leeg('i-tag','Nog geen eigen checklists',
+        'De standaardcontroles staan er altijd bij. Hier voeg je vragen toe die alleen voor jouw modellen gelden.');
+}
+
+function clNieuw(){
+  venster('Checklist maken', `
+    <div class="grid">
+      <div><label>Categorie *</label><select id="cl_cat">
+        ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>`<option>${c}</option>`).join('')}
+      </select></div>
+      <div><label>Alleen voor dit model</label><input id="cl_model" placeholder="Leeg = hele categorie"></div>
+    </div>
+    <label style="margin-top:14px">Vragen, één per regel</label>
+    <textarea id="cl_items" rows="6" placeholder="Zit de dockingpoort er nog in?
+Werkt de vingerafdruklezer?"></textarea>
+    <p class="muted klein" style="margin-top:8px">Elke vraag krijgt automatisch de antwoorden Ja, Nee en Ontbreekt.</p>
+  `, [{tekst:'Opslaan', klasse:'actie', doe:clOpslaan}]);
+}
+
+async function clOpslaan(knop){
+  const regels=(document.getElementById('cl_items').value||'')
+    .split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!regels.length){ toast('Vul minstens één vraag in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_checklists').insert({
+      team_id:account.team_id, categorie:v('cl_cat'),
+      model:v('cl_model')||null,
+      items:regels.map(r=>({v:r, a:['Ja','Nee','Ontbreekt']}))
+    });
+    if(error) throw new Error('Opslaan mislukt');
+    sluit(); await allesLaden(); toast('Checklist opgeslagen', true);
+  });
+}
+async function clWeg(id){
+  if(!confirm('Deze checklist verwijderen?')) return;
+  await sb.from('refurbish_checklists').delete().eq('id',id);
+  await allesLaden(); toast('Verwijderd', true);
+}
+
+/* ═══════════════ hulpjes ═══════════════ */
+
+function v(id){ const e=document.getElementById(id); return e?String(e.value||'').trim():''; }
+
+function venster(kop, inhoud, knoppen, klasse){
+  sluit();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='venster';
+  ov.onclick=e=>{ if(e.target===ov) sluit(); };
+  ov.innerHTML=`<div class="popup ${klasse||''}">
+    <h3>${kop}</h3>
+    <div id="vensterInhoud">${inhoud}</div>
+    <div class="acts" id="vensterKnoppen"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const rij=document.getElementById('vensterKnoppen');
+  (knoppen||[]).forEach(k=>{
+    const b=document.createElement('button');
+    b.className='btn '+(k.klasse||'');
+    b.textContent=k.tekst;
+    b.onclick=()=>k.doe(b);
+    rij.appendChild(b);
+  });
+  const sl=document.createElement('button');
+  sl.className='btn ghost'; sl.textContent='Sluiten'; sl.onclick=sluit;
+  rij.appendChild(sl);
+}
+function sluit(){ const o=document.getElementById('venster'); if(o) o.remove(); }
+
+async function bezig(knop, doe){
+  const oud=knop?knop.textContent:'';
+  if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{ await doe(); }
+  catch(e){ toast(e.message||'Er ging iets mis','fout'); }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+}
+
+/* Een gescand label opent meteen het juiste apparaat. */
+function uitAdres(){
+  const id=new URLSearchParams(location.search).get('apparaat');
+  if(!id) return;
+  const a=apparaten.find(x=>x.id===id);
+  if(a){ appOpen(id); }
+  else{
+    const o=onderdelen.find(x=>x.id===id);
+    if(o) toast('Onderdeel: '+o.naam, true);
+  }
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') sluit(); });
+
+start().then(()=>{ setTimeout(uitAdres, 300); });
+</script>
+</body>
+</html>
