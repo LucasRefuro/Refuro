@@ -2,7 +2,7 @@
   "name": "storvo",
   "private": true,
   "scripts": {
-    "test": "node tests/winkelapp.js && node tests/refurbish-werkstroom.js && node tests/refurbish-zicht.js"
+    "test": "node tests/winkelapp.js && node tests/refurbish-werkstroom.js && node tests/refurbish-toevoegen.js && node tests/refurbish-zicht.js"
   },
   "devDependencies": {
     "jsdom": "^26.0.0"

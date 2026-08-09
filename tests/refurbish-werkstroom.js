@@ -9,15 +9,14 @@ const w=dom.window;
 
 const TEAM='team-1';
 const db={
-  refurbish_batches:[{id:'b1', team_id:TEAM, nummer:'B0001', leverancier:'Testleverancier', inkoopprijs:900, aangemaakt_op:new Date().toISOString()}],
   refurbish_apparaten:[
-    {id:'a1', team_id:TEAM, batch_id:'b1', merk:'Dell', model:'Latitude 5430', categorie:'Laptop',
+    {id:'a1', team_id:TEAM, code:'A0001', leverancier:'Testleverancier', merk:'Dell', model:'Latitude 5430', categorie:'Laptop',
      serienummer:'ABC123', specs:{Processor:'i5', Touchscreen:'ja'}, inkoop:75, status:'te_controleren',
      checklist:[], defecten:[], gelabeld:false, aangemaakt_op:new Date().toISOString()},
-    {id:'a2', team_id:TEAM, batch_id:'b1', merk:'HP', model:'EliteBook 840', categorie:'Laptop',
+    {id:'a2', team_id:TEAM, code:'A0002', merk:'HP', model:'EliteBook 840', categorie:'Laptop',
      specs:{}, inkoop:60, status:'te_repareren', checklist:[], defecten:['Werkt de accu en laden?'],
      aangemaakt_op:new Date().toISOString()},
-    {id:'a3', team_id:TEAM, batch_id:'b1', merk:'Dell', model:'XPS 14', categorie:'Laptop',
+    {id:'a3', team_id:TEAM, code:'A0003', leverancier:'Testleverancier', merk:'Dell', model:'XPS 14', categorie:'Laptop',
      specs:{}, inkoop:120, status:'klaar', checklist:[], defecten:[], aangemaakt_op:new Date().toISOString()}
   ],
   refurbish_onderdelen:[
@@ -26,6 +25,8 @@ const db={
   ],
   refurbish_checklists:[{id:'c1', team_id:TEAM, categorie:'Laptop', model:null,
     items:[{v:'Zit de dockingpoort er nog in?', a:['Ja','Nee','Ontbreekt']}]}],
+  hardware_modellen:[{id:'m1', merk:'Dell', model:'Latitude 5430', categorie:'Laptop',
+    specs:{Processor:'i5-1235U', Geheugen:'16 GB'}, keer_gebruikt:3}],
   refurbish_orders:[{id:'r1', team_id:TEAM, leverancier:'Testleverancier', status:'besteld', prijs:49, aangemaakt_op:new Date().toISOString()}]
 };
 const geschreven=[];
@@ -66,7 +67,8 @@ setTimeout(()=>{
   ok('slot verborgen', d.getElementById('slot').hidden);
   ok('werkbank getekend', /Latitude 5430/.test(d.getElementById('wbLijst').innerHTML));
   ok('kpi in behandeling 3', /">3</.test(d.getElementById('wbKpis').innerHTML));
-  ok('batch getoond', /B0001/.test(d.getElementById('batchLijst').innerHTML));
+  ok('vandaag toegevoegd', /Latitude 5430/.test(d.getElementById('vandaagLijst').innerHTML));
+  ok('nummer op de regel', /A0001/.test(d.getElementById('vandaagLijst').innerHTML));
   ok('controlelijst', /Latitude 5430/.test(d.getElementById('ctrLijst').innerHTML));
   ok('reparatielijst', /EliteBook/.test(d.getElementById('repLijst').innerHTML));
   ok('onderdelen', /Accu EliteBook/.test(d.getElementById('deelLijst').innerHTML));
@@ -81,6 +83,9 @@ setTimeout(()=>{
   w.appOpen('a1');
   const v=d.getElementById('venster');
   ok('controlevenster open', !!v);
+  ok('specificatievelden in de controle', !!d.getElementById('c_cpu') && !!d.getElementById('c_ram'));
+  ok('knop om specs op te zoeken', /Specificaties opzoeken/.test(v.innerHTML));
+  ok('bekende specs voorgevuld', d.getElementById('c_cpu').value==='i5');
   ok('touchscreenvraag erbij', /barst in het touchscreen/.test(v.innerHTML));
   ok('eigen checklistvraag erbij', /dockingpoort/.test(v.innerHTML));
   ok('geen touchscreenvraag zonder touchscreen', (()=>{ w.sluit(); w.appOpen('a2'); return true; })());
@@ -101,7 +106,7 @@ setTimeout(()=>{
       const r=naarHardware[2];
       ok('vraagprijs mee', r.verkoop===349);
       ok('inkoopprijs mee', r.inkoop===120);
-      ok('herkomst mee', r.herkomst==='Batch B0001');
+      ok('herkomst mee', r.herkomst==='Testleverancier · A0003');
       ok('serienummer veld aanwezig', 'serienummer' in r);
     }
     const bij=geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].status==='overgedragen');

@@ -123,6 +123,7 @@ th{text-align:left; font-size:11px; font-weight:700; letter-spacing:.08em; text-
 td{padding:12px; border-top:1px solid var(--border); vertical-align:middle;}
 tr:hover td{background:var(--soft);}
 .num{text-align:right; font-variant-numeric:tabular-nums;}
+.hwact{white-space:nowrap;}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
 .tabelrol{overflow-x:auto; max-width:100%;}
 .muted{color:var(--muted);}
@@ -166,12 +167,30 @@ tr:hover td{background:var(--soft);}
   color:var(--muted-l); margin:20px 0 10px;}
 
 /* ---------- labels om te printen ---------- */
-.labelvel{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px;}
-.label{border:1px dashed var(--muted-l); border-radius:10px; padding:12px;
-  display:flex; gap:12px; align-items:center; background:#fff;}
-.label img,.label canvas{width:74px; height:74px; flex:none;}
-.label .lt{font-size:12px; line-height:1.4; min-width:0;}
-.label .lt b{display:block; font-size:12.5px; overflow-wrap:anywhere;}
+/* Het etiket. Maten in millimeters, want dit gaat naar een printer en niet
+   naar een scherm. Zwart op wit, geen kleur: een labelprinter kan niet anders
+   en een gewone printer maakt er anders grijze soep van. */
+.labelvel{display:grid; grid-template-columns:repeat(auto-fill,minmax(58mm,1fr)); gap:6mm;}
+.etiket{width:58mm; border:1px dashed var(--muted-l); border-radius:6px;
+  padding:5mm; background:#fff; color:#000; break-inside:avoid;
+  font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
+.etstatus{font-size:9pt; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+  border:1.5pt solid #000; border-radius:2mm; padding:1mm 2.5mm; display:inline-block; margin-bottom:2.5mm;}
+.etnaam{font-family:'Sora',sans-serif; font-size:15pt; font-weight:800; line-height:1.15;
+  letter-spacing:-.02em; overflow-wrap:anywhere; margin-bottom:1.5mm;}
+.etcode{font-size:10pt; font-weight:700; letter-spacing:.04em; margin-bottom:1.5mm;}
+.etregels{font-size:9.5pt; line-height:1.45; margin-bottom:3mm;}
+.etqr{width:34mm; height:34mm; display:block;}
+
+/* zoeklijst onder het modelveld */
+.zoekveld{position:relative;}
+.zoeklijst{position:absolute; left:0; right:0; top:100%; z-index:40; background:var(--card);
+  border:1.5px solid var(--border); border-radius:14px; margin-top:4px; overflow:hidden;
+  box-shadow:var(--schaduw-l); max-height:280px; overflow-y:auto;}
+.zoekrij{display:flex; align-items:baseline; gap:10px; padding:10px 14px; cursor:pointer;}
+.zoekrij:hover,.zoekrij.aan{background:var(--soft-2);}
+.zrnaam{font-weight:600; font-size:14px;}
+.zrbij{margin-left:auto; font-size:12px; color:var(--muted-l); text-align:right;}
 
 .leeg{text-align:center; padding:40px 20px; color:var(--muted);}
 .leeg .i{width:34px; height:34px; margin-bottom:12px; color:var(--muted-l);}
@@ -206,9 +225,14 @@ tr:hover td{background:var(--soft);}
   .acts{flex-direction:column;} .acts .btn{width:100%;}
 }
 @media print{
-  aside,.topbar,.pagehead,.btn,#toasts{display:none !important;}
-  main{margin:0;} .card{box-shadow:none; padding:0;}
-  .label{break-inside:avoid;}
+  /* Alles weg behalve de labels zelf. Zonder dit print je de halve app mee. */
+  body *{visibility:hidden;}
+  #labelVel, #labelVel *{visibility:visible;}
+  #labelVel{position:absolute; left:0; top:0; width:100%;}
+  .overlay{position:static; background:none; padding:0; display:block;}
+  .popup{box-shadow:none; padding:0; width:auto; max-height:none; overflow:visible;}
+  .etiket{border:1px solid #ddd;}
+  @page{margin:8mm;}
 }
 </style>
 </head>
@@ -239,7 +263,7 @@ tr:hover td{background:var(--soft);}
   </div>
   <nav>
     <button data-tab="werkbank" class="active"><svg class="i"><use href="#i-laptop"/></svg> Werkbank</button>
-    <button data-tab="inkoop"><svg class="i"><use href="#i-box"/></svg> Inkoopbatches</button>
+    <button data-tab="toevoegen"><svg class="i"><use href="#i-plus"/></svg> Toevoegen</button>
     <button data-tab="controle"><svg class="i"><use href="#i-check"/></svg> Te controleren<span class="badge" id="bControle" hidden>0</span></button>
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
     <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen</button>
@@ -274,15 +298,40 @@ tr:hover td{background:var(--soft);}
       </div>
     </section>
 
-    <!-- ── inkoopbatches ── -->
-    <section id="tab-inkoop" hidden>
-      <div class="pagehead">
-        <h1>Inkoopbatches</h1>
-        <button class="btn actie" onclick="batchNieuw()"><svg class="i"><use href="#i-plus"/></svg>Nieuwe batch</button>
-      </div>
+    <!-- ── toevoegen ──
+         Geen inkoopbatches meer. Je staat met een doos laptops naast je: merk,
+         model, hoeveel, klaar. De specificaties weet je op dat moment nog niet
+         en die vraagt de app dus ook niet; die komen bij de controle. -->
+    <section id="tab-toevoegen" hidden>
+      <div class="pagehead"><h1>Toevoegen</h1></div>
+
       <div class="card">
-        <h2><svg class="i"><use href="#i-box"/></svg>Batches</h2>
-        <div id="batchLijst"></div>
+        <h2><svg class="i"><use href="#i-plus"/></svg>Wat komt er binnen</h2>
+        <div class="grid">
+          <div class="zoekveld">
+            <label>Merk en model *</label>
+            <input id="t_model" autocomplete="off" placeholder="Typ bijvoorbeeld: HP ZBook 15"
+              oninput="modelTyp()" onfocus="modelTyp()" onkeydown="modelToets(event)">
+            <div class="zoeklijst" id="modelLijstje" hidden></div>
+          </div>
+          <div><label>Categorie</label><select id="t_cat">
+            <option>Laptop</option><option>Telefoon</option><option>Tablet</option>
+            <option>Desktop</option><option>Monitor</option><option>Overig</option>
+          </select></div>
+          <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
+          <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
+          <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
+          <div><label>Serienummer</label><input id="t_serie" placeholder="Alleen bij één stuk"></div>
+        </div>
+        <div class="row" style="margin-top:18px">
+          <button class="btn actie" onclick="toevoegen(this)"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen en labels maken</button>
+          <span class="muted klein" id="modelHint"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><svg class="i"><use href="#i-tag"/></svg>Vandaag toegevoegd</h2>
+        <div id="vandaagLijst"></div>
       </div>
     </section>
 
@@ -364,7 +413,7 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 let account=null, abonnement=null;
-let batches=[], apparaten=[], onderdelen=[], checklists=[], orders=[];
+let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[];
 let tab='werkbank';
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -444,15 +493,15 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
-  const [b,a,o,c,r]=await Promise.all([
-    sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
+  const [a,o,c,r,m]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_checklists').select('*').order('categorie'),
-    sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false})
+    sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
+    sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600)
   ]);
-  batches=b.data||[]; apparaten=a.data||[]; onderdelen=o.data||[];
-  checklists=c.data||[]; orders=r.data||[];
+  apparaten=a.data||[]; onderdelen=o.data||[];
+  checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
   tekenAlles();
 }
 
@@ -473,7 +522,7 @@ function past(a){
 }
 
 function tekenAlles(){
-  tekenWerkbank(); tekenBatches(); tekenControle(); tekenReparatie();
+  tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenOnderdelen(); tekenBestellen(); tekenChecklists(); tekenBadges();
 }
 function tekenBadges(){
@@ -504,17 +553,18 @@ function tekenWerkbank(){
 
 function tabel(rijen){
   return `<div class="tabelrol"><table>
-    <thead><tr><th>Apparaat</th><th>Serienummer</th><th>Batch</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
+    <thead><tr><th>Apparaat</th><th>Nummer</th><th>Serienummer</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
     <tbody>${rijen.map(a=>{
-      const b=batches.find(x=>x.id===a.batch_id);
       return `<tr>
         <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
             <div class="muted klein">${esc(a.categorie||'')}${a.gelabeld?'':' · nog geen label'}</div></td>
+        <td class="mono">${esc(a.code||'—')}</td>
         <td class="mono">${esc(a.serienummer||'—')}</td>
-        <td class="muted klein">${esc(b?b.nummer:'—')}</td>
         <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
         <td class="muted klein">${datum(a.aangemaakt_op)}</td>
-        <td class="num"><button class="btn ghost small" onclick="appOpen('${a.id}')">Openen</button></td>
+        <td class="num hwact">
+          <button class="btn ghost small" onclick="labelsTonen('${a.id}')">Label</button>
+          <button class="btn ghost small" onclick="appOpen('${a.id}')">Openen</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
 }
@@ -525,146 +575,188 @@ function leeg(icoon, kop, uitleg){
     <div class="klein">${esc(uitleg)}</div></div>`;
 }
 
-/* ═══════════════ inkoopbatches ═══════════════ */
+/* ═══════════════ toevoegen ═══════════════
+   Eén veld voor merk en model samen, want zo staat het op het apparaat en zo
+   typt een mens het ook. De modellenlijst vult zichzelf: alles wat ooit is
+   ingevuld staat er de volgende keer in, en die lijst is gedeeld met alle
+   winkels. Specificaties van een laptopmodel zijn openbare feiten, dus daar
+   wordt iedereen beter van.                                                 */
 
-function tekenBatches(){
-  const el=document.getElementById('batchLijst');
-  if(!batches.length){ el.innerHTML=leeg('i-box','Nog geen batches',
-    'Een batch is één inkoop bij één leverancier. Alle apparaten eronder horen bij dezelfde factuur.'); return; }
-  el.innerHTML=`<div class="tabelrol"><table>
-    <thead><tr><th>Batch</th><th>Leverancier</th><th class="num">Inkoop</th><th class="num">Apparaten</th><th>Datum</th><th></th></tr></thead>
-    <tbody>${batches.map(b=>{
-      const n=apparaten.filter(a=>a.batch_id===b.id).length;
-      return `<tr>
-        <td><b>${esc(b.nummer)}</b>${b.notitie?`<div class="muted klein">${esc(b.notitie)}</div>`:''}</td>
-        <td>${esc(b.leverancier||'—')}</td>
-        <td class="num">${euro(b.inkoopprijs)}</td>
-        <td class="num">${n}</td>
-        <td class="muted klein">${datum(b.aangemaakt_op)}</td>
-        <td class="num">
-          <button class="btn ghost small" onclick="appNieuw('${b.id}')">Apparaat erbij</button>
-          <button class="btn ghost small" onclick="labelsTonen('${b.id}')">Labels</button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody></table></div>`;
+let modelKeuze=-1, modelTreffers=[];
+
+function splitsModel(tekst){
+  const t=String(tekst||'').trim();
+  if(!t) return {merk:'', model:''};
+  const bekend=modellen.find(m=>
+    t.toLowerCase()===((m.merk+' '+m.model).toLowerCase()));
+  if(bekend) return {merk:bekend.merk, model:bekend.model};
+  const stukken=t.split(/\s+/);
+  return stukken.length>1
+    ? {merk:stukken[0], model:stukken.slice(1).join(' ')}
+    : {merk:'', model:t};
 }
 
-function batchNieuw(){
-  const nr='B'+String(batches.length+1).padStart(4,'0');
-  venster('Nieuwe inkoopbatch', `
-    <div class="grid">
-      <div><label>Batchnummer</label><input id="b_nr" value="${nr}"></div>
-      <div><label>Leverancier</label><input id="b_lev" placeholder="Naam van de leverancier"></div>
-      <div><label>Totale inkoopprijs</label><input id="b_prijs" type="number" step="0.01" value="0"></div>
-      <div><label>Factuurnummer</label><input id="b_fact" placeholder="Van de leverancier"></div>
-    </div>
-    <label style="margin-top:14px">Notitie</label>
-    <input id="b_not" placeholder="Bijvoorbeeld: partij van 12 laptops">
-  `, [{tekst:'Batch aanmaken', klasse:'actie', doe:batchOpslaan}]);
+function modelTyp(){
+  const veld=document.getElementById('t_model');
+  const lijst=document.getElementById('modelLijstje');
+  const q=String(veld.value||'').trim().toLowerCase();
+  modelTreffers = q.length<2 ? [] : modellen
+    .filter(m=>(m.merk+' '+m.model).toLowerCase().includes(q))
+    .slice(0,7);
+  modelKeuze=-1;
+  if(!modelTreffers.length){ lijst.hidden=true; modelHint(); return; }
+  lijst.innerHTML=modelTreffers.map((m,i)=>`
+    <div class="zoekrij" onmousedown="modelPak(${i})">
+      <span class="zrnaam">${esc(m.merk)} ${esc(m.model)}</span>
+      <span class="zrbij">${esc(Object.values(m.specs||{}).slice(0,3).join(' · ')||m.categorie)}</span>
+    </div>`).join('');
+  lijst.hidden=false;
+}
+function modelPak(i){
+  const m=modelTreffers[i]; if(!m) return;
+  document.getElementById('t_model').value=m.merk+' '+m.model;
+  const cat=document.getElementById('t_cat');
+  if(cat && m.categorie) cat.value=m.categorie;
+  document.getElementById('modelLijstje').hidden=true;
+  modelHint();
+}
+function modelToets(e){
+  const lijst=document.getElementById('modelLijstje');
+  if(lijst.hidden || !modelTreffers.length) return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    modelKeuze=(modelKeuze+(e.key==='ArrowDown'?1:-1)+modelTreffers.length)%modelTreffers.length;
+    [...lijst.children].forEach((r,i)=>r.classList.toggle('aan', i===modelKeuze));
+  }else if(e.key==='Enter' && modelKeuze>=0){
+    e.preventDefault(); modelPak(modelKeuze);
+  }else if(e.key==='Escape'){ lijst.hidden=true; }
+}
+function modelHint(){
+  const el=document.getElementById('modelHint'); if(!el) return;
+  const {merk,model}=splitsModel(v('t_model'));
+  if(!model){ el.textContent=''; return; }
+  const bekend=modellen.find(m=>
+    m.model.toLowerCase()===model.toLowerCase() &&
+    (!merk || m.merk.toLowerCase()===merk.toLowerCase()));
+  el.textContent = bekend
+    ? 'Dit model kennen we al, de specificaties staan klaar bij de controle.'
+    : 'Nieuw model. Bij de controle vullen we de specificaties aan.';
 }
 
-async function batchOpslaan(knop){
-  const nummer=v('b_nr'); if(!nummer){ toast('Vul een batchnummer in','let-op'); return; }
-  await bezig(knop, async()=>{
-    const {error}=await sb.from('refurbish_batches').insert({
-      team_id:account.team_id, nummer,
-      leverancier:v('b_lev')||null,
-      inkoopprijs:Number(v('b_prijs'))||0,
-      factuur:v('b_fact')||null,
-      notitie:v('b_not')||null
-    });
-    if(error) throw new Error('Opslaan mislukt');
-    sluit(); await allesLaden(); toast('Batch aangemaakt', true);
-  });
-}
-
-/* ═══════════════ apparaat toevoegen ═══════════════ */
-
-function appNieuw(batchId){
-  venster('Apparaat toevoegen', `
-    <p class="pv">Vul het model in. Ken je de specificaties nog niet, dan kun je ze later aanvullen; wat je invult wordt onthouden voor het volgende apparaat van hetzelfde model.</p>
-    <div class="grid">
-      <div><label>Merk</label><input id="a_merk" placeholder="Dell"></div>
-      <div><label>Model *</label><input id="a_model" placeholder="Latitude 5430"></div>
-      <div><label>Categorie</label><select id="a_cat">
-        ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>`<option>${c}</option>`).join('')}
-      </select></div>
-      <div><label>Serienummer</label><input id="a_serie" placeholder="Servicetag"></div>
-      <div><label>Inkoopprijs per stuk</label><input id="a_inkoop" type="number" step="0.01" value="0"></div>
-      <div><label>Aantal gelijk toevoegen</label><input id="a_aantal" type="number" min="1" value="1"></div>
-    </div>
-    <div class="clkop">Specificaties</div>
-    <div class="grid">
-      <div><label>Processor</label><input id="s_cpu" placeholder="Intel Core i5-1135G7"></div>
-      <div><label>Geheugen</label><input id="s_ram" placeholder="16 GB"></div>
-      <div><label>Opslag</label><input id="s_ssd" placeholder="512 GB SSD"></div>
-      <div><label>Scherm</label><input id="s_scherm" placeholder="14 inch Full HD"></div>
-    </div>
-    <label style="margin-top:12px"><input type="checkbox" id="a_touch" style="width:auto"> Heeft een touchscreen</label>
-  `, [{tekst:'Toevoegen', klasse:'actie', doe:(k)=>appOpslaan(k,batchId)}]);
-}
-
-async function appOpslaan(knop, batchId){
-  const model=v('a_model'); if(!model){ toast('Vul het model in','let-op'); return; }
-  const aantal=Math.max(1, Math.min(50, Number(v('a_aantal'))||1));
-  const specs={};
-  if(v('s_cpu')) specs['Processor']=v('s_cpu');
-  if(v('s_ram')) specs['Geheugen']=v('s_ram');
-  if(v('s_ssd')) specs['Opslag']=v('s_ssd');
-  if(v('s_scherm')) specs['Scherm']=v('s_scherm');
-  if(document.getElementById('a_touch').checked) specs['Touchscreen']='ja';
+async function toevoegen(knop){
+  const {merk, model}=splitsModel(v('t_model'));
+  if(!model){ toast('Vul merk en model in','let-op'); return; }
+  const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
+  const cat=v('t_cat');
+  const bekend=modellen.find(m=>m.model.toLowerCase()===model.toLowerCase());
 
   await bezig(knop, async()=>{
     const rijen=[];
     for(let i=0;i<aantal;i++){
       rijen.push({
-        team_id:account.team_id, batch_id:batchId,
-        merk:v('a_merk')||null, model, categorie:v('a_cat'),
-        serienummer: aantal===1 ? (v('a_serie')||null) : null,
-        inkoop:Number(v('a_inkoop'))||0, specs, status:'te_controleren'
+        team_id:account.team_id,
+        merk:merk||null, model, categorie:cat,
+        serienummer: aantal===1 ? (v('t_serie')||null) : null,
+        inkoop:Number(v('t_inkoop'))||0,
+        leverancier:v('t_lev')||null,
+        code:volgendeCode(i),
+        specs: bekend ? (bekend.specs||{}) : {},
+        status:'te_controleren'
       });
     }
-    const {error}=await sb.from('refurbish_apparaten').insert(rijen);
+    const {data, error}=await sb.from('refurbish_apparaten').insert(rijen).select();
     if(error) throw new Error('Opslaan mislukt');
-    sluit(); await allesLaden();
-    toast(aantal===1?'Apparaat toegevoegd':aantal+' apparaten toegevoegd', true);
+
+    // Het model onthouden, ook zonder specificaties: dan staat het de volgende
+    // keer in ieder geval in de lijst.
+    await sb.rpc('model_onthouden', {
+      merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}
+    });
+
+    document.getElementById('t_serie').value='';
+    await allesLaden();
+    toast(aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd', true);
+    labelsTonen((data||[]).map(r=>r.id));
   });
 }
 
+/* Een kort nummer dat op het label past en dat je aan de telefoon kunt
+   voorlezen. Uuid's zijn daar niet geschikt voor. */
+function volgendeCode(extra){
+  const bestaand=apparaten.map(a=>Number(String(a.code||'').replace(/\D/g,''))||0);
+  const hoogste=bestaand.length?Math.max(...bestaand):0;
+  return 'A'+String(hoogste+1+(extra||0)).padStart(4,'0');
+}
+
+function tekenVandaag(){
+  const el=document.getElementById('vandaagLijst');
+  if(!el) return;
+  const vandaag=new Date().toDateString();
+  const rijen=apparaten.filter(a=>new Date(a.aangemaakt_op).toDateString()===vandaag);
+  el.innerHTML=rijen.length
+    ? tabel(rijen)+`<div class="row" style="margin-top:14px">
+        <button class="btn ghost small" onclick="labelsTonen(${JSON.stringify(rijen.map(r=>r.id)).replace(/"/g,'&quot;')})">
+          <svg class="i s"><use href="#i-print"/></svg>Alle labels van vandaag</button></div>`
+    : leeg('i-tag','Vandaag nog niets toegevoegd','Wat je hierboven invult verschijnt hier, met de labels erbij.');
+}
+
 /* ═══════════════ labels ═══════════════
-   Een QR-code per apparaat, met het id erin. Scan je hem later, dan opent
-   meteen het juiste scherm. We gebruiken een openbare generator zodat er geen
-   bibliotheek van megabytes bij hoeft.                                       */
+   Zoals op de foto: bovenaan waar het apparaat in het proces staat, daaronder
+   merk en model groot, dan het korte nummer en de gegevens die op dat moment
+   bekend zijn, en onderaan een QR die naar dit apparaat wijst.
+
+   Bij het toevoegen staan er nog geen specificaties op, want die weet je dan
+   nog niet. Na de controle druk je hem opnieuw af en staan ze er wel op, met
+   de nieuwe status erboven. Zelfde label, ander moment.                     */
 
 function labelUrl(id){
   const doel=location.origin+'/refurbish/?apparaat='+id;
-  return 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=0&data='+encodeURIComponent(doel);
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data='+encodeURIComponent(doel);
 }
 
-function labelsTonen(batchId){
-  const b=batches.find(x=>x.id===batchId);
-  const lijst=apparaten.filter(a=>a.batch_id===batchId);
-  if(!lijst.length){ toast('Er hangen nog geen apparaten aan deze batch','let-op'); return; }
-  venster('Labels voor '+esc(b?b.nummer:''), `
-    <p class="pv">Print dit vel, knip de labels en plak ze op de apparaten. Scan je een label, dan opent het juiste apparaat meteen.</p>
-    <div class="labelvel">${lijst.map(a=>`
-      <div class="label">
-        <img src="${labelUrl(a.id)}" alt="" loading="lazy">
-        <div class="lt">
-          <b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
-          <span class="muted">${esc(b?b.nummer:'')}</span>
-        </div>
-      </div>`).join('')}</div>
+const STATUS_KORT={
+  te_controleren:'TE CONTROLEREN',
+  te_repareren:'TE REPAREREN',
+  repurpose:'SLOPEN VOOR ONDERDELEN',
+  klaar:'KLAAR VOOR VERKOOP',
+  overgedragen:'IN DE WINKEL'
+};
+
+function labelHtml(a){
+  const specs=a.specs||{};
+  const regels=[
+    a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie,
+    specs['Processor'] ? 'CPU: '+specs['Processor'] : null,
+    specs['Geheugen']  ? 'RAM: '+specs['Geheugen']  : null,
+    specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
+    specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null
+  ].filter(Boolean);
+  return `<div class="etiket">
+    <div class="etstatus">${esc(STATUS_KORT[a.status]||a.status)}</div>
+    <div class="etnaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
+    <div class="etcode">${esc(a.code||'')}${a.serienummer?' · '+esc(a.serienummer):''}</div>
+    <div class="etregels">${regels.map(r=>`<div>${esc(r)}</div>`).join('')}</div>
+    <img class="etqr" src="${labelUrl(a.id)}" alt="" loading="lazy">
+  </div>`;
+}
+
+function labelsTonen(ids){
+  const lijst=(Array.isArray(ids)?ids:[ids])
+    .map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
+  if(!lijst.length){ toast('Geen apparaten om een label van te maken','let-op'); return; }
+  venster('Labels ('+lijst.length+')', `
+    <p class="pv">Print dit vel en plak een label op elk apparaat. Scan je hem later, dan opent meteen het juiste apparaat. Na de controle kun je opnieuw afdrukken; dan staan de specificaties er ook op.</p>
+    <div class="labelvel" id="labelVel">${lijst.map(labelHtml).join('')}</div>
   `, [
-    {tekst:'Printen', klasse:'', doe:()=>window.print()},
-    {tekst:'Labels zitten erop', klasse:'actie', doe:(k)=>labelsKlaar(k,batchId)}
-  ]);
+    {tekst:'Printen', klasse:'actie', doe:()=>window.print()},
+    {tekst:'Labels zitten erop', klasse:'', doe:(k)=>labelsKlaar(k, lijst.map(a=>a.id))}
+  ], 'groot');
 }
 
-async function labelsKlaar(knop, batchId){
+async function labelsKlaar(knop, ids){
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten')
-      .update({gelabeld:true}).eq('batch_id',batchId);
+      .update({gelabeld:true}).in('id', ids);
     if(error) throw new Error('Bijwerken mislukt');
     sluit(); await allesLaden(); toast('Labels afgevinkt', true);
   });
@@ -736,12 +828,26 @@ function appOpen(id){
 function ctrTeken(){
   const a=ctrApparaat;
   const groepen=checklistVoor(a);
+  const sp=a.specs||{};
   venster('Controle: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
-    <p class="pv">${a.serienummer?'Serienummer '+esc(a.serienummer)+' · ':''}Loop de lijst af. Wat je aanvinkt bepaalt wat er daarna met dit apparaat gebeurt.</p>
-    <div style="margin-bottom:8px">
-      <label>Serienummer</label>
-      <input id="c_serie" value="${esc(a.serienummer||'')}" placeholder="Nog invullen">
+    <p class="pv">${a.code?esc(a.code)+' · ':''}Vul eerst in wat erin zit, loop dan de lijst af. Wat je aanvinkt bepaalt wat er daarna met dit apparaat gebeurt.</p>
+
+    <div class="clkop">Wat zit erin</div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn ghost small" onclick="specsZoeken(this)">
+        <svg class="i s"><use href="#i-sparkles"/></svg>Specificaties opzoeken</button>
+      <span class="muted klein" id="specsBron"></span>
     </div>
+    <div class="grid">
+      <div><label>Serienummer</label><input id="c_serie" value="${esc(a.serienummer||'')}" placeholder="Van de sticker"></div>
+      <div><label>Processor</label><input id="c_cpu" value="${esc(sp['Processor']||'')}" placeholder="Intel Core i5-1135G7"></div>
+      <div><label>Geheugen</label><input id="c_ram" value="${esc(sp['Geheugen']||'')}" placeholder="16 GB"></div>
+      <div><label>Opslag</label><input id="c_ssd" value="${esc(sp['Opslag']||'')}" placeholder="512 GB SSD"></div>
+      <div><label>Scherm</label><input id="c_scherm" value="${esc(sp['Scherm']||'')}" placeholder="14 inch Full HD"></div>
+      <div><label>Videokaart</label><input id="c_gpu" value="${esc(sp['Videokaart']||'')}" placeholder="Alleen als hij er een heeft"></div>
+    </div>
+    <label style="margin-top:10px"><input type="checkbox" id="c_touch" style="width:auto"
+      ${String(sp['Touchscreen']||'').toLowerCase()==='ja'?'checked':''}> Heeft een touchscreen</label>
     ${groepen.map(g=>`
       <div class="clkop">${esc(g.kop)}</div>
       ${g.vragen.map(q=>`
@@ -768,21 +874,78 @@ function kleurVan(opt){
 }
 function ctrKies(vraag, antwoord){
   ctrAntwoord[vraag]=antwoord;
-  const serie=v('c_serie'); ctrApparaat.serienummer=serie||ctrApparaat.serienummer;
+  /* Het scherm wordt opnieuw getekend, dus wat er al is ingetypt moet mee
+     terug. Anders ben je je specificaties kwijt bij elke klik. */
+  ctrApparaat.serienummer = v('c_serie') || ctrApparaat.serienummer;
+  ctrApparaat.specs = Object.assign({}, ctrApparaat.specs||{}, ctrSpecs());
   ctrTeken();
+}
+
+function ctrSpecs(){
+  const uit={};
+  if(v('c_cpu'))    uit['Processor']=v('c_cpu');
+  if(v('c_ram'))    uit['Geheugen']=v('c_ram');
+  if(v('c_ssd'))    uit['Opslag']=v('c_ssd');
+  if(v('c_scherm')) uit['Scherm']=v('c_scherm');
+  if(v('c_gpu'))    uit['Videokaart']=v('c_gpu');
+  const t=document.getElementById('c_touch');
+  if(t && t.checked) uit['Touchscreen']='ja';
+  return uit;
+}
+
+/* Eerst de gedeelde lijst, dan pas AI. Wat een andere winkel ooit heeft
+   ingevuld staat er al in en dat is gratis en meteen goed. */
+async function specsZoeken(knop){
+  const a=ctrApparaat;
+  await bezig(knop, async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/model-specs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({merk:a.merk, model:a.model, categorie:a.categorie})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Opzoeken mislukte');
+
+    const sp=uit.specs||{};
+    const zet=(id,w)=>{ const e=document.getElementById(id); if(e && w && !e.value) e.value=w; };
+    zet('c_cpu', sp['Processor']); zet('c_ram', sp['Geheugen']);
+    zet('c_ssd', sp['Opslag']);    zet('c_scherm', sp['Scherm']);
+    zet('c_gpu', sp['Videokaart']);
+    const t=document.getElementById('c_touch');
+    if(t && String(sp['Touchscreen']||'').toLowerCase()==='ja') t.checked=true;
+
+    const bron=document.getElementById('specsBron');
+    if(bron) bron.textContent = uit.melding
+      ? uit.melding
+      : (uit.bron==='lijst' ? 'Uit de modellenlijst. Kijk het even na.'
+                            : 'Opgezocht met AI en onthouden. Kijk het even na.');
+  });
 }
 
 async function ctrAfronden(knop, status){
   const a=ctrApparaat;
   const lijst=Object.keys(ctrAntwoord).map(k=>({v:k, a:ctrAntwoord[k]}));
   const defecten=lijst.filter(r=>kleurVan(r.a)!=='goed').map(r=>r.v);
+  const specs=ctrSpecs();
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten').update({
-      status, checklist:lijst, defecten,
+      status, checklist:lijst, defecten, specs,
       serienummer:v('c_serie')||a.serienummer||null,
       bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
+
+    /* Wat je hier invult komt in de gedeelde modellenlijst. De volgende keer
+       dat iemand dit model binnenkrijgt staat het er al in. */
+    if(Object.keys(specs).length){
+      await sb.rpc('model_onthouden', {
+        merk_in:a.merk||'Onbekend', model_in:a.model,
+        categorie_in:a.categorie||'Laptop', specs_in:specs
+      });
+    }
+
     sluit(); await allesLaden();
     toast(status==='klaar'?'Goedgekeurd, klaar voor verkoop'
         : status==='te_repareren'?'Naar de reparatielijst'
@@ -911,7 +1074,6 @@ async function sloopKlaar(knop, a){
    en hoort het thuis in Storvo.                                              */
 
 function klaarOpen(a){
-  const b=batches.find(x=>x.id===a.batch_id);
   venster('Klaar voor verkoop', `
     <p class="pv"><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${a.serienummer?' · '+esc(a.serienummer):''}<br>
     Zet de vraagprijs erbij, dan gaat dit toestel naar je winkelvoorraad in Storvo. Daar reken je hem af en zet je hem eventueel op de webshop.</p>
@@ -925,14 +1087,13 @@ function klaarOpen(a){
       </select></div>
       <div><label>Garantie (maanden)</label><input id="k_gar" type="number" min="0" value="6"></div>
     </div>
-    <p class="muted klein" style="margin-top:14px">Herkomst wordt vastgelegd als ${esc(b?b.nummer:'onbekende batch')}, zodat je later kunt terugvinden uit welke inkoop dit toestel kwam.</p>
+    <p class="muted klein" style="margin-top:14px">Herkomst wordt vastgelegd als ${esc(a.leverancier||'onbekend')}${a.code?' ('+esc(a.code)+')':''}, zodat je later kunt terugvinden waar dit toestel vandaan kwam.</p>
   `, [{tekst:'Naar de winkelvoorraad', klasse:'actie', doe:(k)=>overdragen(k,a)}]);
 }
 
 async function overdragen(knop, a){
   const verkoop=v('k_verkoop');
   if(!verkoop){ toast('Vul een vraagprijs in','let-op'); return; }
-  const b=batches.find(x=>x.id===a.batch_id);
   await bezig(knop, async()=>{
     const {data, error}=await sb.from('hardware').insert({
       team_id:account.team_id,
@@ -940,7 +1101,7 @@ async function overdragen(knop, a){
       serienummer:a.serienummer, specs:a.specs||{},
       staat:v('k_staat'), inkoop:Number(v('k_inkoop'))||0,
       verkoop:Number(verkoop)||0, garantie:Number(v('k_gar'))||0,
-      herkomst:b?('Batch '+b.nummer):null,
+      herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
       status:'voorraad', kanalen:{winkel:true}
     }).select().single();
     if(error) throw new Error('Overdragen mislukt');

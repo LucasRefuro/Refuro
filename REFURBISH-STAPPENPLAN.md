@@ -22,9 +22,9 @@ De grens ligt op één moment: **zodra een apparaat goedgekeurd is.**
 
 | Refurbish-app (de werkbank) | Storvo (de balie) |
 |---|---|
-| Inkoopbatch en leverancier | Verkoopbare voorraad |
-| Registratie en specificaties | Verkoopprijs en marge |
-| QR-labels printen | Kassa en bon |
+| Toevoegen en labelen | Verkoopbare voorraad |
+| Specificaties bij de controle | Verkoopprijs en marge |
+| De gedeelde modellenlijst | Kassa en bon |
 | Checklists en controle | Klant en garantie |
 | Reparatie en repurpose | Reparaties aan de balie |
 | Onderdelenvoorraad | Dashboard en cijfers |
@@ -134,15 +134,22 @@ je apart kunt onderhouden.
 
 In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
 
-1. **Inkoop en registratie.** Batch met leverancier, batchnummer, inkoopprijs en
-   factuur. Apparaten eraan hangen. Specificaties automatisch ophalen, met de
-   mogelijkheid om ze zelf aan te vullen. Wat je invult wordt onthouden voor het
-   volgende apparaat van hetzelfde model.
-2. **Labels.** QR-codes voor een hele batch in één keer, klaar om te printen.
-   Daarna de vraag of alle labels erop zitten, en pas dan door.
+1. **Toevoegen.** Eén veld voor merk en model, aantal, inkoopprijs en
+   leverancier. Geen inkoopbatches: je staat met een doos naast je en wilt
+   doorwerken. Specificaties vraagt de app hier niet, want die weet je nog niet.
+2. **Labels.** Rollen er meteen uit na het toevoegen. Bovenaan waar het apparaat
+   in het proces staat, daaronder merk en model groot, het korte nummer, en een
+   QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
+   staan de specificaties er ook op.
 3. **Checklists.** Per categorie een basislijst, per model extra punten, en
    vragen die meebewegen met de specificaties: staat er een touchscreen in, dan
    komt de vraag over het touchscreen erbij.
+3b. **De modellenlijst.** Bij de controle vul je in wat erin zit, of je drukt op
+   *Specificaties opzoeken*. Die kijkt eerst in een gedeelde lijst en vraagt het
+   pas aan AI als het model nieuw is. Wat eruit komt gaat de lijst in, dus het
+   wordt maar één keer opgezocht. Specificaties van een laptopmodel zijn
+   openbare feiten, dus die lijst is gedeeld met alle winkels; er staat niets in
+   wat naar een winkel of een klant te herleiden is.
 4. **Controle.** QR scannen opent de juiste lijst. De uitkomst bepaalt de
    route: goedgekeurd, te repareren, of slopen voor onderdelen.
 5. **Reparatie en onderdelen.** Wat zit erin, wat is stuk, wat ligt er op de
@@ -214,10 +221,11 @@ het menu en daaronder **Refurbishen**, dat de werkbank opent.
 
 Een rondje om te zien of het klopt:
 
-1. Refurbishen → Inkoopbatches → **Nieuwe batch**
-2. **Apparaat erbij**, model invullen, een paar specificaties erbij
-3. **Labels** → printen of gewoon bekijken → **Labels zitten erop**
-4. Te controleren → klik het apparaat aan → loop de checklist af
+1. Refurbishen → **Toevoegen** → typ "HP ZBook", kies uit de lijst, aantal 2
+2. **Toevoegen en labels maken** → de labels verschijnen meteen
+3. Printen of gewoon bekijken → **Labels zitten erop**
+4. Te controleren → klik een apparaat aan → **Specificaties opzoeken** → loop de
+   checklist af
 5. Kies **Goedgekeurd**, of **Moet gerepareerd** om die kant te zien
 6. Bij goedgekeurd: klik hem nog een keer aan, zet er een vraagprijs bij en
    druk op **Naar de winkelvoorraad**

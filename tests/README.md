@@ -19,7 +19,8 @@ npm test
 | Bestand | Wat het nakijkt |
 |---|---|
 | `winkelapp.js` | Hardwarepagina: lijst, filters, marge, kanalen, het bewerkvenster |
-| `refurbish-werkstroom.js` | Van batch tot overdracht, inclusief de checklist die meebeweegt met de specificaties |
+| `refurbish-werkstroom.js` | Van binnenkomst tot overdracht, inclusief de checklist die meebeweegt met de specificaties |
+| `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
 
 Die laatste bestaat vanwege een fout die er echt in zat: een element met
