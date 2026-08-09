@@ -5250,14 +5250,33 @@ function proefOpbouw(){
   return punten;
 }
 
-/* Even kijken hoe een scherm eruitziet zonder erop te moeten wachten.
-   Zet ?toon=laatstedag of ?toon=korting achter het adres. Alleen de eigenaar,
-   en het verandert niets aan de administratie: het tekent alleen het scherm. */
+/* ---------- schermen bekijken zonder erop te wachten ----------
+   Sommige schermen zie je in het echt maar één keer, of pas na dertig dagen.
+   Met ?toon=<naam> achter het adres teken je er eentje meteen. Het beheer-
+   paneel heeft hier een pagina voor met alle namen op een rij.
+
+   Alleen de eigenaar, en het verandert niets aan de administratie: er wordt
+   uitsluitend een scherm getekend.                                          */
+const VOORBEELDEN={
+  onboarding:  ()=>toonOnboarding(),
+  rondleiding: ()=>startRondleiding(0),
+  nudge10:     ()=>toonProefScherm(10),
+  nudge5:      ()=>toonProefScherm(5),
+  nudge2:      ()=>toonProefScherm(2),
+  laatstedag:  ()=>toonProefScherm(1),
+  korting:     ()=>toonKortingAanbod(),
+  pakketten:   ()=>toonPakketten(false),
+  pakkettenkorting: ()=>toonPakketten(true),
+  slot:        ()=>toonSlot(),
+  feedback:    ()=>feedbackPopup(),
+  review:      ()=>reviewPopup(true),
+  vertrek:     ()=>vertrekPopup()
+};
 function voorbeeldScherm(){
   if(!account || account.rol!=='eigenaar') return;
   const wat=new URLSearchParams(location.search).get('toon');
-  if(wat==='laatstedag') setTimeout(()=>toonProefScherm(1), 400);
-  else if(wat==='korting') setTimeout(()=>toonKortingAanbod(), 400);
+  const fn=wat && VOORBEELDEN[wat];
+  if(fn) setTimeout(()=>{ try{ fn(); }catch(e){ console.error('voorbeeld',wat,e); } }, 400);
 }
 
 function proefNudge(){

@@ -237,6 +237,18 @@
   .fbster{color:#E8B31D; letter-spacing:2px; font-size:14px;}
   .fbreden{font-weight:600; font-size:14px; margin-bottom:5px;}
   .fbtekst{font-size:14px; line-height:1.65; color:var(--muted); white-space:pre-wrap;}
+  /* alle schermen op een rij */
+  .scgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px;}
+  .scvak{border:1px solid var(--border); border-radius:14px; padding:16px 18px;
+    display:flex; flex-direction:column; gap:7px;}
+  .scnaam{font-weight:700; font-size:14.5px;}
+  .scuit{font-size:13px; line-height:1.6; color:var(--muted); flex:1;}
+  .scvoet{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;}
+  .scvoet code{font-size:11.5px; color:var(--muted-l); background:var(--soft-2);
+    padding:3px 8px; border-radius:6px;}
+  .scvoet .btn{padding:7px 14px; font-size:13px;}
+  @media(max-width:640px){ .scvoet{flex-direction:column; align-items:stretch;} .scvoet .btn{justify-content:center;} }
+
   .fbrij.af{opacity:.62;}
   .fbvoet{display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap;}
   .fbnotitie{flex:1; min-width:200px; font:inherit; font-size:13.5px; color:var(--tekst);
@@ -344,6 +356,7 @@
   <symbol id="i-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
   <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
   <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91 0z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
@@ -362,6 +375,7 @@
     <button data-tab="klanten"><svg class="i"><use href="#i-shop"/></svg> Klanten</button>
     <button data-tab="teams"><svg class="i"><use href="#i-shop"/></svg> Teams &amp; accounts</button>
     <button data-tab="feedback"><svg class="i"><use href="#i-message"/></svg> Feedback</button>
+    <button data-tab="schermen"><svg class="i"><use href="#i-eye"/></svg> Schermen</button>
     <button data-tab="plannen"><svg class="i"><use href="#i-card"/></svg> Abonnementen</button>
     <button data-tab="stripe"><svg class="i"><use href="#i-plug"/></svg> Stripe-koppeling</button>
     <button data-tab="live"><svg class="i"><use href="#i-rocket"/></svg> Live gaan</button>
@@ -508,6 +522,30 @@
   <div class="card">
     <div id="fbLijst">Bezig met laden…</div>
   </div>
+</section>
+
+<!-- Elk scherm dat een winkel maar zelden of eenmalig te zien krijgt. We tonen
+     hier geen nagemaakte plaatjes maar openen het echte scherm in de app, zodat
+     dit overzicht nooit kan gaan afwijken van wat de klant werkelijk ziet. -->
+<section id="tab-schermen"hidden>
+  <div class="pagehead">
+    <h1>Schermen</h1>
+    <div class="periodesel" id="scFilter">
+      <button data-g="alles" class="active">Alles</button>
+      <button data-g="start">Eerste keer</button>
+      <button data-g="proef">Proef naar betalend</button>
+      <button data-g="stop">Feedback en vertrek</button>
+    </div>
+  </div>
+  <div class="card">
+    <p class="muted" style="font-size:13.5px; line-height:1.7; margin-bottom:4px">
+      Elke knop opent het echte scherm in de winkelapp, in een nieuw tabblad. Er
+      verandert niets aan de administratie en de winkel merkt er niets van; het
+      scherm wordt alleen getekend. Werkt alleen als je zelf als eigenaar bent
+      ingelogd in de app.
+    </p>
+  </div>
+  <div id="scLijst"></div>
 </section>
 
 <section id="tab-live"hidden>
@@ -958,12 +996,76 @@ async function fbNotitie(id, veld){
   }catch(e){ alert('Kon de notitie niet opslaan: '+e.message); }
 }
 
+/* ---------- alle schermen op een rij ----------
+   Bewust geen nagemaakte voorbeelden: we openen het echte scherm in de app.
+   Een kopie zou binnen een maand achterlopen op de werkelijkheid.          */
+const APP_URL='https://storvo.app/app/';
+const SCHERMEN=[
+  {g:'start', s:'onboarding',  n:'Onboarding',
+   u:'De stappen die een nieuwe winkel doorloopt bij de allereerste keer inloggen.'},
+  {g:'start', s:'rondleiding', n:'Rondleiding',
+   u:'De spotlight die langs het menu loopt, aan het eind van de onboarding.'},
+
+  {g:'proef', s:'nudge10', n:'Proef: nog 10 dagen',
+   u:'Het eerste rustige seintje, halverwege de proefperiode.'},
+  {g:'proef', s:'nudge5',  n:'Proef: nog 5 dagen',
+   u:'Wat dringender van toon, maar nog wel weg te klikken.'},
+  {g:'proef', s:'nudge2',  n:'Proef: nog 2 dagen',
+   u:'Vanaf hier komt hij elke dag terug.'},
+  {g:'proef', s:'laatstedag', n:'Proef: laatste dag',
+   u:'Niet weg te klikken. Zegt de winkel hier nee, dan volgt het kortingsaanbod.'},
+  {g:'proef', s:'korting', n:'Kortingsaanbod',
+   u:'70% op de eerste maand, met het bedrag van het pakket waar de winkel op zit. Eén keer per winkel.'},
+  {g:'proef', s:'pakketten', n:'Pakketkeuze',
+   u:'De drie pakketten naast elkaar, met per pakket wat je wel en niet krijgt.'},
+  {g:'proef', s:'pakkettenkorting', n:'Pakketkeuze met korting',
+   u:'Hetzelfde scherm, maar dan met de kortingsbon actief bij het afrekenen.'},
+  {g:'proef', s:'slot', n:'Slotscherm',
+   u:'Wat een winkel ziet als de proef voorbij is of de betaling is mislukt.'},
+
+  {g:'stop', s:'feedback', n:'Feedback geven',
+   u:'Het luik dat opengaat vanuit Instellingen, naast het versienummer.'},
+  {g:'stop', s:'review',   n:'Beoordeling vragen',
+   u:'Komt vanzelf na genoeg verkopen of reparaties. Eén keer per winkel.'},
+  {g:'stop', s:'vertrek',  n:'Voor je gaat',
+   u:'De vraag naar de reden, op het moment dat iemand echt stopt.'}
+];
+const SC_GROEP={start:'Eerste keer', proef:'Proef naar betalend', stop:'Feedback en vertrek'};
+let scGroep='alles';
+
+function tekenSchermen(){
+  const vak=document.getElementById('scLijst');
+  if(!vak) return;
+  const groepen=Object.keys(SC_GROEP).filter(g=>scGroep==='alles'||scGroep===g);
+  vak.innerHTML=groepen.map(g=>{
+    const rijen=SCHERMEN.filter(x=>x.g===g);
+    return `<div class="card">
+      <h2>${esc(SC_GROEP[g])}</h2>
+      <div class="scgrid">${rijen.map(r=>`
+        <div class="scvak">
+          <div class="scnaam">${esc(r.n)}</div>
+          <div class="scuit">${esc(r.u)}</div>
+          <div class="scvoet">
+            <code>?toon=${esc(r.s)}</code>
+            <a class="btn ghost" href="${APP_URL}?toon=${encodeURIComponent(r.s)}" target="_blank" rel="noopener">
+              <svg class="i s"><use href="#i-eye"/></svg>Bekijken
+            </a>
+          </div>
+        </div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+document.querySelectorAll('#scFilter button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#scFilter button').forEach(x=>x.classList.toggle('active', x===b));
+  scGroep=b.dataset.g; tekenSchermen();
+}));
+
 document.querySelectorAll('#fbFilter button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#fbFilter button').forEach(x=>x.classList.toggle('active', x===b));
   fbSoort=b.dataset.s; tekenFeedback();
 }));
 
-function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); rolTabellen(); }
+function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); tekenSchermen(); rolTabellen(); }
 save(); teken();
 syncKlantenVanSupabase();
 adminPoortBoot().then(ok=>{ if(ok) laadFeedback(); });
