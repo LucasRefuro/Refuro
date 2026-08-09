@@ -373,6 +373,7 @@
     --amber:#E8B31D; --amber-soft:#FAF0D8; --amber-tekst:#946C07;
     --red:#D64545;   --red-soft:#FAE4E4;   --red-tekst:#A33333;
     --radius:24px; --radius-s:18px; --pil:100px;
+    --abohoogte:36px;   /* hoogte van de abonnementsbalk bovenin */
     --schaduw:0 6px 24px rgba(23,32,30,.07);
     --schaduw-l:0 10px 34px rgba(23,32,30,.10);
   }
@@ -1220,23 +1221,33 @@
      De knop is wit met donkere tekst. Donkerrood op lichtrood heeft te weinig
      contrast en leest als iets wat uitstaat; wit springt eruit en ziet er
      bovendien vriendelijker uit dan nog meer rood. */
-  .abobalk{position:fixed; left:0; right:0; top:0; z-index:900;
-    padding:11px 22px; font-size:14px; line-height:1.45;
+  .abobalk{position:fixed; left:0; right:0; top:0; z-index:900; width:100%;
+    min-height:var(--abohoogte); display:flex; align-items:center;
+    padding:0 22px; font-size:13px; line-height:1.3;
     background:#FEF4E2; color:#7A5307; border-bottom:1.5px solid #F0D9A8;}
   .abobalk.fout{background:#FDECF1; color:#8E1033; border-bottom-color:#F3C7D5;}
-  .abobinnen{max-width:1640px; margin:0 auto; display:flex; align-items:center; gap:14px;}
+  .abobinnen{max-width:1640px; margin:0 auto; width:100%;
+    display:flex; align-items:center; gap:12px;}
+  .abobalk .i{flex:none; width:15px; height:15px;}
   .abobalk span{flex:1; min-width:0;}
-  .abobalk button{border:none; border-radius:var(--pil); padding:9px 18px; font-family:inherit;
-    font-size:13.5px; font-weight:700; cursor:pointer; background:#fff; color:inherit; flex:none;
-    white-space:nowrap; box-shadow:0 2px 8px rgba(23,32,30,.10); transition:.15s;}
-  .abobalk button:hover{transform:translateY(-1px); box-shadow:0 5px 14px rgba(23,32,30,.16);}
-  /* De app schuift eronder door, zodat de balk niets afdekt. */
-  body.metabobalk{padding-top:46px;}
-  body.metabobalk .topbar{top:46px;}
-  @media(max-width:640px){
-    .abobinnen{flex-wrap:wrap; gap:9px;}
+  .abobalk button{border:none; border-radius:var(--pil); padding:5px 14px; font-family:inherit;
+    font-size:12.5px; font-weight:700; line-height:1.35; cursor:pointer; background:#fff; color:inherit; flex:none;
+    white-space:nowrap; box-shadow:0 1px 5px rgba(23,32,30,.10); transition:.15s;}
+  .abobalk button:hover{box-shadow:0 3px 10px rgba(23,32,30,.16);}
+
+  /* De balk dekt niets af: de zijbalk en de topbalk beginnen er precies onder.
+     Alle drie rekenen met dezelfde maat, zodat er nooit een kier ontstaat. */
+  body.metabobalk{padding-top:var(--abohoogte);}
+  body.metabobalk aside{top:var(--abohoogte);}
+  body.metabobalk .topbar{top:var(--abohoogte);}
+
+  /* Op een smal scherm staat de zijbalk toch al boven de inhoud. Dan hoeft de
+     balk niet vast te staan: hij is gewoon het eerste blok van de pagina. */
+  @media(max-width:860px){
+    .abobalk{position:static; padding:8px 16px;}
+    .abobinnen{flex-wrap:wrap; gap:8px;}
     .abobalk span{flex:1 1 100%;}
-    .abobalk button{width:100%;}
+    .abobalk button{width:100%; padding:8px 14px;}
     body.metabobalk{padding-top:0;}
     body.metabobalk .topbar{top:0;}
   }
@@ -5567,7 +5578,9 @@ function toonAboBalk(){
   const m=ABO_BALK[w](abonnement);
   if(!balk){
     balk=document.createElement('div'); balk.id='aboBalk';
-    document.body.appendChild(balk);
+    /* Helemaal vooraan, niet achteraan. Op een smal scherm staat hij niet
+       vast en moet hij dus vanzelf boven de zijbalk uitkomen. */
+    document.body.insertBefore(balk, document.body.firstChild);
   }
   /* Geen kruisje meer. Wie dit wegklikt vergeet het, en staat een week later
      voor een dichte deur. De balk hoort erbij tot het geregeld is. */
