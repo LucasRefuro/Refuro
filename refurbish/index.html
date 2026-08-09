@@ -34,6 +34,10 @@
   --schaduw-l:0 10px 34px rgba(23,32,30,.10);
 }
 *{box-sizing:border-box; margin:0; padding:0;}
+/* Verbergen moet altijd winnen. Zonder deze regel blijft een element met
+   hidden gewoon staan zodra er ergens display:flex op staat, en dat is precies
+   wat er misging: het slotscherm lag als lege witte kaart over de hele app. */
+[hidden]{display:none !important;}
 html{overflow-x:clip;}
 body{font-family:'Instrument Sans',system-ui,sans-serif; font-size:15px; color:var(--tekst);
   background:var(--bg); line-height:1.6; overflow-x:clip; max-width:100vw;}
