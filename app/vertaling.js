@@ -164,7 +164,22 @@ const WOORDEN = {
 'Lopende aanvragen':'Open requests', 'Afgehandeld':'Handled',
 'Geen lopende aanvragen. Maak er een aan bij Nieuwe aanvraag.':'No open requests. Create one under New request.',
 'Nog niets afgehandeld.':'Nothing handled yet.',
-'Wat wil de klant?':'What does the customer want?', 'Omschrijving *':'Description *',
+'Wat wil de klant?':'What does the customer want?', 'Product *':'Product *',
+'Typ of kies uit je eigen producten':'Type, or pick from your own products',
+'Dit product ken ik al':'I already know this product', 'op voorraad':'in stock',
+'Inkoopprijs overnemen':'Copy the purchase price',
+'Bij het inscannen van de levering meldt Storvo dat deze voor je klant is.':
+  'When you scan the delivery in, Storvo will say this one is for your customer.',
+'Ja, Storvo stuurt bericht':'Yes, Storvo sends a message', 'Nee, ik bel zelf':'No, I will call them myself',
+'Storvo stuurt niets':'Storvo sends nothing',
+'Je belt de klant zelf zodra het binnen is.':'You call the customer yourself once it arrives.',
+'staat nu uit bij Instellingen, Berichten':'is currently switched off under Settings, Messages',
+'Er staat geen enkel kanaal aan, dus er gaat niets uit. Zet WhatsApp of e-mail aan bij Instellingen, Klantpagina.':
+  'No channel is switched on, so nothing goes out. Turn on WhatsApp or email under Settings, Customer page.',
+'De teksten pas je aan bij Instellingen, Berichten. Aangevraagd en Opgehaald leveren geen bericht op; dat gebeurt terwijl de klant voor je staat.':
+  'You edit the wording under Settings, Messages. Requested and Collected send nothing; those happen while the customer is standing in front of you.',
+'De klant krijgt bericht':'The customer gets a message',
+'De klant krijgt geen bericht.':'The customer gets no message.', 'Je belt zelf.':'You call them yourself.',
 'bijv. iPhone 16 Pro 256GB zwart':'e.g. iPhone 16 Pro 256GB black',
 'Inkoopprijs (€)':'Purchase price (€)', 'Marge (%)':'Margin (%)', 'Aanbetaling (€)':'Deposit (€)',
 'Klant betaalt':'Customer pays', 'Jouw winst':'Your profit', 'Al aanbetaald':'Already paid',
