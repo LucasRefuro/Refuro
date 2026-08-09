@@ -475,7 +475,9 @@
   .npwacht{color:#8A938F; font-size:13px; padding:18px; text-align:center; line-height:1.6;}
 
   .npbron{background:var(--green-soft); color:var(--green-tekst); border-radius:var(--radius-s);
-    padding:14px 17px; margin-bottom:16px; font-size:13.5px; line-height:1.65;}
+    padding:16px 19px; margin:14px 0 16px; font-size:13.5px; line-height:1.7; max-width:100%;}
+  .npbron ul li{margin-bottom:5px;}
+  .npbron ul{margin:8px 0 4px;}
   .npbron.twijfel{background:var(--amber-soft); color:var(--amber-tekst);}
   .npbronkop{font-weight:700; margin-bottom:6px;}
   .npbron ul{margin:0; padding-left:18px;}
@@ -504,14 +506,29 @@
   .avwat{font-size:14px; min-width:0; overflow:hidden; text-overflow:ellipsis;}
   .avgeld{text-align:right;}
   .avgeld b{font-family:'Sora',sans-serif; font-size:16px; font-weight:700;}
-  .aanvreken{margin-top:16px; background:var(--soft-2); border-radius:var(--radius-s); padding:14px 17px;}
-  .avdetail{background:var(--soft-2); border-radius:var(--radius-s); padding:14px 17px; margin:16px 0;}
-  .arrij{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:6px 0;
+  .aanvreken{margin-top:18px; background:var(--soft-2); border-radius:var(--radius-s); padding:18px 20px;}
+  .avdetail{background:var(--soft-2); border-radius:var(--radius-s); padding:18px 20px; margin:18px 0;}
+  .arrij{display:flex; justify-content:space-between; align-items:baseline; gap:20px; padding:9px 0;
     font-size:14px; color:var(--muted);}
-  .arrij b{font-family:'Sora',sans-serif; font-weight:700; color:var(--text); font-size:15px;}
-  .arrij b.groot{font-size:21px; color:var(--oranje);}
-  .arrij.rest{border-top:1px solid var(--border); margin-top:6px; padding-top:11px;}
-  .arrij.rest b{color:var(--green-tekst); font-size:18px;}
+  .arrij + .arrij{border-top:1px solid var(--border);}
+  .arrij b{font-family:'Sora',sans-serif; font-weight:700; color:var(--text); font-size:15px;
+    text-align:right; white-space:nowrap;}
+  .arrij b.groot{font-size:24px; line-height:1.15;}
+  .arrij.nu b{color:var(--oranje);}
+  .arrij.rest b{color:var(--green-tekst);}
+
+  /* eigen uitklaplijst bij het zoeken naar een product */
+  .zoekveld{position:relative;}
+  .zoeklijst{position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:40;
+    background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw-l);
+    overflow:hidden; max-height:290px; overflow-y:auto; padding:6px;}
+  .zoekrij{display:grid; grid-template-columns:1fr auto; gap:2px 14px; width:100%; text-align:left;
+    background:none; border:none; padding:11px 13px; border-radius:12px; cursor:pointer;
+    font-family:inherit; color:var(--tekst); transition:background .12s;}
+  .zoekrij:hover, .zoekrij.aan{background:var(--lblauw);}
+  .zrnaam{font-size:14px; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .zrprijs{font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--oranje);}
+  .zrvoor{grid-column:1/-1; font-size:12px; color:var(--muted-l);}
   .avber{background:var(--lblauw); border-radius:var(--radius-s); padding:12px 16px;
     font-size:13.5px; line-height:1.6; margin-bottom:14px; color:var(--muted);}
   .avber b{color:var(--tekst);}
@@ -602,7 +619,7 @@
   .codeknop svg{opacity:.55;}
   .codeknop:hover svg{opacity:1;}
   .npbron li{margin-bottom:2px;}
-  .npgelezen{margin-top:8px; opacity:.8; font-style:italic;}
+  .npgelezen{display:block; margin-top:9px; opacity:.85; font-style:italic; line-height:1.6;}
   @media(max-width:700px){ .npkoppel{gap:18px;} .npqr{margin:0 auto;} }
   @keyframes tstop{from{opacity:0; transform:translateY(-5px)} to{opacity:1; transform:none}}
   @media(prefers-reduced-motion:reduce){ .tstbox{animation:none;} }
@@ -1496,23 +1513,36 @@
 
     <div class="card">
       <h2><svg class="i"><use href="#i-package"/></svg>Wat wil de klant?</h2>
-      <div><label>Product *</label>
-        <input id="a_wat" list="aanvProducten" autocomplete="off" placeholder="Typ of kies uit je eigen producten"
-          oninput="aanvProductKijk()">
-        <datalist id="aanvProducten"></datalist>
-        <div id="aanvKoppel"></div>
+      <div class="zoekveld" id="aanvZoekveld">
+        <label>Product *</label>
+        <input id="a_wat" autocomplete="off" placeholder="Typ of kies uit je eigen producten"
+          oninput="aanvTyp()" onfocus="aanvTyp()" onkeydown="aanvToets(event)">
+        <div class="zoeklijst" id="aanvLijstje" hidden></div>
       </div>
-      <div class="grid" style="margin-top:12px">
-        <div><label>Inkoopprijs (€)</label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
-        <div><label>Marge (%)</label><input id="a_marge" type="number" step="1" min="0" oninput="aanvReken()"></div>
-        <div><label>Aanbetaling (€)</label><input id="a_aanbet" type="number" step="0.01" min="0" value="0" oninput="aanvReken()"></div>
+      <div id="aanvKoppel"></div>
+
+      <div class="grid" style="margin-top:14px">
+        <div><label>Verkoopprijs (€) <span class="muted">totaal</span></label><input id="a_verkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+        <div><label>Aanbetaling (%)</label><input id="a_pct" type="number" step="1" min="0" max="100" oninput="aanvReken('pct')"></div>
+        <div><label>Aanbetaling (€)</label><input id="a_aanbet" type="number" step="0.01" min="0" oninput="aanvReken('bedrag')"></div>
       </div>
+
+      <div class="veldrij" style="margin-top:14px">
+        <div><label>Betaalt de aanbetaling met</label>
+          <select id="a_betaal">
+            <option value="pin">Pin</option>
+            <option value="cash">Cash met bon</option>
+            <option value="cash_zb">Cash zonder bon</option>
+          </select></div>
+        <div><label>Inkoop (€) <span class="muted">optioneel, voor je winst</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+      </div>
+
       <div class="aanvreken" id="aanvReken"></div>
-      <div class="row" style="margin-top:16px">
+      <div class="row" style="margin-top:18px">
         <button class="btn actie" onclick="maakAanvraag()"><svg class="i"><use href="#i-check"/></svg>Aanvraag aanmaken</button>
         <button class="btn ghost" onclick="resetAanvraag()">Leegmaken</button>
       </div>
-      <p class="muted" style="margin-top:10px">De marge staat standaard op <b id="aanvStdMarge">50</b>%, aan te passen bij Instellingen. Per aanvraag mag je er altijd van afwijken.</p>
+      <p class="muted" style="margin-top:12px">De aanbetaling staat standaard op <b id="aanvStdMarge">50</b>%, aan te passen bij Instellingen. Per aanvraag mag je er altijd van afwijken.</p>
     </div>
     </div>
   </div>
@@ -1795,9 +1825,9 @@
 
   <div class="card" id="inst-aanvragen"hidden>
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Bestel je iets speciaal voor een klant, dan gaat er een percentage over je inkoopprijs heen. Bij 50% wordt een toestel van 500 euro dus 750 voor de klant. Per aanvraag kun je er altijd van afwijken.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Bestel je iets speciaal voor een klant, dan laat je hem meestal een deel vooruitbetalen. Bij 50% legt hij op een toestel van 1000 euro dus 500 euro neer, en de rest bij het ophalen. Per aanvraag kun je er altijd van afwijken.</p>
     <div class="row">
-      <div style="max-width:220px"><label>Standaardmarge (%)</label><input id="s_marge" type="number" min="0" step="1" onchange="slaMargeOp()"></div>
+      <div style="max-width:220px"><label>Standaard aanbetaling (%)</label><input id="s_marge" type="number" min="0" step="1" onchange="slaMargeOp()"></div>
     </div>
   </div>
 
@@ -3489,12 +3519,11 @@ const AANV_STATUS={
 
 function aanvragen(){ return Array.isArray(state.aanvragen)?state.aanvragen:(state.aanvragen=[]); }
 function stdMarge(){ return state.marge!=null ? Number(state.marge) : 50; }
-/* Het percentage gaat over de inkoopprijs heen: 500 met 50% wordt 750. */
-function aanvVerkoop(inkoop, marge){
-  return Math.round((Number(inkoop)||0) * (1 + (Number(marge)||0)/100) * 100)/100;
-}
+/* De klant betaalt een deel vooruit en de rest bij het ophalen. Het bedrag
+   dat hij nu neerlegt is de aanbetaling; wat overblijft is het restant.     */
+function aanvTotaal(a){ return Math.round((Number(a.verkoop)||0)*100)/100; }
 function aanvRestant(a){
-  return Math.round((aanvVerkoop(a.inkoop,a.marge) - (Number(a.aanbetaling)||0))*100)/100;
+  return Math.round((aanvTotaal(a) - (Number(a.aanbetaling)||0))*100)/100;
 }
 function aanvLopend(){ return aanvragen().filter(a=>a.status!=='opgehaald' && a.status!=='geannuleerd'); }
 
@@ -3536,10 +3565,65 @@ function aanvUitleg(){
    Vraagt iemand om iets wat je gewoon voert, dan wil je die aanvraag aan dat
    product kunnen hangen. Bij het inscannen van de levering zegt Storvo dan
    meteen dat er iemand op wacht.                                            */
-function aanvVulProducten(){
-  const dl=document.getElementById('aanvProducten');
-  if(!dl) return;
-  dl.innerHTML=state.producten.map(p=>`<option value="${esc(p.naam)}">`).join('');
+/* Een eigen uitklaplijst in plaats van de ingebouwde datalist. Die van de
+   browser ziet er op elk systeem anders uit en je kunt er niets aan sturen;
+   deze past bij de rest en toont per product meteen de prijs en de voorraad. */
+let aanvKeus=-1;
+function aanvVulProducten(){ /* niets meer voor te bereiden, de lijst rolt live */ }
+
+function aanvTyp(){
+  const veld=document.getElementById('a_wat');
+  const lijst=document.getElementById('aanvLijstje');
+  if(!veld || !lijst) return;
+  const q=veld.value.trim();
+  const treffers=(q ? state.producten.filter(p=>zoekPast(p.naam+' '+(p.sku||''), zoekGroepen(q)))
+                    : state.producten.slice())
+    .sort((a,b)=>a.naam.localeCompare(b.naam)).slice(0,8);
+  aanvKeus=-1;
+  if(!treffers.length){ lijst.hidden=true; lijst.innerHTML=''; aanvProductKijk(); return; }
+  lijst.hidden=false;
+  lijst.innerHTML=treffers.map((p,i)=>`
+    <button type="button" class="zoekrij" data-i="${i}" onmousedown="event.preventDefault(); aanvPak(${p.id})">
+      <span class="zrnaam" data-onvertaald>${esc(p.naam)}</span>
+      <span class="zrprijs">${euro(p.verkoop)}</span>
+      <span class="zrvoor">${achterLiggen(p)+inWinkel(p)} op voorraad</span>
+    </button>`).join('');
+  aanvProductKijk();
+}
+function aanvPak(id){
+  const p=state.producten.find(p=>p.id===id);
+  if(!p) return;
+  document.getElementById('a_wat').value=p.naam;
+  aanvSluitLijst();
+  aanvProductKijk();
+  const vk=document.getElementById('a_verkoop');
+  if(vk){ vk.value=p.verkoop; }
+  const ink=document.getElementById('a_inkoop');
+  if(ink && p.inkoop) ink.value=p.inkoop;
+  aanvReken();
+}
+function aanvSluitLijst(){
+  const l=document.getElementById('aanvLijstje');
+  if(l){ l.hidden=true; }
+  aanvKeus=-1;
+}
+function aanvToets(e){
+  const lijst=document.getElementById('aanvLijstje');
+  if(!lijst || lijst.hidden) return;
+  const rijen=[...lijst.querySelectorAll('.zoekrij')];
+  if(!rijen.length) return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    aanvKeus=(aanvKeus + (e.key==='ArrowDown'?1:-1) + rijen.length+1) % (rijen.length+1) - (aanvKeus<0&&e.key==='ArrowUp'?0:0);
+    if(aanvKeus>=rijen.length) aanvKeus=0;
+    if(aanvKeus<0) aanvKeus=rijen.length-1;
+    rijen.forEach((r,i)=>r.classList.toggle('aan', i===aanvKeus));
+  }else if(e.key==='Enter' && aanvKeus>=0){
+    e.preventDefault();
+    rijen[aanvKeus].dispatchEvent(new MouseEvent('mousedown'));
+  }else if(e.key==='Escape'){
+    aanvSluitLijst();
+  }
 }
 function aanvZoekProduct(tekst){
   const t=String(tekst||'').trim();
@@ -3553,21 +3637,16 @@ function aanvProductKijk(){
   const p=aanvZoekProduct(document.getElementById('a_wat').value);
   if(!p){ el.innerHTML=''; return; }
   const ink=document.getElementById('a_inkoop');
-  el.innerHTML=`<div class="npbron" style="margin:10px 0 0">
+  el.innerHTML=`<div class="npbron">
     <div class="npbronkop">Dit product ken ik al</div>
-    <span data-onvertaald>${esc(p.naam)}</span> · ${achterLiggen(p)+inWinkel(p)} op voorraad ·
-    inkoop ${euro(p.inkoop)}
-    <div style="margin-top:10px"><button type="button" class="btn ghost small" onclick="aanvNeemInkoop(${p.id})">Inkoopprijs overnemen</button></div>
+    <span data-onvertaald>${esc(p.naam)}</span> · verkoopprijs ${euro(p.verkoop)} ·
+    ${achterLiggen(p)+inWinkel(p)} op voorraad
     <div class="npgelezen">Bij het inscannen van de levering meldt Storvo dat deze voor je klant is.</div>
   </div>`;
-  if(ink && !ink.value){ ink.value=p.inkoop; aanvReken(); }
-}
-function aanvNeemInkoop(id){
-  const p=state.producten.find(p=>p.id===id);
-  if(!p) return;
-  document.getElementById('a_inkoop').value=p.inkoop;
+  const vk=document.getElementById('a_verkoop');
+  if(vk && !vk.value){ vk.value=p.verkoop; }
+  if(ink && !ink.value && p.inkoop) ink.value=p.inkoop;
   aanvReken();
-  toast('Inkoopprijs overgenomen: '+euro(p.inkoop), true);
 }
 
 /* Scan je een levering in, dan kijkt Storvo of er iemand op wacht. Zo ja, dan
@@ -3588,25 +3667,39 @@ function aanvBijScan(p){
   piep(990);
 }
 
-function aanvReken(){
+/* Percentage en bedrag houden elkaar bij: typ je een percentage, dan rolt het
+   bedrag eruit, en andersom. Wie het handiger vindt om gewoon "honderd euro
+   aanbetaling" te zeggen kan dat dus ook.                                   */
+function aanvReken(bron){
+  const totaal=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
+  const pctEl=document.getElementById('a_pct'), bedEl=document.getElementById('a_aanbet');
+  let pct=Number(pctEl.value); if(isNaN(pct)) pct=stdMarge();
+  let aanbet=Number(bedEl.value)||0;
+
+  if(bron==='bedrag'){
+    pct = totaal>0 ? Math.round(aanbet/totaal*1000)/10 : 0;
+    pctEl.value=pct;
+  }else{
+    pct=Math.max(0, Math.min(100, pct));
+    aanbet=Math.round(totaal*pct)/100;
+    bedEl.value=aanbet ? aanbet.toFixed(2) : '';
+  }
+  const rest=Math.round((totaal-aanbet)*100)/100;
   const inkoop=Number(document.getElementById('a_inkoop').value)||0;
-  const marge=Number(document.getElementById('a_marge').value)||0;
-  const aanbet=Number(document.getElementById('a_aanbet').value)||0;
-  const verkoop=aanvVerkoop(inkoop,marge);
-  const winst=Math.round((verkoop-inkoop)*100)/100;
-  const rest=Math.round((verkoop-aanbet)*100)/100;
+  const winst=inkoop>0 ? Math.round((totaal-inkoop)*100)/100 : null;
+
   const el=document.getElementById('aanvReken');
   if(!el) return;
   el.innerHTML=`
-    <div class="arrij"><span>Klant betaalt</span><b class="groot">${euro(verkoop)}</b></div>
-    <div class="arrij"><span>Jouw winst</span><b>${euro(winst)}</b></div>
-    ${aanbet>0?`<div class="arrij"><span>Al aanbetaald</span><b>${euro(aanbet)}</b></div>
-    <div class="arrij rest"><span>Nog te betalen bij ophalen</span><b>${euro(rest)}</b></div>`:''}`;
+    <div class="arrij nu"><span>Klant betaalt nu</span><b class="groot">${euro(aanbet)}</b></div>
+    <div class="arrij rest"><span>Bij het ophalen nog</span><b>${euro(rest)}</b></div>
+    <div class="arrij"><span>Totaalprijs</span><b>${euro(totaal)}</b></div>
+    ${winst!=null?`<div class="arrij"><span>Jouw winst</span><b>${euro(winst)}</b></div>`:''}`;
 }
 function resetAanvraag(){
-  ['a_naam','a_tel','a_email','a_wat','a_inkoop'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('a_aanbet').value=0;
-  document.getElementById('a_marge').value=stdMarge();
+  ['a_naam','a_tel','a_email','a_wat','a_verkoop','a_inkoop','a_aanbet'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('a_pct').value=stdMarge();
+  document.getElementById('a_betaal').value='pin';
   document.getElementById('a_notify').value='1';
   aanvVulProducten();
   const k=document.getElementById('aanvKoppel'); if(k) k.innerHTML='';
@@ -3617,10 +3710,13 @@ function maakAanvraag(){
   const naam=document.getElementById('a_naam').value.trim();
   const tel=document.getElementById('a_tel').value.trim();
   const wat=document.getElementById('a_wat').value.trim();
-  const inkoop=Number(document.getElementById('a_inkoop').value)||0;
+  const verkoop=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
+  const aanbet=Math.round((Number(document.getElementById('a_aanbet').value)||0)*100)/100;
+  const bet=document.getElementById('a_betaal').value;
   if(!naam || !tel){ alert('Naam en telefoonnummer zijn verplicht.'); return; }
-  if(!wat){ alert('Vul in wat de klant wil hebben.'); return; }
-  if(inkoop<=0){ alert('Vul de inkoopprijs in, anders kan Storvo niet uitrekenen wat de klant betaalt.'); return; }
+  if(!wat){ alert('Vul in welk product de klant wil hebben.'); return; }
+  if(verkoop<=0){ alert('Vul de verkoopprijs in, anders weet Storvo niet wat de klant betaalt.'); return; }
+  if(aanbet>verkoop){ alert('De aanbetaling kan niet hoger zijn dan de verkoopprijs.'); return; }
 
   state.aanvNr=(state.aanvNr||0)+1;
   const nr='A'+new Date().getFullYear().toString().slice(2)+'-'+String(state.aanvNr).padStart(3,'0');
@@ -3628,20 +3724,24 @@ function maakAanvraag(){
     id:uid(), nr, t:Date.now(),
     klant:{naam, tel, email:document.getElementById('a_email').value.trim()},
     notify:document.getElementById('a_notify').value==='1',
-    wat, inkoop,
+    wat, verkoop,
+    inkoop:Math.round((Number(document.getElementById('a_inkoop').value)||0)*100)/100,
     productId:(aanvZoekProduct(wat)||{}).id || null,
-    marge:Number(document.getElementById('a_marge').value)||stdMarge(),
-    aanbetaling:Number(document.getElementById('a_aanbet').value)||0,
+    aanbetPct:Number(document.getElementById('a_pct').value)||0,
+    aanbetaling:aanbet, aanbetBetaal:bet,
     status:'aangevraagd', door:gebruiker?gebruiker.naam:null,
     tijdlijn:[{status:'aangevraagd', t:Date.now()}], notities:[]
   };
   aanvragen().unshift(a);
-  /* Een aanbetaling is contant geld dat de lade in gaat. */
-  if(a.aanbetaling>0) kasBoek(a.aanbetaling, 'in', 'Aanbetaling '+a.nr+' · '+naam, true);
+  /* Contant aanbetaald geld gaat de lade in; pin komt op de rekening.
+     De aanbetaling is nog geen omzet: dat wordt het pas bij het ophalen. */
+  if(aanbet>0 && (bet==='cash'||bet==='cash_zb')){
+    kasBoek(aanbet, 'in', 'Aanbetaling '+nr+' · '+naam, true);
+  }
   save(); renderAanvragen(); updateBadge(); renderKassa();
   resetAanvraag();
   document.querySelector('#aanvTabs button[data-s="overzicht"]').click();
-  toast('Aanvraag '+nr+' aangemaakt voor '+naam, true);
+  toast('Aanvraag '+nr+' voor '+naam+(aanbet>0?' · '+euro(aanbet)+' aanbetaald ('+betaalNaam(bet)+')':''), true);
 }
 
 function aanvStap(id){
@@ -3658,13 +3758,54 @@ function aanvStap(id){
   toast(a.nr+': '+AANV_STATUS[a.status].label, true);
   if(document.getElementById('aanvDetail')) toonAanvraag(id);
 }
+/* Afrekenen bij het ophalen. Er komt nog maar één bedrag over de toonbank,
+   het restant. In de omzet telt wel de hele verkoopprijs mee, want de
+   aanbetaling was destijds nog geen omzet maar een vooruitbetaling.        */
 function aanvAfrekenen(id){
   const a=aanvragen().find(a=>a.id===id);
   if(!a) return;
-  sluitAanvraag();
-  /* Alleen het restant gaat nog over de toonbank; de aanbetaling had je al. */
-  betaalPopup('Aanvraag '+a.nr+' · '+a.wat, aanvRestant(a), a.inkoop-(a.aanbetaling||0), false, null);
-  aanvAfrekenen.bezig=id;
+  sluitAanvraag(); sluitPopup();
+  const rest=aanvRestant(a);
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='scanOverlay';
+  ov.innerHTML=`<div class="popup">
+    <h3>${esc(a.nr)} · ${esc(a.wat)}</h3>
+    <div class="pv">Totaal ${euro(aanvTotaal(a))}${a.aanbetaling>0?' · al aanbetaald '+euro(a.aanbetaling)+' ('+betaalNaam(a.aanbetBetaal||'pin')+')':''}</div>
+    <div class="avdetail" style="margin:0 0 18px">
+      <div class="arrij nu"><span>Nu te betalen</span><b class="groot">${euro(rest)}</b></div>
+    </div>
+    <div class="acts">
+      <div class="betaalrow">
+        <button class="btn" onclick="aanvBoek(${a.id},'pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
+        <button class="btn" onclick="aanvBoek(${a.id},'cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash bon</button>
+        <button class="btn" onclick="aanvBoek(${a.id},'cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash</button>
+      </div>
+      <button class="btn ghost" onclick="sluitPopup()">Annuleren (Esc)</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) sluitPopup(); });
+  document.body.appendChild(ov);
+}
+function aanvBoek(id, bet){
+  const a=aanvragen().find(a=>a.id===id);
+  if(!a) return;
+  const rest=aanvRestant(a);
+  const totaal=aanvTotaal(a);
+  const vid=uid();
+  /* Omzet is de hele prijs; kosten zijn wat het toestel jou kostte. */
+  state.verkopen.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr+' · '+a.wat,
+    verkoop:totaal, inkoop:a.inkoop||0, aantal:1, betaal:bet,
+    cat:dienstCat().id, door:gebruiker?gebruiker.naam:null});
+  if(state.verkopen.length>5000) state.verkopen.length=5000;
+  state.log.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr, m:'uit', v:null, aantal:1, pid:null});
+  state.log=state.log.slice(0,50);
+  /* Alleen het restant komt nu de lade in; de aanbetaling zat er al. */
+  kasVerkoop(rest, bet, 'Aanvraag '+a.nr);
+  a.status='opgehaald'; a.betaal=bet; a.opgehaaldOp=Date.now();
+  a.tijdlijn.push({status:'opgehaald', t:Date.now(), door:gebruiker?gebruiker.naam:null});
+  save(); sluitPopup(); piep(440);
+  renderAanvragen(); updateBadge(); renderKassa(); herteken(); renderScanLog();
+  toast(a.nr+' afgerekend: '+euro(rest)+' ('+betaalNaam(bet)+')', true);
 }
 function aanvAnnuleer(id){
   const a=aanvragen().find(a=>a.id===id);
@@ -3683,8 +3824,8 @@ function aanvRij(a){
     <div class="avnr"><b>${esc(a.nr)}</b><div class="muted" style="font-size:12px">${esc(a.klant.naam)}</div></div>
     <div class="avwat">${esc(a.wat)}</div>
     <div><span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span></div>
-    <div class="avgeld"><b>${euro(aanvVerkoop(a.inkoop,a.marge))}</b>
-      ${a.aanbetaling>0?`<div class="muted" style="font-size:12px">nog ${euro(rest)}</div>`:''}</div>
+    <div class="avgeld"><b>${euro(aanvTotaal(a))}</b>
+      ${a.status!=='opgehaald' && rest>0 ? `<div class="muted" style="font-size:12px">nog ${euro(rest)}</div>`:''}</div>
   </div>`;
 }
 function renderAanvragen(){
@@ -3710,7 +3851,7 @@ function toonAanvraag(id){
   if(!a) return;
   sluitAanvraag();
   const s=AANV_STATUS[a.status];
-  const verkoop=aanvVerkoop(a.inkoop,a.marge);
+  const totaal=aanvTotaal(a);
   const rest=aanvRestant(a);
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='aanvDetail';
@@ -3723,15 +3864,13 @@ function toonAanvraag(id){
     </div>
 
     ${a.status==='binnen' ? `<div class="npmelding goed" style="font-size:15px">
-      <b>Ligt klaar.</b> De klant moet nog ${euro(rest)} betalen${a.aanbetaling>0?' (er is '+euro(a.aanbetaling)+' aanbetaald)':''}.</div>` : ''}
+      <b>Ligt klaar.</b> De klant betaalt bij het ophalen nog ${euro(rest)}${a.aanbetaling>0?', want '+euro(a.aanbetaling)+' is al aanbetaald':''}.</div>` : ''}
 
     <div class="avdetail">
-      <div class="arrij"><span>Inkoop</span><b>${euro(a.inkoop)}</b></div>
-      <div class="arrij"><span>Marge</span><b>${a.marge}%</b></div>
-      <div class="arrij"><span>Klant betaalt</span><b class="groot">${euro(verkoop)}</b></div>
-      <div class="arrij"><span>Jouw winst</span><b>${euro(Math.round((verkoop-a.inkoop)*100)/100)}</b></div>
-      ${a.aanbetaling>0?`<div class="arrij"><span>Aanbetaald</span><b>${euro(a.aanbetaling)}</b></div>
-      <div class="arrij rest"><span>Nog te betalen</span><b>${euro(rest)}</b></div>`:''}
+      <div class="arrij"><span>Totaalprijs</span><b>${euro(totaal)}</b></div>
+      ${a.aanbetaling>0?`<div class="arrij"><span>Aanbetaald${a.aanbetPct?' ('+a.aanbetPct+'%)':''}</span><b>${euro(a.aanbetaling)} · ${betaalNaam(a.aanbetBetaal||'pin')}</b></div>`:''}
+      <div class="arrij ${a.status==='opgehaald'?'':'rest'}"><span>${a.status==='opgehaald'?'Afgerekend':'Nog te betalen bij ophalen'}</span><b class="groot">${euro(rest)}</b></div>
+      ${a.inkoop>0?`<div class="arrij"><span>Jouw winst</span><b>${euro(Math.round((totaal-a.inkoop)*100)/100)}</b></div>`:''}
     </div>
 
     <div class="avber">${a.notify
@@ -3763,9 +3902,9 @@ function sluitAanvraag(){ const o=document.getElementById('aanvDetail'); if(o) o
 function slaMargeOp(){
   const v=Math.max(0, Number(document.getElementById('s_marge').value)||0);
   state.marge=v; save(); renderAanvragen();
-  const m=document.getElementById('a_marge');
+  const m=document.getElementById('a_pct');
   if(m && !m.value) m.value=v;
-  toast('Standaardmarge aangepast naar '+v+'%', true);
+  toast('Standaard aanbetaling aangepast naar '+v+'%', true);
 }
 
 /* ═══════════════ DE KASSA ═══════════════
@@ -5779,15 +5918,6 @@ function boekDienst(bet){
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   state.log.unshift({id, t:Date.now(), naam:tx.naam, m:'uit', v:null, aantal:1, pid:null});
   state.log=state.log.slice(0,50);
-  if(aanvAfrekenen.bezig){
-    const a=aanvragen().find(x=>x.id===aanvAfrekenen.bezig);
-    aanvAfrekenen.bezig=null;
-    if(a){
-      a.status='opgehaald'; a.betaal=bet; a.opgehaaldOp=Date.now();
-      a.tijdlijn.push({status:'opgehaald', t:Date.now(), door:gebruiker?gebruiker.naam:null});
-      renderAanvragen();
-    }
-  }
   if(tx.repId){
     const r=state.reparaties.find(r=>r.id===tx.repId);
     if(r){
