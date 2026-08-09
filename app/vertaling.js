@@ -133,6 +133,9 @@ const WOORDEN = {
 'Ook voor klant':'Also for the customer',
 'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Zoeken op gsm-world':'Search gsm-world',
 
+/* ---------- de balk onderin op de telefoon ---------- */
+'Meer':'More', "Alle pagina's":'All pages', 'Bestellen':'Ordering',
+
 /* ---------- pagina's aan of uit ---------- */
 "Welke pagina's gebruik je?":'Which pages do you use?',
 'Zet uit wat je winkel niet doet. De pagina verdwijnt dan uit het menu voor iedereen, en er gaat niets verloren: zet je hem later weer aan, dan staat alles er nog. Dashboard en Instellingen blijven altijd staan, anders kom je hier nooit meer terug.':

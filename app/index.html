@@ -648,6 +648,18 @@
     .popup{padding:24px; border-radius:var(--radius-s);}
     #toasts{left:14px; right:14px; bottom:14px; top:auto; align-items:stretch; max-width:none;} .toast{max-width:none;}
   }
+  /* ═══════════ NIETS SCHUIFT ZIJWAARTS ═══════════
+     Eén blok dat een paar pixels te breed is en je kunt de hele app heen en
+     weer trekken, met een witte rand die er niet hoort. Dat voelt goedkoop.
+     Daarom knippen we alles wat buiten de breedte valt gewoon af, en krijgt
+     elke tabel zijn eigen schuifbak in plaats van de pagina mee te sleuren. */
+  html{overflow-x:clip;}
+  body{overflow-x:clip; max-width:100vw;}
+  main{min-width:0; overflow-x:clip;}
+  .binnen, section, .card, .modules, .kpis, .row, .grid{min-width:0;}
+  img, svg, canvas, video{max-width:100%;}
+  .tabelrol{overflow-x:auto; overflow-y:hidden; max-width:100%; -webkit-overflow-scrolling:touch;}
+
   /* ---------- het dashboard op een telefoon ----------
      Een telefoonwinkel staat aan de balie, niet achter een bureau. De cijfers
      moeten dus ook op een klein scherm meteen leesbaar zijn, zonder in en uit
@@ -664,15 +676,14 @@
     .dagnav{width:100%; display:flex; gap:8px;}
     .dagnav input{flex:1; min-width:0;}
 
-    /* Tabellen: laat ze schuiven en geef een randje mee zodat je ziet dat er
-       meer staat dan wat er in beeld past. */
-    .card > div[style*="overflow-x"]{
-      margin:0 -20px; padding:0 20px; -webkit-overflow-scrolling:touch;
-      scrollbar-width:none;
+    /* Tabellen: laat ze schuiven binnen hun eigen bak, met een vervaging aan
+       de randen zodat je ziet dat er meer staat dan wat er in beeld past. */
+    .tabelrol{
+      margin:0 -20px; padding:0 20px; scrollbar-width:none;
       mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
       -webkit-mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
     }
-    .card > div[style*="overflow-x"]::-webkit-scrollbar{display:none;}
+    .tabelrol::-webkit-scrollbar{display:none;}
     table{font-size:13px;}
     th,td{padding:11px 9px; white-space:nowrap;}
     th:first-child,td:first-child{position:sticky; left:0; background:var(--card); z-index:1;}
@@ -692,12 +703,78 @@
     h2{font-size:15px; flex-wrap:wrap;}
     h2 .muted{margin-left:0; width:100%; margin-top:3px;}
   }
+  /* ═══════════ DE TELEFOON: BALK ONDERIN, KOP DIE WEGSCHUIFT ═══════════
+     Een zijbalk is een bureauding. Op een telefoon houd je het toestel in één
+     hand en reikt je duim tot ongeveer een derde van onderen. Daar hoort het
+     menu dus, met de vier dingen die je de hele dag doet. De rest zit achter
+     een vel dat je omhoog trekt, zoals je van je telefoon gewend bent.
+
+     Bovenin blijft alleen het merk en de zoekbalk. Ga je naar beneden lezen,
+     dan schuift die weg; kom je terug omhoog, dan is hij er weer.           */
+  .onderbalk, .velmenu, .velwaas, .topmerk{display:none;}
+
+  @media(max-width:860px){
+    aside{display:none;}
+    body{padding-bottom:calc(66px + env(safe-area-inset-bottom));}
+
+    .topmerk{display:flex; align-items:center; flex:none; cursor:pointer;}
+    .tmk{width:30px; height:30px; display:block;}
+    .tmk svg{width:30px; height:30px; display:block;}
+    .topbar{transition:transform .28s cubic-bezier(.4,0,.2,1); will-change:transform;}
+    .topbar.weg{transform:translateY(-102%);}
+
+    .onderbalk{display:flex; position:fixed; left:0; right:0; bottom:0; z-index:60;
+      background:rgba(255,255,255,.94); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      border-top:1.5px solid var(--border); padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+      touch-action:pan-y;}
+    .onderbalk button{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+      background:none; border:none; padding:8px 2px 6px; font-family:inherit; font-size:10.5px;
+      font-weight:600; color:var(--muted-l); cursor:pointer; position:relative; min-width:0;
+      border-radius:14px; transition:color .18s;}
+    .onderbalk button .i{width:22px; height:22px; stroke-width:2;}
+    .onderbalk button span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .onderbalk button.actief{color:var(--oranje);}
+    .onderbalk button.actief::before{content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+      width:22px; height:3px; border-radius:0 0 3px 3px; background:var(--oranje);}
+    .onderbalk button:active{background:var(--soft-2);}
+    .onderbalk .tel{position:absolute; top:4px; right:calc(50% - 20px); min-width:16px; height:16px;
+      border-radius:8px; background:var(--red); color:#fff; font-size:10px; font-weight:700;
+      display:flex; align-items:center; justify-content:center; padding:0 4px;}
+
+    .velwaas{display:block; position:fixed; inset:0; z-index:70; background:rgba(23,32,30,.34);
+      opacity:0; transition:opacity .26s;}
+    .velwaas.open{opacity:1;}
+    .velmenu{display:block; position:fixed; left:0; right:0; bottom:0; z-index:80;
+      background:var(--card); border-radius:24px 24px 0 0; box-shadow:0 -8px 40px rgba(23,32,30,.16);
+      padding:10px 16px calc(20px + env(safe-area-inset-bottom));
+      transform:translateY(102%); transition:transform .32s cubic-bezier(.22,1,.36,1);
+      max-height:78vh; overflow-y:auto; touch-action:pan-y;}
+    .velmenu.open{transform:none;}
+    .velgreep{width:42px; height:5px; border-radius:3px; background:var(--border); margin:0 auto 14px;}
+    .velkop{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+      color:var(--muted-l); margin-bottom:12px; padding:0 4px;}
+    .vellijst{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+    .vellijst button{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+      background:var(--soft-2); border:none; border-radius:18px; padding:18px 8px; font-family:inherit;
+      font-size:12.5px; font-weight:600; color:var(--text); cursor:pointer; min-height:88px; transition:.15s;}
+    .vellijst button .i{width:24px; height:24px; color:var(--muted);}
+    .vellijst button.actief{background:var(--lblauw); color:var(--oranje);}
+    .vellijst button.actief .i{color:var(--oranje);}
+    .vellijst button:active{transform:scale(.97);}
+
+    #toasts{bottom:calc(76px + env(safe-area-inset-bottom));}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .topbar,.velmenu,.velwaas{transition:none;}
+  }
+
   @media(max-width:520px){
     .kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+    .vellijst{gap:8px;}
     .kpi{padding:14px 15px;} .kpi .v{font-size:21px;} .kpi .l{font-size:10px;}
     .binnen{padding:0 12px 44px;}
     .card{padding:17px 15px;}
-    .card > div[style*="overflow-x"]{margin:0 -15px; padding:0 15px;}
+    .tabelrol{margin:0 -15px; padding:0 15px;}
     .pagehead h1{font-size:21px;}
     .chart{height:150px;} .chart .bars{height:112px;}
     .zoekvak input{font-size:16px;}   /* onder de 16px zoomt iOS het scherm in */
@@ -987,6 +1064,9 @@
 
 <div class="topbar">
   <div class="binnenbar">
+    <a class="topmerk" onclick="showTab('dashboard')" aria-label="Naar het dashboard">
+      <span class="tmk" id="topMerk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </a>
     <div class="zoekvak">
       <span class="ic"><svg class="i s"><use href="#i-search"/></svg></span>
       <input id="globaalZoek" placeholder="Zoek product, reparatie of klant" autocomplete="off" oninput="globaalZoeken()" onblur="setTimeout(()=>{const r=document.getElementById('zoekRes'); if(r) r.remove();},180)">
@@ -1628,6 +1708,16 @@
 
 </div>
 </main>
+
+<!-- Onderbalk voor de telefoon. De vier dingen die je het meest doet staan
+     altijd binnen duimbereik; de rest zit in het vel dat je omhoog trekt. -->
+<nav class="onderbalk" id="onderBalk" hidden aria-label="Hoofdmenu"></nav>
+<div class="velwaas" id="velWaas" hidden onclick="sluitVel()"></div>
+<div class="velmenu" id="velMenu" hidden role="dialog" aria-label="Alle pagina's">
+  <div class="velgreep" aria-hidden="true"></div>
+  <div class="velkop">Alle pagina's</div>
+  <div class="vellijst" id="velLijst"></div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const KEY='refuro_stock_v2';
@@ -1760,6 +1850,10 @@ function showTab(t){
     const k=document.getElementById('npKaart');
     if(k){ k.hidden=!!editId; if(!editId) npTeken(); }
   }
+  if(typeof mobielBijwerken==='function') mobielBijwerken();
+  /* Bij het wisselen van pagina weer bovenaan beginnen, met de kop in beeld. */
+  const bar=document.querySelector('.topbar');
+  if(bar) bar.classList.remove('weg');
 }
 
 /* ---------- globaal zoeken ---------- */
@@ -2227,6 +2321,7 @@ function herteken(){
   if(!document.getElementById('tab-producten').hidden) renderProducten();
   if(!document.getElementById('tab-bestellen').hidden) renderBestellen();
   if(!document.getElementById('tab-reparaties').hidden) renderReparaties();
+  if(typeof mobielBijwerken==='function') mobielBijwerken();
 }
 /* Melding rechtsonder. soort: 'ok' (groen), 'let-op' (amber), 'fout' (rood), anders neutraal. */
 function toast(msg, soort){
@@ -2998,6 +3093,146 @@ function renderPaginas(){
     </label>`;
   }).join('');
 }
+/* ═══════════════ DE TELEFOONBALK ═══════════════
+   Vier knoppen onderin, binnen duimbereik, plus een vijfde die het vel met
+   alle pagina's omhoog haalt. Welke vier dat zijn hangt af van wat de winkel
+   aan heeft staan en wat deze rol mag zien, dus we bouwen hem elke keer
+   opnieuw op in plaats van hem vast te timmeren.                            */
+const MOB={
+  dashboard:   {naam:'Dashboard',    ico:'i-chart'},
+  scan:        {naam:'Scannen',      ico:'i-scan'},
+  reparaties:  {naam:'Reparaties',   ico:'i-wrench'},
+  producten:   {naam:'Producten',    ico:'i-box'},
+  bestellen:   {naam:'Bestellen',    ico:'i-cart'},
+  diensten:    {naam:'Diensten',     ico:'i-tool'},
+  team:        {naam:'Team',         ico:'i-users'},
+  instellingen:{naam:'Instellingen', ico:'i-settings'}
+};
+const MOB_VOLGORDE=['dashboard','scan','reparaties','producten','bestellen','diensten','team','instellingen'];
+
+function huidigeTab(){
+  const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
+  if(!s) return 'dashboard';
+  const t=s.id.replace('tab-','');
+  return t==='nieuw' ? 'producten' : t;
+}
+function mobTabs(){ return MOB_VOLGORDE.filter(t=>mag(t)); }
+
+function tekenOnderbalk(){
+  const balk=document.getElementById('onderBalk');
+  if(!balk) return;
+  const alles=mobTabs();
+  const nu=huidigeTab();
+  /* Staat de pagina waar je op zit niet bij de eerste vier, dan schuiven we
+     hem naar voren. Anders zie je nergens meer waar je bent. */
+  let vast=alles.slice(0,4);
+  if(!vast.includes(nu) && alles.includes(nu)) vast=[nu].concat(vast.slice(0,3));
+
+  const tel=(t)=>{
+    if(t==='reparaties'){ const n=(typeof repTeDoen==='function')?repTeDoen().length:0; return n||0; }
+    if(t==='bestellen'){ const n=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0; return n||0; }
+    return 0;
+  };
+  balk.innerHTML = vast.map(t=>{
+    const n=tel(t);
+    return `<button data-tab="${t}" class="${t===nu?'actief':''}" onclick="showTab('${t}')">
+      <svg class="i"><use href="#${MOB[t].ico}"/></svg><span>${esc(MOB[t].naam)}</span>
+      ${n?`<span class="tel">${n>99?'99+':n}</span>`:''}</button>`;
+  }).join('') +
+  `<button id="meerKnop" class="${velOpen?'actief':''}" onclick="wisselVel()" aria-label="Alle pagina's">
+    <svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    <span>Meer</span></button>`;
+}
+
+let velOpen=false;
+function tekenVel(){
+  const lijst=document.getElementById('velLijst');
+  if(!lijst) return;
+  const nu=huidigeTab();
+  lijst.innerHTML=mobTabs().map(t=>
+    `<button class="${t===nu?'actief':''}" onclick="showTab('${t}'); sluitVel()">
+      <svg class="i"><use href="#${MOB[t].ico}"/></svg>${esc(MOB[t].naam)}</button>`).join('');
+}
+function openVel(){
+  if(velOpen) return;
+  velOpen=true;
+  tekenVel();
+  const vel=document.getElementById('velMenu'), waas=document.getElementById('velWaas');
+  vel.hidden=false; waas.hidden=false;
+  requestAnimationFrame(()=>{ vel.classList.add('open'); waas.classList.add('open'); });
+  tekenOnderbalk();
+}
+function sluitVel(){
+  if(!velOpen) return;
+  velOpen=false;
+  const vel=document.getElementById('velMenu'), waas=document.getElementById('velWaas');
+  vel.classList.remove('open'); waas.classList.remove('open');
+  setTimeout(()=>{ if(!velOpen){ vel.hidden=true; waas.hidden=true; } }, 340);
+  tekenOnderbalk();
+}
+function wisselVel(){ velOpen ? sluitVel() : openVel(); }
+
+/* Omhoog vegen over de balk opent het vel, omlaag vegen sluit het weer.
+   Dat is hoe je het van je telefoon gewend bent, dus dat hoeft niemand uit
+   te leggen. De knoppen blijven gewoon werken: pas vanaf dertig pixels
+   noemen we het een veeg.                                                  */
+function veegKoppelen(el, opOmhoog, opOmlaag){
+  let startY=null, bezig=false;
+  el.addEventListener('touchstart', e=>{
+    if(e.touches.length!==1) return;
+    startY=e.touches[0].clientY; bezig=false;
+  }, {passive:true});
+  el.addEventListener('touchmove', e=>{
+    if(startY===null) return;
+    const dy=e.touches[0].clientY-startY;
+    if(!bezig && Math.abs(dy)>30){
+      bezig=true;
+      if(dy<0 && opOmhoog) opOmhoog();
+      if(dy>0 && opOmlaag) opOmlaag();
+    }
+  }, {passive:true});
+  el.addEventListener('touchend', ()=>{ startY=null; }, {passive:true});
+}
+
+/* De kop schuift weg zodra je naar beneden leest en komt terug zodra je weer
+   omhoog gaat. Vlak bij de bovenkant blijft hij altijd staan.               */
+function kopVolgen(){
+  const bar=document.querySelector('.topbar');
+  if(!bar) return;
+  let vorige=0, gepland=false;
+  const kijk=()=>{
+    gepland=false;
+    const y=Math.max(0, window.scrollY||document.documentElement.scrollTop||0);
+    if(y<70){ bar.classList.remove('weg'); vorige=y; return; }
+    if(Math.abs(y-vorige)<8) return;
+    bar.classList.toggle('weg', y>vorige);
+    vorige=y;
+  };
+  addEventListener('scroll', ()=>{ if(!gepland){ gepland=true; requestAnimationFrame(kijk); } }, {passive:true});
+}
+
+/* Elke tabel krijgt zijn eigen schuifbak. Zonder dat trekt één te brede
+   tabel de hele pagina scheef en kun je het scherm heen en weer slepen.    */
+function rolTabellen(){
+  document.querySelectorAll('main table').forEach(t=>{
+    const p=t.parentElement;
+    if(p && p.classList.contains('tabelrol')) return;
+    if(p && p.getAttribute('style') && /overflow-x/.test(p.getAttribute('style'))){
+      p.classList.add('tabelrol'); return;
+    }
+    const bak=document.createElement('div');
+    bak.className='tabelrol';
+    t.parentNode.insertBefore(bak, t);
+    bak.appendChild(t);
+  });
+}
+
+function mobielBijwerken(){
+  rolTabellen();
+  tekenOnderbalk();
+  if(velOpen) tekenVel();
+}
+
 function pasRechtenToe(){
   document.querySelectorAll('aside nav button').forEach(b=>{
     b.style.display = mag(b.dataset.tab)?'':'none';
@@ -3014,6 +3249,7 @@ function pasRechtenToe(){
   }
   const zicht=document.querySelector('main section[id^="tab-"]:not([hidden])');
   if(zicht && !mag(zicht.id.replace('tab-',''))) showTab(mag('dashboard')?'dashboard':'scan');
+  mobielBijwerken();
 }
 function toonLogin(){
   const h=huisstijl();
@@ -6173,6 +6409,16 @@ async function onbAfronden(overgeslagen){
 save();
 pasHuisstijlToe();
 renderScanLog(); updateBadge(); renderDashboard();
+
+/* De telefoonopzet aanzetten: balk onderin, vegen, en de kop die meeschuift. */
+document.getElementById('onderBalk').hidden=false;
+tekenOnderbalk();
+rolTabellen();
+kopVolgen();
+veegKoppelen(document.getElementById('onderBalk'), openVel, null);
+veegKoppelen(document.getElementById('velMenu'), null, sluitVel);
+addEventListener('keydown', e=>{ if(e.key==='Escape' && velOpen) sluitVel(); });
+
 authBoot();
 </script>
 <script src="scanner.js"></script>
