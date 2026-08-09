@@ -166,10 +166,17 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    wordt maar één keer opgezocht. Specificaties van een laptopmodel zijn
    openbare feiten, dus die lijst is gedeeld met alle winkels; er staat niets in
    wat naar een winkel of een klant te herleiden is.
-4. **Controle.** QR scannen opent de juiste lijst. De uitkomst bepaalt de
-   route: goedgekeurd, te repareren, of slopen voor onderdelen.
-5. **Reparatie en onderdelen.** Wat zit erin, wat is stuk, wat ligt er op de
-   plank. Onderdelen toewijzen of op de bestellijst zetten.
+4. **De apparaatpagina.** Elk apparaat heeft een eigen pagina: de feiten op een
+   rij, wat erin zit, wat de controle opleverde, wat er mis is, wat eruit is
+   gehaald, en het label als voorbeeld. Klikken op een regel brengt je er
+   altijd heen, en de QR op het label ook.
+5. **Printwachtrij.** Je loopt met een stapel langs de tafel, zet er labels bij
+   in de wachtrij, en drukt aan het eind alles in één keer af. De wachtrij
+   staat in de browser van die werkplek.
+6. **Reparatie en onderdelen.** Wat zit erin, wat is stuk, wat ligt er op de
+   plank. Onderdelen toewijzen of op de bestellijst zetten. De onderdelenlijst
+   kun je per soort bekijken (heb ik nog een scherm?) of per stuk (waar kwam
+   dit vandaan?). Apparaten die zijn leeggehaald blijven staan onder **Donoren**.
 6. **Parts inkoop.** Bestellijst samenvoegen tot inkooporders per leverancier,
    met factuur en status.
 7. **Verkoopklaar.** AI schrijft titel en omschrijving, foto's erbij, en dan de

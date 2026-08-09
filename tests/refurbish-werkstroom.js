@@ -76,7 +76,9 @@ setTimeout(async()=>{
   ok('grade in de regel', /grade A/.test(d.getElementById('wbLijst').innerHTML));
   ok('controlelijst', /Latitude 5430/.test(d.getElementById('ctrLijst').innerHTML));
   ok('reparatielijst', /EliteBook/.test(d.getElementById('repLijst').innerHTML));
-  ok('onderdelen', /Toetsenbord EliteBook/.test(d.getElementById('deelLijst').innerHTML));
+  ok('onderdelen per soort geteld', /Toetsenbord/.test(d.getElementById('deelLijst').innerHTML));
+  w.eval("deelWeergaveNu='stuk'; tekenOnderdelen();");
+  ok('onderdelen per stuk', /Toetsenbord EliteBook/.test(d.getElementById('deelLijst').innerHTML));
   ok('bestellijst', /Scherm 14 inch/.test(d.getElementById('bestelLijst').innerHTML));
   ok('lopende order', /Testleverancier/.test(d.getElementById('orderLijst').innerHTML));
   ok('checklists', /dockingpoort/.test(d.getElementById('clLijst').innerHTML));

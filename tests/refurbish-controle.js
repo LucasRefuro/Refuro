@@ -58,7 +58,7 @@ setTimeout(async()=>{
 
   // ── hele regel klikbaar ──
   const regel=d.querySelector('#wbLijst tr.klikbaar');
-  ok('hele regel is klikbaar', !!regel && /appOpen/.test(regel.getAttribute('onclick')));
+  ok('hele regel is klikbaar', !!regel && /appPagina/.test(regel.getAttribute('onclick')));
 
   // ── pad 1: gaat niet aan, geen lampje, reset, blijft dood ──
   w.eval("appOpen('a1')");

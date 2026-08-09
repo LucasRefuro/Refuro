@@ -154,6 +154,48 @@ tr.klikbaar{cursor:pointer;}
 .acts{display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;}
 .acts .btn{flex:1; min-width:150px;}
 
+/* ---------- de apparaatpagina ---------- */
+.kruimel{font-size:12.5px; color:var(--muted-l); margin-bottom:4px;}
+.kruimel a{cursor:pointer; text-decoration:none;}
+.kruimel a:hover{color:var(--groen);}
+.gradepil{display:inline-block; font-family:'Sora',sans-serif; font-size:12.5px; font-weight:800;
+  padding:4px 12px; border-radius:var(--pil); background:var(--groen); color:#fff;}
+
+/* De feiten op een rij, zoals op de balk boven een apparaat. */
+.feiten{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  background:var(--card); border-radius:var(--radius); box-shadow:var(--schaduw);
+  overflow:hidden; margin-bottom:20px;}
+.feit{padding:16px 20px; border-right:1px solid var(--border);}
+.feit:last-child{border-right:none;}
+.fl{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted-l); margin-bottom:5px;}
+.fw{font-size:15px; font-weight:700;}
+.fw.mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:13.5px; font-weight:600;}
+
+.tweekolom{display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:18px; align-items:start;}
+.ant{font-size:12.5px; font-weight:700; padding:3px 10px; border-radius:var(--pil);}
+.ant.goed{background:var(--green-soft); color:var(--green-tekst);}
+.ant.fout{background:var(--red-soft); color:var(--red-tekst);}
+.ant.mist{background:var(--amber-soft); color:var(--amber-tekst);}
+.delenrij{display:flex; flex-wrap:wrap; gap:6px;}
+.deelpil{font-size:12.5px; font-weight:600; padding:4px 11px; border-radius:var(--pil);
+  background:var(--soft-2); color:var(--muted);}
+.labelvoorbeeld{display:flex; justify-content:center;}
+.num.rood{color:var(--red-tekst); font-weight:700;}
+
+/* De printwachtrij, rechtsonder in beeld. */
+.wachtrij{position:fixed; right:20px; bottom:20px; z-index:80;
+  display:flex; align-items:center; gap:12px; background:var(--tekst); color:#fff;
+  padding:10px 14px; border-radius:var(--pil); box-shadow:var(--schaduw-l); font-size:13.5px;}
+.wachtrij .btn{padding:6px 14px; font-size:12.5px;}
+.wachtrij .btn.ghost{background:transparent; border-color:rgba(255,255,255,.3); color:#fff;}
+.wachtrij .btn.ghost:hover{background:rgba(255,255,255,.12);}
+
+@media(max-width:900px){
+  .tweekolom{grid-template-columns:1fr;}
+  .feit{border-right:none; border-bottom:1px solid var(--border);}
+}
+
 /* ---------- de controle in stappen ---------- */
 .stapbalk{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 18px;}
 .stapbol{font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
@@ -261,6 +303,7 @@ tr.klikbaar{cursor:pointer;}
 @media print{
   /* Alles weg behalve de labels zelf. Zonder dit print je de halve app mee. */
   body *{visibility:hidden;}
+  .wachtrij{display:none !important;}
   #labelVel, #labelVel *{visibility:visible;}
   #labelVel{position:absolute; left:0; top:0; width:100%;}
   .overlay{position:static; background:none; padding:0; display:block;}
@@ -300,6 +343,8 @@ tr.klikbaar{cursor:pointer;}
     <button data-tab="toevoegen"><svg class="i"><use href="#i-plus"/></svg> Toevoegen</button>
     <button data-tab="controle"><svg class="i"><use href="#i-check"/></svg> Te controleren<span class="badge" id="bControle" hidden>0</span></button>
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
+    <button data-tab="klaar"><svg class="i"><use href="#i-check"/></svg> Klaar voor verkoop<span class="badge" id="bKlaar" hidden>0</span></button>
+    <button data-tab="donoren"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
     <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen</button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
     <button data-tab="checklists"><svg class="i"><use href="#i-tag"/></svg> Checklists</button>
@@ -386,11 +431,45 @@ tr.klikbaar{cursor:pointer;}
       </div>
     </section>
 
+    <!-- ── apparaatpagina ──
+         Een echte pagina in plaats van een venster. Je staat hier soms minuten
+         naar te kijken, en dan wil je kunnen scrollen, terugbladeren en de
+         link kunnen delen. -->
+    <section id="tab-apparaat" hidden>
+      <div id="appPagina"></div>
+    </section>
+
+    <!-- ── klaar voor verkoop ── -->
+    <section id="tab-klaar" hidden>
+      <div class="pagehead">
+        <h1>Klaar voor verkoop</h1>
+        <div class="periodesel" id="klaarFilter">
+          <button data-f="alles" class="active">Alles</button>
+          <button data-f="hier">Nog hier</button>
+          <button data-f="winkel">In de winkel</button>
+        </div>
+      </div>
+      <div class="card"><div id="klaarLijst"></div></div>
+    </section>
+
+    <!-- ── donoren ── -->
+    <section id="tab-donoren" hidden>
+      <div class="pagehead"><h1>Donoren</h1></div>
+      <div class="card">
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Apparaten die niet meer aangaan en zijn leeggehaald. Ze blijven hier staan zodat je kunt terugzien waar een onderdeel vandaan kwam.</p>
+        <div id="donorLijst"></div>
+      </div>
+    </section>
+
     <!-- ── onderdelen ── -->
     <section id="tab-onderdelen" hidden>
       <div class="pagehead">
         <h1>Onderdelen</h1>
         <button class="btn actie" onclick="deelNieuw()"><svg class="i"><use href="#i-plus"/></svg>Onderdeel toevoegen</button>
+      </div>
+      <div class="periodesel" id="deelWeergave" style="margin-bottom:18px">
+        <button data-w="soort" class="active">Per soort</button>
+        <button data-w="stuk">Per stuk</button>
       </div>
       <div class="card">
         <h2><svg class="i"><use href="#i-cpu"/></svg>Op de plank</h2>
@@ -557,7 +636,8 @@ function past(a){
 
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
-  tekenOnderdelen(); tekenBestellen(); tekenChecklists(); tekenBadges();
+  tekenKlaar(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
+  tekenChecklists(); tekenApparaat(); tekenBadges(); tekenWachtrij();
 }
 function tekenBadges(){
   const zet=(id,n)=>{ const e=document.getElementById(id); if(!e) return;
@@ -565,6 +645,7 @@ function tekenBadges(){
   zet('bControle', apparaten.filter(a=>a.status==='te_controleren').length);
   zet('bRep',      apparaten.filter(a=>a.status==='te_repareren').length);
   zet('bBestel',   onderdelen.filter(o=>o.status==='te_bestellen').length);
+  zet('bKlaar',    apparaten.filter(a=>a.status==='klaar').length);
 }
 
 /* ═══════════════ werkbank ═══════════════ */
@@ -591,7 +672,7 @@ function tabel(rijen){
     <tbody>${rijen.map(a=>{
       /* De hele regel is de knop. Je zoekt niet eerst een klein knopje op
          als je met handschoenen aan achter een tafel vol laptops staat. */
-      return `<tr class="klikbaar" onclick="appOpen('${a.id}')">
+      return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
         <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
             <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}</div></td>
         <td class="mono">${esc(a.code||'—')}</td>
@@ -599,6 +680,7 @@ function tabel(rijen){
         <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
         <td class="muted klein">${datum(a.aangemaakt_op)}</td>
         <td class="num hwact">
+          <button class="btn ghost small" onclick="event.stopPropagation(); wachtrijBij('${a.id}')">Wachtrij</button>
           <button class="btn ghost small" onclick="event.stopPropagation(); labelsTonen('${a.id}')">Label</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
@@ -813,6 +895,162 @@ function tekenControle(){
   document.getElementById('ctrLijst').innerHTML=rijen.length
     ? tabel(rijen)
     : leeg('i-check','Niets te controleren','Alles is nagekeken. Voeg een batch toe om verder te gaan.');
+}
+
+/* ═══════════════ de apparaatpagina ═══════════════
+   Alles over één apparaat op één plek: waar het staat, wat de controle heeft
+   opgeleverd, en wat je er nu mee kunt. Vanuit de lijst klik je erheen, en de
+   QR op het label komt hier ook uit.                                        */
+
+let opendApparaat=null;
+
+function appPagina(id){
+  const a=apparaten.find(x=>x.id===id);
+  if(!a){ toast('Dit apparaat bestaat niet meer','let-op'); return showTab('werkbank'); }
+  opendApparaat=id;
+  showTab('apparaat');
+}
+
+function tekenApparaat(){
+  const el=document.getElementById('appPagina');
+  if(!el) return;
+  const a=apparaten.find(x=>x.id===opendApparaat);
+  if(!a){ el.innerHTML=leeg('i-laptop','Geen apparaat gekozen','Klik in een lijst op een regel.'); return; }
+
+  const specs=a.specs||{};
+  const specrijen=Object.entries(specs).filter(([,w])=>String(w||'').trim());
+  const hw=hardwareVan(a);
+
+  el.innerHTML=`
+    <div class="pagehead">
+      <div>
+        <div class="kruimel">
+          <a onclick="showTab('werkbank')">Werkbank</a> ›
+          <span>${esc([a.merk,a.model].filter(Boolean).join(' '))}</span>
+        </div>
+        <h1>${esc([a.merk,a.model].filter(Boolean).join(' '))}</h1>
+      </div>
+      <div class="row">
+        <span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span>
+        ${a.grade?`<span class="gradepil">Grade ${esc(a.grade)}</span>`:''}
+      </div>
+    </div>
+
+    <div class="feiten">
+      ${feit('Nummer', a.code||'—', true)}
+      ${feit('Serienummer', a.serienummer||'—', true)}
+      ${feit('Grade', a.grade||'—')}
+      ${feit('Leverancier', a.leverancier||'—')}
+      ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}))}
+      ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
+    </div>
+
+    <div class="row" style="margin:0 0 22px">
+      ${a.status==='te_controleren'
+        ? `<button class="btn actie" onclick="appOpen('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Controle starten</button>`:''}
+      ${a.status==='te_repareren'
+        ? `<button class="btn actie" onclick="repOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie openen</button>`:''}
+      ${a.status==='klaar'
+        ? `<button class="btn actie" onclick="klaarOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-arrow"/></svg>Naar de winkelvoorraad</button>`:''}
+      <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label</button>
+      <button class="btn ghost" onclick="wachtrijBij('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>In de wachtrij</button>
+      <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+    </div>
+
+    <div class="tweekolom">
+      <div>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
+          ${specrijen.length
+            ? `<table><tbody>${specrijen.map(([k,w])=>
+                `<tr><td class="muted" style="width:40%">${esc(k)}</td><td><b>${esc(w)}</b></td></tr>`).join('')}</tbody></table>`
+            : '<p class="muted klein">Nog niets bekend. De specificaties worden ingevuld bij de controle.</p>'}
+        </div>
+
+        ${(a.checklist||[]).length ? `<div class="card">
+          <h2><svg class="i"><use href="#i-check"/></svg>Wat de controle opleverde</h2>
+          <table><tbody>${(a.checklist||[]).map(r=>`
+            <tr><td class="muted">${esc(r.v)}</td>
+                <td class="num"><span class="ant ${kleurVan(r.a)}">${esc(r.a)}</span></td></tr>`).join('')}
+          </tbody></table>
+          ${a.punten!=null?`<p class="muted klein" style="margin-top:12px">${a.punten} strafpunt${a.punten===1?'':'en'} bij de visuele inspectie.</p>`:''}
+        </div>` : ''}
+
+        ${(a.defecten||[]).length ? `<div class="card">
+          <h2><svg class="i"><use href="#i-wrench"/></svg>Wat er mis is</h2>
+          ${(a.defecten||[]).map(d=>`<div class="clrij"><div class="clvraag">${esc(d)}</div></div>`).join('')}
+        </div>` : ''}
+
+        ${(a.goede_delen||[]).length ? `<div class="card">
+          <h2><svg class="i"><use href="#i-recycle"/></svg>Eruit gehaald</h2>
+          <div class="delenrij">${(a.goede_delen||[]).map(d=>`<span class="deelpil">${esc(d)}</span>`).join('')}</div>
+        </div>` : ''}
+      </div>
+
+      <div>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-tag"/></svg>Label</h2>
+          <div class="labelvoorbeeld">${labelHtml(a)}</div>
+        </div>
+
+        ${hw ? `<div class="card">
+          <h2><svg class="i"><use href="#i-arrow"/></svg>In de winkel</h2>
+          <p class="muted klein">Dit apparaat staat in je winkelvoorraad${hw.verkoop?' voor '+euro(hw.verkoop):''}.</p>
+          <a class="btn ghost" style="margin-top:12px" href="/app/?tab=hardware" target="_blank" rel="noopener">Openen in Storvo</a>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+function feit(naam, waarde, mono){
+  return `<div class="feit"><div class="fl">${esc(naam)}</div>
+    <div class="fw${mono?' mono':''}">${esc(waarde)}</div></div>`;
+}
+function hardwareVan(a){ return a.hardware_id ? {id:a.hardware_id, verkoop:null} : null; }
+
+async function appWeg(id){
+  if(!confirm('Dit apparaat helemaal verwijderen?')) return;
+  await sb.from('refurbish_apparaten').delete().eq('id',id);
+  await allesLaden(); showTab('werkbank'); toast('Verwijderd', true);
+}
+
+/* ═══════════════ printwachtrij ═══════════════
+   Je loopt met een stapel langs de tafel en drukt daarna alles in één keer af.
+   De wachtrij staat in deze browser, want het is een eigenschap van de
+   werkplek en niet van de winkel.                                           */
+
+const WACHTRIJ_SLEUTEL='storvo_labelwachtrij';
+function wachtrij(){
+  try{ return JSON.parse(localStorage.getItem(WACHTRIJ_SLEUTEL))||[]; }catch(e){ return []; }
+}
+function wachtrijZet(lijst){
+  try{ localStorage.setItem(WACHTRIJ_SLEUTEL, JSON.stringify(lijst)); }catch(e){}
+  tekenWachtrij();
+}
+function wachtrijBij(id){
+  const l=wachtrij();
+  if(l.includes(id)){ toast('Staat al in de wachtrij','let-op'); return; }
+  l.push(id); wachtrijZet(l);
+  toast('In de wachtrij gezet', true);
+}
+function wachtrijLeeg(){ wachtrijZet([]); toast('Wachtrij geleegd', true); }
+function wachtrijPrinten(){
+  const l=wachtrij().filter(id=>apparaten.some(a=>a.id===id));
+  if(!l.length){ toast('De wachtrij is leeg','let-op'); return; }
+  labelsTonen(l);
+}
+function tekenWachtrij(){
+  let el=document.getElementById('wachtrijBalk');
+  const l=wachtrij().filter(id=>apparaten.some(a=>a.id===id));
+  if(!l.length){ if(el) el.remove(); return; }
+  if(!el){
+    el=document.createElement('div'); el.id='wachtrijBalk'; el.className='wachtrij';
+    document.body.appendChild(el);
+  }
+  el.innerHTML=`<svg class="i s"><use href="#i-print"/></svg>
+    <span>${l.length} label${l.length===1?'':'s'} klaar</span>
+    <button class="btn small" onclick="wachtrijPrinten()">Printen</button>
+    <button class="btn ghost small" onclick="wachtrijLeeg()">Leegmaken</button>`;
 }
 
 /* ═══════════════ de controle als stappenpad ═══════════════
@@ -1430,28 +1668,113 @@ async function overdragen(knop, a){
   });
 }
 
-/* ═══════════════ onderdelen ═══════════════ */
+/* ═══════════════ klaar voor verkoop ═══════════════ */
 
+let klaarFilterNu='alles';
+function tekenKlaar(){
+  const el=document.getElementById('klaarLijst'); if(!el) return;
+  let rijen=apparaten.filter(a=>a.status==='klaar' || (a.status==='overgedragen' && a.hardware_id));
+  if(klaarFilterNu==='hier')   rijen=rijen.filter(a=>a.status==='klaar');
+  if(klaarFilterNu==='winkel') rijen=rijen.filter(a=>a.status==='overgedragen');
+  rijen=rijen.filter(past);
+  el.innerHTML=rijen.length
+    ? `<div class="tabelrol"><table>
+        <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Serienummer</th><th>Leverancier</th><th>Status</th></tr></thead>
+        <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
+          <td class="mono">${esc(a.code||'—')}</td>
+          <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+              <div class="muted klein">${esc(Object.values(a.specs||{}).slice(0,3).join(' · ')||a.categorie||'')}</div></td>
+          <td>${a.grade?`<span class="gradepil">${esc(a.grade)}</span>`:'—'}</td>
+          <td class="mono">${esc(a.serienummer||'—')}</td>
+          <td class="muted klein">${esc(a.leverancier||'—')}</td>
+          <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
+        </tr>`).join('')}</tbody></table></div>`
+    : leeg('i-check','Niets klaar','Zodra een controle goed afloopt komt het apparaat hier te staan.');
+}
+document.querySelectorAll('#klaarFilter button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#klaarFilter button').forEach(x=>x.classList.toggle('active', x===b));
+  klaarFilterNu=b.dataset.f; tekenKlaar();
+}));
+
+/* ═══════════════ donoren ═══════════════ */
+
+function tekenDonoren(){
+  const el=document.getElementById('donorLijst'); if(!el) return;
+  const rijen=apparaten.filter(a=>a.status==='repurpose' ||
+    (a.status==='overgedragen' && !a.hardware_id)).filter(past);
+  el.innerHTML=rijen.length
+    ? `<div class="tabelrol"><table>
+        <thead><tr><th>Nummer</th><th>Apparaat</th><th>Eruit gehaald</th><th>Binnen</th></tr></thead>
+        <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
+          <td class="mono">${esc(a.code||'—')}</td>
+          <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b></td>
+          <td>${(a.goede_delen||[]).length
+            ? `<div class="delenrij">${(a.goede_delen||[]).map(d=>`<span class="deelpil">${esc(d)}</span>`).join('')}</div>`
+            : '<span class="muted klein">niets bruikbaars</span>'}</td>
+          <td class="muted klein">${datum(a.aangemaakt_op)}</td>
+        </tr>`).join('')}</tbody></table></div>`
+    : leeg('i-recycle','Nog geen donoren','Apparaten die niet meer aangaan komen hier terecht.');
+}
+
+/* ═══════════════ onderdelen ═══════════════
+   Twee manieren om ernaar te kijken. Per soort is wat je wilt weten als je een
+   reparatie plant: heb ik nog een scherm? Per stuk is wat je wilt weten als je
+   moet terugzoeken waar iets vandaan komt.                                  */
+
+let deelWeergaveNu='soort';
 function tekenOnderdelen(){
+  const el=document.getElementById('deelLijst'); if(!el) return;
   const q=zoekterm();
   const rijen=onderdelen.filter(o=>o.status!=='gebruikt')
     .filter(o=>!q || String(o.naam).toLowerCase().includes(q));
-  document.getElementById('deelLijst').innerHTML=rijen.length
-    ? `<div class="tabelrol"><table>
-        <thead><tr><th>Onderdeel</th><th>Soort</th><th>Status</th><th>Voor</th><th class="num">Prijs</th><th></th></tr></thead>
-        <tbody>${rijen.map(o=>{
-          const voor=apparaten.find(a=>a.id===o.voor_apparaat);
-          return `<tr>
-            <td><b>${esc(o.naam)}</b></td>
-            <td class="muted klein">${esc(o.soort||'—')}</td>
-            <td><span class="st ${o.status}">${esc(DEEL_STATUS[o.status]||o.status)}</span></td>
-            <td class="muted klein">${voor?esc([voor.merk,voor.model].filter(Boolean).join(' ')):'—'}</td>
-            <td class="num">${o.prijs?euro(o.prijs):'—'}</td>
-            <td class="num"><button class="btn ghost small" onclick="deelWeg('${o.id}')">Weg</button></td>
-          </tr>`;
-        }).join('')}</tbody></table></div>`
-    : leeg('i-cpu','Niets op de plank','Onderdelen komen hier terecht als je een apparaat sloopt of een bestelling ontvangt.');
+
+  if(!rijen.length){
+    el.innerHTML=leeg('i-cpu','Niets op de plank',
+      'Onderdelen komen hier terecht als je een apparaat leeghaalt of een bestelling ontvangt.');
+    return;
+  }
+
+  if(deelWeergaveNu==='soort'){
+    const per={};
+    rijen.forEach(o=>{
+      const k=o.soort||'Overig';
+      if(!per[k]) per[k]={soort:k, plank:0, bestellen:0, besteld:0, apparaten:new Set()};
+      if(o.status==='voorraad')      per[k].plank++;
+      if(o.status==='te_bestellen')  per[k].bestellen++;
+      if(o.status==='besteld')       per[k].besteld++;
+      if(o.van_apparaat) per[k].apparaten.add(o.van_apparaat);
+    });
+    const lijst=Object.values(per).sort((a,z)=>z.plank-a.plank);
+    el.innerHTML=`<div class="tabelrol"><table>
+      <thead><tr><th>Soort</th><th class="num">Op de plank</th><th class="num">Te bestellen</th><th class="num">Besteld</th><th class="num">Uit apparaten</th></tr></thead>
+      <tbody>${lijst.map(r=>`<tr>
+        <td><b>${esc(r.soort)}</b></td>
+        <td class="num${r.plank?'':' muted'}">${r.plank}</td>
+        <td class="num${r.bestellen?' rood':' muted'}">${r.bestellen}</td>
+        <td class="num${r.besteld?'':' muted'}">${r.besteld}</td>
+        <td class="num muted">${r.apparaten.size}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+    return;
+  }
+
+  el.innerHTML=`<div class="tabelrol"><table>
+    <thead><tr><th>Onderdeel</th><th>Soort</th><th>Status</th><th>Uit</th><th class="num">Prijs</th><th></th></tr></thead>
+    <tbody>${rijen.map(o=>{
+      const uit=apparaten.find(a=>a.id===o.van_apparaat);
+      return `<tr>
+        <td><b>${esc(o.naam)}</b></td>
+        <td class="muted klein">${esc(o.soort||'—')}</td>
+        <td><span class="st ${o.status}">${esc(DEEL_STATUS[o.status]||o.status)}</span></td>
+        <td class="muted klein">${uit?esc(uit.code||[uit.merk,uit.model].filter(Boolean).join(' ')):'—'}</td>
+        <td class="num">${o.prijs?euro(o.prijs):'—'}</td>
+        <td class="num"><button class="btn ghost small" onclick="deelWeg('${o.id}')">Weg</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
 }
+document.querySelectorAll('#deelWeergave button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#deelWeergave button').forEach(x=>x.classList.toggle('active', x===b));
+  deelWeergaveNu=b.dataset.w; tekenOnderdelen();
+}));
 
 function deelNieuw(){
   venster('Onderdeel toevoegen', `
@@ -1659,7 +1982,7 @@ function uitAdres(){
   const id=new URLSearchParams(location.search).get('apparaat');
   if(!id) return;
   const a=apparaten.find(x=>x.id===id);
-  if(a){ appOpen(id); }
+  if(a){ appPagina(id); }
   else{
     const o=onderdelen.find(x=>x.id===id);
     if(o) toast('Onderdeel: '+o.naam, true);

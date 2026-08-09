@@ -277,6 +277,10 @@
   .kan.mp{background:var(--amber-soft); color:var(--amber-tekst);}
   a.kan.shop:hover{filter:brightness(.96);}
   .hwpop textarea{width:100%; font-family:inherit; font-size:14px;}
+  .veldkop{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px;}
+  .veldkop label{margin:0;}
+  .veldkop .btn{padding:5px 12px; font-size:12px;}
+  .hwverkoop{margin-top:18px; padding-top:16px; border-top:1.5px solid var(--border);}
   .hwkanaal{background:var(--soft-2); border-radius:var(--radius-s); padding:14px 16px; margin-top:16px;}
   .hkkop{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
     color:var(--muted-l); margin-bottom:8px;}
@@ -5606,13 +5610,24 @@ function hwVenster(h){
       <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
     </div>
 
-    <label style="margin-top:14px">Titel voor online</label>
+    ${h?`<div class="hwverkoop">
+      <div class="hkkop">Tekst voor online</div>
+      <div class="row" style="gap:8px; margin-bottom:12px">
+        <button class="btn ghost small" onclick="hwSchrijf(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Laat AI dit schrijven</button>
+        <button class="btn ghost small" onclick="hwPrijsvoorstel(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Prijs voorstellen</button>
+        <span class="muted klein" id="hwPrijsBron"></span>
+      </div>
+    </div>`:''}
+
+    <div class="veldkop"><label>Titel voor online</label>
+      ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_titel\', this)">Kopiëren</button>':''}</div>
     <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="Dell Latitude 5430 · i5 · 16 GB · 512 GB SSD">
-    <label>Omschrijving</label>
-    <textarea id="hw_oms" rows="4" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
+
+    <div class="veldkop"><label>Omschrijving</label>
+      ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_oms\', this)">Kopiëren</button>':''}</div>
+    <textarea id="hw_oms" rows="5" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
     ${h?`<div class="row" style="gap:8px; margin-top:8px">
-      <button class="btn ghost small" onclick="hwSchrijf(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Laat AI dit schrijven</button>
-      <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-copy"/></svg>Kopieer voor Marktplaats</button>
+      <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-copy"/></svg>Alles kopiëren voor Marktplaats</button>
     </div>`:''}
 
     ${h?`<div class="hwkanaal">
@@ -5777,6 +5792,44 @@ async function hwSchrijf(knop){
     toast('Tekst geschreven, kijk hem even na', true);
   }catch(e){ toast(e.message,'fout'); }
   knop.disabled=false; knop.textContent=oud;
+}
+
+/* Per veld kopiëren. Op Marktplaats plak je de titel in het ene vak en de
+   omschrijving in het andere; alles in één keer plakken helpt daar niet. */
+function hwKopieerVeld(id, knop){
+  const e=document.getElementById(id); if(!e) return;
+  const oud=knop?knop.textContent:'';
+  try{
+    navigator.clipboard.writeText(e.value||'');
+    if(knop){ knop.textContent='Gekopieerd'; setTimeout(()=>knop.textContent=oud, 1200); }
+  }catch(err){ toast('Kopiëren lukte niet','fout'); }
+}
+
+/* Een prijsvoorstel op basis van wat jij zelf eerder voor dit model vroeg, en
+   anders een eenvoudige opslag op de inkoopprijs. Geen zwarte doos: er staat
+   altijd bij waar het vandaan komt. */
+function hwPrijsvoorstel(knop){
+  if(!hwOpen) return;
+  const zelfde=hwData.filter(x=>x.id!==hwOpen.id && x.verkoop!=null &&
+    String(x.model||'').toLowerCase()===String(hwOpen.model||'').toLowerCase());
+  const bron=document.getElementById('hwPrijsBron');
+  let voorstel=null, uitleg='';
+
+  if(zelfde.length){
+    const bedragen=zelfde.map(x=>Number(x.verkoop)||0).sort((a,z)=>a-z);
+    voorstel=bedragen[Math.floor(bedragen.length/2)];
+    uitleg='Wat je zelf vroeg voor '+zelfde.length+' keer hetzelfde model.';
+  }else{
+    const inkoop=Number(hwGetal('hw_inkoop'))||Number(hwOpen.inkoop)||0;
+    if(!inkoop){ toast('Vul eerst een inkoopprijs in','let-op'); return; }
+    /* Bij tweedehands hardware is ongeveer verdubbelen gebruikelijk: er gaat
+       nog werk, garantie en risico overheen. */
+    voorstel=Math.round(inkoop*2.2/5)*5-0.05;
+    uitleg='Ruwe schatting: ruim het dubbele van de inkoop. Kijk zelf even wat de markt doet.';
+  }
+  const veld=document.getElementById('hw_verkoop');
+  if(veld) veld.value=voorstel.toFixed(2);
+  if(bron) bron.textContent=uitleg;
 }
 
 function hwKopieer(){

@@ -80,6 +80,13 @@ setTimeout(()=>{
   ok('velden gevuld', d.getElementById('hw_model').value==='Latitude 5430');
   ok('inkoopprijs gevuld', d.getElementById('hw_inkoop').value==='75');
   ok('shopify-knop aanwezig', /Op Shopify zetten/.test(v.innerHTML));
+  ok('kopieerknop bij de titel', /hwKopieerVeld\('hw_titel'/.test(v.innerHTML));
+  ok('kopieerknop bij de omschrijving', /hwKopieerVeld\('hw_oms'/.test(v.innerHTML));
+  ok('knop prijs voorstellen', /Prijs voorstellen/.test(v.innerHTML));
+  // prijsvoorstel op basis van een eerder verkocht zelfde model
+  w.eval("hwPrijsvoorstel()");
+  ok('prijsvoorstel ingevuld', Number(d.getElementById('hw_verkoop').value)>0);
+  ok('bron van het voorstel genoemd', d.getElementById('hwPrijsBron').textContent.length>10);
   ok('verkoopknop aanwezig', /Verkopen aan de balie/.test(v.innerHTML));
   w.eval("hwSluit()");
   ok('venster sluit', !d.getElementById('hwOverlay'));
