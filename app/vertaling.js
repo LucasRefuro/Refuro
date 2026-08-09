@@ -136,6 +136,52 @@ const WOORDEN = {
 /* ---------- de balk onderin op de telefoon ---------- */
 'Bestellen':'Ordering',
 
+/* ---------- bijhangen met de scanner ---------- */
+'Uit het magazijn de winkel in':'From the storeroom onto the shop floor',
+'Deze liggen achter maar hangen niet in de winkel. Wat niet hangt wordt niet gekocht.':
+  'These are in the back but not out on the shop floor. What is not out does not get bought.',
+'Bijhangen en scannen':'Put out and scan', 'Hele lijst bekijken':'View the whole list',
+'Bijhangen uit het magazijn':'Putting out from the storeroom',
+'Alles hangt zoals het hoort':'Everything is out as it should be',
+'Scan het product':'Scan the product', 'Scan of typ de barcode':'Scan or type the barcode',
+'Met telefoon':'With your phone', 'Klaar':'Done', 'Opgehangen':'Put out',
+'Niets meer bij te hangen. Mooi.':'Nothing left to put out. Good.',
+'Daarna blijft de camera aan. Scan het ene product na het andere; hier verdwijnen ze vanzelf uit de lijst.':
+  'The camera then stays on. Scan one product after another; they drop off the list here by themselves.',
+'Deze hoef je niet te bestellen, ze liggen achter':'No need to order these, they are in the back',
+'Nu bijhangen':'Put out now', 'in het magazijn':'in the storeroom',
+'Scan wat je ophangt':'Scan what you put out',
+'Houd de barcode voor de camera. Hij blijft aan, dus je kunt gewoon doorgaan met het volgende product.':
+  'Hold the barcode up to the camera. It stays on, so you can just carry on with the next product.',
+'Nog niets gescand':'Nothing scanned yet', 'Alles hangt':'Everything is out',
+'Toch nog scannen':'Scan something anyway',
+
+/* ---------- winkel en overvoorraad ---------- */
+'Voorraad':'Stock', 'Winkel':'Shop floor', 'Achter':'Back',
+'Alles bijhangen':'Put everything out',
+'Bijhangen in de winkel':'Put out on the shop floor',
+'Deze producten liggen achter maar hangen niet, of niet genoeg, in de winkel. Wat een klant niet ziet hangen koopt hij niet. Hang bij en druk op de knop; Storvo verplaatst het dan van achter naar de winkel.':
+  'These products are in the back but are not out on the shop floor, or not enough of them. What a customer does not see, a customer does not buy. Put them out and press the button; Storvo then moves them from the back to the shop floor.',
+'Alles hangt zoals het hoort. Niets bij te hangen.':'Everything is out as it should be. Nothing to put out.',
+'rek is leeg':'shelf is empty', 'hangt':'out', 'achter':'in the back', 'zou moeten':'should be',
+'Nulmeting':'Stocktake',
+'Loop je winkel langs en tel wat er echt is. Scan de barcode, vul in hoeveel er hangen en hoeveel er achter liggen, en druk op Enter. De cursor springt vanzelf naar het volgende product. Wat je niet telt blijft ongemoeid.':
+  'Walk through your shop and count what is really there. Scan the barcode, fill in how many are out and how many are in the back, and press Enter. The cursor jumps to the next product by itself. Whatever you do not count is left alone.',
+'Scan of typ de barcode':'Scan or type the barcode', 'Zoeken':'Search',
+'Hangt in de winkel':'Out on the shop floor', 'Ligt achter':'In the back',
+'Zou moeten hangen':'Should be out', 'Opslaan en volgende':'Save and next', 'Overslaan':'Skip',
+'Zojuist geteld':'Just counted', 'Product aanmaken':'Create the product',
+'Winkel en overvoorraad':'Shop floor and overstock',
+'Van elk product horen er een paar in de winkel te hangen. Wat daarboven binnenkomt is overvoorraad en ligt achter. Zodra het rek onder dit aantal komt en er ligt nog wat achter, zet Storvo het op de bijvullijst. Zo blijft er niets in het magazijn liggen verstoffen.':
+  'A few of every product belong out on the shop floor. Anything above that is overstock and stays in the back. As soon as the shelf drops below this number and there is still stock in the back, Storvo puts it on the list. That way nothing sits gathering dust in the storeroom.',
+'Moet standaard hangen':'Should be out by default', 'Moet hangen':'Should be out',
+'(in de winkel)':'(on the shop floor)',
+'Dit geldt voor alle producten waarbij je niets aparts hebt ingevuld. Per product kun je er bij Producten van afwijken, bijvoorbeeld vier voor je best verkopende hoesje.':
+  'This applies to every product where you have not set something specific. You can deviate per product under Products, for instance four for your best selling case.',
+'Er hoeft niets bijgehangen te worden':'There is nothing to put out',
+'Wat er bijgehangen moet worden vanuit het magazijn, en de nulmeting.':
+  'What needs putting out from the storeroom, and the stocktake.',
+
 /* ---------- pagina's aan of uit ---------- */
 "Welke pagina's gebruik je?":'Which pages do you use?',
 'Zet uit wat je winkel niet doet. De pagina verdwijnt dan uit het menu voor iedereen, en er gaat niets verloren: zet je hem later weer aan, dan staat alles er nog. Dashboard en Instellingen blijven altijd staan, anders kom je hier nooit meer terug.':

@@ -479,6 +479,55 @@
   .npbron.twijfel{background:var(--amber-soft); color:var(--amber-tekst);}
   .npbronkop{font-weight:700; margin-bottom:6px;}
   .npbron ul{margin:0; padding-left:18px;}
+  /* bijhangen vanuit het magazijn */
+  .bijvulrij{display:grid; grid-template-columns:1fr auto auto auto auto; gap:16px; align-items:center;
+    padding:15px 18px; border-radius:var(--radius-s); background:var(--soft-2); margin-bottom:9px;}
+  .bijvulrij.leeg{background:var(--red-soft);}
+  .bvnaam{font-weight:600; font-size:14.5px; min-width:0;}
+  .bvleeg{margin-left:9px; background:var(--red); color:#fff; font-size:10.5px; font-weight:700;
+    padding:3px 9px; border-radius:var(--pil); vertical-align:2px;}
+  .bvcijfer{text-align:center; min-width:56px;}
+  .bvcijfer b{display:block; font-family:'Sora',sans-serif; font-size:19px; font-weight:700; line-height:1.1;}
+  .bvcijfer span{font-size:10.5px; color:var(--muted-l); text-transform:uppercase; letter-spacing:.06em;}
+  @media(max-width:760px){
+    .bijvulrij{grid-template-columns:repeat(3,1fr); gap:10px;}
+    .bvnaam{grid-column:1/-1;}
+    .bijvulrij .btn{grid-column:1/-1;}
+  }
+
+  /* bijhangen met de scanner */
+  .hangpop{max-height:88vh; overflow-y:auto;}
+  .hangkop{display:flex; align-items:flex-start; gap:14px; margin-bottom:18px;}
+  .hangkop > div:first-child{flex:1; min-width:0;}
+  .hanglijst{margin-top:16px; max-height:44vh; overflow-y:auto;}
+  .hangrij{display:flex; align-items:center; gap:14px; padding:12px 15px; border-radius:var(--radius-s);
+    background:var(--soft-2); margin-bottom:8px; transition:opacity .22s, transform .22s;}
+  .hangrij.leeg{background:var(--red-soft);}
+  .hangrij.weg{opacity:0; transform:translateX(26px);}
+  .hgnaam{flex:1; min-width:0; font-weight:600; font-size:14px;}
+  .hgaantal{font-family:'Sora',sans-serif; font-weight:700; font-size:17px; color:var(--oranje); flex:none;}
+  @media(max-width:560px){
+    .hangpop{width:100%; max-height:92vh;}
+    .hangkop{flex-direction:column; gap:10px;}
+    .hangrij{flex-wrap:wrap; gap:9px;}
+    .hgnaam{flex-basis:100%;}
+    .hangrij .btn{margin-left:auto;}
+    .hanglijst{max-height:38vh;}
+  }
+
+  /* nulmeting */
+  .nulkaart{background:var(--lblauw); border-radius:var(--radius-s); padding:18px 20px;}
+  .nulnaam{font-weight:700; font-size:16px; margin-bottom:14px;}
+  .nulvelden{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;}
+  .nulvelden input{font-size:17px; font-weight:600; text-align:center;}
+  .nullog{margin-top:18px; font-size:13px; color:var(--muted); line-height:1.9;}
+  .nullog > div{padding:5px 0; border-bottom:1px solid var(--soft-2);}
+  .nulkop{font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--muted-l); border:none; padding-bottom:6px;}
+  .nulplus{color:var(--green-tekst); font-weight:700;}
+  .nulmin{color:var(--red-tekst); font-weight:700;}
+  @media(max-width:560px){ .nulvelden{grid-template-columns:1fr;} }
+
   /* pagina's aan of uit */
   .pagrij{display:grid; grid-template-columns:auto minmax(120px,180px) 1fr; align-items:center; gap:14px;
     padding:14px 16px; border-radius:var(--radius-s); background:var(--soft-2); margin-bottom:8px;
@@ -1047,6 +1096,7 @@
     <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
+    <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
   </nav>
@@ -1109,6 +1159,14 @@
     </div>
     <div class="chart" id="chart"></div>
     <div class="legend"><span class="lo">Omzet</span><span class="lw">Winst</span><span class="lv" id="legVorig">Vorige week</span></div>
+  </div>
+  <div class="card breed" id="hangKaart" hidden>
+    <h2><svg class="i"><use href="#i-up"/></svg>Uit het magazijn de winkel in <span class="muted" id="hangKaartTel"></span></h2>
+    <p class="muted" style="margin-bottom:14px; max-width:78ch">Deze liggen achter maar hangen niet in de winkel. Wat niet hangt wordt niet gekocht.</p>
+    <div class="row">
+      <button class="btn actie" onclick="openBijhangen()"><svg class="i"><use href="#i-scan"/></svg>Bijhangen en scannen</button>
+      <button class="btn ghost" onclick="showTab('voorraad')">Hele lijst bekijken</button>
+    </div>
   </div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-wrench"/></svg>Lopende reparaties <span class="muted" id="repDashTelling"></span></h2>
@@ -1304,7 +1362,7 @@
     </div>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Barcode</th><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Voorraad</th><th class="num">Min.</th><th></th></tr></thead>
+      <thead><tr><th>Barcode</th><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Achter</th><th class="num">Min.</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
     </div>
@@ -1333,6 +1391,7 @@
       <div><label>Inkoopprijs (€)</label><input id="f_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoopprijs (€)</label><input id="f_verkoop" type="number" step="0.01" min="0"></div>
       <div><label>Beginvoorraad</label><input id="f_voorraad" type="number" step="1" min="0" value="0"></div>
+      <div><label>Moet hangen <span class="muted">(in de winkel)</span></label><input id="f_schap" type="number" step="1" min="0"></div>
       <div><label>Min. voorraad</label><input id="f_min" type="number" step="1" min="0" value="2"></div>
       <div><label>Bestelaantal</label><input id="f_bestel" type="number" step="1" min="1"></div>
     </div>
@@ -1344,6 +1403,31 @@
   </div>
 </section>
 
+<!-- VOORRAAD -->
+<section id="tab-voorraad"hidden>
+  <div class="pagehead">
+    <h1>Voorraad</h1>
+    <button class="btn actie" onclick="allesBijvullen()"><svg class="i"><use href="#i-up"/></svg>Alles bijhangen</button>
+  </div>
+
+  <div class="card">
+    <h2><svg class="i"><use href="#i-up"/></svg>Bijhangen in de winkel <span class="muted" id="bijvulTelling"></span></h2>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Deze producten liggen achter maar hangen niet, of niet genoeg, in de winkel. Wat een klant niet ziet hangen koopt hij niet. Hang bij en druk op de knop; Storvo verplaatst het dan van achter naar de winkel.</p>
+    <div id="bijvulLijst"></div>
+  </div>
+
+  <div class="card">
+    <h2><svg class="i"><use href="#i-scan"/></svg>Nulmeting</h2>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Loop je winkel langs en tel wat er echt is. Scan de barcode, vul in hoeveel er hangen en hoeveel er achter liggen, en druk op Enter. De cursor springt vanzelf naar het volgende product. Wat je niet telt blijft ongemoeid.</p>
+    <div class="row" style="margin-bottom:14px">
+      <div style="flex:2; min-width:200px"><label>Scan of typ de barcode</label><input id="nm_code" placeholder="Scan barcode…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); nulZoek();}"></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn ghost" onclick="nulZoek()">Zoeken</button></div>
+    </div>
+    <div id="nulVak"></div>
+    <div id="nulLog" class="nullog"></div>
+  </div>
+</section>
+
 <!-- BESTELLINGEN -->
 <section id="tab-bestellen"hidden>
   <div class="pagehead">
@@ -1351,6 +1435,7 @@
     <button class="btn ghost" onclick="kopieerBestellijst()"><svg class="i"><use href="#i-clipboard"/></svg>Hele lijst kopiëren</button>
   </div>
   <div class="card">
+    <div id="eerstHangen"></div>
     <h2>Te bestellen <span class="muted">(voorraad ≤ minimum)</span></h2>
     <div style="overflow-x:auto">
     <table>
@@ -1463,6 +1548,7 @@
       <button data-s="modellen">Modellen</button>
       <button data-s="cats">Categorieën</button>
       <button data-s="bedrijf">Bedrijf</button>
+      <button data-s="voorraad">Voorraad</button>
       <button data-s="paginas">Pagina's</button>
       <button data-s="huisstijl">Huisstijl</button>
       <button data-s="klantpagina">Klantpagina</button>
@@ -1538,6 +1624,15 @@
       <div><label>Bestel</label><input id="c_bestel" type="number" step="1" min="1" value="10"></div>
       <div><button class="btn" onclick="voegCatToe()">Toevoegen</button></div>
     </div>
+  </div>
+
+  <div class="card" id="inst-voorraad"hidden>
+    <h2><svg class="i"><use href="#i-package"/></svg>Winkel en overvoorraad</h2>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Van elk product horen er een paar in de winkel te hangen. Wat daarboven binnenkomt is overvoorraad en ligt achter. Zodra het rek onder dit aantal komt en er ligt nog wat achter, zet Storvo het op de bijvullijst. Zo blijft er niets in het magazijn liggen verstoffen.</p>
+    <div class="row">
+      <div style="max-width:220px"><label>Moet standaard hangen</label><input id="s_schap" type="number" min="0" step="1" onchange="slaSchapOp()"></div>
+    </div>
+    <p class="muted" style="margin-top:10px">Dit geldt voor alle producten waarbij je niets aparts hebt ingevuld. Per product kun je er bij Producten van afwijken, bijvoorbeeld vier voor je best verkopende hoesje.</p>
   </div>
 
   <div class="card" id="inst-paginas"hidden>
@@ -1786,6 +1881,15 @@ function load(){
   if(!s.teams) s.teams=[{id:1, naam:'Winkel'}];
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
   if(!Array.isArray(s.verborgen)) s.verborgen=[];
+  if(s.schapNorm==null) s.schapNorm=2;
+  /* Producten van voor deze module hebben nog geen winkelvoorraad. We
+     verdelen wat er is: het schap eerst vol, de rest ligt achter. */
+  (s.producten||[]).forEach(p=>{
+    if(p.winkel==null){
+      const norm=p.schap!=null?p.schap:(s.schapNorm!=null?s.schapNorm:2);
+      p.winkel=Math.min(p.voorraad||0, norm);
+    }
+  });
   if(s.vergrendeld===undefined) s.vergrendeld=false;
   if(s.onboardingKlaar===undefined) s.onboardingKlaar=false;
   return s;
@@ -1834,6 +1938,7 @@ function showTab(t){
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
   if(t==='producten') renderProducten();
+  if(t==='voorraad') renderVoorraad();
   if(t==='bestellen') renderBestellen();
   if(t==='instellingen') renderInstellingen();
   if(t==='nieuw'){
@@ -1996,7 +2101,28 @@ function pctHtml(nu,vorig){
   const p=(nu-vorig)/vorig*100;
   return `<span class="pct ${p>=0?'up':'down'}" title="t.o.v. vorige week">${p>=0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`;
 }
+/* Bij het openen van het dashboard vragen we één keer per dag aandacht voor
+   wat er nog opgehangen moet worden. Vaker is zeuren; nooit is te makkelijk
+   te vergeten, en dan blijft de doos achter staan.                          */
+function hangHerinnering(){
+  const kaart=document.getElementById('hangKaart');
+  const lijst=bijvulLijst();
+  if(kaart){
+    kaart.hidden = lijst.length===0;
+    const t=document.getElementById('hangKaartTel');
+    if(t) t.textContent = lijst.length ? '('+lijst.length+' product'+(lijst.length===1?'':'en')+')' : '';
+  }
+  if(!lijst.length) return;
+  const vandaag=new Date().toISOString().slice(0,10);
+  let gezien=null;
+  try{ gezien=localStorage.getItem('storvo_hang_gezien'); }catch(e){}
+  if(gezien===vandaag) return;
+  try{ localStorage.setItem('storvo_hang_gezien', vandaag); }catch(e){}
+  setTimeout(()=>{ if(bijvulLijst().length) openBijhangen(); }, 500);
+}
+
 function renderDashboard(){
+  hangHerinnering();
   const b=bereik(), vb=vorigBereik(b);
   const s=stats(b), vs=vb?stats(vb):null;
   const marge=s.omzet>0?(s.winst/s.omzet*100):0;
@@ -2231,6 +2357,63 @@ function verwerkScan(code){
   piep(mode==='in'?880:440);
   toast((mode==='in'?' +1 ':'Verkocht: ')+p.naam+' voorraad '+p.voorraad, true);
 }
+/* ═══════════════ WINKEL EN OVERVOORRAAD ═══════════════
+   Van elk product horen er een paar in de winkel te hangen. Wat daarboven
+   binnenkomt is overvoorraad en ligt achter. Het gevaar daarvan is dat het
+   blijft liggen: het rek is leeg, de klant loopt weg, en er staan er nog vijf
+   in een doos in het magazijn. Daar is deze module voor.
+
+   We houden twee getallen bij:
+     · voorraad  het totaal, alles bij elkaar. Alles wat er al was blijft
+                 hierop rekenen: bestellijst, omzet, winst, rapportage.
+     · winkel    hoeveel er daadwerkelijk in de winkel hangen.
+   Wat achter ligt is gewoon het verschil. Eén getal minder om uit de pas te
+   laten lopen.
+
+   Een levering komt binnen op het totaal en blijft achter staan. Storvo zet
+   hem meteen op de bijvullijst; zodra jij hem ophangt druk je op Bijgevuld.  */
+
+function schapNorm(p){
+  if(p && p.schap!=null) return Math.max(0, p.schap);
+  return state.schapNorm!=null ? Math.max(0, state.schapNorm) : 2;
+}
+function inWinkel(p){ return Math.max(0, Math.min(p.winkel||0, p.voorraad||0)); }
+function achterLiggen(p){ return Math.max(0, (p.voorraad||0) - inWinkel(p)); }
+function schapTekort(p){ return Math.max(0, schapNorm(p) - inWinkel(p)); }
+/* Wat je nu daadwerkelijk kunt ophangen: nooit meer dan er achter ligt. */
+function bijTeVullen(p){ return Math.min(schapTekort(p), achterLiggen(p)); }
+function bijvulLijst(){
+  return state.producten.filter(p=>bijTeVullen(p)>0)
+    .sort((a,b)=>(inWinkel(a)-inWinkel(b)) || a.naam.localeCompare(b.naam));
+}
+/* Verkocht of uitgescand: eerst uit de winkel, en pas als het rek leeg is uit
+   het magazijn. Dat laatste melden we, want dan moet er bijgehangen worden. */
+function haalUitVoorraad(p, n){
+  const uitWinkel=Math.min(inWinkel(p), n);
+  p.winkel=inWinkel(p)-uitWinkel;
+  p.voorraad=Math.max(0, (p.voorraad||0)-n);
+  if(p.winkel>p.voorraad) p.winkel=p.voorraad;
+  return n-uitWinkel;                 /* zoveel kwam er uit het magazijn */
+}
+function bijvullen(id, stil){
+  const p=state.producten.find(p=>p.id===id);
+  if(!p) return 0;
+  const n=bijTeVullen(p);
+  if(n<=0) return 0;
+  p.winkel=inWinkel(p)+n;
+  if(!stil){ save(); renderVoorraad(); updateBadge(); herteken();
+             toast(n+'× '+p.naam+' opgehangen', true); }
+  return n;
+}
+function allesBijvullen(){
+  const lijst=bijvulLijst();
+  if(!lijst.length){ toast('Er hoeft niets bijgehangen te worden','let-op'); return; }
+  let n=0, p=0;
+  lijst.forEach(x=>{ const k=bijvullen(x.id, true); if(k){ n+=k; p++; } });
+  save(); renderVoorraad(); updateBadge(); herteken();
+  toast(n+' stuks opgehangen, verdeeld over '+p+' product'+(p===1?'':'en'), true);
+}
+
 function boekIn(p,n){
   const id=uid();
   p.voorraad+=n;
@@ -2242,7 +2425,8 @@ function boekIn(p,n){
 }
 function boekVerkoop(p,n,bet){
   const id=uid();
-  p.voorraad-=n;
+  const uitMagazijn=haalUitVoorraad(p,n);
+  if(uitMagazijn>0) toast(uitMagazijn+'× '+p.naam+' kwam uit het magazijn. Hang bij.','let-op');
   state.verkopen.unshift({id, t:Date.now(), naam:p.naam, verkoop:p.verkoop*n, inkoop:p.inkoop*n, aantal:n, betaal:bet, cat:p.cat, door:gebruiker?gebruiker.naam:null});
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   state.log.unshift({id, t:Date.now(), naam:p.naam, m:'uit', v:p.voorraad, aantal:n, pid:p.id});
@@ -2310,6 +2494,7 @@ function popupUit(id,bet){
 function herteken(){
   if(!document.getElementById('tab-dashboard').hidden) renderDashboard();
   if(!document.getElementById('tab-producten').hidden) renderProducten();
+  if(!document.getElementById('tab-voorraad').hidden) renderVoorraad();
   if(!document.getElementById('tab-bestellen').hidden) renderBestellen();
   if(!document.getElementById('tab-reparaties').hidden) renderReparaties();
   if(typeof mobielBijwerken==='function') mobielBijwerken();
@@ -2339,9 +2524,9 @@ function ongedaanMaken(logId){
   const n=l.aantal||1;
   if(l.m==='in'){
     if(p.voorraad<n && !confirm('Voorraad is lager dan het terug te boeken aantal. Toch terugboeken (voorraad wordt '+(p.voorraad-n)+')?')) return;
-    p.voorraad-=n;
+    haalUitVoorraad(p,n);
   }else{
-    if(p) p.voorraad+=n;
+    if(p) p.voorraad+=n;   /* terug van een verkoop komt weer achter te liggen */
     state.verkopen=state.verkopen.filter(v=>v.id!==logId);
   }
   l.ongedaan=true;
@@ -2384,7 +2569,7 @@ function wijzigAantal(logId,val){
     p.voorraad+=delta;
   }else{
     if(delta>0 && p.voorraad<delta){ toast('Maar '+p.voorraad+' op voorraad.', 'let-op'); renderScanLog(); return; }
-    p.voorraad-=delta;
+    if(delta>0) haalUitVoorraad(p,delta); else p.voorraad-=delta;
     const v=state.verkopen.find(v=>v.id===logId);
     if(v){ const eV=v.verkoop/oud, eI=v.inkoop/oud; v.verkoop=eV*nieuw; v.inkoop=eI*nieuw; v.aantal=nieuw; }
   }
@@ -2463,10 +2648,11 @@ function renderProducten(){
     .map(p=>`<tr><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
       `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
-      `<td class="num${p.voorraad<=p.min?'low':''}">${p.voorraad}</td><td class="num">${p.min}</td>`+
+      `<td class="num${inWinkel(p)<schapNorm(p)?' low':''}">${inWinkel(p)}</td>`+
+      `<td class="num">${achterLiggen(p)}</td><td class="num">${p.min}</td>`+
       `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="8" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="9" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
   const sel=document.getElementById('filterCat');
   const cur=sel.value;
   sel.innerHTML='<option value="">Alle categorieën</option>'+state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
@@ -2486,6 +2672,7 @@ function bewerk(id){
   document.getElementById('f_inkoop').value=p.inkoop;
   document.getElementById('f_verkoop').value=p.verkoop;
   document.getElementById('f_voorraad').value=p.voorraad;
+  document.getElementById('f_schap').value=schapNorm(p);
   document.getElementById('f_min').value=p.min;
   document.getElementById('f_bestel').value=p.bestel;
 }
@@ -2533,6 +2720,7 @@ function resetForm(){
   document.getElementById('f_naam').value='';
   document.getElementById('f_sku').value='';
   document.getElementById('f_voorraad').value=0;
+  document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:2;
   vulStandaard();
 }
 /* ═══════════════ NIEUW PRODUCT MET DE TELEFOON ═══════════════
@@ -2931,6 +3119,7 @@ function opslaanProduct(){
     inkoop:Number(document.getElementById('f_inkoop').value)||0,
     verkoop:Number(document.getElementById('f_verkoop').value)||0,
     voorraad:Number(document.getElementById('f_voorraad').value)||0,
+    schap:Math.max(0, Math.floor(Number(document.getElementById('f_schap').value)||0)),
     min:Number(document.getElementById('f_min').value)||0,
     bestel:Number(document.getElementById('f_bestel').value)||1
   };
@@ -2940,6 +3129,9 @@ function opslaanProduct(){
     toast('Wijzigingen opgeslagen: '+naam, true);
   }else{
     data.id=uid(); data.besteld=false; data.besteldOp=null;
+    /* Een nieuw product hangt nog niet in de winkel. Wat je als
+       beginvoorraad invult ligt dus achter, en komt op de bijvullijst. */
+    data.winkel=0;
     state.producten.push(data);
     save();
     const n=naam;
@@ -2951,8 +3143,269 @@ function opslaanProduct(){
   updateBadge();
 }
 
+/* ═══════════════ BIJHANGEN MET DE SCANNER ═══════════════
+   Je staat met een doos in je handen bij het rek. Dan wil je niet op je scherm
+   een naam zoeken: je scant het doosje dat je vasthebt en het is klaar.
+
+   Werkt op drie manieren, allemaal door hetzelfde luik:
+     · handscanner aan de pc, die typt de code en drukt Enter
+     · zelf intypen
+     · met je telefoon, gekoppeld via een QR-code, en dan blijft de camera aan
+       zodat je product na product kunt scannen zonder iets aan te raken.     */
+
+let hangKanaal=null, hangCode=null, hangTel=0;
+
+function hangLijst(){ return bijvulLijst(); }
+
+function openBijhangen(){
+  sluitBijhangen(true);
+  hangTel=0;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='hangOverlay';
+  ov.onclick=e=>{ if(e.target===ov) sluitBijhangen(); };
+  ov.innerHTML=`<div class="popup groot hangpop">
+    <div class="hangkop">
+      <div>
+        <h3>Bijhangen uit het magazijn</h3>
+        <div class="pv" id="hangPv"></div>
+      </div>
+      <button class="btn ghost small" onclick="sluitBijhangen()"><svg class="i s"><use href="#i-check"/></svg>Klaar</button>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div style="flex:2; min-width:180px"><label>Scan het product</label>
+        <input id="hangScan" placeholder="Scan of typ de barcode" autocomplete="off"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); hangScan(this.value); this.value='';}"></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn ghost" id="hangTelKnop" onclick="hangKoppel()"><svg class="i s"><use href="#i-scan"/></svg>Met telefoon</button></div>
+    </div>
+    <div id="hangQr"></div>
+    <div id="hangMelding"></div>
+    <div id="hangLijst" class="hanglijst"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  tekenHangLijst();
+  const v=document.getElementById('hangScan');
+  if(v) v.focus();
+}
+function sluitBijhangen(stil){
+  const o=document.getElementById('hangOverlay');
+  if(o) o.remove();
+  if(hangKanaal){ try{ sb.removeChannel(hangKanaal); }catch(e){} hangKanaal=null; hangCode=null; }
+  if(!stil && hangTel) toast(hangTel+' stuks opgehangen', true);
+}
+function tekenHangLijst(){
+  const el=document.getElementById('hangLijst');
+  if(!el) return;
+  const lijst=hangLijst();
+  const pv=document.getElementById('hangPv');
+  if(pv) pv.textContent = lijst.length
+    ? lijst.length+' product'+(lijst.length===1?'':'en')+' liggen achter en moeten de winkel in'
+    : 'Alles hangt zoals het hoort';
+  el.innerHTML = lijst.length ? lijst.map(p=>`
+    <div class="hangrij${inWinkel(p)===0?' leeg':''}" id="hang-${p.id}">
+      <div class="hgnaam">${esc(p.naam)}<div class="muted" style="font-size:12px">${esc(p.barcode)}</div></div>
+      <div class="hgaantal">+${bijTeVullen(p)}</div>
+      <button class="btn small ghost" onclick="hangKlaar(${p.id})">Opgehangen</button>
+    </div>`).join('')
+    : '<div class="npmelding goed">Niets meer bij te hangen. Mooi.</div>';
+}
+function hangKlaar(id){
+  const p=state.producten.find(p=>p.id===id);
+  if(!p) return;
+  const n=bijvullen(id, true);
+  if(!n) return;
+  hangTel+=n;
+  save(); updateBadge(); herteken(); renderVoorraad();
+  const rij=document.getElementById('hang-'+id);
+  if(rij){ rij.classList.add('weg'); setTimeout(tekenHangLijst, 240); } else tekenHangLijst();
+  hangMeld('goed', n+'× '+p.naam+' opgehangen');
+  piep(880);
+  return n;
+}
+function hangScan(code){
+  code=String(code||'').trim();
+  if(!code) return;
+  const p=state.producten.find(p=>String(p.barcode)===code);
+  if(!p){ hangMeld('mis','Onbekende barcode '+code); piep(300); return; }
+  if(bijTeVullen(p)<=0){
+    hangMeld('let', p.naam+' hoeft niet bijgehangen te worden'+
+      (achterLiggen(p)?'':', er ligt niets meer achter'));
+    piep(440);
+    return;
+  }
+  hangKlaar(p.id);
+}
+function hangMeld(soort, tekst){
+  const el=document.getElementById('hangMelding');
+  if(!el) return;
+  const kl=soort==='goed'?'goed':(soort==='mis'?'mis':'bezig');
+  el.innerHTML=`<div class="npmelding ${kl}">${esc(tekst)}</div>`;
+  clearTimeout(hangMeld.t);
+  hangMeld.t=setTimeout(()=>{ if(el) el.innerHTML=''; }, 3200);
+}
+
+/* De telefoon koppelen: dezelfde QR-truc als bij het aanmaken van producten,
+   maar dan met de camera die aan blijft staan.                              */
+function hangKoppel(){
+  if(!navigator.onLine){ toast('Koppelen kan alleen als je online bent','let-op'); return; }
+  if(hangKanaal){ try{ sb.removeChannel(hangKanaal); }catch(e){} hangKanaal=null; }
+  hangCode=npCode();
+  const link=location.origin+npMap()+'scan'+(/(^|\.)storvo\.(app|nl)$/i.test(location.hostname)?'':'.html')+
+    '?s='+hangCode+'&m=hang';
+  hangKanaal=sb.channel('scan-'+hangCode, {config:{broadcast:{self:false}}});
+  hangKanaal
+    .on('broadcast',{event:'hallo'}, ()=>{
+      hangKanaal.send({type:'broadcast', event:'welkom',
+        payload:{winkel:(state.bedrijf&&state.bedrijf.naam)||'Storvo', modus:'hang'}});
+      const q=document.getElementById('hangQr');
+      if(q) q.innerHTML='<div class="npmelding goed">Telefoon verbonden. Scan maar raak.</div>';
+    })
+    .on('broadcast',{event:'barcode'}, ({payload})=>{
+      const code=payload&&payload.code?String(payload.code).trim():'';
+      if(!code) return;
+      const p=state.producten.find(p=>String(p.barcode)===code);
+      let antwoord;
+      if(!p) antwoord={ok:false, tekst:'Onbekende barcode'};
+      else if(bijTeVullen(p)<=0) antwoord={ok:false, tekst:p.naam+' hoeft niet bijgehangen'};
+      else { const n=hangKlaar(p.id); antwoord={ok:true, tekst:n+'× '+p.naam+' opgehangen', over:hangLijst().length}; }
+      hangKanaal.send({type:'broadcast', event:'hangterug', payload:antwoord});
+      if(!antwoord.ok) hangMeld('mis', antwoord.tekst);
+    })
+    .subscribe();
+
+  const q=document.getElementById('hangQr');
+  q.innerHTML=`<div class="npkoppel" style="margin:14px 0">
+    <div class="npqr" id="hangQrVak"></div>
+    <div class="npuitleg">
+      <h3>Scan deze code met je telefoon</h3>
+      <p class="muted">Daarna blijft de camera aan. Scan het ene product na het andere; hier verdwijnen ze vanzelf uit de lijst.</p>
+      <div class="nplink">Lukt scannen niet? Typ over: <b>${esc(link)}</b></div>
+    </div></div>`;
+  npQr(document.getElementById('hangQrVak'), link);
+}
+
+function slaSchapOp(){
+  const v=Math.max(0, Math.floor(Number(document.getElementById('s_schap').value)||0));
+  state.schapNorm=v;
+  save(); renderVoorraad(); renderProducten(); updateBadge();
+  toast('Standaard aangepast: er horen er '+v+' te hangen', true);
+}
+
+/* ---------- de voorraadpagina ---------- */
+function renderVoorraad(){
+  const lijst=bijvulLijst();
+  const tel=document.getElementById('bijvulTelling');
+  if(tel) tel.textContent = lijst.length ? '('+lijst.length+' product'+(lijst.length===1?'':'en')+')' : '';
+  const el=document.getElementById('bijvulLijst');
+  if(!el) return;
+  el.innerHTML = lijst.length ? lijst.map(p=>{
+    const leeg=inWinkel(p)===0;
+    return `<div class="bijvulrij${leeg?' leeg':''}">
+      <div class="bvnaam">${esc(p.naam)}${leeg?'<span class="bvleeg">rek is leeg</span>':''}
+        <div class="muted" style="font-size:12.5px">${esc(catNaam(p.cat))}</div></div>
+      <div class="bvcijfer"><b>${inWinkel(p)}</b><span>hangt</span></div>
+      <div class="bvcijfer"><b>${achterLiggen(p)}</b><span>achter</span></div>
+      <div class="bvcijfer"><b>${schapNorm(p)}</b><span>zou moeten</span></div>
+      <button class="btn small actie" onclick="bijvullen(${p.id})">+${bijTeVullen(p)} bijgehangen</button>
+    </div>`;
+  }).join('')
+  : '<div class="npmelding goed">Alles hangt zoals het hoort. Niets bij te hangen.</div>';
+}
+
+/* ---------- nulmeting ----------
+   Tellen gaat het snelst met twee handen: scanner in de ene, toetsenbord in
+   de andere. Scannen zet de cursor meteen in het eerste vakje, Enter slaat op
+   en zet hem terug op de scanregel. Zo tel je een hele winkel zonder de muis
+   aan te raken.                                                             */
+let nulProduct=null, nulGeteld=[];
+function nulZoek(){
+  const veld=document.getElementById('nm_code');
+  const code=veld.value.trim();
+  if(!code) return;
+  const p=state.producten.find(p=>String(p.barcode)===code)
+       || state.producten.find(p=>zoekPast(p.naam, zoekGroepen(code)));
+  if(!p){
+    document.getElementById('nulVak').innerHTML=
+      `<div class="npmelding mis">Onbekende code <b>${esc(code)}</b>. `+
+      `<a href="#" onclick="nieuwMetBarcode('${esc(code)}'); return false;">Product aanmaken</a></div>`;
+    veld.select();
+    return;
+  }
+  nulProduct=p;
+  tekenNulVak();
+}
+function tekenNulVak(){
+  const p=nulProduct;
+  const vak=document.getElementById('nulVak');
+  if(!p){ vak.innerHTML=''; return; }
+  vak.innerHTML=`<div class="nulkaart">
+    <div class="nulnaam">${esc(p.naam)}<div class="muted" style="font-size:12.5px">${esc(p.barcode)} · ${esc(catNaam(p.cat))}</div></div>
+    <div class="nulvelden">
+      <div><label>Hangt in de winkel</label><input id="nm_winkel" type="number" min="0" step="1" value="${inWinkel(p)}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('nm_achter').select();}"></div>
+      <div><label>Ligt achter</label><input id="nm_achter" type="number" min="0" step="1" value="${achterLiggen(p)}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); nulOpslaan();}"></div>
+      <div><label>Zou moeten hangen</label><input id="nm_schap" type="number" min="0" step="1" value="${schapNorm(p)}"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn actie" onclick="nulOpslaan()"><svg class="i s"><use href="#i-check"/></svg>Opslaan en volgende</button>
+      <button class="btn ghost" onclick="nulStop()">Overslaan</button>
+    </div>
+  </div>`;
+  const w=document.getElementById('nm_winkel');
+  if(w){ w.focus(); w.select(); }
+}
+function nulStop(){
+  nulProduct=null;
+  document.getElementById('nulVak').innerHTML='';
+  const veld=document.getElementById('nm_code');
+  veld.value=''; veld.focus();
+}
+function nulOpslaan(){
+  const p=nulProduct;
+  if(!p) return;
+  const winkel=Math.max(0, Math.floor(Number(document.getElementById('nm_winkel').value)||0));
+  const achter=Math.max(0, Math.floor(Number(document.getElementById('nm_achter').value)||0));
+  const schap =Math.max(0, Math.floor(Number(document.getElementById('nm_schap').value)||0));
+  const oud=p.voorraad||0;
+  p.winkel=winkel;
+  p.voorraad=winkel+achter;
+  p.schap=schap;
+  if(p.voorraad>p.min){ p.besteld=false; p.besteldOp=null; }
+  const verschil=p.voorraad-oud;
+  nulGeteld.unshift({naam:p.naam, winkel, achter, verschil, t:Date.now()});
+  nulGeteld=nulGeteld.slice(0,40);
+  save();
+  renderVoorraad(); updateBadge(); herteken(); tekenNulLog();
+  piep(880);
+  toast('Geteld: '+p.naam+' · '+winkel+' in de winkel, '+achter+' achter'+
+        (verschil?' ('+(verschil>0?'+':'')+verschil+' t.o.v. het systeem)':''), true);
+  nulStop();
+}
+function tekenNulLog(){
+  const el=document.getElementById('nulLog');
+  if(!el) return;
+  el.innerHTML = nulGeteld.length
+    ? '<div class="nulkop">Zojuist geteld</div>'+nulGeteld.map(g=>
+        `<div><b>${esc(g.naam)}</b> · ${g.winkel} in de winkel, ${g.achter} achter`+
+        (g.verschil?` <span class="${g.verschil>0?'nulplus':'nulmin'}">${g.verschil>0?'+':''}${g.verschil}</span>`:'')+
+        `</div>`).join('')
+    : '';
+}
+
 /* ---------- bestellingen ---------- */
-function bestelLijst(){ return state.producten.filter(p=>p.voorraad<=p.min).sort((a,b)=>a.naam.localeCompare(b.naam)); }
+/* Ligt er nog genoeg achter om het rek weer vol te hangen, dan is er niets te
+   bestellen; er moet iets opgehangen worden. Anders bestel je dozen bij terwijl
+   er al voorraad in je eigen magazijn staat.                                 */
+function nogAchterGenoeg(p){ return schapTekort(p)>0 && achterLiggen(p)>=schapTekort(p); }
+function bestelLijst(){
+  return state.producten.filter(p=>p.voorraad<=p.min && !nogAchterGenoeg(p))
+    .sort((a,b)=>a.naam.localeCompare(b.naam));
+}
+/* Wat wél laag staat, maar nog uit eigen magazijn aangevuld kan worden. */
+function eerstBijhangen(){
+  return state.producten.filter(p=>p.voorraad<=p.min && nogAchterGenoeg(p))
+    .sort((a,b)=>a.naam.localeCompare(b.naam));
+}
 /* ---------- bestellen: codes klaarzetten om te plakken ----------
    Bij de leverancier zoek je op de artikelcode, niet op de naam. Die staat
    hier dus met een knop ernaast, zodat je hem in één klik in het zoekvak van
@@ -2999,6 +3452,19 @@ function renderBestellen(){
     `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
   }).join('');
   document.getElementById('bestelBody').innerHTML = rows || '<tr><td colspan="7" class="muted">Alles is op voorraad, niets te bestellen.</td></tr>';
+
+  /* Wat laag staat maar nog in je eigen magazijn ligt hoort niet besteld te
+     worden. Dat zeggen we hier, anders lijkt het alsof het vergeten is. */
+  const el=document.getElementById('eerstHangen');
+  if(el){
+    const lijst=eerstBijhangen();
+    el.innerHTML = lijst.length
+      ? `<div class="npbron" style="background:var(--amber-soft); color:var(--amber-tekst)">
+          <div class="npbronkop">Deze hoef je niet te bestellen, ze liggen achter</div>
+          <ul>${lijst.map(p=>`<li><span data-onvertaald>${esc(p.naam)}</span> · ${achterLiggen(p)} in het magazijn</li>`).join('')}</ul>
+          <div style="margin-top:12px"><button class="btn ghost small" onclick="openBijhangen()"><svg class="i s"><use href="#i-scan"/></svg>Nu bijhangen</button></div>
+        </div>` : '';
+  }
   updateBadge();
 }
 function toggleBesteld(id){
@@ -3020,12 +3486,18 @@ function updateBadge(){
   rb.textContent=rn; rb.style.display=rn?'':'none';
   rb.classList.toggle('rood', lopend.some(r=>heeftProbleem(r)));
   rb.title=rn?rn+' reparatie(s) vragen actie':'';
+  const bv=bijvulLijst().length;
+  const vb=document.getElementById('vrdBadge');
+  if(vb){
+    vb.textContent=bv; vb.style.display=bv?'':'none';
+    vb.title=bv?bv+' product(en) moeten bijgehangen worden':'';
+  }
 }
 
 /* ---------- instellingen ---------- */
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','voorraad','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
@@ -3033,8 +3505,8 @@ document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('cli
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','bestellen','instellingen','team'],
-  medewerker:['scan','diensten','reparaties','producten','nieuw','bestellen']
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','voorraad','bestellen','instellingen','team'],
+  medewerker:['scan','diensten','reparaties','producten','nieuw','voorraad','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -3048,6 +3520,7 @@ const UITZETBAAR=[
   {tab:'diensten',    naam:'Diensten',     uitleg:'Losse werkzaamheden zoals simkaart knippen of data overzetten.'},
   {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
   {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
+  {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en de nulmeting.'},
   {tab:'bestellen',   naam:'Bestellingen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
   {tab:'team',        naam:'Team',         uitleg:'Medewerkers, rollen en wachtwoorden.'}
 ];
@@ -3094,12 +3567,13 @@ const MOB={
   scan:        {naam:'Scannen',      ico:'i-scan'},
   reparaties:  {naam:'Reparaties',   ico:'i-wrench'},
   producten:   {naam:'Producten',    ico:'i-box'},
+  voorraad:    {naam:'Voorraad',     ico:'i-package'},
   bestellen:   {naam:'Bestellen',    ico:'i-cart'},
   diensten:    {naam:'Diensten',     ico:'i-tool'},
   team:        {naam:'Team',         ico:'i-users'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','reparaties','producten','bestellen','diensten','team','instellingen'];
+const MOB_VOLGORDE=['dashboard','scan','reparaties','producten','voorraad','bestellen','diensten','team','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
@@ -3115,6 +3589,7 @@ function tekenOnderbalk(){
   const nu=huidigeTab();
   const tel=(t)=>{
     if(t==='reparaties'){ const n=(typeof repTeDoen==='function')?repTeDoen().length:0; return n||0; }
+    if(t==='voorraad'){ const n=(typeof bijvulLijst==='function')?bijvulLijst().length:0; return n||0; }
     if(t==='bestellen'){ const n=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0; return n||0; }
     return 0;
   };
@@ -4474,6 +4949,7 @@ function slaBedrijfOp(){
 }
 function renderInstellingen(){
   renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
+  document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:2;
   const i=state.instellingen||{};
   document.getElementById('b_naam').value=i.naam||'';
   document.getElementById('b_email').value=i.email||'';
@@ -5221,7 +5697,7 @@ function maakReparatie(){
   let allesOpVoorraad=repOnd.length>0;
   repOnd.forEach(o=>{
     const vr=state.onderdelen.find(x=>x.naam.toLowerCase()===o.naam.toLowerCase());
-    if(vr && vr.voorraad>0){ vr.voorraad--; o.uitVoorraad=true; }
+    if(vr && vr.voorraad>0){ haalUitVoorraad(vr,1); o.uitVoorraad=true; }
     else allesOpVoorraad=false;
   });
   const r={

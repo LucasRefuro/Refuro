@@ -79,6 +79,8 @@ input[type=file]{display:none;}
   background:conic-gradient(var(--amber) var(--vol,0%), var(--rand) 0);
   transition:background .15s linear;}
 
+.hangteller{text-align:center; font-size:13px; color:var(--muted-l); margin:-8px 0 14px;}
+
 .handmatig{margin-top:16px;}
 .handmatig label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:6px;}
 .handmatig input{width:100%; padding:14px 16px; border:1.5px solid var(--rand); border-radius:14px;
@@ -116,7 +118,13 @@ input[type=file]{display:none;}
 const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
 
-const code=new URLSearchParams(location.search).get('s')||'';
+const zoek=new URLSearchParams(location.search);
+const code=zoek.get('s')||'';
+/* Twee soorten werk door hetzelfde luik: een nieuw product aanmaken, of
+   bijhangen uit het magazijn. Bij bijhangen slaan we de foto over en blijft
+   de camera aan staan, zodat je product na product kunt scannen.            */
+const modus=zoek.get('m')==='hang' ? 'hang' : 'product';
+let hangGedaan=0, hangOver=null, hangLaatst='';
 const scherm=document.getElementById('scherm');
 const balk=document.getElementById('stappen');
 
@@ -150,7 +158,15 @@ function verbind(){
     .on('broadcast',{event:'welkom'}, ({payload})=>{
       verbonden=true;
       if(payload && payload.winkel) document.getElementById('winkelNaam').textContent=payload.winkel;
-      if(stap==='verbinden'){ stap='doosje'; teken(); }
+      if(stap==='verbinden'){ stap = modus==='hang' ? 'hangen' : 'doosje'; teken(); }
+    })
+    .on('broadcast',{event:'hangterug'}, ({payload})=>{
+      const p=payload||{};
+      hangLaatst=(p.ok?'✓ ':'✕ ')+(p.tekst||'');
+      if(p.ok){ hangGedaan++; if(p.over!=null) hangOver=p.over; if(navigator.vibrate) navigator.vibrate(50); }
+      barcode=null;                       /* klaar voor de volgende scan */
+      tekenHangStand();
+      if(p.ok && p.over===0){ stap='hangklaar'; teken(); }
     })
     .on('broadcast',{event:'herkend'}, ({payload})=>{
       herkend=payload||{}; fout='';
@@ -239,10 +255,27 @@ async function startLezen(){
 function gevonden(c){
   if(barcode) return;
   barcode=c;
-  if(lezer){ lezer.stop(); lezer=null; }
   if(navigator.vibrate) navigator.vibrate(60);
+  if(modus==='hang'){
+    /* De camera blijft aan; de pc laat weten of het gelukt is. Even wachten
+       zodat hetzelfde doosje niet drie keer achter elkaar telt. */
+    zeg('barcode',{code:c});
+    hangLaatst='…';
+    tekenHangStand();
+    setTimeout(()=>{ barcode=null; }, 1200);
+    return;
+  }
+  if(lezer){ lezer.stop(); lezer=null; }
   zeg('barcode',{code:c, herkend});
   stap='klaar'; teken();
+}
+function tekenHangStand(){
+  const el=document.getElementById('hangStand');
+  if(el) el.textContent=hangLaatst||'Nog niets gescand';
+  const t=document.getElementById('hangTeller');
+  if(t) t.textContent = hangGedaan
+    ? hangGedaan+' opgehangen'+(hangOver!=null?' · nog '+hangOver+' te gaan':'')
+    : (hangOver!=null?'nog '+hangOver+' te gaan':'');
 }
 function handmatigOk(){
   const v=document.getElementById('handcode').value.trim();
@@ -253,7 +286,7 @@ function handmatigOk(){
 function stopLezen(){ if(lezer){ lezer.stop(); lezer=null; } }
 
 function teken(){
-  if(stap!=='barcode') stopLezen();
+  if(stap!=='barcode' && stap!=='hangen') stopLezen();
   if(stap!=='doosje')  stopFoto();
   const melding = fout ? `<div class="melding mis">${esc(fout)}</div>` : '';
 
@@ -318,6 +351,37 @@ function teken(){
     startLezen();
     return;
   }
+  if(stap==='hangen'){
+    zetBalk(1);
+    scherm.innerHTML=`<div class="kaart">
+      <h1>Scan wat je ophangt</h1>
+      <p class="lead">Houd de barcode voor de camera. Hij blijft aan, dus je kunt gewoon doorgaan met het volgende product.</p>
+      <div class="cam" id="camera"><div class="wacht">Camera wordt gestart…</div><div class="mikker"></div></div>
+      <div class="camstand"><span id="hangStand">Nog niets gescand</span></div>
+      <div class="hangteller" id="hangTeller"></div>
+      <div class="handmatig">
+        <label>Lukt het scannen niet? Typ de code</label>
+        <input id="handcode" inputmode="numeric" autocomplete="off" placeholder="bijv. 8712345678901"
+          onkeydown="if(event.key==='Enter'){event.preventDefault(); handmatigOk();}">
+        <button class="knop stil" onclick="handmatigOk()">Deze code gebruiken</button>
+      </div>
+      ${melding}</div>`;
+    startLezen();
+    tekenHangStand();
+    return;
+  }
+  if(stap==='hangklaar'){
+    zetBalk(3, true);
+    scherm.innerHTML=`<div class="kaart midden">
+      <div class="klaarvink"><svg viewBox="0 0 24 24">${icoon.vink}</svg></div>
+      <h1>Alles hangt</h1>
+      <p class="lead">${hangGedaan} stuks opgehangen. Er ligt niets meer te wachten in het magazijn.</p>
+      <button class="knop" onclick="stap='hangen'; hangLaatst=''; teken()">
+        <svg viewBox="0 0 24 24">${icoon.scan}</svg>Toch nog scannen</button>
+    </div>`;
+    return;
+  }
+
   /* klaar */
   zetBalk(3, true);
   scherm.innerHTML=`<div class="kaart midden">
