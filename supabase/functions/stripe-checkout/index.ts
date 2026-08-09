@@ -112,7 +112,9 @@ Deno.serve(async (req) => {
 
       // Onze prijzen zijn exclusief btw. Stripe Tax bepaalt per klant welk
       // tarief erbovenop komt en past verlegging toe bij een buitenlandse
-      // ondernemer met een geldig btw-nummer.
+      // ondernemer met een geldig btw-nummer. Dit geldt meteen voor het hele
+      // abonnement, dus ook voor elke maandelijkse verlenging; een aparte
+      // instelling onder subscription_data bestaat hier niet.
       "automatic_tax[enabled]": "true",
 
       // Een factuur aan een ondernemer hoort zijn adres en btw-nummer te
@@ -125,10 +127,6 @@ Deno.serve(async (req) => {
       // dat expliciet vraagt. Anders blijft het adres leeg op de factuur.
       "customer_update[address]": "auto",
       "customer_update[name]": "auto",
-
-      // Ook bij elke maandelijkse verlenging opnieuw laten rekenen, niet
-      // alleen bij de eerste betaling.
-      "subscription_data[automatic_tax][enabled]": "true",
 
       "subscription_data[metadata][team_id]": winkel.id,
       "subscription_data[metadata][plan]": pakket,
