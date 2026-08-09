@@ -191,14 +191,22 @@ tr.klikbaar{cursor:pointer;}
 }
 
 /* ---------- wat voor apparaat ---------- */
-.soortkiezer{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px;}
-.soortknop{display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 10px;
+.verhuis{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;
+    padding:12px 16px; border-radius:var(--radius-s); background:var(--lblauw);
+    font-size:14px; font-weight:600;}
+  .verhuis .van{color:var(--muted); text-decoration:line-through;}
+  .verhuis .pijl{color:var(--groen); font-weight:800;}
+  .verhuis .naar{color:var(--groen);}
+  .locpil{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700;
+    padding:3px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
+  .soortkiezer,.lockiezer{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px;}
+.soortknop,.locknop{display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 10px;
   border:1.5px solid var(--border); border-radius:16px; background:var(--card);
   font-family:inherit; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;
   transition:.15s;}
-.soortknop:hover{border-color:var(--mint); color:var(--tekst);}
-.soortknop .i{width:24px; height:24px;}
-.soortknop.aan{border-color:var(--groen); background:var(--lblauw); color:var(--groen);}
+.soortknop:hover,.locknop:hover{border-color:var(--mint); color:var(--tekst);}
+.soortknop .i,.locknop .i{width:24px; height:24px;}
+.soortknop.aan,.locknop.aan{border-color:var(--groen); background:var(--lblauw); color:var(--groen);}
 
 /* ---------- de controle als pagina ---------- */
 .tijdlijn{list-style:none; display:flex; gap:0; margin:0 0 20px; padding:0; overflow-x:auto;}
@@ -538,6 +546,14 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
           <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
           <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
+        </div>
+
+        <!-- Waar de doos heen gaat. Vul je dit hier in, dan hoeft niemand later
+             te raden waar een toestel gebleven is, en zie je bij het inscannen
+             meteen waar het vandaan komt. -->
+        <div style="margin-top:18px">
+          <label>Waar leg je ze neer</label>
+          <div class="lockiezer" id="t_loc_kiezer"></div>
         </div>
         <div class="row" style="margin-top:18px">
           <button class="btn actie" onclick="toevoegen(this)"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen en labels maken</button>
@@ -928,6 +944,55 @@ function tekenSoorten(){
 }
 function soortKies(n){ soortNu=n; tekenSoorten(); modelHint(); }
 
+/* Waar de doos heen gaat. Dezelfde knoppen als de soortkiezer, want het is
+   dezelfde handeling: één klik, en je ziet zonder uitklappen wat er staat.
+   De laatste keuze blijft staan, want je pakt zelden één doos. */
+let locKeuze=null;
+const LOC_ICOON={winkel:'i-shop', magazijn:'i-box', werkplaats:'i-wrench'};
+
+function tekenLocKiezer(){
+  const el=document.getElementById('t_loc_kiezer'); if(!el) return;
+  if(!locaties.length){
+    locKeuze=null;
+    el.innerHTML=`<p class="muted klein" style="margin:0">Nog geen locaties.
+      <a onclick="showTab('instellingen')" style="cursor:pointer; text-decoration:underline">Voeg ze toe bij Instellingen</a>,
+      dan kun je hier kiezen waar de doos heen gaat.</p>`;
+    return;
+  }
+  if(!locaties.some(l=>l.id===locKeuze)){
+    let vorige=null; try{ vorige=localStorage.getItem('storvo_locatie'); }catch(e){}
+    locKeuze = locaties.some(l=>l.id===vorige) ? vorige : locaties[0].id;
+  }
+  el.innerHTML=locaties.map(l=>`
+    <button type="button" class="locknop${l.id===locKeuze?' aan':''}" onclick="locKies('${l.id}')">
+      <svg class="i"><use href="#${LOC_ICOON[l.soort]||'i-box'}"/></svg><span>${esc(l.naam)}</span>
+    </button>`).join('');
+}
+function locKies(id){
+  locKeuze=id;
+  try{ localStorage.setItem('storvo_locatie', id); }catch(e){}
+  tekenLocKiezer();
+}
+function locNaam(id){
+  const l=locaties.find(x=>x.id===id);
+  return l?l.naam:null;
+}
+
+/* Elke verhuizing wordt vastgelegd. Zonder dat weet je bij een verschil in de
+   telling nooit of iemand iets verplaatst heeft of dat het weg is. */
+async function verplaatsingLoggen({apparaat_id, hardware_id, van, naar, reden}){
+  if(van===naar) return;
+  try{
+    await sb.from('voorraad_verplaatsingen').insert({
+      team_id:account.team_id,
+      apparaat_id:apparaat_id||null, hardware_id:hardware_id||null,
+      van_id:van||null, naar_id:naar||null,
+      van_naam:locNaam(van), naar_naam:locNaam(naar),
+      reden:reden||null, door:account.id
+    });
+  }catch(e){ console.error('verplaatsing loggen', e); }
+}
+
 function splitsModel(tekst){
   const t=String(tekst||'').trim();
   if(!t) return {merk:'', model:''};
@@ -1003,11 +1068,18 @@ async function toevoegen(knop){
         leverancier:v('t_lev')||null,
         code:volgendeCode(i),
         specs: bekend ? (bekend.specs||{}) : {},
+        locatie_id: locKeuze||null,
         status:'te_controleren'
       });
     }
     const {data, error}=await sb.from('refurbish_apparaten').insert(rijen).select();
     if(error) throw new Error('Opslaan mislukt');
+
+    if(locKeuze){
+      for(const r of (data||[])){
+        await verplaatsingLoggen({apparaat_id:r.id, naar:locKeuze, reden:'binnengekomen'});
+      }
+    }
 
     // Het model onthouden, ook zonder specificaties: dan staat het de volgende
     // keer in ieder geval in de lijst.
@@ -1016,7 +1088,8 @@ async function toevoegen(knop){
     });
 
     await allesLaden();
-    toast(aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd', true);
+    const waar=locNaam(locKeuze);
+    toast((aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd')+(waar?' · '+waar:''), true);
     labelsTonen((data||[]).map(r=>r.id));
   });
 }
@@ -1040,11 +1113,12 @@ function tekenVandaag(){
     return;
   }
   el.innerHTML=`<div class="tabelrol"><table>
-      <thead><tr><th>Nummer</th><th>Apparaat</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Nummer</th><th>Apparaat</th><th>Ligt in</th><th>Status</th><th></th></tr></thead>
       <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
         <td class="mono">${esc(a.code||'—')}</td>
         <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
             <div class="muted klein">${esc(a.categorie||'')}</div></td>
+        <td>${locNaam(a.locatie_id)?`<span class="locpil">${esc(locNaam(a.locatie_id))}</span>`:'<span class="muted klein">—</span>'}</td>
         <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
         <td class="num hwact"><button class="btn ghost small"
           onclick="event.stopPropagation(); labelsTonen('${a.id}')">Label opnieuw</button></td>
@@ -1128,6 +1202,39 @@ async function labelsKlaar(knop, ids){
   });
 }
 
+/* Iets van de ene plek naar de andere brengen. Je ziet eerst waar het nu ligt,
+   dan waar het heen gaat; dat voorkomt de klik waarna je je afvraagt wat je
+   net veranderd hebt. */
+function appVerplaats(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const nu=locNaam(a.locatie_id);
+  venster('Verplaatsen', `
+    <p class="pv">${esc([a.merk,a.model].filter(Boolean).join(' '))}
+      ligt nu ${nu?'in <b>'+esc(nu)+'</b>':'nergens geregistreerd'}.</p>
+    <label>Waar gaat hij heen</label>
+    <select id="vp_loc">${locaties.map(l=>
+      `<option value="${l.id}"${l.id===a.locatie_id?' selected':''}>${esc(l.naam)}</option>`).join('')}</select>
+  `, [{tekst:'Verplaatsen', klasse:'actie', doe:(k)=>appVerplaatsDoen(k, a)}]);
+}
+
+async function appVerplaatsDoen(knop, a){
+  const naar=v('vp_loc');
+  if(naar===a.locatie_id){ toast('Hij ligt daar al','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({locatie_id:naar, bijgewerkt_op:new Date().toISOString()}).eq('id',a.id);
+    if(error) throw new Error('Verplaatsen mislukt');
+    await verplaatsingLoggen({apparaat_id:a.id, van:a.locatie_id, naar, reden:'verplaatst'});
+    if(a.hardware_id){
+      await sb.from('hardware').update({locatie_id:naar, bijgewerkt_op:new Date().toISOString()})
+        .eq('id',a.hardware_id);
+      await verplaatsingLoggen({hardware_id:a.hardware_id, van:a.locatie_id, naar, reden:'verplaatst'});
+    }
+    sluit(); await allesLaden();
+    toast((locNaam(a.locatie_id)||'Onbekend')+' → '+locNaam(naar), true);
+  });
+}
+
 /* ═══════════════ controle ═══════════════ */
 
 function tekenControle(){
@@ -1180,6 +1287,7 @@ function tekenApparaat(){
       ${feit('Nummer', a.code||'—', true)}
       ${feit('Grade', a.grade||'—')}
       ${feit('Accu', a.accu?a.accu+'%':'—')}
+      ${feit('Ligt in', locNaam(a.locatie_id)||'nog niet bepaald')}
       ${feit('Leverancier', a.leverancier||'—')}
       ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}))}
       ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
@@ -1194,6 +1302,7 @@ function tekenApparaat(){
         ? `<button class="btn actie" onclick="repOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie openen</button>`:''}
       ${a.status==='klaar'
         ? `<button class="btn actie" onclick="klaarOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-arrow"/></svg>Naar de winkelvoorraad</button>`:''}
+      ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
       <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
     </div>
@@ -2117,7 +2226,7 @@ async function overdragen(knop, a){
       staat:v('k_staat'), inkoop:Number(v('k_inkoop'))||0,
       verkoop:Number(verkoop)||0, garantie:Number(v('k_gar'))||0,
       herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
-      status:'voorraad', kanalen:{winkel:true}
+      status:'voorraad', kanalen:{winkel:true}, locatie_id:a.locatie_id||null
     }).select().single();
     if(error) throw new Error('Overdragen mislukt');
 
@@ -2590,6 +2699,7 @@ async function onlPubliceren(knop){
       titel:onl.titel||null, omschrijving:onl.tekst||null,
       fotos:(onl.fotos||[]).map(f=>fotoUrl(f.pad)),
       status: instel.inscannen ? 'onderweg' : 'voorraad',
+      locatie_id: instel.inscannen ? null : (a.locatie_id||null),
       code:a.code, kanalen
     }).select().single();
     if(error) throw new Error('Publiceren mislukt: '+error.message);
@@ -3049,6 +3159,7 @@ let locaties=[];
 async function locatiesLaden(){
   const {data}=await sb.from('hardware_locaties').select('*').order('volgorde');
   locaties=data||[];
+  tekenLocKiezer();
   tekenLocaties();
 }
 function tekenLocaties(){

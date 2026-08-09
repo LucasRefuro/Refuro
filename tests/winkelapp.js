@@ -7,10 +7,16 @@ let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
 
 const MOCK=`<script>
-const _leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
-  in(){return this;},maybeSingle:async()=>({data:null}),
-  insert(){return {select:()=>({single:async()=>({data:{id:'x'}})})};},
-  update(){return this;},delete(){return this;},then(r){ r({data:[],error:null}); }};
+window.__geschreven=[];
+function _leegVoor(naam){
+  const api={select(){return api;},order(){return api;},limit(){return api;},eq(){return api;},
+    in(){return api;},maybeSingle:async()=>({data:null}),
+    insert(r){ window.__geschreven.push([naam,'insert',r]);
+      return {select:()=>({single:async()=>({data:{id:'x'}})})}; },
+    update(r){ window.__geschreven.push([naam,'update',r]); return api; },
+    delete(){return api;},then(r){ r({data:[],error:null}); }};
+  return api;
+}
 window.supabase={createClient:()=>({
   auth:{getSession:async()=>({data:{session:null}}),
         onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
@@ -18,7 +24,7 @@ window.supabase={createClient:()=>({
   from:(n)=> n==='hardware_locaties'
     ? {select(){return this;},order(){return this;},
        then(r){ r({data:[{id:'l1',naam:'Winkel',soort:'winkel',volgorde:0}],error:null}); }}
-    : _leeg,
+    : _leegVoor(n),
   rpc:async()=>({data:[]}),
   channel:()=>({on(){return this;},subscribe(){return this;},send(){},unsubscribe(){}}),
   removeChannel(){}
@@ -118,7 +124,45 @@ setTimeout(async()=>{
   d.getElementById('hw_scan').value='A0009';
   w.eval('hwScanZoek()');
   await new Promise(r=>setTimeout(r,60));
-  ok('scan schrijft de locatie weg', true);
+  ok('scan schrijft de locatie weg',
+     w.__geschreven.some(g=>g[0]==='hardware' && g[1]==='update' && g[2].locatie_id==='l1'));
+
+  // ── van het magazijn naar de winkel ──
+  // Dit is het geval waar het om gaat: hij ligt al ergens, en moet daar weg.
+  w.eval(`hwSluit();
+    window.__geschreven.length=0; hwFilterNu='voorraad';
+    hwLocaties=[{id:'l1',naam:'Winkel',soort:'winkel'},{id:'l2',naam:'Magazijn',soort:'magazijn'}];
+    hwData=[{id:'h5', merk:'Lenovo', model:'ThinkPad T14', code:'A0011', status:'voorraad',
+      locatie_id:'l2', inkoop:200, verkoop:449, kanalen:{}, aangemaakt_op:new Date().toISOString()}];
+    renderHardware();`);
+  ok('lijst toont waar hij ligt', /Magazijn/.test(d.getElementById('hwLijst').innerHTML));
+
+  w.eval('hwInscannen()');
+  d.getElementById('hw_scan').value='A0011';
+  w.eval('hwScanKijk()');
+  const pad=d.getElementById('hw_pad').innerHTML;
+  ok('nog voor het scannen zie je de verhuizing', /Magazijn/.test(pad) && /Winkel/.test(pad));
+  ok('de oude plek is doorgestreept', /class="van"/.test(pad));
+
+  w.eval('hwScanZoek()');
+  await new Promise(r=>setTimeout(r,80));
+  const bij=w.__geschreven.find(g=>g[0]==='hardware' && g[1]==='update');
+  ok('gaat naar de nieuwe locatie', !!bij && bij[2].locatie_id==='l1');
+  const log=w.__geschreven.find(g=>g[0]==='voorraad_verplaatsingen');
+  ok('verhuizing wordt vastgelegd', !!log);
+  ok('met waar hij vandaan kwam', !!log && log[2].van_naam==='Magazijn' && log[2].naar_naam==='Winkel');
+  ok('zichtbaar in het venster', /Zojuist verplaatst/.test(d.getElementById('hwOverlay').innerHTML));
+
+  // twee keer dezelfde plek doet niets
+  w.eval(`hwSluit(); window.__geschreven.length=0;
+    hwData=[{id:'h5', merk:'Lenovo', model:'ThinkPad T14', code:'A0011', status:'voorraad',
+      locatie_id:'l1', kanalen:{}, aangemaakt_op:new Date().toISOString()}];
+    hwInscannen();`);
+  d.getElementById('hw_scan').value='A0011';
+  w.eval('hwScanZoek()');
+  await new Promise(r=>setTimeout(r,60));
+  ok('ligt hij er al, dan gebeurt er niets',
+     !w.__geschreven.some(g=>g[0]==='voorraad_verplaatsingen'));
   // hwLaad haalt in deze test een lege lijst op, dus de toestellen weer terugzetten
   w.eval("hwSluit(); hwFilterNu='voorraad'; hwData="+JSON.stringify(toestellen)+"; renderHardware();");
 

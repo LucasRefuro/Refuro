@@ -134,9 +134,14 @@ je apart kunt onderhouden.
 
 In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
 
-1. **Toevoegen.** Eén veld voor merk en model, aantal, inkoopprijs en
-   leverancier. Geen inkoopbatches: je staat met een doos naast je en wilt
-   doorwerken. Specificaties vraagt de app hier niet, want die weet je nog niet.
+1. **Toevoegen.** Eén veld voor merk en model, aantal, inkoopprijs,
+   leverancier en **waar je ze neerlegt**. Geen inkoopbatches: je staat met een
+   doos naast je en wilt doorwerken. Specificaties vraagt de app hier niet, want
+   die weet je nog niet.
+
+   Die locatie is één klik, en de laatste keuze blijft staan; je pakt zelden
+   één doos. Vanaf dat moment weet het systeem waar elk toestel ligt, en hoeft
+   niemand later te raden waar iets gebleven is.
 2. **Labels.** Rollen er meteen uit na het toevoegen. Bovenaan waar het apparaat
    in het proces staat, daaronder merk en model groot, het korte nummer, en een
    QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
@@ -245,12 +250,25 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
      online staat.
    - **De kanalen**: webshop, Marktplaats, winkel. Daarna **Publiceren**.
 
-   **Inscannen.** Publiceren en in de winkel leggen zijn twee verschillende
-   dingen; daartussen zit een busrit en een doos. Zet je bij Instellingen
-   *Inscannen* aan, dan komt een gepubliceerd toestel op **onderweg** te staan.
-   Pas als iemand in Storvo het nummer scant en een locatie kiest, telt hij mee
-   in de voorraad. Locaties beheer je op dezelfde pagina: winkel, magazijn,
-   werkplaats, vitrine voor.
+   **Inscannen en verhuizen.** Publiceren en in de winkel leggen zijn twee
+   verschillende dingen; daartussen zit een busrit en een doos. Zet je bij
+   Instellingen *Inscannen* aan, dan komt een gepubliceerd toestel op
+   **onderweg** te staan. Pas als iemand in Storvo het nummer scant en een
+   locatie kiest, telt hij mee in de voorraad. Laat je het uit staan, dan komt
+   hij meteen in de voorraad te liggen, op de plek die bij het toevoegen is
+   gekozen.
+
+   Scan je een toestel dat al ergens ligt, dan **gaat het daar automatisch weg**.
+   Een toestel ligt op één plek tegelijk; alles anders is een telling die niet
+   klopt. Je ziet het ook: nog tijdens het typen staat er *Magazijn → Winkel*,
+   met de oude plek doorgestreept, en na het scannen blijft er een lijstje
+   staan van wat je zojuist verplaatst hebt. Elke verhuizing wordt vastgelegd,
+   dus bij een verschil in de telling kun je terugzien of iemand iets verplaatst
+   heeft of dat het echt weg is. Die geschiedenis staat onder het toestel zelf.
+
+   Locaties beheer je op dezelfde pagina: winkel, magazijn, werkplaats, vitrine
+   voor. Verplaatsen kan ook zonder scanner, via het toestel in Storvo of via
+   *Verplaatsen* op de apparaatpagina in de refurbish-app.
 
    Daarna gaat het apparaat naar de winkelvoorraad in Storvo. Daar zit de knop
    om hem daadwerkelijk op Shopify te zetten, want daar zit ook de prijs.

@@ -273,6 +273,23 @@
   .hwoud{color:var(--red-tekst); font-weight:700;}
   .onderweg{font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
     background:var(--amber-soft); color:var(--amber-tekst); white-space:nowrap;}
+  /* Van waar naar waar. Dit is het enige wat je wilt zien nadat je gescand
+     hebt, dus het staat groot en het staat in de weg. */
+  .verhuis{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:14px 0 4px;
+    padding:14px 16px; border-radius:var(--radius-s); background:var(--green-soft);
+    font-size:15px; font-weight:700;}
+  .verhuis.let{background:var(--amber-soft);}
+  .verhuis .van{color:var(--muted); text-decoration:line-through; font-weight:600;}
+  .verhuis .pijl{font-weight:800; color:var(--green-tekst);}
+  .verhuis .naar{color:var(--green-tekst);}
+  .verhuis .wie{width:100%; font-size:13px; font-weight:600; color:var(--muted);}
+  .scanlog{margin-top:16px; padding-top:14px; border-top:1.5px solid var(--border);}
+  .scanlog .lr{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px;}
+  .scanlog .lr .pijl{color:var(--green-tekst); font-weight:800;}
+  .locpil{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px;
+    border-radius:var(--pil); background:var(--soft-2); color:var(--muted); white-space:nowrap;}
+  .verhuisrij{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0;}
+  .verhuisrij .dt{color:var(--muted-l); min-width:120px;}
   .wachtlijst{margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);}
   .wachtrij2{display:flex; align-items:center; gap:12px; width:100%; text-align:left;
     padding:11px 14px; margin-bottom:6px; border:1.5px solid var(--border); border-radius:12px;
@@ -5533,45 +5550,104 @@ function hwLocatieNaam(h){
 
 /* Inscannen: het toestel ligt pas echt in de winkel als iemand het label heeft
    gescand en een plek heeft gekozen. Tot dat moment staat het op onderweg. */
+let hwScanLog=[];
+
 function hwInscannen(){
   if(!hwLocaties.length){
     toast('Voeg eerst een locatie toe bij Refurbishen → Instellingen','let-op'); return;
   }
-  const wacht=hwData.filter(h=>h.status==='onderweg');
+  hwScanLog=[];
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='hwOverlay';
   ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
   ov.innerHTML=`<div class="popup groot">
-    <h3>Toestel inscannen</h3>
-    <p class="pv">Scan het label of typ het nummer. Kies waar je hem neerlegt; daarna telt hij mee in je voorraad.</p>
+    <h3>Inscannen</h3>
+    <p class="pv">Scan het label of typ het nummer, en kies waar je hem neerlegt. Ligt hij ergens anders, dan gaat hij daar automatisch weg; je ziet precies wat er verhuist.</p>
     <label>Nummer van het label</label>
     <input id="hw_scan" placeholder="Bijvoorbeeld A0007" autocomplete="off"
-      onkeydown="if(event.key==='Enter') hwScanZoek()">
+      oninput="hwScanKijk()" onkeydown="if(event.key==='Enter') hwScanZoek()">
     <label style="margin-top:14px">Waar leg je hem</label>
-    <select id="hw_loc">${hwLocaties.map(l=>
+    <select id="hw_loc" onchange="hwScanKijk()">${hwLocaties.map(l=>
       `<option value="${l.id}">${esc(l.naam)}</option>`).join('')}</select>
+    <div id="hw_pad"></div>
     <div class="acts">
       <button class="btn actie" onclick="hwScanZoek()">Inscannen</button>
       <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
     </div>
-    ${wacht.length?`<div class="wachtlijst">
-      <div class="hkkop">Nog niet ingescand (${wacht.length})</div>
-      ${wacht.map(h=>`<button class="wachtrij2" onclick="hwScanNu('${h.id}')">
-        <span class="mono">${esc(h.code||'—')}</span>
-        <span>${esc([h.merk,h.model].filter(Boolean).join(' '))}</span>
-      </button>`).join('')}
-    </div>`:'<p class="muted klein" style="margin-top:16px">Er staat niets te wachten.</p>'}
+    <div id="hw_scanlog"></div>
+    <div id="hw_wacht"></div>
   </div>`;
   document.body.appendChild(ov);
+  hwWachtTeken();
   setTimeout(()=>{ const e=document.getElementById('hw_scan'); if(e) e.focus(); }, 60);
 }
 
+function hwZoekOpCode(code){
+  const c=String(code||'').trim().toUpperCase();
+  if(!c) return null;
+  return hwData.find(x=>String(x.code||'').toUpperCase()===c ||
+                        String(x.serienummer||'').toUpperCase()===c) || null;
+}
+
+/* Meekijken terwijl je typt. Je weet dan vóór het scannen al wat er gaat
+   gebeuren, in plaats van erna. */
+function hwScanKijk(){
+  const vak=document.getElementById('hw_pad'); if(!vak) return;
+  const veld=document.getElementById('hw_scan');
+  const h=hwZoekOpCode(veld?veld.value:'');
+  if(!h){ vak.innerHTML=''; return; }
+  const naar=document.getElementById('hw_loc');
+  vak.innerHTML=hwVerhuisHtml(h, naar?naar.value:null, false);
+}
+
+function hwVerhuisHtml(h, naarId, gedaan){
+  const van=hwLocatieNaam(h);
+  const naar=(hwLocaties.find(l=>l.id===naarId)||{}).naam||'—';
+  const naam=esc([h.merk,h.model].filter(Boolean).join(' '));
+  if(van && van===naar){
+    return `<div class="verhuis let"><span>Ligt al in <b>${esc(naar)}</b></span>
+      <span class="wie">${naam} · ${esc(h.code||'')}</span></div>`;
+  }
+  return `<div class="verhuis">
+    ${van?`<span class="van">${esc(van)}</span><span class="pijl">→</span>`
+        :'<span class="van">Nog niet ingescand</span><span class="pijl">→</span>'}
+    <span class="naar">${esc(naar)}</span>
+    <span class="wie">${naam} · ${esc(h.code||'')}${gedaan?' · verplaatst':''}</span>
+  </div>`;
+}
+
+/* Wat er nog ligt te wachten, en waar het nu ligt. Zonder die tweede kolom
+   moet je gaan zoeken en dat is precies waarom dingen kwijtraken. */
+function hwWachtTeken(){
+  const vak=document.getElementById('hw_wacht'); if(!vak) return;
+  const wacht=hwData.filter(h=>h.status==='onderweg');
+  vak.innerHTML=wacht.length?`<div class="wachtlijst">
+      <div class="hkkop">Nog niet ingescand (${wacht.length})</div>
+      ${wacht.map(h=>`<button class="wachtrij2" onclick="hwScanNu('${h.id}')">
+        <span class="mono">${esc(h.code||'—')}</span>
+        <span style="flex:1">${esc([h.merk,h.model].filter(Boolean).join(' '))}</span>
+        <span class="locpil">${esc(hwLocatieNaam(h)||'nergens')}</span>
+      </button>`).join('')}
+    </div>`
+    :'<p class="muted klein" style="margin-top:16px">Er staat niets te wachten.</p>';
+}
+
+function hwScanLogTeken(){
+  const vak=document.getElementById('hw_scanlog'); if(!vak) return;
+  vak.innerHTML=hwScanLog.length?`<div class="scanlog">
+    <div class="hkkop">Zojuist verplaatst (${hwScanLog.length})</div>
+    ${hwScanLog.map(r=>`<div class="lr"><span class="mono">${esc(r.code||'')}</span>
+      <span style="flex:1">${esc(r.naam)}</span>
+      <span class="muted">${esc(r.van||'nieuw')}</span>
+      <span class="pijl">→</span><span><b>${esc(r.naar)}</b></span></div>`).join('')}
+  </div>`:'';
+}
+
 function hwScanZoek(){
-  const code=(document.getElementById('hw_scan').value||'').trim().toUpperCase();
-  if(!code) return;
-  const h=hwData.find(x=>String(x.code||'').toUpperCase()===code ||
-                         String(x.serienummer||'').toUpperCase()===code);
-  if(!h){ toast('Dit nummer ken ik niet','fout'); return; }
+  const veld=document.getElementById('hw_scan');
+  const h=hwZoekOpCode(veld?veld.value:'');
+  if(!veld || !veld.value.trim()) return;
+  if(!h){ toast('Dit nummer ken ik niet','fout'); piep(200); return; }
   if(h.status==='verkocht'){ toast('Dit toestel is al verkocht','let-op'); return; }
   hwScanNu(h.id);
 }
@@ -5579,18 +5655,49 @@ function hwScanZoek(){
 async function hwScanNu(id){
   const loc=document.getElementById('hw_loc');
   const h=hwData.find(x=>x.id===id); if(!h) return;
+  const naar=loc?loc.value:null;
+  const vanNaam=hwLocatieNaam(h);
+  const naarNaam=(hwLocaties.find(l=>l.id===naar)||{}).naam||null;
+
+  if(h.status==='voorraad' && h.locatie_id===naar){
+    toast('Ligt al in '+(naarNaam||'deze locatie'),'let-op');
+    const e=document.getElementById('hw_scan'); if(e){ e.value=''; e.focus(); hwScanKijk(); }
+    return;
+  }
+
   const {error}=await sb.from('hardware').update({
     status:'voorraad',
-    locatie_id: loc?loc.value:null,
+    locatie_id: naar,
     ingescand_op:new Date().toISOString(),
     bijgewerkt_op:new Date().toISOString()
   }).eq('id',id);
   if(error){ toast('Inscannen mislukt','fout'); return; }
+
+  /* Vastleggen waar hij vandaan kwam. Anders staat er over een maand alleen
+     dat hij in de winkel ligt en weet niemand meer dat hij uit het magazijn
+     is gehaald. */
+  try{
+    await sb.from('voorraad_verplaatsingen').insert({
+      team_id:account.team_id, hardware_id:id,
+      van_id:h.locatie_id||null, naar_id:naar||null,
+      van_naam:vanNaam, naar_naam:naarNaam,
+      reden: h.status==='onderweg' ? 'ingescand' : 'verplaatst',
+      door:account.id
+    });
+  }catch(e){ console.error('verplaatsing loggen', e); }
+
+  hwScanLog.unshift({code:h.code||h.serienummer||'', naam:[h.merk,h.model].filter(Boolean).join(' '),
+                     van:vanNaam, naar:naarNaam||'—'});
+  const pad=document.getElementById('hw_pad');
+  if(pad) pad.innerHTML=hwVerhuisHtml({...h, locatie_id:h.locatie_id}, naar, true);
+
   const e=document.getElementById('hw_scan'); if(e){ e.value=''; e.focus(); }
   await hwLaad(true);
+  hwWachtTeken(); hwScanLogTeken();
   piep(660);
-  toast([h.merk,h.model].filter(Boolean).join(' ')+' ligt nu in de winkel', true);
-  if(!hwData.some(x=>x.status==='onderweg')) hwSluit();
+  toast(vanNaam
+    ? vanNaam+' → '+(naarNaam||'—')
+    : [h.merk,h.model].filter(Boolean).join(' ')+' ligt nu in '+(naarNaam||'de winkel'), true);
 }
 
 async function hwLaad(stil){
@@ -5665,7 +5772,7 @@ function renderHardware(){
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
         <td>${h.status==='onderweg'
           ? '<span class="onderweg">Nog niet ingescand</span>'
-          : esc(hwLocatieNaam(h)||'—')}</td>
+          : (hwLocatieNaam(h)?`<span class="locpil">${esc(hwLocatieNaam(h))}</span>`:'<span class="muted">—</span>')}</td>
         <td class="num">${euro(h.inkoop||0)}</td>
         <td class="num">${h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>'}</td>
         <td class="num">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
@@ -5746,7 +5853,20 @@ function hwVenster(h){
     </div>`:''}
 
     ${h?`<div class="hwkanaal">
-      <div class="hkkop">Waar staat hij</div>
+      <div class="hkkop">Waar ligt hij</div>
+      <div class="hkrij">
+        <span style="flex:1">${h.status==='onderweg'
+          ? '<span class="onderweg">Nog niet ingescand</span>'
+          : `<span class="locpil">${esc(hwLocatieNaam(h)||'nergens vastgelegd')}</span>`}</span>
+        ${hwLocaties.length?`<select id="hw_loc2" style="max-width:190px">${hwLocaties.map(l=>
+          `<option value="${l.id}"${l.id===h.locatie_id?' selected':''}>${esc(l.naam)}</option>`).join('')}</select>
+          <button class="btn ghost small" onclick="hwVerplaats('${h.id}', this)">Verplaatsen</button>`:''}
+      </div>
+      <div id="hwHistorie" class="muted klein" style="margin-top:6px">Geschiedenis laden…</div>
+    </div>
+
+    <div class="hwkanaal">
+      <div class="hkkop">Waar staat hij online</div>
       <label class="hkrij"><input type="checkbox" id="hw_k_winkel" ${k.winkel!==false?'checked':''}> In de winkel</label>
       <label class="hkrij"><input type="checkbox" id="hw_k_mp" ${k.marktplaats?'checked':''}> Op Marktplaats gezet</label>
       <div class="hkrij">
@@ -5767,8 +5887,50 @@ function hwVenster(h){
     ${h?`<button class="btn ghost small" style="margin-top:10px" onclick="hwVerwijder('${h.id}')">Toestel verwijderen</button>`:''}
   </div>`;
   document.body.appendChild(ov);
+  if(h) hwHistorieLaden(h.id);
 }
 function hwSluit(){ const o=document.getElementById('hwOverlay'); if(o) o.remove(); hwOpen=null; }
+
+/* Verplaatsen kan ook zonder scanner, want soms staat het toestel al voor je
+   neus en heb je alleen de muis. Hetzelfde spoor wordt vastgelegd. */
+async function hwVerplaats(id, knop){
+  const sel=document.getElementById('hw_loc2'); if(!sel) return;
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const naar=sel.value;
+  if(h.locatie_id===naar && h.status!=='onderweg'){ toast('Hij ligt daar al','let-op'); return; }
+  const vanNaam=hwLocatieNaam(h);
+  const naarNaam=(hwLocaties.find(l=>l.id===naar)||{}).naam||null;
+  if(knop) knop.disabled=true;
+  const {error}=await sb.from('hardware').update({
+    status: h.status==='verkocht'?h.status:'voorraad',
+    locatie_id:naar, ingescand_op:new Date().toISOString(),
+    bijgewerkt_op:new Date().toISOString()
+  }).eq('id',id);
+  if(knop) knop.disabled=false;
+  if(error){ toast('Verplaatsen mislukt','fout'); return; }
+  try{
+    await sb.from('voorraad_verplaatsingen').insert({
+      team_id:account.team_id, hardware_id:id,
+      van_id:h.locatie_id||null, naar_id:naar||null,
+      van_naam:vanNaam, naar_naam:naarNaam, reden:'verplaatst', door:account.id
+    });
+  }catch(e){ console.error('verplaatsing loggen', e); }
+  await hwLaad(true);
+  toast((vanNaam||'Nergens')+' → '+(naarNaam||'—'), true);
+  hwHistorieLaden(id);
+}
+
+async function hwHistorieLaden(id){
+  const vak=document.getElementById('hwHistorie'); if(!vak) return;
+  const {data}=await sb.from('voorraad_verplaatsingen').select('*')
+    .eq('hardware_id',id).order('op',{ascending:false}).limit(8);
+  if(!data || !data.length){ vak.innerHTML='Nog niet verplaatst.'; return; }
+  vak.innerHTML=data.map(r=>`<div class="verhuisrij">
+    <span class="dt">${new Date(r.op).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+    <span>${esc(r.van_naam||'nieuw')}</span><span class="pijl">→</span>
+    <b>${esc(r.naar_naam||'—')}</b>
+  </div>`).join('');
+}
 
 function hwVeld(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
 function hwGetal(id){ const v=hwVeld(id); return v===''?null:Math.round(Number(v)*100)/100; }

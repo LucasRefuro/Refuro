@@ -19,6 +19,10 @@ window.__db={
      aangemaakt_op:new Date().toISOString()}
   ],
   refurbish_onderdelen:[], refurbish_checklists:[], refurbish_orders:[],
+  hardware_locaties:[
+    {id:'l1', team_id:'t1', naam:'Magazijn', soort:'magazijn', volgorde:0},
+    {id:'l2', team_id:'t1', naam:'Winkel', soort:'winkel', volgorde:1}
+  ],
   hardware_modellen:[
     {id:'m1', merk:'HP', model:'ZBook 15 G6 Mobile', categorie:'Laptop',
      specs:{Processor:'Intel Core i7-9750H', Geheugen:'16 GB'}, keer_gebruikt:5},
@@ -80,6 +84,16 @@ setTimeout(async()=>{
   ok('splitsen bekend model', w.eval("JSON.stringify(splitsModel('HP ZBook 15 G6 Mobile'))")==='{"merk":"HP","model":"ZBook 15 G6 Mobile"}');
   ok('splitsen onbekend model', w.eval("splitsModel('Acer Swift 3').merk")==='Acer');
 
+  // ── waar de doos heen gaat ──
+  ok('locatiekiezer op de toevoegpagina', !!d.getElementById('t_loc_kiezer'));
+  ok('beide locaties als knop', /Magazijn/.test(d.getElementById('t_loc_kiezer').innerHTML)
+                             && /Winkel/.test(d.getElementById('t_loc_kiezer').innerHTML));
+  w.eval("locKies('l1')");
+  ok('gekozen locatie staat aan', w.eval('locKeuze')==='l1'
+      && !!d.querySelector('#t_loc_kiezer .locknop.aan'));
+  ok('locatieknoppen staan los van de categoriekiezer',
+      d.querySelectorAll('#t_loc_kiezer .soortknop').length===0);
+
   d.getElementById('t_aantal').value='3';
   d.getElementById('t_inkoop').value='75';
   d.getElementById('t_lev').value='Testleverancier';
@@ -98,7 +112,12 @@ setTimeout(async()=>{
     ok('geen serienummer gevraagd', !('serienummer' in r) || r.serienummer==null);
     ok('elk apparaat een eigen nummer', ins[2][0].code!==ins[2][1].code);
     ok('nummer leesbaar', /^A\d{4}$/.test(r.code));
+    ok('locatie meteen vastgelegd', r.locatie_id==='l1');
   }
+  const verhuis=geschreven.filter(g=>g[0]==='voorraad_verplaatsingen');
+  ok('binnenkomst vastgelegd', verhuis.length===3);
+  ok('met de naam van de plek', !!verhuis[0] && verhuis[0][2].naar_naam==='Magazijn');
+  ok('en zonder plek van herkomst', !!verhuis[0] && verhuis[0][2].van_id===null);
   ok('model onthouden voor de volgende keer', w.__rpcs.some(r=>r[0]==='model_onthouden'));
 
   w.eval("sluit(); labelsTonen('a1')");

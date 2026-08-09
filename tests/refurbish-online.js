@@ -194,6 +194,18 @@ setTimeout(async()=>{
   const hw2=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='insert').pop();
   ok('gepubliceerd als onderweg', hw2[2].status==='onderweg');
   ok('nummer meegegeven om te scannen', hw2[2].code==='A0001');
+  ok('nog geen plek, want hij moet nog ingescand worden', hw2[2].locatie_id===null);
+
+  // zonder inscannen ligt hij meteen waar hij lag
+  await w.eval('scanInstelling(false)');
+  w.eval("apparaten[0].status='klaar'; apparaten[0].locatie_id='l1'; onlineZetten('a1')");
+  await new Promise(r=>setTimeout(r,60));
+  d().getElementById('onl_prijs').value='349';
+  w.eval('onlVeld()');
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  const hw3=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='insert').pop();
+  ok('meteen in de voorraad', hw3[2].status==='voorraad');
+  ok('op de plek waar hij al lag', hw3[2].locatie_id==='l1');
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);
