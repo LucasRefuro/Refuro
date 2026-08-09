@@ -302,6 +302,11 @@
     font-family:'Sora',sans-serif; font-weight:800; font-size:28px; overflow:hidden;}
   .splash .mk.storvo{background:transparent; border-radius:0;}
   .splash .mk svg, .splash .mk img{width:100%; height:100%;}
+  /* voor wie al ingelogd was: geen donker scherm, alleen een streepje */
+  #authScherm.stil{background:var(--bg); align-items:flex-start; justify-content:center; padding-top:0;}
+  #authScherm.stil .splashbalk{width:100%; max-width:none; height:3px; border-radius:0;
+    background:transparent;}
+  #authScherm.stil .splashbalk i{background:var(--oranje);}
   .splashbalk{width:130px; height:4px; border-radius:var(--pil); background:rgba(255,255,255,.22); overflow:hidden;}
   .splashbalk i{display:block; width:40%; height:100%; border-radius:var(--pil);
     background:var(--oranje); animation:splashloop 1.1s ease-in-out infinite;}
@@ -653,10 +658,15 @@
   }
 
   /* kassa */
+  /* De twee kaarten zijn ongelijk lang. Ze even hoog trekken laat onder de
+     linker een gat vallen; daarom laten we ze allebei hun eigen hoogte houden. */
+  .kassamodules{align-items:start;}
   .kassaldo{font-family:'Sora',sans-serif; font-size:42px; font-weight:800; letter-spacing:-.03em;
-    color:var(--green-tekst); line-height:1;}
+    color:var(--green-tekst); line-height:1; margin-bottom:14px;}
   .kassaldo.vol{color:var(--red-tekst);}
-  .kasvakken{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  #kasStand{font-size:13.5px; line-height:1.6;}
+  #kasStand .npmelding{margin:0;}
+  .kasvakken{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:20px;}
   .kasvak{background:var(--soft-2); border-radius:var(--radius-s); padding:13px 15px;}
   .kasvak span{display:block; font-size:11px; color:var(--muted-l); text-transform:uppercase;
     letter-spacing:.06em; margin-bottom:5px;}
@@ -1203,25 +1213,32 @@
   .abopakket{flex:none; background:#fff; border-radius:var(--pil); padding:7px 15px;
     font-size:13px; font-weight:700; color:var(--text);}
 
-  .abobalk{position:fixed; left:50%; transform:translateX(-50%); top:14px; z-index:900;
-    display:flex; align-items:center; gap:12px; max-width:min(680px, calc(100vw - 32px));
-    padding:12px 14px 12px 16px; border-radius:16px; font-size:14px; line-height:1.45;
-    box-shadow:0 10px 30px rgba(23,32,30,.14); background:#fff; border:1.5px solid var(--border);}
-  .abobalk.let-op{background:#FEF4E2; border-color:#F0D9A8; color:#7A5307;}
-  .abobalk.fout{background:var(--red-soft,#FDECF1); border-color:#F3C7D5; color:#8E1033;}
-  .abobalk span{flex:1;}
-  /* Stond hier eerst background:currentColor met color:#fff erachter. Dat is
-     dezelfde kleur: currentColor kijkt naar de kleur die het element zélf
-     krijgt, dus de knop werd wit op wit en de tekst verdween. */
-  .abobalk button{border:none; border-radius:var(--pil); padding:8px 15px; font-family:inherit;
-    font-size:13px; font-weight:700; cursor:pointer; background:#7A5307; color:#fff; flex:none;
-    white-space:nowrap;}
-  .abobalk.fout button{background:#8E1033;}
-  .abobalk button:hover{opacity:.88;}
-  .abobalk .abosluit{background:none; color:inherit; font-size:20px; padding:0 4px; font-weight:400; opacity:.55;}
+  /* Een echte balk over de volle breedte, bovenaan, en niet weg te klikken.
+     Een zwevend pilletje met een kruisje wordt weggeklikt en vergeten; dit
+     hoort erbij tot het geregeld is.
+
+     De knop is wit met donkere tekst. Donkerrood op lichtrood heeft te weinig
+     contrast en leest als iets wat uitstaat; wit springt eruit en ziet er
+     bovendien vriendelijker uit dan nog meer rood. */
+  .abobalk{position:fixed; left:0; right:0; top:0; z-index:900;
+    padding:11px 22px; font-size:14px; line-height:1.45;
+    background:#FEF4E2; color:#7A5307; border-bottom:1.5px solid #F0D9A8;}
+  .abobalk.fout{background:#FDECF1; color:#8E1033; border-bottom-color:#F3C7D5;}
+  .abobinnen{max-width:1640px; margin:0 auto; display:flex; align-items:center; gap:14px;}
+  .abobalk span{flex:1; min-width:0;}
+  .abobalk button{border:none; border-radius:var(--pil); padding:9px 18px; font-family:inherit;
+    font-size:13.5px; font-weight:700; cursor:pointer; background:#fff; color:inherit; flex:none;
+    white-space:nowrap; box-shadow:0 2px 8px rgba(23,32,30,.10); transition:.15s;}
+  .abobalk button:hover{transform:translateY(-1px); box-shadow:0 5px 14px rgba(23,32,30,.16);}
+  /* De app schuift eronder door, zodat de balk niets afdekt. */
+  body.metabobalk{padding-top:46px;}
+  body.metabobalk .topbar{top:46px;}
   @media(max-width:640px){
-    .abobalk{flex-wrap:wrap; top:auto; bottom:14px;}
+    .abobinnen{flex-wrap:wrap; gap:9px;}
     .abobalk span{flex:1 1 100%;}
+    .abobalk button{width:100%;}
+    body.metabobalk{padding-top:0;}
+    body.metabobalk .topbar{top:0;}
   }
 </style>
 </head>
@@ -1666,12 +1683,12 @@
 <section id="tab-kassa"hidden>
   <div class="pagehead"><h1>Kassa</h1></div>
 
-  <div class="modules">
+  <div class="modules kassamodules">
   <div class="card">
     <h2><svg class="i"><use href="#i-cash"/></svg>In de lade</h2>
     <div class="kassaldo" id="kasSaldo">€ 0,00</div>
-    <div id="kasStand" style="margin-top:12px"></div>
-    <div class="kasvakken" id="kasVandaag" style="margin-top:18px"></div>
+    <div id="kasStand"></div>
+    <div class="kasvakken" id="kasVandaag"></div>
   </div>
 
   <div class="card">
@@ -4914,9 +4931,28 @@ function authEnter(e){
    allang was ingelogd; dan zag je bij elke verversing heel even een inlogbox
    voorbijkomen. Dat is verwarrend. Nu zie je alleen het merk tot duidelijk is
    waar je heen moet.                                                         */
+/* Weten we al dat er iemand ingelogd is? Supabase legt de sessie in de
+   opslag van de browser, dus dat kunnen we zien zonder de server te vragen.
+   Zo ja, dan tonen we geen donker scherm met een logo maar alleen een rustig
+   laadstreepje op de gewone achtergrond. Er valt dan niets meer te flitsen. */
+function ooitIngelogd(){
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && k.startsWith('sb-') && k.endsWith('-auth-token')) return true;
+    }
+  }catch(e){}
+  return false;
+}
 function authSplash(){
   let el=document.getElementById('authScherm');
   if(!el){ el=document.createElement('div'); el.id='authScherm'; document.body.appendChild(el); }
+  if(ooitIngelogd()){
+    el.className='stil';
+    el.innerHTML='<div class="splashbalk"><i></i></div>';
+    return;
+  }
+  el.className='';
   const h=huisstijl();
   const isStorvo=(h.naam||'Storvo').trim().toLowerCase()==='storvo';
   el.innerHTML=`<div class="splash">
@@ -5263,15 +5299,22 @@ function kortingAangeboden(){ try{ return localStorage.getItem('storvo_korting_a
 
 const REVIEW_URL='https://g.page/r/storvo/review';   /* aan te passen als je van reviewsite wisselt */
 
+/* Gaat via de server, niet rechtstreeks de tabel in. Daar wordt de regel
+   bewaard én meteen doorgestuurd naar info@storvo.nl, zodat je het ziet
+   zonder dat je het beheerpaneel open hoeft te hebben staan. */
 async function feedbackOpslaan(rij){
   if(!account) return false;
   try{
-    const {error}=await sb.from('feedback').insert(Object.assign({
-      team_id:account.team_id, account_id:account.id,
-      plan:(abonnement&&abonnement.plan)||null,
-      winkel:(state.instellingen&&state.instellingen.naam)||null
-    }, rij));
-    if(error){ console.error('feedback opslaan:', error); return false; }
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) return false;
+    const res=await fetch(SUPABASE_URL+'/functions/v1/feedback',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify(rij)
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok || !uit.ok){ console.error('feedback opslaan:', uit.error||res.status); return false; }
     return true;
   }catch(e){ console.error('feedback opslaan:', e); return false; }
 }
@@ -5516,18 +5559,26 @@ async function startAbonnement(korting, knop, pakket){
 function toonAboBalk(){
   let balk=document.getElementById('aboBalk');
   const w=abonnement&&abonnement.waarschuwing;
-  if(!w || !ABO_BALK[w]){ if(balk) balk.remove(); return; }
+  if(!w || !ABO_BALK[w]){
+    if(balk) balk.remove();
+    document.body.classList.remove('metabobalk');
+    return;
+  }
   const m=ABO_BALK[w](abonnement);
   if(!balk){
     balk=document.createElement('div'); balk.id='aboBalk';
     document.body.appendChild(balk);
   }
+  /* Geen kruisje meer. Wie dit wegklikt vergeet het, en staat een week later
+     voor een dichte deur. De balk hoort erbij tot het geregeld is. */
   balk.className='abobalk '+m.soort;
-  balk.innerHTML=`<svg class="i s"><use href="#i-bell"/></svg>
+  balk.innerHTML=`<div class="abobinnen">
+    <svg class="i s"><use href="#i-bell"/></svg>
     <span>${esc(m.tekst)}</span>
     ${account&&account.rol==='eigenaar'
       ? `<button onclick="${m.nieuw?'toonPakketten(false)':'openPortaal(this)'}">${esc(m.knop)}</button>` : ''}
-    <button class="abosluit" onclick="this.parentNode.remove()" title="Verbergen">&times;</button>`;
+  </div>`;
+  document.body.classList.add('metabobalk');
 }
 
 function toonAuthLogin(fout){

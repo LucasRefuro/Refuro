@@ -237,6 +237,15 @@
   .fbster{color:#E8B31D; letter-spacing:2px; font-size:14px;}
   .fbreden{font-weight:600; font-size:14px; margin-bottom:5px;}
   .fbtekst{font-size:14px; line-height:1.65; color:var(--muted); white-space:pre-wrap;}
+  .fbrij.af{opacity:.62;}
+  .fbvoet{display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap;}
+  .fbnotitie{flex:1; min-width:200px; font:inherit; font-size:13.5px; color:var(--tekst);
+    padding:9px 12px; border:1px solid var(--border); border-radius:10px; background:var(--kaart);
+    transition:border-color .2s, background .2s;}
+  .fbnotitie:focus{outline:none; border-color:var(--oranje);}
+  .fbnotitie.bewaard{border-color:#2E9E6B; background:#F0FAF5;}
+  .fbvoet .btn{flex:none; padding:9px 16px; font-size:13.5px;}
+  @media(max-width:640px){ .fbvoet .btn{width:100%;} }
 
   /* ---------- het beheerpaneel op een telefoon ----------
      Je kijkt hier ook weleens even snel op je mobiel of er iets binnen is
@@ -488,10 +497,11 @@
   <div class="pagehead">
     <h1>Feedback</h1>
     <div class="periodesel" id="fbFilter">
-      <button data-s="alles" class="active">Alles</button>
+      <button data-s="alles" class="active">Te verwerken</button>
       <button data-s="review">Beoordelingen</button>
       <button data-s="opmerking">Opmerkingen</button>
       <button data-s="vertrek">Vertrek</button>
+      <button data-s="verwerkt">Afgehandeld</button>
     </div>
   </div>
   <div class="kpis" id="fbKpis"></div>
@@ -875,17 +885,21 @@ function tekenFeedback(){
   if(!vak || !fbData) return;
   const k=document.getElementById('fbKpis');
   const tel=(s)=>fbData.rijen.filter(r=>r.soort===s).length;
+  const open=fbData.rijen.filter(r=>!r.verwerkt).length;
   if(k) k.innerHTML=
+    `<div class="kpi"><div class="l">Nog te verwerken</div><div class="v">${open}</div></div>`+
     `<div class="kpi"><div class="l">Beoordelingen</div><div class="v">${tel('review')}</div></div>`+
     `<div class="kpi"><div class="l">Gemiddeld</div><div class="v">${fbData.gemiddeld!=null?fbData.gemiddeld:'—'}</div></div>`+
     `<div class="kpi"><div class="l">Opmerkingen</div><div class="v">${tel('opmerking')}</div></div>`+
     `<div class="kpi"><div class="l">Vertrokken</div><div class="v">${tel('vertrek')}</div></div>`;
 
-  const rijen=fbData.rijen.filter(r=>fbSoort==='alles'||r.soort===fbSoort);
+  const rijen=fbData.rijen.filter(r=>
+    fbSoort==='alles' ? !r.verwerkt :
+    fbSoort==='verwerkt' ? r.verwerkt : (r.soort===fbSoort && !r.verwerkt));
   vak.innerHTML = rijen.length ? rijen.map(r=>{
     const d=new Date(r.aangemaakt_op);
     const sterren=r.sterren?'★'.repeat(r.sterren)+'☆'.repeat(5-r.sterren):'';
-    return `<div class="fbrij">
+    return `<div class="fbrij${r.verwerkt?' af':''}" data-id="${esc(r.id)}">
       <div class="fbkop">
         <b>${esc(r.winkel||'Onbekende winkel')}</b>
         <span class="tag">${esc(FB_SOORT[r.soort]||r.soort)}</span>
@@ -896,9 +910,54 @@ function tekenFeedback(){
       ${r.reden?`<div class="fbreden">${esc(r.reden)}</div>`:''}
       ${r.tekst?`<div class="fbtekst">${esc(r.tekst)}</div>`:''}
       ${r.mag_contact?'':'<div class="muted" style="font-size:12px; margin-top:6px">Wil geen contact hierover</div>'}
+      <div class="fbvoet">
+        <input class="fbnotitie" placeholder="Notitie: wat heb je ermee gedaan?" value="${esc(r.notitie||'')}"
+               onchange="fbNotitie('${esc(r.id)}', this)">
+        <button class="btn ${r.verwerkt?'ghost':'actie'}" onclick="fbVerwerk('${esc(r.id)}', ${r.verwerkt?'false':'true'}, this)">
+          ${r.verwerkt?'Terugzetten':'Verwerkt'}
+        </button>
+      </div>
     </div>`;
-  }).join('') : '<p class="muted">Nog niets binnengekomen in deze categorie.</p>';
+  }).join('') : `<p class="muted">${fbSoort==='verwerkt'?'Nog niets afgevinkt.':'Niets meer te verwerken hier.'}</p>`;
 }
+
+async function fbSchrijf(lijf){
+  const {data:{session}}=await sbAdmin.auth.getSession();
+  if(!session) throw new Error('Niet ingelogd');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/admin-feedback',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+             'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(lijf)
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok) throw new Error(uit.error||'Opslaan mislukt');
+}
+
+async function fbVerwerk(id, aan, knop){
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Even…';
+  try{
+    await fbSchrijf({id, verwerkt:aan});
+    const r=fbData.rijen.find(x=>x.id===id);
+    if(r){ r.verwerkt=aan; r.verwerkt_op=aan?new Date().toISOString():null; }
+    tekenFeedback();
+  }catch(e){
+    knop.disabled=false; knop.textContent=oud;
+    alert('Kon het niet opslaan: '+e.message);
+  }
+}
+
+async function fbNotitie(id, veld){
+  const was=veld.value;
+  try{
+    await fbSchrijf({id, notitie:was});
+    const r=fbData.rijen.find(x=>x.id===id);
+    if(r) r.notitie=was.trim()||null;
+    veld.classList.add('bewaard');
+    setTimeout(()=>veld.classList.remove('bewaard'), 1200);
+  }catch(e){ alert('Kon de notitie niet opslaan: '+e.message); }
+}
+
 document.querySelectorAll('#fbFilter button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#fbFilter button').forEach(x=>x.classList.toggle('active', x===b));
   fbSoort=b.dataset.s; tekenFeedback();

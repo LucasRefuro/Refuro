@@ -41,8 +41,33 @@ Deno.serve(async (req) => {
     .select("id").eq("id", wie.user.id).maybeSingle();
   if (!baas) return fout("Geen toegang tot het beheerpaneel", 403);
 
+  // Een regel afvinken of er een notitie bij zetten.
+  if (req.method === "POST") {
+    let lijf: any;
+    try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
+    if (!lijf?.id) return fout("Geen regel meegegeven");
+
+    const wijziging: Record<string, unknown> = {};
+    if (typeof lijf.verwerkt === "boolean") {
+      wijziging.verwerkt = lijf.verwerkt;
+      wijziging.verwerkt_op = lijf.verwerkt ? new Date().toISOString() : null;
+      wijziging.verwerkt_door = lijf.verwerkt ? wie.user.id : null;
+    }
+    if (typeof lijf.notitie === "string") {
+      wijziging.notitie = lijf.notitie.trim().slice(0, 2000) || null;
+    }
+    if (!Object.keys(wijziging).length) return fout("Niets om te wijzigen");
+
+    const { error } = await admin.from("feedback").update(wijziging).eq("id", lijf.id);
+    if (error) {
+      console.error("feedback bijwerken", error);
+      return fout("Kon de regel niet bijwerken", 500);
+    }
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  }
+
   const { data, error } = await admin.from("feedback")
-    .select("id, soort, sterren, reden, tekst, mag_contact, plan, winkel, aangemaakt_op, team_id")
+    .select("id, soort, sterren, reden, tekst, mag_contact, plan, winkel, aangemaakt_op, team_id, verwerkt, verwerkt_op, notitie")
     .order("aangemaakt_op", { ascending: false })
     .limit(300);
   if (error) {
@@ -61,6 +86,7 @@ Deno.serve(async (req) => {
     ok: true,
     rijen: data || [],
     aantal: (data || []).length,
+    open: (data || []).filter((r) => !r.verwerkt).length,
     reviews: reviews.length,
     gemiddeld,
   }), { headers: cors });

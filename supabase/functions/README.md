@@ -18,7 +18,8 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `redeem-invite` | ja | Werknemer maakt zijn account via een uitnodigingslink |
 | `team-admin` | nee | Wachtwoorden en uitnodigingen binnen een winkel |
 | `admin-teams` | nee | Beheerpaneel van Storvo zelf |
-| `admin-feedback` | nee | Leest de feedback van winkels uit voor het beheerpaneel |
+| `feedback` | nee | Neemt feedback aan, bewaart hem en mailt hem naar info@storvo.nl |
+| `admin-feedback` | nee | Leest de feedback uit en vinkt hem af in het beheerpaneel |
 | `stripe-webhook` | ja | Verwerkt betalingen en houdt de abonnementsstatus bij |
 | `stripe-portaal` | nee | Opent het betaalportaal voor de winkel |
 | `stripe-checkout` | nee | Start het afrekenen van proef naar abonnement, met of zonder korting |
@@ -41,6 +42,7 @@ Zet ze nooit in de code en nooit in een chat.
 |---|---|
 | `RESEND_API_KEY` | E-mail versturen |
 | `RESEND_FROM` | Afzender van de e-mails |
+| `FEEDBACK_NAAR` | Waar feedback heen gaat, standaard info@storvo.nl |
 | `STRIPE_SECRET_KEY` | Betalingen |
 | `STRIPE_WEBHOOK_SECRET` | Controleert of een melding echt van Stripe komt |
 | `META_WA_NUMMER_ID` | Het WhatsApp-nummer van Storvo zelf |
