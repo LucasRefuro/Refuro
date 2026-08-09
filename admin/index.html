@@ -264,10 +264,12 @@
       -webkit-mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
     }
     .tabelrol::-webkit-scrollbar{display:none;}
-    table{font-size:13px;}
-    th,td{padding:11px 9px; white-space:nowrap;}
-    th:first-child,td:first-child{position:sticky; left:0; background:var(--card); z-index:1;}
-    td:first-child{white-space:normal; min-width:140px;}
+    /* Alles schuift samen mee; niets blijft plakken, anders wordt de rest
+       te smal om nog te kunnen lezen. */
+    table{font-size:13.5px;}
+    th,td{padding:12px 12px; white-space:nowrap;}
+    td:first-child{padding-left:2px;}
+    th:last-child,td:last-child{padding-right:2px;}
     h2{font-size:15px; flex-wrap:wrap;}
   }
   @media(max-width:520px){

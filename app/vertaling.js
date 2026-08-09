@@ -134,7 +134,7 @@ const WOORDEN = {
 'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Zoeken op gsm-world':'Search gsm-world',
 
 /* ---------- de balk onderin op de telefoon ---------- */
-'Meer':'More', "Alle pagina's":'All pages', 'Bestellen':'Ordering',
+'Bestellen':'Ordering',
 
 /* ---------- pagina's aan of uit ---------- */
 "Welke pagina's gebruik je?":'Which pages do you use?',
