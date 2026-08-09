@@ -5098,6 +5098,7 @@ async function ladAccountEnStart(session){
   renderInstellingen();
   toonAboBalk();
   proefNudge();
+  voorbeeldScherm();
   reviewMoment();
   syncStart();
   if(!account.onboarding_klaar) toonOnboarding();
@@ -5244,6 +5245,16 @@ function proefOpbouw(){
   if(rep)  punten.push(rep+' reparatie'+(rep===1?'':'s')+' met de geschiedenis erbij');
   if(verk) punten.push(verk+' verkoop'+(verk===1?'':'en')+' en '+euro(omzet)+' aan omzet');
   return punten;
+}
+
+/* Even kijken hoe een scherm eruitziet zonder erop te moeten wachten.
+   Zet ?toon=laatstedag of ?toon=korting achter het adres. Alleen de eigenaar,
+   en het verandert niets aan de administratie: het tekent alleen het scherm. */
+function voorbeeldScherm(){
+  if(!account || account.rol!=='eigenaar') return;
+  const wat=new URLSearchParams(location.search).get('toon');
+  if(wat==='laatstedag') setTimeout(()=>toonProefScherm(1), 400);
+  else if(wat==='korting') setTimeout(()=>toonKortingAanbod(), 400);
 }
 
 function proefNudge(){
