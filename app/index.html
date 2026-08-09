@@ -185,6 +185,9 @@
   .notitie.klant{border-left:3px solid var(--oranje);}
   .notitie.prob{border-left:3px solid var(--red);}
   aside nav button .badge.rood{background:#fff; color:var(--red);}
+  /* Instellingen hoort onderaan: je gebruikt het zelden en het hoort niet
+     tussen het dagelijkse werk te staan. */
+  .onderin{margin-top:auto; padding-top:14px; border-top:1.5px solid var(--border);}
   .popup.groot{width:min(680px,94vw); max-height:88vh; overflow:auto;}
   .logoImg{width:38px; height:38px; border-radius:10px; object-fit:cover;}
   /* login & gebruiker */
@@ -476,6 +479,18 @@
   .npbron.twijfel{background:var(--amber-soft); color:var(--amber-tekst);}
   .npbronkop{font-weight:700; margin-bottom:6px;}
   .npbron ul{margin:0; padding-left:18px;}
+  /* pagina's aan of uit */
+  .pagrij{display:grid; grid-template-columns:auto minmax(120px,180px) 1fr; align-items:center; gap:14px;
+    padding:14px 16px; border-radius:var(--radius-s); background:var(--soft-2); margin-bottom:8px;
+    cursor:pointer; transition:.15s;}
+  .pagrij:hover{background:var(--lblauw);}
+  .pagrij input{width:20px; height:20px; accent-color:var(--oranje); cursor:pointer;}
+  .pagnaam{font-weight:600; font-size:14.5px;}
+  .paguitleg{font-size:13px; color:var(--muted); line-height:1.5;}
+  .pagrij.uit .pagnaam, .pagrij.uit .paguitleg{opacity:.5;}
+  .pagrij.uit .pagnaam{text-decoration:line-through;}
+  @media(max-width:640px){ .pagrij{grid-template-columns:auto 1fr;} .paguitleg{grid-column:2;} }
+
   .codeknop{display:inline-flex; align-items:center; gap:8px; background:var(--soft-2); border:none;
     border-radius:var(--pil); padding:6px 12px; font:inherit; font-size:13px; font-weight:600;
     color:var(--tekst); cursor:pointer; transition:.15s; font-variant-numeric:tabular-nums;}
@@ -609,7 +624,10 @@
     aside nav{flex-direction:row;}
     aside nav button{white-space:nowrap; padding:10px 15px; font-size:13.5px;}
     .logo{padding:0 14px 0 4px;}
-    aside .foot,.gebruikerchip{display:none !important;}
+    /* Op een smal scherm wordt de zijbalk een rij; Instellingen schuift dan
+       gewoon achteraan mee in plaats van naar beneden. */
+    .onderin{margin-top:0; display:flex; align-items:center; padding-top:0; border-top:none;}
+    aside .foot{display:none !important;}
     main{margin-left:0; padding:0;}
     .binnen{padding:0 16px 48px;}
     .topbar{position:sticky; top:0; padding:12px 16px; margin:0 0 20px;}
@@ -907,10 +925,11 @@
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
-    <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
   </nav>
-  <div style="margin-top:auto">
-    <div class="gebruikerchip" id="gebruikerChip" style="display:none"></div>
+  <div class="onderin">
+    <nav class="onder">
+      <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
+    </nav>
     <div class="foot" id="sidebarFoot">Versie 1.0</div>
   </div>
 </aside>
@@ -1317,6 +1336,7 @@
       <button data-s="modellen">Modellen</button>
       <button data-s="cats">Categorieën</button>
       <button data-s="bedrijf">Bedrijf</button>
+      <button data-s="paginas">Pagina's</button>
       <button data-s="huisstijl">Huisstijl</button>
       <button data-s="klantpagina">Klantpagina</button>
       <button data-s="berichten">Berichten</button>
@@ -1391,6 +1411,12 @@
       <div><label>Bestel</label><input id="c_bestel" type="number" step="1" min="1" value="10"></div>
       <div><button class="btn" onclick="voegCatToe()">Toevoegen</button></div>
     </div>
+  </div>
+
+  <div class="card" id="inst-paginas"hidden>
+    <h2><svg class="i"><use href="#i-layers"/></svg>Welke pagina's gebruik je?</h2>
+    <p class="muted" style="margin-bottom:18px; max-width:78ch">Zet uit wat je winkel niet doet. De pagina verdwijnt dan uit het menu voor iedereen, en er gaat niets verloren: zet je hem later weer aan, dan staat alles er nog. Dashboard en Instellingen blijven altijd staan, anders kom je hier nooit meer terug.</p>
+    <div id="paginaLijst"></div>
   </div>
 
   <div class="card" id="inst-bedrijf"hidden>
@@ -1628,6 +1654,7 @@ function load(){
   if(!s.repNr) s.repNr=0;
   if(!s.teams) s.teams=[{id:1, naam:'Winkel'}];
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
+  if(!Array.isArray(s.verborgen)) s.verborgen=[];
   if(s.vergrendeld===undefined) s.vergrendeld=false;
   if(s.onboardingKlaar===undefined) s.onboardingKlaar=false;
   return s;
@@ -1661,6 +1688,9 @@ function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
 /* ---------- navigatie ---------- */
 document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 function showTab(t){
+  /* Een pagina die uitstaat of die deze rol niet mag zien, gaat ook niet open
+     via een link of een snelkoppeling. */
+  if(typeof mag==='function' && !mag(t)) t = mag('dashboard') ? 'dashboard' : 'scan';
   /* Nieuw product heeft geen eigen menuknop meer; hij hangt onder Producten.
      Daarom blijft die knop oplichten zolang je in het formulier zit.        */
   const menu = t==='nieuw' ? 'producten' : t;
@@ -2859,9 +2889,10 @@ function updateBadge(){
 /* ---------- instellingen ---------- */
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','paginas','huisstijl','klantpagina','berichten','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
+  if(b.dataset.s==='paginas') renderPaginas();
 }));
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
@@ -2869,29 +2900,67 @@ const ROL_TABS={
   beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','bestellen','instellingen','team'],
   medewerker:['scan','diensten','reparaties','producten','nieuw','bestellen']
 };
+/* ---------- pagina's aan of uit ----------
+   Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
+   niet in zijn menu te hebben staan. De eigenaar zet hier zelf uit wat hij
+   niet gebruikt; dat scheelt ruis voor het hele team.
+
+   Dashboard en Instellingen kunnen niet uit. Zonder die twee kom je nergens
+   meer, ook niet terug bij deze schakelaars.                               */
+const UITZETBAAR=[
+  {tab:'scan',        naam:'Scannen',      uitleg:'In- en uitscannen van producten met de barcodescanner.'},
+  {tab:'diensten',    naam:'Diensten',     uitleg:'Losse werkzaamheden zoals simkaart knippen of data overzetten.'},
+  {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
+  {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
+  {tab:'bestellen',   naam:'Bestellingen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
+  {tab:'team',        naam:'Team',         uitleg:'Medewerkers, rollen en wachtwoorden.'}
+];
+function verborgen(){ return Array.isArray(state.verborgen)?state.verborgen:[]; }
+function paginaAan(tab){ return !verborgen().includes(tab); }
+
 function mag(tab){
+  /* Producten uit betekent ook geen nieuw product kunnen aanmaken. */
+  const hoort = tab==='nieuw' ? 'producten' : tab;
+  if(!paginaAan(hoort)) return false;
   const r=gebruiker?gebruiker.rol:'eigenaar';
   const toegestaan=ROL_TABS[r];
   return !toegestaan || toegestaan.includes(tab);
+}
+function paginaWissel(tab, aan){
+  const lijst=verborgen().filter(t=>t!==tab);
+  if(!aan) lijst.push(tab);
+  state.verborgen=lijst;
+  save();
+  pasRechtenToe();
+  renderPaginas();
+  toast(aan ? UITZETBAAR.find(u=>u.tab===tab).naam+' staat weer in het menu'
+            : UITZETBAAR.find(u=>u.tab===tab).naam+' is verborgen', true);
+}
+function renderPaginas(){
+  const el=document.getElementById('paginaLijst');
+  if(!el) return;
+  el.innerHTML=UITZETBAAR.map(u=>{
+    const aan=paginaAan(u.tab);
+    return `<label class="pagrij${aan?'':' uit'}">
+      <input type="checkbox" ${aan?'checked':''} onchange="paginaWissel('${u.tab}', this.checked)">
+      <span class="pagnaam">${esc(u.naam)}</span>
+      <span class="paguitleg">${esc(u.uitleg)}</span>
+    </label>`;
+  }).join('');
 }
 function pasRechtenToe(){
   document.querySelectorAll('aside nav button').forEach(b=>{
     b.style.display = mag(b.dataset.tab)?'':'none';
   });
-  const chip=document.getElementById('gebruikerChip');
+  /* Wie er is ingelogd staat alleen nog rechtsboven. Twee keer hetzelfde
+     tonen leverde alleen maar ruis op onderin de zijbalk.                  */
   const top=document.getElementById('topUser');
   if(gebruiker){
-    chip.style.display='flex';
-    chip.innerHTML=`<div class="av">${esc(gebruiker.naam.charAt(0).toUpperCase())}</div>`+
-      `<div>${esc(gebruiker.naam)}<br><span style="opacity:.7">${esc(gebruiker.rol)}</span></div>`+
-      (account?`<button onclick="toonMijnAccount()" title="Mijn account"><svg class="i s"><use href="#i-settings"/></svg></button>`:'')+
-      `<button onclick="uitloggen()">${account?'uitloggen':'wissel'}</button>`;
     if(top) top.innerHTML=`<div class="av">${esc(gebruiker.naam.charAt(0).toUpperCase())}</div>`+
       `<div><div class="nm">${esc(gebruiker.naam)}</div><div class="rl">${esc(gebruiker.rol)}</div></div>`;
     if(top) top.onclick=account?(()=>toonMijnAccount()):(()=>uitloggen());
-  }else{
-    chip.style.display='none';
-    if(top) top.innerHTML='';
+  }else if(top){
+    top.innerHTML=''; top.onclick=null;
   }
   const zicht=document.querySelector('main section[id^="tab-"]:not([hidden])');
   if(zicht && !mag(zicht.id.replace('tab-',''))) showTab(mag('dashboard')?'dashboard':'scan');
@@ -4173,7 +4242,7 @@ function slaBedrijfOp(){
   toast('Bedrijfsgegevens opgeslagen', true);
 }
 function renderInstellingen(){
-  renderSnel(); renderTypes(); renderModellen(); renderCats();
+  renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
   const i=state.instellingen||{};
   document.getElementById('b_naam').value=i.naam||'';
   document.getElementById('b_email').value=i.email||'';

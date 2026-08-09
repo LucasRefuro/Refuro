@@ -133,6 +133,18 @@ const WOORDEN = {
 'Ook voor klant':'Also for the customer',
 'Prijs op gsm-world.nl':'Price on gsm-world.nl', 'Zoeken op gsm-world':'Search gsm-world',
 
+/* ---------- pagina's aan of uit ---------- */
+"Welke pagina's gebruik je?":'Which pages do you use?',
+'Zet uit wat je winkel niet doet. De pagina verdwijnt dan uit het menu voor iedereen, en er gaat niets verloren: zet je hem later weer aan, dan staat alles er nog. Dashboard en Instellingen blijven altijd staan, anders kom je hier nooit meer terug.':
+  'Switch off what your shop does not do. The page then disappears from the menu for everyone, and nothing is lost: turn it back on later and it is all still there. Dashboard and Settings always stay, otherwise you could never get back here.',
+"Pagina's":'Pages',
+'In- en uitscannen van producten met de barcodescanner.':'Scanning products in and out with the barcode scanner.',
+'Losse werkzaamheden zoals simkaart knippen of data overzetten.':'One-off jobs like cutting a SIM card or transferring data.',
+'Reparaties aannemen, volgen en de klant op de hoogte houden.':'Taking in repairs, following them and keeping the customer posted.',
+'De voorraadlijst en het toevoegen van nieuwe producten.':'The stock list and adding new products.',
+'Wat er bijbesteld moet worden zodra de voorraad opraakt.':'What needs reordering once stock runs low.',
+'Medewerkers, rollen en wachtwoorden.':'Employees, roles and passwords.',
+
 /* ---------- nieuw product scannen ---------- */
 'Nieuw product toevoegen':'Add a new product', 'Terug naar producten':'Back to products',
 'Artikelcode':'Article code', '(van de leverancier)':'(from the supplier)',

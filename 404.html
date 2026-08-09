@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pagina niet gevonden · Storvo</title>
+<link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
+<meta name="theme-color" content="#0B5B52">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --groen:#0B5B52; --groen-m:#6A9C93; --groen-l:#A7C3BD; --petrol:#123F39;
+  --amber:#E88A1D; --amber-d:#CE7811; --warmwit:#F7F6F3; --ink:#17201E;
+  --ijsgroen:#E7F1EE; --card:#FFFFFF; --rand:#ECEAE4;
+  --muted:#5B6663; --muted-l:#8A938F; --body:#475350;
+  --radius:24px; --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--warmwit); color:var(--ink); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased; min-height:100vh; display:flex; flex-direction:column;}
+a{color:var(--groen); text-decoration:none;}
+a:hover{text-decoration:underline;}
+.wrap{max-width:1000px; margin:0 auto; padding:0 24px; width:100%;}
+
+header.bar{padding:22px 0; border-bottom:1px solid var(--rand); background:var(--card);}
+header.bar .in{display:flex; align-items:center; gap:14px;}
+.merk{display:flex; align-items:center; gap:11px;}
+.mk{width:34px; height:34px; flex:none;}
+.mk svg{width:34px; height:34px; display:block;}
+.wm{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.03em; color:var(--ink);}
+
+main{flex:1 0 auto; display:flex; align-items:center; padding:70px 24px;}
+main > .binnen{width:100%;}
+.kolommen{display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;}
+
+.label{font-size:12.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--groen); margin-bottom:14px;}
+h1{font-family:'Sora',sans-serif; font-size:clamp(32px,5vw,46px); font-weight:800;
+  letter-spacing:-.03em; line-height:1.1; margin-bottom:16px;}
+.lead{font-size:17.5px; color:var(--body); margin-bottom:32px; max-width:46ch;}
+
+.knoppen{display:flex; gap:12px; flex-wrap:wrap;}
+.knop{display:inline-flex; align-items:center; gap:9px; background:var(--amber); color:#fff;
+  border:none; border-radius:var(--pil); padding:15px 26px; font-family:inherit; font-size:15.5px;
+  font-weight:700; cursor:pointer; box-shadow:0 6px 18px rgba(232,138,29,.26); transition:.18s;}
+.knop:hover{background:var(--amber-d); transform:translateY(-2px); text-decoration:none;
+  box-shadow:0 12px 26px rgba(232,138,29,.3);}
+.knop.stil{background:var(--card); color:var(--muted); border:1.5px solid var(--rand); box-shadow:none;}
+.knop.stil:hover{border-color:var(--groen); color:var(--groen); background:var(--ijsgroen);}
+.knop svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.2;
+  stroke-linecap:round; stroke-linejoin:round;}
+
+.verder{margin-top:38px; padding-top:26px; border-top:1px solid var(--rand);}
+.verder .kop{font-size:13px; font-weight:700; color:var(--muted-l); margin-bottom:12px;
+  letter-spacing:.04em; text-transform:uppercase;}
+.verder ul{list-style:none; display:flex; flex-wrap:wrap; gap:10px 22px;}
+.verder a{font-size:15px; color:var(--body); display:inline-flex; align-items:center; gap:7px;}
+.verder a:hover{color:var(--groen);}
+.verder a svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.4;
+  stroke-linecap:round; stroke-linejoin:round; opacity:.5;}
+
+/* Het merk als raster: één vlakje ontbreekt, dat is precies wat er aan de hand is. */
+.beeld{display:flex; align-items:center; justify-content:center;}
+.raster{display:grid; grid-template-columns:1fr 1fr; gap:18px; width:min(320px,100%);
+  aspect-ratio:1; padding:14px;}
+.vlak{border-radius:22%; animation:opkomen .6s cubic-bezier(.22,.8,.3,1) both;}
+.vlak.a{background:var(--groen);}
+.vlak.b{background:var(--groen-m); animation-delay:.08s;}
+.vlak.c{background:var(--groen-l); animation-delay:.16s;}
+.vlak.leeg{border:3px dashed var(--groen-l); background:transparent; animation-delay:.24s;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Sora',sans-serif; font-size:clamp(30px,6vw,44px); font-weight:800;
+  color:var(--groen-l); letter-spacing:-.04em;}
+@keyframes opkomen{from{opacity:0; transform:scale(.86)} to{opacity:1; transform:none}}
+
+.op{opacity:0; transform:translateY(20px); animation:omhoog .7s cubic-bezier(.22,.8,.3,1) both;}
+.op.d1{animation-delay:.05s} .op.d2{animation-delay:.12s} .op.d3{animation-delay:.19s}
+@keyframes omhoog{to{opacity:1; transform:none}}
+@media(prefers-reduced-motion:reduce){ .op,.vlak{animation:none; opacity:1; transform:none;} }
+
+footer{flex:none; border-top:1px solid var(--rand); background:var(--card);
+  padding:26px 0 30px; font-size:13.5px; color:var(--muted-l);}
+footer .rij{display:flex; gap:12px 24px; flex-wrap:wrap;}
+footer a{color:var(--muted);}
+footer .rechts{margin-left:auto;}
+
+@media(max-width:860px){
+  .kolommen{grid-template-columns:1fr; gap:44px;}
+  .beeld{order:-1;} .raster{width:min(230px,70%);}
+  main{padding:48px 24px;}
+}
+@media(max-width:560px){
+  footer .rechts{margin-left:0;}
+  .knoppen .knop{width:100%; justify-content:center;}
+}
+
+/* taalkiezer: vlag, code en een klein pijltje, zonder omlijning */
+.taalkies{display:flex; align-items:center; gap:7px; background:transparent; border:none;
+  padding:8px; border-radius:12px; cursor:pointer; font-family:inherit; font-size:14px;
+  font-weight:600; color:var(--muted); transition:.15s; line-height:1; margin-left:auto;}
+.taalkies:hover{background:var(--ijsgroen); color:var(--groen);}
+.taalkies .vlag{font-size:17px; line-height:1;}
+.taalkies .pijl{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.6;
+  stroke-linecap:round; stroke-linejoin:round; opacity:.55;}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap in">
+    <a href="/" class="merk">
+      <span class="mk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="wm">storvo</span>
+    </a>
+    <button class="taalkies" id="taalKnop" onclick="wisselTaal()" aria-label="Taal">
+      <span class="vlag" id="taalVlag">🇳🇱</span><span id="taalCode">NL</span>
+      <svg class="pijl" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="wrap binnen">
+    <div class="kolommen">
+
+      <div>
+        <div class="label op" data-t="label">Foutmelding 404</div>
+        <h1 class="op d1" data-t="kop">Deze pagina staat er niet</h1>
+        <p class="lead op d2" data-t="lead">Misschien is het adres verkeerd overgetypt, of hebben wij de pagina verplaatst. Vervelend, maar zo weer opgelost.</p>
+
+        <div class="knoppen op d3">
+          <a href="/" class="knop" data-t="knop_home">
+            <svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            <span data-t="knop_home_t">Naar de homepagina</span>
+          </a>
+          <a href="/contact" class="knop stil" data-t="knop_contact">
+            <svg viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            <span data-t="knop_contact_t">Laat het ons weten</span>
+          </a>
+        </div>
+
+        <div class="verder op d3">
+          <div class="kop" data-t="verder_kop">Of ga direct naar</div>
+          <ul>
+            <li><a href="/app/"><svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v4M9 3H5a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h4m6 0h4a2 2 0 0 0 2-2v-4"/></svg><span data-t="l_app">Inloggen op Storvo</span></a></li>
+            <li><a href="/proberen"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span data-t="l_proberen">Gratis proberen</span></a></li>
+            <li><a href="/contact"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span data-t="l_contact">Contact</span></a></li>
+            <li><a href="/voorwaarden"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span data-t="l_voorwaarden">Algemene voorwaarden</span></a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="beeld">
+        <div class="raster" role="img" aria-label="404">
+          <div class="vlak a"></div>
+          <div class="vlak b"></div>
+          <div class="vlak c"></div>
+          <div class="vlak leeg">404</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap rij">
+    <span>&copy; <span id="jaar">2026</span> Storvo</span>
+    <a href="/voorwaarden" data-t="f_voorwaarden">Algemene voorwaarden</a>
+    <a href="/privacy" data-t="f_privacy">Privacyverklaring</a>
+    <a href="mailto:info@storvo.nl" class="rechts">info@storvo.nl</a>
+  </div>
+</footer>
+
+<script>
+'use strict';
+
+/* De site is Nederlands op storvo.nl en Engels op storvo.app. De keuze van de
+   bezoeker gaat daar altijd voor.                                          */
+const EN={
+  label:'Error 404',
+  kop:'This page is not here',
+  lead:'The address may have a typo in it, or we moved the page. Annoying, but quickly sorted.',
+  knop_home_t:'Go to the homepage',
+  knop_contact_t:'Let us know',
+  verder_kop:'Or go straight to',
+  l_app:'Log in to Storvo',
+  l_proberen:'Try it free',
+  l_contact:'Contact',
+  l_voorwaarden:'Terms and conditions',
+  f_voorwaarden:'Terms and conditions',
+  f_privacy:'Privacy statement'
+};
+
+function kiesTaal(){
+  try{
+    const t=localStorage.getItem('storvo_taal');
+    if(t==='nl'||t==='en') return t;
+  }catch(e){}
+  if(/(^|\.)storvo\.app$/i.test(location.hostname)) return 'en';
+  if(/(^|\.)storvo\.nl$/i.test(location.hostname))  return 'nl';
+  return (navigator.language||'nl').toLowerCase().startsWith('nl') ? 'nl' : 'en';
+}
+
+let taal=kiesTaal();
+
+function zetTaal(t){
+  taal=t;
+  document.documentElement.lang=t;
+  document.getElementById('taalVlag').textContent = t==='nl' ? '🇳🇱' : '🇬🇧';
+  document.getElementById('taalCode').textContent = t.toUpperCase();
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const s=el.dataset.t;
+    if(t==='en' && EN[s]) el.textContent=EN[s];
+    else if(t==='nl' && el.dataset.nl) el.textContent=el.dataset.nl;
+  });
+  document.title = t==='en' ? 'Page not found · Storvo' : 'Pagina niet gevonden · Storvo';
+}
+
+function wisselTaal(){
+  const n = taal==='nl' ? 'en' : 'nl';
+  try{ localStorage.setItem('storvo_taal', n); }catch(e){}
+  zetTaal(n);
+}
+
+/* De Nederlandse tekst staat al in de opmaak; die bewaren we om terug te kunnen. */
+document.querySelectorAll('[data-t]').forEach(el=>{ el.dataset.nl=el.textContent; });
+document.getElementById('jaar').textContent=new Date().getFullYear();
+zetTaal(taal);
+</script>
+</body>
+</html>
