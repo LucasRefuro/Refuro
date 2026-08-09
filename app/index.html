@@ -286,6 +286,10 @@
   .scanlog{margin-top:16px; padding-top:14px; border-top:1.5px solid var(--border);}
   .scanlog .lr{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px;}
   .scanlog .lr .pijl{color:var(--green-tekst); font-weight:800;}
+  .filtertel{opacity:.6; font-variant-numeric:tabular-nums;}
+  /* De locatieknoppen zitten in een span zodat ze in één keer te vervangen
+     zijn; display:contents zorgt dat ze toch gewoon meedoen in de rij. */
+  #hwLocFilters{display:contents;}
   .locpil{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px;
     border-radius:var(--pil); background:var(--soft-2); color:var(--muted); white-space:nowrap;}
   .verhuisrij{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0;}
@@ -1846,6 +1850,7 @@
     <div class="row" style="gap:10px">
       <div class="periodesel" id="hwFilter">
         <button data-f="voorraad" class="active">Op voorraad</button>
+        <span id="hwLocFilters"></span>
         <button data-f="onderweg">Onderweg</button>
         <button data-f="online">Staat online</button>
         <button data-f="oud">Langer dan 30 dagen</button>
@@ -5685,6 +5690,7 @@ async function hwScanNu(id){
       door:account.id
     });
   }catch(e){ console.error('verplaatsing loggen', e); }
+  await hwVolgRefurbish(id, naar);
 
   hwScanLog.unshift({code:h.code||h.serienummer||'', naam:[h.merk,h.model].filter(Boolean).join(' '),
                      van:vanNaam, naar:naarNaam||'—'});
@@ -5710,6 +5716,7 @@ async function hwLaad(stil){
   hwData=data||[];
   const {data:locs}=await sb.from('hardware_locaties').select('*').order('volgorde');
   hwLocaties=locs||[];
+  hwLocFilters();
   renderHardware();
 }
 
@@ -5723,6 +5730,10 @@ function hwZichtbaar(h){
   if(hwFilterNu==='verkocht') return h.status==='verkocht';
   if(h.status==='verkocht') return false;
   if(hwFilterNu==='onderweg') return h.status==='onderweg';
+  /* Alleen wat in de winkel ligt, of alleen wat in het magazijn ligt. Dat is
+     de vraag die je stelt als een klant voor je staat. */
+  if(hwFilterNu.startsWith('loc:'))
+    return h.status!=='onderweg' && h.locatie_id===hwFilterNu.slice(4);
   if(h.status==='onderweg' && hwFilterNu==='voorraad') return false;
   if(hwFilterNu==='online')  return hwOnline(h);
   if(hwFilterNu==='oud')     return hwDagen(h)>=30;
@@ -5784,6 +5795,24 @@ function renderHardware(){
       </tr>`;
     }).join('')}</tbody></table>`;
   if(typeof rolTabellen==='function') rolTabellen();
+}
+
+/* De locatieknoppen staan tussen de vaste filters in, want ze horen bij
+   dezelfde vraag: welk deel van de voorraad wil ik nu zien. */
+function hwLocFilters(){
+  const vak=document.getElementById('hwLocFilters'); if(!vak) return;
+  vak.innerHTML=hwLocaties.map(l=>{
+    const n=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg'
+                          && h.locatie_id===l.id).length;
+    return `<button data-f="loc:${l.id}" class="${hwFilterNu==='loc:'+l.id?'active':''}"
+      onclick="hwKiesFilter('loc:${l.id}')">${esc(l.naam)}${n?` <span class="filtertel">${n}</span>`:''}</button>`;
+  }).join('');
+}
+function hwKiesFilter(f){
+  hwFilterNu=f;
+  document.querySelectorAll('#hwFilter button').forEach(x=>
+    x.classList.toggle('active', x.dataset.f===f));
+  renderHardware();
 }
 
 function hwKanalen(h){
@@ -5915,9 +5944,22 @@ async function hwVerplaats(id, knop){
       van_naam:vanNaam, naar_naam:naarNaam, reden:'verplaatst', door:account.id
     });
   }catch(e){ console.error('verplaatsing loggen', e); }
+  await hwVolgRefurbish(id, naar);
   await hwLaad(true);
   toast((vanNaam||'Nergens')+' → '+(naarNaam||'—'), true);
   hwHistorieLaden(id);
+}
+
+/* Het toestel staat op twee plekken in de administratie: als voorraadrij hier,
+   en als apparaat in de refurbish-app. Verplaats je hem hier, dan moet daar
+   hetzelfde staan; anders wijst de ene lijst naar de winkel en de andere naar
+   het magazijn en gelooft niemand ze allebei nog. */
+async function hwVolgRefurbish(hardwareId, locatieId){
+  try{
+    await sb.from('refurbish_apparaten')
+      .update({locatie_id:locatieId, bijgewerkt_op:new Date().toISOString()})
+      .eq('hardware_id', hardwareId);
+  }catch(e){ console.error('refurbish bijwerken', e); }
 }
 
 async function hwHistorieLaden(id){
@@ -6119,9 +6161,8 @@ function hwKopieer(){
   }catch(e){ toast('Kopiëren lukte niet','fout'); }
 }
 
-document.querySelectorAll('#hwFilter button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#hwFilter button').forEach(x=>x.classList.toggle('active', x===b));
-  hwFilterNu=b.dataset.f; renderHardware();
+document.querySelectorAll('#hwFilter > button').forEach(b=>b.addEventListener('click',()=>{
+  hwKiesFilter(b.dataset.f);
 }));
 
 /* ═══════════════ FEEDBACK EN REVIEWS ═══════════════

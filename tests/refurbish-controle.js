@@ -170,7 +170,7 @@ setTimeout(async()=>{
     apparaten[1].specs={Processor:'i5', Geheugen:'16 GB'}; apparaten[1].accu=88;
     labelsTonen('a2');`);
   const et2=d.getElementById('venster').innerHTML;
-  ok('label met grade', /etgrade">A</.test(et2) && /KLAAR VOOR VERKOOP/.test(et2));
+  ok('label met grade', /etgrade">A</.test(et2) && /OP VOORRAAD/.test(et2));
   ok('label met specs', /RAM: 16 GB/.test(et2));
   ok('accu op het label', /Accu: 88%/.test(et2));
   ok('code onder de qr', /etqr[\s\S]*etcode/.test(et2));

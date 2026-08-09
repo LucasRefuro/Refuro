@@ -192,9 +192,15 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    256 GB, i7 met 16 GB en 512 GB, enzovoort. Klik de juiste aan en de velden
    vullen zich; klopt er iets niet, dan pas je het gewoon aan.
 
-   De uitkomst volgt uit de antwoorden: alles goed is klaar voor verkoop met
+   De uitkomst volgt uit de antwoorden: alles goed betekent **op voorraad** met
    grade, één kapotte toets stuurt hem naar de reparatielijst, en een apparaat
    dat niet meer aan gaat wordt leeggehaald.
+
+   Goedgekeurd is meteen op voorraad. Er zat hier een scherm tussen, *naar de
+   winkelvoorraad*, waarin je nog eens een prijs en een grade moest invullen
+   voordat het toestel in Storvo bestond. Dat was een stap zonder werk erin. Het
+   toestel is af en het ligt ergens; de prijs hoort bij het online zetten, niet
+   bij het opbergen.
 3b. **De modellenlijst.** Bij de controle vul je in wat erin zit, of je drukt op
    *Specificaties opzoeken*. Die kijkt eerst in een gedeelde lijst en vraagt het
    pas aan AI als het model nieuw is. Wat eruit komt gaat de lijst in, dus het
@@ -213,8 +219,25 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    dit vandaan?). Apparaten die zijn leeggehaald blijven staan onder **Donoren**.
 6. **Parts inkoop.** Bestellijst samenvoegen tot inkooporders per leverancier,
    met factuur en status.
-7. **Online zetten.** Achter de status in de lijst *Klaar voor verkoop* staat een
-   knop die alles bij elkaar zet wat nodig is om te verkopen:
+7. **Voorraad en online zetten.** De lijst heette *Klaar voor verkoop*; dat zei
+   niets. Een toestel dat de controle heeft gehaald ligt gewoon ergens, en de
+   enige twee vragen die er dan nog toe doen zijn: **waar ligt hij** en **staat
+   hij online**. Dat is nu precies wat de pagina **Voorraad** laat zien.
+
+   - Boven de lijst een knop per locatie, dus je kunt in één klik alleen de
+     winkelvoorraad zien, of alleen wat in het magazijn ligt. Plus een knop
+     *Nog niet online*, want dat is geld dat op een plank ligt.
+   - In elke regel staat een pil met de plek waar hij ligt. Ook in Storvo, in
+     het hardware-overzicht, en bovenaan de apparaatpagina.
+   - Staat hij nog niet op de webshop, dan staat er een **oranje knop**. Zodra
+     hij erop staat verdwijnt die knop en komt er een groene melding *Staat
+     online* voor terug, met een link naar de advertentie. Een knop die niets
+     meer te doen heeft hoort weg te zijn.
+
+   Weg zijn: "klaar voor verkoop", "naar de winkel" en "klaar voor de webshop".
+   Een toestel ligt in de winkel of in het magazijn, en verder niets.
+
+   Achter de oranje knop zit alles wat nodig is om te verkopen:
 
    - **De advertentie**, geschreven volgens het sjabloon dat je bij Checklists
      instelt. De opbouw staat vast, de AI vult alleen de gaten. Per kanaal een
@@ -225,6 +248,10 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
      scant een QR, de telefoon opent een lijstje met die zes en je werkt ze af.
      Die telefoon hoeft niet in te loggen; hij werkt op een code die een half
      uur geldig is.
+   - **Een hoofdfoto.** Eén foto is de foto: die staat vooraan in de advertentie
+     en gaat als eerste naar de webshop. De foto van voren wordt het vanzelf,
+     want daar zie je het scherm op; met één klik wijs je een andere aan.
+   - **Achtergrond op het scherm.** Zie hieronder.
    - **De prijs**, met een voorstel uit drie bronnen: wat jij zelf eerder voor
      hetzelfde model vroeg, een schatting van de Nederlandse refurbished-markt,
      en zoeklinks naar Back Market, Refurbed, Marktplaats en Tweakers om het in
@@ -270,8 +297,41 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    voor. Verplaatsen kan ook zonder scanner, via het toestel in Storvo of via
    *Verplaatsen* op de apparaatpagina in de refurbish-app.
 
-   Daarna gaat het apparaat naar de winkelvoorraad in Storvo. Daar zit de knop
-   om hem daadwerkelijk op Shopify te zetten, want daar zit ook de prijs.
+   **Publiceren zet hem echt online.** Staat *Webshop* aan, dan wordt het
+   toestel op datzelfde moment op Shopify gezet. Eerder stond er "gepubliceerd"
+   terwijl er op de webshop nog niets gebeurd was, en daar kom je een dag later
+   achter. Lukt het niet, dan zegt de app wat er misging en blijft de rest wel
+   opgeslagen. Marktplaats blijft kopiëren en plakken; die hebben geen
+   bruikbare koppeling.
+
+### De achtergrond op het scherm
+
+Wat Coolblue en Back Market doen: op elke productfoto staat hetzelfde strakke
+beeld op het scherm, met de schermmaat erop. Dat is geen opsmuk. Een rij foto's
+waarop elk scherm iets anders laat zien, de een uit met een spiegeling erin en
+de ander met een half bureaublad, ziet er rommelig uit, en rommelig leest een
+koper als onbetrouwbaar.
+
+Onder de foto's staat **Achtergrond vervangen**. Die pakt de hoofdfoto en opent
+een venster waarin:
+
+- de AI zelf de vier hoeken van het beeldscherm zoekt, en jij ze bijsleept als
+  het net niet klopt;
+- je kiest uit Storvo-groen, nacht, licht, of een eigen afbeelding;
+- de **schermmaat** erop komt, met een pijl over de diagonaal zodat duidelijk is
+  dat het over de diagonaal gaat. Het getal wordt uit de specificaties gehaald
+  (15.6", 15,6 inch, 13.3-inch: allemaal hetzelfde getal) en is aan te passen.
+  De resolutie mag erbij;
+- een lichte glans over het scherm gaat, want zonder dat ziet het eruit als een
+  sticker.
+
+Alles gebeurt in de browser, dus je ziet elke wijziging meteen en het kost niets
+om het twintig keer over te doen. Opslaan maakt er een nieuwe foto van en zet
+die als hoofdfoto; de originele foto blijft gewoon staan.
+
+Waarom het bijgesteld moet kunnen worden: volautomatisch kan dit niet
+fatsoenlijk. De hoekdetectie zit er meestal goed op en soms een centimeter
+naast, en dat merk je anders pas als de advertentie online staat.
 8. **Export.** Batches en facturen eruit voor de boekhouding.
 
 ---
@@ -350,6 +410,9 @@ Een rondje om te zien of het klopt:
 4. Te controleren → klik een apparaat aan → **Specificaties opzoeken** → loop de
    checklist af
 5. Kies **Goedgekeurd**, of **Moet gerepareerd** om die kant te zien
-6. Bij goedgekeurd: klik hem nog een keer aan, zet er een vraagprijs bij en
-   druk op **Naar de winkelvoorraad**
-7. Terug naar de winkel → **Hardware** → daar staat hij, met marge en al
+6. Bij goedgekeurd staat hij meteen bij **Voorraad**, op de plek die je bij het
+   toevoegen koos, met een oranje knop *Online zetten*
+7. Druk daarop, laat de advertentie schrijven, zet er foto's bij en probeer
+   **Achtergrond vervangen** op de hoofdfoto
+8. Publiceren → de oranje knop verandert in *Staat online*
+9. Terug naar de winkel → **Hardware** → daar staat hij, met marge en al

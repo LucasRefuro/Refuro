@@ -22,6 +22,14 @@ window.__db={
      specs:{}, status:'overgedragen', hardware_id:'h9', grade:'B',
      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}
   ],
+  hardware_locaties:[
+    {id:'l1', team_id:'t1', naam:'Winkel', soort:'winkel', volgorde:0},
+    {id:'l2', team_id:'t1', naam:'Magazijn', soort:'magazijn', volgorde:1}
+  ],
+  hardware:[
+    {id:'h9', team_id:'t1', status:'voorraad', locatie_id:'l2', verkoop:449,
+     kanalen:{winkel:true, shopify:{id:'99', url:'https://winkel.nl/p/99'}}}
+  ],
   refurbish_onderdelen:[
     {id:'o1', team_id:'t1', naam:'Scherm uit Dell Latitude 5430', soort:'Scherm', van_apparaat:'a2',
      status:'voorraad', aangemaakt_op:new Date().toISOString()},
@@ -67,11 +75,19 @@ setTimeout(()=>{
   if(fouten.length) console.log('   ', fouten.slice(0,2).join(' | '));
 
   // ── nieuwe pagina's ──
-  ok('klaar voor verkoop in het menu', !!d.querySelector('aside nav button[data-tab="klaar"]'));
+  ok('voorraad in het menu', !!d.querySelector('aside nav button[data-tab="voorraad"]'));
+  ok('klaar voor verkoop bestaat niet meer', !d.querySelector('aside nav button[data-tab="klaar"]'));
   ok('donoren in het menu', !!d.querySelector('aside nav button[data-tab="donoren"]'));
-  ok('badge klaar voor verkoop', d.getElementById('bKlaar').textContent==='1');
-  ok('klaarlijst toont het toestel', /EliteBook 840 G9/.test(d.getElementById('klaarLijst').innerHTML));
-  ok('klaarlijst toont de grade', /gradepil/.test(d.getElementById('klaarLijst').innerHTML));
+  ok('badge telt wat nog niet online staat', d.getElementById('bKlaar').textContent==='1');
+  const vr=d.getElementById('voorraadLijst').innerHTML;
+  ok('wat online staat krijgt een pil', /onlinepil/.test(vr) && /Staat online/.test(vr));
+  ok('met een link naar de webshop', /winkel\.nl\/p\/99/.test(vr));
+  ok('wat nog niet online staat krijgt een oranje knop', /btn oranje small/.test(vr));
+  ok('waar hij ligt staat erbij', /Magazijn/.test(vr));
+  ok('filter per locatie', /Magazijn/.test(d.getElementById('voorraadFilter').innerHTML)
+                        && /Nog niet online/.test(d.getElementById('voorraadFilter').innerHTML));
+  ok('voorraadlijst toont het toestel', /EliteBook 840 G9/.test(d.getElementById('voorraadLijst').innerHTML));
+  ok('voorraadlijst toont de grade', /gradepil/.test(d.getElementById('voorraadLijst').innerHTML));
   ok('donorlijst toont de gesloopte', /Latitude 5430/.test(d.getElementById('donorLijst').innerHTML));
   ok('donorlijst toont wat eruit is', /Scherm/.test(d.getElementById('donorLijst').innerHTML));
 
@@ -95,7 +111,8 @@ setTimeout(()=>{
   ok('controle-uitslag getoond', /toetsenbord/.test(pag));
   ok('strafpunten genoemd', /1 strafpunt/.test(pag));
   ok('label als voorbeeld', /etiket/.test(pag));
-  ok('knop naar de winkelvoorraad', /Naar de winkelvoorraad/.test(pag));
+  ok('geen tussenstap naar de winkelvoorraad meer', !/Naar de winkelvoorraad/.test(pag));
+  ok('wel een knop om hem online te zetten', /Online zetten/.test(pag));
 
   w.eval("appPagina('a2')");
   const pag2=d.getElementById('appPagina').innerHTML;

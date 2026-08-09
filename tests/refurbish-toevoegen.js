@@ -139,7 +139,7 @@ setTimeout(async()=>{
   ok('zonder specs geen lege regels', !/RAM:/.test(et2) && /Latitude 5430/.test(et2));
 
   w.eval("sluit(); apparaten[0].status='klaar'; labelsTonen('a1')");
-  ok('status volgt het apparaat', /KLAAR VOOR VERKOOP/.test(d.getElementById('venster').innerHTML));
+  ok('status volgt het apparaat', /OP VOORRAAD/.test(d.getElementById('venster').innerHTML));
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);

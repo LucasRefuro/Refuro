@@ -191,7 +191,20 @@ tr.klikbaar{cursor:pointer;}
 }
 
 /* ---------- wat voor apparaat ---------- */
-.verhuis{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;
+/* De oranje knop betekent één ding: hier moet je nog wat mee. Zodra dat
+     gebeurd is verdwijnt hij en komt er een groene melding voor terug, want
+     een knop die niets meer te doen heeft hoort weg te zijn. */
+  .btn.oranje{background:var(--oranje); color:var(--actieftekst); border-color:transparent;}
+  .btn.oranje:hover{filter:brightness(.95);}
+  .onlinepil{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700;
+    padding:4px 11px; border-radius:var(--pil); background:var(--green-soft);
+    color:var(--green-tekst); white-space:nowrap; text-decoration:none;}
+  .onlinepil .stip{width:7px; height:7px; border-radius:50%; background:var(--green);}
+  a.onlinepil:hover{filter:brightness(.97);}
+  .filtertel{opacity:.6; font-variant-numeric:tabular-nums;}
+  .kpi.vrattentie .v{color:var(--oranje);}
+  .locpil.leeg{background:transparent; color:var(--muted-l); border:1.5px dashed var(--border);}
+  .verhuis{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;
     padding:12px 16px; border-radius:var(--radius-s); background:var(--lblauw);
     font-size:14px; font-weight:600;}
   .verhuis .van{color:var(--muted); text-decoration:line-through;}
@@ -259,6 +272,30 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 .fotoweg{position:absolute; top:7px; right:7px; width:26px; height:26px; border-radius:50%;
   border:none; background:rgba(23,32,30,.72); color:#fff; font-size:17px; line-height:1; cursor:pointer;}
 
+.fotovak.hoofdfoto{border-color:var(--oranje); box-shadow:0 0 0 2px rgba(232,138,29,.18);}
+.hoofdvlag{position:absolute; top:7px; left:7px; font-size:10.5px; font-weight:800;
+  letter-spacing:.05em; text-transform:uppercase; padding:3px 8px; border-radius:var(--pil);
+  background:var(--oranje); color:#fff;}
+.hoofdknop{position:absolute; top:7px; left:7px; font-size:10.5px; font-weight:700;
+  padding:3px 8px; border-radius:var(--pil); border:0; cursor:pointer;
+  background:rgba(23,32,30,.62); color:#fff; opacity:0; transition:opacity .15s;}
+.fotovak:hover .hoofdknop{opacity:1;}
+.achtergrondvak{display:flex; align-items:center; justify-content:space-between; gap:16px;
+  flex-wrap:wrap; margin-top:16px; padding:14px 16px; border-radius:var(--radius-s);
+  background:var(--lblauw);}
+.achtergrondvak .knaam{font-weight:700; font-size:14.5px;}
+.achtergrondvak .kuit{font-size:13px; color:var(--muted); max-width:60ch; margin-top:2px;}
+.achtvak{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(240px,1fr); gap:18px; align-items:start;}
+@media(max-width:820px){ .achtvak{grid-template-columns:1fr;} }
+.achtdoek{background:var(--soft-2); border-radius:14px; padding:10px; text-align:center;}
+.achtdoek canvas{max-width:100%; height:auto; border-radius:8px; cursor:grab; touch-action:none;}
+.stijlkiezer{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.stijlknop{border:2px solid var(--border); border-radius:12px; padding:0; cursor:pointer;
+  overflow:hidden; background:none; font-family:inherit;}
+.stijlknop canvas{width:100%; height:52px; display:block;}
+.stijlknop span{display:block; font-size:11.5px; font-weight:700; padding:5px 4px; color:var(--muted);}
+.stijlknop.aan{border-color:var(--groen);}
+.stijlknop.aan span{color:var(--groen);}
 .rechtvak{background:var(--soft-2); border-radius:14px; padding:10px; text-align:center;}
 .rechtvak canvas{max-width:100%; height:auto; border-radius:8px; cursor:grab; touch-action:none;}
 .rechtknop{margin-left:8px; padding:3px 9px; font-size:11px;}
@@ -489,7 +526,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <button data-tab="toevoegen"><svg class="i"><use href="#i-plus"/></svg> Toevoegen</button>
     <button data-tab="controle"><svg class="i"><use href="#i-check"/></svg> Te controleren<span class="badge" id="bControle" hidden>0</span></button>
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
-    <button data-tab="klaar"><svg class="i"><use href="#i-check"/></svg> Klaar voor verkoop<span class="badge" id="bKlaar" hidden>0</span></button>
+    <button data-tab="voorraad"><svg class="i"><use href="#i-shop"/></svg> Voorraad<span class="badge" id="bKlaar" hidden>0</span></button>
     <button data-tab="donoren"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
     <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen</button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
@@ -600,17 +637,18 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       <div id="ctrPagina"></div>
     </section>
 
-    <!-- ── klaar voor verkoop ── -->
-    <section id="tab-klaar" hidden>
+    <!-- ── voorraad ──
+         Niet "klaar voor verkoop": een toestel dat de controle heeft gehaald
+         ligt gewoon ergens, in de winkel of in het magazijn, en de enige vraag
+         die er dan nog toe doet is of hij al online staat. Dat zijn precies de
+         twee dingen die je hier ziet. -->
+    <section id="tab-voorraad" hidden>
       <div class="pagehead">
-        <h1>Klaar voor verkoop</h1>
-        <div class="periodesel" id="klaarFilter">
-          <button data-f="alles" class="active">Alles</button>
-          <button data-f="hier">Voorraad</button>
-          <button data-f="winkel">In de winkel</button>
-        </div>
+        <h1>Voorraad</h1>
+        <div class="periodesel" id="voorraadFilter"></div>
       </div>
-      <div class="card"><div id="klaarLijst"></div></div>
+      <div class="kpis" id="vrKpis"></div>
+      <div class="card"><div id="voorraadLijst"></div></div>
     </section>
 
     <!-- ── online zetten ──
@@ -743,7 +781,7 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 let account=null, abonnement=null;
-let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[];
+let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let instel={accu_min:80};
 let tab='werkbank';
 
@@ -760,14 +798,20 @@ function toast(bericht, soort){
   setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3200);
 }
 
+/* Zolang een toestel op de werkbank staat zegt de status wat er moet gebeuren.
+   Zodra hij de controle heeft gehaald is dat niet meer interessant: dan telt
+   alleen nog waar hij ligt en of hij online staat. Vandaar dat 'klaar' en
+   'overgedragen' hetzelfde heten; het verschil zat alleen in onze administratie
+   en dat is geen informatie voor de werkvloer. */
 const STATUS={
   te_controleren:'Te controleren',
   installeren:'Windows installeren',
   te_repareren:'Te repareren',
   repurpose:'Slopen voor onderdelen',
-  klaar:'Klaar voor verkoop',
-  overgedragen:'Naar de winkel'
+  klaar:'Op voorraad',
+  overgedragen:'Op voorraad'
 };
+const OP_VOORRAAD=['klaar','overgedragen'];
 const DEEL_STATUS={voorraad:'Op de plank', gebruikt:'Gebruikt', te_bestellen:'Te bestellen', besteld:'Besteld'};
 
 /* ═══════════════ opstarten ═══════════════ */
@@ -827,16 +871,19 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
-  const [a,o,c,r,m,i]=await Promise.all([
+  const [a,o,c,r,m,i,h]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_checklists').select('*').order('categorie'),
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
-    sb.from('refurbish_instellingen').select('*').maybeSingle()
+    sb.from('refurbish_instellingen').select('*').maybeSingle(),
+    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,titel')
+      .order('aangemaakt_op',{ascending:false}).limit(1000)
   ]);
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
+  hardwares=h.data||[];
   if(i && i.data) instel=i.data;
   tekenAlles();
 }
@@ -859,7 +906,7 @@ function past(a){
 
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
-  tekenKlaar(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
+  tekenVoorraad(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
   tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges();
 }
 function tekenBadges(){
@@ -868,20 +915,20 @@ function tekenBadges(){
   zet('bControle', apparaten.filter(a=>a.status==='te_controleren'||a.status==='installeren').length);
   zet('bRep',      apparaten.filter(a=>a.status==='te_repareren').length);
   zet('bBestel',   onderdelen.filter(o=>o.status==='te_bestellen').length);
-  zet('bKlaar',    apparaten.filter(a=>a.status==='klaar').length);
+  zet('bKlaar',    vrRijen().filter(a=>!staatOnline(a)).length);
 }
 
 /* ═══════════════ werkbank ═══════════════ */
 
 function tekenWerkbank(){
-  const bezig=apparaten.filter(a=>a.status!=='overgedragen');
+  const bezig=apparaten.filter(a=>!OP_VOORRAAD.includes(a.status));
   const k=document.getElementById('wbKpis');
   const tel=s=>apparaten.filter(a=>a.status===s).length;
   k.innerHTML=
     `<div class="kpi"><div class="l">In behandeling</div><div class="v">${bezig.length}</div></div>`+
     `<div class="kpi"><div class="l">Te controleren</div><div class="v">${tel('te_controleren')}</div></div>`+
     `<div class="kpi"><div class="l">Te repareren</div><div class="v">${tel('te_repareren')}</div></div>`+
-    `<div class="kpi"><div class="l">Klaar voor verkoop</div><div class="v">${tel('klaar')}</div></div>`;
+    `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${vrRijen().length}</div></div>`;
 
   const rijen=bezig.filter(past);
   document.getElementById('wbLijst').innerHTML=rijen.length
@@ -1147,8 +1194,8 @@ const STATUS_KORT={
   installeren:'WINDOWS INSTALLEREN',
   te_repareren:'TE REPAREREN',
   repurpose:'ONDERDELEN',
-  klaar:'KLAAR VOOR VERKOOP',
-  overgedragen:'IN DE WINKEL'
+  klaar:'OP VOORRAAD',
+  overgedragen:'OP VOORRAAD'
 };
 
 function labelHtml(a){
@@ -1207,31 +1254,32 @@ async function labelsKlaar(knop, ids){
    net veranderd hebt. */
 function appVerplaats(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
-  const nu=locNaam(a.locatie_id);
+  const nu=locNaam(plekVan(a));
   venster('Verplaatsen', `
     <p class="pv">${esc([a.merk,a.model].filter(Boolean).join(' '))}
       ligt nu ${nu?'in <b>'+esc(nu)+'</b>':'nergens geregistreerd'}.</p>
     <label>Waar gaat hij heen</label>
     <select id="vp_loc">${locaties.map(l=>
-      `<option value="${l.id}"${l.id===a.locatie_id?' selected':''}>${esc(l.naam)}</option>`).join('')}</select>
+      `<option value="${l.id}"${l.id===plekVan(a)?' selected':''}>${esc(l.naam)}</option>`).join('')}</select>
   `, [{tekst:'Verplaatsen', klasse:'actie', doe:(k)=>appVerplaatsDoen(k, a)}]);
 }
 
 async function appVerplaatsDoen(knop, a){
   const naar=v('vp_loc');
-  if(naar===a.locatie_id){ toast('Hij ligt daar al','let-op'); return; }
+  const van=plekVan(a);
+  if(naar===van){ toast('Hij ligt daar al','let-op'); return; }
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten')
       .update({locatie_id:naar, bijgewerkt_op:new Date().toISOString()}).eq('id',a.id);
     if(error) throw new Error('Verplaatsen mislukt');
-    await verplaatsingLoggen({apparaat_id:a.id, van:a.locatie_id, naar, reden:'verplaatst'});
+    await verplaatsingLoggen({apparaat_id:a.id, van, naar, reden:'verplaatst'});
     if(a.hardware_id){
       await sb.from('hardware').update({locatie_id:naar, bijgewerkt_op:new Date().toISOString()})
         .eq('id',a.hardware_id);
-      await verplaatsingLoggen({hardware_id:a.hardware_id, van:a.locatie_id, naar, reden:'verplaatst'});
+      await verplaatsingLoggen({hardware_id:a.hardware_id, van, naar, reden:'verplaatst'});
     }
     sluit(); await allesLaden();
-    toast((locNaam(a.locatie_id)||'Onbekend')+' → '+locNaam(naar), true);
+    toast((locNaam(van)||'Nergens')+' → '+locNaam(naar), true);
   });
 }
 
@@ -1287,7 +1335,7 @@ function tekenApparaat(){
       ${feit('Nummer', a.code||'—', true)}
       ${feit('Grade', a.grade||'—')}
       ${feit('Accu', a.accu?a.accu+'%':'—')}
-      ${feit('Ligt in', locNaam(a.locatie_id)||'nog niet bepaald')}
+      ${feit('Ligt in', locNaam(plekVan(a))||'nog niet bepaald')}
       ${feit('Leverancier', a.leverancier||'—')}
       ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}))}
       ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
@@ -1300,8 +1348,9 @@ function tekenApparaat(){
         ? `<button class="btn actie" onclick="appOpen('${a.id}')"><svg class="i s"><use href="#i-windows"/></svg>Controle hervatten</button>`:''}
       ${a.status==='te_repareren'
         ? `<button class="btn actie" onclick="repOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie openen</button>`:''}
-      ${a.status==='klaar'
-        ? `<button class="btn actie" onclick="klaarOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-arrow"/></svg>Naar de winkelvoorraad</button>`:''}
+      ${OP_VOORRAAD.includes(a.status) ? (staatOnline(a)
+        ? `<button class="btn ghost" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Advertentie aanpassen</button>`
+        : `<button class="btn oranje" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`):''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
       <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
@@ -1367,7 +1416,30 @@ function feit(naam, waarde, mono){
   return `<div class="feit"><div class="fl">${esc(naam)}</div>
     <div class="fw${mono?' mono':''}">${esc(waarde)}</div></div>`;
 }
-function hardwareVan(a){ return a.hardware_id ? {id:a.hardware_id, verkoop:null} : null; }
+function hardwareVan(a){
+  return a.hardware_id ? (hardwares.find(h=>h.id===a.hardware_id)||null) : null;
+}
+/* Staat hij op de webshop. De winkel-vlag telt niet mee: dat betekent alleen
+   dat hij in de winkel ligt, en dat weet je al aan de locatie. */
+function staatOnline(a){
+  const h=hardwareVan(a);
+  return !!(h && h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id);
+}
+function webshopUrl(a){
+  const h=hardwareVan(a);
+  return (h && h.kanalen && h.kanalen.shopify && h.kanalen.shopify.url) || null;
+}
+/* Waar ligt hij. Zodra het toestel in de winkelvoorraad staat is de
+   hardware-rij de waarheid: dat is de rij die de scanner in Storvo bijwerkt.
+   Zolang die er nog niet is, geldt de plek die je bij het toevoegen koos. */
+function plekVan(a){
+  const h=hardwareVan(a);
+  return (h && h.locatie_id) || a.locatie_id || null;
+}
+function isVerkocht(a){
+  const h=hardwareVan(a);
+  return !!(h && h.status==='verkocht');
+}
 
 async function notitieOpslaan(id, knop){
   const e=document.getElementById('pg_notitie'); if(!e) return;
@@ -1465,7 +1537,7 @@ let ctr=null;   /* alles van de lopende controle staat hierin */
 function appOpen(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
   if(a.status==='te_repareren') return repOpen(a);
-  if(a.status==='klaar')        return klaarOpen(a);
+  if(OP_VOORRAAD.includes(a.status)) return appPagina(a.id);
   if(a.status==='repurpose')    return sloopOpen(a);
   ctr={
     a, stap: a.status==='installeren' ? 'specs' : 'start',
@@ -2031,10 +2103,16 @@ async function ctrAfronden(knop){
       });
     }
 
+    /* Goedgekeurd betekent: hij ligt in de voorraad. Niet in een wachtrij waar
+       iemand hem later nog ergens heen moet klikken. Dit gebeurt als laatste:
+       de uitslag van de controle staat dan al vast, en die mag niet verloren
+       gaan als het aanmaken van de voorraadrij hapert. */
+    if(status==='klaar') await naarVoorraad(Object.assign({}, a, {grade, specs}));
+
     ctr=null; await allesLaden(); showTab('controle');
     const bij=apparaten.find(x=>x.id===a.id);
     toast(status==='klaar'
-      ? 'Goedgekeurd, grade '+grade
+      ? 'Goedgekeurd, grade '+grade+(locNaam(a.locatie_id)?' · ligt in '+locNaam(a.locatie_id):'')
       : defecten.length+' ding'+(defecten.length===1?'':'en')+' te repareren', true);
     if(bij) labelsTonen(bij.id);
   });
@@ -2151,10 +2229,12 @@ async function deelBestellen(apparaatId){
 }
 async function repKlaar(knop, id){
   await bezig(knop, async()=>{
+    const a=apparaten.find(x=>x.id===id);
     const {error}=await sb.from('refurbish_apparaten')
       .update({status:'klaar', bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw new Error('Bijwerken mislukt');
-    sluit(); await allesLaden(); toast('Gerepareerd, klaar voor verkoop', true);
+    if(a) await naarVoorraad(a);
+    sluit(); await allesLaden(); toast('Gerepareerd en op voorraad', true);
   });
 }
 
@@ -2193,81 +2273,118 @@ async function sloopKlaar(knop, a){
   });
 }
 
-/* ═══════════════ klaar: naar de winkel ═══════════════
-   Hier ligt de grens. Vanaf dit moment is het geen werkbank meer maar handel,
-   en hoort het thuis in Storvo.                                              */
+/* ═══════════════ van de werkbank naar de voorraad ═══════════════
+   Er zat hier een extra scherm tussen, "naar de winkelvoorraad", waarin je nog
+   eens een prijs en een grade moest invullen voordat het toestel bestond in
+   Storvo. Dat was een stap zonder werk erin: het toestel is af, het ligt ergens,
+   klaar. Dus gebeurt het nu vanzelf zodra de controle goed afloopt, zonder
+   prijs. De prijs hoort bij het online zetten, niet bij het opbergen.        */
 
-function klaarOpen(a){
-  venster('Klaar voor verkoop', `
-    <p class="pv"><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${a.serienummer?' · '+esc(a.serienummer):''}<br>
-    Zet de vraagprijs erbij, dan gaat dit toestel naar je winkelvoorraad in Storvo. Daar reken je hem af en zet je hem eventueel op de webshop.</p>
-    <div class="grid">
-      <div><label>Inkoopprijs</label><input id="k_inkoop" type="number" step="0.01" value="${a.inkoop||0}"></div>
-      <div><label>Vraagprijs</label><input id="k_verkoop" type="number" step="0.01" placeholder="Bijvoorbeeld 349"></div>
-      <div><label>Staat</label><select id="k_staat">
-        <option value="A"${a.grade==='A'?' selected':''}>A · als nieuw</option>
-        <option value="B"${!a.grade||a.grade==='B'?' selected':''}>B · gebruikt</option>
-        <option value="C"${a.grade==='C'?' selected':''}>C · zichtbare sporen</option>
-      </select></div>
-      <div><label>Garantie (maanden)</label><input id="k_gar" type="number" min="0" value="6"></div>
-    </div>
-    <p class="muted klein" style="margin-top:14px">Herkomst wordt vastgelegd als ${esc(a.leverancier||'onbekend')}${a.code?' ('+esc(a.code)+')':''}, zodat je later kunt terugvinden waar dit toestel vandaan kwam.</p>
-  `, [{tekst:'Naar de winkelvoorraad', klasse:'actie', doe:(k)=>overdragen(k,a)}]);
+async function naarVoorraad(a){
+  if(a.hardware_id) return a.hardware_id;
+  const {data, error}=await sb.from('hardware').insert({
+    team_id:account.team_id,
+    merk:a.merk, model:a.model, categorie:a.categorie,
+    serienummer:a.serienummer, specs:a.specs||{},
+    staat:a.grade||'B', inkoop:Number(a.inkoop)||0,
+    verkoop:null, garantie:0,
+    herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
+    code:a.code,
+    /* Weet je waar hij ligt, dan ligt hij daar; dat is geen aanname maar iets
+       wat iemand bij het toevoegen heeft ingevuld. Alleen als niemand een plek
+       heeft gekozen en de winkel op inscannen staat, blijft hij 'onderweg'
+       totdat iemand hem ergens neerlegt en scant. */
+    status: (instel.inscannen && !a.locatie_id) ? 'onderweg' : 'voorraad',
+    locatie_id:a.locatie_id||null,
+    kanalen:{winkel:true}
+  }).select().single();
+  if(error) throw new Error('Kon hem niet in de voorraad zetten: '+error.message);
+  await sb.from('refurbish_apparaten')
+    .update({hardware_id:data.id, bijgewerkt_op:new Date().toISOString()}).eq('id',a.id);
+  return data.id;
 }
 
-async function overdragen(knop, a){
-  const verkoop=v('k_verkoop');
-  if(!verkoop){ toast('Vul een vraagprijs in','let-op'); return; }
-  await bezig(knop, async()=>{
-    const {data, error}=await sb.from('hardware').insert({
-      team_id:account.team_id,
-      merk:a.merk, model:a.model, categorie:a.categorie,
-      serienummer:a.serienummer, specs:a.specs||{},
-      staat:v('k_staat'), inkoop:Number(v('k_inkoop'))||0,
-      verkoop:Number(verkoop)||0, garantie:Number(v('k_gar'))||0,
-      herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
-      status:'voorraad', kanalen:{winkel:true}, locatie_id:a.locatie_id||null
-    }).select().single();
-    if(error) throw new Error('Overdragen mislukt');
+/* ═══════════════ voorraad ═══════════════
+   Twee vragen, meer niet: waar ligt hij, en staat hij online. De filters komen
+   uit je eigen locaties, want "winkel" en "magazijn" verzinnen wij niet voor
+   je; sommige winkels hebben er drie en sommige zeven.                       */
 
-    await sb.from('refurbish_apparaten').update({
-      status:'overgedragen', hardware_id:data.id, bijgewerkt_op:new Date().toISOString()
-    }).eq('id',a.id);
+let vrFilterNu='alles';
 
-    sluit(); await allesLaden();
-    toast('Staat nu in je winkelvoorraad', true);
-  });
+function vrRijen(){
+  return apparaten.filter(a=>OP_VOORRAAD.includes(a.status) &&
+    !(a.status==='overgedragen' && !a.hardware_id) && !isVerkocht(a));
 }
 
-/* ═══════════════ klaar voor verkoop ═══════════════ */
+function tekenVoorraadFilters(){
+  const el=document.getElementById('voorraadFilter'); if(!el) return;
+  const rijen=vrRijen();
+  const knoppen=[{f:'alles', n:'Alles', t:rijen.length}]
+    .concat(locaties.map(l=>({f:'loc:'+l.id, n:l.naam,
+      t:rijen.filter(a=>plekVan(a)===l.id).length})))
+    .concat([{f:'offline', n:'Nog niet online', t:rijen.filter(a=>!staatOnline(a)).length}]);
+  if(!knoppen.some(k=>k.f===vrFilterNu)) vrFilterNu='alles';
+  el.innerHTML=knoppen.map(k=>`
+    <button class="${vrFilterNu===k.f?'active':''}" onclick="vrFilter('${k.f}')">
+      ${esc(k.n)}${k.t?` <span class="filtertel">${k.t}</span>`:''}</button>`).join('');
+}
+function vrFilter(f){ vrFilterNu=f; tekenVoorraad(); }
 
-let klaarFilterNu='alles';
-function tekenKlaar(){
-  const el=document.getElementById('klaarLijst'); if(!el) return;
-  let rijen=apparaten.filter(a=>a.status==='klaar' || (a.status==='overgedragen' && a.hardware_id));
-  if(klaarFilterNu==='hier')   rijen=rijen.filter(a=>a.status==='klaar');
-  if(klaarFilterNu==='winkel') rijen=rijen.filter(a=>a.status==='overgedragen');
+function tekenVoorraad(){
+  tekenVoorraadFilters();
+  const el=document.getElementById('voorraadLijst'); if(!el) return;
+  let rijen=vrRijen();
+  if(vrFilterNu.startsWith('loc:')) rijen=rijen.filter(a=>plekVan(a)===vrFilterNu.slice(4));
+  if(vrFilterNu==='offline')        rijen=rijen.filter(a=>!staatOnline(a));
+
+  const kpi=document.getElementById('vrKpis');
+  if(kpi){
+    const alle=vrRijen();
+    const offline=alle.filter(a=>!staatOnline(a)).length;
+    kpi.innerHTML=
+      `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${alle.length}</div></div>`+
+      locaties.map(l=>`<div class="kpi"><div class="l">${esc(l.naam)}</div>
+        <div class="v">${alle.filter(a=>plekVan(a)===l.id).length}</div></div>`).join('')+
+      `<div class="kpi${offline?' vrattentie':''}"><div class="l">Nog niet online</div><div class="v">${offline}</div></div>`;
+  }
+
   rijen=rijen.filter(past);
   el.innerHTML=rijen.length
     ? `<div class="tabelrol"><table>
-        <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Leverancier</th><th>Status</th><th></th></tr></thead>
-        <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
+        <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Ligt in</th>
+          <th class="num">Vraagprijs</th><th>Webshop</th><th></th></tr></thead>
+        <tbody>${rijen.map(a=>{
+          const h=hardwareVan(a);
+          const url=webshopUrl(a);
+          return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
           <td class="mono">${esc(a.code||'—')}</td>
           <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
               <div class="muted klein">${esc(Object.values(a.specs||{}).slice(0,3).join(' · ')||a.categorie||'')}</div></td>
           <td>${a.grade?`<span class="gradepil">${esc(a.grade)}</span>`:'—'}</td>
-          <td class="muted klein">${esc(a.leverancier||'—')}</td>
-          <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
-          <td class="num hwact"><button class="btn actie small"
-            onclick="event.stopPropagation(); onlineZetten('${a.id}')">
-            <svg class="i s"><use href="#i-globe"/></svg>Online zetten</button></td>
-        </tr>`).join('')}</tbody></table></div>`
-    : leeg('i-check','Niets klaar','Zodra een controle goed afloopt komt het apparaat hier te staan.');
+          <td>${plekPil(a)}</td>
+          <td class="num">${h&&h.verkoop!=null?euro(h.verkoop):'<span class="muted klein">nog niet</span>'}</td>
+          <td>${staatOnline(a)
+            ? (url
+              ? `<a class="onlinepil" href="${esc(url)}" target="_blank" rel="noopener"
+                   onclick="event.stopPropagation()"><span class="stip"></span>Staat online</a>`
+              : '<span class="onlinepil"><span class="stip"></span>Staat online</span>')
+            : '<span class="muted klein">nog niet</span>'}</td>
+          <td class="num hwact">${staatOnline(a)
+            ? `<button class="btn ghost small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">Aanpassen</button>`
+            : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">
+                 <svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}</td>
+        </tr>`;}).join('')}</tbody></table></div>`
+    : leeg('i-shop', vrFilterNu==='alles'?'Nog niets op voorraad':'Niets in deze lijst',
+        'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.');
 }
-document.querySelectorAll('#klaarFilter button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#klaarFilter button').forEach(x=>x.classList.toggle('active', x===b));
-  klaarFilterNu=b.dataset.f; tekenKlaar();
-}));
+
+/* Waar hij ligt, als pil. Ligt er nog geen locatie vast, dan zeggen we dat
+   ook: dat is namelijk een gaatje in je administratie en geen detail. */
+function plekPil(a){
+  const naam=locNaam(plekVan(a));
+  return naam ? `<span class="locpil">${esc(naam)}</span>`
+              : '<span class="locpil leeg">nog geen plek</span>';
+}
 
 /* ═══════════════ online zetten ═══════════════
    Drie dingen bij elkaar: de tekst, de foto's en waar hij heen gaat. Dat zijn
@@ -2284,7 +2401,10 @@ const AANZICHTEN=[
 ];
 /* De rechtgezette schermfoto hoort niet bij de verplichte zes: hij ontstaat uit
    de foto 'open' en telt dus niet mee in de teller. */
-const EXTRA_AANZICHT={id:'scherm', naam:'Scherm recht'};
+const EXTRAS=[
+  {id:'scherm',   naam:'Scherm recht'},
+  {id:'gestyled', naam:'Met achtergrond'}
+];
 const KANALEN=[
   {id:'webshop',     naam:'Webshop',     uit:'Via Storvo naar Shopify'},
   {id:'marktplaats', naam:'Marktplaats', uit:'Tekst kopiëren en plakken'},
@@ -2308,6 +2428,16 @@ async function fotosLaden(a){
     .or(`apparaat_id.eq.${a.id},and(apparaat_id.is.null,model.ilike.${a.model})`)
     .order('volgorde');
   onl.fotos=data||[];
+  /* Is er nog geen hoofdfoto gekozen, dan is dat de foto van voren: daar zie
+     je het scherm op, en dat is de foto waar een koper op klikt. */
+  if(onl.fotos.length && !onl.fotos.some(f=>f.hoofd)){
+    const eerste=onl.fotos.find(f=>f.aanzicht==='open') || onl.fotos[0];
+    if(eerste){
+      eerste.hoofd=true;
+      sb.from('refurbish_fotos').update({hoofd:true}).eq('id',eerste.id)
+        .then(()=>{}, ()=>{});
+    }
+  }
   /* Wat vroeg je eerder voor hetzelfde model? Dat is het beste prijsanker dat
      er is, beter dan welke schatting ook. */
   const {data:eerder}=await sb.from('hardware')
@@ -2324,7 +2454,7 @@ function fotoUrl(pad){
 function tekenOnline(){
   const el=document.getElementById('onlinePagina');
   if(!el) return;
-  if(!onl){ el.innerHTML=leeg('i-globe','Niets gekozen','Kies een apparaat bij Klaar voor verkoop.'); return; }
+  if(!onl){ el.innerHTML=leeg('i-globe','Niets gekozen','Kies een apparaat bij Voorraad.'); return; }
   const a=onl.a;
   const fotos=onl.fotos||[];
   const perAanzicht={};
@@ -2334,7 +2464,7 @@ function tekenOnline(){
   el.innerHTML=`
     <div class="pagehead">
       <div>
-        <div class="kruimel"><a onclick="showTab('klaar')">Klaar voor verkoop</a> › <span>${esc(a.code||'')}</span></div>
+        <div class="kruimel"><a onclick="showTab('voorraad')">Voorraad</a> › <span>${esc(a.code||'')}</span></div>
         <h1>Online zetten</h1>
       </div>
       <span class="gradepil">${esc([a.merk,a.model].filter(Boolean).join(' '))}</span>
@@ -2375,22 +2505,33 @@ function tekenOnline(){
           <h2><svg class="i"><use href="#i-camera"/></svg>Foto's <span class="muted klein">${compleet} van ${AANZICHTEN.length}</span></h2>
           <p class="muted klein" style="margin-bottom:14px">Altijd dezelfde zes aanzichten. Niet de kwaliteit van één foto maakt een advertentie professioneel, maar dat ze bij elkaar horen.</p>
 
-          <div class="fotorooster">${AANZICHTEN.map(v=>{
+          <div class="fotorooster">${AANZICHTEN.concat(EXTRAS).map(v=>{
             const f=perAanzicht[v.id];
-            return `<div class="fotovak${f?' erin':''}">
+            if(EXTRAS.some(e=>e.id===v.id) && !f) return '';
+            const hoofd=f&&f.hoofd;
+            return `<div class="fotovak${f?' erin':''}${hoofd?' hoofdfoto':''}">
               ${f ? `<img src="${esc(fotoUrl(f.pad))}" alt="${esc(v.naam)}" loading="lazy">
+                     ${hoofd?'<span class="hoofdvlag">Hoofdfoto</span>':
+                       `<button class="hoofdknop" onclick="fotoHoofd('${f.id}')" title="Dit wordt de eerste foto">Hoofdfoto maken</button>`}
                      <button class="fotoweg" onclick="fotoWeg('${f.id}')" aria-label="Verwijderen">×</button>`
                   : '<div class="fotoleeg"><svg class="i"><use href="#i-camera"/></svg></div>'}
-              <div class="fotonaam">${esc(v.naam)}${
-                v.id==='open' && f ? `<button class="btn ghost small rechtknop" onclick="rechtOpen('${f.id}')">Recht zetten</button>` : ''}</div>
+              <div class="fotonaam">${esc(v.naam)}${f && (v.id==='open'||v.id==='scherm')
+                ? `<button class="btn ghost small rechtknop" onclick="rechtOpen('${f.id}')">Recht zetten</button>` : ''}</div>
             </div>`;
-          }).join('')}${(()=>{
-            const f=perAanzicht['scherm'];
-            return f ? `<div class="fotovak erin">
-              <img src="${esc(fotoUrl(f.pad))}" alt="Scherm recht" loading="lazy">
-              <button class="fotoweg" onclick="fotoWeg('${f.id}')" aria-label="Verwijderen">×</button>
-              <div class="fotonaam">Scherm recht</div></div>` : '';
-          })()}</div>
+          }).join('')}</div>
+
+          ${(()=>{
+            const hf=(onl.fotos||[]).find(f=>f.hoofd) || perAanzicht['open'] || (onl.fotos||[])[0];
+            if(!hf) return '';
+            return `<div class="achtergrondvak">
+              <div>
+                <div class="knaam">Achtergrond op het scherm</div>
+                <div class="kuit">Zet een strakke achtergrond op het beeldscherm van de hoofdfoto, met de schermmaat erop. De AI zoekt de hoeken; jij kijkt het na.</div>
+              </div>
+              <button class="btn actie small" onclick="achtOpen('${hf.id}')">
+                <svg class="i s"><use href="#i-sparkles"/></svg>Achtergrond vervangen</button>
+            </div>`;
+          })()}
 
           <div class="row" style="margin-top:16px">
             <button class="btn ghost small" onclick="fotoTelefoon(this)">
@@ -2466,9 +2607,11 @@ function tekenOnline(){
               </div>
             </label>`).join('')}</div>
 
-          <button class="btn actie" style="width:100%; margin-top:18px" onclick="onlPubliceren(this)">
-            <svg class="i s"><use href="#i-globe"/></svg>Publiceren</button>
-          <p class="muted klein" style="margin-top:10px">Het apparaat gaat naar je winkelvoorraad in Storvo, onder <b>Hardware</b>. Daar staat ook de knop om hem echt op Shopify te zetten, want daar zit de kassa.</p>
+          <button class="btn ${staatOnline(a)?'actie':'oranje'}" style="width:100%; margin-top:18px" onclick="onlPubliceren(this)">
+            <svg class="i s"><use href="#i-globe"/></svg>${staatOnline(a)?'Opslaan en bijwerken':'Publiceren'}</button>
+          <p class="muted klein" style="margin-top:10px">${staatOnline(a)
+            ? 'Hij staat al op de webshop. Opslaan werkt de advertentie daar meteen bij.'
+            : 'Staat <b>Webshop</b> aan, dan wordt hij nu echt op Shopify gezet. Marktplaats blijft kopiëren en plakken; die hebben geen bruikbare koppeling.'}</p>
         </div>
 
         ${onl.fotocode?`<div class="card qrkaart">
@@ -2621,6 +2764,18 @@ async function fotoTelefoon(knop){
 }
 async function fotosVernieuwen(){ await fotosLaden(onl.a); toast('Bijgewerkt', true); }
 
+/* Eén foto is de foto: die staat vooraan in de advertentie, die gaat als
+   eerste naar de webshop, en daar werkt de achtergrondbewerking op. Er kan er
+   maar één zijn, dus de rest gaat uit. */
+async function fotoHoofd(id){
+  const ids=(onl.fotos||[]).map(f=>f.id).filter(x=>x!==id);
+  if(ids.length) await sb.from('refurbish_fotos').update({hoofd:false}).in('id', ids);
+  const {error}=await sb.from('refurbish_fotos').update({hoofd:true}).eq('id',id);
+  if(error){ toast('Instellen mislukt','fout'); return; }
+  await fotosLaden(onl.a);
+  toast('Dit is nu de hoofdfoto', true);
+}
+
 async function fotoWeg(id){
   const f=(onl.fotos||[]).find(x=>x.id===id); if(!f) return;
   await sb.storage.from('refurbish-fotos').remove([f.pad]);
@@ -2686,34 +2841,54 @@ async function onlPubliceren(knop){
     return;
   }
   await bezig(knop, async()=>{
-    const kanalen={winkel:onlKanaalAan('winkel'), marktplaats:onlKanaalAan('marktplaats')};
-    const {data, error}=await sb.from('hardware').insert({
-      team_id:account.team_id,
-      merk:a.merk, model:a.model, categorie:a.categorie,
-      serienummer:a.serienummer, specs:a.specs||{},
+    /* Het toestel staat al in de voorraad sinds de controle; hier komt er
+       alleen de verkoopkant bij. Eerst zorgen dat de rij er is, want oude
+       toestellen van voor deze wijziging hebben er nog geen. */
+    const hwId=await naarVoorraad(a);
+    const kanalen=Object.assign({}, (hardwareVan(a)||{}).kanalen||{}, {
+      winkel:onlKanaalAan('winkel'), marktplaats:onlKanaalAan('marktplaats')
+    });
+    /* De hoofdfoto hoort voorop te staan, want dat is de foto die de koper
+       in het overzicht ziet. */
+    const gesorteerd=(onl.fotos||[]).slice().sort((x,y)=>(y.hoofd?1:0)-(x.hoofd?1:0));
+    const {error}=await sb.from('hardware').update({
       staat:onl.staat||a.grade||'B',
-      inkoop:Number(a.inkoop)||0,
       verkoop:Number(onl.prijs)||0,
       garantie:Number(onl.garantie)||0,
-      herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
       titel:onl.titel||null, omschrijving:onl.tekst||null,
-      fotos:(onl.fotos||[]).map(f=>fotoUrl(f.pad)),
-      status: instel.inscannen ? 'onderweg' : 'voorraad',
-      locatie_id: instel.inscannen ? null : (a.locatie_id||null),
-      code:a.code, kanalen
-    }).select().single();
+      fotos:gesorteerd.map(f=>fotoUrl(f.pad)),
+      specs:a.specs||{}, kanalen,
+      bijgewerkt_op:new Date().toISOString()
+    }).eq('id', hwId);
     if(error) throw new Error('Publiceren mislukt: '+error.message);
 
-    await sb.from('refurbish_apparaten').update({
-      status:'overgedragen', hardware_id:data.id, bijgewerkt_op:new Date().toISOString()
-    }).eq('id',a.id);
+    /* En dan echt online. Zonder deze stap staat er "gepubliceerd" terwijl er
+       niets op de webshop is gebeurd, en dat is precies het soort halve
+       waarheid waar je een dag later achter komt. */
+    let webshop='';
+    if(onlKanaalAan('webshop')){
+      try{
+        const {data:{session}}=await sb.auth.getSession();
+        const res=await fetch(SUPABASE_URL+'/functions/v1/shopify',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+                   'Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({actie:'online', hardware_id:hwId})
+        });
+        const uit=await res.json().catch(()=>({}));
+        if(!res.ok||!uit.ok) throw new Error(uit.error||'Shopify gaf een fout');
+        webshop=' · staat op de webshop';
+      }catch(e){
+        await allesLaden(); showTab('voorraad');
+        toast('Opgeslagen, maar de webshop lukte niet: '+e.message,'let-op');
+        onl=null; return;
+      }
+    }
 
     onl=null;
     await allesLaden();
-    showTab('klaar');
-    toast(instel.inscannen
-      ? 'Gepubliceerd. Scan hem in zodra hij in de winkel ligt.'
-      : 'Staat in je winkelvoorraad, onder Hardware', true);
+    showTab('voorraad');
+    toast('Opgeslagen'+webshop, true);
   });
 }
 
@@ -2931,6 +3106,485 @@ async function rechtKlaar(knop){
     rechtSluit();
     await fotosLaden(onl.a);
     toast('Rechtgezet en opgeslagen', true);
+  });
+}
+
+
+/* ═══════════════ achtergrond op het scherm ═══════════════
+
+   Wat Coolblue en Back Market doen: op elke productfoto staat hetzelfde
+   strakke beeld op het scherm, met de schermmaat erop. Dat is geen opsmuk.
+   Een rij foto's waarop elk scherm iets anders laat zien, de een uit met een
+   spiegeling erin en de ander met een half bureaublad, ziet er rommelig uit,
+   en rommelig leest een koper als onbetrouwbaar.
+
+   Volautomatisch kan dit niet fatsoenlijk. De hoekdetectie zit er meestal
+   goed op en soms een centimeter naast, en dat merk je anders pas als de
+   advertentie online staat. Dus: de AI doet de gok, jij sleept de punten en
+   ziet meteen wat eruit komt.
+
+   Het perspectief benaderen we met bilineaire interpolatie tussen de vier
+   hoeken, opgedeeld in een raster van driehoekjes. Dat is niet dezelfde
+   wiskunde als een echte homografie, maar bij een laptopscherm dat redelijk
+   frontaal staat is het verschil met het oog niet te zien, en het scheelt een
+   bibliotheek van een halve megabyte. Het rechtzetten hiernaast werkt met
+   precies dezelfde benadering, dus de twee blijven consistent.            */
+
+let acht=null;
+
+const ACHTERGRONDEN=[
+  {id:'mint',   naam:'Storvo',   donker:true},
+  {id:'nacht',  naam:'Nacht',    donker:true},
+  {id:'licht',  naam:'Licht',    donker:false},
+  {id:'eigen',  naam:'Eigen foto', donker:true}
+];
+
+/* De schermmaat staat meestal ergens in de specificaties, maar altijd net
+   anders opgeschreven: 15.6", 15,6 inch, 15.6-inch FHD. */
+function inchUit(specs){
+  const t=String((specs||{})['Scherm']||(specs||{})['Beeldscherm']||'');
+  const m=t.match(/(\d{1,2}[.,]\d)\s*(?:inch|"|”|-inch)/i)
+       || t.match(/\b(\d{2})\s*(?:inch|"|”|-inch)/i)
+       || t.match(/^\s*(\d{1,2}[.,]\d)/);
+  return m ? m[1].replace('.', ',') : '';
+}
+function resolutieUit(specs){
+  const t=String((specs||{})['Scherm']||(specs||{})['Beeldscherm']||'');
+  const m=t.match(/(\d{3,4})\s*[x×*]\s*(\d{3,4})/);
+  return m ? m[1]+' × '+m[2] : '';
+}
+
+function achtOpen(fotoId){
+  const f=(onl.fotos||[]).find(x=>x.id===fotoId);
+  if(!f){ toast('Deze foto bestaat niet meer','let-op'); return; }
+  const specs=onl.a.specs||{};
+  acht={foto:f, beeld:null, punten:null, sleept:-1,
+        stijl:'mint', eigen:null,
+        inch:inchUit(specs), resolutie:resolutieUit(specs),
+        maat:true, glans:true, klaar:false};
+
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='achtOverlay';
+  ov.innerHTML=`<div class="popup groot">
+    <h3>Achtergrond op het scherm</h3>
+    <p class="pv">De vier punten horen op de hoeken van het beeldscherm te staan. Sleep ze bij als het net niet klopt; je ziet het resultaat meteen.</p>
+    <div class="achtvak">
+      <div class="achtdoek"><canvas id="achtDoek"></canvas></div>
+      <div>
+        <div class="hkkop">Achtergrond</div>
+        <div class="stijlkiezer" id="achtStijlen"></div>
+        <label class="btn ghost small" style="cursor:pointer; margin-top:8px; display:inline-flex">
+          <svg class="i s"><use href="#i-camera"/></svg>Eigen afbeelding
+          <input type="file" accept="image/*" hidden onchange="achtEigen(this)">
+        </label>
+
+        <div class="hkkop" style="margin-top:18px">Schermmaat</div>
+        <div class="row">
+          <input id="acht_inch" value="${esc(acht.inch)}" placeholder="15,6"
+            style="max-width:90px" oninput="achtVeld()">
+          <span class="muted klein">inch</span>
+        </div>
+        <input id="acht_res" value="${esc(acht.resolutie)}" placeholder="Resolutie, mag leeg"
+          style="margin-top:8px" oninput="achtVeld()">
+
+        <label class="schakelrij" style="margin-top:14px">
+          <input type="checkbox" id="acht_maat" checked onchange="achtVeld()">
+          <div><div class="knaam">Maat op de achtergrond</div></div>
+        </label>
+        <label class="schakelrij">
+          <input type="checkbox" id="acht_glans" checked onchange="achtVeld()">
+          <div><div class="knaam">Glans over het scherm</div>
+               <div class="kuit">Zonder dit ziet het eruit als een sticker.</div></div>
+        </label>
+
+        <div class="row" style="margin-top:16px">
+          <button class="btn ghost small" onclick="achtHoeken(this)">
+            <svg class="i s"><use href="#i-sparkles"/></svg>Hoeken laten zoeken</button>
+        </div>
+        <p class="muted klein" id="achtBron" style="margin-top:8px">Bezig met kijken waar het scherm zit…</p>
+      </div>
+    </div>
+    <div class="acts">
+      <button class="btn actie" onclick="achtBewaar(this)">Opslaan als hoofdfoto</button>
+      <button class="btn ghost" onclick="achtSluit()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  achtStijlen();
+  achtLaden(fotoUrl(f.pad));
+}
+
+function achtSluit(){ const o=document.getElementById('achtOverlay'); if(o) o.remove(); acht=null; }
+
+function achtLaden(url){
+  const beeld=new Image();
+  beeld.crossOrigin='anonymous';
+  beeld.onload=()=>{
+    if(!acht) return;
+    acht.beeld=beeld;
+    const doek=document.getElementById('achtDoek');
+    const breed=Math.min(680, beeld.width);
+    doek.width=breed;
+    doek.height=Math.round(beeld.height*(breed/beeld.width));
+    /* Een gok op ongeveer de plek waar een laptopscherm staat, in verhoudingen
+       zodat hij niet aan de grootte van dit venster hangt. */
+    acht.punten=[{x:.18,y:.12},{x:.82,y:.12},{x:.86,y:.66},{x:.14,y:.66}];
+    acht.klaar=true;
+    achtTeken();
+    achtLuister(doek);
+    achtHoeken(null);
+  };
+  beeld.onerror=()=>{ toast('De foto kon niet geladen worden','fout'); achtSluit(); };
+  beeld.src=url;
+}
+
+function achtVeld(){
+  if(!acht) return;
+  const g=id=>document.getElementById(id);
+  acht.inch=(g('acht_inch').value||'').trim();
+  acht.resolutie=(g('acht_res').value||'').trim();
+  acht.maat=g('acht_maat').checked;
+  acht.glans=g('acht_glans').checked;
+  achtTeken();
+}
+
+function achtStijl(id){
+  if(!acht) return;
+  if(id==='eigen' && !acht.eigen){ toast('Kies eerst een eigen afbeelding','let-op'); return; }
+  acht.stijl=id; achtStijlen(); achtTeken();
+}
+
+function achtStijlen(){
+  const el=document.getElementById('achtStijlen'); if(!el||!acht) return;
+  el.innerHTML=ACHTERGRONDEN.map(a=>`
+    <button type="button" class="stijlknop${acht.stijl===a.id?' aan':''}" onclick="achtStijl('${a.id}')">
+      <canvas data-stijl="${a.id}"></canvas><span>${esc(a.naam)}</span></button>`).join('');
+  el.querySelectorAll('canvas').forEach(c=>{
+    c.width=200; c.height=104;
+    const bron=achtergrondDoek(200,104,{stijl:c.dataset.stijl, maat:false});
+    c.getContext('2d').drawImage(bron,0,0);
+  });
+}
+
+function achtEigen(invoer){
+  const bestand=(invoer.files||[])[0]; invoer.value='';
+  if(!bestand||!acht) return;
+  const lezer=new FileReader();
+  lezer.onload=()=>{
+    const b=new Image();
+    b.onload=()=>{ acht.eigen=b; acht.stijl='eigen'; achtStijlen(); achtTeken(); };
+    b.src=lezer.result;
+  };
+  lezer.readAsDataURL(bestand);
+}
+
+/* De achtergrond zelf, getekend op de maat die het scherm in de foto heeft.
+   Alles gebeurt hier in de browser: geen upload, geen wachten, en je kunt
+   twintig keer iets veranderen zonder dat het wat kost.                    */
+function achtergrondDoek(breed, hoog, opties){
+  const o=Object.assign({stijl:'mint', maat:true, inch:'', resolutie:''}, opties||{});
+  const doek=document.createElement('canvas');
+  doek.width=Math.max(2,Math.round(breed)); doek.height=Math.max(2,Math.round(hoog));
+  const c=doek.getContext('2d');
+  const B=doek.width, H=doek.height;
+  let licht=false;
+
+  if(o.stijl==='eigen' && acht && acht.eigen){
+    const b=acht.eigen;
+    const f=Math.max(B/b.width, H/b.height);
+    c.drawImage(b, (B-b.width*f)/2, (H-b.height*f)/2, b.width*f, b.height*f);
+  }else if(o.stijl==='licht'){
+    licht=true;
+    const g=c.createLinearGradient(0,0,B,H);
+    g.addColorStop(0,'#FFFFFF'); g.addColorStop(1,'#E9E6DF');
+    c.fillStyle=g; c.fillRect(0,0,B,H);
+    const r=c.createRadialGradient(B*.7,H*.25,0,B*.7,H*.25,B*.7);
+    r.addColorStop(0,'rgba(127,196,182,.30)'); r.addColorStop(1,'rgba(127,196,182,0)');
+    c.fillStyle=r; c.fillRect(0,0,B,H);
+  }else if(o.stijl==='nacht'){
+    const g=c.createLinearGradient(0,0,B,H);
+    g.addColorStop(0,'#131A19'); g.addColorStop(1,'#05100E');
+    c.fillStyle=g; c.fillRect(0,0,B,H);
+    const r=c.createRadialGradient(B*.3,H*.2,0,B*.3,H*.2,B*.8);
+    r.addColorStop(0,'rgba(127,196,182,.22)'); r.addColorStop(1,'rgba(127,196,182,0)');
+    c.fillStyle=r; c.fillRect(0,0,B,H);
+  }else{
+    const g=c.createLinearGradient(0,H,B,0);
+    g.addColorStop(0,'#0B5B52'); g.addColorStop(.55,'#123F39'); g.addColorStop(1,'#0E6A5F');
+    c.fillStyle=g; c.fillRect(0,0,B,H);
+    const r=c.createRadialGradient(B*.72,H*.22,0,B*.72,H*.22,B*.75);
+    r.addColorStop(0,'rgba(127,196,182,.36)'); r.addColorStop(1,'rgba(127,196,182,0)');
+    c.fillStyle=r; c.fillRect(0,0,B,H);
+  }
+
+  if(o.maat && String(o.inch||'').trim()){
+    tekenMaat(c, B, H, String(o.inch).trim(), String(o.resolutie||'').trim(), licht);
+  }
+  return doek;
+}
+
+/* De maat zoals een webshop hem laat zien: een pijl van hoek tot hoek over de
+   diagonaal, met het getal in het midden. Meteen duidelijk dat het over de
+   diagonaal gaat en niet over de breedte, want dat is de vraag die anders
+   overblijft.                                                              */
+function tekenMaat(c, B, H, inch, resolutie, licht){
+  const lijn = licht ? 'rgba(18,63,57,.50)' : 'rgba(255,255,255,.58)';
+  const vol  = licht ? '#123F39' : '#FFFFFF';
+  const marge= Math.min(B,H)*0.13;
+  const a={x:marge, y:H-marge}, b={x:B-marge, y:marge};
+  const mx=B/2, my=H/2;
+
+  /* Eerst uitrekenen hoe groot het plaatje met het getal wordt, want de pijl
+     moet daar omheen. Een streep dwars door de tekst leest niet. */
+  const groot=Math.round(Math.min(B,H)*0.20);
+  const tekst=inch+'"';
+  c.save();
+  c.font='800 '+groot+'px Inter, system-ui, sans-serif';
+  const br=c.measureText(tekst).width;
+  const pb=br+groot*0.70, ph=groot*(resolutie?1.70:1.20);
+
+  const hoek=Math.atan2(b.y-a.y, b.x-a.x);
+  const lengte=Math.hypot(b.x-a.x, b.y-a.y);
+  /* Waar de diagonaal de pil verlaat, plus wat lucht. Niet de breedte en de
+     hoogte bij elkaar optellen: dan wordt het gat veel te groot en houd je
+     twee stompjes over in de hoeken. */
+  const co=Math.abs(Math.cos(hoek))||1e-6, si=Math.abs(Math.sin(hoek))||1e-6;
+  const gat=Math.min(lengte*0.40, Math.min(pb/2/co, ph/2/si) + groot*0.30);
+
+  c.strokeStyle=lijn; c.lineWidth=Math.max(1.5, Math.min(B,H)*0.006);
+  c.lineCap='round';
+  const langs=(p,afstand)=>({x:p.x+Math.cos(hoek)*afstand, y:p.y+Math.sin(hoek)*afstand});
+  const stop1=langs(a, lengte/2-gat), start2=langs(a, lengte/2+gat);
+  c.beginPath(); c.moveTo(a.x,a.y); c.lineTo(stop1.x,stop1.y); c.stroke();
+  c.beginPath(); c.moveTo(start2.x,start2.y); c.lineTo(b.x,b.y); c.stroke();
+
+  const pijl=Math.min(B,H)*0.045;
+  [[a,hoek],[b,hoek+Math.PI]].forEach(([p,r])=>{
+    c.beginPath();
+    c.moveTo(p.x,p.y);
+    c.lineTo(p.x+Math.cos(r-0.42)*pijl, p.y+Math.sin(r-0.42)*pijl);
+    c.lineTo(p.x+Math.cos(r+0.42)*pijl, p.y+Math.sin(r+0.42)*pijl);
+    c.closePath(); c.fillStyle=lijn; c.fill();
+  });
+
+  c.fillStyle = licht ? 'rgba(255,255,255,.90)' : 'rgba(5,22,20,.60)';
+  const r=ph/2;
+  c.beginPath();
+  c.moveTo(mx-pb/2+r, my-ph/2);
+  c.arcTo(mx+pb/2, my-ph/2, mx+pb/2, my+ph/2, r);
+  c.arcTo(mx+pb/2, my+ph/2, mx-pb/2, my+ph/2, r);
+  c.arcTo(mx-pb/2, my+ph/2, mx-pb/2, my-ph/2, r);
+  c.arcTo(mx-pb/2, my-ph/2, mx+pb/2, my-ph/2, r);
+  c.closePath(); c.fill();
+
+  c.fillStyle=vol; c.textAlign='center'; c.textBaseline='middle';
+  c.font='800 '+groot+'px Inter, system-ui, sans-serif';
+  c.fillText(tekst, mx, my - (resolutie?groot*0.24:0));
+  if(resolutie){
+    c.font='600 '+Math.round(groot*0.30)+'px Inter, system-ui, sans-serif';
+    c.fillStyle = licht ? 'rgba(18,63,57,.88)' : 'rgba(255,255,255,.80)';
+    c.fillText(resolutie, mx, my + groot*0.44);
+  }
+  c.restore();
+}
+
+/* Een rechthoekige afbeelding in een vierhoek tekenen. Per driehoekje een
+   affiene transformatie; genoeg driehoekjes en je ziet er niets van.       */
+function driehoekTekenen(c, img, s0,s1,s2, d0,d1,d2){
+  const mx=(d0.x+d1.x+d2.x)/3, my=(d0.y+d1.y+d2.y)/3;
+  /* De clip een fractie opblazen, anders zie je haarlijntjes tussen de
+     driehoekjes door. */
+  const uit=q=>({x:mx+(q.x-mx)*1.06, y:my+(q.y-my)*1.06});
+  const e0=uit(d0), e1=uit(d1), e2=uit(d2);
+  const den=s0.x*(s2.y-s1.y)-s1.x*s2.y+s2.x*s1.y+(s1.x-s2.x)*s0.y;
+  if(!den) return;
+  c.save();
+  c.beginPath(); c.moveTo(e0.x,e0.y); c.lineTo(e1.x,e1.y); c.lineTo(e2.x,e2.y); c.closePath(); c.clip();
+  const a=-(s0.y*(d2.x-d1.x)-s1.y*d2.x+s2.y*d1.x+(s1.y-s2.y)*d0.x)/den;
+  const b= (s1.y*d2.y+s0.y*(d1.y-d2.y)-s2.y*d1.y+(s2.y-s1.y)*d0.y)/den;
+  const cc=(s0.x*(d2.x-d1.x)-s1.x*d2.x+s2.x*d1.x+(s1.x-s2.x)*d0.x)/den;
+  const d=-(s1.x*d2.y+s0.x*(d1.y-d2.y)-s2.x*d1.y+(s2.x-s1.x)*d0.y)/den;
+  const e= (s0.x*(s2.y*d1.x-s1.y*d2.x)+s0.y*(s1.x*d2.x-s2.x*d1.x)+(s2.x*s1.y-s1.x*s2.y)*d0.x)/den;
+  const f= (s0.x*(s2.y*d1.y-s1.y*d2.y)+s0.y*(s1.x*d2.y-s2.x*d1.y)+(s2.x*s1.y-s1.x*s2.y)*d0.y)/den;
+  c.setTransform(a,b,cc,d,e,f);
+  c.drawImage(img,0,0);
+  c.restore();
+}
+
+function tekenInVierhoek(c, bron, P, N){
+  const punt=(u,v)=>({
+    x:(1-u)*(1-v)*P[0].x + u*(1-v)*P[1].x + u*v*P[2].x + (1-u)*v*P[3].x,
+    y:(1-u)*(1-v)*P[0].y + u*(1-v)*P[1].y + u*v*P[2].y + (1-u)*v*P[3].y
+  });
+  const W=bron.width, H=bron.height;
+  for(let i=0;i<N;i++){
+    for(let j=0;j<N;j++){
+      const u0=i/N, u1=(i+1)/N, v0=j/N, v1=(j+1)/N;
+      const s0={x:u0*W,y:v0*H}, s1={x:u1*W,y:v0*H}, s2={x:u1*W,y:v1*H}, s3={x:u0*W,y:v1*H};
+      const d0=punt(u0,v0), d1=punt(u1,v0), d2=punt(u1,v1), d3=punt(u0,v1);
+      driehoekTekenen(c, bron, s0,s1,s2, d0,d1,d2);
+      driehoekTekenen(c, bron, s0,s2,s3, d0,d2,d3);
+    }
+  }
+}
+
+/* De foto met de achtergrond erin, op de gevraagde breedte. Dezelfde functie
+   voor het voorbeeld en voor het eindresultaat, zodat wat je ziet ook is wat
+   je opslaat.                                                              */
+function achtSamenstellen(doek, fijn){
+  const c=doek.getContext('2d');
+  c.setTransform(1,0,0,1,0,0);
+  c.clearRect(0,0,doek.width,doek.height);
+  c.drawImage(acht.beeld, 0, 0, doek.width, doek.height);
+  if(!acht.punten) return;
+
+  const P=acht.punten.map(q=>({x:q.x*doek.width, y:q.y*doek.height}));
+  const breed=Math.max(Math.hypot(P[1].x-P[0].x,P[1].y-P[0].y),
+                       Math.hypot(P[2].x-P[3].x,P[2].y-P[3].y));
+  const hoog =Math.max(Math.hypot(P[3].x-P[0].x,P[3].y-P[0].y),
+                       Math.hypot(P[2].x-P[1].x,P[2].y-P[1].y));
+  if(breed<8||hoog<8) return;
+
+  const bron=achtergrondDoek(breed, hoog,
+    {stijl:acht.stijl, maat:acht.maat, inch:acht.inch, resolutie:acht.resolutie});
+  tekenInVierhoek(c, bron, P, fijn?26:14);
+
+  c.save();
+  c.beginPath(); c.moveTo(P[0].x,P[0].y);
+  for(let i=1;i<4;i++) c.lineTo(P[i].x,P[i].y);
+  c.closePath();
+  if(acht.glans){
+    c.save(); c.clip();
+    const g=c.createLinearGradient(P[0].x,P[0].y,P[2].x,P[2].y);
+    g.addColorStop(0,   'rgba(255,255,255,.20)');
+    g.addColorStop(.34, 'rgba(255,255,255,.05)');
+    g.addColorStop(.46, 'rgba(255,255,255,.13)');
+    g.addColorStop(.62, 'rgba(255,255,255,.02)');
+    g.addColorStop(1,   'rgba(255,255,255,0)');
+    c.fillStyle=g; c.fillRect(0,0,doek.width,doek.height);
+    c.restore();
+  }
+  /* Een dun donker randje: een echt scherm heeft een rand, en zonder deze
+     lijn plakt de achtergrond zichtbaar op de foto. */
+  c.strokeStyle='rgba(8,20,18,.45)';
+  c.lineWidth=Math.max(1, doek.width*0.0022);
+  c.stroke();
+  c.restore();
+}
+
+function achtTeken(){
+  const doek=document.getElementById('achtDoek');
+  if(!doek||!acht||!acht.klaar||!acht.punten) return;
+  achtSamenstellen(doek, false);
+  const c=doek.getContext('2d');
+  const P=acht.punten.map(q=>({x:q.x*doek.width, y:q.y*doek.height}));
+  P.forEach((q,i)=>{
+    c.beginPath(); c.arc(q.x,q.y,11,0,Math.PI*2);
+    c.fillStyle= acht.sleept===i ? '#0B5B52' : '#E88A1D';
+    c.fill(); c.strokeStyle='#fff'; c.lineWidth=3; c.stroke();
+  });
+}
+
+function achtLuister(doek){
+  const plek=e=>{
+    const r=doek.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return {x:(t.clientX-r.left)/r.width, y:(t.clientY-r.top)/r.height};
+  };
+  const pak=e=>{
+    const q=plek(e);
+    let dichtst=-1, kort=1e9;
+    acht.punten.forEach((p,i)=>{
+      const d=Math.hypot((p.x-q.x)*doek.width, (p.y-q.y)*doek.height);
+      if(d<kort){ kort=d; dichtst=i; }
+    });
+    if(kort<40){ acht.sleept=dichtst; achtTeken(); e.preventDefault(); }
+  };
+  const sleep=e=>{
+    if(!acht||acht.sleept<0) return;
+    const q=plek(e);
+    acht.punten[acht.sleept]={x:Math.max(0,Math.min(1,q.x)), y:Math.max(0,Math.min(1,q.y))};
+    achtTeken(); e.preventDefault();
+  };
+  const los=()=>{ if(acht&&acht.sleept>=0){ acht.sleept=-1; achtTeken(); } };
+  doek.addEventListener('mousedown',pak); doek.addEventListener('mousemove',sleep);
+  window.addEventListener('mouseup',los);
+  doek.addEventListener('touchstart',pak,{passive:false});
+  doek.addEventListener('touchmove',sleep,{passive:false});
+  window.addEventListener('touchend',los);
+}
+
+async function achtHoeken(knop){
+  const werk=async()=>{
+    const klein=document.createElement('canvas');
+    const f=Math.min(1, 1100/acht.beeld.width);
+    klein.width=Math.round(acht.beeld.width*f);
+    klein.height=Math.round(acht.beeld.height*f);
+    klein.getContext('2d').drawImage(acht.beeld,0,0,klein.width,klein.height);
+
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/scherm-hoeken',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({foto:klein.toDataURL('image/jpeg', 0.8)})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Het zoeken lukte niet');
+
+    const bron=document.getElementById('achtBron');
+    if(!uit.gevonden){
+      if(bron) bron.textContent=uit.melding||'Geen scherm gevonden. Sleep de punten zelf naar de hoeken.';
+      return;
+    }
+    acht.punten=uit.hoeken.map(h=>({x:h.x/100, y:h.y/100}));
+    achtTeken();
+    if(bron) bron.textContent = uit.zeker==='hoog'
+      ? 'Hoeken gevonden. Kijk even of het klopt.'
+      : 'Gevonden, maar niet heel zeker. Kijk het goed na voordat je opslaat.';
+  };
+  try{
+    if(knop) await bezig(knop, werk); else await werk();
+  }catch(e){
+    const bron=document.getElementById('achtBron');
+    if(bron) bron.textContent='Het zoeken lukte niet: '+e.message+'. Sleep de punten zelf.';
+  }
+}
+
+async function achtBewaar(knop){
+  await bezig(knop, async()=>{
+    const doek=document.createElement('canvas');
+    const breed=Math.min(1800, acht.beeld.width);
+    doek.width=breed;
+    doek.height=Math.round(acht.beeld.height*(breed/acht.beeld.width));
+    achtSamenstellen(doek, true);
+
+    const blob=await new Promise(r=>doek.toBlob(r,'image/jpeg',0.92));
+    if(!blob) throw new Error('De foto kon niet gemaakt worden');
+    const pad=`${account.team_id}/${onl.a.id}/gestyled-${Date.now()}.jpg`;
+    const {error}=await sb.storage.from('refurbish-fotos')
+      .upload(pad, blob, {contentType:'image/jpeg'});
+    if(error) throw new Error(error.message);
+
+    /* Eén bewerkte foto per apparaat is genoeg. Doe je het nog eens over, dan
+       gaat de vorige weg; anders raakt de map vol met varianten waarvan
+       niemand meer weet welke de goede was. */
+    const oud=(onl.fotos||[]).filter(f=>f.aanzicht==='gestyled');
+    for(const o of oud){
+      await sb.storage.from('refurbish-fotos').remove([o.pad]);
+      await sb.from('refurbish_fotos').delete().eq('id',o.id);
+    }
+    const ids=(onl.fotos||[]).map(f=>f.id).filter(id=>!oud.some(o=>o.id===id));
+    if(ids.length) await sb.from('refurbish_fotos').update({hoofd:false}).in('id', ids);
+
+    await sb.from('refurbish_fotos').insert({
+      team_id:account.team_id, apparaat_id:onl.a.id,
+      merk:onl.a.merk, model:onl.a.model,
+      aanzicht:'gestyled', pad, volgorde:1, hoofd:true
+    });
+    achtSluit();
+    await fotosLaden(onl.a);
+    toast('Achtergrond erop en als hoofdfoto ingesteld', true);
   });
 }
 

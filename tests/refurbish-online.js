@@ -83,12 +83,14 @@ setTimeout(async()=>{
   ok('app start zonder fout', fouten.length===0);
   if(fouten.length) console.log('   ', fouten.slice(0,2).join(' | '));
 
-  // ── lijst klaar voor verkoop ──
-  const lijst=d().getElementById('klaarLijst').innerHTML;
-  ok('pushknop achter de status', /Online zetten/.test(lijst));
+  // ── de voorraadlijst ──
+  const lijst=d().getElementById('voorraadLijst').innerHTML;
+  ok('oranje knop om online te zetten', /btn oranje small/.test(lijst) && /Online zetten/.test(lijst));
   ok('serienummerkolom weg', !/Serienummer/.test(lijst));
-  const filters=[...d().querySelectorAll('#klaarFilter button')].map(b=>b.textContent.trim());
-  ok('filter heet nu Voorraad', filters.includes('Voorraad') && !filters.includes('Nog hier'));
+  ok('geen wollige status meer', !/Klaar voor verkoop/.test(lijst) && !/Naar de winkel/.test(lijst));
+  const filters=[...d().querySelectorAll('#voorraadFilter button')].map(b=>b.textContent.trim());
+  ok('filter per locatie', filters.some(f=>f.startsWith('Winkel')));
+  ok('filter op wat nog niet online staat', filters.some(f=>f.startsWith('Nog niet online')));
 
   // ── het scherm openen ──
   w.eval("onlineZetten('a1')");
@@ -161,17 +163,17 @@ setTimeout(async()=>{
   d().getElementById('onl_prijs').value='349';
   w.eval('onlVeld()');
   await w.eval('onlPubliceren(document.createElement("button"))');
-  const hw=w.__geschreven.find(g=>g[0]==='hardware' && g[1]==='insert');
-  ok('naar de winkelvoorraad geschreven', !!hw);
+  const hw=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='update').pop();
+  ok('de voorraadrij bijgewerkt', !!hw);
   if(hw){
     ok('prijs mee', hw[2].verkoop===349);
     ok('grade mee', hw[2].staat==='A');
     ok('garantie mee', hw[2].garantie===6);
     ok('titel en tekst mee', 'titel' in hw[2] && 'omschrijving' in hw[2]);
     ok('kanalen mee', hw[2].kanalen && hw[2].kanalen.winkel===true);
+    ok('hoofdfoto vooraan', Array.isArray(hw[2].fotos) && hw[2].fotos.length===2);
   }
-  const bij=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
-  ok('apparaat op overgedragen', !!bij && bij[2].status==='overgedragen');
+  ok('echt op de webshop gezet', w.__fetches.some(f=>f[0].includes('/shopify')));
 
   // ── instellingen: locaties en inscannen ──
   ok('inscanschakelaar', !!d().getElementById('in_scan'));
@@ -185,18 +187,27 @@ setTimeout(async()=>{
   ok('inscannen aangezet', !!sc && sc[2].inscannen===true);
   ok('accugrens blijft staan', !!sc && sc[2].accu_min===80);
 
-  // met inscannen aan gaat een gepubliceerd toestel op onderweg
+  // Inscannen aan en nog geen plek gekozen: dan telt hij nog niet mee.
   w.eval("onlineZetten('a1')");
   await new Promise(r=>setTimeout(r,60));
   d().getElementById('onl_prijs').value='349';
   w.eval('onlVeld()');
   await w.eval('onlPubliceren(document.createElement("button"))');
   const hw2=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='insert').pop();
-  ok('gepubliceerd als onderweg', hw2[2].status==='onderweg');
+  ok('zonder plek blijft hij onderweg', hw2[2].status==='onderweg');
   ok('nummer meegegeven om te scannen', hw2[2].code==='A0001');
   ok('nog geen plek, want hij moet nog ingescand worden', hw2[2].locatie_id===null);
 
-  // zonder inscannen ligt hij meteen waar hij lag
+  // wel een plek gekozen: dan ligt hij daar gewoon, ook met inscannen aan
+  w.eval("apparaten[0].locatie_id='l1'; onlineZetten('a1')");
+  await new Promise(r=>setTimeout(r,60));
+  d().getElementById('onl_prijs').value='349';
+  w.eval('onlVeld()');
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  const hw4=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='insert').pop();
+  ok('met een plek ligt hij gewoon in de voorraad', hw4[2].status==='voorraad');
+  ok('op de gekozen plek', hw4[2].locatie_id==='l1');
+
   await w.eval('scanInstelling(false)');
   w.eval("apparaten[0].status='klaar'; apparaten[0].locatie_id='l1'; onlineZetten('a1')");
   await new Promise(r=>setTimeout(r,60));

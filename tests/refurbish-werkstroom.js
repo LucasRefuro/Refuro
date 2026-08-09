@@ -70,10 +70,12 @@ setTimeout(async()=>{
 
   // overzichten
   ok('werkbank getekend', /Latitude 5430/.test(d.getElementById('wbLijst').innerHTML));
-  ok('kpi in behandeling 3', />3</.test(d.getElementById('wbKpis').innerHTML));
+  ok('kpi in behandeling 2', />2</.test(d.getElementById('wbKpis').innerHTML));
+  ok('wat op voorraad ligt staat niet op de werkbank',
+     !/XPS 14/.test(d.getElementById('wbLijst').innerHTML));
   ok('vandaag toegevoegd', /Latitude 5430/.test(d.getElementById('vandaagLijst').innerHTML));
   ok('nummer op de regel', /A0001/.test(d.getElementById('vandaagLijst').innerHTML));
-  ok('grade in de regel', /grade A/.test(d.getElementById('wbLijst').innerHTML));
+  ok('grade in de voorraadlijst', /gradepil/.test(d.getElementById('voorraadLijst').innerHTML));
   ok('controlelijst', /Latitude 5430/.test(d.getElementById('ctrLijst').innerHTML));
   ok('reparatielijst', /EliteBook/.test(d.getElementById('repLijst').innerHTML));
   ok('onderdelen per soort geteld', /Toetsenbord/.test(d.getElementById('deelLijst').innerHTML));
@@ -99,29 +101,32 @@ setTimeout(async()=>{
   ok('defect getoond', /toetsenbord/i.test(rep));
   ok('onderdeel van de plank aanbieden', /Toetsenbord EliteBook/.test(rep));
 
-  // overdracht naar de winkel
+  // ── van de werkbank naar de voorraad ──
+  // Er zat hier een scherm tussen waarin je nog eens een prijs moest invullen
+  // voordat het toestel bestond in Storvo. Dat scherm is weg: goedgekeurd is
+  // op voorraad.
   w.eval("sluit(); appOpen('a3')");
-  const kl=d.getElementById('venster').innerHTML;
-  ok('klaar-scherm', /Naar de winkelvoorraad/.test(kl));
-  ok('grade voorgeselecteerd', d.getElementById('k_staat').value==='A');
-  d.getElementById('k_verkoop').value='349';
-  const knop=[...d.querySelectorAll('#vensterKnoppen button')]
-    .find(b=>b.textContent.includes('winkelvoorraad'));
-  knop.click();
+  ok('geen tussenscherm meer', !d.getElementById('venster'));
+  const pag=d.getElementById('appPagina').innerHTML;
+  ok('de apparaatpagina opent', /XPS 14/.test(pag));
+  ok('nergens meer naar de winkelvoorraad', !/Naar de winkelvoorraad/.test(pag));
+  ok('wel een knop om hem online te zetten', /Online zetten/.test(pag));
 
-  setTimeout(()=>{
-    const naar=w.__geschreven.find(g=>g[0]==='hardware' && g[1]==='insert');
-    ok('rij naar hardware geschreven', !!naar);
-    if(naar){
-      const r=naar[2];
-      ok('vraagprijs mee', r.verkoop===349);
-      ok('inkoopprijs mee', r.inkoop===120);
-      ok('grade mee als staat', r.staat==='A');
-      ok('herkomst mee', r.herkomst==='Testleverancier · A0003');
-    }
-    const bij=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].status==='overgedragen');
-    ok('apparaat op overgedragen', !!bij);
-    console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
-    process.exit(fout?1:0);
-  },250);
+  await w.eval("naarVoorraad(apparaten.find(a=>a.id==='a3'))");
+  const naar=w.__geschreven.find(g=>g[0]==='hardware' && g[1]==='insert');
+  ok('rij naar hardware geschreven', !!naar);
+  if(naar){
+    const r=naar[2];
+    ok('inkoopprijs mee', r.inkoop===120);
+    ok('grade mee als staat', r.staat==='A');
+    ok('herkomst mee', r.herkomst==='Testleverancier · A0003');
+    ok('nummer mee om te scannen', r.code==='A0003');
+    ok('nog geen vraagprijs', r.verkoop===null);
+    ok('meteen op voorraad', r.status==='voorraad');
+  }
+  const bij=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].hardware_id);
+  ok('apparaat weet welke voorraadrij het is', !!bij);
+
+  console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
+  process.exit(fout?1:0);
 },450);

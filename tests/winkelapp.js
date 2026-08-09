@@ -152,6 +152,38 @@ setTimeout(async()=>{
   ok('verhuizing wordt vastgelegd', !!log);
   ok('met waar hij vandaan kwam', !!log && log[2].van_naam==='Magazijn' && log[2].naar_naam==='Winkel');
   ok('zichtbaar in het venster', /Zojuist verplaatst/.test(d.getElementById('hwOverlay').innerHTML));
+  const mee=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update');
+  ok('de refurbish-app gaat mee', !!mee && mee[2].locatie_id==='l1');
+
+  // en dezelfde weg terug: winkel naar magazijn
+  w.eval("hwSluit(); window.__geschreven.length=0; hwLocaties=[{id:'l1',naam:'Winkel',soort:'winkel'},{id:'l2',naam:'Magazijn',soort:'magazijn'}];");
+  w.eval(`hwData=[{id:'h5', merk:'Lenovo', model:'ThinkPad T14', code:'A0011', status:'voorraad',
+      locatie_id:'l1', kanalen:{}, aangemaakt_op:new Date().toISOString()}];
+    renderHardware(); hwInscannen();`);
+  d.getElementById('hw_scan').value='A0011';
+  d.getElementById('hw_loc').value='l2';
+  w.eval('hwScanZoek()');
+  await new Promise(r=>setTimeout(r,80));
+  const terug=w.__geschreven.find(g=>g[0]==='voorraad_verplaatsingen');
+  ok('ook terug naar het magazijn', !!terug && terug[2].van_naam==='Winkel' && terug[2].naar_naam==='Magazijn');
+
+  // filterknoppen per locatie
+  w.eval(`hwSluit();
+    hwLocaties=[{id:'l1',naam:'Winkel',soort:'winkel'},{id:'l2',naam:'Magazijn',soort:'magazijn'}];
+    hwData=[
+      {id:'h6', merk:'HP', model:'Elite 1', code:'A1', status:'voorraad', locatie_id:'l1', kanalen:{}, aangemaakt_op:new Date().toISOString()},
+      {id:'h7', merk:'HP', model:'Elite 2', code:'A2', status:'voorraad', locatie_id:'l2', kanalen:{}, aangemaakt_op:new Date().toISOString()}];
+    hwLocFilters(); renderHardware();`);
+  const lf=d.getElementById('hwLocFilters');
+  ok('knop per locatie', !!lf && /data-f="loc:l1"/.test(lf.innerHTML)
+                      && /data-f="loc:l2"/.test(lf.innerHTML));
+  w.eval("hwKiesFilter('loc:l1')");
+  const alleenWinkel=d.getElementById('hwLijst').innerHTML;
+  ok('alleen wat in de winkel ligt', /Elite 1/.test(alleenWinkel) && !/Elite 2/.test(alleenWinkel));
+  w.eval("hwKiesFilter('loc:l2')");
+  const alleenMagazijn=d.getElementById('hwLijst').innerHTML;
+  ok('alleen wat in het magazijn ligt', /Elite 2/.test(alleenMagazijn) && !/Elite 1/.test(alleenMagazijn));
+  w.eval("hwKiesFilter('voorraad')");
 
   // twee keer dezelfde plek doet niets
   w.eval(`hwSluit(); window.__geschreven.length=0;
