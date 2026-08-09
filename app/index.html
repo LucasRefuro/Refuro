@@ -2361,13 +2361,22 @@ function npCode(){
   const a=new Uint8Array(10); crypto.getRandomValues(a);
   return [...a].map(x=>t[x%t.length]).join('');
 }
-/* Vercel draait met cleanUrls, dus het adres is /app/scan en niet
-   /app/scan.html. Die laatste geeft een 404. Op een gewone webserver zonder
-   die instelling werkt /app/scan niet, dus daar houden we de .html aan.     */
+/* Het adres van de app is glad geschuurd door Vercel en dat levert twee
+   valkuilen op:
+     · cleanUrls haalt .html weg, dus /app/scan.html geeft een 404
+     · trailingSlash:false maakt van /app/ een /app, zonder streepje op het
+       eind. Klakkeloos "alles na de laatste slash weghalen" haalt dan de
+       hele map weg en je komt uit op /scan in plaats van /app/scan.
+   Daarom kijken we eerst of het laatste stuk een bestandsnaam is of een map. */
+function npMap(){
+  const p=location.pathname;
+  return /\.[a-z0-9]+$/i.test(p)
+    ? p.replace(/[^/]*$/,'')        /* /app/index.html → /app/ */
+    : p.replace(/\/?$/,'/');        /* /app of /app/   → /app/ */
+}
 function npLink(){
-  const map=location.origin+location.pathname.replace(/[^/]*$/,'');
-  const schoon=/(^|\.)storvo\.(app|nl)$/.test(location.hostname);
-  return map+'scan'+(schoon?'':'.html')+'?s='+np.code;
+  const schoon=/(^|\.)storvo\.(app|nl)$/i.test(location.hostname);
+  return location.origin+npMap()+'scan'+(schoon?'':'.html')+'?s='+np.code;
 }
 
 function startNieuwProduct(){
