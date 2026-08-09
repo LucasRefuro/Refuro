@@ -34,6 +34,8 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
 | `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |
+| `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
+| `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.

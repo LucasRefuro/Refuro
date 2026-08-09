@@ -208,8 +208,22 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    dit vandaan?). Apparaten die zijn leeggehaald blijven staan onder **Donoren**.
 6. **Parts inkoop.** Bestellijst samenvoegen tot inkooporders per leverancier,
    met factuur en status.
-7. **Verkoopklaar.** AI schrijft titel en omschrijving, foto's erbij, en dan de
-   overdracht naar Storvo.
+7. **Online zetten.** Achter de status in de lijst *Klaar voor verkoop* staat een
+   knop die alles bij elkaar zet wat nodig is om te verkopen:
+
+   - **De advertentie**, geschreven volgens het sjabloon dat je bij Checklists
+     instelt. De opbouw staat vast, de AI vult alleen de gaten. Per kanaal een
+     andere toon: netjes opgebouwd voor de webshop, korter en losser voor
+     Marktplaats. Titel en tekst hebben elk een eigen kopieerknop.
+   - **Zes foto's** in een vaste volgorde: dicht, open, toetsenbord, links,
+     rechts, onderkant. Uploaden vanaf de computer, of met de telefoon: je
+     scant een QR, de telefoon opent een lijstje met die zes en je werkt ze af.
+     Die telefoon hoeft niet in te loggen; hij werkt op een code die een half
+     uur geldig is.
+   - **De kanalen**: webshop, Marktplaats, winkel.
+
+   Daarna gaat het apparaat naar de winkelvoorraad in Storvo. Daar zit de knop
+   om hem daadwerkelijk op Shopify te zetten, want daar zit ook de prijs.
 8. **Export.** Batches en facturen eruit voor de boekhouding.
 
 ---

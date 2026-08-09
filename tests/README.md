@@ -21,6 +21,7 @@ npm test
 | `winkelapp.js` | Hardwarepagina: lijst, filters, marge, kanalen, het bewerkvenster |
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
 | `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
+| `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen |
 | `refurbish-pagina.js` | De apparaatpagina, donoren en onderdelen per soort |
 | `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |

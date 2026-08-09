@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Foto's maken · Storvo</title>
+<link rel="icon" href="/merk/app-icoon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* Fotograferen met de telefoon.
+   Deze pagina vraagt niet om inloggen: hij werkt op een code die een half uur
+   geldig is en uit de QR op de pc komt. Iemand die de code niet heeft kan hier
+   niets. Alles is met de duim te bedienen, want je hebt een laptop in je
+   andere hand. */
+:root{
+  --groen:#0B5B52; --oranje:#E88A1D; --bg:#F7F6F3; --card:#fff; --border:#ECEAE4;
+  --tekst:#17201E; --muted:#5B6663; --muted-l:#8A938F; --lblauw:#E7F1EE;
+  --green-soft:#E3F4EC; --green-tekst:#177A51; --red-soft:#FAE4E4; --red-tekst:#A33333;
+  --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+[hidden]{display:none !important;}
+body{font-family:'Instrument Sans',system-ui,sans-serif; background:var(--bg); color:var(--tekst);
+  font-size:16px; line-height:1.6; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+  max-width:560px; margin:0 auto;}
+h1{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.02em;}
+.kop{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+.kop .mark{width:34px; height:34px; flex:none;}
+.muted{color:var(--muted);}
+.klein{font-size:13.5px;}
+.kaart{background:var(--card); border-radius:20px; padding:20px; margin-top:16px;
+  box-shadow:0 6px 24px rgba(23,32,30,.07);}
+.btn{display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+  padding:16px 20px; border:none; border-radius:var(--pil); font-family:inherit;
+  font-size:16px; font-weight:700; cursor:pointer; background:var(--groen); color:#fff;}
+.btn.actie{background:var(--oranje);}
+.btn.ghost{background:var(--card); color:var(--tekst); border:1.5px solid var(--border);}
+.btn:disabled{opacity:.5;}
+label{display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin-bottom:8px;}
+
+/* De vaste set aanzichten. Altijd dezelfde volgorde, want dan zien je
+   advertenties er allemaal hetzelfde uit en zoekt een koper niet. */
+.setlijst{display:flex; flex-direction:column; gap:10px;}
+.setrij{display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:16px;
+  border:1.5px solid var(--border); background:var(--card); cursor:pointer;}
+.setrij.klaar{border-color:var(--green-tekst); background:var(--green-soft);}
+.setnr{width:30px; height:30px; flex:none; border-radius:50%; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;
+  color:var(--muted-l);}
+.setrij.klaar .setnr{background:var(--green-tekst); color:#fff;}
+.setnaam{font-weight:700; font-size:15.5px;}
+.setuit{font-size:13px; color:var(--muted);}
+.setdaar{margin-left:auto; font-size:13px; font-weight:700; color:var(--green-tekst);}
+.mini{width:46px; height:46px; border-radius:10px; object-fit:cover; margin-left:auto;}
+
+#toasts{position:fixed; left:16px; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px;}
+.toast{background:var(--tekst); color:#fff; padding:13px 18px; border-radius:14px; font-size:14.5px;}
+.toast.ok{background:var(--green-tekst);}
+.toast.fout{background:var(--red-tekst);}
+.klaarvak{text-align:center; padding:10px 0;}
+.klaarvak .vink{width:60px; height:60px; margin:0 auto 14px; border-radius:50%;
+  background:var(--green-soft); color:var(--green-tekst); display:flex; align-items:center; justify-content:center;}
+.klaarvak .vink svg{width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:3;
+  stroke-linecap:round; stroke-linejoin:round;}
+</style>
+</head>
+<body>
+
+<div class="kop">
+  <div class="mark" id="merkVlak"></div>
+  <div><h1>Foto's maken</h1></div>
+</div>
+<p class="muted klein" id="watIsHet">Bezig met openen…</p>
+
+<div id="werk" hidden>
+  <div class="kaart">
+    <label>Loop deze zes af</label>
+    <div class="setlijst" id="setLijst"></div>
+  </div>
+
+  <div class="kaart" id="klaarKaart" hidden>
+    <div class="klaarvak">
+      <div class="vink"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <b>Alle zes gemaakt</b>
+      <p class="muted klein" style="margin-top:6px">Je kunt dit venster sluiten. Op de pc staan ze er meteen bij.</p>
+    </div>
+  </div>
+</div>
+
+<div class="kaart" id="fout" hidden>
+  <b id="foutKop"></b>
+  <p class="muted klein" id="foutTekst" style="margin-top:6px"></p>
+</div>
+
+<input type="file" accept="image/*" capture="environment" id="camera" hidden>
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+
+/* De vaste set. Zes foto's, altijd dezelfde en altijd in deze volgorde. Dat is
+   wat een advertentie er professioneel uit laat zien: niet de kwaliteit van één
+   foto, maar dat ze bij elkaar horen. */
+const SET=[
+  {id:'dicht',       naam:'Dicht, van boven',   uit:'Deksel dicht, recht van boven'},
+  {id:'open',        naam:'Open, van voren',    uit:'Scherm aan, recht ervoor'},
+  {id:'toetsenbord', naam:'Toetsenbord',        uit:'Van boven, hele toetsenbord in beeld'},
+  {id:'links',       naam:'Linkerkant',         uit:'De aansluitingen aan de linkerkant'},
+  {id:'rechts',      naam:'Rechterkant',        uit:'De aansluitingen aan de rechterkant'},
+  {id:'onderkant',   naam:'Onderkant',          uit:'Met het typeplaatje in beeld'}
+];
+
+const code=new URLSearchParams(location.search).get('c');
+let gemaakt={}, bezigMet=null;
+
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(bericht, soort){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast '+(soort||'');
+  t.textContent=bericht;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+function stop(kop, tekst){
+  document.getElementById('watIsHet').textContent='';
+  document.getElementById('foutKop').textContent=kop;
+  document.getElementById('foutTekst').textContent=tekst;
+  document.getElementById('fout').hidden=false;
+}
+
+document.getElementById('merkVlak').innerHTML=
+  `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="3" width="19" height="19" rx="5" fill="#0B5B52"/>
+    <rect x="26" y="3" width="19" height="19" rx="5" fill="#6A9C93"/>
+    <rect x="3" y="26" width="19" height="19" rx="5" fill="#A7C3BD"/>
+    <path d="M28 36.5 L33 41.5 L44 28" fill="none" stroke="#0B5B52" stroke-width="5"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+async function praat(lijf){
+  const res=await fetch(SUPABASE_URL+'/functions/v1/refurbish-foto',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
+    body:JSON.stringify(Object.assign({code}, lijf))
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok) throw new Error(uit.error||'Er ging iets mis');
+  return uit;
+}
+
+async function start(){
+  if(!code){ stop('Geen code','Scan de QR-code opnieuw vanaf je computer.'); return; }
+  try{
+    const uit=await praat({actie:'kijken'});
+    const a=uit.apparaat;
+    document.getElementById('watIsHet').innerHTML=
+      `<b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${a.code?' · '+esc(a.code):''}`;
+    document.getElementById('werk').hidden=false;
+    teken();
+  }catch(e){ stop('Dit werkt niet meer', e.message); }
+}
+
+function teken(){
+  document.getElementById('setLijst').innerHTML=SET.map((s,i)=>`
+    <div class="setrij${gemaakt[s.id]?' klaar':''}" onclick="pak('${s.id}')">
+      <div class="setnr">${gemaakt[s.id]?'✓':(i+1)}</div>
+      <div>
+        <div class="setnaam">${esc(s.naam)}</div>
+        <div class="setuit">${esc(s.uit)}</div>
+      </div>
+      ${gemaakt[s.id]
+        ? `<img class="mini" src="${esc(gemaakt[s.id])}" alt="">`
+        : '<div class="setdaar">Maken</div>'}
+    </div>`).join('');
+  document.getElementById('klaarKaart').hidden = SET.some(s=>!gemaakt[s.id]);
+}
+
+function pak(id){
+  bezigMet=id;
+  document.getElementById('camera').click();
+}
+
+document.getElementById('camera').addEventListener('change', async e=>{
+  const bestand=e.target.files && e.target.files[0];
+  e.target.value='';
+  if(!bestand || !bezigMet) return;
+  const welke=bezigMet; bezigMet=null;
+  toast('Bezig met versturen…');
+  try{
+    const klein=await verklein(bestand);
+    const uit=await praat({aanzicht:welke, foto:klein});
+    gemaakt[welke]=uit.url||klein;
+    teken();
+    toast('Gelukt', 'ok');
+  }catch(err){ toast(err.message,'fout'); }
+});
+
+/* Een foto van een telefoon is zo vier megabyte. Dat hoeft niet: voor een
+   advertentie is 1600 pixels ruim genoeg en het scheelt de helft van de
+   wachttijd op een slechte wifi. */
+function verklein(bestand){
+  return new Promise((klaar, mis)=>{
+    const lezer=new FileReader();
+    lezer.onerror=()=>mis(new Error('De foto kon niet gelezen worden'));
+    lezer.onload=()=>{
+      const beeld=new Image();
+      beeld.onerror=()=>mis(new Error('De foto kon niet geopend worden'));
+      beeld.onload=()=>{
+        const max=1600;
+        const f=Math.min(1, max/Math.max(beeld.width, beeld.height));
+        const c=document.createElement('canvas');
+        c.width=Math.round(beeld.width*f);
+        c.height=Math.round(beeld.height*f);
+        c.getContext('2d').drawImage(beeld, 0, 0, c.width, c.height);
+        klaar(c.toDataURL('image/jpeg', 0.82));
+      };
+      beeld.src=lezer.result;
+    };
+    lezer.readAsDataURL(bestand);
+  });
+}
+
+start();
+</script>
+</body>
+</html>
