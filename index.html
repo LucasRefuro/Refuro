@@ -32,6 +32,25 @@
   --radius:24px; --radius-s:18px; --pil:100px;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
+
+/* ---------- soepel scrollen ----------
+   Klikken op een menu-item glijdt naar de sectie in plaats van er hard heen te
+   springen. En bij het scrollen zelf klikt de pagina zachtjes op een blok vast:
+   "proximity", niet "mandatory", zodat hij nooit tegen je vinger in vecht als
+   je ergens middenin wilt blijven staan.
+
+   Op een klein of laag scherm zetten we het uit, want dan zijn de blokken hoger
+   dan het scherm en zou het snappen juist in de weg zitten. Wie beweging heeft
+   uitgezet in zijn systeem krijgt het sowieso niet.                          */
+html{scroll-behavior:smooth; scroll-padding-top:86px;}
+@media(min-width:861px) and (min-height:620px){
+  html{scroll-snap-type:y proximity;}
+  section, footer{scroll-snap-align:start; scroll-snap-stop:normal;}
+  header.hero{scroll-snap-align:start;}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto; scroll-snap-type:none;}
+}
 html{scroll-behavior:smooth;}
 body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--warmwit); color:var(--ink);
   font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;}
@@ -262,8 +281,7 @@ section{padding:92px 0;}
 
 /* prijzen */
 .prijzen{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:24px; align-items:start;}
-.p{background:var(--card); border-radius:var(--radius); padding:34px; box-shadow:var(--schaduw); transition:.25s; position:relative;}
-.p:hover{transform:translateY(-4px); box-shadow:var(--schaduw-l);}
+.p{background:var(--card); border-radius:var(--radius); padding:34px; box-shadow:var(--schaduw); position:relative;}
 .p.pop{background:var(--petrol); color:var(--warmwit); box-shadow:var(--schaduw-l);}
 .p .badge{display:inline-block; background:var(--mint); color:var(--petrol); font-size:11px; font-weight:700;
   padding:5px 14px; border-radius:var(--pil); letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px;}
@@ -327,15 +345,27 @@ footer{padding:60px 0 44px; border-top:1px solid var(--rand); margin-top:72px; b
 .op{opacity:0; transform:translateY(24px); transition:opacity .7s cubic-bezier(.22,.8,.3,1), transform .7s cubic-bezier(.22,.8,.3,1);}
 .op.zie{opacity:1; transform:none;}
 .op.tr1{transition-delay:.08s} .op.tr2{transition-delay:.16s} .op.tr3{transition-delay:.24s} .op.tr4{transition-delay:.32s}
-.voortgang{position:fixed; top:0; left:0; height:3px; background:var(--groen); z-index:200; width:0;}
+/* De balk wordt met scaleX gerekt in plaats van breder gemaakt. Breedte
+   veranderen dwingt de browser tot herberekenen; schalen niet.             */
+.voortgang{position:fixed; top:0; left:0; height:3px; background:var(--groen); z-index:200;
+  width:100%; transform:scaleX(0); transform-origin:0 50%; will-change:transform;}
+.blob{will-change:transform;}
 
 /* zachte beweging die de aandacht stuurt, nooit afleidt */
 .zweef{animation:zweef 7s ease-in-out infinite;}
 @keyframes zweef{0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)}}
 .f:hover .ic{transform:translateY(-3px) scale(1.06);}
 .f .ic{transition:transform .3s cubic-bezier(.22,1.1,.4,1);}
-.p{transition:transform .25s cubic-bezier(.22,.8,.3,1), box-shadow .25s;}
-.p:hover{transform:translateY(-5px); box-shadow:var(--schaduw-l);}
+/* De prijskaarten komen omhoog als je erover gaat. Dat moet zacht voelen, dus
+   we bewegen alleen transform en schaduw. Stond hier eerst "transition:.25s",
+   en dat probeert élke eigenschap te animeren; daar gaat het schokken van. De
+   kaart krijgt ook een eigen laag, zodat de browser hem niet elke keer opnieuw
+   hoeft te tekenen.                                                         */
+.p{transition:transform .32s cubic-bezier(.22,.61,.36,1), box-shadow .32s cubic-bezier(.22,.61,.36,1);
+  will-change:transform; backface-visibility:hidden;}
+@media(hover:hover){
+  .p:hover{transform:translateY(-6px); box-shadow:var(--schaduw-l);}
+}
 .btn:focus-visible,.mocknav button:focus-visible,.demoknop:focus-visible,
 a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outline-offset:3px; border-radius:var(--pil);}
 
@@ -740,18 +770,35 @@ if(heeftIO){
   document.querySelectorAll('.op').forEach(el=>el.classList.add('zie'));
 }
 
-/* nav + voortgangsbalk + parallax */
+/* nav + voortgangsbalk + parallax
+   Dit draaide vroeger bij élke scrollgebeurtenis, en dat zijn er honderden per
+   seconde. Erger nog: het zocht telkens opnieuw de blobs op en las de hoogte
+   van de pagina uit, waardoor de browser midden in het scrollen de hele lay-out
+   moest doorrekenen. Vandaar het schokken.
+
+   Nu onthouden we de elementen één keer, lezen we de paginahoogte alleen bij
+   het wijzigen van het venster, en tekenen we hooguit één keer per beeldje.  */
 const nav=document.getElementById('nav'), vg=document.getElementById('voortgang');
-function bijScroll(){
+const blobs=[...document.querySelectorAll('.blob')].map(b=>({el:b, par:parseFloat(b.dataset.par)||0}));
+let maxScroll=1, gepland=false;
+
+function meetPagina(){ maxScroll=Math.max(1, document.body.scrollHeight-innerHeight); }
+
+function teken(){
+  gepland=false;
   const y=scrollY;
   nav.classList.toggle('vast', y>20);
-  const h=document.body.scrollHeight-innerHeight;
-  vg.style.width=(h>0? (y/h*100):0)+'%';
-  document.querySelectorAll('.blob').forEach(b=>{
-    b.style.transform='translateY('+(y*parseFloat(b.dataset.par))+'px)';
-  });
+  vg.style.transform='scaleX('+Math.min(1, y/maxScroll)+')';
+  for(const b of blobs) b.el.style.transform='translate3d(0,'+(y*b.par).toFixed(1)+'px,0)';
 }
-addEventListener('scroll',bijScroll,{passive:true}); bijScroll();
+function bijScroll(){
+  if(gepland) return;
+  gepland=true;
+  requestAnimationFrame(teken);
+}
+addEventListener('scroll', bijScroll, {passive:true});
+addEventListener('resize', ()=>{ meetPagina(); bijScroll(); }, {passive:true});
+meetPagina(); teken();
 
 /* tellers */
 if(heeftIO){

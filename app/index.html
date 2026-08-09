@@ -648,10 +648,60 @@
     .popup{padding:24px; border-radius:var(--radius-s);}
     #toasts{left:14px; right:14px; bottom:14px; top:auto; align-items:stretch; max-width:none;} .toast{max-width:none;}
   }
+  /* ---------- het dashboard op een telefoon ----------
+     Een telefoonwinkel staat aan de balie, niet achter een bureau. De cijfers
+     moeten dus ook op een klein scherm meteen leesbaar zijn, zonder in en uit
+     te zoomen en zonder tabellen die half buiten beeld vallen.               */
+  @media(max-width:860px){
+    /* Kopregel: titel boven, knoppen eronder over de volle breedte. */
+    .pagehead{flex-direction:column; align-items:stretch; gap:12px;}
+    .pagehead .row{width:100%; flex-direction:column; align-items:stretch; gap:10px;}
+    .pagehead .btn{width:100%; justify-content:center;}
+    .periodesel{display:flex; width:100%; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none; padding-bottom:2px;}
+    .periodesel::-webkit-scrollbar{display:none;}
+    .periodesel button{flex:1 0 auto; white-space:nowrap;}
+    .dagnav{width:100%; display:flex; gap:8px;}
+    .dagnav input{flex:1; min-width:0;}
+
+    /* Tabellen: laat ze schuiven en geef een randje mee zodat je ziet dat er
+       meer staat dan wat er in beeld past. */
+    .card > div[style*="overflow-x"]{
+      margin:0 -20px; padding:0 20px; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+      mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+      -webkit-mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+    }
+    .card > div[style*="overflow-x"]::-webkit-scrollbar{display:none;}
+    table{font-size:13px;}
+    th,td{padding:11px 9px; white-space:nowrap;}
+    th:first-child,td:first-child{position:sticky; left:0; background:var(--card); z-index:1;}
+    td:first-child{white-space:normal; min-width:150px;}
+
+    /* De grafiek: minder staafjes tegelijk is beter dan alles piepklein. */
+    .chart .lbl{font-size:9px;}
+    .chart .bar{max-width:14px;}
+
+    /* Losse dingen die op smalle schermen uit hun jasje groeiden. */
+    .row{flex-wrap:wrap;}
+    .veldrij,.grid{grid-template-columns:1fr;}
+    .npkoppel{flex-direction:column;}
+    .npqr{align-self:center;}
+    .tstrij{gap:7px;}
+    .codeknop{max-width:100%; overflow:hidden; text-overflow:ellipsis;}
+    h2{font-size:15px; flex-wrap:wrap;}
+    h2 .muted{margin-left:0; width:100%; margin-top:3px;}
+  }
   @media(max-width:520px){
-    .kpis{grid-template-columns:1fr;}
-    .pagehead{flex-direction:column; align-items:flex-start;}
-    .dagnav{width:100%;}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+    .kpi{padding:14px 15px;} .kpi .v{font-size:21px;} .kpi .l{font-size:10px;}
+    .binnen{padding:0 12px 44px;}
+    .card{padding:17px 15px;}
+    .card > div[style*="overflow-x"]{margin:0 -15px; padding:0 15px;}
+    .pagehead h1{font-size:21px;}
+    .chart{height:150px;} .chart .bars{height:112px;}
+    .zoekvak input{font-size:16px;}   /* onder de 16px zoomt iOS het scherm in */
+    input,select,textarea{font-size:16px;}
   }
 
   /* ---------- iconen: Lucide, één lijngewicht, ronde uiteinden ---------- */

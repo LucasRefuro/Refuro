@@ -221,11 +221,54 @@
   .toast.weg{opacity:0; transform:translateY(12px) scale(.97); transition:.32s cubic-bezier(.4,0,.2,1);}
   @media(max-width:860px){ #toasts{left:14px; right:14px; bottom:14px; align-items:stretch;} .toast{max-width:none;} }
   @keyframes toastin{from{opacity:0; transform:translateX(30px)}to{opacity:1; transform:none}}
+  /* ---------- het beheerpaneel op een telefoon ----------
+     Je kijkt hier ook weleens even snel op je mobiel of er iets binnen is
+     gekomen. Dan moet het menu een rij worden, moeten de tabellen kunnen
+     schuiven zonder de pagina mee te trekken, en moet de eerste kolom in
+     beeld blijven zodat je weet naar welke winkel je zit te kijken.        */
   @media(max-width:860px){
-    aside{position:static; width:100%; flex-direction:row; align-items:center; overflow-x:auto; padding:12px; border-right:none; border-bottom:1px solid var(--border);}
+    aside{position:static; width:100%; flex-direction:row; align-items:center; overflow-x:auto;
+      padding:12px; border-right:none; border-bottom:1px solid var(--border);
+      scrollbar-width:none; -webkit-overflow-scrolling:touch;}
+    aside::-webkit-scrollbar{display:none;}
     aside nav{flex-direction:row;} aside nav button{white-space:nowrap;}
-    .logo{padding:0 14px 0 4px;} aside .foot{display:none;}
+    .logo{padding:0 14px 0 4px; flex:none;} aside .foot{display:none;}
     body{flex-direction:column;} main{margin-left:0; padding:18px;}
+    .binnen{padding:0;}
+
+    .pagehead{flex-direction:column; align-items:stretch; gap:12px;}
+    .pagehead .row{width:100%; flex-direction:column; align-items:stretch; gap:10px;}
+    .pagehead .btn{width:100%; justify-content:center;}
+    .periodesel{display:flex; width:100%; overflow-x:auto; scrollbar-width:none;}
+    .periodesel::-webkit-scrollbar{display:none;}
+    .periodesel button{flex:1 0 auto; white-space:nowrap;}
+
+    .modules{grid-template-columns:1fr; gap:14px;}
+    .card{padding:20px; margin-bottom:14px;}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+    .grid,.row{grid-template-columns:1fr;}
+    .row{flex-wrap:wrap;}
+
+    div[style*="overflow-x"]{
+      margin:0 -20px; padding:0 20px; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+      -webkit-mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+    }
+    div[style*="overflow-x"]::-webkit-scrollbar{display:none;}
+    table{font-size:13px;}
+    th,td{padding:11px 9px; white-space:nowrap;}
+    th:first-child,td:first-child{position:sticky; left:0; background:var(--card); z-index:1;}
+    td:first-child{white-space:normal; min-width:140px;}
+    h2{font-size:15px; flex-wrap:wrap;}
+  }
+  @media(max-width:520px){
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+    .kpi{padding:14px 15px;} .kpi .v{font-size:21px;}
+    main{padding:14px;}
+    .card{padding:17px 15px;}
+    div[style*="overflow-x"]{margin:0 -15px; padding:0 15px;}
+    .pagehead h1{font-size:21px;}
+    input,select,textarea{font-size:16px;}   /* onder de 16px zoomt iOS in */
   }
   /* iconen */
   .i{width:20px; height:20px; flex:none; stroke:currentColor; fill:none; stroke-width:2;
