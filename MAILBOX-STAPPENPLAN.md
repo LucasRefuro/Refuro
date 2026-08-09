@@ -1,19 +1,23 @@
 # info@storvo.nl werkend krijgen
 
-Je kunt nu wel mail versturen vanaf storvo.app, maar er komt nog niets binnen op
-storvo.nl. Dit stappenplan regelt het ontvangen.
-Je doet dit bij Hostinger.
+**Afgerond.** Dit stappenplan is uitgevoerd en hoeft niet meer gedaan te worden.
+Het blijft staan als naslag, voor als je later nog een adres bijzet.
 
-Tijd: ongeveer twintig minuten, plus wachten op de DNS.
-
----
-
-## Wat er nu al werkt
+## Wat er staat (gecontroleerd op 9 augustus 2026)
 
 | Onderdeel | Status |
 |---|---|
 | Uitgaande mail via Resend (wachtwoord vergeten, klantberichten, proefaanvragen) | Werkt |
-| Inkomende mail op info@storvo.nl | Nog niet |
+| Inkomende mail op info@storvo.nl | Werkt |
+| MX naar mx1/mx2.hostinger.com | Staat |
+| SPF `v=spf1 include:_spf.mail.hostinger.com ~all` | Staat |
+| DMARC `p=none` met rapportage naar info@storvo.nl | Staat |
+| DKIM-sleutels a, b en c | Staan |
+| Feedback uit de app komt binnen op info@storvo.nl | Werkt |
+
+Let op bij het zelf natrekken: publieke resolvers onthouden ook een *negatief*
+antwoord. Vraag je een record op vlak nadat het is toegevoegd, dan kan het lijken
+of het er niet is. Met `cd=1` bij dns.google omzeil je die cache.
 
 Handig detail: Storvo verstuurt via **storvo.app** en ontvangt straks op
 **storvo.nl**. Dat zijn twee losse domeinen, dus de records botsen nergens.
