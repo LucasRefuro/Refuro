@@ -220,7 +220,19 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
      scant een QR, de telefoon opent een lijstje met die zes en je werkt ze af.
      Die telefoon hoeft niet in te loggen; hij werkt op een code die een half
      uur geldig is.
-   - **De kanalen**: webshop, Marktplaats, winkel.
+   - **De prijs**, met een voorstel op basis van wat je zelf eerder voor
+     hetzelfde model vroeg. Heb je dat nog niet, dan een ruwe opslag op de
+     inkoop. Er staat altijd bij waar het getal vandaan komt.
+   - **Fabrieksfoto's** uit Icecat: de catalogus waar fabrikanten zelf hun
+     productfoto's in zetten. Die mag je gebruiken, in tegenstelling tot
+     willekeurige plaatjes van internet. Je moet er wel een gratis account voor
+     maken; zie onderaan.
+   - **Het scherm recht zetten.** Bij de foto *open, van voren* staat een knop
+     *Recht zetten*. Je sleept de vier hoeken van het beeldscherm op hun plek en
+     de foto wordt rechtgetrokken, zodat het scherm haaks in beeld staat zoals in
+     een webshop. De andere foto's mogen gewoon een hoek hebben; dat maakt ze
+     juist echt.
+   - **De kanalen**: webshop, Marktplaats, winkel. Daarna **Publiceren**.
 
    Daarna gaat het apparaat naar de winkelvoorraad in Storvo. Daar zit de knop
    om hem daadwerkelijk op Shopify te zetten, want daar zit ook de prijs.
@@ -273,7 +285,16 @@ Zodat een verkoop in de webshop het toestel hier uit de voorraad haalt.
 Zonder die sleutel weigert de functie elk bericht, en terecht: dan kan iedereen
 melden dat er iets verkocht is.
 
-### 3. De prijs bepalen
+### 3. Icecat koppelen voor productfoto's (vijf minuten)
+
+1. Maak een gratis account op **icecat.biz** (Open Icecat volstaat)
+2. Zet je gebruikersnaam in Supabase als `ICECAT_GEBRUIKER`
+
+Zonder dat account werkt de knop *Fabrieksfoto's zoeken* niet; de rest wel.
+Let op: Icecat matcht op de artikelcode van de fabrikant en wij zoeken op
+modelnaam, dus het lukt niet bij elk model. Eigen foto's blijven het beste.
+
+### 4. De prijs bepalen
 
 Wat kost de module per maand? Zeg het, dan zet ik hem als tweede regel in
 Stripe en wordt hij bij het afrekenen automatisch meegenomen.

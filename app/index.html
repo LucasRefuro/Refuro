@@ -261,6 +261,11 @@
     font-weight:600; text-decoration:none; transition:.16s;}
   .refurblink:hover{background:var(--soft-2); color:var(--tekst);}
 
+  .wijzer{display:flex; align-items:center; gap:10px; background:var(--lblauw);
+    color:var(--groen,#0B5B52); border-radius:14px; padding:12px 16px; margin-bottom:18px;
+    font-size:13.5px;}
+  .wijzer a{font-weight:700; text-decoration:underline; cursor:pointer;}
+
   /* ---------- hardware: unieke exemplaren ---------- */
   .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
   .hwact{white-space:nowrap;}
@@ -1641,6 +1646,7 @@
 
 <!-- PRODUCTEN -->
 <section id="tab-producten"hidden>
+  <div class="wijzer" id="hwWijzer" hidden></div>
   <div class="pagehead">
     <h1>Producten</h1>
     <button class="btn actie" onclick="startNieuwProduct()"><svg class="i"><use href="#i-plus"/></svg> Nieuw product toevoegen</button>
@@ -2419,6 +2425,15 @@ function showTab(t){
      staat. Bewerk je net een product, dan wil je daar blijven. */
   if(t!=='nieuw'){ try{ localStorage.setItem('storvo_tab', t); }catch(e){} }
 }
+/* Een link van buitenaf mag bepalen waar je landt. De refurbish-app stuurt je
+   zo rechtstreeks naar Hardware. */
+function tabUitAdres(){
+  try{
+    const t=new URLSearchParams(location.search).get('tab');
+    if(t && document.getElementById('tab-'+t) && mag(t)) return t;
+  }catch(e){}
+  return null;
+}
 function laatsteTab(){
   try{
     const t=localStorage.getItem('storvo_tab');
@@ -3118,7 +3133,21 @@ function snelKey(e,modelId){
 }
 
 /* ---------- producten ---------- */
+/* Unieke toestellen staan niet tussen de gewone producten. Dat is met opzet,
+   maar dan moet je er wel op gewezen worden waar ze dan wél staan. */
+function hardwareWijzer(){
+  const el=document.getElementById('hwWijzer');
+  if(!el) return;
+  const n=hwData.filter(h=>h.status!=='verkocht').length;
+  if(!n || !mag('hardware')){ el.hidden=true; return; }
+  el.hidden=false;
+  el.innerHTML=`<svg class="i s"><use href="#i-laptop"/></svg>
+    <span>${n} los toestel${n===1?'':'len'} met een serienummer ${n===1?'staat':'staan'} onder
+      <a onclick="showTab('hardware')">Hardware</a>, niet in deze lijst.</span>`;
+}
+
 function renderProducten(){
+  hardwareWijzer();
   const q=(document.getElementById('zoek').value||'').toLowerCase();
   const fc=document.getElementById('filterCat').value;
   const rows=state.producten
@@ -5164,10 +5193,11 @@ async function ladAccountEnStart(session){
   pasRechtenToe();
   /* Terug waar je gebleven was. Stond je op een pagina die inmiddels uitstaat
      of die deze rol niet mag zien, dan begin je gewoon bij het dashboard. */
-  showTab(laatsteTab() || (mag('dashboard')?'dashboard':'scan'));
+  showTab(tabUitAdres() || laatsteTab() || (mag('dashboard')?'dashboard':'scan'));
   renderInstellingen();
   toonAboBalk();
   moduleLinks();
+  hwLaad(true);
   proefNudge();
   voorbeeldScherm();
   reviewMoment();

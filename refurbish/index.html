@@ -250,6 +250,11 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 .fotoweg{position:absolute; top:7px; right:7px; width:26px; height:26px; border-radius:50%;
   border:none; background:rgba(23,32,30,.72); color:#fff; font-size:17px; line-height:1; cursor:pointer;}
 
+.rechtvak{background:var(--soft-2); border-radius:14px; padding:10px; text-align:center;}
+.rechtvak canvas{max-width:100%; height:auto; border-radius:8px; cursor:grab; touch-action:none;}
+.rechtknop{margin-left:8px; padding:3px 9px; font-size:11px;}
+.fotonaam{display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap;}
+
 .kanaallijst{display:flex; flex-direction:column; gap:8px;}
 .kanaalrij{display:flex; align-items:flex-start; gap:12px; padding:13px 15px; cursor:pointer;
   border:1.5px solid var(--border); border-radius:14px;}
@@ -430,6 +435,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   <symbol id="i-tablet" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
   <symbol id="i-desktop" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
   <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="4" rx="2"/><path d="M7 20h10M12 16v4"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
   <symbol id="i-qr" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></symbol>
@@ -2120,6 +2126,9 @@ const AANZICHTEN=[
   {id:'rechts',      naam:'Rechterkant'},
   {id:'onderkant',   naam:'Onderkant'}
 ];
+/* De rechtgezette schermfoto hoort niet bij de verplichte zes: hij ontstaat uit
+   de foto 'open' en telt dus niet mee in de teller. */
+const EXTRA_AANZICHT={id:'scherm', naam:'Scherm recht'};
 const KANALEN=[
   {id:'webshop',     naam:'Webshop',     uit:'Via Storvo naar Shopify'},
   {id:'marktplaats', naam:'Marktplaats', uit:'Tekst kopiëren en plakken'},
@@ -2131,7 +2140,9 @@ let onl=null;   /* het apparaat dat je online zet */
 function onlineZetten(id){
   const a=apparaten.find(x=>x.id===id);
   if(!a){ toast('Dit apparaat bestaat niet meer','let-op'); return; }
-  onl={a, kanaal:'webshop', titel:'', tekst:'', zoekwoorden:[], fotocode:null, bezig:false};
+  onl={a, kanaal:'webshop', titel:'', tekst:'', zoekwoorden:[], fotocode:null,
+       prijs:null, prijsBron:'', staat:a.grade||'B', garantie:6,
+       kanalen:{webshop:true, winkel:true, marktplaats:false}, gevonden:[], fotos:[]};
   showTab('online');
   fotosLaden(a);
 }
@@ -2141,6 +2152,11 @@ async function fotosLaden(a){
     .or(`apparaat_id.eq.${a.id},and(apparaat_id.is.null,model.ilike.${a.model})`)
     .order('volgorde');
   onl.fotos=data||[];
+  /* Wat vroeg je eerder voor hetzelfde model? Dat is het beste prijsanker dat
+     er is, beter dan welke schatting ook. */
+  const {data:eerder}=await sb.from('hardware')
+    .select('verkoop').ilike('model', a.model).not('verkoop','is',null).limit(20);
+  onl.eerderePrijzen=(eerder||[]).map(r=>Number(r.verkoop)).filter(n=>n>0);
   tekenOnline();
 }
 
@@ -2209,9 +2225,16 @@ function tekenOnline(){
               ${f ? `<img src="${esc(fotoUrl(f.pad))}" alt="${esc(v.naam)}" loading="lazy">
                      <button class="fotoweg" onclick="fotoWeg('${f.id}')" aria-label="Verwijderen">×</button>`
                   : '<div class="fotoleeg"><svg class="i"><use href="#i-camera"/></svg></div>'}
-              <div class="fotonaam">${esc(v.naam)}</div>
+              <div class="fotonaam">${esc(v.naam)}${
+                v.id==='open' && f ? `<button class="btn ghost small rechtknop" onclick="rechtOpen('${f.id}')">Recht zetten</button>` : ''}</div>
             </div>`;
-          }).join('')}</div>
+          }).join('')}${(()=>{
+            const f=perAanzicht['scherm'];
+            return f ? `<div class="fotovak erin">
+              <img src="${esc(fotoUrl(f.pad))}" alt="Scherm recht" loading="lazy">
+              <button class="fotoweg" onclick="fotoWeg('${f.id}')" aria-label="Verwijderen">×</button>
+              <div class="fotonaam">Scherm recht</div></div>` : '';
+          })()}</div>
 
           <div class="row" style="margin-top:16px">
             <button class="btn ghost small" onclick="fotoTelefoon(this)">
@@ -2220,16 +2243,53 @@ function tekenOnline(){
               <svg class="i s"><use href="#i-print"/></svg>Vanaf deze computer
               <input type="file" accept="image/*" multiple hidden onchange="fotoUpload(this)">
             </label>
+            <button class="btn ghost small" onclick="fotosZoeken(this)">
+              <svg class="i s"><use href="#i-search"/></svg>Fabrieksfoto's zoeken</button>
           </div>
+
+          ${(onl.gevonden||[]).length?`<div style="margin-top:18px">
+            <div class="hkkop">Gevonden bij de fabrikant</div>
+            <p class="muted klein" style="margin-bottom:10px">Foto's van dit model, niet van dit exemplaar. Prima voor de webshop; op Marktplaats wil een koper ook het echte apparaat zien.</p>
+            <div class="fotorooster">${onl.gevonden.map((f,i)=>`
+              <div class="fotovak">
+                <img src="${esc(f.klein||f.url)}" alt="" loading="lazy">
+                <button class="btn ghost small" style="width:100%; border-radius:0"
+                  onclick="fotoOvernemen(${i})">Overnemen</button>
+              </div>`).join('')}</div>
+          </div>`:''}
         </div>
       </div>
 
       <div>
         <div class="card">
+          <h2><svg class="i"><use href="#i-cash"/></svg>Prijs</h2>
+          <label>Vraagprijs</label>
+          <div class="row">
+            <input id="onl_prijs" type="number" step="0.01" value="${onl.prijs!=null?onl.prijs:''}"
+              placeholder="Bijvoorbeeld 349" style="flex:1; min-width:120px" onchange="onlVeld()">
+            <button class="btn ghost small" onclick="onlPrijsvoorstel(this)">
+              <svg class="i s"><use href="#i-sparkles"/></svg>Voorstel</button>
+          </div>
+          ${onl.prijsBron?`<p class="muted klein" style="margin-top:8px">${esc(onl.prijsBron)}</p>`:''}
+          ${onl.a.inkoop?`<p class="muted klein" style="margin-top:6px">Ingekocht voor ${euro(onl.a.inkoop)}${
+            onl.prijs?' · winst '+euro((Number(onl.prijs)||0)-(Number(onl.a.inkoop)||0)):''}</p>`:''}
+
+          <div class="grid" style="margin-top:14px">
+            <div><label>Grade</label><select id="onl_staat" onchange="onlVeld()">
+              <option value="A"${(onl.staat||onl.a.grade)==='A'?' selected':''}>A · als nieuw</option>
+              <option value="B"${(onl.staat||onl.a.grade||'B')==='B'?' selected':''}>B · gebruikt</option>
+              <option value="C"${(onl.staat||onl.a.grade)==='C'?' selected':''}>C · zichtbare sporen</option>
+            </select></div>
+            <div><label>Garantie (maanden)</label>
+              <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:6}" onchange="onlVeld()"></div>
+          </div>
+        </div>
+
+        <div class="card">
           <h2><svg class="i"><use href="#i-globe"/></svg>Waar zet je hem</h2>
           <div class="kanaallijst">${KANALEN.map(k=>`
             <label class="kanaalrij">
-              <input type="checkbox" ${onl.kanaal===k.id||k.id==='winkel'?'checked':''}
+              <input type="checkbox" ${onlKanaalAan(k.id)?'checked':''}
                 onchange="onlKanaalVink('${k.id}', this.checked)">
               <div>
                 <div class="knaam">${esc(k.naam)}</div>
@@ -2237,9 +2297,9 @@ function tekenOnline(){
               </div>
             </label>`).join('')}</div>
 
-          <button class="btn actie" style="width:100%; margin-top:18px" onclick="onlOverdragen(this)">
-            <svg class="i s"><use href="#i-arrow"/></svg>Naar de winkelvoorraad</button>
-          <p class="muted klein" style="margin-top:10px">Het apparaat gaat naar Storvo. Daar staat de knop om hem daadwerkelijk op Shopify te zetten, want daar zit ook de prijs en de kassa.</p>
+          <button class="btn actie" style="width:100%; margin-top:18px" onclick="onlPubliceren(this)">
+            <svg class="i s"><use href="#i-globe"/></svg>Publiceren</button>
+          <p class="muted klein" style="margin-top:10px">Het apparaat gaat naar je winkelvoorraad in Storvo, onder <b>Hardware</b>. Daar staat ook de knop om hem echt op Shopify te zetten, want daar zit de kassa.</p>
         </div>
 
         ${onl.fotocode?`<div class="card qrkaart">
@@ -2252,13 +2312,96 @@ function tekenOnline(){
     </div>`;
 }
 
-function onlKanaal(id){ onl.kanaal=id; tekenOnline(); }
-function onlKanaalVink(id, aan){ onl.kanalen=Object.assign({}, onl.kanalen, {[id]:aan}); }
+function onlKanaal(id){ onlBewaarVelden(); onl.kanaal=id; tekenOnline(); }
+function onlKanaalAan(id){
+  if(!onl.kanalen) onl.kanalen={webshop:true, winkel:true, marktplaats:false};
+  return !!onl.kanalen[id];
+}
+function onlKanaalVink(id, aan){
+  if(!onl.kanalen) onl.kanalen={webshop:true, winkel:true, marktplaats:false};
+  onl.kanalen[id]=!!aan;
+}
 
 function onlBewaarVelden(){
   const t=document.getElementById('onl_titel'), x=document.getElementById('onl_tekst');
   if(t) onl.titel=t.value;
   if(x) onl.tekst=x.value;
+  onlVeld();
+}
+function onlVeld(){
+  const p=document.getElementById('onl_prijs');
+  const g=document.getElementById('onl_garantie');
+  const st=document.getElementById('onl_staat');
+  if(p) onl.prijs = p.value===''?null:Math.round(Number(p.value)*100)/100;
+  if(g) onl.garantie = Number(g.value)||0;
+  if(st) onl.staat = st.value;
+}
+
+/* Een prijsvoorstel op basis van wat jij zelf eerder voor hetzelfde model
+   vroeg. Heb je dat nog niet, dan een ruwe opslag op de inkoop. Er staat altijd
+   bij waar het vandaan komt; een getal zonder uitleg vertrouwt niemand. */
+function onlPrijsvoorstel(knop){
+  onlBewaarVelden();
+  const a=onl.a;
+  const eerder=apparaten.filter(x=>x.id!==a.id && x.hardware_id &&
+    String(x.model||'').toLowerCase()===String(a.model||'').toLowerCase());
+  if(eerder.length && onl.eerderePrijzen && onl.eerderePrijzen.length){
+    const b=onl.eerderePrijzen.slice().sort((x,z)=>x-z);
+    onl.prijs=b[Math.floor(b.length/2)];
+    onl.prijsBron='Wat je zelf vroeg voor '+b.length+' keer hetzelfde model.';
+  }else{
+    const inkoop=Number(a.inkoop)||0;
+    if(!inkoop){ toast('Vul eerst een inkoopprijs in bij het apparaat','let-op'); return; }
+    /* Ongeveer verdubbelen is bij tweedehands hardware gebruikelijk: er gaat
+       nog werk, garantie en risico overheen. Afronden op vijf euro min een
+       stuiver, want zo staan prijzen nu eenmaal in een winkel. */
+    onl.prijs=Math.round(inkoop*2.2/5)*5-0.05;
+    onl.prijsBron='Ruwe schatting: ruim het dubbele van de inkoop. Kijk zelf even wat de markt doet.';
+  }
+  tekenOnline();
+}
+
+/* ---------- fabrieksfoto's ---------- */
+
+async function fotosZoeken(knop){
+  const a=onl.a;
+  await bezig(knop, async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({merk:a.merk, model:a.model})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Zoeken mislukte');
+    if(!uit.fotos || !uit.fotos.length){
+      toast(uit.melding||'Niets gevonden voor dit model','let-op'); return;
+    }
+    onl.gevonden=uit.fotos;
+    tekenOnline();
+    toast(uit.fotos.length+' foto\'s gevonden', true);
+  });
+}
+
+async function fotoOvernemen(i){
+  const f=(onl.gevonden||[])[i]; if(!f) return;
+  try{
+    const res=await fetch(f.url);
+    if(!res.ok) throw new Error('De foto kon niet opgehaald worden');
+    const blob=await res.blob();
+    const pad=`${account.team_id}/${onl.a.id}/${f.aanzicht}-${Date.now()}.jpg`;
+    const {error}=await sb.storage.from('refurbish-fotos')
+      .upload(pad, blob, {contentType:blob.type||'image/jpeg'});
+    if(error) throw new Error(error.message);
+    await sb.from('refurbish_fotos').insert({
+      team_id:account.team_id, apparaat_id:onl.a.id,
+      merk:onl.a.merk, model:onl.a.model, aanzicht:f.aanzicht, pad,
+      volgorde:AANZICHTEN.findIndex(v=>v.id===f.aanzicht)
+    });
+    await fotosLaden(onl.a);
+    toast('Overgenomen', true);
+  }catch(e){ toast(e.message,'fout'); }
 }
 
 async function onlSchrijf(knop){
@@ -2363,9 +2506,212 @@ function fotoVerkleinen(bestand){
   });
 }
 
-async function onlOverdragen(knop){
+async function onlPubliceren(knop){
   onlBewaarVelden();
-  klaarOpen(onl.a);
+  const a=onl.a;
+  if(onl.prijs==null || !onl.prijs){
+    toast('Vul eerst een vraagprijs in','let-op');
+    const p=document.getElementById('onl_prijs'); if(p) p.focus();
+    return;
+  }
+  await bezig(knop, async()=>{
+    const kanalen={winkel:onlKanaalAan('winkel'), marktplaats:onlKanaalAan('marktplaats')};
+    const {data, error}=await sb.from('hardware').insert({
+      team_id:account.team_id,
+      merk:a.merk, model:a.model, categorie:a.categorie,
+      serienummer:a.serienummer, specs:a.specs||{},
+      staat:onl.staat||a.grade||'B',
+      inkoop:Number(a.inkoop)||0,
+      verkoop:Number(onl.prijs)||0,
+      garantie:Number(onl.garantie)||0,
+      herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
+      titel:onl.titel||null, omschrijving:onl.tekst||null,
+      fotos:(onl.fotos||[]).map(f=>fotoUrl(f.pad)),
+      status:'voorraad', kanalen
+    }).select().single();
+    if(error) throw new Error('Publiceren mislukt: '+error.message);
+
+    await sb.from('refurbish_apparaten').update({
+      status:'overgedragen', hardware_id:data.id, bijgewerkt_op:new Date().toISOString()
+    }).eq('id',a.id);
+
+    onl=null;
+    await allesLaden();
+    showTab('klaar');
+    toast('Staat in je winkelvoorraad, onder Hardware', true);
+  });
+}
+
+/* ═══════════════ het scherm recht zetten ═══════════════
+
+   Bij de foto van een open laptop wil je het scherm haaks in beeld, zoals in
+   een webshop. De rest van de foto's mag gewoon een hoek hebben; dat maakt ze
+   juist echt.
+
+   Volautomatisch de vier hoeken vinden gaat mis zodra er een spiegeling in
+   zit, het scherm donker is, of de laptop schuin staat. Precies de
+   omstandigheden op een werkbank. Daarom: we doen een gok, en jij sleept de
+   punten desnoods bij. Drie seconden werk en het is altijd goed.            */
+
+let recht=null;
+
+function rechtOpen(fotoId){
+  const f=(onl.fotos||[]).find(x=>x.id===fotoId); if(!f) return;
+  recht={foto:f, punten:null, sleept:-1};
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='rechtOverlay';
+  ov.innerHTML=`<div class="popup groot">
+    <h3>Het scherm recht zetten</h3>
+    <p class="pv">Sleep de vier punten naar de hoeken van het beeldscherm. De foto wordt dan rechtgetrokken, zodat het scherm haaks in beeld staat.</p>
+    <div class="rechtvak">
+      <canvas id="rechtDoek"></canvas>
+    </div>
+    <div class="acts">
+      <button class="btn actie" onclick="rechtKlaar(this)">Rechtzetten en opslaan</button>
+      <button class="btn ghost" onclick="rechtSluit()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  rechtLaden(fotoUrl(f.pad));
+}
+function rechtSluit(){ const o=document.getElementById('rechtOverlay'); if(o) o.remove(); recht=null; }
+
+function rechtLaden(url){
+  const beeld=new Image();
+  beeld.crossOrigin='anonymous';
+  beeld.onload=()=>{
+    recht.beeld=beeld;
+    const doek=document.getElementById('rechtDoek');
+    const breed=Math.min(720, beeld.width);
+    doek.width=breed;
+    doek.height=Math.round(beeld.height*(breed/beeld.width));
+    /* De gok: een rechthoek op ongeveer de plek waar een laptopscherm staat.
+       Meestal hoef je maar een paar punten bij te schuiven. */
+    recht.punten=[
+      {x:doek.width*0.18, y:doek.height*0.12},
+      {x:doek.width*0.82, y:doek.height*0.12},
+      {x:doek.width*0.86, y:doek.height*0.66},
+      {x:doek.width*0.14, y:doek.height*0.66}
+    ];
+    rechtTeken();
+    rechtLuister(doek);
+  };
+  beeld.onerror=()=>{ toast('De foto kon niet geladen worden','fout'); rechtSluit(); };
+  beeld.src=url;
+}
+
+function rechtTeken(){
+  const doek=document.getElementById('rechtDoek'); if(!doek||!recht) return;
+  const c=doek.getContext('2d');
+  c.clearRect(0,0,doek.width,doek.height);
+  c.drawImage(recht.beeld, 0, 0, doek.width, doek.height);
+  const p=recht.punten;
+  c.beginPath();
+  c.moveTo(p[0].x,p[0].y);
+  for(let i=1;i<4;i++) c.lineTo(p[i].x,p[i].y);
+  c.closePath();
+  c.strokeStyle='#E88A1D'; c.lineWidth=3; c.stroke();
+  c.fillStyle='rgba(232,138,29,.14)'; c.fill();
+  p.forEach((q,i)=>{
+    c.beginPath(); c.arc(q.x,q.y,11,0,Math.PI*2);
+    c.fillStyle= recht.sleept===i ? '#0B5B52' : '#E88A1D';
+    c.fill(); c.strokeStyle='#fff'; c.lineWidth=3; c.stroke();
+  });
+}
+
+function rechtLuister(doek){
+  const plek=e=>{
+    const r=doek.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return {x:(t.clientX-r.left)*(doek.width/r.width), y:(t.clientY-r.top)*(doek.height/r.height)};
+  };
+  const pak=e=>{
+    const q=plek(e);
+    let dichtst=-1, kort=1e9;
+    recht.punten.forEach((p,i)=>{
+      const d=Math.hypot(p.x-q.x, p.y-q.y);
+      if(d<kort){ kort=d; dichtst=i; }
+    });
+    if(kort<40){ recht.sleept=dichtst; rechtTeken(); e.preventDefault(); }
+  };
+  const sleep=e=>{
+    if(recht.sleept<0) return;
+    const q=plek(e);
+    recht.punten[recht.sleept]={
+      x:Math.max(0,Math.min(doek.width,q.x)),
+      y:Math.max(0,Math.min(doek.height,q.y))
+    };
+    rechtTeken(); e.preventDefault();
+  };
+  const los=()=>{ recht.sleept=-1; rechtTeken(); };
+  doek.addEventListener('mousedown',pak); doek.addEventListener('mousemove',sleep);
+  window.addEventListener('mouseup',los);
+  doek.addEventListener('touchstart',pak,{passive:false});
+  doek.addEventListener('touchmove',sleep,{passive:false});
+  window.addEventListener('touchend',los);
+}
+
+/* Het rechttrekken zelf. We tekenen de foto in stukjes: elke rij van het
+   resultaat komt van een lijn tussen de boven- en onderrand van de vierhoek.
+   Genoeg stukjes en je ziet er niets van, en het scheelt een bibliotheek van
+   een halve megabyte voor een echte perspectiefberekening. */
+function rechtTrekken(){
+  const p=recht.punten;
+  const doek=document.getElementById('rechtDoek');
+  const schaal=recht.beeld.width/doek.width;
+  const P=p.map(q=>({x:q.x*schaal, y:q.y*schaal}));
+
+  const breedte=Math.round(Math.max(
+    Math.hypot(P[1].x-P[0].x, P[1].y-P[0].y),
+    Math.hypot(P[2].x-P[3].x, P[2].y-P[3].y)));
+  const hoogte=Math.round(Math.max(
+    Math.hypot(P[3].x-P[0].x, P[3].y-P[0].y),
+    Math.hypot(P[2].x-P[1].x, P[2].y-P[1].y)));
+
+  const uit=document.createElement('canvas');
+  uit.width=breedte; uit.height=hoogte;
+  const c=uit.getContext('2d');
+  const beeldDoek=document.createElement('canvas');
+  beeldDoek.width=recht.beeld.width; beeldDoek.height=recht.beeld.height;
+  beeldDoek.getContext('2d').drawImage(recht.beeld,0,0);
+  const bron=beeldDoek.getContext('2d').getImageData(0,0,recht.beeld.width,recht.beeld.height);
+  const doel=c.createImageData(breedte,hoogte);
+
+  for(let y=0;y<hoogte;y++){
+    const v=y/(hoogte-1||1);
+    const links={x:P[0].x+(P[3].x-P[0].x)*v, y:P[0].y+(P[3].y-P[0].y)*v};
+    const rechts={x:P[1].x+(P[2].x-P[1].x)*v, y:P[1].y+(P[2].y-P[1].y)*v};
+    for(let x=0;x<breedte;x++){
+      const u=x/(breedte-1||1);
+      const bx=Math.round(links.x+(rechts.x-links.x)*u);
+      const by=Math.round(links.y+(rechts.y-links.y)*u);
+      if(bx<0||by<0||bx>=bron.width||by>=bron.height) continue;
+      const b=(by*bron.width+bx)*4, d=(y*breedte+x)*4;
+      doel.data[d]=bron.data[b]; doel.data[d+1]=bron.data[b+1];
+      doel.data[d+2]=bron.data[b+2]; doel.data[d+3]=255;
+    }
+  }
+  c.putImageData(doel,0,0);
+  return uit.toDataURL('image/jpeg', 0.9);
+}
+
+async function rechtKlaar(knop){
+  await bezig(knop, async()=>{
+    const beeld=rechtTrekken();
+    const blob=await (await fetch(beeld)).blob();
+    const oud=recht.foto;
+    const pad=`${account.team_id}/${onl.a.id}/scherm-${Date.now()}.jpg`;
+    const {error}=await sb.storage.from('refurbish-fotos')
+      .upload(pad, blob, {contentType:'image/jpeg'});
+    if(error) throw new Error(error.message);
+    await sb.from('refurbish_fotos').insert({
+      team_id:account.team_id, apparaat_id:onl.a.id,
+      merk:onl.a.merk, model:onl.a.model, aanzicht:'scherm', pad, volgorde:98
+    });
+    rechtSluit();
+    await fotosLaden(onl.a);
+    toast('Rechtgezet en opgeslagen', true);
+  });
 }
 
 /* ═══════════════ donoren ═══════════════ */

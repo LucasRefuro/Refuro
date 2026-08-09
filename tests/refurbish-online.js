@@ -10,7 +10,7 @@ const MOCK=`<script>
 window.__db={
   refurbish_apparaten:[
     {id:'a1', team_id:'t1', code:'A0001', merk:'HP', model:'EliteBook 840 G9', categorie:'Laptop',
-     specs:{Processor:'i5', Geheugen:'16 GB'}, status:'klaar', grade:'A', accu:88,
+     specs:{Processor:'i5', Geheugen:'16 GB'}, status:'klaar', grade:'A', accu:88, inkoop:75,
      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}
   ],
   refurbish_onderdelen:[], refurbish_checklists:[], refurbish_orders:[], hardware_modellen:[],
@@ -23,10 +23,15 @@ window.__db={
 window.__geschreven=[];
 function __tabel(naam){
   const api={select(){return api;},order(){return api;},limit(){return api;},eq(){return api;},
-    or(){return api;}, in(){return api;},
+    or(){return api;}, in(){return api;}, ilike(){return api;}, not(){return api;},
     maybeSingle:async()=>({data: Array.isArray(window.__db[naam])
       ? (window.__db[naam][0]||null) : (window.__db[naam]||null)}),
-    insert(r){ window.__geschreven.push([naam,'insert',r]); return {select:async()=>({data:[],error:null})}; },
+    insert(r){ window.__geschreven.push([naam,'insert',r]);
+      // select() moet zowel als belofte als met .single() werken, net als bij Supabase
+      return {select:()=>({
+        single:async()=>({data:{id:'h1'}, error:null}),
+        then:(res)=>res({data:[{id:'h1'}], error:null})
+      })}; },
     upsert(r){ window.__geschreven.push([naam,'upsert',r]); return api; },
     update(r){ window.__geschreven.push([naam,'update',r]); return api; },
     delete(){ window.__geschreven.push([naam,'delete']); return api; },
@@ -123,6 +128,40 @@ setTimeout(async()=>{
   const sj=w.__geschreven.filter(g=>g[0]==='refurbish_instellingen').pop();
   ok('sjabloon opgeslagen', !!sj && sj[2].ad_sjabloon.includes('Specificaties'));
   ok('toon opgeslagen', !!sj && sj[2].ad_toon==='kort en zakelijk');
+
+  // ── prijs in de zijkolom, geen popup meer ──
+  w.eval("onlineZetten('a1')");
+  await new Promise(r=>setTimeout(r,60));
+  ok('prijsveld in de zijkolom', !!d().getElementById('onl_prijs'));
+  ok('grade in de zijkolom', !!d().getElementById('onl_staat'));
+  ok('garantie in de zijkolom', !!d().getElementById('onl_garantie'));
+  ok('knop heet Publiceren', /Publiceren/.test(pag()));
+  ok('geen knop naar de winkelvoorraad meer', !/Naar de winkelvoorraad/.test(pag()));
+  ok('grade uit de controle voorgevuld', d().getElementById('onl_staat').value==='A');
+
+  // publiceren zonder prijs doet niets, maar zegt wel wat
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  ok('zonder prijs niet gepubliceerd', !w.__geschreven.some(g=>g[0]==='hardware'));
+
+  w.eval('onlPrijsvoorstel(document.createElement("button"))');
+  ok('prijsvoorstel ingevuld', Number(d().getElementById('onl_prijs').value)>0);
+  ok('voorstel is meer dan de inkoop', Number(d().getElementById('onl_prijs').value)>75);
+  ok('bron van het voorstel genoemd', /Ruwe schatting|Wat je zelf vroeg/.test(pag()));
+
+  d().getElementById('onl_prijs').value='349';
+  w.eval('onlVeld()');
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  const hw=w.__geschreven.find(g=>g[0]==='hardware' && g[1]==='insert');
+  ok('naar de winkelvoorraad geschreven', !!hw);
+  if(hw){
+    ok('prijs mee', hw[2].verkoop===349);
+    ok('grade mee', hw[2].staat==='A');
+    ok('garantie mee', hw[2].garantie===6);
+    ok('titel en tekst mee', 'titel' in hw[2] && 'omschrijving' in hw[2]);
+    ok('kanalen mee', hw[2].kanalen && hw[2].kanalen.winkel===true);
+  }
+  const bij=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
+  ok('apparaat op overgedragen', !!bij && bij[2].status==='overgedragen');
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);

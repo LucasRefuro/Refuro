@@ -36,6 +36,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |
 | `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
 | `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
+| `productfotos` | nee | Haalt officiële productfoto's op bij Icecat |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.
@@ -68,3 +69,4 @@ Zet ze nooit in de code en nooit in een chat.
 | `SHOPIFY_WINKEL` | Je winkeladres, bijvoorbeeld `mijnwinkel.myshopify.com` |
 | `SHOPIFY_TOKEN` | Het Admin API-token dat begint met `shpat_` |
 | `SHOPIFY_WEBHOOK_SECRET` | Controleert of een melding echt van Shopify komt |
+| `ICECAT_GEBRUIKER` | Gebruikersnaam van je gratis Icecat-account, voor productfoto's |

@@ -95,6 +95,16 @@ setTimeout(()=>{
   ok('online toestel toont offline-knop', /Offline halen/.test(d.getElementById('hwOverlay').innerHTML));
   w.eval("hwSluit()");
 
+  // de wijzer op de productenpagina
+  w.eval("renderProducten()");
+  const wijzer=d.getElementById('hwWijzer');
+  ok('wijzer naar hardware zichtbaar', wijzer && !wijzer.hidden);
+  ok('wijzer telt de toestellen', /2 los/.test(wijzer.textContent));
+  ok('wijzer verwijst naar Hardware', /Hardware/.test(wijzer.innerHTML));
+
+  // een link van buitenaf mag bepalen waar je landt
+  ok('tab uit het adres', typeof w.eval('tabUitAdres')==='function');
+
   // pagina echt openen
   w.eval("showTab('hardware')");
   const zicht=w.getComputedStyle(d.getElementById('tab-hardware')).display;
