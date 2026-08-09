@@ -1,5 +1,8 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
+const path=require('path');
+// Paden vanaf dit bestand, zodat de tests ook vanuit de hoofdmap draaien.
+const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
 
@@ -16,7 +19,7 @@ function bouw(bestand, mock){
 const zichtbaar=(w,el)=> el && w.getComputedStyle(el).display!=='none';
 
 // 1. niet ingelogd: slot zichtbaar met tekst, zijbalk niet
-const w1=bouw('../refurbish/index.html',{createClient:()=>({
+const w1=bouw(bron('refurbish/index.html'),{createClient:()=>({
   auth:{getSession:async()=>({data:{session:null}})},
   from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null})}),
   rpc:async()=>({data:[]})})});
@@ -31,7 +34,7 @@ setTimeout(()=>{
   const TEAM='t1';
   const leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
     then(r){ r({data:[],error:null}); }};
-  const w2=bouw('../refurbish/index.html',{createClient:()=>({
+  const w2=bouw(bron('refurbish/index.html'),{createClient:()=>({
     auth:{getSession:async()=>({data:{session:{user:{id:'u1'},access_token:'t'}}})},
     from:(n)=> n==='accounts'
       ? {select(){return this;},eq(){return this;},maybeSingle:async()=>({data:{id:'u1',team_id:TEAM,naam:'Lucas'}})}
@@ -48,7 +51,7 @@ setTimeout(()=>{
     ok('ingelogd: badges verborgen', !zichtbaar(w2,d2.getElementById('bControle')));
 
     // 3. zonder de module: netjes uitleggen, niet leeg
-    const w3=bouw('../refurbish/index.html',{createClient:()=>({
+    const w3=bouw(bron('refurbish/index.html'),{createClient:()=>({
       auth:{getSession:async()=>({data:{session:{user:{id:'u1'},access_token:'t'}}})},
       from:(n)=> n==='accounts'
         ? {select(){return this;},eq(){return this;},maybeSingle:async()=>({data:{id:'u1',team_id:TEAM}})}

@@ -1,6 +1,9 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
-const html=fs.readFileSync('../refurbish/index.html','utf8').replace(/<script src=[^>]*><\/script>/,'');
+const path=require('path');
+// Paden vanaf dit bestand, zodat de tests ook vanuit de hoofdmap draaien.
+const bron=n=>path.join(__dirname,'..',n);
+const html=fs.readFileSync(bron('refurbish/index.html'),'utf8').replace(/<script src=[^>]*><\/script>/,'');
 const dom=new JSDOM(html,{runScripts:'dangerously', url:'https://storvo.app/refurbish/'});
 const w=dom.window;
 

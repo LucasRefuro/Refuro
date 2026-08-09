@@ -1,5 +1,8 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
+const path=require('path');
+// Paden vanaf dit bestand, zodat de tests ook vanuit de hoofdmap draaien.
+const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
 
@@ -18,7 +21,7 @@ window.supabase={createClient:()=>({
 })};
 <\/script>`;
 
-let html=fs.readFileSync('../app/index.html','utf8')
+let html=fs.readFileSync(bron('app/index.html'),'utf8')
   .replace(/<script src="https:\/\/cdn\.jsdelivr[^"]*"><\/script>/, MOCK)
   .replace(/<script src="(?!https)[^"]*"><\/script>/g,'');
 
