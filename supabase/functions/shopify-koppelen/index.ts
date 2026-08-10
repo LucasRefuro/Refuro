@@ -1,45 +1,22 @@
 // De webshop van deze winkel koppelen.
 //
-// Hoe het werkt voor de winkelier: hij maakt in zijn eigen Shopify-beheer een
-// app aan, vinkt zes rechten aan, en plakt het token hier. Wij controleren of
-// het token werkt, welke rechten er echt op staan, waar zijn voorraad ligt en
-// via welk kanaal zijn webshop publiceert. Pas als dat allemaal klopt slaan we
-// iets op.
+// De gewone weg is één knop: je typt je winkeladres, wij sturen je naar Shopify,
+// jij ziet daar welke rechten Storvo vraagt, en na het installeren ben je klaar.
+// Er komt geen sleutel aan te pas die iemand moet overtypen.
 //
-// Waarom niet de "verbind met één klik"-knop die je bij grote apps ziet: die
-// werkt via OAuth en dat vraagt een Shopify Partner-account met een app die
-// eerst door Shopify beoordeeld moet worden. Deze weg werkt vandaag, voor
-// iedere winkel, zonder dat er iemand op ons hoeft te wachten. De opzet
-// hieronder is zo gebouwd dat OAuth er later naast kan: alleen het stukje
-// "hoe komen we aan een token" verandert dan.
+// Daarnaast blijft er een tweede weg staan voor winkels die al een eigen app in
+// hun Shopify-beheer hebben, van vóór januari 2026. Die apps blijven werken en
+// geven een token dat je kunt plakken. Nieuwe winkels kunnen die weg niet meer
+// bewandelen; Shopify heeft dat dichtgezet.
 
 import {
   admin, cors, fout, wieBelt, graphql, versleutel, ontsleutel,
-  domeinOpschonen, RECHTEN,
+  domeinOpschonen, winkelVerkennen, webhooksZetten, nieuwPad,
+  RECHTEN, SCOPES, MELDINGEN,
 } from "../_gedeeld/shopify.ts";
 
-/* De meldingen die we willen ontvangen. Bestellingen zijn het belangrijkst:
-   zonder die melding staat een verkochte laptop nog een uur in de winkel te
-   koop. `orders/create` is genoeg voor onze vraag ("is hij weg?"), maar
-   `orders/paid` vangt het geval van een bestelling die pas bij betaling telt.
-   Dubbel binnenkomen is geen probleem: we controleren of het toestel al op
-   verkocht staat. */
-const MELDINGEN = ["ORDERS_CREATE", "ORDERS_PAID"];
-
-function webhookAdres(pad: string) {
-  const basis = Deno.env.get("SUPABASE_URL")!;
-  return `${basis}/functions/v1/shopify-webhook/${pad}`;
-}
-
-/* Een adres dat niet te raden is. Wie dit adres niet kent kan geen valse
-   verkoopmelding sturen, en dat is de eerste van drie sloten op die deur. */
-function nieuwPad() {
-  const b = crypto.getRandomValues(new Uint8Array(24));
-  return btoa(String.fromCharCode(...b)).replace(/[^a-zA-Z0-9]/g, "").slice(0, 28);
-}
-
-/* Welke rechten er werkelijk op het token staan. Dit is een vast adres buiten
-   de versies om, en het is de enige manier om vóórdat er iets misgaat te
+/* Welke rechten er werkelijk op een geplakt token staan. Dit is een vast adres
+   buiten de versies om, en het is de enige manier om vóórdat er iets misgaat te
    zeggen "je bent write_publications vergeten". */
 async function rechtenVan(domein: string, token: string) {
   const res = await fetch(`https://${domein}/admin/oauth/access_scopes.json`, {
@@ -53,85 +30,17 @@ async function rechtenVan(domein: string, token: string) {
   return (uit?.access_scopes || []).map((s: any) => String(s.handle));
 }
 
-/* Waar de webshop publiceert en waar de voorraad ligt. Beide hebben we later
-   nodig en beide kunnen we nu al opzoeken, zodat we het niet elke keer opnieuw
-   hoeven te vragen en de winkelier het nooit hoeft in te vullen. */
-async function winkelVerkennen(k: { domein: string; token: string }) {
-  const d = await graphql(k, `
-    query {
-      shop { name currencyCode myshopifyDomain }
-      publications(first: 25) { nodes { id name } }
-      locations(first: 25, includeInactive: false) { nodes { id name isActive shipsInventory } }
-    }`);
-
-  const publicaties = d?.publications?.nodes || [];
-  /* Het kanaal heet in het Nederlands "Onlinewinkel" en in het Engels "Online
-     Store". Op de naam zoeken is daarom wankel; we nemen de eerste die er als
-     webshop uitziet en anders gewoon de eerste. Beter iets dan niets, en het is
-     achteraf aan te passen. */
-  const online = publicaties.find((p: any) => /online\s*store|onlinewinkel|online winkel/i.test(p.name))
-    || publicaties[0] || null;
-
-  const locaties = (d?.locations?.nodes || []).filter((l: any) => l.isActive !== false);
-  const locatie = locaties.find((l: any) => l.shipsInventory) || locaties[0] || null;
-
-  return {
-    naam: d?.shop?.name || null,
-    valuta: d?.shop?.currencyCode || null,
-    domein: d?.shop?.myshopifyDomain || k.domein,
-    publicatie: online?.id || null,
-    publicatieNaam: online?.name || null,
-    locatie: locatie?.id || null,
-    locatieNaam: locatie?.name || null,
-    aantalLocaties: locaties.length,
-  };
-}
-
-async function webhooksZetten(k: { domein: string; token: string }, pad: string) {
-  const adres = webhookAdres(pad);
-
-  /* Eerst opruimen wat er van ons al staat. Koppel je opnieuw, dan krijg je
-     anders elke keer een melding extra en gaat de teller vrolijk door. */
-  const bestaand = await graphql(k, `
-    query { webhookSubscriptions(first: 100) {
-      nodes { id topic endpoint { __typename ... on WebhookHttpEndpoint { callbackUrl } } } } }`);
-  for (const w of (bestaand?.webhookSubscriptions?.nodes || [])) {
-    const url = w?.endpoint?.callbackUrl || "";
-    if (url.includes("/functions/v1/shopify-webhook")) {
-      await graphql(k, `mutation($id: ID!){ webhookSubscriptionDelete(id: $id){ userErrors { message } } }`,
-        { id: w.id });
-    }
-  }
-
-  const gezet: { topic: string; id: string }[] = [];
-  for (const topic of MELDINGEN) {
-    const uit = await graphql(k, `
-      mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
-        webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) {
-          webhookSubscription { id }
-          userErrors { field message }
-        }
-      }`, { topic, sub: { callbackUrl: adres, format: "JSON" } });
-    const blok = uit?.webhookSubscriptionCreate;
-    if (blok?.webhookSubscription?.id) {
-      gezet.push({ topic, id: blok.webhookSubscription.id });
-    } else {
-      // Niet fataal: zonder melding werkt alles nog, alleen moet je zelf zien
-      // dat er iets verkocht is. Dat zeggen we dan ook eerlijk.
-      console.error("webhook", topic, JSON.stringify(blok?.userErrors || []));
-    }
-  }
-  return gezet;
-}
-
 /* Wat de browser mag zien. Geen token, alleen genoeg om te herkennen wat er
    staat en of het goed staat. */
 function veiligeStand(rij: any, extra?: Record<string, unknown>) {
-  if (!rij) return { ok: true, gekoppeld: false, rechten: RECHTEN, ...(extra || {}) };
+  const kanOauth = !!(Deno.env.get("SHOPIFY_CLIENT_ID") && Deno.env.get("SHOPIFY_CLIENT_SECRET"));
+  if (!rij) return { ok: true, gekoppeld: false, rechten: RECHTEN, kanOauth, ...(extra || {}) };
   const mist = Object.keys(RECHTEN).filter((r) => !(rij.scopes || []).includes(r));
   return {
     ok: true,
     gekoppeld: true,
+    kanOauth,
+    via: rij.via,
     domein: rij.domein,
     winkelnaam: rij.winkelnaam,
     valuta: rij.valuta,
@@ -167,9 +76,36 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(veiligeStand(data)), { headers: cors });
     }
 
-    /* ── uitproberen zonder op te slaan ──
-       Je wilt weten of het klopt vóórdat je het bewaart. Anders staat er een
-       kapotte koppeling en moet je gaan raden wat er mis is. */
+    /* ── de heenreis ──
+       We onthouden wie er wegging in een sleuteltje dat een kwartier geldig is.
+       Zonder dat zou iemand anders zijn installatie in jouw Storvo kunnen
+       hangen door het adres van de terugkomst na te bouwen. */
+    if (actie === "start") {
+      const clientId = Deno.env.get("SHOPIFY_CLIENT_ID");
+      if (!clientId || !Deno.env.get("SHOPIFY_CLIENT_SECRET")) {
+        return fout("De Shopify-app is nog niet ingesteld door de beheerder", 409);
+      }
+      const domein = domeinOpschonen(lijf?.domein);
+      if (!domein) {
+        return fout("Dat winkeladres herken ik niet. Het ziet eruit als jouwwinkel.myshopify.com");
+      }
+
+      const staat = crypto.randomUUID() + "." + nieuwPad();
+      await admin.from("koppel_pogingen").delete().lt("vervalt", new Date().toISOString());
+      const { error } = await admin.from("koppel_pogingen").insert({
+        staat, team_id: acc.team_id, domein, door: acc.id,
+      });
+      if (error) throw new Error("Kon het koppelen niet starten");
+
+      const terugAdres = `${Deno.env.get("SUPABASE_URL")}/functions/v1/shopify-installeren`;
+      const heen = `https://${domein}/admin/oauth/authorize?client_id=${clientId}` +
+        `&scope=${encodeURIComponent(SCOPES)}` +
+        `&redirect_uri=${encodeURIComponent(terugAdres)}` +
+        `&state=${encodeURIComponent(staat)}`;
+      return new Response(JSON.stringify({ ok: true, heen, domein }), { headers: cors });
+    }
+
+    /* ── de tweede weg: een token uit een bestaande eigen app ── */
     if (actie === "testen" || actie === "opslaan") {
       const domein = domeinOpschonen(lijf?.domein);
       const token = String(lijf?.token || "").trim();
@@ -210,16 +146,16 @@ Deno.serve(async (req) => {
       try {
         meldingen = await webhooksZetten({ domein, token }, pad);
       } catch (e) {
-        waarschuwing = "De koppeling staat, maar het instellen van de verkoopmeldingen lukte niet: " +
+        waarschuwing = "De koppeling staat, maar het instellen van de meldingen lukte niet: " +
           (e instanceof Error ? e.message : "onbekende fout");
       }
       if (!waarschuwing && meldingen.length < MELDINGEN.length) {
-        waarschuwing = "De koppeling staat, maar niet alle verkoopmeldingen konden worden aangezet. " +
+        waarschuwing = "De koppeling staat, maar niet alle meldingen konden worden aangezet. " +
           "Verkoop je iets online, kijk dan zelf even of het toestel uit je voorraad gaat.";
       }
 
       const rij = {
-        team_id: acc.team_id, kanaal: "shopify",
+        team_id: acc.team_id, kanaal: "shopify", via: "token", client_id: null,
         domein: winkel.domein,
         token_versleuteld: await versleutel(token),
         token_staart: token.slice(-4),
@@ -274,6 +210,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(veiligeStand(nu)), { headers: cors });
     }
 
+    /* ── meldingen opnieuw instellen ──
+       Nuttig als het bij het koppelen net niet lukte, of als er meldingen zijn
+       bijgekomen na een nieuwe versie van Storvo. */
+    if (actie === "meldingen") {
+      const { data } = await admin.from("winkel_koppelingen")
+        .select("*").eq("team_id", acc.team_id).eq("kanaal", "shopify").maybeSingle();
+      if (!data) return fout("Er is nog geen webshop gekoppeld", 404);
+      const token = await ontsleutel(data.token_versleuteld);
+      const meldingen = await webhooksZetten({ domein: data.domein, token }, data.webhook_pad);
+      await admin.from("winkel_koppelingen")
+        .update({ webhooks: meldingen, bijgewerkt_op: new Date().toISOString() })
+        .eq("id", data.id);
+      const { data: nu } = await admin.from("winkel_koppelingen")
+        .select("*").eq("team_id", acc.team_id).eq("kanaal", "shopify").maybeSingle();
+      return new Response(JSON.stringify(veiligeStand(nu)), { headers: cors });
+    }
+
     /* ── loskoppelen ──
        Netjes opruimen aan de Shopify-kant. Laat je de meldingen staan, dan
        blijft Shopify maanden naar een adres praten dat niets meer doet. */
@@ -293,7 +246,7 @@ Deno.serve(async (req) => {
         console.error("loskoppelen opruimen", e);
       }
       await admin.from("winkel_koppelingen").delete().eq("id", data.id);
-      return new Response(JSON.stringify({ ok: true, gekoppeld: false, rechten: RECHTEN }), { headers: cors });
+      return new Response(JSON.stringify(veiligeStand(null)), { headers: cors });
     }
 
     return fout("Onbekende actie");

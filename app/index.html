@@ -287,6 +287,26 @@
   .scanlog .lr{display:flex; align-items:center; gap:10px; padding:6px 0; font-size:13.5px;}
   .scanlog .lr .pijl{color:var(--green-tekst); font-weight:800;}
   .filtertel{opacity:.6; font-variant-numeric:tabular-nums;}
+  /* Bestellingen uit de webshop. Nieuw is dik, gezien is gewoon. */
+  .bstrij{border:1.5px solid var(--border); border-radius:16px; padding:16px 18px; margin-bottom:10px;
+    background:var(--card);}
+  .bstrij.nieuw{border-color:var(--navy); box-shadow:0 0 0 1px var(--navy);}
+  .bstkop{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .bstnr{font-weight:800; font-size:15.5px;}
+  .bstklant{font-size:14px; color:var(--muted);}
+  .bstbedrag{margin-left:auto; font-weight:800; font-size:15.5px; white-space:nowrap;}
+  .bstregels{margin-top:10px; font-size:13.5px; color:var(--muted);}
+  .bstregels .r{display:flex; gap:8px; padding:2px 0;}
+  .bsttoestellen{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+  .bstvoet{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .bststatus{font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
+  .bststatus.betaald{background:var(--green-soft); color:var(--green-tekst);}
+  .bststatus.verzonden{background:var(--soft-2); color:var(--muted);}
+  .bststatus.open{background:var(--amber-soft); color:var(--amber-tekst);}
+  .bststatus.geannuleerd{background:var(--red-soft); color:var(--red-tekst);}
+  .bstnieuwvlag{font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    padding:3px 9px; border-radius:var(--pil); background:var(--navy); color:#fff;}
   /* De locatieknoppen zitten in een span zodat ze in één keer te vervangen
      zijn; display:contents zorgt dat ze toch gewoon meedoen in de rij. */
   #hwLocFilters{display:contents;}
@@ -1319,6 +1339,9 @@
     background:var(--green-soft); color:var(--green-tekst);}
   .shopuitslag.fout{background:var(--red-soft); color:var(--red-tekst);}
   .shopuitslag.let{background:var(--amber-soft); color:var(--amber-tekst);}
+  .shopanders{margin-top:22px; border-top:1px solid var(--soft-2); padding-top:18px;}
+  .shopanders summary{cursor:pointer; font-size:13.5px; font-weight:600; color:var(--muted);}
+  .shopanders summary:hover{color:var(--text);}
   .wakaart{border:1.5px solid var(--border); border-radius:20px; padding:22px 24px; background:var(--soft);}
   .wakaart.aan{border-color:var(--green-tekst); background:var(--green-soft);}
   .wakop{display:flex; align-items:flex-start; gap:14px;}
@@ -1453,6 +1476,7 @@
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
+    <button data-tab="webshop" id="webshopLink" hidden><svg class="i"><use href="#i-cart"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
@@ -1875,6 +1899,27 @@
   </div>
 </section>
 
+<!-- WEBSHOP: wat er online besteld is -->
+<!-- Een toestel dat uit je voorraad verdwijnt zonder uitleg is verwarrend.
+     Hier staat de bestelling erachter: wie, wat, hoeveel, en welke toestellen
+     eruit gingen. -->
+<section id="tab-webshop" hidden>
+  <div class="pagehead">
+    <h1>Webshop</h1>
+    <div class="periodesel" id="bstFilter">
+      <button data-f="alles" class="active">Alles</button>
+      <button data-f="nieuw">Nieuw</button>
+      <button data-f="open">Nog niet verzonden</button>
+      <button data-f="toestellen">Met een toestel</button>
+    </div>
+  </div>
+  <div class="kpis" id="bstKpis"></div>
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-cart"/></svg>Bestellingen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
+    <div id="bstLijst">Bezig met laden…</div>
+  </div>
+</section>
+
 <!-- VOORRAAD -->
 <!-- Hardware: unieke exemplaren. Een hoesje tel je, een laptop niet: die heeft
      een serienummer, een eigen inkoopprijs en een eigen geschiedenis. Daarom
@@ -2293,7 +2338,7 @@
        controleren we het token voordat we het bewaren. -->
   <div class="card" id="inst-webshop" hidden>
     <h2><svg class="i"><use href="#i-globe"/></svg>Je webshop koppelen</h2>
-    <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Shopify-webshop, dan zet je een toestel met één knop online en gaat hij er vanzelf weer af zodra hij verkocht is. Zonder koppeling verkoop je een laptop twee keer en mag je een klant bellen dat het toch niet doorgaat.</p>
+    <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Shopify-webshop, dan zet je een toestel met één knop online, gaat hij er vanzelf weer af zodra hij verkocht is, en zie je hier wat er besteld wordt. Zonder koppeling verkoop je een laptop twee keer en mag je een klant bellen dat het toch niet doorgaat.</p>
     <div id="shopVak">Bezig met kijken…</div>
   </div>
 
@@ -2486,6 +2531,7 @@ function showTab(t){
   if(t==='producten') renderProducten();
   if(t==='voorraad') renderVoorraad();
   if(t==='hardware') hwLaad();
+  if(t==='webshop') bstLaad();
   if(t==='aanvragen') renderAanvragen();
   if(t==='kassa') renderKassa();
   if(t==='bestellen') renderBestellen();
@@ -4626,6 +4672,125 @@ document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('cli
   if(b.dataset.s==='webshop') shopStatus();
 }));
 
+
+/* ---------- bestellingen uit de webshop ----------
+
+   Een toestel dat uit je voorraad verdwijnt zonder uitleg is verwarrend, en de
+   eerste vraag is altijd dezelfde: door wie is het gekocht en is het al
+   betaald. Die vraag beantwoordt deze pagina.
+
+   De rijen komen van Shopify binnen via de meldingen; de browser haalt ze
+   alleen op. Nieuw betekent hier: nog niet door iemand bekeken. Dat is wat
+   anders dan onverwerkt, want een bestelling verwerken doe je in Shopify.   */
+
+let bstData=[], bstFilterNu='alles';
+
+async function bstLaad(stil){
+  if(!account) return;
+  const vak=document.getElementById('bstLijst');
+  if(vak && !stil) vak.innerHTML='Bezig met laden…';
+  const {data,error}=await sb.from('webshop_bestellingen').select('*')
+    .order('geplaatst_op',{ascending:false}).limit(200);
+  if(error){
+    if(vak) vak.innerHTML='<p class="muted">Kon de bestellingen niet laden.</p>';
+    return;
+  }
+  bstData=data||[];
+  renderBestellingen();
+  bstBadge();
+}
+
+function bstBadge(){
+  const b=document.getElementById('bBestel');
+  if(!b) return;
+  const n=bstData.filter(x=>!x.gezien && !x.geannuleerd).length;
+  b.textContent=n; b.hidden=!n;
+}
+
+function bstZichtbaar(x){
+  if(bstFilterNu==='nieuw')       return !x.gezien && !x.geannuleerd;
+  if(bstFilterNu==='open')        return !x.verzonden && !x.geannuleerd;
+  if(bstFilterNu==='toestellen')  return (x.toestellen||[]).length>0;
+  return true;
+}
+
+function renderBestellingen(){
+  const vak=document.getElementById('bstLijst'); if(!vak) return;
+
+  const kpi=document.getElementById('bstKpis');
+  if(kpi){
+    const nieuw=bstData.filter(x=>!x.gezien && !x.geannuleerd).length;
+    const open=bstData.filter(x=>!x.verzonden && !x.geannuleerd).length;
+    const maand=bstData.filter(x=>!x.geannuleerd &&
+      new Date(x.geplaatst_op) > new Date(Date.now()-30*86400000));
+    const omzet=maand.reduce((n,x)=>n+(Number(x.bedrag)||0),0);
+    kpi.innerHTML=
+      `<div class="kpi${nieuw?' hwattentie':''}"><div class="l">Nieuw</div><div class="v">${nieuw}</div></div>`+
+      `<div class="kpi"><div class="l">Nog niet verzonden</div><div class="v">${open}</div></div>`+
+      `<div class="kpi"><div class="l">Bestellingen deze maand</div><div class="v">${maand.length}</div></div>`+
+      `<div class="kpi"><div class="l">Omzet deze maand</div><div class="v">${euro(omzet)}</div></div>`;
+  }
+
+  const rijen=bstData.filter(bstZichtbaar);
+  const tel=document.getElementById('bstTelling');
+  if(tel) tel.textContent=rijen.length?'('+rijen.length+')':'';
+
+  if(!rijen.length){
+    vak.innerHTML=`<p class="muted">${bstData.length
+      ? 'Niets in deze lijst.'
+      : 'Nog geen bestellingen. Zodra er iets in je webshop gekocht wordt, staat het hier binnen een paar seconden.'}</p>`;
+    return;
+  }
+
+  vak.innerHTML=rijen.map(x=>{
+    const toestellen=x.toestellen||[];
+    const regels=x.regels||[];
+    return `<div class="bstrij${!x.gezien && !x.geannuleerd?' nieuw':''}">
+      <div class="bstkop">
+        ${!x.gezien && !x.geannuleerd?'<span class="bstnieuwvlag">Nieuw</span>':''}
+        <span class="bstnr">${esc(x.nummer||'—')}</span>
+        <span class="bstklant">${esc(x.klant||x.email||'Onbekende klant')}</span>
+        <span class="bstbedrag">${x.bedrag!=null?euro(x.bedrag):'—'}</span>
+      </div>
+
+      <div class="bstregels">${regels.map(r=>`
+        <div class="r"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}</span>
+          ${r.sku?`<span class="mono">${esc(r.sku)}</span>`:''}</div>`).join('')
+        || '<div class="r">Geen regels meegekomen</div>'}</div>
+
+      ${toestellen.length?`<div class="bsttoestellen">${toestellen.map(t=>`
+        <span class="kan shop">${esc(t.naam)}${t.code?' · '+esc(t.code):''}</span>`).join('')}
+        <span class="muted klein">uit je voorraad gehaald</span></div>`:''}
+
+      <div class="bstvoet">
+        <span class="bststatus ${esc(x.status)}">${esc(bstStatusNaam(x))}</span>
+        <span class="muted klein">${x.geplaatst_op
+          ? new Date(x.geplaatst_op).toLocaleString('nl-NL',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})
+          : ''}</span>
+        <span style="margin-left:auto"></span>
+        ${!x.gezien?`<button class="btn ghost small" onclick="bstGezien('${x.id}')">Gezien</button>`:''}
+        ${x.beheer_url?`<a class="btn ghost small" href="${esc(x.beheer_url)}" target="_blank" rel="noopener">Openen in Shopify</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function bstStatusNaam(x){
+  if(x.geannuleerd) return 'Geannuleerd';
+  if(x.verzonden)   return 'Verzonden';
+  if(x.betaald)     return 'Betaald';
+  return 'Nog niet betaald';
+}
+
+/* Afvinken is bewust iets anders dan verwerken: verwerken doe je in Shopify.
+   Dit zegt alleen "ik heb hem gezien", zodat het bolletje in het menu weggaat. */
+async function bstGezien(id){
+  const {error}=await sb.from('webshop_bestellingen').update({gezien:true}).eq('id',id);
+  if(error){ toast('Afvinken mislukt','fout'); return; }
+  const x=bstData.find(b=>b.id===id); if(x) x.gezien=true;
+  renderBestellingen(); bstBadge();
+}
+
 /* ---------- de webshop koppelen ----------
 
    Eén keer instellen, daarna nooit meer omkijken. Het lastige is niet de code
@@ -4657,11 +4822,41 @@ async function shopRoep(lijf){
   return uit;
 }
 
+/* Terug uit Shopify. De installatiefunctie stuurt je hierheen met in het adres
+   of het gelukt is; dat laten we zien en daarna halen we het uit de adresbalk,
+   zodat een verversing niet dezelfde melding herhaalt. */
+function shopTerugkomst(){
+  let p;
+  try{ p=new URLSearchParams(location.search); }catch(e){ return null; }
+  const stand=p.get('webshop');
+  if(!stand) return null;
+  const melding=p.get('melding')||'';
+  try{
+    p.delete('webshop'); p.delete('melding');
+    const rest=p.toString();
+    history.replaceState({}, '', location.pathname + (rest?'?'+rest:''));
+  }catch(e){}
+  return `<div class="shopuitslag ${stand==='gelukt'?'':'fout'}">${esc(melding ||
+    (stand==='gelukt'?'De webshop is gekoppeld.':'Het koppelen is niet gelukt.'))}</div>`;
+}
+
+/* Kom je terug uit Shopify, dan land je op Instellingen. Dan wil je ook meteen
+   het webshoptabblad zien en niet zelf gaan zoeken. */
+function shopTabAls(){
+  let heeft=false;
+  try{ heeft=!!new URLSearchParams(location.search).get('webshop'); }catch(e){}
+  if(!heeft) return;
+  const k=document.querySelector('#instTabs button[data-s="webshop"]');
+  if(k) k.click();
+}
+
 async function shopStatus(){
   const vak=document.getElementById('shopVak'); if(!vak) return;
+  const terug=shopTerugkomst();
   try{
     shopStand=await shopRoep({actie:'status'});
-    shopTeken();
+    shopTeken(terug||undefined);
+    if(terug) webshopLink();
   }catch(e){
     vak.innerHTML=`<p class="muted">Kon de koppeling niet ophalen: ${esc(e.message)}</p>`;
   }
@@ -4720,38 +4915,83 @@ function shopTeken(uitslag){
     return;
   }
 
+  /* Nog niet gekoppeld. De gewone weg is één knop; de tweede weg staat
+     eronder, ingeklapt, voor winkels met een eigen app van vóór 2026. */
   vak.innerHTML=`
-    <ol class="shopstappen">
-      <li>Ga in je Shopify-beheer naar <b>Instellingen</b> → <b>Apps en verkoopkanalen</b>.</li>
-      <li>Klik rechtsboven op <b>Apps ontwikkelen</b> en daarna op <b>App maken</b>. Noem hem <b>Storvo</b>.</li>
-      <li>Open het tabblad <b>Configuratie</b> → <b>Admin API-integratie</b> → <b>Configureren</b>, en zet deze zes vinkjes aan:
-        ${shopRechtenLijst(s&&s.rechten, [])}
-        <span class="muted" style="font-size:13px">Precies deze zes. Meer rechten geven kan wel, maar hoeft niet, en hoe minder je weggeeft hoe beter.</span>
-      </li>
-      <li>Klik op <b>Opslaan</b> en daarna op <b>Installeren</b>.</li>
-      <li>Ga naar het tabblad <b>API-referenties</b> en klik bij <b>Admin API-toegangstoken</b> op <b>Onthullen</b>. Kopieer het token; het begint met <b>shpat_</b>.</li>
-      <li>Plak het hieronder. <b>Shopify laat dit token maar één keer zien</b>, dus doe het meteen. Ben je het kwijt, dan maak je gewoon een nieuw token aan.</li>
-    </ol>
+    ${s.kanOauth?`
+    <div class="shopkaart">
+      <div class="shopkop"><h3>Koppelen met Shopify</h3></div>
+      <p class="muted" style="font-size:14px; max-width:70ch; margin-bottom:16px">
+        Je typt hieronder je winkeladres en drukt op Koppelen. Je komt dan bij Shopify,
+        ziet daar precies waar Storvo toestemming voor vraagt, en na het installeren
+        ben je klaar. Er komt geen sleutel aan te pas die je moet overtypen.</p>
 
-    <div class="grid" style="gap:14px">
-      <div>
-        <label>Adres van je winkel</label>
-        <input id="shop_domein" placeholder="jouwwinkel.myshopify.com" autocomplete="off"
-          onkeydown="if(event.key==='Enter') shopTesten(this)">
-        <p class="muted" style="font-size:12.5px; margin-top:5px">Het adres dat je in de adresbalk van je Shopify-beheer ziet, dus niet je eigen .nl-domein.</p>
-      </div>
-      <div>
-        <label>Admin API-toegangstoken</label>
-        <input id="shop_token" type="password" placeholder="shpat_..." autocomplete="off" spellcheck="false">
-        <p class="muted" style="font-size:12.5px; margin-top:5px">Gaat rechtstreeks naar de server en wordt versleuteld bewaard. Wij kunnen hem daarna zelf ook niet meer lezen.</p>
-      </div>
-    </div>
+      <div class="hkkop">Waar Storvo toestemming voor vraagt</div>
+      ${shopRechtenLijst(s&&s.rechten, [])}
 
-    <div class="row" style="margin-top:18px; gap:10px">
-      <button class="btn" onclick="shopTesten(this)">Eerst uitproberen</button>
-      <button class="btn actie" onclick="shopOpslaan(this)">Koppelen</button>
-    </div>
+      <label style="margin-top:16px">Adres van je winkel</label>
+      <input id="shop_domein" placeholder="jouwwinkel.myshopify.com" autocomplete="off"
+        onkeydown="if(event.key==='Enter') shopKoppelen(this)">
+      <p class="muted" style="font-size:12.5px; margin-top:5px">Het adres uit de adresbalk van je Shopify-beheer, dus niet je eigen .nl-domein. Beide vormen mogen: <b>jouwwinkel.myshopify.com</b> of <b>admin.shopify.com/store/jouwwinkel</b>.</p>
+
+      <div class="row" style="margin-top:18px">
+        <button class="btn actie" onclick="shopKoppelen(this)">
+          <svg class="i s"><use href="#i-globe"/></svg>Koppelen met Shopify</button>
+      </div>
+    </div>`:`
+    <div class="shopuitslag let">De Shopify-app is nog niet ingesteld door de beheerder.
+      Zolang dat niet gebeurd is kun je alleen koppelen met een eigen token.</div>`}
+
+    <details class="shopanders" ${s.kanOauth?'':'open'}>
+      <summary>Ik heb al een eigen app in mijn Shopify-beheer</summary>
+      <p class="muted" style="font-size:13.5px; max-width:70ch; margin:10px 0 14px">
+        Heb je vóór januari 2026 zelf een app aangemaakt in je Shopify-beheer, dan kun je
+        het token daarvan hier plakken. Nieuwe apps van dat soort kun je niet meer maken;
+        Shopify heeft dat dichtgezet. Zorg dat deze zes rechten erop staan:</p>
+      ${shopRechtenLijst(s&&s.rechten, [])}
+      <div class="grid" style="gap:14px; margin-top:14px">
+        <div>
+          <label>Adres van je winkel</label>
+          <input id="shop_domein2" placeholder="jouwwinkel.myshopify.com" autocomplete="off">
+        </div>
+        <div>
+          <label>Admin API-toegangstoken</label>
+          <input id="shop_token" type="password" placeholder="shpat_..." autocomplete="off" spellcheck="false">
+          <p class="muted" style="font-size:12.5px; margin-top:5px">Gaat rechtstreeks naar de server en wordt versleuteld bewaard.</p>
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn" onclick="shopTesten(this)">Eerst uitproberen</button>
+        <button class="btn ghost" onclick="shopOpslaan(this)">Koppelen met dit token</button>
+      </div>
+    </details>
     <div id="shopUitslag">${uitslag||''}</div>`;
+}
+
+/* Het doorsturen zit apart, zodat het na te bootsen is in een test en zodat er
+   één plek is als we het ooit in een nieuw tabblad willen openen. */
+function shopGaNaar(adres){ location.href=adres; }
+
+/* Wegwezen naar Shopify. We halen het adres eerst bij onze eigen server op, want
+   daar wordt het sleuteltje aangemaakt dat de terugkomst herkenbaar maakt. */
+async function shopKoppelen(knop){
+  const veld=document.getElementById('shop_domein');
+  const domein=veld?veld.value:'';
+  if(!String(domein).trim()){
+    if(veld) veld.focus();
+    toast('Vul eerst je winkeladres in','let-op');
+    return;
+  }
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    const r=await shopRoep({actie:'start', domein});
+    shopGaNaar(r.heen);
+  }catch(e){
+    knop.disabled=false; knop.textContent=oud;
+    const uit=document.getElementById('shopUitslag');
+    if(uit) uit.innerHTML=`<div class="shopuitslag fout">${esc(e.message)}</div>`;
+    toast(e.message,'fout');
+  }
 }
 
 function shopOpnieuw(){
@@ -4761,7 +5001,7 @@ function shopOpnieuw(){
 
 function shopVelden(){
   return {
-    domein:(document.getElementById('shop_domein')||{}).value||'',
+    domein:(document.getElementById('shop_domein2')||document.getElementById('shop_domein')||{}).value||'',
     token:(document.getElementById('shop_token')||{}).value||''
   };
 }
@@ -4836,8 +5076,8 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','kassa','bestellen','instellingen','team'],
-  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','kassa','bestellen']
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','kassa','bestellen','instellingen','team'],
+  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','kassa','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -5796,6 +6036,21 @@ let hwData=[], hwFilterNu='voorraad', hwBezig=false;
 function moduleLinks(){
   const l=document.getElementById('refurbLink');
   if(l) l.hidden = !moduleAan('refurbish');
+  webshopLink();
+}
+
+/* De webshoppagina heeft geen zin zonder gekoppelde webshop; dan is het een
+   menu-item dat altijd leeg is. Hij verschijnt zodra er gekoppeld is. */
+async function webshopLink(){
+  const l=document.getElementById('webshopLink');
+  if(!l || !account) return;
+  /* De koppelingentabel zelf is dicht voor de browser; daar staan de sleutels
+     van de webshop in. Dit ene vraagje geeft alleen ja of nee terug. */
+  let gekoppeld=false;
+  try{ const {data}=await sb.rpc('webshop_gekoppeld'); gekoppeld = data===true; }catch(e){}
+  const heeft = gekoppeld;
+  l.hidden = !heeft || !mag('webshop');
+  if(heeft) bstLaad(true);
 }
 
 function moduleAan(naam){
@@ -6417,6 +6672,10 @@ function hwKopieer(){
   }catch(e){ toast('Kopiëren lukte niet','fout'); }
 }
 
+document.querySelectorAll('#bstFilter button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#bstFilter button').forEach(x=>x.classList.toggle('active', x===b));
+  bstFilterNu=b.dataset.f; renderBestellingen();
+}));
 document.querySelectorAll('#hwFilter > button').forEach(b=>b.addEventListener('click',()=>{
   hwKiesFilter(b.dataset.f);
 }));
@@ -7436,6 +7695,7 @@ function slaBedrijfOp(){
   toast('Bedrijfsgegevens opgeslagen', true);
 }
 function renderInstellingen(){
+  shopTabAls();
   renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
   document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:2;
   document.getElementById('s_kasmax').value=kasMax();

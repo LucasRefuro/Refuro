@@ -29,7 +29,8 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `whatsapp-koppelen` | nee | Rondt het koppelen van een eigen nummer af |
 | `whatsapp-status` | nee | Geeft de browser het app-ID voor de koppelflow |
 | `product-herkennen` | nee | Leest een foto van een productdoosje en zegt wat erin zit |
-| `shopify-koppelen` | nee | Koppelt de webshop van één winkel: uitproberen, opslaan, nakijken, loskoppelen |
+| `shopify-koppelen` | nee | Start het koppelen, en beheert de koppeling: nakijken, meldingen, loskoppelen |
+| `shopify-installeren` | ja | Hier komt de winkelier terug na het installeren bij Shopify |
 | `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf |
 | `shopify-webhook` | ja | Shopify meldt hier dat er iets verkocht is |
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
@@ -46,10 +47,44 @@ controleren zelf wie er belt, via een handtekening of een eigen controle.
 
 ## De webshopkoppeling
 
-Er stonden drie instellingen voor Shopify in deze lijst: één winkeladres, één
-token en één webhookgeheim voor het hele platform. Dat werkt zolang er één
-winkel is. Elke winkel koppelt nu zijn eigen webshop, bij Instellingen onder
-**Webshop**, en die gegevens staan in de tabel `winkel_koppelingen`.
+Elke winkel koppelt zijn eigen webshop, bij Instellingen onder **Webshop**. De
+gegevens staan in `winkel_koppelingen`, één rij per winkel.
+
+### Hoe het koppelen loopt
+
+1. De winkelier typt zijn winkeladres en drukt op **Koppelen met Shopify**.
+2. `shopify-koppelen` maakt een sleuteltje aan in `koppel_pogingen` (een kwartier
+   geldig) en geeft het adres van het toestemmingsscherm terug.
+3. De browser gaat naar Shopify. Daar staat welke rechten Storvo vraagt.
+4. Na het installeren komt Shopify terug bij `shopify-installeren`, met een code
+   en een handtekening.
+5. Die functie controleert de handtekening, zoekt het sleuteltje op, ruilt de
+   code in voor een token, zet de meldingen klaar en zoekt het verkoopkanaal en
+   de voorraadlocatie op.
+6. De winkelier komt terug in Storvo met een melding of het gelukt is.
+
+Er is nergens een sleutel die iemand moet overtypen. Daarnaast staat er nog een
+tweede weg voor winkels die vóór januari 2026 zelf een app in hun Shopify-beheer
+hebben gemaakt; die kunnen een token plakken. Nieuwe apps van dat soort kun je
+niet meer aanmaken, dat heeft Shopify dichtgezet.
+
+### Wat je in het Dev Dashboard instelt
+
+De app maak je één keer aan, in het [Shopify Dev Dashboard](https://dev.shopify.com/dashboard).
+Bij de instellingen van die app zet je als toegestaan terugkomstadres:
+
+```
+https://ugilfxqolemxwssbpdwu.supabase.co/functions/v1/shopify-installeren
+```
+
+De client ID en de client secret komen in de Supabase-instellingen te staan.
+
+**Twee soorten distributie, en die keuze kun je niet terugdraaien.** *Custom
+distribution* mag op één winkel en heeft geen goedkeuring van Shopify nodig;
+dat is de app voor je eigen winkel. *Public distribution* mag op meerdere
+winkels maar moet door de beoordeling van de Shopify App Store heen; die heb je
+nodig zodra andere winkels Storvo gaan gebruiken. Het zijn dus twee aparte apps,
+met dezelfde code eromheen: alleen de client ID en secret verschillen.
 
 Wat er met het token gebeurt:
 
@@ -100,4 +135,6 @@ Zet ze nooit in de code en nooit in een chat.
 | `STRIPE_KORTING_COUPON` | De bon voor het laatste aanbod, mag ontbreken |
 | `APP_URL` | Waarheen Stripe terugstuurt na het afrekenen |
 | `KOPPELING_SLEUTEL` | 32 bytes in base64. Hiermee worden webshoptokens versleuteld opgeslagen |
+| `SHOPIFY_CLIENT_ID` | Client ID van de Storvo-app in het Shopify Dev Dashboard |
+| `SHOPIFY_CLIENT_SECRET` | Client secret van diezelfde app. Hiermee worden ook de meldingen gecontroleerd |
 | `ICECAT_GEBRUIKER` | Gebruikersnaam van je gratis Icecat-account, voor productfoto's |

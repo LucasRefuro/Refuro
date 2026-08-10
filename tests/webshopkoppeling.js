@@ -61,23 +61,40 @@ setTimeout(async()=>{
   ok('webshop in de instellingen', !!d().querySelector('#instTabs button[data-s="webshop"]'));
   ok('eigen kaart', !!d().getElementById('inst-webshop'));
 
-  // ── nog niet gekoppeld: de uitleg ──
+  // ── nog niet gekoppeld: de knop staat voorop ──
+  w.__antwoord={ok:true, gekoppeld:false, kanOauth:true, rechten:RECHTEN};
   await w.eval('shopStatus()');
   await new Promise(r=>setTimeout(r,30));
   const uitleg=vak();
-  ok('zes stappen', (uitleg.match(/<li>/g)||[]).length===6);
-  ok('vertelt waar je moet klikken', /Apps ontwikkelen/.test(uitleg) && /API-referenties/.test(uitleg));
-  ok('waarschuwt dat het token maar één keer te zien is', /maar één keer/.test(uitleg));
+  ok('één knop om te koppelen', /Koppelen met Shopify/.test(uitleg));
+  ok('geen token nodig', /geen sleutel aan te pas/.test(uitleg));
+  ok('alleen een winkeladres invullen', !!d().getElementById('shop_domein'));
+  ok('beide adresvormen mogen', /admin\.shopify\.com\/store/.test(uitleg));
   ok('alle zes rechten met uitleg erbij',
      Object.keys(RECHTEN).every(r=>uitleg.includes(r)));
+
+  // ── de heenreis ──
+  d().getElementById('shop_domein').value='https://mijnwinkel.myshopify.com/';
+  w.__antwoord={ok:true, heen:'https://mijnwinkel.myshopify.com/admin/oauth/authorize?client_id=abc',
+    domein:'mijnwinkel.myshopify.com'};
+  w.eval("window.__gegaan=null; shopGaNaar=(a)=>{ window.__gegaan=a; };");
+  await w.eval('shopKoppelen(document.createElement("button"))');
+  await new Promise(r=>setTimeout(r,30));
+  ok('stuurt je door naar Shopify', /oauth\/authorize/.test(String(w.__gegaan||'')));
+  const start=w.__verstuurd.filter(v=>v[0].includes('shopify-koppelen')).pop();
+  ok('vraagt de server om het adres', start[1].actie==='start');
+  ok('met het getypte winkeladres', /mijnwinkel/.test(start[1].domein));
+
+  // ── de tweede weg blijft bestaan voor oude apps ──
+  ok('tweede weg staat er, ingeklapt', /shopanders/.test(uitleg) && /eigen app/.test(uitleg));
   ok('velden voor adres en token',
-     !!d().getElementById('shop_domein') && !!d().getElementById('shop_token'));
+     !!d().getElementById('shop_domein2') && !!d().getElementById('shop_token'));
   ok('token staat verborgen tijdens het typen',
      d().getElementById('shop_token').type==='password');
   ok('zegt wat er met het token gebeurt', /versleuteld bewaard/.test(uitleg));
 
   // ── uitproberen met ontbrekende rechten ──
-  d().getElementById('shop_domein').value='https://mijnwinkel.myshopify.com/';
+  d().getElementById('shop_domein2').value='https://mijnwinkel.myshopify.com/';
   d().getElementById('shop_token').value='shpat_abcdef123456';
   w.__antwoord={ok:true, geldig:true, domein:'mijnwinkel.myshopify.com', winkelnaam:'Mijn Winkel',
     mist:['write_publications'], rechten:RECHTEN,
@@ -107,7 +124,7 @@ setTimeout(async()=>{
   ok('noemt waar de voorraad komt', /Magazijn/.test(goed) && /van 2 locaties/.test(goed));
 
   // ── koppelen ──
-  w.__antwoord={ok:true, gekoppeld:true, domein:'mijnwinkel.myshopify.com',
+  w.__antwoord={ok:true, gekoppeld:true, kanOauth:true, domein:'mijnwinkel.myshopify.com',
     winkelnaam:'Mijn Winkel', token_staart:'3456', status:'actief', mist:[],
     rechten:RECHTEN, meldingen:['ORDERS_CREATE','ORDERS_PAID'],
     publicatie:true, locatie:true, laatst_gecontroleerd:new Date().toISOString()};
