@@ -1484,7 +1484,7 @@
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
   </nav>
   <div class="onderin">
-    <nav class="onder">
+    <nav>
       <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
     </nav>
     <div class="foot" id="sidebarFoot">Versie 1.0 · <a href="#" onclick="feedbackPopup(); return false;">Feedback</a></div>
@@ -1685,10 +1685,10 @@
       </div>
       <div id="toestelKeuze" hidden></div>
       <div class="row" style="margin-bottom:8px">
-        <a class="btn ghost small" id="zoekGsm" href="https://gsm-world.nl/reparaties/" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Prijs op gsm-world.nl</a>
-        <a class="btn ghost small" id="zoekGsmZoek" href="https://gsm-world.nl/reparaties/" target="_blank" title="Zoeken op gsm-world.nl als de pagina niet klopt">Zoeken op gsm-world</a>
-        <a class="btn ghost small" id="zoekFoneday" href="https://www.foneday.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Voorraad foneday</a>
-        <a class="btn ghost small" id="zoekMobileparts" href="https://www.mobileparts.shop" target="_blank"><svg class="i s"><use href="#i-search"/></svg>Mobileparts <b>(ex. btw)</b></a>
+        <a class="btn ghost small" id="zoekGsm" href="https://gsm-world.nl/reparaties/" target="_blank" rel="noopener"><svg class="i s"><use href="#i-search"/></svg>Prijs op gsm-world.nl</a>
+        <a class="btn ghost small" id="zoekGsmZoek" href="https://gsm-world.nl/reparaties/" target="_blank" title="Zoeken op gsm-world.nl als de pagina niet klopt" rel="noopener">Zoeken op gsm-world</a>
+        <a class="btn ghost small" id="zoekFoneday" href="https://www.foneday.shop" target="_blank" rel="noopener"><svg class="i s"><use href="#i-search"/></svg>Voorraad foneday</a>
+        <a class="btn ghost small" id="zoekMobileparts" href="https://www.mobileparts.shop" target="_blank" rel="noopener"><svg class="i s"><use href="#i-search"/></svg>Mobileparts <b>(ex. btw)</b></a>
       </div>
       <div class="warnbox"> <b>Let op: foneday en mobileparts tonen prijzen exclusief btw.</b> Pas in de checkout komt daar 21% bij. Neem je een prijs van die sites over, vink dan "ex. btw (+21%)"aan bij het onderdeel. De software rekent de btw er dan automatisch bij, zodat je winstberekening klopt. Prijzen op gsm-world.nl zijn consumentenprijzen inclusief btw.</div>
       <p class="muted" style="margin-top:10px; line-height:1.7">gsm-world opent de pagina van het toestel zelf, want daar staan de reparatieprijzen per model. Foneday opent zijn catalogus voor precies dat toestel, want zoeken op onderdeelnamen werkt daar niet. Mobileparts opent de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.</p>
@@ -2348,12 +2348,12 @@
     <div class="grid" style="margin-bottom:14px">
       <div><label>Foneday e-mail</label><input id="lv_fd_user" autocomplete="off" onchange="slaLeveranciersOp()"></div>
       <div><label>Foneday wachtwoord</label><input id="lv_fd_pass" type="password" autocomplete="new-password" onchange="slaLeveranciersOp()"></div>
-      <div style="display:flex; align-items:flex-end"><a class="btn ghost small" href="https://www.foneday.shop/en/customer/account/login" target="_blank">Open foneday login </a></div>
+      <div style="display:flex; align-items:flex-end"><a class="btn ghost small" href="https://www.foneday.shop/en/customer/account/login" target="_blank" rel="noopener">Open foneday login </a></div>
     </div>
     <div class="grid" style="margin-bottom:14px">
       <div><label>Mobileparts e-mail</label><input id="lv_mp_user" autocomplete="off" onchange="slaLeveranciersOp()"></div>
       <div><label>Mobileparts wachtwoord</label><input id="lv_mp_pass" type="password" autocomplete="new-password" onchange="slaLeveranciersOp()"></div>
-      <div style="display:flex; align-items:flex-end"><a class="btn ghost small" href="https://www.mobileparts.shop/customer/account/login/" target="_blank">Open mobileparts login </a></div>
+      <div style="display:flex; align-items:flex-end"><a class="btn ghost small" href="https://www.mobileparts.shop/customer/account/login/" target="_blank" rel="noopener">Open mobileparts login </a></div>
     </div>
     <p class="muted"> De gegevens worden alleen lokaal in deze browser opgeslagen (onversleuteld) en worden nergens heen gestuurd. Gebruik bij twijfel een uniek wachtwoord voor deze shops.</p>
   </div>
@@ -4296,7 +4296,7 @@ function toonAanvraag(id){
           if(kp.kanaalEmail!==false)k.push('e-mail');
           return k.length?k.join(' en '):'geen enkel kanaal (staat uit)';})()
       : '<b>De klant krijgt geen bericht.</b> Je belt zelf.'}</div>
-    <div id="repVerzonden" class="avverz"></div>
+    <div id="aanvVerzonden" class="avverz"></div>
 
     <div class="avtijd">${a.tijdlijn.map(x=>{
       const d=new Date(x.t);
@@ -4311,7 +4311,7 @@ function toonAanvraag(id){
     </div>
   </div>`;
   document.body.appendChild(ov);
-  if(a.notify && typeof laadVerzonden==='function') laadVerzonden(a.nr);
+  if(a.notify && typeof laadVerzonden==='function') laadVerzonden(a.nr, 'aanvVerzonden');
 }
 function sluitAanvraag(){ const o=document.getElementById('aanvDetail'); if(o) o.remove(); }
 
@@ -5255,7 +5255,7 @@ function toonLogin(){
   const el=document.createElement('div');
   el.id='loginScherm';
   el.innerHTML=`<div class="loginbox">
-    <div class="mk">${h.logo?`<img src="${h.logo}">`:esc((h.naam||'R').charAt(0).toUpperCase())}</div>
+    <div class="mk">${h.logo?`<img src="${h.logo}" alt="">`:esc((h.naam||'R').charAt(0).toUpperCase())}</div>
     <h2 style="font-size:18px">${esc(h.naam||'Storvo')}</h2>
     <p class="muted" id="loginTekst">Wie ben je?</p>
     <div class="mwLijst" id="loginLijst">${actieve.map(m=>
@@ -5535,7 +5535,7 @@ function authWrap(inner){
   const eigenNaam=(h.naam||'Storvo').trim();
   const isStorvo=eigenNaam.toLowerCase()==='storvo';
   el.innerHTML=`<div class="loginbox">
-    <div class="mk${isStorvo&&!h.logo?' storvo':''}">${h.logo?`<img src="${h.logo}">`:(isStorvo?MERK:esc(eigenNaam.charAt(0).toUpperCase()))}</div>
+    <div class="mk${isStorvo&&!h.logo?' storvo':''}">${h.logo?`<img src="${h.logo}" alt="">`:(isStorvo?MERK:esc(eigenNaam.charAt(0).toUpperCase()))}</div>
     <h2>${isStorvo?'storvo':esc(eigenNaam)}</h2>
     ${inner}
     <div id="authFout" class="authfout" hidden></div>
@@ -5626,7 +5626,7 @@ function authSplash(){
   const h=huisstijl();
   const isStorvo=(h.naam||'Storvo').trim().toLowerCase()==='storvo';
   el.innerHTML=`<div class="splash">
-    <div class="mk${isStorvo&&!h.logo?' storvo':''}">${h.logo?`<img src="${h.logo}">`:(isStorvo?MERK:esc((h.naam||'S').trim().charAt(0).toUpperCase()))}</div>
+    <div class="mk${isStorvo&&!h.logo?' storvo':''}">${h.logo?`<img src="${h.logo}" alt="">`:(isStorvo?MERK:esc((h.naam||'S').trim().charAt(0).toUpperCase()))}</div>
     <div class="splashbalk"><i></i></div>
   </div>`;
 }
@@ -5792,7 +5792,7 @@ function toonSlot(){
     <h3 class="slotkop">${esc(t.kop)}</h3>
     <p class="muted" style="line-height:1.65; margin-bottom:20px">${esc(t.uitleg)}</p>
     ${t.knop ? (eigenaar
-      ? `<button class="btn amber" style="width:100%" onclick="${t.pakketten?'toonPakketten(false)':'openPortaal(this)'}">${esc(t.knop)}</button>`
+      ? `<button class="btn actie" style="width:100%" onclick="${t.pakketten?'toonPakketten(false)':'openPortaal(this)'}">${esc(t.knop)}</button>`
       : `<p class="muted klein" style="margin-bottom:16px">Vraag de eigenaar van de winkel om dit te regelen.</p>`) : ''}
     <button class="btn ghost" style="width:100%; margin-top:8px" onclick="uitloggen()">Uitloggen</button>
     <p class="muted klein" style="margin-top:16px">Vragen? Mail ons op
@@ -5987,7 +5987,7 @@ function toonKortingAanbod(){
   const b=kortingBedragen();
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='aboAanbod';
-  ov.innerHTML=`<div class="popup groot proefpop korting">
+  ov.innerHTML=`<div class="popup groot proefpop">
     <div class="kortingbadge">70% korting op je eerste maand</div>
     <h3>Wacht, dan doen we dit</h3>
     <p class="pv">Je hebt Storvo dertig dagen gebruikt en je hele voorraad staat erin. Zonde om dat weg te gooien om de prijs. Daarom je eerste maand voor bijna niets.</p>
@@ -6015,7 +6015,6 @@ function toonKortingAanbod(){
   document.body.appendChild(ov);
   try{ localStorage.setItem('storvo_korting_aangeboden','1'); }catch(e){}
 }
-function kortingAangeboden(){ try{ return localStorage.getItem('storvo_korting_aangeboden')==='1'; }catch(e){ return false; } }
 
 /* ═══════════════ HARDWARE: UNIEKE EXEMPLAREN ═══════════════
    Een hoesje tel je: vijf stuks is één regel met een vijf erachter. Een
@@ -6279,7 +6278,7 @@ function renderHardware(){
     return;
   }
 
-  vak.innerHTML=`<table class="tabel">
+  vak.innerHTML=`<table>
     <thead><tr>
       <th>Toestel</th><th>Nummer</th><th>Waar</th>
       <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
@@ -7310,7 +7309,7 @@ async function start2FAInschakelen(){
   if(error){ toast(error.message, 'fout'); return; }
   const el=document.getElementById('ma_2fa');
   el.innerHTML=`<p class="muted">Scan deze QR-code met je authenticator-app (bijv. Google Authenticator):</p>
-    <img src="${data.totp.qr_code}" style="width:160px; height:160px; margin:10px auto; display:block">
+    <img src="${data.totp.qr_code}" alt="QR-code voor je authenticatie-app" style="width:160px; height:160px; margin:10px auto; display:block">
     <p class="muted" style="font-size:11px; word-break:break-all">Of voer handmatig in: ${esc(data.totp.secret)}</p>
     <input id="ma_2fa_code" maxlength="6" inputmode="numeric" placeholder="6-cijferige code" style="text-align:center; letter-spacing:4px">
     <button class="btn actie" style="width:100%; margin-top:8px" onclick="bevestig2FAInschakelen('${data.id}')">Bevestigen</button>`;
@@ -7471,7 +7470,7 @@ function pasHuisstijlToe(){
   document.getElementById('logoNaam').textContent = nm.trim().toLowerCase()==='storvo' ? 'storvo' : nm;
   document.getElementById('logoSub').textContent=h.sub||'';
   const mark=document.getElementById('logoMark');
-  if(h.logo){ mark.innerHTML=`<img src="${h.logo}" class="logoImg" alt="logo">`; mark.classList.add('storvo'); }
+  if(h.logo){ mark.innerHTML=`<img src="${h.logo}" alt="" class="logoImg" alt="logo">`; mark.classList.add('storvo'); }
   else if((h.naam||'Storvo').trim().toLowerCase()==='storvo'){ mark.innerHTML=MERK; mark.classList.add('storvo'); }
   else { mark.textContent=(h.naam||'S').trim().charAt(0).toUpperCase(); mark.classList.remove('storvo'); }
   document.title=(h.naam||'Storvo')+' \u00b7 voorraad en reparaties';
@@ -7523,7 +7522,7 @@ function renderHuisstijl(){
     document.getElementById('hs_'+k).value=h[k];
     document.getElementById('hs_'+k+'_hex').value=h[k].toUpperCase();
   });
-  document.getElementById('hs_logoPrev').innerHTML=h.logo?`<img src="${h.logo}" class="logoImg" style="width:44px;height:44px">`:'<span class="muted">geen logo</span>';
+  document.getElementById('hs_logoPrev').innerHTML=h.logo?`<img src="${h.logo}" alt="" class="logoImg" style="width:44px;height:44px">`:'<span class="muted">geen logo</span>';
 }
 
 /* ---------- klantpagina ---------- */
@@ -7591,7 +7590,7 @@ h2{font-family:'Sora',sans-serif;font-size:16px;font-weight:700;margin-bottom:16
 .rij:last-child{border:none}.rij b{font-family:'Sora',sans-serif;font-weight:700}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:10px}
 </style></head><body><div class="wrap">
-<header><div class="mk${!h.logo&&(h.naam||'Storvo').trim().toLowerCase()==='storvo'?' storvo':''}">${h.logo?`<img src="${h.logo}">`:((h.naam||'Storvo').trim().toLowerCase()==='storvo'?MERK:esc((h.naam||'S').charAt(0).toUpperCase()))}</div>
+<header><div class="mk${!h.logo&&(h.naam||'Storvo').trim().toLowerCase()==='storvo'?' storvo':''}">${h.logo?`<img src="${h.logo}" alt="">`:((h.naam||'Storvo').trim().toLowerCase()==='storvo'?MERK:esc((h.naam||'S').charAt(0).toUpperCase()))}</div>
 <div><h1>${esc(h.naam)}</h1><div class="s">Status van je reparatie</div></div></header>
 <div class="card">
   <h2>Reparatie ${esc(r.nr)}</h2>
@@ -9221,8 +9220,8 @@ async function berProefbericht(status){
 }
 
 /* ---------- verzendgeschiedenis ---------- */
-async function laadVerzonden(nr){
-  const vak=document.getElementById('repVerzonden'); if(!vak || !account) return;
+async function laadVerzonden(nr, doel){
+  const vak=document.getElementById(doel||'repVerzonden'); if(!vak || !account) return;
   const {data,error}=await sb.from('berichten').select('*')
     .eq('reparatie_nr',nr).order('verstuurd_op',{ascending:false});
   if(error){ vak.innerHTML='<p class="muted">Kon de verzendgeschiedenis niet laden.</p>'; return; }

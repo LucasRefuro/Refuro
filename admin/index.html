@@ -255,10 +255,15 @@
 
   .fbrij.af{opacity:.62;}
   .fbvoet{display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap;}
-  .fbnotitie{flex:1; min-width:200px; font:inherit; font-size:13.5px; color:var(--tekst);
-    padding:9px 12px; border:1px solid var(--border); border-radius:10px; background:var(--kaart);
+  /* De labeltjes achter een winkelnaam in de feedbacklijst. Deze klasse stond
+     wel in de opmaak maar had geen enkele regel, dus het waren losse woorden. */
+  .tag{display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; padding:3px 9px; border-radius:var(--pil);
+    background:var(--soft-2); color:var(--muted); white-space:nowrap;}
+  .fbnotitie{flex:1; min-width:200px; font:inherit; font-size:13.5px; color:var(--text);
+    padding:9px 12px; border:1px solid var(--border); border-radius:10px; background:var(--card);
     transition:border-color .2s, background .2s;}
-  .fbnotitie:focus{outline:none; border-color:var(--oranje);}
+  .fbnotitie:focus{outline:none; border-color:var(--paars);}
   .fbnotitie.bewaard{border-color:#2E9E6B; background:#F0FAF5;}
   .fbvoet .btn{flex:none; padding:9px 16px; font-size:13.5px;}
   @media(max-width:640px){ .fbvoet .btn{width:100%;} }

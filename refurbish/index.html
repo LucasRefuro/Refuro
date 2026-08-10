@@ -93,7 +93,35 @@ main{flex:1; margin-left:246px; min-width:0; overflow-x:clip;}
 label{display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin:0 0 6px;}
 input,select,textarea{width:100%; padding:11px 14px; border:1.5px solid var(--border);
   border-radius:12px; font-family:inherit; font-size:14.5px; color:var(--tekst); background:var(--card);}
-input:focus,select:focus,textarea:focus{outline:none; border-color:var(--groen);}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--groen);
+  box-shadow:0 0 0 4px rgba(11,91,82,.10);}
+input:hover:not(:focus),select:hover:not(:focus),textarea:hover:not(:focus){border-color:#DCD8D0;}
+
+/* Een eigen pijltje in plaats van dat van het besturingssysteem. Anders ziet
+   dezelfde keuzelijst er op een Mac anders uit dan op een pc, en allebei anders
+   dan de rest van het scherm. */
+select{appearance:none; -webkit-appearance:none; -moz-appearance:none; cursor:pointer;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A938F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 13px center; background-size:16px 16px;
+  padding-right:42px;}
+select:hover{border-color:var(--groen);
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B5B52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");}
+select option{font-family:inherit; color:var(--tekst); background:var(--card);}
+
+/* Hetzelfde voor de vinkjes. Deze staan in de controle bij elke vraag, dus als
+   er iets in de huisstijl hoort te zijn is het dit wel. */
+input[type=checkbox]{appearance:none; -webkit-appearance:none; width:22px; height:22px;
+  min-width:22px; padding:0; border:1.5px solid #DCD8D0; border-radius:7px; background:var(--card);
+  cursor:pointer; vertical-align:-5px; transition:.15s;
+  background-position:center; background-repeat:no-repeat; background-size:14px;}
+input[type=checkbox]:hover{border-color:var(--groen);}
+input[type=checkbox]:checked{background-color:var(--groen); border-color:var(--groen);
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F7F6F3' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");}
+input[type=checkbox]:focus-visible{outline:none; box-shadow:0 0 0 4px rgba(11,91,82,.12);}
+/* Een kleurkiezer is geen tekstvak; die hoort niet dezelfde vulling te krijgen. */
+input[type=color]{padding:2px; cursor:pointer;}
+input[type=range]{padding:0; border:none; background:none; accent-color:var(--groen);}
+input[type=file]{padding:0; border:none; background:none;}
 .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px;}
 .row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
 
@@ -303,7 +331,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 .fotonaam{display:flex; align-items:center; justify-content:center; gap:4px; flex-wrap:wrap;}
 
 .schakelrij{display:flex; align-items:flex-start; gap:14px; cursor:pointer;}
-.schakelrij input{width:auto; margin-top:4px;}
+.schakelrij input{margin-top:2px;}
 
 .adviesvak{background:var(--soft-2); border-radius:14px; padding:14px 16px; margin-top:12px;}
 .adviesband{display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -361,6 +389,11 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 
 /* De vraag waar je nu bent, en wat je al gehad hebt. Met dertig vragen op één
    pagina is dat het verschil tussen doorwerken en zoeken. */
+/* Het kleine kopje boven een blokje: "Achtergrond", "Zoekwoorden", "Notitie".
+   Deze klasse stond wel in de opmaak maar had geen enkele regel, dus het waren
+   gewone regels tekst tussen de rest. */
+.hkkop{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted-l); margin-bottom:8px;}
 .clrij.aandebeurt{background:var(--lblauw); box-shadow:0 0 0 2px var(--mint) inset;}
 .clrij.beantwoord .clvraag{color:var(--muted);}
 /* Het draaiende stipje in de lijst: hier staat iets te werken, dat is wat
@@ -425,6 +458,14 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
    naar een scherm. Zwart op wit, geen kleur: een labelprinter kan niet anders
    en een gewone printer maakt er anders grijze soep van. */
 .labelvel{display:grid; grid-template-columns:repeat(auto-fill,minmax(58mm,1fr)); gap:6mm;}
+/* De labels voor losse onderdelen. Deze stonden zonder stijl op het vel, dus
+   dat waren een plaatje en wat tekst onder elkaar. */
+.labelvel .label{border:1px dashed var(--border); border-radius:12px; padding:12px;
+  display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
+  background:var(--card); break-inside:avoid;}
+.labelvel .label img{width:100%; max-width:120px; height:auto;}
+.labelvel .label .lt{display:flex; flex-direction:column; gap:2px; font-size:12px; line-height:1.35;}
+.labelvel .label .lt b{font-size:12.5px;}
 .etiket{width:58mm; border:1px dashed var(--muted-l); border-radius:6px;
   padding:5mm; background:#fff; color:#000; break-inside:avoid;
   font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
@@ -2020,7 +2061,7 @@ const CTR_STAPPEN={
 
       ${SPEC_VELDEN.map(v=>ctrSpecVeld(v)).join('')}
 
-      <label style="margin-top:10px"><input type="checkbox" id="c_touch" style="width:auto"
+      <label style="margin-top:10px"><input type="checkbox" id="c_touch"
         ${String(sp['Touchscreen']||'').toLowerCase()==='ja'?'checked':''} onchange="ctrVeldBewaar()"> Heeft een touchscreen</label>`;
   }, knoppen:()=>[{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] },
 
@@ -2343,8 +2384,9 @@ async function ctrSlopen(knop){
   });
 }
 
-/* Het oude sloopscherm is vervangen door de stap hierboven, maar je moet een
-   apparaat dat al op slopen staat nog wel kunnen openen. */
+/* Een apparaat dat al op slopen staat moet je nog kunnen openen. Er stond hier
+   ook nog een tweede functie met dezelfde naam, het oude popupscherm; die won
+   het van deze en dat is precies wat je niet wilt. Weg dus. */
 function sloopOpen(a){
   ctr={a, stap:'slopen', antwoord:{}, punten:{}, delen:{}, notities:{},
        specs:Object.assign({}, a.specs||{}), accu:a.accu!=null?String(a.accu):'',
@@ -2433,41 +2475,6 @@ async function repKlaar(knop, id){
     if(error) throw new Error('Bijwerken mislukt');
     if(a) await naarVoorraad(a);
     sluit(); await allesLaden(); toast('Gerepareerd en op voorraad', true);
-  });
-}
-
-/* ═══════════════ slopen voor onderdelen ═══════════════ */
-
-function sloopOpen(a){
-  const specs=Object.keys(a.specs||{});
-  venster('Slopen: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
-    <p class="pv">Vink aan wat er nog werkt. Die onderdelen komen op de plank te liggen en kun je later bij een reparatie gebruiken.</p>
-    ${(specs.length?specs:['Scherm','Accu','Toetsenbord','Moederbord']).map((s,i)=>`
-      <label class="clrij" style="display:block; cursor:pointer">
-        <input type="checkbox" id="sl_${i}" data-naam="${esc(s)}" style="width:auto"> ${esc(s)}
-        ${(a.specs||{})[s]?`<span class="muted klein"> · ${esc((a.specs||{})[s])}</span>`:''}
-      </label>`).join('')}
-  `, [{tekst:'Onderdelen op de plank', klasse:'actie', doe:(k)=>sloopKlaar(k,a)}]);
-}
-
-async function sloopKlaar(knop, a){
-  const gekozen=[...document.querySelectorAll('[id^="sl_"]')]
-    .filter(e=>e.checked).map(e=>e.dataset.naam);
-  await bezig(knop, async()=>{
-    if(gekozen.length){
-      const rijen=gekozen.map(n=>({
-        team_id:account.team_id,
-        naam:n+' uit '+[a.merk,a.model].filter(Boolean).join(' '),
-        soort:n, van_apparaat:a.id, status:'voorraad'
-      }));
-      const {error}=await sb.from('refurbish_onderdelen').insert(rijen);
-      if(error) throw new Error('Opslaan mislukt');
-    }
-    await sb.from('refurbish_apparaten')
-      .update({status:'overgedragen', notitie:'Gesloopt voor onderdelen',
-               bijgewerkt_op:new Date().toISOString()}).eq('id',a.id);
-    sluit(); await allesLaden();
-    toast(gekozen.length?gekozen.length+' onderdelen op de plank':'Apparaat afgevoerd', true);
   });
 }
 
@@ -2632,8 +2639,12 @@ async function fotosLaden(a){
     const eerste=onl.fotos.find(f=>f.aanzicht==='open') || onl.fotos[0];
     if(eerste){
       eerste.hoofd=true;
+      /* Bewust niet afgewacht: het scherm hoeft hier niet op te staan wachten.
+         Wel opschrijven als het misgaat, anders verdwijnt de fout in het niets
+         en snapt niemand later waarom de hoofdfoto niet blijft staan. */
       sb.from('refurbish_fotos').update({hoofd:true}).eq('id',eerste.id)
-        .then(()=>{}, ()=>{});
+        .then(({error})=>{ if(error) console.error('hoofdfoto vastleggen:', error); },
+              (e)=>console.error('hoofdfoto vastleggen:', e));
     }
   }
   /* Wat vroeg je eerder voor hetzelfde model? Dat is het beste prijsanker dat
@@ -3894,7 +3905,7 @@ function tekenBestellen(){
         <tbody>${nodig.map(o=>{
           const voor=apparaten.find(a=>a.id===o.voor_apparaat);
           return `<tr>
-            <td><input type="checkbox" class="bestelvink" value="${o.id}" style="width:auto"></td>
+            <td><input type="checkbox" class="bestelvink" value="${o.id}"></td>
             <td><b>${esc(o.naam)}</b></td>
             <td class="muted klein">${voor?esc([voor.merk,voor.model].filter(Boolean).join(' ')):'—'}</td>
             <td class="num"><button class="btn ghost small" onclick="deelWeg('${o.id}')">Weg</button></td>
