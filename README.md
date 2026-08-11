@@ -1,60 +1,63 @@
-# Refuro
+# Storvo
 
-Beheersysteem voor telefoonreparatiewinkels: voorraad, reparaties, klantstatus en een beheerpaneel voor het bedrijf zelf.
+Alles-in-één software voor telefoon- en laptopreparatiewinkels: voorraad,
+reparaties, kassa, klantstatus, een refurbishmodule en een beheerpaneel voor
+Storvo zelf.
+
+Werk je hieraan mee, lees dan eerst **`CLAUDE.md`** (hoe het in elkaar zit en
+waar de valkuilen zitten) en **`OPENSTAAND.md`** (wat er nog moet gebeuren).
 
 ## Structuur
 
 ```
-/                index.html   marketingwebsite (openbare landingpagina)
-/app/            index.html   de winkelapp (dashboard, scannen, reparaties, voorraad, team)
-/admin/          index.html   beheerpaneel (klanten, abonnementen, Stripe-voorbereiding)
+/                     index.html   marketingsite (storvo.nl en storvo.app)
+/app/                 index.html   de winkelapp
+/app/scan.html                     de scanner op je telefoon
+/refurbish/           index.html   de refurbish-app (bijkoopmodule)
+/refurbish/foto.html               fotograferen met je telefoon
+/admin/               index.html   het beheerpaneel van Storvo zelf
+/r/                   index.html   de publieke klantpagina bij een reparatie
+/supabase/functions/               de Edge Functions (Deno)
+/tests/                            browsertests
 ```
 
-Alle drie zijn losse statische bestanden zonder build-stap. Data van de winkelapp en het beheerpaneel staat nu nog lokaal in de browser (localStorage); dat verplaatsen we later naar een echte database (Supabase) zodra meerdere winkels/gebruikers tegelijk moeten werken.
+Alle pagina's zijn losse statische bestanden met hun eigen CSS en JavaScript
+erin. Geen framework, geen bouwstap. De gegevens staan in Supabase.
 
 ## Lokaal bekijken
-
-Geen installatie nodig, gewoon een bestand openen in de browser. Voor het testen van links tussen de pagina's (bijvoorbeeld vanaf de marketingsite naar /app/) is een simpele lokale server handiger:
 
 ```
 npx serve .
 ```
 
-## Live zetten (GitHub + Vercel)
+Openen kan ook door een bestand naar je browser te slepen, maar met een lokale
+server werken de links tussen de pagina's zoals ze live werken.
 
-1. Maak een lege repo aan op github.com (geen README/gitignore aanvinken, die heb je al).
-2. In deze map, eenmalig:
-   ```
-   rm -rf .git
-   git init
-   git add -A
-   git commit -m "v1.0.0: eerste versie"
-   git branch -M main
-   git remote add origin git@github.com:JOUW-GEBRUIKERSNAAM/refuro.git
-   git push -u origin main
-   ```
-3. Ga naar vercel.com, "Add New Project", kies je GitHub-repo. Vercel herkent automatisch dat het een statische site is (geen buildinstellingen nodig). Klik Deploy.
-4. Klaar: elke push naar `main` zet automatisch een nieuwe versie live.
-
-## Nieuwe functies uitrollen zonder de live site te breken
+## Testen
 
 ```
-git checkout -b feature/naam-van-de-functie
-# wijzigingen maken
+npm test
+```
+
+Twaalf testbestanden, ongeveer 570 controles, klaar in een paar seconden. Alles
+moet groen zijn voordat je pusht.
+
+## Live zetten
+
+Elke push naar `main` gaat automatisch naar Vercel en staat binnen een minuut
+live.
+
+```
 git add -A
-git commit -m "omschrijving"
-git push -u origin feature/naam-van-de-functie
+git commit -m "wat je gedaan hebt"
+git push origin main
 ```
 
-Vercel maakt automatisch een eigen preview-link voor die branch, los van de live site. Test daar rustig. Pas als het goed is: merge de branch naar `main` (via een Pull Request op GitHub, of lokaal `git checkout main && git merge feature/naam-van-de-functie && git push`) en de live site werkt automatisch bij.
+Edge Functions rollen daar níét mee uit; die staan in Supabase en worden apart
+uitgerold.
 
-Voor een vaste versienotatie: na elke merge naar main een tag zetten, bijvoorbeeld:
-```
-git tag v1.1.0
-git push --tags
-```
-Zie CHANGELOG.md voor het overzicht per versie.
+## Geheimen
 
-## Volgende stap: Supabase
-
-Zodra de app naar meerdere winkels/medewerkers tegelijk moet, vervangen we localStorage door Supabase (database + login). Dat is een aparte module: eerst het datamodel (producten, reparaties, medewerkers, klanten) als tabellen opzetten, dan de opslagfuncties in de app aanpassen zodat ze naar Supabase schrijven in plaats van localStorage.
+Nooit in de code en nooit in een commit. Ze staan in Supabase onder Project
+Settings → Edge Functions → Secrets. Welke er zijn en waar ze voor dienen staat
+in `supabase/functions/README.md`.
