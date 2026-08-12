@@ -109,7 +109,7 @@ Je hoeft niet dertig dagen te wachten om de schermen te zien.
 
 ```sql
 update klanten set proef_tot = now() + interval '1 day', status = 'proef'
-where naam = 'Refuro';
+where naam = 'Storvo';
 ```
 
 3. Ververs de app. Je krijgt het scherm voor de laatste dag.
@@ -126,7 +126,7 @@ Object.keys(localStorage).filter(k=>k.startsWith('storvo_nudge')).forEach(k=>loc
 Zet je winkel daarna weer goed:
 
 ```sql
-update klanten set status = 'actief' where naam = 'Refuro';
+update klanten set status = 'actief' where naam = 'Storvo';
 ```
 
 ---

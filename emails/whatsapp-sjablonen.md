@@ -16,10 +16,10 @@ anders komt er onzin bij de klant terecht.
 | Variabele | Betekenis | Voorbeeld |
 |---|---|---|
 | `{{1}}` | voornaam van de klant | Sara |
-| `{{2}}` | naam van de winkel | Refuro |
+| `{{2}}` | naam van de winkel | Storvo |
 | `{{3}}` | het toestel | iPhone 14 |
 | `{{4}}` | reparatienummer | R26-001 |
-| `{{5}}` | link naar de statuspagina | https://storvo.app/r/refuro/R26001 |
+| `{{5}}` | link naar de statuspagina | https://storvo.app/r/storvo/R26001 |
 
 ---
 
@@ -34,7 +34,7 @@ Volg de status: {{5}}
 Je hoort van ons zodra er nieuws is.
 ```
 
-Voorbeeldwaarden voor Meta: `Sara` · `Refuro` · `iPhone 14` · `R26-001` · `https://storvo.app/r/refuro/R26001`
+Voorbeeldwaarden voor Meta: `Sara` · `Storvo` · `iPhone 14` · `R26-001` · `https://storvo.app/r/storvo/R26001`
 
 ---
 

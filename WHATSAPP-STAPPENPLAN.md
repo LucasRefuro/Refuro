@@ -108,7 +108,7 @@ Tijd: 15 minuten. Zes keer hetzelfde kunstje.
 Open erbij: `emails/whatsapp-sjablonen.md` in deze map. Daar staat de tekst die je gaat plakken.
 
 1. Ga naar **business.facebook.com/wa/manage/**.
-2. Klik linksboven en controleer dat je **Refuro** hebt geselecteerd, niet het testaccount.
+2. Klik linksboven en controleer dat je **Storvo** hebt geselecteerd, niet het testaccount.
 3. Klik in het linkermenu op **Berichtsjablonen**.
 4. Klik op de blauwe knop **Sjabloon maken**.
 
@@ -124,10 +124,10 @@ Voor sjabloon 1:
 12. Knoppen: laat leeg.
 13. Meta vraagt om voorbeeldwaarden voor `{{1}}` tot en met `{{5}}`. Vul in:
     - {{1}} `Sara`
-    - {{2}} `Refuro`
+    - {{2}} `Storvo`
     - {{3}} `iPhone 14`
     - {{4}} `R26-001`
-    - {{5}} `https://storvo.app/r/refuro/R26001`
+    - {{5}} `https://storvo.app/r/storvo/R26001`
 14. Klik op **Indienen**.
 
 Herhaal stap 4 tot en met 14 voor de andere vijf. Alleen de naam en de hoofdtekst
@@ -187,7 +187,7 @@ mag de simkaart in een la.
 ### Daarna: het nummer toevoegen
 
 1. Ga naar **business.facebook.com/wa/manage/**.
-2. Zorg dat linksboven **Refuro** geselecteerd staat, niet het testaccount.
+2. Zorg dat linksboven **Storvo** geselecteerd staat, niet het testaccount.
 3. Klik in het linkermenu op **Telefoonnummers**.
 4. Klik op **Telefoonnummer toevoegen**.
 5. Vul in:

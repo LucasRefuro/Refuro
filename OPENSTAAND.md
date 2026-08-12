@@ -123,7 +123,6 @@ ID en secret. Wat er wel bij komt kijken:
 
 ## 6. Klein en oud
 
-- Je eigen winkel heet in de administratie nog **Refuro**, niet Storvo.
 - **Lekwachtwoord-bescherming** in Supabase kan pas aan op het Pro-pakket.
 - De **`README.md`** was geschreven toen alles nog in de browser werd bewaard en
   het product Refuro heette. Hij is bijgewerkt, maar kijk er kritisch naar als
