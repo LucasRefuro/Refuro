@@ -127,6 +127,3 @@ ID en secret. Wat er wel bij komt kijken:
 - De **`README.md`** was geschreven toen alles nog in de browser werd bewaard en
   het product Refuro heette. Hij is bijgewerkt, maar kijk er kritisch naar als
   je hem gebruikt.
-- In `app/index.html` staan nog vier `style="width:auto"` op aankruisvakken. Ze
-  doen geen kwaad (de `min-width` uit de stijlregel wint), maar het zijn
-  overblijfsels van vóór de eigen vinkjes.
