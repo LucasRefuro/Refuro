@@ -2,7 +2,7 @@
   "name": "storvo",
   "private": true,
   "scripts": {
-    "test": "node tests/huisstijl.js && node tests/winkelapp.js && node tests/refurbish-toevoegen.js && node tests/refurbish-controle.js && node tests/refurbish-accu-windows.js && node tests/refurbish-online.js && node tests/refurbish-fotos.js && node tests/refurbish-pagina.js && node tests/refurbish-werkstroom.js && node tests/refurbish-zicht.js && node tests/webshopkoppeling.js && node tests/webshopbestellingen.js"
+    "test": "node tests/huisstijl.js && node tests/winkelapp.js && node tests/refurbish-toevoegen.js && node tests/refurbish-controle.js && node tests/refurbish-accu-windows.js && node tests/refurbish-online.js && node tests/refurbish-fotos.js && node tests/refurbish-pagina.js && node tests/refurbish-werkstroom.js && node tests/refurbish-zicht.js && node tests/webshopkoppeling.js && node tests/webshopbestellingen.js && node tests/productenvoorraad.js"
   },
   "devDependencies": {
     "jsdom": "^26.0.0"

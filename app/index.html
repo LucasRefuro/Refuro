@@ -1746,7 +1746,7 @@
     </div>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Barcode</th><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Achter</th><th class="num">Min.</th><th></th></tr></thead>
+      <thead><tr><th>Barcode</th><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
     </div>
@@ -1774,10 +1774,10 @@
     <div class="grid" style="margin-bottom:16px">
       <div><label>Inkoopprijs (€)</label><input id="f_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoopprijs (€)</label><input id="f_verkoop" type="number" step="0.01" min="0"></div>
-      <div><label>Beginvoorraad</label><input id="f_voorraad" type="number" step="1" min="0" value="0"></div>
-      <div><label>Moet hangen <span class="muted">(in de winkel)</span></label><input id="f_schap" type="number" step="1" min="0"></div>
-      <div><label>Min. voorraad</label><input id="f_min" type="number" step="1" min="0" value="2"></div>
-      <div><label>Bestelaantal</label><input id="f_bestel" type="number" step="1" min="1"></div>
+      <div><label>Actuele winkelvoorraad <span class="muted">(hangt nu)</span></label><input id="f_voorraad" type="number" step="1" min="0" value="0"></div>
+      <div><label>Min. winkelvoorraad</label><input id="f_schap" type="number" step="1" min="0"></div>
+      <div><label>Actuele overvoorraad <span class="muted">(ligt achter)</span></label><input id="f_min" type="number" step="1" min="0" value="0"></div>
+      <div><label>Min. overvoorraad</label><input id="f_bestel" type="number" step="1" min="0"></div>
     </div>
     <div class="row">
       <button class="btn actie" id="formOpslaan" onclick="opslaanProduct()">Product toevoegen</button>
@@ -1985,7 +1985,7 @@
     <h2>Te bestellen <span class="muted">(voorraad ≤ minimum)</span></h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th></th><th>Naam</th><th>Code</th><th class="num">Voorraad</th><th class="num">Min.</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
+      <thead><tr><th></th><th>Naam</th><th>Code</th><th class="num">Over</th><th class="num">Min. over</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
       <tbody id="bestelBody"></tbody>
     </table>
     </div>
@@ -2118,7 +2118,7 @@
     </div>
     <div class="row" style="margin-bottom:6px">
       <div style="flex:2; min-width:220px"><label>Producttype</label><select id="snelType" onchange="renderSnelRows()"></select></div>
-      <div style="flex:1; min-width:140px"><label>Beginvoorraad per model</label><input id="snelVoorraad" type="number" min="0" value="0"></div>
+      <div style="flex:1; min-width:140px"><label>Beginvoorraad per model <span class="muted">(ligt achter)</span></label><input id="snelVoorraad" type="number" min="0" value="0"></div>
     </div>
     <p class="muted" style="margin-bottom:12px">Kies een type, bijvoorbeeld Screenprotector Clear. Scan per model de barcode en druk op Enter. Het product wordt direct aangemaakt en de cursor springt naar het volgende model.</p>
     <div style="overflow-x:auto">
@@ -2133,7 +2133,7 @@
     <h2><svg class="i"><use href="#i-zap"/></svg>Producttypes <span class="muted">(voor snel toevoegen)</span></h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Min.</th><th class="num">Bestelaantal</th><th></th></tr></thead>
+      <thead><tr><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Min. winkel</th><th class="num">Min. over</th><th></th></tr></thead>
       <tbody id="typeBody"></tbody>
     </table>
     </div>
@@ -2142,8 +2142,8 @@
       <div style="flex:1; min-width:140px"><label>Categorie</label><select id="t_cat"></select></div>
       <div><label>Inkoop (€)</label><input id="t_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoop (€)</label><input id="t_verkoop" type="number" step="0.01" min="0"></div>
-      <div><label>Min.</label><input id="t_min" type="number" step="1" min="0" value="2"></div>
-      <div><label>Bestel</label><input id="t_bestel" type="number" step="1" min="1" value="10"></div>
+      <div><label>Min. winkel</label><input id="t_min" type="number" step="1" min="0" value="2"></div>
+      <div><label>Min. over</label><input id="t_bestel" type="number" step="1" min="0" value="5"></div>
       <div><button class="btn" onclick="voegTypeToe()">Toevoegen</button></div>
     </div>
   </div>
@@ -2162,7 +2162,7 @@
     <h2><svg class="i"><use href="#i-tag"/></svg>Categorieën</h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Naam</th><th class="num">Std. inkoop</th><th class="num">Std. verkoop</th><th class="num">Std. min.</th><th class="num">Std. bestelaantal</th><th></th></tr></thead>
+      <thead><tr><th>Naam</th><th class="num">Std. inkoop</th><th class="num">Std. verkoop</th><th class="num">Std. min. winkel</th><th class="num">Std. min. over</th><th></th></tr></thead>
       <tbody id="catBody"></tbody>
     </table>
     </div>
@@ -2170,17 +2170,18 @@
       <div style="flex:2; min-width:160px"><label>Nieuwe categorie</label><input id="c_naam" placeholder="bijv. Opladers"></div>
       <div><label>Inkoop (€)</label><input id="c_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoop (€)</label><input id="c_verkoop" type="number" step="0.01" min="0"></div>
-      <div><label>Min.</label><input id="c_min" type="number" step="1" min="0" value="2"></div>
-      <div><label>Bestel</label><input id="c_bestel" type="number" step="1" min="1" value="10"></div>
+      <div><label>Min. winkel</label><input id="c_min" type="number" step="1" min="0" value="2"></div>
+      <div><label>Min. over</label><input id="c_bestel" type="number" step="1" min="0" value="5"></div>
       <div><button class="btn" onclick="voegCatToe()">Toevoegen</button></div>
     </div>
   </div>
 
   <div class="card" id="inst-voorraad"hidden>
     <h2><svg class="i"><use href="#i-package"/></svg>Winkel en overvoorraad</h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Van elk product horen er een paar in de winkel te hangen. Wat daarboven binnenkomt is overvoorraad en ligt achter. Zodra het rek onder dit aantal komt en er ligt nog wat achter, zet Storvo het op de bijvullijst. Zo blijft er niets in het magazijn liggen verstoffen.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Van elk product horen er een paar in de winkel te hangen: de min. winkelvoorraad. Wat daarboven binnenkomt is overvoorraad en ligt achter. Zakt de winkel onder z'n minimum en ligt er nog wat achter, dan zet Storvo het op de bijvullijst. Zakt de winkel óf de overvoorraad onder z'n minimum, dan komt het op de bestellijst. Zo blijft er niets in het magazijn liggen verstoffen.</p>
     <div class="row">
-      <div style="max-width:220px"><label>Moet standaard hangen</label><input id="s_schap" type="number" min="0" step="1" onchange="slaSchapOp()"></div>
+      <div style="max-width:220px"><label>Min. winkelvoorraad (standaard)</label><input id="s_schap" type="number" min="0" step="1" onchange="slaSchapOp()"></div>
+      <div style="max-width:220px"><label>Min. overvoorraad (standaard)</label><input id="s_minover" type="number" min="0" step="1" onchange="slaMinOverOp()"></div>
     </div>
     <p class="muted" style="margin-top:10px">Dit geldt voor alle producten waarbij je niets aparts hebt ingevuld. Per product kun je er bij Producten van afwijken, bijvoorbeeld vier voor je best verkopende hoesje.</p>
   </div>
@@ -2468,6 +2469,7 @@ function load(){
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
   if(!Array.isArray(s.verborgen)) s.verborgen=[];
   if(s.schapNorm==null) s.schapNorm=2;
+  if(s.minOverNorm==null) s.minOverNorm=2;
   if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
@@ -2480,6 +2482,9 @@ function load(){
       const norm=p.schap!=null?p.schap:(s.schapNorm!=null?s.schapNorm:2);
       p.winkel=Math.min(p.voorraad||0, norm);
     }
+    /* Nieuw: de overvoorraad krijgt een eigen ondergrens. Oudere producten
+       erven die van hun vroegere 'min. voorraad'. */
+    if(p.minOver==null) p.minOver=(p.min!=null?p.min:(s.minOverNorm!=null?s.minOverNorm:2));
   });
   if(s.vergrendeld===undefined) s.vergrendeld=false;
   if(s.onboardingKlaar===undefined) s.onboardingKlaar=false;
@@ -2750,7 +2755,7 @@ function renderDashboard(){
     `<div class="kpi"><div class="l">Cash zonder bon</div><div class="v">${euro(s.cashzb)}${P('cashzb')}</div></div>`;
   const tot=state.producten.reduce((x,p)=>x+p.voorraad,0);
   const waarde=state.producten.reduce((x,p)=>x+p.voorraad*p.inkoop,0);
-  const laag=state.producten.filter(p=>p.voorraad<=p.min).length;
+  const laag=state.producten.filter(p=>moetBestellen(p)).length;
   document.getElementById('kpiRow2').innerHTML=
     `<div class="kpi"><div class="l">Marge</div><div class="v oranje">${marge.toFixed(1)}%</div></div>`+
     `<div class="kpi"><div class="l">Verkochte stuks</div><div class="v">${s.stuks}${P('stuks')}</div></div>`+
@@ -2882,7 +2887,7 @@ function renderLeveringen(){
     .sort((a,b)=>verwachteLevering(a.besteldOp)-verwachteLevering(b.besteldOp));
   const reps=(state.reparaties||[]).filter(r=>r.status==='besteld' && r.besteldOp);
   const rijen=
-    items.map(p=>`<tr id="lev${p.id}"><td>${esc(p.naam)}</td><td class="num">${p.bestel} st.</td><td style="text-align:right">${leverTekst(p.besteldOp)}</td><td style="text-align:right"><button class="btn small" style="background:var(--green)" onclick="levBinnen(${p.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></td></tr>`)
+    items.map(p=>`<tr id="lev${p.id}"><td>${esc(p.naam)}</td><td class="num">${teBestellen(p)} st.</td><td style="text-align:right">${leverTekst(p.besteldOp)}</td><td style="text-align:right"><button class="btn small" style="background:var(--green)" onclick="levBinnen(${p.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></td></tr>`)
     .concat(reps.map(r=>`<tr id="levr${r.id}"><td><svg class="i s"><use href="#i-wrench"/></svg> <b>${esc(r.nr)}</b> ${esc(r.toestel)} ${esc(r.type)} <span class="muted">(${esc(r.klant.naam)})</span></td><td class="num">${r.onderdelen.filter(o=>!o.uitVoorraad).length||1} ond.</td><td style="text-align:right">${repLeverTekst(r.besteldOp)}</td><td style="text-align:right"><button class="btn small" style="background:var(--green)" onclick="repBinnenViaDash(${r.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></td></tr>`));
   document.getElementById('leveringen').innerHTML = rijen.length
     ? '<table><tbody>'+rijen.join('')+'</tbody></table>'
@@ -2906,7 +2911,7 @@ function repBinnenViaDash(id){
 function levBinnen(id){
   const p=state.producten.find(p=>p.id===id);
   if(!p || !p.besteld) return;
-  const n=p.bestel;
+  const n=Math.max(1, teBestellen(p));
   boekIn(p,n);
   p.besteld=false; p.besteldOp=null;
   save();
@@ -2967,7 +2972,7 @@ function verwerkScan(code){
   }
   if(mode==='in') boekIn(p,1); else boekVerkoop(p,1,betaal);
   fb.className='ok';
-  fb.textContent=(mode==='in'?'+1 ':'Verkocht ('+betaalNaam(betaal)+'): ')+p.naam+' · voorraad: '+p.voorraad+(p.voorraad<=p.min?' · bestellen':'');
+  fb.textContent=(mode==='in'?'+1 ':'Verkocht ('+betaalNaam(betaal)+'): ')+p.naam+' · voorraad: '+p.voorraad+(moetBestellen(p)?' · bestellen':'');
   piep(mode==='in'?880:440);
   toast((mode==='in'?' +1 ':'Verkocht: ')+p.naam+' voorraad '+p.voorraad, true);
 }
@@ -2996,6 +3001,21 @@ function achterLiggen(p){ return Math.max(0, (p.voorraad||0) - inWinkel(p)); }
 function schapTekort(p){ return Math.max(0, schapNorm(p) - inWinkel(p)); }
 /* Wat je nu daadwerkelijk kunt ophangen: nooit meer dan er achter ligt. */
 function bijTeVullen(p){ return Math.min(schapTekort(p), achterLiggen(p)); }
+/* De overvoorraad is wat er achter ligt; hij heeft een eigen ondergrens
+   (min. over), los van de winkel. */
+function overVoorraad(p){ return achterLiggen(p); }
+function minOverNorm(p){
+  if(p && p.minOver!=null) return Math.max(0, p.minOver);
+  return state.minOverNorm!=null ? Math.max(0, state.minOverNorm) : 2;
+}
+/* Bijbestellen bij de leverancier: de achtervoorraad is op of onder z'n
+   minimum, óf de winkel staat te laag en er ligt niets meer achter om bij te
+   hangen. Zolang je nog kunt bijhangen hoef je niet te bestellen. */
+function moetBestellen(p){
+  return overVoorraad(p) <= minOverNorm(p) || (schapTekort(p) > 0 && !nogAchterGenoeg(p));
+}
+/* Zoveel bestellen dat winkel én over samen weer op hun minimum komen. */
+function teBestellen(p){ return Math.max(0, (schapNorm(p) + minOverNorm(p)) - (p.voorraad||0)); }
 function bijvulLijst(){
   return state.producten.filter(p=>bijTeVullen(p)>0)
     .sort((a,b)=>(inWinkel(a)-inWinkel(b)) || a.naam.localeCompare(b.naam));
@@ -3032,7 +3052,7 @@ function boekIn(p,n){
   const id=uid();
   p.voorraad+=n;
   setTimeout(()=>aanvBijScan(p), 60);
-  if(p.voorraad>p.min){ p.besteld=false; p.besteldOp=null; }
+  if(!moetBestellen(p)){ p.besteld=false; p.besteldOp=null; }
   state.log.unshift({id, t:Date.now(), naam:p.naam, m:'in', v:p.voorraad, aantal:n, pid:p.id});
   state.log=state.log.slice(0,50);
   save(); renderScanLog(); updateBadge();
@@ -3077,7 +3097,7 @@ function scanPopup(code){
   ov.className='overlay'; ov.id='scanOverlay';
   ov.innerHTML=`<div class="popup">
     <h3>${esc(p.naam)}</h3>
-    <div class="pv">Voorraad: <b>${p.voorraad}</b> &middot; Verkoopprijs: <b>${euro(p.verkoop)}</b> &middot; ${esc(catNaam(p.cat))}</div>
+    <div class="pv">Winkel: <b>${inWinkel(p)}</b> &middot; Achter: <b>${overVoorraad(p)}</b> &middot; Verkoopprijs: <b>${euro(p.verkoop)}</b> &middot; ${esc(catNaam(p.cat))}</div>
     <div class="acts">
       <button class="btn" style="background:var(--green); box-shadow:0 5px 16px rgba(30,158,106,.22)" onclick="popupIn(${p.id})"><svg class="i s"><use href="#i-down"/></svg>Inscannen (+1)</button>
       <div class="betaalrow">
@@ -3104,7 +3124,7 @@ function popupUit(id,bet){
   const p=state.producten.find(p=>p.id===id); if(!p) return;
   if(p.voorraad<=0){ toast(''+p.naam+', voorraad is al 0'); piep(200); return; }
   boekVerkoop(p,1,bet); sluitPopup(); piep(440);
-  toast('Verkocht ('+betaalNaam(bet)+'): '+p.naam+' · voorraad: '+p.voorraad+(p.voorraad<=p.min?' · bestellen':''), true);
+  toast('Verkocht ('+betaalNaam(bet)+'): '+p.naam+' · voorraad: '+p.voorraad+(moetBestellen(p)?' · bestellen':''), true);
   herteken();
 }
 function herteken(){
@@ -3245,15 +3265,21 @@ function snelKey(e,modelId){
     naam:type.naam+' – '+model.naam,
     cat:type.cat, typeId:typeId, modelId:modelId,
     inkoop:type.inkoop, verkoop:type.verkoop,
-    voorraad:Number(document.getElementById('snelVoorraad').value)||0,
-    min:type.min, bestel:type.bestel, besteld:false, besteldOp:null
+    winkel:0, voorraad:Number(document.getElementById('snelVoorraad').value)||0,
+    schap:type.min, minOver:type.bestel, besteld:false, besteldOp:null
   });
   save(); updateBadge();
   piep(880);
   toast('Aangemaakt: '+type.naam+' – '+model.naam, true);
   renderSnelRows();
-  const volgende=document.querySelector('#snelBody input[data-model]');
-  if(volgende) volgende.focus();
+  /* Verder naar het eerstvolgende model dat nog geen product heeft, en wel
+     zónder de pagina te laten verspringen. Pakten we gewoon het eerste lege
+     vakje, dan sprong de cursor naar bovenaan de lijst en schoot de pagina
+     mee omhoog. preventScroll houdt de pagina waar hij staat. */
+  const invoer=[...document.querySelectorAll('#snelBody input[data-model]')];
+  const idx=state.modellen.findIndex(m=>m.id===modelId);
+  const volgende=invoer.find(inp=>state.modellen.findIndex(m=>m.id===Number(inp.getAttribute('data-model')))>idx) || invoer[0];
+  if(volgende) volgende.focus({preventScroll:true});
 }
 
 /* ---------- producten ---------- */
@@ -3280,15 +3306,30 @@ function renderProducten(){
     .map(p=>`<tr><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
       `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
-      `<td class="num${inWinkel(p)<schapNorm(p)?' low':''}">${inWinkel(p)}</td>`+
-      `<td class="num">${achterLiggen(p)}</td><td class="num">${p.min}</td>`+
+      `<td class="num${inWinkel(p)<schapNorm(p)?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
+      `<td class="num"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
+      `<td class="num${overVoorraad(p)<=minOverNorm(p)?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
+      `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
       `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="9" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="10" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
   const sel=document.getElementById('filterCat');
   const cur=sel.value;
   sel.innerHTML='<option value="">Alle categorieën</option>'+state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
   sel.value=cur;
+}
+/* De vier voorraadgetallen zijn direct in de tabel te wijzigen; dat scheelt
+   telkens naar het formulier gaan. Winkel en over zijn de twee tellingen, het
+   totaal (voorraad) is hun som. */
+function zetVeld(id, veld, val){
+  const p=state.producten.find(p=>p.id===id); if(!p) return;
+  const n=Math.max(0, Math.floor(Number(val)||0));
+  if(veld==='winkel'){ const over=overVoorraad(p); p.winkel=n; p.voorraad=n+over; }
+  else if(veld==='over'){ p.voorraad=inWinkel(p)+n; }
+  else if(veld==='schap'){ p.schap=n; }
+  else if(veld==='minOver'){ p.minOver=n; }
+  else return;
+  save(); renderProducten(); updateBadge(); herteken();
 }
 function bewerk(id){
   const p=state.producten.find(p=>p.id===id); if(!p) return;
@@ -3303,10 +3344,10 @@ function bewerk(id){
   document.getElementById('f_cat').value=p.cat;
   document.getElementById('f_inkoop').value=p.inkoop;
   document.getElementById('f_verkoop').value=p.verkoop;
-  document.getElementById('f_voorraad').value=p.voorraad;
+  document.getElementById('f_voorraad').value=inWinkel(p);
   document.getElementById('f_schap').value=schapNorm(p);
-  document.getElementById('f_min').value=p.min;
-  document.getElementById('f_bestel').value=p.bestel;
+  document.getElementById('f_min').value=overVoorraad(p);
+  document.getElementById('f_bestel').value=minOverNorm(p);
 }
 function verwijder(id){
   const p=state.producten.find(p=>p.id===id);
@@ -3339,8 +3380,9 @@ function vulStandaard(){
   if(!c) return;
   document.getElementById('f_inkoop').value=c.inkoop;
   document.getElementById('f_verkoop').value=c.verkoop;
-  document.getElementById('f_min').value=c.min>0?c.min:2;
-  document.getElementById('f_bestel').value=c.bestel||10;
+  /* De categorie levert de standaard-minima; de actuele tellingen vul je zelf. */
+  document.getElementById('f_schap').value=c.min>0?c.min:(state.schapNorm!=null?state.schapNorm:2);
+  document.getElementById('f_bestel').value=c.bestel>0?c.bestel:(state.minOverNorm!=null?state.minOverNorm:2);
 }
 function resetForm(){
   editId=null;
@@ -3352,7 +3394,9 @@ function resetForm(){
   document.getElementById('f_naam').value='';
   document.getElementById('f_sku').value='';
   document.getElementById('f_voorraad').value=0;
+  document.getElementById('f_min').value=0;
   document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:2;
+  document.getElementById('f_bestel').value=state.minOverNorm!=null?state.minOverNorm:2;
   vulStandaard();
 }
 /* ═══════════════ NIEUW PRODUCT MET DE TELEFOON ═══════════════
@@ -3612,12 +3656,12 @@ function npSlimInvullen(h, barcode){
   if(bron.length){
     const inkoop =npMediaan(bron.map(p=>p.inkoop));
     const verkoop=npMediaan(bron.map(p=>p.verkoop));
-    const min    =npMediaan(bron.map(p=>p.min));
-    const bestel =npMediaan(bron.map(p=>p.bestel));
+    const mw     =npMediaan(bron.map(p=>schapNorm(p)));
+    const mo     =npMediaan(bron.map(p=>minOverNorm(p)));
     if(inkoop>0)  document.getElementById('f_inkoop').value=inkoop;
     if(verkoop>0) document.getElementById('f_verkoop').value=verkoop;
-    if(min>0)     document.getElementById('f_min').value=Math.round(min);
-    if(bestel>0)  document.getElementById('f_bestel').value=Math.round(bestel);
+    if(mw>0)      document.getElementById('f_schap').value=Math.round(mw);
+    if(mo>0)      document.getElementById('f_bestel').value=Math.round(mo);
     /* De namen zelf laten we met rust; alleen de zin eromheen wordt vertaald. */
     bronnen.push('Prijzen overgenomen van <span data-onvertaald>'+
       bron.slice(0,2).map(p=>esc(p.naam)).join(' · ')+'</span>');
@@ -3744,16 +3788,20 @@ function opslaanProduct(){
   if(document.getElementById('f_cat').value==='__nieuw'){ alert('Kies eerst een categorie.'); return; }
   const dubbel=state.producten.find(p=>p.barcode===barcode && p.id!==editId);
   if(dubbel){ alert('Barcode bestaat al bij: '+dubbel.naam); return; }
+  /* De twee actuele tellingen komen uit het formulier; het totaal is hun som.
+     f_voorraad = winkel (hangt nu), f_min = over (ligt achter). */
+  const winkelNu=Math.max(0, Math.floor(Number(document.getElementById('f_voorraad').value)||0));
+  const overNu  =Math.max(0, Math.floor(Number(document.getElementById('f_min').value)||0));
   const data={
     barcode, naam,
     sku:document.getElementById('f_sku').value.trim().toUpperCase(),
     cat:Number(document.getElementById('f_cat').value),
     inkoop:Number(document.getElementById('f_inkoop').value)||0,
     verkoop:Number(document.getElementById('f_verkoop').value)||0,
-    voorraad:Number(document.getElementById('f_voorraad').value)||0,
+    winkel:winkelNu,
+    voorraad:winkelNu+overNu,
     schap:Math.max(0, Math.floor(Number(document.getElementById('f_schap').value)||0)),
-    min:Number(document.getElementById('f_min').value)||0,
-    bestel:Number(document.getElementById('f_bestel').value)||1
+    minOver:Math.max(0, Math.floor(Number(document.getElementById('f_bestel').value)||0))
   };
   if(editId){
     Object.assign(state.producten.find(p=>p.id===editId), data);
@@ -3761,9 +3809,6 @@ function opslaanProduct(){
     toast('Wijzigingen opgeslagen: '+naam, true);
   }else{
     data.id=uid(); data.besteld=false; data.besteldOp=null;
-    /* Een nieuw product hangt nog niet in de winkel. Wat je als
-       beginvoorraad invult ligt dus achter, en komt op de bijvullijst. */
-    data.winkel=0;
     state.producten.push(data);
     save();
     const n=naam;
@@ -4445,6 +4490,12 @@ function slaSchapOp(){
   save(); renderVoorraad(); renderProducten(); updateBadge();
   toast('Standaard aangepast: er horen er '+v+' te hangen', true);
 }
+function slaMinOverOp(){
+  const v=Math.max(0, Math.floor(Number(document.getElementById('s_minover').value)||0));
+  state.minOverNorm=v;
+  save(); renderVoorraad(); renderProducten(); updateBadge();
+  toast('Standaard aangepast: minstens '+v+' achter houden', true);
+}
 
 /* ---------- de voorraadpagina ---------- */
 function renderVoorraad(){
@@ -4526,7 +4577,7 @@ function nulOpslaan(){
   p.winkel=winkel;
   p.voorraad=winkel+achter;
   p.schap=schap;
-  if(p.voorraad>p.min){ p.besteld=false; p.besteldOp=null; }
+  if(!moetBestellen(p)){ p.besteld=false; p.besteldOp=null; }
   const verschil=p.voorraad-oud;
   nulGeteld.unshift({naam:p.naam, winkel, achter, verschil, t:Date.now()});
   nulGeteld=nulGeteld.slice(0,40);
@@ -4554,12 +4605,12 @@ function tekenNulLog(){
    er al voorraad in je eigen magazijn staat.                                 */
 function nogAchterGenoeg(p){ return schapTekort(p)>0 && achterLiggen(p)>=schapTekort(p); }
 function bestelLijst(){
-  return state.producten.filter(p=>p.voorraad<=p.min && !nogAchterGenoeg(p))
+  return state.producten.filter(p=>moetBestellen(p))
     .sort((a,b)=>a.naam.localeCompare(b.naam));
 }
 /* Wat wél laag staat, maar nog uit eigen magazijn aangevuld kan worden. */
 function eerstBijhangen(){
-  return state.producten.filter(p=>p.voorraad<=p.min && nogAchterGenoeg(p))
+  return state.producten.filter(p=>schapTekort(p)>0 && nogAchterGenoeg(p) && !moetBestellen(p))
     .sort((a,b)=>a.naam.localeCompare(b.naam));
 }
 /* ---------- bestellen: codes klaarzetten om te plakken ----------
@@ -4592,7 +4643,7 @@ function kopieerCode(id){
 function kopieerBestellijst(){
   const lijst=bestelLijst().filter(p=>!p.besteld);
   if(!lijst.length){ toast('Er staat niets open om te bestellen','let-op'); return; }
-  const regels=lijst.map(p=>[bestelCode(p), p.bestel, p.naam].join('\t')).join('\n');
+  const regels=lijst.map(p=>[bestelCode(p), teBestellen(p), p.naam].join('\t')).join('\n');
   kopieer(regels, lijst.length+' regels gekopieerd, klaar om te plakken');
 }
 
@@ -4603,8 +4654,8 @@ function renderBestellen(){
     `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${p.besteld?'checked':''} onchange="toggleBesteld(${p.id})"></td>`+
     `<td>${esc(p.naam)}</td>`+
     `<td>${c?`<button class="codeknop" title="Code kopiëren om in de webshop te plakken" onclick="kopieerCode(${p.id})"><span data-onvertaald>${esc(c)}</span><svg class="i s"><use href="#i-clipboard"/></svg></button>`:'<span class="muted">geen code</span>'}</td>`+
-    `<td class="num low">${p.voorraad}</td><td class="num">${p.min}</td>`+
-    `<td class="num"><b>${p.bestel}</b></td>`+
+    `<td class="num low">${overVoorraad(p)}</td><td class="num">${minOverNorm(p)}</td>`+
+    `<td class="num"><b>${teBestellen(p)}</b></td>`+
     `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
   }).join('');
   document.getElementById('bestelBody').innerHTML = rows || '<tr><td colspan="7" class="muted">Alles is op voorraad, niets te bestellen.</td></tr>';
@@ -7697,6 +7748,7 @@ function renderInstellingen(){
   shopTabAls();
   renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
   document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:2;
+  document.getElementById('s_minover').value=state.minOverNorm!=null?state.minOverNorm:2;
   document.getElementById('s_kasmax').value=kasMax();
   document.getElementById('s_marge').value=stdMarge();
   const i=state.instellingen||{};
