@@ -114,11 +114,22 @@ Deno.serve(async (req) => {
   const betaald = String(order.displayFinancialStatus || "").toUpperCase() === "PAID";
   const verzonden = String(order.displayFulfillmentStatus || "").toUpperCase() === "FULFILLED";
 
+  /* De eerder bewaarde bestelling is onze betrouwbare terugval: daarin staan de
+     hardware-id's van de toestellen. Nodig omdat we bij de verkoop de
+     shopify-marker uit het toestel halen; een toestel zonder code/serienummer is
+     daarna niet meer via de melding te matchen, en paid/cancelled/fulfilled komen
+     als losse meldingen binnen. */
+  const { data: bestaand } = await admin.from("webshop_bestellingen")
+    .select("id, toestellen").eq("team_id", kop.team_id).eq("kanaal", "shopify")
+    .eq("bestelling_id", String(bestellingId)).maybeSingle();
+  const eerderToestellen: any[] = Array.isArray(bestaand?.toestellen) ? bestaand.toestellen : [];
+
   /* ── de toestellen uit deze bestelling ──
      Herkennen doen we aan het product-ID dat we bij het publiceren hebben
      opgeslagen. Het korte nummer op de sku is de reservemanier, bijvoorbeeld
      als iemand het product in Shopify zelf opnieuw heeft aangemaakt. */
   const gevonden: { id: string; naam: string; code: string | null }[] = [];
+  const gedaan = new Set<string>();
 
   for (const r of regels) {
     const productId = r?.product?.id || null;
@@ -148,6 +159,7 @@ Deno.serve(async (req) => {
       naam: [rij.merk, rij.model].filter(Boolean).join(" "),
       code: rij.code || null,
     });
+    gedaan.add(rij.id);
 
     /* Geannuleerd betekent: hij is er weer. Zet hem terug op voorraad, want
        anders staat er een laptop in je magazijn die het systeem verkocht denkt
@@ -178,6 +190,27 @@ Deno.serve(async (req) => {
     console.log("shopify-webhook: toestel", rij.id, "verkocht in de webshop");
   }
 
+  /* Toestellen die we deze melding niet meer konden matchen (marker weg, geen
+     sku) halen we uit de eerder bewaarde bestelling. Bij een annulering zetten
+     we ze alsnog terug op voorraad; en de toestellenlijst van de bestelling mag
+     nooit leeglopen op een vervolgmelding. */
+  const toestellenSamen: any[] = [...gevonden];
+  for (const t of eerderToestellen) {
+    if (!t?.id || gedaan.has(t.id)) continue;
+    toestellenSamen.push(t);
+    if (geannuleerd) {
+      const { data: hw } = await admin.from("hardware")
+        .select("id, status").eq("team_id", kop.team_id).eq("id", t.id).maybeSingle();
+      if (hw && hw.status === "verkocht") {
+        await admin.from("hardware").update({
+          status: "voorraad", verkocht_op: null, verkocht_via: null,
+          bijgewerkt_op: new Date().toISOString(),
+        }).eq("id", hw.id);
+        console.log("shopify-webhook: geannuleerd (via bewaarde bestelling), toestel", hw.id, "terug op voorraad");
+      }
+    }
+  }
+
   /* ── de bestelling zelf bewaren ──
      Zodat je in Storvo ziet wat er besteld is en niet alleen dat er iets uit de
      voorraad verdwenen is. */
@@ -196,15 +229,11 @@ Deno.serve(async (req) => {
       titel: r.title, sku: r.sku || null, aantal: r.quantity,
       bedrag: geld(r.originalTotalSet),
     })),
-    toestellen: gevonden,
+    toestellen: toestellenSamen,
     beheer_url: `https://${kop.domein}/admin/orders/${nummer}`,
     geplaatst_op: order.createdAt || new Date().toISOString(),
     bijgewerkt_op: new Date().toISOString(),
   };
-
-  const { data: bestaand } = await admin.from("webshop_bestellingen")
-    .select("id").eq("team_id", kop.team_id).eq("kanaal", "shopify")
-    .eq("bestelling_id", String(bestellingId)).maybeSingle();
 
   if (bestaand) {
     await admin.from("webshop_bestellingen").update(rij).eq("id", bestaand.id);
