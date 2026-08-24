@@ -73,53 +73,48 @@ de bug nog.
 
 ---
 
-## Deel C — Webshopdata uploaden: eerst een keuze, dan klaarzetten
+## Deel C — Webshopdata uploaden: gebouwd en droog getest
 
-**De kern van het probleem.** Er zijn twee losse Shopify-pijplijnen die niet op
-elkaar zijn afgestemd:
+**Keuze gemaakt:** één product per uniek toestel (model A). Je thema leest de
+specs en de staat op productniveau (`product.metafields.refuro.*`), dus varianten
+per grade zijn niet nodig. Dat past bij unieke refurbished laptops met eigen
+foto's.
 
-- **Live (Edge Functions, hoofdrepo).** Zet per toestel de specs in de
-  *omschrijving*, de grade als tag `staat-A/B/C`, en géén `refuro.*` metafields.
-  Regelt foto's wel (uit de refurbish-app + Icecat).
-- **Het thema (webshop-repo).** Verwacht `refuro.*` metafields (cpu, ram, opslag,
-  scherm, accu_gezondheid, …), de grade als *uitstekend / zeer_goed / prima*, en
-  de nieuwprijs als Shopify-vergelijkprijs. De bijbehorende importer
-  (`storvo-sync`) is nog een skelet en is nooit gedraaid.
+**Wat ik heb gebouwd en getest** (in `refuro-webshop/storvo-sync/`, lokaal
+gecommit — die repo heeft geen remote):
 
-Gevolg: een toestel dat nu via de live koppeling online gaat, toont in jóuw thema
-een **lege specificatietabel, geen grade-badge en geen accu-balk**, en het
-grade-filter werkt niet. Dit moet eerst recht voordat een batch de webshop op kan.
+- **`src/webshop-upload.js`** — zet elk toestel als eigen Shopify-product neer,
+  thema-correct: de `refuro.*` metafields (cpu, ram, opslag, scherm,
+  accu_gezondheid, geschikt_voor, …), de grade als *uitstekend/zeer_goed/prima*,
+  de filter-tags (`merk-`, `staat-`, `gebruik-`) en de nieuwprijs als
+  Shopify-vergelijkprijs. Standaard **droog** (schrijft niets).
+- **`src/metafields-aanmaken.js`** — maakt in één keer alle 24 metafield-definities
+  aan (scheelt 24× klikken).
+- **`voorbeeld-toestellen.csv`** — 6 verzonnen laptops als proefdata.
+- **`GEBRUIK-UPLOAD.md`** — de gebruiksuitleg.
 
-**Aanbevolen richting** (jullie afspraak: het thema is leidend): laat de live
-koppeling het thema-formaat schrijven — `refuro.*` metafields plus grade
-uitstekend/zeer_goed/prima. Dat is een aanpassing in
-`supabase/functions/shopify/index.ts` (de actie `online`), plus eenmalig de
-metafield-definities in Shopify aanmaken (`refuro-webshop/docs/04-METAFIELDS.md`).
-Dit raakt de klantgerichte productpagina's, dus dat wil ik met jou afstemmen
-voordat ik het live zet — het staat als plan klaar, niet uitgevoerd.
+Beide scripts draaien **zonder `npm install`**. De droogloop op de proefdata gaf
+**0 waarschuwingen** en de mapping klopt (grade, tags, prijzen, metafields,
+locatie).
 
-**Het datasjabloon voor jouw batch.** Lever de laptops aan in exact deze kolommen
-(zie ook `refuro-webshop/storvo-sync/voorbeeld-export.csv`), puntkomma-gescheiden:
+**Om het live te zetten hoef jij alleen:**
+1. `storvo-sync/.env` invullen (kopie van `.env.example`): `SHOPIFY_SHOP`, je
+   `SHOPIFY_ADMIN_TOKEN`, en de twee locatie-ID's (winkel + magazijn).
+2. `node src/metafields-aanmaken.js --toepassen` (de definities aanmaken).
+3. De proefdata vervangen door je echte toestellen in dezelfde kolommen — of geef
+   ze mij, dan giet ik ze erin.
+4. `node src/webshop-upload.js jouw-toestellen.csv` (droog controleren), en dan
+   met `--toepassen` echt uploaden.
 
-```
-artikel_id; artikelnummer; omschrijving; merk; model; verkoopprijs; adviesprijs;
-voorraad; voorraad_winkel; locatie; staat; staat_opmerking; processor; geheugen;
-opslag; schermmaat; videokaart; besturingssysteem; toetsenbord; aansluitingen;
-bouwjaar; accu_percentage; gewicht; garantie_maanden; serienummer
-```
+**Nog niet ingebouwd:** foto's van je computer rechtstreeks uploaden (vraagt een
+staged upload). Foto's die al op een publieke URL staan — zoals die uit de
+refurbish-app — werken wel: zet ze in een kolom `fotos`, gescheiden met een `|`.
 
-- `staat` mag A/B/C of Uitstekend/Zeer goed/Prima zijn (wordt omgezet).
-- `verkoopprijs`/`adviesprijs` in euro's met een komma (`649,00`).
-- **Foto's** zitten niet in het CSV: die upload je per product (of komen via de
-  live refurbish-app + Icecat). Lever ze het liefst per `artikel_id` aan.
-
-**Voordat een echte upload kan** (naast de datakeuze):
-- De `refuro.*` metafield-definities in Shopify aanmaken (eenmalig).
-- Bij de CSV-importer: `.env` invullen (zie de nieuwe `.env.example`) met jouw
-  Shopify-admin-token en de twee locatie-ID's. Altijd eerst `DRY_RUN=true`.
-
-Geef me de data + je keuze (thema-formaat via de live koppeling, of de CSV-route),
-dan maak ik het upload-klaar.
+**Ter info:** de live Edge Function (`supabase/functions/shopify/index.ts`) schrijft
+nog het oude formaat (specs in de omschrijving, grade als `staat-A`). Voor de
+doorlopende "Online zetten"-knop per toestel zou die dezelfde mapping moeten
+krijgen. Dat raakt de klantpagina's, dus dat stem ik met je af; de CSV-route
+hierboven is nu de batchweg.
 
 ---
 
