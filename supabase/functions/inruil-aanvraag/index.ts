@@ -71,6 +71,51 @@ async function mail(rij: Record<string, unknown>) {
   });
 }
 
+// Bevestiging naar de klant zelf. Kort en geruststellend, in de taal van de
+// webshop. Van een Refuro-afzender, met de winkel als antwoordadres, zodat een
+// reactie van de klant bij de winkel binnenkomt en niet bij de storvo-afzender.
+async function klantMail(rij: Record<string, unknown>, taal: string) {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return;
+  const naar = String(rij.email || "");
+  if (!naar) return;
+
+  const van = Deno.env.get("RESEND_KLANT_FROM") || "Refuro <welkom@storvo.app>";
+  const antwoord = Deno.env.get("INRUIL_NAAR") || "info@refuro.nl";
+  const rj = (rij.ruwe_json ?? {}) as Record<string, unknown>;
+  const tegoed = rj.uitbetaling === "tegoed";
+  const en = taal === "en";
+  const naam = String(rij.naam || "").split(" ")[0];
+  const toestel = String(rij.toestel || "");
+  const schatting = String(rij.schatting || "");
+  const regel = (label: string, waarde: string) => waarde ? `<b>${label}:</b> ${waarde}<br>` : "";
+
+  const onderwerp = en ? "We received your trade-in request" : "We hebben je inruilaanvraag ontvangen";
+  const html = en
+    ? `<div style="font-family:system-ui,Arial,sans-serif;color:#1B2254;line-height:1.55">
+        <h2 style="margin:0 0 12px">Thanks, we received your request</h2>
+        <p>Hi ${naam || "there"}, we received your trade-in request.</p>
+        <p>${regel("Device", toestel)}${regel("Estimate", schatting)}<b>Payout:</b> ${tegoed ? "store credit" : "to your bank account"}</p>
+        <p>You will hear from us within one working day with the fixed price. After that you bring the device to our shop in Rijen or send it in for free. Turn off Find My or your Google account so we can take it over right away.</p>
+        <p>The estimate is based on your answers. We confirm the final price after a quick check. No obligation.</p>
+        <p>Kind regards,<br>Refuro</p>
+      </div>`
+    : `<div style="font-family:system-ui,Arial,sans-serif;color:#1B2254;line-height:1.55">
+        <h2 style="margin:0 0 12px">Bedankt, we hebben je aanvraag</h2>
+        <p>Hoi ${naam || "daar"}, we hebben je inruilaanvraag goed ontvangen.</p>
+        <p>${regel("Toestel", toestel)}${regel("Richtprijs", schatting)}<b>Uitbetaling:</b> ${tegoed ? "winkeltegoed" : "op je rekening"}</p>
+        <p>Je hoort binnen één werkdag van ons met de vaste prijs. Daarna breng je het toestel langs in Rijen of stuur je het gratis op. Zet alvast Zoek mijn of je Google-account uit, dan kunnen we het meteen overnemen.</p>
+        <p>De richtprijs is een schatting op basis van je antwoorden. De definitieve prijs bevestigen we na een korte controle. Zonder verplichting.</p>
+        <p>Groeten,<br>Refuro</p>
+      </div>`;
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: van, to: [naar], reply_to: antwoord, subject: onderwerp, html }),
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -130,8 +175,11 @@ Deno.serve(async (req) => {
   const { error } = await admin.from("webshop_inruil_aanvragen").insert(rij);
   if (error) return fout("Opslaan mislukte, probeer het zo nog eens.", 500);
 
-  // Notificatie mag het antwoord niet ophouden; een mailfout is geen 500.
+  // Notificatie mag het antwoord niet ophouden; een mailfout is geen 500. Twee
+  // mails: eentje naar de winkel, eentje als bevestiging naar de klant zelf.
+  const taal = knip(lijf["taal"], 5).toLowerCase().startsWith("en") ? "en" : "nl";
   try { EdgeRuntime.waitUntil(mail(rij)); } catch { /* geen waitUntil beschikbaar: laat lopen */ }
+  try { EdgeRuntime.waitUntil(klantMail(rij, taal)); } catch { /* laat lopen */ }
 
   return new Response(JSON.stringify({ ok: true }), { headers: cors });
 });
