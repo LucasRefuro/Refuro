@@ -4959,6 +4959,7 @@ function renderInruil(){
         ${x.accu?`<div><span>Accu</span>${esc(x.accu)}</div>`:''}
         ${x.email?`<div><span>E-mail</span><a href="mailto:${esc(x.email)}">${esc(x.email)}</a></div>`:''}
         ${x.adres?`<div><span>Adres</span>${esc(x.adres)}</div>`:''}
+        ${rj.uitbetaling?`<div><span>Uitbetaling</span>${rj.uitbetaling==='tegoed'?'Winkeltegoed':'Op rekening'}</div>`:''}
         ${x.iban?`<div><span>IBAN</span><span class="mono">${esc(x.iban)}</span></div>`:''}
         <div><span>Nieuwsbrief</span>${x.nieuwsbrief?'ja':'nee'}</div>
       </div>

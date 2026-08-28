@@ -44,6 +44,8 @@ async function mail(rij: Record<string, unknown>) {
 
   const van = Deno.env.get("RESEND_FROM") || "Storvo <welkom@storvo.app>";
   const r = (k: string) => String(rij[k] ?? "-");
+  const rj = (rij.ruwe_json ?? {}) as Record<string, unknown>;
+  const uitLabel = rj.uitbetaling === "tegoed" ? "Winkeltegoed" : "Op rekening (IBAN)";
   const html = `
     <h2 style="margin:0 0 12px">Nieuwe inruilaanvraag</h2>
     <p><b>Toestel:</b> ${r("toestel")}<br>
@@ -53,6 +55,7 @@ async function mail(rij: Record<string, unknown>) {
        <b>E-mail:</b> ${r("email")}<br>
        <b>Telefoon:</b> ${r("telefoon")}<br>
        <b>Adres:</b> ${r("adres")}<br>
+       <b>Uitbetaling:</b> ${uitLabel}<br>
        <b>IBAN:</b> ${r("iban")}<br>
        <b>Nieuwsbrief:</b> ${rij.nieuwsbrief ? "ja" : "nee"}</p>`;
   await fetch("https://api.resend.com/emails", {
@@ -118,6 +121,7 @@ Deno.serve(async (req) => {
       straat: knip(lijf["straat"], 120),
       plaats: knip(lijf["plaats"], 120),
       akkoord: lijf["akkoord"] === true,
+      uitbetaling: knip(lijf["uitbetaling"], 20) === "tegoed" ? "tegoed" : "contant",
       ip: req.headers.get("x-forwarded-for") || "",
       ua: req.headers.get("user-agent") || "",
     },
