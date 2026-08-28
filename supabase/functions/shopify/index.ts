@@ -47,6 +47,22 @@ async function fotosVan(h: any) {
   }));
 }
 
+/* Ligt dit toestel op de winkellocatie, of in het magazijn of de werkplaats? Dat
+   bepaalt op de productpagina of "ophalen in de winkel" aangeklikt mag worden.
+   We schrijven het als metafield refuro.winkelvoorraad (1 of 0); het thema leest
+   dat en zet de ophaaloptie aan of grijs. Soort "winkel" is de fysieke winkel. */
+async function ligtInWinkel(locatieId: string | null): Promise<boolean> {
+  if (!locatieId) return false;
+  const { data: loc } = await admin.from("hardware_locaties")
+    .select("soort").eq("id", locatieId).maybeSingle();
+  return loc?.soort === "winkel";
+}
+
+// Eén regel voor het metafield, hergebruikt bij online zetten en bij verplaatsen.
+function winkelvoorraadMetafield(inWinkel: boolean) {
+  return { namespace: "refuro", key: "winkelvoorraad", type: "number_integer", value: inWinkel ? "1" : "0" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -77,6 +93,7 @@ Deno.serve(async (req) => {
       if (h.verkoop == null) return fout("Vul eerst een vraagprijs in");
       const titel = h.titel || [h.merk, h.model].filter(Boolean).join(" ");
       const bestaand = kanalen.shopify?.id || null;
+      const inWinkel = await ligtInWinkel(h.locatie_id);
 
       /* productSet doet in één keer wat vroeger vier aanroepen kostte: het
          product, de variant, de prijs en de voorraad. Dat scheelt niet alleen
@@ -89,6 +106,7 @@ Deno.serve(async (req) => {
         productType: h.categorie || "Laptop",
         status: "ACTIVE",
         tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || ""].filter(Boolean),
+        metafields: [winkelvoorraadMetafield(inWinkel)],
         productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
         variants: [{
           price: String(h.verkoop),
@@ -193,6 +211,22 @@ Deno.serve(async (req) => {
       });
       letOp(uit?.productVariantsBulkUpdate, "Het bijwerken van de prijs");
       return new Response(JSON.stringify({ ok: true }), { headers: cors });
+    }
+
+    if (actie === "locatie") {
+      // Alleen de ophaal-indicator op de productpagina bijwerken nadat een toestel
+      // is verplaatst. Staat het niet online, dan is er niets te doen.
+      const s = kanalen.shopify;
+      if (!s?.id) return new Response(JSON.stringify({ ok: true, overgeslagen: true }), { headers: cors });
+      const inWinkel = await ligtInWinkel(h.locatie_id);
+      const uit = await graphql(k, `
+        mutation($mf: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $mf) {
+            userErrors { field message }
+          }
+        }`, { mf: [{ ownerId: s.id, ...winkelvoorraadMetafield(inWinkel) }] });
+      letOp(uit?.metafieldsSet, "Het bijwerken van de winkelvoorraad");
+      return new Response(JSON.stringify({ ok: true, winkelvoorraad: inWinkel ? 1 : 0 }), { headers: cors });
     }
 
     return fout("Onbekende actie");

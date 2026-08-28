@@ -6413,6 +6413,7 @@ async function hwScanNu(id){
 
   const e=document.getElementById('hw_scan'); if(e){ e.value=''; e.focus(); }
   await hwLaad(true);
+  hwSyncWinkel(id);
   hwWachtTeken(); hwScanLogTeken();
   piep(660);
   toast(vanNaam
@@ -6660,6 +6661,7 @@ async function hwVerplaats(id, knop){
   }catch(e){ console.error('verplaatsing loggen', e); }
   await hwVolgRefurbish(id, naar);
   await hwLaad(true);
+  hwSyncWinkel(id);
   toast((vanNaam||'Nergens')+' → '+(naarNaam||'—'), true);
   hwHistorieLaden(id);
 }
@@ -6803,6 +6805,25 @@ async function hwShopify(id, wat, knop){
     if(knop){ knop.disabled=false; knop.textContent=oud; }
     toast(e.message,'fout');
   }
+}
+
+/* Na een verplaatsing: staat het toestel op de webshop, dan laten we de winkel
+   weten of het nu in de winkel ligt. Dat stuurt de ophaal-optie op de product-
+   pagina (aanklikbaar of grijs). Stil en best-effort: mislukt het, dan klopt de
+   voorraad nog, alleen de ophaal-optie loopt achter tot de volgende keer. Niet
+   online, of geen webshop gekoppeld: dan gebeurt er niets. */
+async function hwSyncWinkel(id){
+  const h=hwData.find(x=>x.id===id);
+  if(!h || !hwOnline(h)) return;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    await fetch(SUPABASE_URL+'/functions/v1/shopify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'locatie', hardware_id:id})
+    });
+  }catch(e){ console.error('winkelvoorraad syncen', e); }
 }
 
 /* ---------- AI-teksten ---------- */
