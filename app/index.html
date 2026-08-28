@@ -307,6 +307,14 @@
   .bststatus.geannuleerd{background:var(--red-soft); color:var(--red-tekst);}
   .bstnieuwvlag{font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
     padding:3px 9px; border-radius:var(--pil); background:var(--navy); color:#fff;}
+  /* Details van een inruilaanvraag: twee kolommen label-en-waarde, op smal scherm
+     onder elkaar. Het label is grijs en smal zodat de waarden netjes uitlijnen. */
+  .inr-details{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 22px;
+    margin-top:12px; font-size:13.5px;}
+  .inr-details > div{display:flex; gap:8px; align-items:baseline; min-width:0;}
+  .inr-details > div > span:first-child{color:var(--muted); font-weight:600; flex:none; min-width:74px;}
+  .inr-details .mono{word-break:break-all;}
+  @media(max-width:640px){ .inr-details{grid-template-columns:1fr;} }
   /* De locatieknoppen zitten in een span zodat ze in één keer te vervangen
      zijn; display:contents zorgt dat ze toch gewoon meedoen in de rij. */
   #hwLocFilters{display:contents;}
@@ -1477,6 +1485,7 @@
     <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
     <button data-tab="webshop" id="webshopLink" hidden><svg class="i"><use href="#i-cart"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
+    <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
@@ -1917,6 +1926,24 @@
   <div class="card breed">
     <h2><svg class="i"><use href="#i-cart"/></svg>Bestellingen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
     <div id="bstLijst">Bezig met laden…</div>
+  </div>
+</section>
+
+<!-- INRUIL: aanvragen die via de webshop binnenkomen, los van Shopify. Ze komen
+     via de Edge Function inruil-aanvraag in webshop_inruil_aanvragen. -->
+<section id="tab-inruil" hidden>
+  <div class="pagehead">
+    <h1>Inruilaanvragen</h1>
+    <div class="periodesel" id="inrFilter">
+      <button data-f="alles" class="active">Alles</button>
+      <button data-f="nieuw">Nieuw</button>
+      <button data-f="open">Open</button>
+    </div>
+  </div>
+  <div class="kpis" id="inrKpis"></div>
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-recycle"/></svg>Aanvragen<span class="muted klein" id="inrTelling" style="margin-left:8px"></span></h2>
+    <div id="inrLijst">Bezig met laden…</div>
   </div>
 </section>
 
@@ -2537,6 +2564,7 @@ function showTab(t){
   if(t==='voorraad') renderVoorraad();
   if(t==='hardware') hwLaad();
   if(t==='webshop') bstLaad();
+  if(t==='inruil') inrLaad();
   if(t==='aanvragen') renderAanvragen();
   if(t==='kassa') renderKassa();
   if(t==='bestellen') renderBestellen();
@@ -4842,6 +4870,129 @@ async function bstGezien(id){
   renderBestellingen(); bstBadge();
 }
 
+/* ---------- inruilaanvragen uit de webshop ----------
+
+   Iemand biedt op de webshop een toestel aan; dat komt via de Edge Function
+   inruil-aanvraag in webshop_inruil_aanvragen terecht (los van Shopify). Deze
+   pagina laat ze zien zodat je ze kunt afhandelen. Nieuw = nog niet bekeken.
+   De winkelier krijgt óók een mail, maar dit is het overzicht om af te vinken. */
+
+let inrData=[], inrFilterNu='alles';
+
+async function inrLaad(stil){
+  if(!account) return;
+  const vak=document.getElementById('inrLijst');
+  if(vak && !stil) vak.innerHTML='Bezig met laden…';
+  const {data,error}=await sb.from('webshop_inruil_aanvragen').select('*')
+    .order('aangemaakt_op',{ascending:false}).limit(200);
+  if(error){
+    if(vak) vak.innerHTML='<p class="muted">Kon de inruilaanvragen niet laden.</p>';
+    return;
+  }
+  inrData=data||[];
+  renderInruil();
+  inrBadge();
+}
+
+function inrBadge(){
+  const b=document.getElementById('inrBadge');
+  if(!b) return;
+  const n=inrData.filter(x=>!x.gezien).length;
+  b.textContent=n; b.style.display=n?'':'none';
+  b.title=n?n+' nieuwe inruilaanvraag/aanvragen':'';
+}
+
+function inrZichtbaar(x){
+  if(inrFilterNu==='nieuw') return !x.gezien;
+  if(inrFilterNu==='open')  return x.status!=='afgerond' && x.status!=='afgewezen';
+  return true;
+}
+
+function inrStatusNaam(x){
+  if(x.status==='afgerond')       return 'Afgerond';
+  if(x.status==='afgewezen')      return 'Afgewezen';
+  if(x.status==='in_behandeling') return 'In behandeling';
+  return 'Nieuw';
+}
+function inrStatusKlasse(x){
+  if(x.status==='afgerond')  return 'betaald';
+  if(x.status==='afgewezen') return 'geannuleerd';
+  return 'open';
+}
+
+function renderInruil(){
+  const vak=document.getElementById('inrLijst'); if(!vak) return;
+
+  const kpi=document.getElementById('inrKpis');
+  if(kpi){
+    const nieuw=inrData.filter(x=>!x.gezien).length;
+    const open=inrData.filter(x=>x.status!=='afgerond' && x.status!=='afgewezen').length;
+    const maand=inrData.filter(x=> new Date(x.aangemaakt_op) > new Date(Date.now()-30*86400000));
+    kpi.innerHTML=
+      `<div class="kpi${nieuw?' hwattentie':''}"><div class="l">Nieuw</div><div class="v">${nieuw}</div></div>`+
+      `<div class="kpi"><div class="l">Open</div><div class="v">${open}</div></div>`+
+      `<div class="kpi"><div class="l">Deze maand</div><div class="v">${maand.length}</div></div>`;
+  }
+
+  const rijen=inrData.filter(inrZichtbaar);
+  const tel=document.getElementById('inrTelling');
+  if(tel) tel.textContent=rijen.length?'('+rijen.length+')':'';
+
+  if(!rijen.length){
+    vak.innerHTML=`<p class="muted">${inrData.length
+      ? 'Niets in deze lijst.'
+      : 'Nog geen inruilaanvragen. Zodra iemand op de webshop een toestel aanbiedt, staat het hier.'}</p>`;
+    return;
+  }
+
+  vak.innerHTML=rijen.map(x=>{
+    const rj=x.ruwe_json||{};
+    return `<div class="bstrij${!x.gezien?' nieuw':''}">
+      <div class="bstkop">
+        ${!x.gezien?'<span class="bstnieuwvlag">Nieuw</span>':''}
+        <span class="bstnr">${esc(x.toestel||'—')}</span>
+        <span class="bstklant">${esc(x.naam||'')}${x.telefoon?' · '+esc(x.telefoon):''}</span>
+        <span class="bstbedrag">${esc(x.schatting||'—')}</span>
+      </div>
+
+      <div class="inr-details">
+        ${x.accu?`<div><span>Accu</span>${esc(x.accu)}</div>`:''}
+        ${x.email?`<div><span>E-mail</span><a href="mailto:${esc(x.email)}">${esc(x.email)}</a></div>`:''}
+        ${x.adres?`<div><span>Adres</span>${esc(x.adres)}</div>`:''}
+        ${x.iban?`<div><span>IBAN</span><span class="mono">${esc(x.iban)}</span></div>`:''}
+        <div><span>Nieuwsbrief</span>${x.nieuwsbrief?'ja':'nee'}</div>
+      </div>
+
+      <div class="bstvoet">
+        <span class="bststatus ${inrStatusKlasse(x)}">${esc(inrStatusNaam(x))}</span>
+        <span class="muted klein">${x.aangemaakt_op
+          ? new Date(x.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})
+          : ''}</span>
+        <span style="margin-left:auto"></span>
+        ${!x.gezien?`<button class="btn ghost small" onclick="inrGezien('${x.id}')">Gezien</button>`:''}
+        ${x.status!=='in_behandeling'&&x.status!=='afgerond'&&x.status!=='afgewezen'?`<button class="btn ghost small" onclick="inrStatus('${x.id}','in_behandeling')">In behandeling</button>`:''}
+        ${x.status!=='afgerond'?`<button class="btn ghost small" onclick="inrStatus('${x.id}','afgerond')">Afgerond</button>`:''}
+        ${x.status!=='afgewezen'?`<button class="btn ghost small" onclick="inrStatus('${x.id}','afgewezen')">Afwijzen</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Afvinken zet alleen "gezien"; het bolletje in het menu gaat dan uit. */
+async function inrGezien(id){
+  const {error}=await sb.from('webshop_inruil_aanvragen').update({gezien:true}).eq('id',id);
+  if(error){ toast('Afvinken mislukt','fout'); return; }
+  const x=inrData.find(a=>a.id===id); if(x) x.gezien=true;
+  renderInruil(); inrBadge();
+}
+
+async function inrStatus(id,status){
+  const {error}=await sb.from('webshop_inruil_aanvragen').update({status:status,gezien:true}).eq('id',id);
+  if(error){ toast('Bijwerken mislukt','fout'); return; }
+  const x=inrData.find(a=>a.id===id); if(x){ x.status=status; x.gezien=true; }
+  renderInruil(); inrBadge();
+}
+
 /* ---------- de webshop koppelen ----------
 
    Eén keer instellen, daarna nooit meer omkijken. Het lastige is niet de code
@@ -5127,8 +5278,8 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','kassa','bestellen','instellingen','team'],
-  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','kassa','bestellen']
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','instellingen','team'],
+  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -6087,6 +6238,7 @@ function moduleLinks(){
   const l=document.getElementById('refurbLink');
   if(l) l.hidden = !moduleAan('refurbish');
   webshopLink();
+  inrLaad(true);
 }
 
 /* De webshoppagina heeft geen zin zonder gekoppelde webshop; dan is het een
