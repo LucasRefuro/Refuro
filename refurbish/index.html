@@ -3983,6 +3983,18 @@ function vrdLaag(o){
   return min>0 && (Number(o.aantal)||0)<=min;
 }
 
+/* De partijen (lots) zijn leidend; aantal en prijs zijn de samenvatting. aantal
+   is het totaal, prijs die van de eerstvolgende partij (de oudste die er nog is,
+   want die pak je als eerste). Lege partijen vallen weg. */
+function vrdSync(lots){
+  const arr=(Array.isArray(lots)?lots:[])
+    .map(l=>({aantal:Math.max(0,Math.round(Number(l.aantal)||0)), prijs:Math.round((Number(l.prijs)||0)*100)/100}))
+    .filter(l=>l.aantal>0);
+  const aantal=arr.reduce((n,l)=>n+l.aantal,0);
+  const prijs=arr.length?arr[0].prijs:0;
+  return {aantal, prijs, lots:arr};
+}
+
 function tekenVoorraaddelen(){
   const laagLijst=voorraaddelen.filter(vrdLaag);
   const bv=document.getElementById('bVrd');
@@ -4015,12 +4027,16 @@ function tekenVoorraaddelen(){
     <thead><tr><th>Onderdeel</th><th>Soort</th><th class="num">Op voorraad</th><th class="num">Minimum</th><th class="num">Prijs</th><th></th></tr></thead>
     <tbody>${voorraaddelen.map(o=>{
       const laag=vrdLaag(o);
+      const lots=Array.isArray(o.lots)?o.lots:[];
+      const sub=lots.length>1
+        ? lots.map(l=>l.aantal+' à '+euro(Number(l.prijs)||0)).join(' · ')
+        : (o.leverancier||'');
       return `<tr>
-        <td><b>${esc(o.naam)}</b>${o.leverancier?`<div class="muted klein">${esc(o.leverancier)}</div>`:''}</td>
+        <td><b>${esc(o.naam)}</b>${sub?`<div class="muted klein">${esc(sub)}</div>`:''}</td>
         <td class="muted klein">${esc(batSoortNaam(o.soort))}</td>
         <td class="num${laag?' rood':''}">${o.aantal}${laag?' <span class="batpil batpil-ongetest">bijbestellen</span>':''}</td>
         <td class="num muted">${o.min_aantal||0}</td>
-        <td class="num">${euro(Number(o.prijs)||0)}</td>
+        <td class="num">${euro(Number(o.prijs)||0)}${lots.length>1?' <span class="muted klein">e.v.</span>':''}</td>
         <td class="num" style="white-space:nowrap">
           <button class="btn ghost small" title="Voorraad bijboeken" onclick="vrdBijboek('${o.id}')">Bijboeken</button>
           <button class="btn ghost small" onclick="vrdBewerk('${o.id}')">Bewerken</button>
@@ -4033,6 +4049,7 @@ function vrdNieuw(){ vrdForm(null); }
 function vrdBewerk(id){ vrdForm(voorraaddelen.find(o=>o.id===id)||null); }
 function vrdForm(o){
   const s=o?o.soort||'':'';
+  const lots=o&&Array.isArray(o.lots)?o.lots:[];
   const inhoud=`<div class="grid">
       <div style="grid-column:1/-1"><label>Naam</label><input id="vd_naam" value="${o?esc(o.naam||''):''}" placeholder="bijv. SSD 256GB of RAM 8GB DDR4"></div>
       <div><label>Soort</label><select id="vd_soort">
@@ -4041,11 +4058,17 @@ function vrdForm(o){
         <option value="lader"${s==='lader'?' selected':''}>Lader</option>
         <option value="anders"${(!s||s==='anders')?' selected':''}>Overig</option>
       </select></div>
-      <div><label>Aantal op voorraad</label><input id="vd_aantal" type="number" min="0" value="${o?(o.aantal||0):''}" placeholder="0"></div>
-      <div><label>Inkoopprijs per stuk</label><input id="vd_prijs" type="number" step="0.01" min="0" value="${o&&o.prijs!=null?o.prijs:''}" placeholder="0,00"></div>
       <div><label>Minimum</label><input id="vd_min" type="number" min="0" value="${o?(o.min_aantal||0):''}" placeholder="0"></div>
       <div><label>Leverancier</label><input id="vd_lev" value="${o?esc(o.leverancier||''):''}"></div>
-    </div>`;
+      ${o?'':`<div><label>Aantal eerste partij</label><input id="vd_aantal" type="number" min="0" value="" placeholder="0"></div>
+      <div><label>Prijs per stuk</label><input id="vd_prijs" type="number" step="0.01" min="0" value="" placeholder="0,00"></div>`}
+    </div>
+    ${o?`<div class="veldkop"><label>Partijen op voorraad</label></div>
+      ${lots.length?`<div class="tabelrol"><table><tbody>${lots.map((l,i)=>`<tr>
+        <td>${l.aantal} stuks à ${euro(Number(l.prijs)||0)}</td>
+        <td class="num"><button class="btn ghost small" title="Partij weghalen" onclick="vrdLotWeg('${o.id}',${i})">×</button></td>
+      </tr>`).join('')}</tbody></table></div>`:'<p class="muted klein">Geen voorraad. Boek een partij bij met de knop Bijboeken op de lijst.</p>'}
+      <p class="muted klein" style="margin-top:8px">Een nieuwe partij bijkopen doe je met Bijboeken; daar geef je de prijs van díe partij op.</p>`:''}`;
   const knoppen=[{tekst:o?'Opslaan':'Toevoegen', klasse:'actie', doe:(kn)=>vrdOpslaan(kn, o?o.id:null)}];
   if(o) knoppen.push({tekst:'Verwijderen', klasse:'rood', doe:()=>vrdWeg(o.id)});
   venster(o?'Voorraad bewerken':'Voorraad toevoegen', inhoud, knoppen);
@@ -4055,34 +4078,64 @@ async function vrdOpslaan(knop, id){
   if(!naam){ toast('Vul een naam in','let-op'); return; }
   const rij={
     naam, soort:document.getElementById('vd_soort').value||null,
-    aantal:Math.max(0, Math.round(Number(document.getElementById('vd_aantal').value)||0)),
-    prijs:Math.round((Number(document.getElementById('vd_prijs').value)||0)*100)/100,
     min_aantal:Math.max(0, Math.round(Number(document.getElementById('vd_min').value)||0)),
     leverancier:(document.getElementById('vd_lev').value||'').trim()||null,
     bijgewerkt_op:new Date().toISOString()
   };
+  let sync;
+  if(id){
+    /* Bewerken raakt alleen de gegevens, niet de partijen zelf. */
+    const o=voorraaddelen.find(x=>x.id===id);
+    sync=vrdSync(o?o.lots:[]);
+  }else{
+    const aantal=Math.max(0, Math.round(Number(document.getElementById('vd_aantal').value)||0));
+    const prijs=Math.round((Number(document.getElementById('vd_prijs').value)||0)*100)/100;
+    sync=vrdSync(aantal>0?[{aantal, prijs}]:[]);
+    rij.team_id=account.team_id;
+  }
+  rij.lots=sync.lots; rij.aantal=sync.aantal; rij.prijs=sync.prijs;
   await bezig(knop, async()=>{
     if(id){ const {error}=await sb.from('refurbish_voorraad').update(rij).eq('id',id); if(error) throw error; }
-    else { rij.team_id=account.team_id; const {error}=await sb.from('refurbish_voorraad').insert(rij); if(error) throw error; }
+    else { const {error}=await sb.from('refurbish_voorraad').insert(rij); if(error) throw error; }
     sluit(); await allesLaden(); toast(id?'Voorraad bijgewerkt':'Voorraad toegevoegd', true);
   });
 }
 function vrdBijboek(id){
   const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
-  venster('Voorraad bijboeken', `<p class="pv">Hoeveel ${esc(o.naam)} komen erbij?</p>
-    <div class="grid"><div><label>Aantal erbij</label><input id="vd_bij" type="number" min="1" value="1"></div></div>`,
+  venster('Partij bijboeken', `<p class="pv">Een nieuwe partij ${esc(o.naam)} bijboeken, met de prijs die je er deze keer voor betaalde.</p>
+    <div class="grid">
+      <div><label>Aantal</label><input id="vd_bij" type="number" min="1" value="1"></div>
+      <div><label>Prijs per stuk</label><input id="vd_bijprijs" type="number" step="0.01" min="0" value="${o.prijs!=null?o.prijs:''}" placeholder="0,00"></div>
+    </div>`,
     [{tekst:'Bijboeken', klasse:'actie', doe:(kn)=>vrdBijboekOpslaan(kn, id)}]);
 }
 async function vrdBijboekOpslaan(knop, id){
   const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
   const erbij=Math.max(0, Math.round(Number(document.getElementById('vd_bij').value)||0));
+  const prijs=Math.round((Number(document.getElementById('vd_bijprijs').value)||0)*100)/100;
   if(!erbij){ toast('Vul een aantal in','let-op'); return; }
+  const lots=(Array.isArray(o.lots)?o.lots.slice():[]);
+  lots.push({aantal:erbij, prijs});
+  const sync=vrdSync(lots);
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_voorraad')
-      .update({aantal:(Number(o.aantal)||0)+erbij, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+      .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw error;
-    sluit(); await allesLaden(); toast('Voorraad bijgeboekt', true);
+    sluit(); await allesLaden(); toast('Partij bijgeboekt', true);
   });
+}
+async function vrdLotWeg(id, index){
+  const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  const lots=(Array.isArray(o.lots)?o.lots.slice():[]);
+  if(index<0 || index>=lots.length) return;
+  lots.splice(index,1);
+  const sync=vrdSync(lots);
+  const {error}=await sb.from('refurbish_voorraad')
+    .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Mislukt','fout'); return; }
+  await allesLaden();
+  const o2=voorraaddelen.find(x=>x.id===id);
+  if(o2) vrdForm(o2); else sluit();
 }
 async function vrdWeg(id){
   if(!confirm('Deze voorraadregel verwijderen?')) return;
@@ -4593,11 +4646,19 @@ async function batExtraToevoegen(id, knop){
     const {error}=await sb.from('refurbish_apparaten')
       .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw error;
-    /* Kwam het uit de voorraad, dan gaat er een van de teller af. */
+    /* Kwam het uit de voorraad, dan gaat er een van af. De oudste partij eerst,
+       zodat de kostprijs die je in oude voorraad hebt zitten er als eerste uit
+       gaat (FIFO). */
     if(vrdId){
       const o=voorraaddelen.find(x=>x.id===vrdId);
-      if(o) await sb.from('refurbish_voorraad')
-        .update({aantal:Math.max(0,(Number(o.aantal)||0)-1), bijgewerkt_op:new Date().toISOString()}).eq('id',vrdId);
+      if(o){
+        const lots=(Array.isArray(o.lots)?o.lots:[]).map(l=>({aantal:Number(l.aantal)||0, prijs:Number(l.prijs)||0}));
+        const eerste=lots.find(l=>l.aantal>0);
+        if(eerste) eerste.aantal-=1;
+        const sync=vrdSync(lots);
+        await sb.from('refurbish_voorraad')
+          .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',vrdId);
+      }
     }
     await allesLaden();
     toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
@@ -4615,11 +4676,17 @@ async function batExtraWeg(id, index){
   const {error}=await sb.from('refurbish_apparaten')
     .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
   if(error){ toast('Mislukt','fout'); return; }
-  /* Kwam het uit de voorraad, dan gaat het er weer bij: weghalen is een correctie. */
+  /* Kwam het uit de voorraad, dan gaat het er weer bij tegen de prijs die het
+     toestel ervoor betaalde: weghalen is een correctie. Vooraan, zodat het er
+     als eerste weer uit gaat. */
   if(weg.voorraad_id){
     const o=voorraaddelen.find(x=>x.id===weg.voorraad_id);
-    if(o) await sb.from('refurbish_voorraad')
-      .update({aantal:(Number(o.aantal)||0)+1, bijgewerkt_op:new Date().toISOString()}).eq('id',weg.voorraad_id);
+    if(o){
+      const lots=[{aantal:1, prijs:Number(weg.bedrag)||0}].concat(Array.isArray(o.lots)?o.lots:[]);
+      const sync=vrdSync(lots);
+      await sb.from('refurbish_voorraad')
+        .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',weg.voorraad_id);
+    }
   }
   await allesLaden();
 }
