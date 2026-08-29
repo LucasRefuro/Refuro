@@ -155,6 +155,22 @@ tr.klikbaar{cursor:pointer;}
 .hwact{white-space:nowrap;}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
 .tabelrol{overflow-x:auto; max-width:100%;}
+
+  /* ---------- batches: partij-overzicht ---------- */
+  .batpil{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:var(--pil);
+    border:1px solid var(--border); color:var(--muted); margin-left:6px; vertical-align:middle;}
+  .batpil-werkend{border-color:transparent; background:var(--green-soft); color:var(--green-tekst);}
+  .batpil-ongetest{border-color:transparent; background:var(--amber-soft); color:var(--amber-tekst);}
+  .batbon{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
+    background:var(--green-soft); color:var(--green-tekst); white-space:nowrap;}
+  .batbon-zb{background:var(--amber-soft); color:var(--amber-tekst);}
+  .batwinst{color:var(--green-tekst); font-weight:800;}
+  .batverlies{color:var(--red-tekst); font-weight:800;}
+  .batrij{cursor:pointer;}
+  .batkostform{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:16px;
+    padding-top:16px; border-top:1px solid var(--border);}
+  .batkoppellijst{display:flex; flex-direction:column; gap:2px; max-height:340px; overflow-y:auto; margin-bottom:6px;}
+  .batkoppelrij{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border); cursor:pointer;}
 .muted{color:var(--muted);}
 .klein{font-size:12.5px;}
 
@@ -578,6 +594,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   </div>
   <nav>
     <button data-tab="werkbank" class="active"><svg class="i"><use href="#i-laptop"/></svg> Werkbank</button>
+    <button data-tab="batches"><svg class="i"><use href="#i-box"/></svg> Batches</button>
     <button data-tab="toevoegen"><svg class="i"><use href="#i-plus"/></svg> Toevoegen</button>
     <button data-tab="controle"><svg class="i"><use href="#i-check"/></svg> Te controleren<span class="badge" id="bControle" hidden>0</span></button>
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
@@ -613,6 +630,25 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <h2><svg class="i"><use href="#i-laptop"/></svg>Alles wat in behandeling is</h2>
         <div id="wbLijst"></div>
       </div>
+    </section>
+
+    <!-- ── batches ──
+         Los toevoegen, batch als overzicht. Je maakt een partij aan, koppelt er
+         toestellen aan, en ziet per partij wat het je kostte en opbracht. De
+         toestellen zijn refurbish_apparaten; de omzet komt uit de hardware-rij
+         waar ze aan gekoppeld raken zodra ze verkocht zijn. -->
+    <section id="tab-batches" hidden>
+      <div class="pagehead">
+        <h1>Batches</h1>
+        <button class="btn actie" onclick="batNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe batch</button>
+      </div>
+      <div id="batLijstVak">
+        <div class="card">
+          <h2><svg class="i"><use href="#i-box"/></svg>Partijen <span class="muted" id="batTelling"></span></h2>
+          <div id="batLijst"></div>
+        </div>
+      </div>
+      <div id="batDetailVak" hidden></div>
     </section>
 
     <!-- ── toevoegen ──
@@ -893,6 +929,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 let account=null, abonnement=null;
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
+let batches=[], batHuidig=null;
 let instel={accu_min:80};
 let tab='werkbank';
 
@@ -982,19 +1019,20 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
-  const [a,o,c,r,m,i,h]=await Promise.all([
+  const [a,o,c,r,m,i,h,bt]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_checklists').select('*').order('categorie'),
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
     sb.from('refurbish_instellingen').select('*').maybeSingle(),
-    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,titel')
-      .order('aangemaakt_op',{ascending:false}).limit(1000)
+    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel')
+      .order('aangemaakt_op',{ascending:false}).limit(1000),
+    sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false})
   ]);
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
-  hardwares=h.data||[];
+  hardwares=h.data||[]; batches=bt.data||[];
   if(i && i.data) instel=i.data;
   /* Het logo hoort bij de instellingen, dus dat halen we hier ook op; anders
      tekent het voorbeeld de eerste keer zonder logo. */
@@ -1021,7 +1059,7 @@ function past(a){
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenVoorraad(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
-  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges();
+  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches();
 }
 function tekenBadges(){
   const zet=(id,n)=>{ const e=document.getElementById(id); if(!e) return;
@@ -4289,6 +4327,323 @@ async function bezig(knop, doe){
   try{ await doe(); }
   catch(e){ toast(e.message||'Er ging iets mis','fout'); }
   if(knop){ knop.disabled=false; knop.textContent=oud; }
+}
+
+/* ═══════════════════════ Batches ═══════════════════════
+   Een batch is een ingekochte partij. Je voegt toestellen gewoon toe bij
+   Toevoegen en koppelt ze daarna aan een partij; deze pagina is het geldover-
+   zicht. De toestellen zijn refurbish_apparaten (batch_id). De omzet komt uit de
+   hardware-rij waar een toestel aan gekoppeld raakt zodra het is overgedragen en
+   verkocht, aan de balie of op de webshop. De partij zelf, met kosten, marge en
+   verwachting, staat in refurbish_batches. */
+function batBetaalNaam(bet){
+  return bet==='pin'?'pin':bet==='cash'?'cash met bon':bet==='webshop'?'webshop':'zonder bon';
+}
+function batSoortNaam(s){
+  return s==='ssd'?'SSD':s==='ram'?'RAM':s==='lader'?'Lader':s==='reparatie'?'Reparatie':'Overig';
+}
+
+/* Korte samenvatting van de onderdelen: hoeveel ssd's, ram en laders erin gingen. */
+function batOnderdelen(b){
+  const t={ssd:0, ram:0, lader:0, reparatie:0, anders:0};
+  (Array.isArray(b.kosten)?b.kosten:[]).forEach(k=>{
+    const s=t.hasOwnProperty(k.soort)?k.soort:'anders';
+    t[s]+=(Number(k.aantal)||0);
+  });
+  const uit=[];
+  if(t.ssd) uit.push(t.ssd+'x SSD');
+  if(t.ram) uit.push(t.ram+'x RAM');
+  if(t.lader) uit.push(t.lader+'x lader');
+  if(t.reparatie) uit.push(t.reparatie+'x reparatie');
+  if(t.anders) uit.push(t.anders+'x overig');
+  return uit.join(' · ');
+}
+
+/* Alle cijfers van een partij op een rij. Investering = partijprijs plus de
+   inkoop per toestel plus de losse kosten. Omzet = wat de gekoppelde, verkochte
+   toestellen opbrachten, gesplitst in met bon en zonder bon. Een webshopverkoop
+   telt altijd als met bon. */
+function batCijfers(id){
+  const b=batches.find(x=>x.id===id)||{};
+  const devs=apparaten.filter(a=>a.batch_id===id);
+  const devInkoop=devs.reduce((n,a)=>n+(Number(a.inkoop)||0),0);
+  const extras=(Array.isArray(b.kosten)?b.kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
+  const investering=(Number(b.inkoopprijs)||0)+devInkoop+extras;
+  let omzetBon=0, omzetZb=0, verkocht=0, teKoop=0, teKoopWaarde=0;
+  devs.forEach(a=>{
+    const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
+    if(hw && hw.status==='verkocht'){
+      verkocht++;
+      const bedrag=Number(hw.verkoop)||0;
+      const bet=hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash');
+      if(bet==='cash_zb') omzetZb+=bedrag; else omzetBon+=bedrag;
+    }else{
+      teKoop++;
+      if(hw) teKoopWaarde+=(Number(hw.verkoop)||0);
+    }
+  });
+  const omzet=omzetBon+omzetZb;
+  const winst=omzet-investering;
+  const btw=b.marge?Math.max(0,winst)*0.21/1.21:omzet*0.21/1.21;
+  return {b, aantal:devs.length, verkocht, teKoop, teKoopWaarde,
+          investering, devInkoop, extras, omzet, omzetBon, omzetZb, winst, btw, devs};
+}
+
+function tekenBatches(){
+  const lijstVak=document.getElementById('batLijstVak');
+  const detailVak=document.getElementById('batDetailVak');
+  if(!lijstVak || !detailVak) return;
+  if(batHuidig && batches.some(b=>b.id===batHuidig)){
+    lijstVak.hidden=true; detailVak.hidden=false; renderBatchDetail(); return;
+  }
+  batHuidig=null; lijstVak.hidden=false; detailVak.hidden=true; detailVak.innerHTML='';
+  const tel=document.getElementById('batTelling');
+  if(tel) tel.textContent=batches.length?'('+batches.length+')':'';
+  const vak=document.getElementById('batLijst'); if(!vak) return;
+  if(!batches.length){
+    vak.innerHTML='<p class="muted">Nog geen batches. Maak een partij aan en koppel er toestellen aan, dan zie je de investering, de omzet en de winst per partij.</p>';
+    return;
+  }
+  vak.innerHTML=`<div class="tabelrol"><table>
+    <thead><tr><th>Batch</th><th>Leverancier</th><th class="num">Verkocht</th>
+      <th class="num">Investering</th><th class="num">Omzet</th><th class="num">Winst</th><th></th></tr></thead>
+    <tbody>${batches.map(b=>{
+      const c=batCijfers(b.id);
+      return `<tr class="batrij" onclick="batOpen('${b.id}')">
+        <td><b>${esc(b.nummer||'Naamloos')}</b> <span class="batpil">${b.marge?'marge':'btw 21%'}</span>${b.verwacht?`<span class="batpil batpil-${b.verwacht}">${b.verwacht==='ongetest'?'ongetest':'werkend'}</span>`:''}</td>
+        <td>${b.leverancier?esc(b.leverancier):'<span class="muted">geen</span>'}</td>
+        <td class="num">${c.verkocht}/${c.aantal}</td>
+        <td class="num">${euro(c.investering)}</td>
+        <td class="num">${euro(c.omzet)}</td>
+        <td class="num"><b class="${c.winst>=0?'batwinst':'batverlies'}">${euro(c.winst)}</b></td>
+        <td class="num"><svg class="i s"><use href="#i-arrow"/></svg></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function batOpen(id){ batHuidig=id; tekenBatches(); window.scrollTo(0,0); }
+function batTerug(){ batHuidig=null; tekenBatches(); }
+
+function renderBatchDetail(){
+  const vak=document.getElementById('batDetailVak'); if(!vak) return;
+  const b=batches.find(x=>x.id===batHuidig); if(!b){ batTerug(); return; }
+  const c=batCijfers(b.id);
+  const devs=c.devs;
+  const kosten=Array.isArray(b.kosten)?b.kosten:[];
+  const onderdelen=batOnderdelen(b);
+
+  const devRijen=devs.map(a=>{
+    const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
+    const verkocht=hw && hw.status==='verkocht';
+    const bedrag=verkocht?(Number(hw.verkoop)||0):null;
+    const bet=verkocht?(hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash')):null;
+    const hoe=verkocht
+      ? `<span class="batbon ${bet==='cash_zb'?'batbon-zb':''}">${batBetaalNaam(bet)}</span>`
+      : (hw?'<span class="locpil">te koop</span>':'<span class="locpil leeg">werkbank</span>');
+    return `<tr>
+      <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b>${a.code?`<div class="muted klein mono">${esc(a.code)}</div>`:''}</td>
+      <td class="num">${euro(Number(a.inkoop)||0)}</td>
+      <td class="num">${verkocht?euro(bedrag):(hw&&hw.verkoop!=null?euro(hw.verkoop):'<span class="muted">-</span>')}</td>
+      <td>${hoe}</td>
+      <td class="num"><button class="btn ghost small" title="Uit batch halen" onclick="batLos('${a.id}')">×</button></td>
+    </tr>`;
+  }).join('');
+
+  const kostRijen=kosten.map((k,i)=>`<tr>
+      <td>${esc(batSoortNaam(k.soort))}</td>
+      <td class="num">${Number(k.aantal)||0}</td>
+      <td class="num">${euro(Number(k.bedrag)||0)}</td>
+      <td>${esc(k.omschrijving||'')}</td>
+      <td class="num"><button class="btn ghost small" onclick="batKostWeg(${i})">×</button></td>
+    </tr>`).join('');
+
+  vak.innerHTML=`
+    <div class="pagehead">
+      <button class="btn ghost" onclick="batTerug()"><svg class="i s"><use href="#i-left"/></svg>Alle batches</button>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost" onclick="batBewerk('${b.id}')"><svg class="i s"><use href="#i-note"/></svg>Bewerken</button>
+        <button class="btn ghost" onclick="batVerwijder('${b.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom:2px">${esc(b.nummer||'Naamloos')}</h2>
+      <p class="muted klein">${b.leverancier?esc(b.leverancier)+' · ':''}${b.marge?'Margeregeling':'Normale btw (21%)'}${b.verwacht?' · binnengekomen als '+(b.verwacht==='ongetest'?'ongetest':'werkend'):''}</p>
+      ${b.notitie?`<p class="muted klein" style="margin-top:4px">${esc(b.notitie)}</p>`:''}
+      <div class="kpis" style="margin-top:18px">
+        <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div>
+          <div class="muted klein" style="margin-top:6px">toestellen ${euro(c.devInkoop)}${(Number(b.inkoopprijs)||0)?' · partij '+euro(Number(b.inkoopprijs)||0):''}${c.extras?' · kosten '+euro(c.extras):''}</div></div>
+        <div class="kpi"><div class="l">Omzet</div><div class="v">${euro(c.omzet)}</div>
+          <div class="muted klein" style="margin-top:6px">met bon ${euro(c.omzetBon)} · zonder bon ${euro(c.omzetZb)}</div></div>
+        <div class="kpi"><div class="l">Winst</div><div class="v ${c.winst>=0?'batwinst':'batverlies'}">${euro(c.winst)}</div>
+          <div class="muted klein" style="margin-top:6px">${c.verkocht} van ${c.aantal} verkocht</div></div>
+        <div class="kpi"><div class="l">Nog te verkopen</div><div class="v">${euro(c.teKoopWaarde)}</div>
+          <div class="muted klein" style="margin-top:6px">${c.teKoop} ${c.teKoop===1?'toestel':'toestellen'}</div></div>
+        <div class="kpi"><div class="l">Btw-indicatie</div><div class="v">${euro(c.btw)}</div>
+          <div class="muted klein" style="margin-top:6px">${b.marge?'marge, over de winst':'over de omzet'}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px">
+        <h2 style="margin:0"><svg class="i"><use href="#i-laptop"/></svg>Toestellen in deze batch <span class="muted">(${devs.length})</span></h2>
+        <button class="btn ghost small" onclick="batKoppelOpen()"><svg class="i s"><use href="#i-plus"/></svg>Toestellen koppelen</button>
+      </div>
+      ${devs.length?`<div class="tabelrol"><table>
+        <thead><tr><th>Toestel</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th>Hoe verkocht</th><th></th></tr></thead>
+        <tbody>${devRijen}</tbody></table></div>`
+        :'<p class="muted">Nog geen toestellen. Voeg ze toe bij Toevoegen en koppel ze hier, of gebruik de knop hierboven.</p>'}
+    </div>
+
+    <div class="card">
+      <h2><svg class="i"><use href="#i-wrench"/></svg>Kosten en onderdelen${onderdelen?` <span class="muted">(${onderdelen})</span>`:''}</h2>
+      ${kosten.length?`<div class="tabelrol"><table>
+        <thead><tr><th>Soort</th><th class="num">Aantal</th><th class="num">Bedrag</th><th>Omschrijving</th><th></th></tr></thead>
+        <tbody>${kostRijen}</tbody></table></div>`
+        :'<p class="muted">Nog geen kosten. Voeg onderdelen of reparaties toe, dan tellen ze mee in de investering.</p>'}
+      <div class="batkostform">
+        <select id="bk_soort">
+          <option value="ssd">SSD</option><option value="ram">RAM</option>
+          <option value="lader">Lader</option><option value="reparatie">Reparatie</option>
+          <option value="anders">Overig</option>
+        </select>
+        <input id="bk_aantal" type="number" min="1" value="1" style="max-width:80px" placeholder="Aantal">
+        <input id="bk_bedrag" type="number" step="0.01" min="0" style="max-width:130px" placeholder="Totaal in euro">
+        <input id="bk_oms" placeholder="Omschrijving (mag leeg)" style="min-width:160px; flex:1">
+        <button class="btn" onclick="batKostToevoegen(this)">Toevoegen</button>
+      </div>
+    </div>`;
+}
+
+function batNieuw(){ batForm(null); }
+function batBewerk(id){ batForm(batches.find(b=>b.id===id)||null); }
+
+function batForm(b){
+  const vw=b?b.verwacht||'':'';
+  const inhoud=`<div class="grid">
+      <div style="grid-column:1/-1"><label>Naam of nummer</label><input id="bf_naam" value="${b?esc(b.nummer||''):''}" placeholder="bijv. Dell pallet januari"></div>
+      <div><label>Leverancier</label><input id="bf_lev" value="${b?esc(b.leverancier||''):''}" placeholder="waar komt het vandaan"></div>
+      <div><label>Extra inkoop partij</label><input id="bf_ink" type="number" step="0.01" min="0" value="${b&&b.inkoopprijs!=null?b.inkoopprijs:''}" placeholder="0,00"></div>
+      <div><label>Btw</label><select id="bf_marge">
+        <option value="ja"${!b||b.marge?' selected':''}>Margeregeling</option>
+        <option value="nee"${b&&!b.marge?' selected':''}>Normale btw (21%)</option>
+      </select></div>
+      <div><label>Binnengekomen als</label><select id="bf_verwacht">
+        <option value=""${vw===''?' selected':''}>Onbekend</option>
+        <option value="werkend"${vw==='werkend'?' selected':''}>Werkend</option>
+        <option value="ongetest"${vw==='ongetest'?' selected':''}>Ongetest</option>
+      </select></div>
+    </div>
+    <div class="veldkop"><label>Notitie</label></div>
+    <textarea id="bf_notitie" rows="2" placeholder="bijv. factuurnummer">${b?esc(b.notitie||''):''}</textarea>
+    <p class="muted klein" style="margin-top:8px">De inkoop per toestel vul je bij Toevoegen in; die telt al mee. Vul hier alleen iets als je de hele partij voor een los bedrag kocht.</p>`;
+  venster(b?'Batch bewerken':'Nieuwe batch', inhoud, [
+    {tekst:b?'Opslaan':'Aanmaken', klasse:'actie', doe:(kn)=>batBewaar(kn, b?b.id:null)}
+  ]);
+}
+
+async function batBewaar(knop, id){
+  const naam=(document.getElementById('bf_naam').value||'').trim();
+  if(!naam){ toast('Geef de batch een naam','let-op'); return; }
+  const rij={
+    nummer:naam,
+    leverancier:(document.getElementById('bf_lev').value||'').trim()||null,
+    inkoopprijs:Math.round((Number(document.getElementById('bf_ink').value)||0)*100)/100,
+    marge:document.getElementById('bf_marge').value==='ja',
+    verwacht:document.getElementById('bf_verwacht').value||null,
+    notitie:(document.getElementById('bf_notitie').value||'').trim()||null
+  };
+  await bezig(knop, async()=>{
+    if(id){
+      const {error}=await sb.from('refurbish_batches').update(rij).eq('id',id);
+      if(error) throw error;
+      const b=batches.find(x=>x.id===id); if(b) Object.assign(b, rij);
+    }else{
+      rij.team_id=account.team_id;
+      const {data,error}=await sb.from('refurbish_batches').insert(rij).select().single();
+      if(error) throw error;
+      if(data){ batches.unshift(data); batHuidig=data.id; }
+    }
+    sluit(); tekenBatches();
+    toast(id?'Batch bijgewerkt':'Batch aangemaakt', true);
+  });
+}
+
+async function batVerwijder(id){
+  const c=batCijfers(id);
+  const vraag=c.aantal
+    ? 'Deze batch verwijderen? De '+c.aantal+' toestellen blijven bestaan, ze horen daarna bij geen partij meer.'
+    : 'Deze batch verwijderen?';
+  if(!confirm(vraag)) return;
+  /* Eerst de toestellen loskoppelen, dan de partij weg. Zo maakt het niet uit
+     hoe de sleutel in de database is ingesteld. */
+  await sb.from('refurbish_apparaten').update({batch_id:null}).eq('batch_id',id);
+  const {error}=await sb.from('refurbish_batches').delete().eq('id',id);
+  if(error){ toast('Verwijderen mislukt','fout'); return; }
+  apparaten.forEach(a=>{ if(a.batch_id===id) a.batch_id=null; });
+  batches=batches.filter(b=>b.id!==id);
+  batHuidig=null; sluit(); tekenBatches();
+  toast('Batch verwijderd', true);
+}
+
+function batKoppelOpen(){
+  const vrij=apparaten.filter(a=>!a.batch_id);
+  if(!vrij.length){ toast('Geen losse toestellen om te koppelen','let-op'); return; }
+  const inhoud=`<p class="pv">Vink de toestellen aan die bij deze partij horen.</p>
+    <div class="batkoppellijst">${vrij.map(a=>`<label class="batkoppelrij">
+      <input type="checkbox" value="${a.id}">
+      <span>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}${a.code?' <span class="muted klein mono">'+esc(a.code)+'</span>':''}</span>
+    </label>`).join('')}</div>`;
+  venster('Toestellen koppelen', inhoud, [
+    {tekst:'Koppelen', klasse:'actie', doe:(kn)=>batKoppel(kn)}
+  ]);
+}
+
+async function batKoppel(knop){
+  const ids=[...document.querySelectorAll('#vensterInhoud input[type=checkbox]:checked')].map(e=>e.value);
+  if(!ids.length){ toast('Niets aangevinkt','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({batch_id:batHuidig, bijgewerkt_op:new Date().toISOString()}).in('id',ids);
+    if(error) throw error;
+    ids.forEach(id=>{ const a=apparaten.find(x=>x.id===id); if(a) a.batch_id=batHuidig; });
+    sluit(); tekenBatches();
+    toast(ids.length+(ids.length>1?' toestellen':' toestel')+' gekoppeld', true);
+  });
+}
+
+async function batLos(apparaatId){
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({batch_id:null, bijgewerkt_op:new Date().toISOString()}).eq('id',apparaatId);
+  if(error){ toast('Mislukt','fout'); return; }
+  const a=apparaten.find(x=>x.id===apparaatId); if(a) a.batch_id=null;
+  tekenBatches();
+}
+
+async function batKostToevoegen(knop){
+  const b=batches.find(x=>x.id===batHuidig); if(!b) return;
+  const soort=document.getElementById('bk_soort').value;
+  const aantal=Number(document.getElementById('bk_aantal').value)||0;
+  const bedrag=Math.round((Number(document.getElementById('bk_bedrag').value)||0)*100)/100;
+  const oms=(document.getElementById('bk_oms').value||'').trim();
+  if(!aantal && !bedrag){ toast('Vul een aantal of een bedrag in','let-op'); return; }
+  const kosten=(Array.isArray(b.kosten)?b.kosten:[]).slice();
+  kosten.push({soort, aantal, bedrag, omschrijving:oms||null});
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_batches').update({kosten}).eq('id',b.id);
+    if(error) throw error;
+    b.kosten=kosten; tekenBatches();
+  });
+}
+
+async function batKostWeg(i){
+  const b=batches.find(x=>x.id===batHuidig); if(!b) return;
+  const kosten=(Array.isArray(b.kosten)?b.kosten:[]).slice();
+  if(i<0 || i>=kosten.length) return;
+  kosten.splice(i,1);
+  const {error}=await sb.from('refurbish_batches').update({kosten}).eq('id',b.id);
+  if(error){ toast('Mislukt','fout'); return; }
+  b.kosten=kosten; tekenBatches();
 }
 
 /* Een gescand label opent meteen het juiste apparaat. */
