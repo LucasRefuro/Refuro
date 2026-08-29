@@ -600,7 +600,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-shop"/></svg> Voorraad<span class="badge" id="bKlaar" hidden>0</span></button>
     <button data-tab="donoren"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
-    <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen</button>
+    <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen<span class="badge" id="bVrd" hidden>0</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
     <button data-tab="checklists"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
   </nav>
@@ -763,14 +763,22 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <section id="tab-onderdelen" hidden>
       <div class="pagehead">
         <h1>Onderdelen</h1>
-        <button class="btn actie" onclick="deelNieuw()"><svg class="i"><use href="#i-plus"/></svg>Onderdeel toevoegen</button>
-      </div>
-      <div class="periodesel" id="deelWeergave" style="margin-bottom:18px">
-        <button data-w="soort" class="active">Per soort</button>
-        <button data-w="stuk">Per stuk</button>
+        <div class="row" style="gap:8px">
+          <button class="btn actie" onclick="vrdNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Voorraad toevoegen</button>
+          <button class="btn ghost" onclick="deelNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Los onderdeel</button>
+        </div>
       </div>
       <div class="card">
-        <h2><svg class="i"><use href="#i-cpu"/></svg>Op de plank</h2>
+        <h2><svg class="i"><use href="#i-cpu"/></svg>Voorraad <span class="muted klein" id="vrdTelling"></span></h2>
+        <p class="muted klein" style="margin-bottom:14px">Onderdelen die je in partij inkoopt: ssd, ram, laders. Bij een toestel kies je ze uit deze voorraad, dan gaan ze er hier vanaf. Zet een minimum, dan zie je wanneer je moet bijbestellen.</p>
+        <div id="vrdLijst"></div>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-recycle"/></svg>Uit apparaten gehaald</h2>
+        <div class="periodesel" id="deelWeergave" style="margin-bottom:14px">
+          <button data-w="soort" class="active">Per soort</button>
+          <button data-w="stuk">Per stuk</button>
+        </div>
         <div id="deelLijst"></div>
       </div>
     </section>
@@ -784,6 +792,10 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       <div class="card">
         <h2><svg class="i"><use href="#i-cart"/></svg>Nog te bestellen</h2>
         <div id="bestelLijst"></div>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-cpu"/></svg>Voorraad onder minimum</h2>
+        <div id="vrdBestelLijst"></div>
       </div>
       <div class="card">
         <h2><svg class="i"><use href="#i-box"/></svg>Lopende inkooporders</h2>
@@ -931,6 +943,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let account=null, abonnement=null;
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
+let voorraaddelen=[];
 let instel={accu_min:80};
 let tab='werkbank';
 
@@ -1020,7 +1033,7 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
-  const [a,o,c,r,m,i,h,bt]=await Promise.all([
+  const [a,o,c,r,m,i,h,bt,vd]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_checklists').select('*').order('categorie'),
@@ -1029,11 +1042,12 @@ async function allesLaden(){
     sb.from('refurbish_instellingen').select('*').maybeSingle(),
     sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel')
       .order('aangemaakt_op',{ascending:false}).limit(1000),
-    sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false})
+    sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
+    sb.from('refurbish_voorraad').select('*').order('naam')
   ]);
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
-  hardwares=h.data||[]; batches=bt.data||[];
+  hardwares=h.data||[]; batches=bt.data||[]; voorraaddelen=vd.data||[];
   if(i && i.data) instel=i.data;
   /* Het logo hoort bij de instellingen, dus dat halen we hier ook op; anders
      tekent het voorbeeld de eerste keer zonder logo. */
@@ -1060,7 +1074,7 @@ function past(a){
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenVoorraad(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
-  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches();
+  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches(); tekenVoorraaddelen();
 }
 function tekenBadges(){
   const zet=(id,n)=>{ const e=document.getElementById(id); if(!e) return;
@@ -1532,6 +1546,11 @@ function tekenApparaat(){
                  <td class="num">${euro(Number(k.bedrag)||0)}</td>
                  <td class="num"><button class="btn ghost small" title="Weghalen" onclick="batExtraWeg('${a.id}',${i})">×</button></td></tr>`).join('')}</tbody></table>`:''}
           <div class="batkostform">
+            <select id="ex_voorraad" onchange="exVoorraadKies()">
+              <option value="">Los onderdeel</option>
+              ${voorraaddelen.filter(o=>(Number(o.aantal)||0)>0).map(o=>
+                `<option value="${o.id}">${esc(o.naam)} · ${o.aantal} op voorraad · ${euro(Number(o.prijs)||0)}</option>`).join('')}
+            </select>
             <select id="ex_soort">
               <option value="ssd">SSD</option><option value="ram">RAM</option>
               <option value="lader">Lader</option><option value="reparatie">Reparatie</option>
@@ -3955,6 +3974,138 @@ async function deelWeg(id){
   await allesLaden(); toast('Verwijderd', true);
 }
 
+/* ═══════════════ voorraad van losse onderdelen ═══════════════
+   ssd, ram en laders die je in partij inkoopt. Aantal-gebaseerd, met een minimum
+   zodat je ziet wanneer je moet bijbestellen. Bij een toestel kies je er een uit;
+   dan gaat de teller hier omlaag en komt de prijs bij de inkoop van dat toestel. */
+function vrdLaag(o){
+  const min=Number(o.min_aantal)||0;
+  return min>0 && (Number(o.aantal)||0)<=min;
+}
+
+function tekenVoorraaddelen(){
+  const laagLijst=voorraaddelen.filter(vrdLaag);
+  const bv=document.getElementById('bVrd');
+  if(bv){ bv.textContent=laagLijst.length; bv.hidden=!laagLijst.length; }
+
+  const bestelEl=document.getElementById('vrdBestelLijst');
+  if(bestelEl){
+    bestelEl.innerHTML=laagLijst.length
+      ? `<div class="tabelrol"><table>
+          <thead><tr><th>Onderdeel</th><th class="num">Op voorraad</th><th class="num">Minimum</th><th>Leverancier</th></tr></thead>
+          <tbody>${laagLijst.map(o=>`<tr>
+            <td><b>${esc(o.naam)}</b></td>
+            <td class="num rood">${o.aantal}</td>
+            <td class="num muted">${o.min_aantal}</td>
+            <td class="muted klein">${o.leverancier?esc(o.leverancier):'—'}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<p class="muted">Alles ruim op voorraad.</p>';
+  }
+
+  const el=document.getElementById('vrdLijst'); if(!el) return;
+  const tel=document.getElementById('vrdTelling');
+  if(tel) tel.textContent=voorraaddelen.length
+    ? '· '+voorraaddelen.length+(voorraaddelen.length===1?' soort':' soorten')+(laagLijst.length?' · '+laagLijst.length+' onder minimum':'')
+    : '';
+  if(!voorraaddelen.length){
+    el.innerHTML=leeg('i-cpu','Nog geen voorraad','Voeg een partij toe, bijvoorbeeld een doos laders of tien schijven.');
+    return;
+  }
+  el.innerHTML=`<div class="tabelrol"><table>
+    <thead><tr><th>Onderdeel</th><th>Soort</th><th class="num">Op voorraad</th><th class="num">Minimum</th><th class="num">Prijs</th><th></th></tr></thead>
+    <tbody>${voorraaddelen.map(o=>{
+      const laag=vrdLaag(o);
+      return `<tr>
+        <td><b>${esc(o.naam)}</b>${o.leverancier?`<div class="muted klein">${esc(o.leverancier)}</div>`:''}</td>
+        <td class="muted klein">${esc(batSoortNaam(o.soort))}</td>
+        <td class="num${laag?' rood':''}">${o.aantal}${laag?' <span class="batpil batpil-ongetest">bijbestellen</span>':''}</td>
+        <td class="num muted">${o.min_aantal||0}</td>
+        <td class="num">${euro(Number(o.prijs)||0)}</td>
+        <td class="num" style="white-space:nowrap">
+          <button class="btn ghost small" title="Voorraad bijboeken" onclick="vrdBijboek('${o.id}')">Bijboeken</button>
+          <button class="btn ghost small" onclick="vrdBewerk('${o.id}')">Bewerken</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function vrdNieuw(){ vrdForm(null); }
+function vrdBewerk(id){ vrdForm(voorraaddelen.find(o=>o.id===id)||null); }
+function vrdForm(o){
+  const s=o?o.soort||'':'';
+  const inhoud=`<div class="grid">
+      <div style="grid-column:1/-1"><label>Naam</label><input id="vd_naam" value="${o?esc(o.naam||''):''}" placeholder="bijv. SSD 256GB of RAM 8GB DDR4"></div>
+      <div><label>Soort</label><select id="vd_soort">
+        <option value="ssd"${s==='ssd'?' selected':''}>SSD</option>
+        <option value="ram"${s==='ram'?' selected':''}>RAM</option>
+        <option value="lader"${s==='lader'?' selected':''}>Lader</option>
+        <option value="anders"${(!s||s==='anders')?' selected':''}>Overig</option>
+      </select></div>
+      <div><label>Aantal op voorraad</label><input id="vd_aantal" type="number" min="0" value="${o?(o.aantal||0):''}" placeholder="0"></div>
+      <div><label>Inkoopprijs per stuk</label><input id="vd_prijs" type="number" step="0.01" min="0" value="${o&&o.prijs!=null?o.prijs:''}" placeholder="0,00"></div>
+      <div><label>Minimum</label><input id="vd_min" type="number" min="0" value="${o?(o.min_aantal||0):''}" placeholder="0"></div>
+      <div><label>Leverancier</label><input id="vd_lev" value="${o?esc(o.leverancier||''):''}"></div>
+    </div>`;
+  const knoppen=[{tekst:o?'Opslaan':'Toevoegen', klasse:'actie', doe:(kn)=>vrdOpslaan(kn, o?o.id:null)}];
+  if(o) knoppen.push({tekst:'Verwijderen', klasse:'rood', doe:()=>vrdWeg(o.id)});
+  venster(o?'Voorraad bewerken':'Voorraad toevoegen', inhoud, knoppen);
+}
+async function vrdOpslaan(knop, id){
+  const naam=(document.getElementById('vd_naam').value||'').trim();
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
+  const rij={
+    naam, soort:document.getElementById('vd_soort').value||null,
+    aantal:Math.max(0, Math.round(Number(document.getElementById('vd_aantal').value)||0)),
+    prijs:Math.round((Number(document.getElementById('vd_prijs').value)||0)*100)/100,
+    min_aantal:Math.max(0, Math.round(Number(document.getElementById('vd_min').value)||0)),
+    leverancier:(document.getElementById('vd_lev').value||'').trim()||null,
+    bijgewerkt_op:new Date().toISOString()
+  };
+  await bezig(knop, async()=>{
+    if(id){ const {error}=await sb.from('refurbish_voorraad').update(rij).eq('id',id); if(error) throw error; }
+    else { rij.team_id=account.team_id; const {error}=await sb.from('refurbish_voorraad').insert(rij); if(error) throw error; }
+    sluit(); await allesLaden(); toast(id?'Voorraad bijgewerkt':'Voorraad toegevoegd', true);
+  });
+}
+function vrdBijboek(id){
+  const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  venster('Voorraad bijboeken', `<p class="pv">Hoeveel ${esc(o.naam)} komen erbij?</p>
+    <div class="grid"><div><label>Aantal erbij</label><input id="vd_bij" type="number" min="1" value="1"></div></div>`,
+    [{tekst:'Bijboeken', klasse:'actie', doe:(kn)=>vrdBijboekOpslaan(kn, id)}]);
+}
+async function vrdBijboekOpslaan(knop, id){
+  const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  const erbij=Math.max(0, Math.round(Number(document.getElementById('vd_bij').value)||0));
+  if(!erbij){ toast('Vul een aantal in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_voorraad')
+      .update({aantal:(Number(o.aantal)||0)+erbij, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw error;
+    sluit(); await allesLaden(); toast('Voorraad bijgeboekt', true);
+  });
+}
+async function vrdWeg(id){
+  if(!confirm('Deze voorraadregel verwijderen?')) return;
+  const {error}=await sb.from('refurbish_voorraad').delete().eq('id',id);
+  if(error){ toast('Mislukt','fout'); return; }
+  sluit(); await allesLaden(); toast('Verwijderd', true);
+}
+
+/* Kies je bij een toestel een onderdeel uit de voorraad, dan vullen we de soort,
+   de prijs en de naam alvast in. Bij het toevoegen gaat er dan een van de teller. */
+function exVoorraadKies(){
+  const sel=document.getElementById('ex_voorraad'); if(!sel) return;
+  const o=voorraaddelen.find(x=>x.id===sel.value);
+  const soort=document.getElementById('ex_soort');
+  const bedrag=document.getElementById('ex_bedrag');
+  const oms=document.getElementById('ex_oms');
+  if(o){
+    if(soort) soort.value=['ssd','ram','lader','reparatie','anders'].includes(o.soort)?o.soort:'anders';
+    if(bedrag) bedrag.value=Number(o.prijs)||0;
+    if(oms) oms.value=o.naam;
+  }
+}
+
 /* ═══════════════ bestellen ═══════════════ */
 
 function tekenBestellen(){
@@ -4428,6 +4579,8 @@ function batExtraSom(a){
    apart bewaard zodat de batchpagina de extra investering kan laten zien. */
 async function batExtraToevoegen(id, knop){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const vrdSel=document.getElementById('ex_voorraad');
+  const vrdId=vrdSel?vrdSel.value:'';
   const soort=document.getElementById('ex_soort').value;
   const bedrag=Math.round((Number(document.getElementById('ex_bedrag').value)||0)*100)/100;
   const omsEl=document.getElementById('ex_oms');
@@ -4440,6 +4593,12 @@ async function batExtraToevoegen(id, knop){
     const {error}=await sb.from('refurbish_apparaten')
       .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw error;
+    /* Kwam het uit de voorraad, dan gaat er een van de teller af. */
+    if(vrdId){
+      const o=voorraaddelen.find(x=>x.id===vrdId);
+      if(o) await sb.from('refurbish_voorraad')
+        .update({aantal:Math.max(0,(Number(o.aantal)||0)-1), bijgewerkt_op:new Date().toISOString()}).eq('id',vrdId);
+    }
     await allesLaden();
     toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
   });
