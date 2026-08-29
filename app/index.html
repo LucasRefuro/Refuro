@@ -271,6 +271,20 @@
   .hwact{white-space:nowrap;}
   .kpi.hwattentie .v{color:var(--amber-tekst);}
   .hwoud{color:var(--red-tekst); font-weight:700;}
+
+  /* ---------- batches: ingekochte partijen ---------- */
+  .batpil{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:var(--pil);
+    border:1px solid var(--border); color:var(--muted); margin-left:6px; vertical-align:middle;}
+  .batpil-werkend{border-color:transparent; background:var(--green-soft); color:var(--green);}
+  .batpil-ongetest{border-color:transparent; background:var(--amber-soft); color:var(--amber-tekst);}
+  .batbon{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
+    background:var(--green-soft); color:var(--green); white-space:nowrap;}
+  .batbon-zb{background:var(--amber-soft); color:var(--amber-tekst);}
+  .batrij{cursor:pointer;}
+  .bathead{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;}
+  .batinvoer input, .batinvoer select{width:100%; min-width:90px;}
+  .batkostform{display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:14px;
+    padding-top:14px; border-top:1px solid var(--border);}
   .onderweg{font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
     background:var(--amber-soft); color:var(--amber-tekst); white-space:nowrap;}
   /* Van waar naar waar. Dit is het enige wat je wilt zien nadat je gescand
@@ -1484,6 +1498,7 @@
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
+    <button data-tab="batches"><svg class="i"><use href="#i-layers"/></svg> Batches</button>
     <button data-tab="webshop" id="webshopLink" hidden><svg class="i"><use href="#i-cart"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
     <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
@@ -1975,6 +1990,25 @@
     <h2><svg class="i"><use href="#i-laptop"/></svg>Toestellen <span class="muted" id="hwTelling"></span></h2>
     <div id="hwLijst">Bezig met laden…</div>
   </div>
+</section>
+
+<!-- BATCHES -->
+<!-- Een batch is een ingekochte partij, meestal een pallet laptops. De laptops
+     zelf zijn gewone hardware-rijen met een batch_id; hier reken je terug wat de
+     partij kostte, wat er nog in ging aan onderdelen en reparaties, en wat er
+     onder de streep overblijft. -->
+<section id="tab-batches" hidden>
+  <div class="pagehead">
+    <h1>Batches</h1>
+    <button class="btn actie" onclick="batNieuw()"><svg class="i"><use href="#i-plus"/></svg>Nieuwe batch</button>
+  </div>
+  <div id="batLijstVak">
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-layers"/></svg>Partijen <span class="muted" id="batTelling"></span></h2>
+      <div id="batLijst">Bezig met laden…</div>
+    </div>
+  </div>
+  <div id="batDetailVak" hidden></div>
 </section>
 
 <section id="tab-voorraad"hidden>
@@ -2563,6 +2597,7 @@ function showTab(t){
   if(t==='producten') renderProducten();
   if(t==='voorraad') renderVoorraad();
   if(t==='hardware') hwLaad();
+  if(t==='batches') batLaad();
   if(t==='webshop') bstLaad();
   if(t==='inruil') inrLaad();
   if(t==='aanvragen') renderAanvragen();
@@ -5279,7 +5314,7 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','instellingen','team'],
+  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','batches','webshop','inruil','kassa','bestellen','instellingen','team'],
   medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
@@ -5296,6 +5331,7 @@ const UITZETBAAR=[
   {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
   {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en de nulmeting.'},
   {tab:'hardware',    naam:'Hardware',     uitleg:'Losse toestellen met een serienummer, zoals tweedehands laptops en telefoons.'},
+  {tab:'batches',     naam:'Batches',      uitleg:'Ingekochte partijen laptops, met kosten, omzet en winst per partij.'},
   {tab:'aanvragen',   naam:'Aanvragen',    uitleg:'Bestellingen op aanvraag voor klanten, met marge en aanbetaling.'},
   {tab:'kassa',       naam:'Kassa',        uitleg:'Het kasboek, wat er in de lade zit en een melding als het te veel wordt.'},
   {tab:'bestellen',   naam:'Bestellingen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
@@ -6240,6 +6276,9 @@ function moduleLinks(){
   if(l) l.hidden = !moduleAan('refurbish');
   webshopLink();
   inrLaad(true);
+  /* De batchlijst alvast op de achtergrond, zodat de keuzelijst bij een nieuw
+     toestel meteen gevuld is, ook voor wie de batchespagina zelf niet opent. */
+  batMetaLaad(true);
 }
 
 /* De webshoppagina heeft geen zin zonder gekoppelde webshop; dan is het een
@@ -6549,7 +6588,7 @@ let hwOpen=null;
 function hwNieuw(){ hwVenster(null); }
 function hwBewerk(id){ hwVenster(hwData.find(h=>h.id===id)||null); }
 
-function hwVenster(h){
+function hwVenster(h, voorafBatch){
   hwOpen=h;
   const k=(h&&h.kanalen)||{};
   const ov=document.createElement('div');
@@ -6574,6 +6613,10 @@ function hwVenster(h){
       <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:6}"></div>
       <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
       <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
+      ${(typeof batData!=='undefined'&&batData.length)?`<div><label>Batch</label><select id="hw_batch">
+        <option value="">Geen batch</option>
+        ${batData.map(bb=>`<option value="${bb.id}"${((h&&h.batch_id===bb.id)||(!h&&voorafBatch===bb.id))?' selected':''}>${esc(bb.nummer||'Naamloos')}</option>`).join('')}
+      </select></div>`:''}
     </div>
 
     ${h?`<div class="hwverkoop">
@@ -6716,6 +6759,10 @@ async function hwOpslaan(knop){
     if(m) k.marktplaats=m.checked;
     rij.kanalen=k;
   }
+  /* De keuzelijst staat er alleen als er batches zijn. Staat hij er, dan is zijn
+     waarde leidend: leeg betekent bewust uit de batch halen. */
+  const bsel=document.getElementById('hw_batch');
+  if(bsel) rij.batch_id=bsel.value||null;
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Opslaan…'; }
   let fout=null;
   if(hwOpen){
@@ -6732,6 +6779,22 @@ async function hwOpslaan(knop){
 
 async function hwVerwijder(id){
   if(!confirm('Dit toestel helemaal verwijderen?')) return;
+  const h=hwData.find(x=>x.id===id);
+  /* Staat hij online, dan eerst van de webshop halen. Anders blijft er een
+     spookproduct te koop staan terwijl het toestel uit Storvo weg is, en dat is
+     precies de dubbele verkoop die de koppeling moet voorkomen. Best-effort:
+     lukt het weghalen niet, dan verwijderen we hem alsnog uit Storvo. */
+  if(h && hwOnline(h)){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      await fetch(SUPABASE_URL+'/functions/v1/shopify',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+                 'Authorization':'Bearer '+session.access_token},
+        body:JSON.stringify({actie:'offline', hardware_id:id})
+      });
+    }catch(e){ console.error('van webshop halen bij verwijderen', e); }
+  }
   const {error}=await sb.from('hardware').delete().eq('id',id);
   if(error){ toast('Verwijderen mislukt','fout'); return; }
   hwSluit(); await hwLaad(true); toast('Toestel verwijderd', true);
@@ -6824,6 +6887,405 @@ async function hwSyncWinkel(id){
       body:JSON.stringify({actie:'locatie', hardware_id:id})
     });
   }catch(e){ console.error('winkelvoorraad syncen', e); }
+}
+
+/* ═══════════════════════ Batches ═══════════════════════
+   Een batch is een ingekochte partij, meestal een pallet laptops. De winkelier
+   wil er zijn geld op terugrekenen: wat kostte de partij, wat ging er nog in aan
+   ssd's, ram, laders en reparaties, wat bracht het op en wat hield hij eraan
+   over. De partij zelf staat al in refurbish_batches (de refurbish-app maakt hem
+   bij binnenkomst aan); hier op de balie komen de kosten, de omzet en de winst
+   erbij.
+
+   De laptops van een batch zijn gewone hardware-rijen met een batch_id. Zo staat
+   een toestel maar op één plek en klopt de omzet vanzelf zodra hij verkocht
+   wordt, aan de balie of op de webshop. */
+let batData=[], batHuidig=null;
+
+async function batMetaLaad(stil){
+  if(!account) return;
+  const {data,error}=await sb.from('refurbish_batches').select('*')
+    .order('aangemaakt_op',{ascending:false});
+  if(error){ console.error('batches laden:', error); return; }
+  batData=data||[];
+}
+
+async function batLaad(stil){
+  if(!account) return;
+  const v=document.getElementById('batLijst');
+  if(!stil && v && !batHuidig) v.innerHTML='Bezig met laden…';
+  await batMetaLaad(true);
+  /* De cijfers komen uit de hardware-rijen (inkoop, verkoop, status). Die halen
+     we via dezelfde bron als de hardwarepagina, zodat er nooit twee lijsten zijn
+     die iets anders zeggen. */
+  await hwLaad(true);
+  if(batHuidig && batData.some(b=>b.id===batHuidig)) renderBatchDetail();
+  else { batHuidig=null; renderBatches(); }
+}
+
+/* Alle cijfers van één batch op een rij. De investering is de partijprijs plus
+   wat er per laptop apart is ingekocht plus de losse kosten; zo werkt het of je
+   nu een hele pallet voor één bedrag koopt of los per toestel. De omzet splitst
+   in met bon (pin en cash met bon) en zonder bon (cash zonder bon), want dat is
+   de vraag die de winkelier zichzelf stelt. Een webshopverkoop telt altijd als
+   met bon: daar hoort een factuur bij. */
+function batCijfers(id){
+  const b=batData.find(x=>x.id===id)||{};
+  const hw=hwData.filter(h=>h.batch_id===id);
+  const laptopInkoop=hw.reduce((n,h)=>n+(Number(h.inkoop)||0),0);
+  const extras=(Array.isArray(b.kosten)?b.kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
+  const investering=(Number(b.inkoopprijs)||0)+laptopInkoop+extras;
+  let omzetBon=0, omzetZb=0, verkocht=0;
+  hw.forEach(h=>{
+    if(h.status!=='verkocht') return;
+    verkocht++;
+    const vk=(state.verkopen||[]).find(x=>x.hardware===h.id);
+    const bedrag=vk?(Number(vk.verkoop)||0):(Number(h.verkoop)||0);
+    const bet=vk?vk.betaal:(h.verkocht_via==='webshop'?'pin':'cash');
+    if(bet==='cash_zb') omzetZb+=bedrag; else omzetBon+=bedrag;
+  });
+  const omzet=omzetBon+omzetZb;
+  const winst=omzet-investering;
+  const inVoorraad=hw.filter(h=>h.status!=='verkocht');
+  const voorraadWaarde=inVoorraad.reduce((n,h)=>n+(Number(h.verkoop)||0),0);
+  /* Btw-indicatie, geen boekhouding. Marge: btw alleen over de winst. Geen
+     marge: de btw zit in de hele verkoopprijs (21/121). */
+  const btw=b.marge?Math.max(0,winst)*0.21/1.21:omzet*0.21/1.21;
+  return {b, aantal:hw.length, verkocht, inVoorraad:inVoorraad.length,
+          investering, laptopInkoop, extras, omzet, omzetBon, omzetZb,
+          winst, voorraadWaarde, btw, hw};
+}
+
+function batSoortNaam(s){
+  return s==='ssd'?'SSD':s==='ram'?'RAM':s==='lader'?'Lader'
+        :s==='reparatie'?'Reparatie':'Overig';
+}
+
+/* Korte samenvatting van de onderdelen: hoeveel ssd's, ram en laders erin zijn
+   gegaan. Dat is de vraag die de winkelier stelt als hij zijn kast opruimt. */
+function batOnderdelen(b){
+  const t={ssd:0, ram:0, lader:0, reparatie:0, anders:0};
+  (Array.isArray(b.kosten)?b.kosten:[]).forEach(k=>{
+    const s=t.hasOwnProperty(k.soort)?k.soort:'anders';
+    t[s]+=(Number(k.aantal)||0);
+  });
+  const uit=[];
+  if(t.ssd) uit.push(t.ssd+'x SSD');
+  if(t.ram) uit.push(t.ram+'x RAM');
+  if(t.lader) uit.push(t.lader+'x lader');
+  if(t.reparatie) uit.push(t.reparatie+'x reparatie');
+  if(t.anders) uit.push(t.anders+'x overig');
+  return uit.join(' · ');
+}
+
+function renderBatches(){
+  const lijstVak=document.getElementById('batLijstVak');
+  const detailVak=document.getElementById('batDetailVak');
+  if(lijstVak) lijstVak.hidden=false;
+  if(detailVak){ detailVak.hidden=true; detailVak.innerHTML=''; }
+  const vak=document.getElementById('batLijst'); if(!vak) return;
+  const tel=document.getElementById('batTelling');
+  if(tel) tel.textContent=batData.length?'('+batData.length+')':'';
+  if(!batData.length){
+    vak.innerHTML='<p class="muted">Nog geen batches. Maak er een aan met de knop rechtsboven, dan kun je er laptops, kosten en cijfers in kwijt.</p>';
+    return;
+  }
+  vak.innerHTML=`<div style="overflow-x:auto"><table>
+    <thead><tr>
+      <th>Batch</th><th>Leverancier</th><th class="num">Verkocht</th>
+      <th class="num">Investering</th><th class="num">Omzet</th><th class="num">Winst</th><th></th>
+    </tr></thead>
+    <tbody>${batData.map(b=>{
+      const c=batCijfers(b.id);
+      return `<tr class="batrij" onclick="batOpen('${b.id}')">
+        <td><b>${esc(b.nummer||'Naamloos')}</b>
+          <span class="batpil">${b.marge?'marge':'btw 21%'}</span>${b.verwacht?`<span class="batpil batpil-${b.verwacht}">${b.verwacht==='ongetest'?'ongetest':'werkend'}</span>`:''}</td>
+        <td>${esc(b.leverancier||'—')}</td>
+        <td class="num">${c.verkocht}/${c.aantal}</td>
+        <td class="num">${euro(c.investering)}</td>
+        <td class="num">${euro(c.omzet)}</td>
+        <td class="num"><b class="${c.winst>=0?'winst':'verlies'}">${euro(c.winst)}</b></td>
+        <td class="num"><svg class="i s"><use href="#i-right"/></svg></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  if(typeof rolTabellen==='function') rolTabellen();
+}
+
+function batOpen(id){ batHuidig=id; renderBatchDetail(); }
+function batTerug(){ batHuidig=null; renderBatches(); }
+
+function renderBatchDetail(){
+  const lijstVak=document.getElementById('batLijstVak');
+  const vak=document.getElementById('batDetailVak');
+  if(!vak) return;
+  const b=batData.find(x=>x.id===batHuidig);
+  if(!b){ batTerug(); return; }
+  const c=batCijfers(b.id);
+  const hw=c.hw;
+  if(lijstVak) lijstVak.hidden=true;
+  vak.hidden=false;
+
+  const kosten=Array.isArray(b.kosten)?b.kosten:[];
+  const onderdelen=batOnderdelen(b);
+
+  const laptopRijen=hw.length?hw.map(h=>{
+    const vk=(state.verkopen||[]).find(x=>x.hardware===h.id);
+    const verkocht=h.status==='verkocht';
+    const bedrag=verkocht?(vk?(Number(vk.verkoop)||0):(Number(h.verkoop)||0)):null;
+    const bet=verkocht?(vk?vk.betaal:(h.verkocht_via==='webshop'?'pin':'cash')):null;
+    const hoe=verkocht
+      ? `<span class="batbon ${bet==='cash_zb'?'batbon-zb':''}">${bet==='cash_zb'?'zonder bon':(h.verkocht_via==='webshop'?'webshop':betaalNaam(bet))}</span>`
+      : '<span class="locpil">voorraad</span>';
+    return `<tr>
+      <td><b>${esc([h.merk,h.model].filter(Boolean).join(' ')||'Naamloos')}</b>${h.serienummer?`<div class="muted klein">${esc(h.serienummer)}</div>`:''}</td>
+      <td>${esc(h.staat||'')}</td>
+      <td class="num">${euro(Number(h.inkoop)||0)}</td>
+      <td class="num">${verkocht?euro(bedrag):(h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>')}</td>
+      <td>${hoe}</td>
+      <td class="num" style="white-space:nowrap">
+        <button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>
+        <button class="btn ghost small" title="Uit batch halen" onclick="batLaptopLos('${h.id}')">×</button>
+      </td>
+    </tr>`;
+  }).join(''):'';
+
+  const kostRijen=kosten.length?kosten.map((k,i)=>`<tr>
+      <td>${esc(batSoortNaam(k.soort))}</td>
+      <td class="num">${Number(k.aantal)||0}</td>
+      <td class="num">${euro(Number(k.bedrag)||0)}</td>
+      <td>${esc(k.omschrijving||'')}</td>
+      <td class="num"><button class="btn ghost small" onclick="batKostWeg(${i})">×</button></td>
+    </tr>`).join(''):'';
+
+  vak.innerHTML=`
+    <div class="pagehead">
+      <button class="btn ghost" onclick="batTerug()"><svg class="i"><use href="#i-left"/></svg>Alle batches</button>
+      <button class="btn ghost" onclick="batBewerk('${b.id}')"><svg class="i"><use href="#i-edit"/></svg>Batch bewerken</button>
+    </div>
+
+    <div class="card breed">
+      <div class="bathead">
+        <div>
+          <h2 style="margin:0">${esc(b.nummer||'Naamloos')}</h2>
+          <p class="muted klein" style="margin:6px 0 0">${b.leverancier?esc(b.leverancier)+' · ':''}${b.marge?'Margeregeling':'Normale btw (21%)'}${b.verwacht?' · binnengekomen als '+(b.verwacht==='ongetest'?'ongetest':'werkend'):''}</p>
+          ${b.notitie?`<p class="muted klein" style="margin:6px 0 0">${esc(b.notitie)}</p>`:''}
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-top:18px">
+        <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div>
+          <div class="muted klein" style="margin-top:6px">partij ${euro(Number(b.inkoopprijs)||0)}${c.extras?' · kosten '+euro(c.extras):''}${c.laptopInkoop?' · los '+euro(c.laptopInkoop):''}</div></div>
+        <div class="kpi"><div class="l">Omzet</div><div class="v">${euro(c.omzet)}</div>
+          <div class="muted klein" style="margin-top:6px">met bon ${euro(c.omzetBon)} · zonder bon ${euro(c.omzetZb)}</div></div>
+        <div class="kpi accent"><div class="l">Winst</div><div class="v">${euro(c.winst)}</div>
+          <div class="klein" style="margin-top:6px; color:var(--lblauw)">${c.verkocht} van ${c.aantal} verkocht</div></div>
+        <div class="kpi"><div class="l">Nog te verkopen</div><div class="v">${euro(c.voorraadWaarde)}</div>
+          <div class="muted klein" style="margin-top:6px">${c.inVoorraad} ${c.inVoorraad===1?'toestel':'toestellen'} in voorraad</div></div>
+        <div class="kpi"><div class="l">Btw-indicatie</div><div class="v">${euro(c.btw)}</div>
+          <div class="muted klein" style="margin-top:6px">${b.marge?'marge, over de winst':'over de omzet'}</div></div>
+      </div>
+    </div>
+
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-laptop"/></svg>Laptops in deze batch <span class="muted">(${hw.length})</span></h2>
+      ${hw.length?`<div style="overflow-x:auto"><table>
+        <thead><tr><th>Toestel</th><th>Staat</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th>Hoe verkocht</th><th></th></tr></thead>
+        <tbody>${laptopRijen}</tbody></table></div>`
+        :'<p class="muted">Nog geen laptops. Voeg ze hieronder toe in de tabel, of los via Toestel toevoegen.</p>'}
+    </div>
+
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-plus"/></svg>Laptops toevoegen</h2>
+      <p class="muted klein" style="margin-bottom:12px">Vul de regels in en druk op Toevoegen aan batch. Elke regel wordt een toestel in deze batch. Losse inkoop per laptop hoeft niet: de partijprijs staat al bij de batch.</p>
+      <div style="overflow-x:auto"><table class="batinvoer">
+        <thead><tr><th>Merk</th><th>Model</th><th>Specs</th><th>Staat</th><th class="num">Vraagprijs</th><th></th></tr></thead>
+        <tbody id="batInvoerBody"></tbody></table></div>
+      <div class="row" style="gap:8px; margin-top:12px">
+        <button class="btn ghost" onclick="batRegel()"><svg class="i s"><use href="#i-plus"/></svg>Regel erbij</button>
+        <button class="btn actie" onclick="batLaptopsOpslaan(this)">Toevoegen aan batch</button>
+        <button class="btn ghost" onclick="batLosToevoegen()">Los toestel toevoegen</button>
+      </div>
+    </div>
+
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-tool"/></svg>Kosten en onderdelen${onderdelen?` <span class="muted">(${onderdelen})</span>`:''}</h2>
+      ${kosten.length?`<div style="overflow-x:auto"><table>
+        <thead><tr><th>Soort</th><th class="num">Aantal</th><th class="num">Bedrag</th><th>Omschrijving</th><th></th></tr></thead>
+        <tbody>${kostRijen}</tbody></table></div>`
+        :'<p class="muted">Nog geen kosten. Voeg onderdelen of reparaties toe, dan tellen ze mee in de investering.</p>'}
+      <div class="batkostform">
+        <select id="batKostSoort">
+          <option value="ssd">SSD</option>
+          <option value="ram">RAM</option>
+          <option value="lader">Lader</option>
+          <option value="reparatie">Reparatie</option>
+          <option value="anders">Overig</option>
+        </select>
+        <input id="batKostAantal" type="number" min="1" value="1" style="max-width:80px" placeholder="Aantal">
+        <input id="batKostBedrag" type="number" step="0.01" min="0" style="max-width:130px" placeholder="Totaal in euro">
+        <input id="batKostOms" placeholder="Omschrijving (mag leeg)" style="min-width:160px; flex:1">
+        <button class="btn" onclick="batKostToevoegen(this)">Toevoegen</button>
+      </div>
+    </div>`;
+
+  for(let i=0;i<3;i++) batRegel();
+  if(typeof rolTabellen==='function') rolTabellen();
+}
+
+/* Een lege regel in de snelinvoer. Losse invoervelden met data-k, zodat we ze
+   bij het opslaan per kolom terugvinden zonder er stijlklassen voor te hoeven
+   verzinnen. */
+function batRegel(){
+  const body=document.getElementById('batInvoerBody'); if(!body) return;
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+    <td><input data-k="merk" placeholder="Dell"></td>
+    <td><input data-k="model" placeholder="Latitude 5430"></td>
+    <td><input data-k="specs" placeholder="i5 · 16GB · 512GB SSD"></td>
+    <td><select data-k="staat">${Object.keys(HW_STAAT).map(s=>`<option${s==='B'?' selected':''}>${s}</option>`).join('')}</select></td>
+    <td class="num"><input data-k="prijs" type="number" step="0.01" min="0"></td>
+    <td class="num"><button class="btn ghost small" title="Regel weg" onclick="this.closest('tr').remove()">×</button></td>`;
+  body.appendChild(tr);
+}
+
+async function batLaptopsOpslaan(knop){
+  if(!batHuidig) return;
+  const rijen=[...document.querySelectorAll('#batInvoerBody tr')];
+  const lees=(tr,k)=>{ const e=tr.querySelector('[data-k="'+k+'"]'); return e?e.value.trim():''; };
+  const inserts=[];
+  rijen.forEach(tr=>{
+    const model=lees(tr,'model'); if(!model) return;
+    const merk=lees(tr,'merk'), specs=lees(tr,'specs');
+    const staat=lees(tr,'staat')||'B';
+    const prijs=lees(tr,'prijs');
+    const verkoop=prijs===''?null:Math.round(Number(prijs)*100)/100;
+    const titel=([merk,model].filter(Boolean).join(' ')+(specs?' · '+specs:'')).trim();
+    inserts.push({team_id:account.team_id, batch_id:batHuidig, merk:merk||null, model,
+      categorie:'Laptop', staat, verkoop, titel:titel||null, status:'voorraad'});
+  });
+  if(!inserts.length){ toast('Vul minstens een model in','let-op'); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  const {error}=await sb.from('hardware').insert(inserts);
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+  if(error){ console.error('batch laptops:', error); toast('Toevoegen mislukt','fout'); return; }
+  toast(inserts.length+(inserts.length>1?' toestellen':' toestel')+' toegevoegd', true);
+  await batLaad(true);
+}
+
+function batLosToevoegen(){ hwVenster(null, batHuidig); }
+
+async function batLaptopLos(hardwareId){
+  if(!confirm('Dit toestel uit de batch halen? Het toestel zelf blijft gewoon bestaan.')) return;
+  const {error}=await sb.from('hardware')
+    .update({batch_id:null, bijgewerkt_op:new Date().toISOString()}).eq('id',hardwareId);
+  if(error){ toast('Mislukt','fout'); return; }
+  await batLaad(true);
+}
+
+async function batKostToevoegen(knop){
+  const b=batData.find(x=>x.id===batHuidig); if(!b) return;
+  const soort=document.getElementById('batKostSoort').value;
+  const aantal=Number(document.getElementById('batKostAantal').value)||0;
+  const bedrag=Math.round((Number(document.getElementById('batKostBedrag').value)||0)*100)/100;
+  const omsEl=document.getElementById('batKostOms');
+  const oms=omsEl?omsEl.value.trim():'';
+  if(!aantal && !bedrag){ toast('Vul een aantal of een bedrag in','let-op'); return; }
+  const kosten=(Array.isArray(b.kosten)?b.kosten:[]).slice();
+  kosten.push({soort, aantal, bedrag, omschrijving:oms||null});
+  if(knop) knop.disabled=true;
+  const {error}=await sb.from('refurbish_batches').update({kosten}).eq('id',b.id);
+  if(knop) knop.disabled=false;
+  if(error){ console.error('kosten opslaan:', error); toast('Opslaan mislukt','fout'); return; }
+  b.kosten=kosten;
+  renderBatchDetail();
+}
+
+async function batKostWeg(i){
+  const b=batData.find(x=>x.id===batHuidig); if(!b) return;
+  const kosten=(Array.isArray(b.kosten)?b.kosten:[]).slice();
+  if(i<0||i>=kosten.length) return;
+  kosten.splice(i,1);
+  const {error}=await sb.from('refurbish_batches').update({kosten}).eq('id',b.id);
+  if(error){ toast('Mislukt','fout'); return; }
+  b.kosten=kosten;
+  renderBatchDetail();
+}
+
+function batNieuw(){ batVenster(null); }
+function batBewerk(id){ batVenster(batData.find(b=>b.id===id)||null); }
+
+function batVenster(b){
+  const vw=b?b.verwacht||'':'';
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='batOverlay';
+  ov.onclick=e=>{ if(e.target===ov) batSluit(); };
+  ov.innerHTML=`<div class="popup">
+    <h3>${b?'Batch bewerken':'Nieuwe batch'}</h3>
+    <div class="grid">
+      <div style="grid-column:1/-1"><label>Naam of nummer *</label><input id="bat_naam" value="${b?esc(b.nummer||''):''}" placeholder="bijv. Dell pallet januari"></div>
+      <div><label>Leverancier</label><input id="bat_lev" value="${b?esc(b.leverancier||''):''}" placeholder="bijv. ITRefresh"></div>
+      <div><label>Inkoopprijs partij</label><input id="bat_ink" type="number" step="0.01" min="0" value="${b&&b.inkoopprijs!=null?b.inkoopprijs:''}" placeholder="0,00"></div>
+      <div><label>Btw</label><select id="bat_marge">
+        <option value="ja"${!b||b.marge?' selected':''}>Margeregeling</option>
+        <option value="nee"${b&&!b.marge?' selected':''}>Normale btw (21%)</option>
+      </select></div>
+      <div><label>Binnengekomen als</label><select id="bat_verwacht">
+        <option value=""${vw===''?' selected':''}>Onbekend</option>
+        <option value="werkend"${vw==='werkend'?' selected':''}>Werkend</option>
+        <option value="ongetest"${vw==='ongetest'?' selected':''}>Ongetest</option>
+      </select></div>
+    </div>
+    <div class="veldkop"><label>Notitie</label></div>
+    <textarea id="bat_notitie" rows="2" placeholder="bijv. factuurnummer of iets bijzonders">${b?esc(b.notitie||''):''}</textarea>
+    <div class="acts">
+      <button class="btn actie" onclick="batBewaar(this${b?",'"+b.id+"'":''})">${b?'Opslaan':'Batch aanmaken'}</button>
+      <button class="btn ghost" onclick="batSluit()">Annuleren</button>
+    </div>
+    ${b?`<button class="btn ghost small" style="margin-top:10px" onclick="batVerwijder('${b.id}')">Batch verwijderen</button>`:''}
+  </div>`;
+  document.body.appendChild(ov);
+}
+function batSluit(){ const o=document.getElementById('batOverlay'); if(o) o.remove(); }
+
+async function batBewaar(knop, id){
+  const naam=document.getElementById('bat_naam').value.trim();
+  if(!naam){ toast('Geef de batch een naam','let-op'); return; }
+  const rij={
+    nummer:naam,
+    leverancier:document.getElementById('bat_lev').value.trim()||null,
+    inkoopprijs:Math.round((Number(document.getElementById('bat_ink').value)||0)*100)/100,
+    marge:document.getElementById('bat_marge').value==='ja',
+    verwacht:document.getElementById('bat_verwacht').value||null,
+    notitie:document.getElementById('bat_notitie').value.trim()||null
+  };
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  let fout=null, nieuwId=id;
+  if(id){
+    const {error}=await sb.from('refurbish_batches').update(rij).eq('id',id); fout=error;
+  }else{
+    rij.team_id=account.team_id;
+    const {data,error}=await sb.from('refurbish_batches').insert(rij).select('id').single();
+    fout=error; if(data) nieuwId=data.id;
+  }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+  if(fout){ console.error('batch opslaan:', fout); toast('Opslaan mislukt','fout'); return; }
+  batSluit();
+  batHuidig=nieuwId||batHuidig;
+  await batLaad(true);
+  toast(id?'Batch bijgewerkt':'Batch aangemaakt', true);
+}
+
+async function batVerwijder(id){
+  const c=batCijfers(id);
+  const vraag=c.aantal
+    ? 'Deze batch verwijderen? De '+c.aantal+' laptops blijven bestaan, ze horen daarna alleen bij geen enkele batch meer.'
+    : 'Deze batch verwijderen?';
+  if(!confirm(vraag)) return;
+  const {error}=await sb.from('refurbish_batches').delete().eq('id',id);
+  if(error){ toast('Verwijderen mislukt','fout'); return; }
+  batSluit(); batHuidig=null;
+  await batLaad(true);
+  toast('Batch verwijderd', true);
 }
 
 /* ---------- AI-teksten ---------- */
