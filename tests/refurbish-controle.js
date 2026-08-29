@@ -1,4 +1,6 @@
 // Het stappenpad van de controle, met alle vertakkingen.
+// Nieuwe volgorde: Start, Hardware (scherm en opladen), Upgrade, Windows,
+// Windows nakijken (de rest van de hardware plus accu), Specs, Staat, Klaar.
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
@@ -17,7 +19,7 @@ window.__db={
      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}
   ],
   refurbish_onderdelen:[], refurbish_checklists:[], refurbish_orders:[],
-  hardware_modellen:[]
+  refurbish_voorraad:[], hardware_modellen:[]
 };
 window.__geschreven=[]; window.__rpcs=[];
 function __tabel(naam){
@@ -50,6 +52,8 @@ const fouten=[]; w.onerror=(m)=>fouten.push(String(m));
 const tekst=()=>w.document.getElementById('ctrPagina').textContent;
 const knop=(deel)=>[...w.document.querySelectorAll('#ctrPagina .ctrvoet button')]
   .find(b=>b.textContent.includes(deel));
+const terug=()=>[...w.document.querySelectorAll('#ctrPagina .pagehead button')]
+  .find(b=>/Terug/.test(b.textContent));
 
 setTimeout(async()=>{
   const d=w.document;
@@ -60,29 +64,23 @@ setTimeout(async()=>{
   const regel=d.querySelector('#wbLijst tr.klikbaar');
   ok('hele regel is klikbaar', !!regel && /appPagina/.test(regel.getAttribute('onclick')));
 
-  // ── pad 1: gaat niet aan, geen lampje, reset, blijft dood ──
+  // ── pad 1: gaat niet aan, alles op één lijst, blijft dood ──
   w.eval("appOpen('a1')");
   ok('stap 1 vraagt of hij opstart', /Start het apparaat op/.test(tekst()));
   ok('tijdlijn zichtbaar', !!d.querySelector('.tijdlijn .tl.nu'));
-  ok('zes stappen in de tijdlijn', d.querySelectorAll('.tijdlijn .tl').length===6);
+  ok('zeven stappen in de tijdlijn', d.querySelectorAll('.tijdlijn .tl').length===7);
   ok('knoppen staan rechts', w.getComputedStyle(d.querySelector('.ctrvoet')).justifyContent==='flex-end');
   ok('geen knop zonder antwoord', !knop('Door') && !knop('Uitzoeken'));
 
   w.eval("ctrKies('start','Nee')");
   ok('nee geeft de uitzoekknop', !!knop('Uitzoeken'));
   knop('Uitzoeken').click();
-  ok('stap lampje', /Brandt er een lampje/.test(tekst()));
-
-  w.eval("ctrKies('lampje','Nee')");
-  knop('Naar de reset').click();
-  ok('resetstappen getoond', /bios-batterij/.test(tekst()));
+  ok('lampje, reset en geheugen op één lijst',
+     /Brandt er een lampje/.test(tekst()) && /bios-batterij/.test(tekst()) && /Zit er geheugen in/.test(tekst()));
   ok('wekker staat op 2:00', d.getElementById('wekTijd').textContent==='2:00');
   w.eval('wekkerStart()');
   ok('wekker loopt', !!w.eval('ctr.tijdEinde'));
-
-  knop('Gedaan').click();
-  ok('geheugenstap', /Zit er geheugen in/.test(tekst()));
-  w.eval("ctrKies('geheugen','Nee')");
+  w.eval("ctrKies('lampje','Nee'); ctrKies('geheugen','Nee')");
   ok('tip bij geen geheugen', /Zet er geheugen in/.test(tekst()));
   w.eval("ctrKies('nogmaals','Nee')");
   knop('Leeghalen').click();
@@ -98,86 +96,68 @@ setTimeout(async()=>{
   ok('apparaat op onderdelen', !!sloop);
   ok('goede delen vastgelegd', !!sloop && sloop[2].goede_delen.length===2);
 
-  // ── pad 2: start op, alles goed, grade A ──
+  // ── pad 2: start op, alleen scherm en opladen vóór Windows ──
   w.eval("appOpen('a2'); ctrKies('start','Ja')");
   knop('Door naar de hardware').click();
-  ok('hardwarestap', /Werkt het toetsenbord/.test(tekst()));
-  ok('accuveld in de hardwarestap', !!d.getElementById('c_accu'));
+  ok('hardwarestap toont scherm en opladen', /Werkt het scherm/.test(tekst()) && /Laadt hij op/.test(tekst()));
+  ok('toetsenbord staat hier niet meer', !/Werkt het toetsenbord/.test(tekst()));
+  ok('geen accuveld in de hardwarestap', !d.getElementById('c_accu'));
   ok('notitieveld in de hardwarestap', !!d.getElementById('c_notitie'));
-  ok('nog niet door zonder antwoorden', !knop('Door naar de staat'));
-  ok('geen touchscreenvraag zonder touchscreen', !/touchscreen overal/.test(tekst()));
+  ok('nog niet door zonder antwoorden', !knop('Door naar de upgrade'));
 
-  // ── na een antwoord staat de volgende vraag klaar ──
   const vragen=()=>[...d.querySelectorAll('#ctrPagina .clrij')];
-  ok('alle vragen staan nog open', vragen().every(r=>r.dataset.open==='1'));
-  const eerste=w.eval("ctrHardwareVragen()[0].v");
-  w.eval("ctrKies(ctrHardwareVragen()[0].v, 'Ja')");
+  ok('de twee vragen staan nog open', vragen().every(r=>r.dataset.open==='1'));
+  w.eval("ctrKies(ctrVoorWindows()[0].v, 'Ja')");
   ok('beantwoorde vraag is afgevinkt', vragen()[0].dataset.open==='0');
   ok('en gemarkeerd als gedaan', vragen()[0].classList.contains('beantwoord'));
   ok('de volgende is aan de beurt', vragen()[1].classList.contains('aandebeurt'));
+  w.eval("ctrKies(ctrVoorWindows()[1].v, 'Nee')");
+  ok('bij nee komt er een veld voor de uitleg', !!d.querySelector('#ctrPagina [data-vraagveld]'));
+  w.eval("ctrKies(ctrVoorWindows()[1].v, 'Ja')");
+  ok('nu door naar de upgrade', !!knop('Door naar de upgrade'));
+  knop('Door naar de upgrade').click();
 
-  // Bij 'nee' springt hij niet door, maar naar het veldje waarin je zegt wat
-  // er mis is; anders typ je die uitleg nooit.
-  w.eval("ctrKies(ctrHardwareVragen()[1].v, 'Nee')");
-  ok('bij nee komt er een veld voor de uitleg',
-     !!d.querySelector('#ctrPagina [data-vraagveld]'));
-  ok('en springt hij niet door', !vragen()[2].classList.contains('aandebeurt'));
-  w.eval("ctrKies(ctrHardwareVragen()[1].v, 'Ja')");
-
-  // ── het accuveld houdt de cursor vast ──
-  const accu=d.getElementById('c_accu');
-  accu.focus(); accu.value='8';
-  w.eval("ctrAccu('8')");
-  ok('cursor blijft in het accuveld', d.activeElement && d.activeElement.id==='c_accu');
-  w.eval("ctrAccu('87')");
-  ok('en de waarde blijft staan', w.eval("ctr.accu")==='87');
-  // Alleen hertekenen als het advies omslaat: anders bouw je bij elke
-  // toetsaanslag dertig vraagregels opnieuw op.
-  const rij=d.querySelector('#ctrPagina .clrij');
-  w.eval("ctrAccu('88')");
-  ok('geen hertekening bij een gelijk advies', d.querySelector('#ctrPagina .clrij')===rij);
-  w.eval("ctrAccu('40')");
-  ok('wel hertekend als het advies omslaat', d.querySelector('#ctrPagina .clrij')!==rij);
-  ok('met het advies erbij', /accu vervangen/i.test(tekst()));
-  w.eval("ctrAccu('87')");
-  w.eval("HARDWARE_CHECKS.forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken();");
-  ok('nu wel door', !!knop('Door naar de staat'));
-  knop('Door naar de staat').click();
-  ok('visuele stap', /Behuizing/.test(tekst()) && /Scharnieren/.test(tekst()));
-
-  // ── terug kunnen ──
-  const terug=()=>[...d.querySelectorAll('#ctrPagina .pagehead button')]
-    .find(b=>/Terug/.test(b.textContent));
-  ok('terugknop verschenen', !!terug());
-  terug().click();
-  ok('terug bij de hardware', /Werkt het toetsenbord/.test(tekst()));
-  ok('antwoorden staan er nog', w.eval("ctr.antwoord[ctrHardwareVragen()[0].v]")==='Ja');
-  knop('Door naar de staat').click();
-  ok('nog geen grade', !d.querySelector('.gradeletter'));
-  w.eval("ctrPunt('Behuizing','Als nieuw',0); ctrPunt('Scherm','Gaaf',0); ctrPunt('Toetsenbord','Letters gaaf',0); ctrPunt('Scharnieren en deksel','Stevig',0)");
-  ok('grade A bij nul punten', d.querySelector('.gradeletter').textContent==='A');
-  ok('de staatvragen springen ook door',
-     [...d.querySelectorAll('#ctrPagina .clrij')].every(r=>r.dataset.open==='0'));
+  // ── upgrade: mag leeg, gewoon door ──
+  ok('upgradestap', /Ram en ssd/.test(tekst()));
   knop('Door naar Windows').click();
   ok('windowsstap', /Windows installeren/.test(tekst()));
-  d.getElementById('c_accu');
-  await w.eval('ctrInstalleren(document.createElement("button"))');
-  const inst=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
-  ok('gaat op installeren', inst[2].status==='installeren');
-  ok('grade nu al bewaard', inst[2].grade==='A');
-  // Hervatten landt op het nakijken, niet op de specificaties: eerst weten of
-  // de installatie echt gelukt is.
-  w.eval("apparaten.find(x=>x.id==='a2').status='installeren'; appOpen('a2')");
-  ok('hervat bij het nakijken', /Windows nakijken/.test(tekst()));
-  ok('vraagt of hij is geinstalleerd', /Is Windows geïnstalleerd/.test(tekst()));
+
+  // ── op de laptop blijven: draait door naar het nakijken ──
+  ok('knop later installeren', !!knop('later installeren'));
+  knop('Windows draait, verder').click();
+  ok('blijft op de laptop, bij het nakijken', /Windows nakijken/.test(tekst()));
+  ok('er is nog steeds een controle open', w.eval('!!ctr'));
+  ok('terug kan naar Windows', !!terug());
+
+  // ── de rest van de hardware staat nu hier ──
+  ok('toetsenbord staat nu bij het nakijken', /Werkt het toetsenbord/.test(tekst()));
+  ok('accuveld staat nu bij het nakijken', !!d.getElementById('c_accu'));
   w.eval("ctrKies('windowsgoed','Ja')");
   ok('vraagt daarna naar de stuurprogramma\'s', /stuurprogramma/.test(tekst()));
-  ok('nog niet door zonder drivers', !knop('Door naar de specificaties'));
-  w.eval("ctrKies('drivers','Ja')");
+  ok('nog niet door zonder de checks', !knop('Door naar de specificaties'));
+  w.eval("ctrKies('drivers','Ja'); ctrNaWindows().forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken()");
+  ok('nu wel door', !!knop('Door naar de specificaties'));
   ok('knop later verder blijft staan', !!knop('later verder'));
   knop('Door naar de specificaties').click();
   ok('specstap', /Windows draait/.test(tekst()));
+  ok('extra uitrusting erbij', /SureView/.test(tekst()) && /Toetsenbordverlichting/.test(tekst()));
   w.eval("ctrSpecKies('Processor','Intel Core i5-1235U'); ctrSpecKies('Geheugen','16 GB')");
+  knop('Door naar de staat').click();
+  ok('staatstap met de vijf panelen',
+     /Toppaneel/.test(tekst()) && /Onderkant/.test(tekst()) && /Scharnieren/.test(tekst()));
+  ok('nog geen grade', !d.querySelector('.gradeletter'));
+
+  // ── terug kunnen ──
+  ok('terugknop verschenen', !!terug());
+  terug().click();
+  ok('terug bij de specificaties', /Windows draait/.test(tekst()));
+  knop('Door naar de staat').click();
+  w.eval(`ctrPunt('Toppaneel','Als nieuw',0); ctrPunt('Scherm','Gaaf',0);
+    ctrPunt('Toetsenbord en handpalm','Als nieuw',0); ctrPunt('Onderkant','Als nieuw',0);
+    ctrPunt('Scharnieren','Stevig',0)`);
+  ok('grade A bij nul punten', d.querySelector('.gradeletter').textContent==='A');
+  ok('de staatvragen springen ook door',
+     [...d.querySelectorAll('#ctrPagina .clrij')].every(r=>r.dataset.open==='0'));
   await w.eval('ctrAfronden(document.createElement("button"))');
   const af=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('status klaar', af[2].status==='klaar');
@@ -185,6 +165,11 @@ setTimeout(async()=>{
   ok('nul strafpunten', af[2].punten===0);
   ok('specificaties bewaard', af[2].specs.Processor==='Intel Core i5-1235U');
   ok('model onthouden', w.__rpcs.some(r=>r[0]==='model_onthouden'));
+
+  // ── hervatten met terugknop: het pad is hersteld ──
+  w.eval("apparaten.find(x=>x.id==='a2').status='installeren'; appOpen('a2')");
+  ok('hervat bij het nakijken', /Windows nakijken/.test(tekst()));
+  ok('en kan alsnog terugklikken', !!terug());
 
   // ── grade rekenen ──
   ok('grade B bij 5 punten', w.eval('gradeVan(5)')==='B');
@@ -197,13 +182,17 @@ setTimeout(async()=>{
       categorie:'Laptop', specs:{}, status:'te_controleren', checklist:[], defecten:[], goede_delen:[],
       aangemaakt_op:new Date().toISOString()});
     appOpen('a3'); ctrKies('start','Ja'); ctrGa('hardware');
-    HARDWARE_CHECKS.forEach(q=>ctr.antwoord[q.v]='Ja');
+    ctrVoorWindows().forEach(q=>ctr.antwoord[q.v]='Ja');
+    ctrGa('upgrade'); ctrGa('windows'); ctrGa('nawindows');
+    ctr.antwoord['windowsgoed']='Ja'; ctr.antwoord['drivers']='Ja';
+    ctrNaWindows().forEach(q=>ctr.antwoord[q.v]='Ja');
     ctr.antwoord['Werkt het toetsenbord, alle toetsen?']='Nee';
-    ctrGa('visueel');
-    ctrPunt('Behuizing','Lichte gebruikssporen',1); ctrPunt('Scherm','Gaaf',0);
-    ctrPunt('Toetsenbord','Licht sleets',1); ctrPunt('Scharnieren en deksel','Stevig',0);
+    ctrGa('specs'); ctrGa('visueel');
+    ctrPunt('Toppaneel','Lichte gebruikssporen',1); ctrPunt('Scherm','Gaaf',0);
+    ctrPunt('Toetsenbord en handpalm','Licht sleets',1); ctrPunt('Onderkant','Als nieuw',0);
+    ctrPunt('Scharnieren','Stevig',0);
     ctrNotitie('Werkt het toetsenbord, alle toetsen?','spatiebalk blijft hangen');`);
-  ok('grade B bij twee punten', d.querySelector('.gradeletter').textContent==='A');
+  ok('grade A bij twee punten', d.querySelector('.gradeletter').textContent==='A');
   await w.eval('ctrAfronden(document.createElement("button"))');
   const rep=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
   ok('kapotte toets stuurt naar reparatie', rep[2].status==='te_repareren');

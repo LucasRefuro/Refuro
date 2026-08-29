@@ -88,8 +88,8 @@ setTimeout(async()=>{
   ok('badge te repareren', d.getElementById('bRep').textContent==='1');
   ok('badge bestellen', d.getElementById('bBestel').textContent==='1');
 
-  // eigen checklistvraag komt terug in de hardwarestap
-  w.eval("appOpen('a1'); ctrKies('start','Ja'); ctrGa('hardware')");
+  // eigen checklistvraag en de touchscreenvraag komen terug bij Windows nakijken
+  w.eval("appOpen('a1'); ctrGa('nawindows')");
   const hw=d.getElementById('ctrPagina').innerHTML;
   ok('eigen controle in het pad', /dockingpoort/.test(hw));
   ok('touchscreenvraag bij een touchscreen', /touchscreen overal/.test(hw));

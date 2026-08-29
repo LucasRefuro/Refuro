@@ -1,4 +1,6 @@
 // De accugrens, het Windows-pad en de uitvoeringen per onderdeel.
+// De accu en de meeste hardware-checks staan nu bij Windows nakijken, na de
+// installatie. Vóór Windows test je alleen scherm en opladen.
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
@@ -14,7 +16,7 @@ window.__db={
      aangemaakt_op:new Date().toISOString()}
   ],
   refurbish_onderdelen:[], refurbish_checklists:[], refurbish_orders:[],
-  hardware_modellen:[],
+  refurbish_voorraad:[], hardware_modellen:[],
   refurbish_instellingen:{team_id:'t1', accu_min:80}
 };
 window.__geschreven=[]; window.__rpcs=[];
@@ -52,6 +54,8 @@ const d=()=>w.document;
 const tekst=()=>d().getElementById('ctrPagina').textContent;
 const knop=(deel)=>[...d().querySelectorAll('#ctrPagina .ctrvoet button')]
   .find(b=>b.textContent.includes(deel));
+const terug=()=>[...d().querySelectorAll('#ctrPagina .pagehead button')]
+  .find(b=>/Terug/.test(b.textContent));
 
 setTimeout(async()=>{
   ok('app start zonder fout', fouten.length===0);
@@ -67,16 +71,25 @@ setTimeout(async()=>{
   ok('grens opgeslagen', !!bewaard && bewaard[2].accu_min===85);
   ok('grens meteen actief', w.eval('instel.accu_min')===85);
 
-  // ── controle tot de hardwarestap ──
+  // ── vóór Windows alleen scherm en opladen, geen accu ──
   w.eval("appOpen('a1'); ctrKies('start','Ja')");
   knop('Door naar de hardware').click();
-  ok('accuveld aanwezig', !!d().getElementById('c_accu'));
+  ok('geen accuveld in de hardwarestap', !d().getElementById('c_accu'));
+  w.eval("ctrVoorWindows().forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken()");
+  knop('Door naar de upgrade').click();
+  knop('Door naar Windows').click();
+  knop('Windows draait, verder').click();
+  ok('windows nakijken', /Windows nakijken/.test(tekst()));
+
+  // ── de accu staat nu bij het nakijken ──
+  ok('accuveld staat nu hier', !!d().getElementById('c_accu'));
   ok('grens genoemd bij het veld', /grens staat op 85%/.test(tekst()));
+  ok('toetsenbord staat hier ook', /Werkt het toetsenbord/.test(tekst()));
+  ok('meerdere na-Windows checks', w.eval('ctrNaWindows().length')>=7);
 
   w.eval("ctrAccu('90')");
   ok('boven de grens geen waarschuwing', !/Advies: accu vervangen/.test(tekst()));
   ok('boven de grens een bevestiging', /boven de grens/.test(tekst()));
-
   w.eval("ctrAccu('72')");
   ok('onder de grens een advies', /Advies: accu vervangen/.test(tekst()));
   ok('percentage genoemd', /72% is onder jouw grens van 85%/.test(tekst()));
@@ -87,28 +100,15 @@ setTimeout(async()=>{
   ok('vinkje vervalt boven de grens', w.eval('ctr.accuVervangen')===false);
   w.eval("ctrAccu('72'); ctrAccuVervangen(true)");
 
-  // ── na Windows nakijken ──
-  ok('toetsenbord kan uitgesteld', /Na Windows/.test(tekst()));
-  w.eval(`HARDWARE_CHECKS.forEach(q=>ctr.antwoord[q.v]='Ja');
-    ctr.antwoord['Werken wifi en bluetooth?']='Na Windows';
-    ctr.antwoord['Werkt het geluid?']='Na Windows';
-    ctrTeken();`);
-  ok('twee uitgestelde checks', w.eval('ctrUitgesteld().length')===2);
-
-  knop('Door naar de staat').click();
-  w.eval(`ctrPunt('Behuizing','Als nieuw',0); ctrPunt('Scherm','Gaaf',0);
-    ctrPunt('Toetsenbord','Letters gaaf',0); ctrPunt('Scharnieren en deksel','Stevig',0);`);
-  knop('Door naar Windows').click();
-  ok('windowsstap', /Windows installeren/.test(tekst()));
-  ok('knop later installeren', !!knop('later installeren'));
-
-  // ── de installatie loopt: het toestel gaat de lijst in met een rondje ──
+  // ── nog niet klaar: leg hem weg, hij gaat de lijst in ──
+  w.eval("ctr.antwoord['windowsgoed']='Ja'; ctr.antwoord['drivers']='Ja'; ctrTeken()");
   await w.eval('ctrInstalleren(document.createElement("button"))');
   const gestart=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
-  ok('geen wachtscherm meer, terug naar de lijst', !w.eval('!!ctr'));
+  ok('weggelegd, terug naar de lijst', !w.eval('!!ctr'));
   ok('staat op installeren', gestart[2].status==='installeren');
   ok('en weet dat hij echt draait', gestart[2].stap==='installeren');
 
+  // ── de lijst toont wie draait en wie wacht ──
   w.eval(`apparaten=[{id:'a1', code:'A0001', merk:'HP', model:'ZBook 15', categorie:'Laptop',
       specs:{}, status:'installeren', stap:'installeren', checklist:[], defecten:[], goede_delen:[],
       aangemaakt_op:new Date().toISOString()},
@@ -121,10 +121,11 @@ setTimeout(async()=>{
   ok('met de tekst erbij', /Bezig met installeren/.test(lijst));
   ok('wie nog moet wachten staat er anders bij', /Wacht op installatie/.test(lijst));
 
-  // ── terugklikken vraagt om bevestiging ──
+  // ── terugklikken landt op het nakijken, en je kunt terug ──
   w.eval("appOpen('a1')");
   ok('landt op het nakijken', /Windows nakijken/.test(tekst()));
   ok('vraagt of hij geinstalleerd is', /Is Windows geïnstalleerd/.test(tekst()));
+  ok('kan alsnog terugklikken', !!terug());
   ok('knop om later verder te gaan', !!knop('later verder'));
   ok('nog niet door zonder bevestiging', !knop('Door naar de specificaties'));
   w.eval("ctrKies('windowsgoed','Nee')");
@@ -135,7 +136,7 @@ setTimeout(async()=>{
   w.eval("ctrKies('drivers','Nee')");
   ok('waarschuwing bij ontbrekende drivers', /ontbrekende stuurprogramma/.test(tekst()));
   ok('en niet door', !knop('Door naar de specificaties'));
-  w.eval("ctrKies('drivers','Ja')");
+  w.eval("ctrKies('drivers','Ja'); ctrNaWindows().forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken()");
   ok('nu wel door', !!knop('Door naar de specificaties'));
 
   // ── uitvoeringen per onderdeel ──
@@ -159,9 +160,12 @@ setTimeout(async()=>{
   ok('eigen invoer mag ook', (()=>{ w.eval("ctr.specs['Opslag']='2 TB SSD'; ctrTeken()");
      return /optieknop aan eigen/.test(d().getElementById('ctrPagina').innerHTML); })());
 
+  // ── extra uitrusting op de specstap ──
+  ok('extra uitrusting erbij', /SureView/.test(tekst()) && /GSM-module/.test(tekst()));
+  w.eval("ctrExtraKeuze('Schermtype','Mat')");
+  ok('schermtype vastgelegd', w.eval("ctr.specs['Schermtype']")==='Mat');
+
   // ── afronden: accu telt als defect ──
-  // Dit toestel is opnieuw geopend, dus de accu zetten we er weer op zoals de
-  // monteur dat bij de hardwarestap zou doen.
   w.eval("ctrAccu('72'); ctrAccuVervangen(true)");
   await w.eval('ctrAfronden(document.createElement("button"))');
   const af=w.__geschreven.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update').pop();
