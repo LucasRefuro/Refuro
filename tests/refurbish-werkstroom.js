@@ -88,11 +88,11 @@ setTimeout(async()=>{
   ok('badge te repareren', d.getElementById('bRep').textContent==='1');
   ok('badge bestellen', d.getElementById('bBestel').textContent==='1');
 
-  // eigen checklistvraag en de touchscreenvraag komen terug bij Windows nakijken
+  // eigen checklistvraag komt terug bij Windows nakijken; de touchscreenvraag bij de specs
   w.eval("appOpen('a1'); ctrGa('nawindows')");
-  const hw=d.getElementById('ctrPagina').innerHTML;
-  ok('eigen controle in het pad', /dockingpoort/.test(hw));
-  ok('touchscreenvraag bij een touchscreen', /touchscreen overal/.test(hw));
+  ok('eigen controle in het pad', /dockingpoort/.test(d.getElementById('ctrPagina').innerHTML));
+  w.eval("ctrGa('specs')");
+  ok('touchscreenvraag bij een touchscreen', /touchscreen overal/.test(d.getElementById('ctrPagina').innerHTML));
 
   // reparatiescherm
   w.eval("ctr=null; sluit(); appOpen('a2')");

@@ -1049,7 +1049,14 @@ async function allesLaden(){
   ]);
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
-  hardwares=h.data||[]; batches=bt.data||[]; voorraaddelen=vd.data||[];
+  hardwares=h.data||[]; batches=bt.data||[];
+  /* Voorraad van vóór de partijen-migratie (aantal wel, lots niet) alsnog als
+     één partij behandelen. Anders zou afboeken de hele voorraad op nul zetten,
+     want vrdSync([]) geeft aantal 0. */
+  voorraaddelen=(vd.data||[]).map(o=>
+    ((!Array.isArray(o.lots) || !o.lots.length) && (Number(o.aantal)||0)>0)
+      ? Object.assign({}, o, {lots:[{aantal:Number(o.aantal)||0, prijs:Number(o.prijs)||0}]})
+      : o);
   if(i && i.data) instel=i.data;
   /* Het logo hoort bij de instellingen, dus dat halen we hier ook op; anders
      tekent het voorbeeld de eerste keer zonder logo. */
@@ -1704,7 +1711,10 @@ const HARDWARE_CHECKS=[
 ];
 function ctrVoorWindows(){ return HARDWARE_CHECKS.filter(q=>q.voor); }
 function ctrNaWindows(){
-  return HARDWARE_CHECKS.filter(q=>!q.voor).concat(ctrSpecVragen()).concat(ctrEigenVragen());
+  /* De vragen die uit de specs volgen (touchscreen, videokaart) horen NIET hier:
+     de specs ken je pas in de specs-stap, die na dit nakijken komt. Ze staan
+     daarom bij de specs zelf. Hier alleen de hardware en de eigen controles. */
+  return HARDWARE_CHECKS.filter(q=>!q.voor).concat(ctrEigenVragen());
 }
 
 /* De visuele inspectie met strafpunten. Hoe minder punten, hoe beter de grade.
@@ -2139,6 +2149,7 @@ const CTR_STAPPEN={
 
   specs:{ balk:'specs', inhoud:()=>{
     const sp=ctr.specs||{};
+    const werk=ctrSpecVragen();
     return `
       <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
       <p class="pv">Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.</p>
@@ -2151,8 +2162,12 @@ const CTR_STAPPEN={
       ${SPEC_VELDEN.map(v=>ctrSpecVeld(v)).join('')}
 
       <div class="clkop">Extra uitrusting</div>
-      <div class="specextra">${SPEC_EXTRA.map(v=>ctrExtraVeld(v, sp)).join('')}</div>`;
-  }, knoppen:()=>[{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] },
+      <div class="specextra">${SPEC_EXTRA.map(v=>ctrExtraVeld(v, sp)).join('')}</div>
+
+      ${werk.length?`<div class="clkop">Werkt de extra uitrusting</div>
+        ${werk.map(q=>ctrVraag(q.v, q.a)).join('')}`:''}`;
+  }, knoppen:()=> ctrSpecVragen().every(q=>ctr.antwoord[q.v])
+      ? [{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] : [] },
 
   visueel:{ balk:'visueel', inhoud:()=>{
     const punten=ctrPunten();
@@ -2230,7 +2245,7 @@ function ctrExtraVeld(v, sp){
         <button class="${nu===o?'gekozen goed':''}" onclick="ctrExtraKeuze(${JSON.stringify(v.s).replace(/"/g,'&quot;')}, ${JSON.stringify(o).replace(/"/g,'&quot;')})">${esc(o)}</button>`).join('')}</div>
     </div>`;
   }
-  return `<label class="ce-vink"><input type="checkbox" id="${v.id}" ${nu.toLowerCase()==='ja'?'checked':''} onchange="ctrVeldBewaar()"> ${esc(v.s)}</label>`;
+  return `<label class="ce-vink"><input type="checkbox" id="${v.id}" ${nu.toLowerCase()==='ja'?'checked':''} onchange="ctrSpecHertekenen()"> ${esc(v.s)}</label>`;
 }
 function ctrExtraKeuze(sleutel, waarde){
   ctrVeldBewaar();
@@ -2238,6 +2253,10 @@ function ctrExtraKeuze(sleutel, waarde){
   ctr.specs[sleutel]=(ctr.specs[sleutel]===waarde)?'':waarde;
   ctrTeken();
 }
+/* Een veld of vinkje op de specs-stap veranderen: opslaan en hertekenen, zodat
+   de vraag of de extra uitrusting werkt verschijnt zodra je hem aanvinkt of een
+   videokaart invult. */
+function ctrSpecHertekenen(){ ctrVeldBewaar(); ctrTeken(); }
 
 function ctrSpecVeld(v){
   const nu=String((ctr.specs||{})[v.sleutel]||'');
@@ -2254,7 +2273,8 @@ function ctrSpecVeld(v){
         ? `<button type="button" class="optieknop aan eigen">${esc(nu)}</button>` : ''}
     </div>`:''}
     <input id="${v.id}" value="${esc(nu)}" placeholder="${esc(v.hint)}"
-      oninput="ctrSpecTyp(${JSON.stringify(v.sleutel).replace(/"/g,'&quot;')}, this.value)">
+      oninput="ctrSpecTyp(${JSON.stringify(v.sleutel).replace(/"/g,'&quot;')}, this.value)"
+      onchange="ctrSpecHertekenen()">
   </div>`;
 }
 
@@ -2403,8 +2423,9 @@ async function ctrUpgrade(knop){
     ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
     if(eerste) eerste.aantal-=1;
     const sync=vrdSync(lots);
-    await sb.from('refurbish_voorraad')
+    const {error:vErr}=await sb.from('refurbish_voorraad')
       .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',o.id);
+    if(vErr){ console.error('voorraad afboeken', vErr); toast('Let op: de voorraad is mogelijk niet afgeboekt','let-op'); }
     o.lots=sync.lots; o.aantal=sync.aantal; o.prijs=sync.prijs;
     ctrTeken();
     toast('Toegevoegd, telt mee in de inkoop', true);
@@ -2426,8 +2447,9 @@ async function ctrUpgradeWeg(index){
     if(o){
       const lots=[{aantal:1, prijs:bedrag}].concat(Array.isArray(o.lots)?o.lots:[]);
       const sync=vrdSync(lots);
-      await sb.from('refurbish_voorraad')
+      const {error:vErr}=await sb.from('refurbish_voorraad')
         .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',o.id);
+      if(vErr) console.error('voorraad terugzetten', vErr);
       o.lots=sync.lots; o.aantal=sync.aantal; o.prijs=sync.prijs;
     }
   }
@@ -4755,9 +4777,17 @@ async function batExtraToevoegen(id, knop){
   const vrdSel=document.getElementById('ex_voorraad');
   const vrdId=vrdSel?vrdSel.value:'';
   const soort=document.getElementById('ex_soort').value;
-  const bedrag=Math.round((Number(document.getElementById('ex_bedrag').value)||0)*100)/100;
   const omsEl=document.getElementById('ex_oms');
   const oms=omsEl?omsEl.value.trim():'';
+  const o = vrdId ? voorraaddelen.find(x=>x.id===vrdId) : null;
+  /* Komt het uit de voorraad, dan is de prijs die van de oudste partij (die we
+     ook afboeken), niet het bewerkbare veld: anders klopt de afboeking niet met
+     wat je op het toestel schrijft. Los onderdeel: het ingevulde bedrag. */
+  const lots = o ? (Array.isArray(o.lots)?o.lots:[]).map(l=>({aantal:Number(l.aantal)||0, prijs:Number(l.prijs)||0})) : null;
+  const eerste = lots ? lots.find(l=>l.aantal>0) : null;
+  const bedrag = o
+    ? Math.round((eerste?eerste.prijs:(Number(o.prijs)||0))*100)/100
+    : Math.round((Number(document.getElementById('ex_bedrag').value)||0)*100)/100;
   if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
   const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
   lijst.push({soort, bedrag, omschrijving:oms||null, voorraad_id:vrdId||null});
@@ -4766,19 +4796,18 @@ async function batExtraToevoegen(id, knop){
     const {error}=await sb.from('refurbish_apparaten')
       .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw error;
-    /* Kwam het uit de voorraad, dan gaat er een van af. De oudste partij eerst,
-       zodat de kostprijs die je in oude voorraad hebt zitten er als eerste uit
-       gaat (FIFO). */
-    if(vrdId){
-      const o=voorraaddelen.find(x=>x.id===vrdId);
-      if(o){
-        const lots=(Array.isArray(o.lots)?o.lots:[]).map(l=>({aantal:Number(l.aantal)||0, prijs:Number(l.prijs)||0}));
-        const eerste=lots.find(l=>l.aantal>0);
-        if(eerste) eerste.aantal-=1;
-        const sync=vrdSync(lots);
-        await sb.from('refurbish_voorraad')
-          .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',vrdId);
-      }
+    /* Ligt hij al in de winkelvoorraad, dan moet dezelfde inkoop naar de
+       hardware-rij, anders rekent de winkelapp de marge op de oude inkoop. */
+    if(a.hardware_id){
+      await sb.from('hardware').update({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',a.hardware_id);
+    }
+    /* Uit de voorraad, oudste partij eerst (FIFO). */
+    if(o){
+      if(eerste) eerste.aantal-=1;
+      const sync=vrdSync(lots);
+      const {error:vErr}=await sb.from('refurbish_voorraad')
+        .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',o.id);
+      if(vErr){ console.error('voorraad afboeken', vErr); toast('Let op: de voorraad is mogelijk niet afgeboekt','let-op'); }
     }
     await allesLaden();
     toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
@@ -4796,6 +4825,10 @@ async function batExtraWeg(id, index){
   const {error}=await sb.from('refurbish_apparaten')
     .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
   if(error){ toast('Mislukt','fout'); return; }
+  /* Ligt hij al in de winkelvoorraad, dan de inkoop daar ook terugdraaien. */
+  if(a.hardware_id){
+    await sb.from('hardware').update({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',a.hardware_id);
+  }
   /* Kwam het uit de voorraad, dan gaat het er weer bij tegen de prijs die het
      toestel ervoor betaalde: weghalen is een correctie. Vooraan, zodat het er
      als eerste weer uit gaat. */
@@ -4804,8 +4837,9 @@ async function batExtraWeg(id, index){
     if(o){
       const lots=[{aantal:1, prijs:Number(weg.bedrag)||0}].concat(Array.isArray(o.lots)?o.lots:[]);
       const sync=vrdSync(lots);
-      await sb.from('refurbish_voorraad')
+      const {error:vErr}=await sb.from('refurbish_voorraad')
         .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',weg.voorraad_id);
+      if(vErr) console.error('voorraad terugzetten', vErr);
     }
   }
   await allesLaden();
