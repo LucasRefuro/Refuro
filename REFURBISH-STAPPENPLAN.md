@@ -173,10 +173,9 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
    staan de specificaties er ook op.
 3. **De controle.** Een eigen pagina met een tijdlijn erboven: Start, Hardware,
-   Staat, Windows, Specs, Klaar. De knop om door te gaan staat rechts, en
+   Upgrade, Windows, Specs, Staat, Klaar. De knop om door te gaan staat rechts, en
    ernaast **Terug** zodra je een stap verder bent. Terug volgt de weg die je
-   gelopen hebt, dus vanaf het geheugen kom je terug bij de reset en niet bij
-   de start.
+   gelopen hebt.
 
    **Antwoorden gaat vanzelf door.** Klik je een vraag aan, dan schuift de
    volgende openstaande vraag in beeld en licht hij op. Met dertig vragen op
@@ -190,6 +189,10 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    dan ben je je cursor kwijt. Nu wordt alleen hertekend als het advies
    omslaat, en blijft de cursor staan waar hij stond.
 
+   **Gaat hij niet aan**, dan staat de hele uitzoekweg op één lijst: het lampje,
+   de reset als instructie ertussen, en het geheugen. Dat waren losse stappen
+   achter elkaar; te veel klikken. De logica erachter:
+
    | Vraag | Ja | Nee |
    |---|---|---|
    | Start hij op? | door naar de hardware | brandt er een lampje? |
@@ -198,46 +201,46 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
 
    Bij die twee minuten loopt een wekker mee die piept als het klaar is.
 
-   **Hardware.** De functionele test. Zet je ergens *nee*, dan verschijnt er een
-   veldje om erbij te zetten wát er dan mis is. Vier dingen kun je zonder
-   werkend Windows niet fatsoenlijk testen: toetsenbord, touchpad, wifi en
-   geluid. Die hebben een derde antwoord, *Na Windows*, en komen vanzelf terug
-   zodra de installatie klaar is.
+   **Hardware.** Vóór Windows test je alleen wat je nu al kunt zien: het scherm
+   en of hij oplaadt. Zet je *nee*, dan verschijnt er een veldje om erbij te
+   zetten wát er mis is. De rest van de functionele test kun je pas fatsoenlijk
+   doen als Windows draait, en staat daarom bij **Windows nakijken**. Daaronder
+   een notitie van maximaal 60 tekens, want die moet op de sticker passen.
 
-   Onderaan de accucapaciteit in procenten. Zit die onder de grens die de winkel
-   zelf instelt, dan verschijnt het advies om hem te vervangen, met een knop om
-   hem meteen op de reparatielijst te zetten. Die grens stel je in bij
-   Checklists en staat standaard op 80%.
+   **Upgrade.** Meteen na de hardware, nog vóór Windows: hier zet je ram of ssd
+   erbij als dat nodig is. Je kiest uit je onderdelenvoorraad; wat je pakt gaat
+   daar van de teller af (de oudste, goedkoopste partij eerst) en telt op bij de
+   inkoop van dit toestel, zodat de marge klopt. Niets nodig? Dan klik je door.
 
-   Daaronder een notitie van maximaal 60 tekens, want die moet op de sticker
-   passen.
+   **Windows.** Twee knoppen: *Windows draait, verder* en *Windows later
+   installeren*. Bij de eerste blijf je op deze laptop en ga je door naar het
+   nakijken; terugklikken naar de vorige stappen blijft werken. De tweede legt
+   hem weg voor als de installatie lang duurt: dan staat hij in de lijst tussen
+   de andere, met een kloppend stipje en **Bezig met installeren**, of met **Wacht
+   op installatie** als je hem nog moet aanzetten. Pak je hem later op, dan land
+   je bij het nakijken en kun je alsnog terugklikken.
 
-   **Staat.** De visuele inspectie met strafpunten: behuizing, scherm,
-   toetsenbord en scharnieren. Nul tot twee punten is een A, tot en met zeven
-   een B, daarboven een C. Een barst in het scherm telt voor acht, dus die haalt
-   hem er in zijn eentje uit.
-
-   **Windows.** Twee knoppen: *Installatie gestart* of *Windows later
-   installeren*. In beide gevallen ga je meteen terug naar de lijst en pak je de
-   volgende laptop. Er is geen wachtscherm meer; dat hield een half beeldscherm
-   bezet met iets waar je toch niet naar kijkt. In de lijst staat de laptop
-   tussen de andere, met een kloppend stipje en **Bezig met installeren**, of
-   met **Wacht op installatie** als je hem nog moet aanzetten. Zo zie je in één
-   oogopslag wat er staat te draaien.
-
-   Klik je hem later aan, dan moet je het eerst bevestigen: is Windows
-   geïnstalleerd en start hij op? Daarna komt de vraag of alle
-   stuurprogramma's erop staan, zonder uitroeptekens in Apparaatbeheer. Dat is
-   niet dezelfde vraag: een laptop die opstart met een ontbrekende wifi- of
-   touchpaddriver is precies waarover een koper de dag erna belt. Pas daarna de
-   checks die je had uitgesteld. Zolang er iets openstaat kun je niet door, maar
-   *Nog niet klaar, later verder* blijft altijd staan.
+   Bij **Windows nakijken** bevestig je eerst dat Windows geïnstalleerd is en
+   opstart, dan of alle stuurprogramma's erop staan zonder uitroeptekens in
+   Apparaatbeheer. Dat is niet dezelfde vraag: een laptop die opstart met een
+   ontbrekende wifi- of touchpaddriver is precies waarover een koper de dag erna
+   belt. Daarna lopen de hardware-checks langs die je zonder Windows niet kon doen
+   en de accucapaciteit; zolang er iets openstaat kun je niet door, maar *Nog niet
+   klaar, later verder* blijft altijd staan.
 
    **Specs.** Pas nu, want pas nu draait Windows en kun je uitlezen wat er
    werkelijk in zit. Eén knop zoekt het model op. Omdat één model in meerdere
    uitvoeringen is verkocht krijg je die als keuzeknoppen te zien: i5 met 8 GB en
    256 GB, i7 met 16 GB en 512 GB, enzovoort. Klik de juiste aan en de velden
-   vullen zich; klopt er iets niet, dan pas je het gewoon aan.
+   vullen zich; klopt er iets niet, dan pas je het gewoon aan. Onderaan een tab
+   **extra uitrusting** die je pas ziet als je hem voor je hebt: gsm-module,
+   vingerafdruk, FaceID, SureView, touchscreen, mat of glans scherm, en
+   toetsenbordverlichting.
+
+   **Staat.** Als laatste, na de specs: de visuele inspectie met strafpunten, per
+   paneel. Toppaneel, scherm, toetsenbord en handpalm, onderkant en scharnieren.
+   Nul tot twee punten is een A, tot en met zeven een B, daarboven een C. Een
+   barst in het scherm telt voor acht, dus die haalt hem er in zijn eentje uit.
 
    De uitkomst volgt uit de antwoorden: alles goed betekent **op voorraad** met
    grade, één kapotte toets stuurt hem naar de reparatielijst, en een apparaat

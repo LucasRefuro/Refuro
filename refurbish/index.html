@@ -2351,7 +2351,10 @@ async function ctrInstalleren(knop, later){
       status:'installeren', stap: later ? 'wachten' : 'installeren',
       checklist:ctrChecklist(), specs:ctrSchoneSpecs(),
       accu:Number(ctr.accu)||null, notitie:ctr.notitie||null,
-      grade:gradeVan(ctrPunten()), punten:ctrPunten(),
+      /* De staat komt nu pas na de specs, dus bij het weggelegde toestel is er
+         nog geen grade. Niet voortijdig een A neerzetten; dat komt bij afronden. */
+      grade: ctrCompleet()?gradeVan(ctrPunten()):null,
+      punten: ctrCompleet()?ctrPunten():null,
       bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
