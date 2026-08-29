@@ -4587,7 +4587,7 @@ async function batExtraToevoegen(id, knop){
   const oms=omsEl?omsEl.value.trim():'';
   if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
   const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
-  lijst.push({soort, bedrag, omschrijving:oms||null});
+  lijst.push({soort, bedrag, omschrijving:oms||null, voorraad_id:vrdId||null});
   const nieuweInkoop=Math.round(((Number(a.inkoop)||0)+bedrag)*100)/100;
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten')
@@ -4608,12 +4608,19 @@ async function batExtraWeg(id, index){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
   const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
   if(index<0 || index>=lijst.length) return;
-  const bedrag=Number(lijst[index].bedrag)||0;
+  const weg=lijst[index];
+  const bedrag=Number(weg.bedrag)||0;
   lijst.splice(index,1);
   const nieuweInkoop=Math.round(Math.max(0,(Number(a.inkoop)||0)-bedrag)*100)/100;
   const {error}=await sb.from('refurbish_apparaten')
     .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
   if(error){ toast('Mislukt','fout'); return; }
+  /* Kwam het uit de voorraad, dan gaat het er weer bij: weghalen is een correctie. */
+  if(weg.voorraad_id){
+    const o=voorraaddelen.find(x=>x.id===weg.voorraad_id);
+    if(o) await sb.from('refurbish_voorraad')
+      .update({aantal:(Number(o.aantal)||0)+1, bijgewerkt_op:new Date().toISOString()}).eq('id',weg.voorraad_id);
+  }
   await allesLaden();
 }
 

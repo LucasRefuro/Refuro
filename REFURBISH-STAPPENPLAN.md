@@ -157,13 +157,17 @@ je apart kunt onderhouden.
 In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
 
 1. **Toevoegen.** Eén veld voor merk en model, aantal, inkoopprijs,
-   leverancier en **waar je ze neerlegt**. Geen inkoopbatches: je staat met een
-   doos naast je en wilt doorwerken. Specificaties vraagt de app hier niet, want
-   die weet je nog niet.
+   leverancier en **waar je ze neerlegt**. Een inkoopbatch is optioneel, geen
+   verplichte stap: je staat met een doos naast je en wilt doorwerken.
+   Specificaties vraagt de app hier niet, want die weet je nog niet.
 
    Die locatie is één klik, en de laatste keuze blijft staan; je pakt zelden
    één doos. Vanaf dat moment weet het systeem waar elk toestel ligt, en hoeft
    niemand later te raden waar iets gebleven is.
+
+   Kopen doe je vaak per partij, dus je kunt hier ook een **batch** kiezen; de
+   toestellen hangen er dan meteen aan voor het geldoverzicht (zie hieronder).
+   Geen batch gekozen is prima.
 2. **Labels.** Rollen er meteen uit na het toevoegen. Bovenaan waar het apparaat
    in het proces staat, daaronder merk en model groot, het korte nummer, en een
    QR die naar dit apparaat wijst. Na de controle druk je hem opnieuw af; dan
@@ -273,6 +277,14 @@ In deze volgorde, want elk stuk is op zichzelf al bruikbaar:
    plank. Onderdelen toewijzen of op de bestellijst zetten. De onderdelenlijst
    kun je per soort bekijken (heb ik nog een scherm?) of per stuk (waar kwam
    dit vandaan?). Apparaten die zijn leeggehaald blijven staan onder **Donoren**.
+
+   Daarnaast een **voorraad** van onderdelen die je in partij inkoopt: ssd, ram,
+   laders. Die is aantal-gebaseerd, met een prijs en een **minimum**. Zakt de
+   voorraad onder dat minimum, dan staat er een teller in het menu en komt de
+   regel op **Bestellen** onder "voorraad onder minimum". Zet je bij een toestel
+   een onderdeel erbij, dan kies je uit die voorraad: de prijs komt mee en er
+   gaat er een van de teller af. Haal je die correctie later weg, dan komt hij er
+   weer bij.
 6. **Parts inkoop.** Bestellijst samenvoegen tot inkooporders per leverancier,
    met factuur en status.
 7. **Voorraad en online zetten.** De lijst heette *Klaar voor verkoop*; dat zei
@@ -402,6 +414,18 @@ die als hoofdfoto; de originele foto blijft gewoon staan.
 Waarom het bijgesteld moet kunnen worden: volautomatisch kan dit niet
 fatsoenlijk. De hoekdetectie zit er meestal goed op en soms een centimeter
 naast, en dat merk je anders pas als de advertentie online staat.
+7b. **Batches: het geldoverzicht per partij.** Naast de werkbank staat
+   **Batches**. Een batch is een ingekochte partij; je koppelt er de toestellen
+   aan (bij Toevoegen, of achteraf op de batchpagina) en ziet dan per partij wat
+   hij je kostte en opbracht: de investering, de omzet gesplitst in met bon en
+   zonder bon, en de winst. De omzet komt vanzelf mee zodra een gekoppeld toestel
+   verkocht is, aan de balie of op de webshop; de betaalwijze bepaalt of het bij
+   met bon of zonder bon telt.
+
+   **Extra investering.** Wat je bij het testen aan een toestel bijkoopt, een
+   ssd, wat geheugen, een lader of een reparatie, telt op bij de inkoop van dát
+   toestel, zodat de marge klopt, en verschijnt op de batchpagina apart als
+   *extra investering*, met onderaan de lijst van wat er per toestel in ging.
 8. **Export.** Batches en facturen eruit voor de boekhouding.
 
 ---
