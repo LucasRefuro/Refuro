@@ -674,6 +674,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
           <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
           <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
+          <div><label>Batch</label><select id="t_batch"><option value="">Geen batch</option></select></div>
         </div>
 
         <!-- Waar de doos heen gaat. Vul je dit hier in, dan hoeft niemand later
@@ -1258,6 +1259,7 @@ async function toevoegen(knop){
   if(!model){ toast('Vul merk en model in','let-op'); return; }
   const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
   const cat=soortNu;
+  const batKeuze=(document.getElementById('t_batch')||{}).value||null;
   const bekend=modellen.find(m=>m.model.toLowerCase()===model.toLowerCase());
 
   await bezig(knop, async()=>{
@@ -1268,6 +1270,7 @@ async function toevoegen(knop){
         merk:merk||null, model, categorie:cat,
         inkoop:Number(v('t_inkoop'))||0,
         leverancier:v('t_lev')||null,
+        batch_id:batKeuze,
         code:volgendeCode(i),
         specs: bekend ? (bekend.specs||{}) : {},
         locatie_id: locKeuze||null,
@@ -1519,6 +1522,25 @@ function tekenApparaat(){
             ? `<table><tbody>${specrijen.map(([k,w])=>
                 `<tr><td class="muted" style="width:40%">${esc(k)}</td><td><b>${esc(w)}</b></td></tr>`).join('')}</tbody></table>`
             : '<p class="muted klein">Nog niets bekend. De specificaties worden ingevuld bij de controle.</p>'}
+        </div>
+
+        <div class="card">
+          <h2><svg class="i"><use href="#i-cpu"/></svg>Extra onderdelen${(a.extra_kosten||[]).length?` <span class="muted">(${euro(batExtraSom(a))})</span>`:''}</h2>
+          <p class="muted klein" style="margin-bottom:10px">Zit er bij het testen geen ram of ssd in, of moest je iets repareren? Zet het hier. Het bedrag komt bij de inkoop van dit toestel${a.batch_id?' en bij de extra investering van de batch':''}.</p>
+          ${(a.extra_kosten||[]).length?`<table><tbody>${(a.extra_kosten||[]).map((k,i)=>
+            `<tr><td>${esc(batSoortNaam(k.soort))}${k.omschrijving?` <span class="muted klein">${esc(k.omschrijving)}</span>`:''}</td>
+                 <td class="num">${euro(Number(k.bedrag)||0)}</td>
+                 <td class="num"><button class="btn ghost small" title="Weghalen" onclick="batExtraWeg('${a.id}',${i})">×</button></td></tr>`).join('')}</tbody></table>`:''}
+          <div class="batkostform">
+            <select id="ex_soort">
+              <option value="ssd">SSD</option><option value="ram">RAM</option>
+              <option value="lader">Lader</option><option value="reparatie">Reparatie</option>
+              <option value="anders">Overig</option>
+            </select>
+            <input id="ex_bedrag" type="number" step="0.01" min="0" style="max-width:120px" placeholder="Kosten in euro">
+            <input id="ex_oms" placeholder="Omschrijving (mag leeg)" style="min-width:140px; flex:1">
+            <button class="btn" onclick="batExtraToevoegen('${a.id}', this)">Toevoegen</button>
+          </div>
         </div>
 
         <div class="card">
@@ -4344,12 +4366,11 @@ function batSoortNaam(s){
 }
 
 /* Korte samenvatting van de onderdelen: hoeveel ssd's, ram en laders erin gingen. */
-function batOnderdelen(b){
+function batOnderdelen(b, devs){
   const t={ssd:0, ram:0, lader:0, reparatie:0, anders:0};
-  (Array.isArray(b.kosten)?b.kosten:[]).forEach(k=>{
-    const s=t.hasOwnProperty(k.soort)?k.soort:'anders';
-    t[s]+=(Number(k.aantal)||0);
-  });
+  const tel=(soort, aantal)=>{ const s=t.hasOwnProperty(soort)?soort:'anders'; t[s]+=aantal; };
+  (Array.isArray(b.kosten)?b.kosten:[]).forEach(k=>tel(k.soort, Number(k.aantal)||0));
+  (devs||[]).forEach(a=>(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).forEach(k=>tel(k.soort, 1)));
   const uit=[];
   if(t.ssd) uit.push(t.ssd+'x SSD');
   if(t.ram) uit.push(t.ram+'x RAM');
@@ -4367,8 +4388,16 @@ function batCijfers(id){
   const b=batches.find(x=>x.id===id)||{};
   const devs=apparaten.filter(a=>a.batch_id===id);
   const devInkoop=devs.reduce((n,a)=>n+(Number(a.inkoop)||0),0);
-  const extras=(Array.isArray(b.kosten)?b.kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
-  const investering=(Number(b.inkoopprijs)||0)+devInkoop+extras;
+  /* Onderdelen die bij het testen op een toestel zijn gezet, zitten al in de
+     inkoop van dat toestel (en dus in devInkoop). Hier tellen we ze los op om ze
+     als extra investering te kunnen tonen. De basis is de inkoop zonder die
+     extra's. */
+  const deviceExtras=devs.reduce((n,a)=>n+(Array.isArray(a.extra_kosten)
+    ?a.extra_kosten.reduce((m,k)=>m+(Number(k.bedrag)||0),0):0),0);
+  const devBasis=Math.round((devInkoop-deviceExtras)*100)/100;
+  const batchKosten=(Array.isArray(b.kosten)?b.kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
+  const extraInvestering=Math.round((deviceExtras+batchKosten)*100)/100;
+  const investering=Math.round(((Number(b.inkoopprijs)||0)+devInkoop+batchKosten)*100)/100;
   let omzetBon=0, omzetZb=0, verkocht=0, teKoop=0, teKoopWaarde=0;
   devs.forEach(a=>{
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
@@ -4386,10 +4415,60 @@ function batCijfers(id){
   const winst=omzet-investering;
   const btw=b.marge?Math.max(0,winst)*0.21/1.21:omzet*0.21/1.21;
   return {b, aantal:devs.length, verkocht, teKoop, teKoopWaarde,
-          investering, devInkoop, extras, omzet, omzetBon, omzetZb, winst, btw, devs};
+          investering, devInkoop, devBasis, deviceExtras, batchKosten, extraInvestering,
+          omzet, omzetBon, omzetZb, winst, btw, devs};
+}
+
+function batExtraSom(a){
+  return (Array.isArray(a.extra_kosten)?a.extra_kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
+}
+
+/* Een extra onderdeel bij een toestel. Het bedrag gaat bij de inkoop van dat
+   toestel op, zodat de totale inkoop en straks de marge kloppen, en het wordt
+   apart bewaard zodat de batchpagina de extra investering kan laten zien. */
+async function batExtraToevoegen(id, knop){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const soort=document.getElementById('ex_soort').value;
+  const bedrag=Math.round((Number(document.getElementById('ex_bedrag').value)||0)*100)/100;
+  const omsEl=document.getElementById('ex_oms');
+  const oms=omsEl?omsEl.value.trim():'';
+  if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
+  const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
+  lijst.push({soort, bedrag, omschrijving:oms||null});
+  const nieuweInkoop=Math.round(((Number(a.inkoop)||0)+bedrag)*100)/100;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw error;
+    await allesLaden();
+    toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
+  });
+}
+
+async function batExtraWeg(id, index){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
+  if(index<0 || index>=lijst.length) return;
+  const bedrag=Number(lijst[index].bedrag)||0;
+  lijst.splice(index,1);
+  const nieuweInkoop=Math.round(Math.max(0,(Number(a.inkoop)||0)-bedrag)*100)/100;
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Mislukt','fout'); return; }
+  await allesLaden();
+}
+
+/* De keuzelijst bij Toevoegen bijwerken, met behoud van wat er gekozen was. */
+function batVulToevoegKeuze(){
+  const sel=document.getElementById('t_batch'); if(!sel) return;
+  const nu=sel.value;
+  sel.innerHTML='<option value="">Geen batch</option>'+
+    batches.map(b=>`<option value="${b.id}">${esc(b.nummer||'Naamloos')}</option>`).join('');
+  if(nu && batches.some(b=>b.id===nu)) sel.value=nu;
 }
 
 function tekenBatches(){
+  batVulToevoegKeuze();
   const lijstVak=document.getElementById('batLijstVak');
   const detailVak=document.getElementById('batDetailVak');
   if(!lijstVak || !detailVak) return;
@@ -4430,7 +4509,7 @@ function renderBatchDetail(){
   const c=batCijfers(b.id);
   const devs=c.devs;
   const kosten=Array.isArray(b.kosten)?b.kosten:[];
-  const onderdelen=batOnderdelen(b);
+  const onderdelen=batOnderdelen(b, devs);
 
   const devRijen=devs.map(a=>{
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
@@ -4449,13 +4528,23 @@ function renderBatchDetail(){
     </tr>`;
   }).join('');
 
-  const kostRijen=kosten.map((k,i)=>`<tr>
-      <td>${esc(batSoortNaam(k.soort))}</td>
-      <td class="num">${Number(k.aantal)||0}</td>
+  const extraRijen=[];
+  devs.forEach(a=>(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).forEach((k,i)=>{
+    extraRijen.push(`<tr>
+      <td>${esc(batSoortNaam(k.soort))}${k.omschrijving?` <span class="muted klein">${esc(k.omschrijving)}</span>`:''}</td>
+      <td>${esc([a.merk,a.model].filter(Boolean).join(' ')||'toestel')}</td>
       <td class="num">${euro(Number(k.bedrag)||0)}</td>
-      <td>${esc(k.omschrijving||'')}</td>
-      <td class="num"><button class="btn ghost small" onclick="batKostWeg(${i})">×</button></td>
-    </tr>`).join('');
+      <td class="num"><button class="btn ghost small" title="Weghalen" onclick="batExtraWeg('${a.id}',${i})">×</button></td>
+    </tr>`);
+  }));
+  kosten.forEach((k,i)=>{
+    extraRijen.push(`<tr>
+      <td>${esc(batSoortNaam(k.soort))}${(Number(k.aantal)||0)>1?` <span class="muted klein">${k.aantal}x</span>`:''}${k.omschrijving?` <span class="muted klein">${esc(k.omschrijving)}</span>`:''}</td>
+      <td><span class="muted">hele partij</span></td>
+      <td class="num">${euro(Number(k.bedrag)||0)}</td>
+      <td class="num"><button class="btn ghost small" title="Weghalen" onclick="batKostWeg(${i})">×</button></td>
+    </tr>`);
+  });
 
   vak.innerHTML=`
     <div class="pagehead">
@@ -4472,7 +4561,9 @@ function renderBatchDetail(){
       ${b.notitie?`<p class="muted klein" style="margin-top:4px">${esc(b.notitie)}</p>`:''}
       <div class="kpis" style="margin-top:18px">
         <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div>
-          <div class="muted klein" style="margin-top:6px">toestellen ${euro(c.devInkoop)}${(Number(b.inkoopprijs)||0)?' · partij '+euro(Number(b.inkoopprijs)||0):''}${c.extras?' · kosten '+euro(c.extras):''}</div></div>
+          <div class="muted klein" style="margin-top:6px">basis ${euro(c.devBasis)}${c.deviceExtras?' · onderdelen '+euro(c.deviceExtras):''}${(Number(b.inkoopprijs)||0)?' · partij '+euro(Number(b.inkoopprijs)||0):''}${c.batchKosten?' · partijkosten '+euro(c.batchKosten):''}</div></div>
+        <div class="kpi"><div class="l">Extra investering</div><div class="v">${euro(c.extraInvestering)}</div>
+          <div class="muted klein" style="margin-top:6px">onderdelen en losse kosten</div></div>
         <div class="kpi"><div class="l">Omzet</div><div class="v">${euro(c.omzet)}</div>
           <div class="muted klein" style="margin-top:6px">met bon ${euro(c.omzetBon)} · zonder bon ${euro(c.omzetZb)}</div></div>
         <div class="kpi"><div class="l">Winst</div><div class="v ${c.winst>=0?'batwinst':'batverlies'}">${euro(c.winst)}</div>
@@ -4496,11 +4587,12 @@ function renderBatchDetail(){
     </div>
 
     <div class="card">
-      <h2><svg class="i"><use href="#i-wrench"/></svg>Kosten en onderdelen${onderdelen?` <span class="muted">(${onderdelen})</span>`:''}</h2>
-      ${kosten.length?`<div class="tabelrol"><table>
-        <thead><tr><th>Soort</th><th class="num">Aantal</th><th class="num">Bedrag</th><th>Omschrijving</th><th></th></tr></thead>
-        <tbody>${kostRijen}</tbody></table></div>`
-        :'<p class="muted">Nog geen kosten. Voeg onderdelen of reparaties toe, dan tellen ze mee in de investering.</p>'}
+      <h2><svg class="i"><use href="#i-wrench"/></svg>Extra investering${onderdelen?` <span class="muted">(${onderdelen})</span>`:''}</h2>
+      <p class="muted klein" style="margin-bottom:8px">Wat er extra in ging: onderdelen die je bij het testen op een toestel zette, en losse kosten voor de hele partij.</p>
+      ${extraRijen.length?`<div class="tabelrol"><table>
+        <thead><tr><th>Wat</th><th>Waarvoor</th><th class="num">Bedrag</th><th></th></tr></thead>
+        <tbody>${extraRijen.join('')}</tbody></table></div>`
+        :'<p class="muted">Nog geen extra kosten. Onderdelen zet je op het toestel zelf bij het testen; losse partijkosten hieronder.</p>'}
       <div class="batkostform">
         <select id="bk_soort">
           <option value="ssd">SSD</option><option value="ram">RAM</option>
@@ -4509,7 +4601,7 @@ function renderBatchDetail(){
         </select>
         <input id="bk_aantal" type="number" min="1" value="1" style="max-width:80px" placeholder="Aantal">
         <input id="bk_bedrag" type="number" step="0.01" min="0" style="max-width:130px" placeholder="Totaal in euro">
-        <input id="bk_oms" placeholder="Omschrijving (mag leeg)" style="min-width:160px; flex:1">
+        <input id="bk_oms" placeholder="Losse partijkosten (mag leeg)" style="min-width:160px; flex:1">
         <button class="btn" onclick="batKostToevoegen(this)">Toevoegen</button>
       </div>
     </div>`;
