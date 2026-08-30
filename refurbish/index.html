@@ -2446,22 +2446,35 @@ function ctrAccu(waarde){
   const w=Number(ctr.accu);
   const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
   if(!laag) ctr.accuVervangen=false;
+  /* Typ je met de hand een ander getal dan 100, dan is het geen nieuwe accu meer;
+     anders zou het label straks 'nieuw' liegen. */
+  if(ctr.nieuweAccu && ctr.accu!=='100'){
+    ctr.nieuweAccu=false;
+    const box=document.getElementById('c_nieuwe_accu'); if(box) box.checked=false;
+  }
   /* Alleen het advies-blok bijwerken, niet het hele scherm: zo blijft je cursor
      in het veld staan terwijl je typt. */
   const vak=document.getElementById('accuAdvies');
   if(vak) vak.innerHTML=accuAdviesHtml();
 }
 function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; }
-/* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Het
-   accuveld en het advies lopen mee, zonder het hele scherm te hertekenen zodat
-   je cursor niet wegspringt. */
+/* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Bij
+   uitvinken zetten we de eerder gemeten waarde terug, zodat er geen misleidende
+   100% blijft staan. Het accuveld en het advies lopen mee zonder het hele scherm
+   te hertekenen, zodat je cursor niet wegspringt. */
 function ctrNieuweAccu(aan){
   ctr.nieuweAccu=!!aan;
+  const inp=document.getElementById('c_accu');
+  const vak=document.getElementById('accuAdvies');
   if(aan){
+    ctr._accuVoor=ctr.accu;
     ctr.accu='100'; ctr.accuVervangen=false;
-    const inp=document.getElementById('c_accu'); if(inp) inp.value='100';
-    const vak=document.getElementById('accuAdvies'); if(vak) vak.innerHTML=accuAdviesHtml();
+    if(inp) inp.value='100';
+  }else{
+    ctr.accu=ctr._accuVoor||'';
+    if(inp) inp.value=ctr.accu;
   }
+  if(vak) vak.innerHTML=accuAdviesHtml();
 }
 
 /* Een notitie mag maar zo lang zijn als er op de sticker past. Liever een
@@ -2577,14 +2590,15 @@ async function ctrUpgradeWeg(index){
   lijst.splice(index,1);
   const nieuweInkoop=Math.round(Math.max(0,(Number(ctr.a.inkoop)||0)-bedrag)*100)/100;
   /* Haal je de accu er weer af en zit er geen andere accu meer bij, dan is het
-     ook geen nieuwe accu meer. */
+     ook geen nieuwe accu meer. Het percentage gaat mee weg: 100% zonder de accu
+     zou liegen. Opnieuw meten dus. */
   const resetAccu = weg.soort==='accu' && !lijst.some(x=>x.soort==='accu');
   const {error}=await sb.from('refurbish_apparaten')
     .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
-      resetAccu?{nieuwe_accu:false}:{})).eq('id',ctr.a.id);
+      resetAccu?{nieuwe_accu:false, accu:null}:{})).eq('id',ctr.a.id);
   if(error){ toast('Mislukt','fout'); return; }
   ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
-  if(resetAccu){ ctr.nieuweAccu=false; ctr.a.nieuwe_accu=false; }
+  if(resetAccu){ ctr.nieuweAccu=false; ctr.a.nieuwe_accu=false; ctr.a.accu=null; ctr.accu=''; }
   if(weg.voorraad_id){
     const o=voorraaddelen.find(x=>x.id===weg.voorraad_id);
     if(o){
@@ -4883,13 +4897,14 @@ function batSoortNaam(s){
 
 /* Korte samenvatting van de onderdelen: hoeveel ssd's, ram en laders erin gingen. */
 function batOnderdelen(b, devs){
-  const t={ssd:0, ram:0, lader:0, reparatie:0, anders:0};
+  const t={ssd:0, ram:0, accu:0, lader:0, reparatie:0, anders:0};
   const tel=(soort, aantal)=>{ const s=t.hasOwnProperty(soort)?soort:'anders'; t[s]+=aantal; };
   (Array.isArray(b.kosten)?b.kosten:[]).forEach(k=>tel(k.soort, Number(k.aantal)||0));
   (devs||[]).forEach(a=>(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).forEach(k=>tel(k.soort, 1)));
   const uit=[];
   if(t.ssd) uit.push(t.ssd+'x SSD');
   if(t.ram) uit.push(t.ram+'x RAM');
+  if(t.accu) uit.push(t.accu+'x accu');
   if(t.lader) uit.push(t.lader+'x lader');
   if(t.reparatie) uit.push(t.reparatie+'x reparatie');
   if(t.anders) uit.push(t.anders+'x overig');
@@ -4931,18 +4946,21 @@ function batCijfers(id){
   let omzetBon=0, omzetZb=0, verkocht=0, teKoop=0, teKoopWaarde=0, btwSom=0, margeGemengd=false;
   const batchMarge=!!b.marge;
   devs.forEach(a=>{
-    if(margeVan(a)!==batchMarge) margeGemengd=true;
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
     if(hw && hw.status==='verkocht'){
       verkocht++;
       const bedrag=Number(hw.verkoop)||0;
       const bet=hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash');
       if(bet==='cash_zb') omzetZb+=bedrag; else omzetBon+=bedrag;
-      /* Btw per toestel, want het regime kan per toestel verschillen. Met de
-         margeregeling betaal je btw over de winst op dat toestel, anders over de
-         hele verkoopprijs. */
-      btwSom += margeVan(a)
-        ? Math.max(0, bedrag-(Number(a.inkoop)||0))*0.21/1.21
+      /* Btw per toestel, want het regime kan per toestel verschillen. We lezen
+         het regime en de inkoop van de hardware-rij: dat is waarmee het toestel
+         echt verkocht is (en wat de balie eventueel heeft bijgesteld), niet de
+         werkbank-rij. Margeregeling tenzij expliciet op normaal gezet: dan btw
+         over de winst, anders over de hele verkoopprijs. */
+      const margeHw = hw.marge!==false;
+      if(margeHw!==batchMarge) margeGemengd=true;
+      btwSom += margeHw
+        ? Math.max(0, bedrag-(Number(hw.inkoop)||0))*0.21/1.21
         : bedrag*0.21/1.21;
     }else{
       teKoop++;
@@ -5018,11 +5036,12 @@ async function batExtraWeg(id, index){
   const bedrag=Number(weg.bedrag)||0;
   lijst.splice(index,1);
   const nieuweInkoop=Math.round(Math.max(0,(Number(a.inkoop)||0)-bedrag)*100)/100;
-  /* Weg met de accu, en geen andere accu meer erbij: dan is het geen nieuwe accu meer. */
+  /* Weg met de accu, en geen andere accu meer erbij: dan is het geen nieuwe accu
+     meer, en gaat het 100%-percentage mee weg (anders liegt het label). */
   const resetAccu = weg.soort==='accu' && !lijst.some(x=>x.soort==='accu');
   const {error}=await sb.from('refurbish_apparaten')
     .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
-      resetAccu?{nieuwe_accu:false}:{})).eq('id',id);
+      resetAccu?{nieuwe_accu:false, accu:null}:{})).eq('id',id);
   if(error){ toast('Mislukt','fout'); return; }
   /* Ligt hij al in de winkelvoorraad, dan de inkoop daar ook terugdraaien. */
   if(a.hardware_id){

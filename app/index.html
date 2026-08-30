@@ -6735,6 +6735,17 @@ async function hwOpslaan(knop){
   }
   if(knop){ knop.disabled=false; knop.textContent=oud; }
   if(fout){ console.error('hardware opslaan:',fout); toast('Opslaan mislukt','fout'); return; }
+  /* Btw-regime en plek ook op het gekoppelde refurbish-toestel bijwerken: de
+     batchcijfers en het refurbish-label lezen die rij, niet de hardware-rij.
+     Zonder deze spiegeling zou een wijziging aan de balie daar onzichtbaar
+     blijven. Best-effort, en het raakt niks als het toestel niet uit refurbish
+     komt (dan matcht hardware_id nergens). */
+  if(hwOpen){
+    const {error:sErr}=await sb.from('refurbish_apparaten')
+      .update({marge:rij.marge, plek:rij.plek, bijgewerkt_op:new Date().toISOString()})
+      .eq('hardware_id', hwOpen.id);
+    if(sErr) console.error('refurbish marge/plek syncen:', sErr);
+  }
   hwSluit(); await hwLaad(true);
   toast(hwOpen?'Toestel bijgewerkt':'Toestel toegevoegd', true);
 }

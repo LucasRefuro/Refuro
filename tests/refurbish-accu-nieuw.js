@@ -35,6 +35,17 @@ setTimeout(async()=>{
   ok('nieuwe accu: veld toont 100', w.eval("document.getElementById('c_accu').value")==='100');
   ok('geen defect "accu vervangen" meer', !w.eval("JSON.stringify(ctrDefecten())").includes('Accu vervangen'));
 
+  // handmatig een ander getal typen wist de vlag, anders liegt het label
+  w.eval("ctrAccu('90')");
+  ok('typen van 90 wist de nieuwe-accu-vlag', w.eval("ctr.nieuweAccu")===false);
+  ok('de checkbox gaat mee uit', w.eval("document.getElementById('c_nieuwe_accu').checked")===false);
+
+  // uitvinken zet de eerder gemeten waarde terug, niet stiekem 100 laten staan
+  w.eval("ctrAccu('78'); ctrNieuweAccu(true);");
+  ok('aanvinken zet 100', w.eval("ctr.accu")==='100');
+  w.eval("ctrNieuweAccu(false)");
+  ok('uitvinken zet de meting 78 terug', w.eval("ctr.accu")==='78');
+
   w.eval(`
     voorraaddelen=[{id:'v1', naam:'Accu Dell', soort:'accu', aantal:3, prijs:40, lots:[{aantal:3,prijs:40}]}];
     apparaten=[{id:'a2', code:'A2', merk:'HP', model:'Y', categorie:'Laptop', specs:{},

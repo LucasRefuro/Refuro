@@ -21,6 +21,7 @@ export const RECHTEN: Record<string, string> = {
   write_products: "toestellen aanmaken en aanpassen",
   read_inventory: "de voorraad uitlezen",
   write_inventory: "de voorraad op één stuk zetten",
+  read_locations: "je winkellocaties uitlezen voor de voorraad",
   read_orders: "zien wat er besteld is",
   write_publications: "het toestel zichtbaar maken in de webshop",
 };
