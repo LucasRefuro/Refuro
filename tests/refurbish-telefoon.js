@@ -110,7 +110,8 @@ setTimeout(async()=>{
   ok('monitor: geen sloten en geen windows', !mon.stap.includes('blokkers') && !mon.stap.includes('windows'));
   ok('monitor: geen accu', mon.accu===false);
   const ov=pv('Overig');
-  ok('overig: minimale generieke stappen', ov.stap.join(',')==='start,test,specs,visueel,klaar');
+  ok('overig: generieke stappen met slot-triage', ov.stap.join(',')==='start,blokkers,test,specs,visueel,klaar');
+  ok('overig: één herkomst-blokker', ov.blok===1);
   ok('onbekende categorie valt terug op laptop', (()=>{ w.eval("ctr={a:{categorie:'Onzin'}}"); return w.eval("prof().icon")==='i-laptop'; })());
 
   // heeftAccu: een desktop toont geen accu-vraag in de Windows-nakijkstap
@@ -119,6 +120,41 @@ setTimeout(async()=>{
     goede_delen:[],aangemaakt_op:new Date().toISOString()}]; appOpen('d1'); ctr.stap='nawindows';
     ctr.antwoord={'Is Windows geïnstalleerd en start hij op?':'Ja'};`);
   ok('desktop nawindows toont geen accu-blok', !/Hoeveel van de accu/.test(w.eval("CTR_STAPPEN.nawindows.inhoud()")));
+
+  // ── bugfixes uit de doorlichting ──
+  // Optionele functies (Niet aanwezig) mogen geen vals defect geven (tablet).
+  w.eval(`apparaten=[{id:'t1',code:'T1',merk:'Apple',model:'iPad',categorie:'Tablet',specs:{},
+    status:'te_controleren',accu:null,nieuwe_accu:false,extra_kosten:[],checklist:[],defecten:[],
+    goede_delen:[],aangemaakt_op:new Date().toISOString()}]; appOpen('t1');
+    prof().hardware.forEach(q=>ctr.antwoord[q.v]='Ja');
+    ctr.antwoord['Werkt de vingerafdruk of gezichtsontgrendeling?']='Niet aanwezig';
+    ctr.antwoord['Werkt de camera achter?']='Niet aanwezig';`);
+  ok('tablet: niet-aanwezige feature telt niet als defect', w.eval("ctrDefecten().length")===0);
+  ok('tablet: een Nee telt wel als defect', (()=>{ w.eval("ctr.antwoord['Werken alle knoppen?']='Nee'"); return w.eval("ctrDefecten().length")===1; })());
+
+  // Desktop: ethernet en wifi/bluetooth gesplitst, wifi mag ontbreken.
+  w.eval("ctr={a:{categorie:'Desktop'}}");
+  ok('desktop: ethernet en wifi apart gevraagd',
+    w.eval("prof().hardware.some(q=>/ethernet/.test(q.v)) && prof().hardware.some(q=>/wifi en bluetooth/.test(q.v))"));
+  ok('desktop: wifi mag ontbreken zonder defect',
+    w.eval("(prof().hardware.find(q=>/wifi en bluetooth/.test(q.v))||{a:[]}).a.includes('Niet aanwezig')"));
+
+  // Desktop hervat: de blokkers-stap valt niet uit het pad.
+  w.eval(`apparaten=[{id:'d2',code:'D2',merk:'Dell',model:'Optiplex',categorie:'Desktop',specs:{},
+    status:'installeren',accu:null,nieuwe_accu:false,extra_kosten:[],checklist:[],defecten:[],
+    goede_delen:[],aangemaakt_op:new Date().toISOString()}]; appOpen('d2');`);
+  ok('desktop hervat: blokkers zit in het pad', w.eval("ctr.pad.join(',')")==='start,blokkers,hardware,upgrade,windows');
+
+  // Overig: een op slot staand toestel wordt geblokkeerd, niet klaar.
+  w.eval(`apparaten=[{id:'o1',code:'O1',merk:'Apple',model:'Watch',categorie:'Overig',specs:{},
+    status:'te_controleren',accu:null,nieuwe_accu:false,extra_kosten:[],checklist:[],defecten:[],
+    goede_delen:[],aangemaakt_op:new Date().toISOString()}]; appOpen('o1');
+    ctr.antwoord['Is het toestel vrij van een account-slot of bedrijfsbeheer, en niet als gestolen gemeld?']='Op slot';`);
+  ok('overig: op slot is een blokker', w.eval("ctrBlokkers().length")===1);
+
+  // Overig zonder extra uitrusting: geen lege kop 'Extra uitrusting'.
+  w.eval("ctr={a:{categorie:'Overig'},antwoord:{},punten:{},specs:{},accu:'',notities:{},opties:{}}");
+  ok('overig: geen lege kop Extra uitrusting', !/Extra uitrusting/.test(w.eval("CTR_STAPPEN.specs.inhoud()")));
 
   // ── auto-doorgaan: alles ingevuld -> vanzelf naar de volgende stap ──
   w.eval(`

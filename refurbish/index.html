@@ -1131,7 +1131,7 @@ async function allesLaden(){
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
     sb.from('refurbish_instellingen').select('*').maybeSingle(),
-    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel')
+    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,inkoop,marge')
       .order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('refurbish_voorraad').select('*').order('naam')
@@ -1954,7 +1954,11 @@ function appOpen(id){
     accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
     nieuweAccu:!!a.nieuwe_accu,
     notitie:a.notitie||'', opties:{},
-    pad: hervat ? ['start','hardware','upgrade','windows'] : [],
+    /* Het pad tot hier uit het profiel halen, niet de vaste laptoplijst: een
+       desktop heeft er een blokkers-stap voor, die anders uit de tijdlijn en de
+       terugknop wegvalt. Tot en met de Windows-stap, want daarna land je op
+       nawindows. */
+    pad: hervat ? _p.stappen.slice(0, _p.stappen.indexOf('windows')+1) : [],
     tijdEinde:null
   };
   /* Was hij al eens langs de controle geweest, dan pakken we op waar het
@@ -2379,9 +2383,9 @@ const CTR_STAPPEN={
         ? ctrVraag('Staan alle stuurprogramma\'s erop, zonder uitroeptekens in Apparaatbeheer?', ['Ja','Nee'], 'drivers')
         : ''}
       ${ctr.antwoord['windowsgoed']==='Nee'
-        ? '<div class="tip">Maak het eerst af. Zolang dit op nee staat kun je niet verder; zo verkoop je geen laptop met een halve installatie.</div>' : ''}
+        ? '<div class="tip">Maak het eerst af. Zolang dit op nee staat kun je niet verder; zo verkoop je geen toestel met een halve installatie.</div>' : ''}
       ${ctr.antwoord['drivers']==='Nee'
-        ? '<div class="tip">Zet de ontbrekende stuurprogramma\'s erop. Een ontbrekende wifi- of touchpaddriver is precies wat een koper de dag erna belt.</div>' : ''}
+        ? '<div class="tip">Zet de ontbrekende stuurprogramma\'s erop. Een ontbrekende wifi- of chipsetdriver is precies wat een koper de dag erna belt.</div>' : ''}
 
       <div class="clkop">Werkt alles${open?' · nog '+open+' te doen':''}</div>
       ${na.map(q=>ctrVraag(q.v, q.a||['Ja','Nee'])).join('')}
@@ -2411,8 +2415,8 @@ const CTR_STAPPEN={
 
       ${prof().specVelden.map(v=>ctrSpecVeld(v)).join('')}
 
-      <div class="clkop">Extra uitrusting</div>
-      <div class="specextra">${prof().specExtra.map(v=>ctrExtraVeld(v, sp)).join('')}</div>
+      ${prof().specExtra.length?`<div class="clkop">Extra uitrusting</div>
+      <div class="specextra">${prof().specExtra.map(v=>ctrExtraVeld(v, sp)).join('')}</div>`:''}
 
       ${!prof().stappen.includes('nawindows') && prof().heeftAccu!==false
         ? `<div class="clkop">Accu</div>${ctrAccublok()}` : ''}
@@ -2656,12 +2660,12 @@ const CATEGORIE_PROFIEL={
       {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm', test:'scherm'},
       {v:'Werken de luidsprekers?', a:['Ja','Nee'], deel:'Luidsprekers', test:'luidspreker'},
       {v:'Werkt de microfoon?', a:['Ja','Nee'], deel:'Microfoon', test:'microfoon'},
-      {v:'Werkt de camera achter?', a:['Ja','Nee'], deel:'Camera achter', test:'camera_achter'},
+      {v:'Werkt de camera achter?', a:['Ja','Nee','Niet aanwezig'], deel:'Camera achter', test:'camera_achter'},
       {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor', test:'camera_voor'},
       {v:'Werken alle knoppen?', a:['Ja','Nee'], deel:'Knoppen'},
       {v:'Laadt hij op via de kabel?', a:['Ja','Nee'], deel:'Laadpoort'},
       {v:'Werken wifi en bluetooth?', a:['Ja','Nee'], deel:'Wifi'},
-      {v:'Werkt de vingerafdruk of gezichtsontgrendeling?', a:['Ja','Nee'], deel:'Biometrie'},
+      {v:'Werkt de vingerafdruk of gezichtsontgrendeling?', a:['Ja','Nee','Niet aanwezig'], deel:'Biometrie'},
       {v:'Werken de sensoren (automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren', test:'sensoren'}
     ],
     visueel:[
@@ -2684,8 +2688,10 @@ const CATEGORIE_PROFIEL={
       {s:'Draadloos laden',       id:'ce_draad', type:'ja'}
     ],
     specVragen:{
-      'Cellular (sim)':   [{v:'Is de tablet simlockvrij?', a:['Ja','Nee']}],
-      'Pen-ondersteuning':[{v:'Is de pen getest, druk en hover?', a:['Ja','Nee']}]
+      'Cellular (sim)':        [{v:'Is de tablet simlockvrij?', a:['Ja','Nee']},{v:'Werkt mobiel internet? Doe een sim erin en test de data.', a:['Ja','Nee']}],
+      'Pen-ondersteuning':     [{v:'Is de pen getest, druk en hover?', a:['Ja','Nee']}],
+      'Toetsenbord-connector': [{v:'Werkt de connector met een toetsenbord?', a:['Ja','Nee']}],
+      'Draadloos laden':       [{v:'Laadt hij draadloos op?', a:['Ja','Nee']}]
     },
     sloopdelen:['Scherm','Achterglas','Accu','Moederbord','Camera achter','Camera voor','Laadpoort','Luidsprekers']
   },
@@ -2719,7 +2725,8 @@ const CATEGORIE_PROFIEL={
       {v:'Geeft de videokaart beeld zonder artefacten onder belasting?', a:['Ja','Nee'], deel:'Videokaart'},
       {v:'Is de voeding stabiel onder belasting, zonder herstarts?', a:['Ja','Nee'], deel:'Voeding'},
       {v:'Werken alle poorten (USB voor en achter, alle video-uitgangen)?', a:['Ja','Nee'], deel:'Poorten'},
-      {v:'Werken ethernet, wifi en bluetooth?', a:['Ja','Nee'], deel:'Netwerk'},
+      {v:'Werkt de netwerkaansluiting (ethernet)?', a:['Ja','Nee'], deel:'Netwerk'},
+      {v:'Werken wifi en bluetooth?', a:['Ja','Nee','Niet aanwezig'], deel:'Wifi en bluetooth'},
       {v:'Werkt het geluid via de lijn-uit?', a:['Ja','Nee'], deel:'Geluid'},
       {v:'Draaien alle ventilatoren en blijft de temperatuur onder belasting normaal?', a:['Ja','Nee'], deel:'Koeling'}
     ],
@@ -2730,14 +2737,17 @@ const CATEGORIE_PROFIEL={
     ],
     grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
     specVelden:[
-      {sleutel:'Processor',  id:'c_cpu', hint:'Intel Core i5'},
-      {sleutel:'Geheugen',   id:'c_ram', hint:'16 GB'},
-      {sleutel:'Opslag',     id:'c_ssd', hint:'512 GB SSD'},
-      {sleutel:'Videokaart', id:'c_gpu', hint:'Alleen als hij er een heeft'}
+      {sleutel:'Processor',  id:'c_cpu',  hint:'Intel Core i5'},
+      {sleutel:'Geheugen',   id:'c_ram',  hint:'16 GB'},
+      {sleutel:'Opslag',     id:'c_ssd',  hint:'512 GB SSD'},
+      {sleutel:'Videokaart', id:'c_gpu',  hint:'Alleen als hij er een heeft'},
+      {sleutel:'Vormfactor', id:'c_vorm', hint:'Tower, SFF of mini'},
+      {sleutel:'Voeding',    id:'c_psu',  hint:'Wattage, bijvoorbeeld 500W'}
     ],
     specExtra:[
-      {s:'Wifi-kaart', id:'ce_wifi', type:'ja'},
-      {s:'Bluetooth',  id:'ce_bt',   type:'ja'}
+      {s:'Wifi-kaart',    id:'ce_wifi', type:'ja'},
+      {s:'Bluetooth',     id:'ce_bt',   type:'ja'},
+      {s:'Vrij M.2-slot', id:'ce_m2',   type:'ja'}
     ],
     specVragen:{},
     sloopdelen:['Moederbord','Geheugen','Opslag','Videokaart','Voeding','Koeler','Behuizing']
@@ -2776,16 +2786,21 @@ const CATEGORIE_PROFIEL={
     grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
     schermDefect:{vlak:'Scherm / glas', optie:'Barst of lijn', vraag:'Barst of lijn in het scherm'},
     specVelden:[
-      {sleutel:'Schermmaat', id:'c_maat',   hint:'24 inch'},
-      {sleutel:'Resolutie',  id:'c_res',    hint:'1920x1080'},
-      {sleutel:'Paneel',     id:'c_paneel', hint:'IPS'}
+      {sleutel:'Schermmaat',  id:'c_maat',   hint:'24 inch'},
+      {sleutel:'Resolutie',   id:'c_res',    hint:'1920x1080'},
+      {sleutel:'Verversing',  id:'c_hz',     hint:'60 Hz of 144 Hz'},
+      {sleutel:'Paneel',      id:'c_paneel', hint:'IPS'}
     ],
     specExtra:[
       {s:'USB-C met beeld',     id:'ce_usbc', type:'ja'},
       {s:'Hoogteverstelbaar',   id:'ce_hoog', type:'ja'},
       {s:'Ingebouwde speakers', id:'ce_spk',  type:'ja'}
     ],
-    specVragen:{},
+    specVragen:{
+      'USB-C met beeld':     [{v:'Geeft USB-C beeld en laadt hij door?', a:['Ja','Nee']}],
+      'Hoogteverstelbaar':   [{v:'Verstelt de hoogte en blijft hij staan?', a:['Ja','Nee']}],
+      'Ingebouwde speakers': [{v:'Werken de ingebouwde speakers?', a:['Ja','Nee']}]
+    },
     sloopdelen:['Paneel','Standaard','Voeding','Aansluitingen-print']
   },
 
@@ -2796,15 +2811,18 @@ const CATEGORIE_PROFIEL={
     icon:'i-box', heeftAccu:false,
     startTekst:'Zet het apparaat aan.', startDoor:'Door naar de test', startNee:'slopen',
     specsTekst:'Noteer wat het is en de belangrijkste kenmerken.',
-    stappen:['start','test','specs','visueel','klaar'],
+    stappen:['start','blokkers','test','specs','visueel','klaar'],
     balk:[
-      {id:'start',   naam:'Start', uitleg:'Gaat hij aan'},
-      {id:'test',    naam:'Test',  uitleg:'Werkt alles'},
-      {id:'specs',   naam:'Specs', uitleg:'Kenmerken'},
-      {id:'visueel', naam:'Staat', uitleg:'Grade bepalen'},
-      {id:'klaar',   naam:'Klaar', uitleg:'Uitkomst'}
+      {id:'start',    naam:'Start', uitleg:'Gaat hij aan'},
+      {id:'blokkers', naam:'Slot',  uitleg:'Herkomst'},
+      {id:'test',     naam:'Test',  uitleg:'Werkt alles'},
+      {id:'specs',    naam:'Specs', uitleg:'Kenmerken'},
+      {id:'visueel',  naam:'Staat', uitleg:'Grade bepalen'},
+      {id:'klaar',    naam:'Klaar', uitleg:'Uitkomst'}
     ],
-    blokkers:[],
+    blokkers:[
+      {v:'Is het toestel vrij van een account-slot of bedrijfsbeheer, en niet als gestolen gemeld?', a:['Vrij','Op slot'], deel:'Slot of herkomst'}
+    ],
     hardware:[
       {v:'Werken alle kernfuncties zoals het hoort?', a:['Ja','Nee'], deel:'Functie'},
       {v:'Laadt hij op, of doet de voeding het?', a:['Ja','Nee'], deel:'Voeding'},
@@ -3128,11 +3146,14 @@ async function ctrUpgrade(knop){
   await bezig(knop, async()=>{
     const lijst=(Array.isArray(ctr.a.extra_kosten)?ctr.a.extra_kosten.slice():[]).concat(nieuweExtras);
     const nieuweInkoop=Math.round(((Number(ctr.a.inkoop)||0)+totaal)*100)/100;
+    /* Dezelfde timestamp lokaal én op de server, anders keurt de sessie-cache bij
+       een herlaad zijn eigen wijziging af als 'door iemand anders veranderd'. */
+    const nu=new Date().toISOString();
     const {error}=await sb.from('refurbish_apparaten')
-      .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+      .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:nu},
         isAccu?{accu:100, nieuwe_accu:true}:{})).eq('id',ctr.a.id);
     if(error) throw error;
-    ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
+    ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop; ctr.a.bijgewerkt_op=nu;
     if(isAccu){
       ctr.nieuweAccu=true; ctr.accu='100'; ctr.accuVervangen=false;
       ctr.a.nieuwe_accu=true; ctr.a.accu=100;
@@ -3157,11 +3178,12 @@ async function ctrUpgradeWeg(index){
      ook geen nieuwe accu meer. Het percentage gaat mee weg: 100% zonder de accu
      zou liegen. Opnieuw meten dus. */
   const resetAccu = weg.soort==='accu' && !lijst.some(x=>x.soort==='accu');
+  const nu=new Date().toISOString();
   const {error}=await sb.from('refurbish_apparaten')
-    .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+    .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:nu},
       resetAccu?{nieuwe_accu:false, accu:null}:{})).eq('id',ctr.a.id);
   if(error){ toast('Mislukt','fout'); return; }
-  ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
+  ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop; ctr.a.bijgewerkt_op=nu;
   if(resetAccu){ ctr.nieuweAccu=false; ctr.a.nieuwe_accu=false; ctr.a.accu=null; ctr.accu=''; }
   if(weg.voorraad_id){
     const o=voorraaddelen.find(x=>x.id===weg.voorraad_id);
