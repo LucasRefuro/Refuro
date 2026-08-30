@@ -2867,6 +2867,7 @@ async function naarVoorraad(a){
     locatie_id:a.locatie_id||null,
     plek:a.plek||null,
     nieuwe_accu:!!a.nieuwe_accu,
+    marge:margeVan(a),
     kanalen:{winkel:true}
   }).select().single();
   if(error) throw new Error('Kon hem niet in de voorraad zetten: '+error.message);
@@ -2998,7 +2999,7 @@ function onlineZetten(id){
   const a=apparaten.find(x=>x.id===id);
   if(!a){ toast('Dit apparaat bestaat niet meer','let-op'); return; }
   onl={a, kanaal:'webshop', titel:'', tekst:'', zoekwoorden:[], fotocode:null,
-       prijs:null, prijsBron:'', staat:a.grade||'B', garantie:6,
+       prijs:null, prijsBron:'', staat:a.grade||'B', garantie:6, marge:margeVan(a),
        kanalen:{webshop:true, winkel:true, marktplaats:false}, gevonden:[], fotos:[]};
   showTab('online');
   fotosLaden(a);
@@ -3177,6 +3178,10 @@ function tekenOnline(){
             </select></div>
             <div><label>Garantie (maanden)</label>
               <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:6}" onchange="onlVeld()"></div>
+            <div><label>Btw</label><select id="onl_marge" onchange="onlVeld()">
+              <option value="ja"${onl.marge?' selected':''}>Margeregeling</option>
+              <option value="nee"${!onl.marge?' selected':''}>Normale btw (21%)</option>
+            </select></div>
           </div>
           <button class="btn ghost small" style="margin-top:14px" onclick="prijskaartTonen()">
             <svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>
@@ -3234,6 +3239,8 @@ function onlVeld(){
   if(p) onl.prijs = p.value===''?null:Math.round(Number(p.value)*100)/100;
   if(g) onl.garantie = Number(g.value)||0;
   if(st) onl.staat = st.value;
+  const mg=document.getElementById('onl_marge');
+  if(mg) onl.marge = mg.value==='ja';
 }
 
 /* Een prijsvoorstel op basis van wat jij zelf eerder voor hetzelfde model
@@ -3444,10 +3451,15 @@ async function onlPubliceren(knop){
       garantie:Number(onl.garantie)||0,
       titel:onl.titel||null, omschrijving:onl.tekst||null,
       fotos:gesorteerd.map(f=>fotoUrl(f.pad)),
-      specs:a.specs||{}, kanalen, nieuwe_accu:!!a.nieuwe_accu,
+      specs:a.specs||{}, kanalen, nieuwe_accu:!!a.nieuwe_accu, marge:!!onl.marge,
       bijgewerkt_op:new Date().toISOString()
     }).eq('id', hwId);
     if(error) throw new Error('Publiceren mislukt: '+error.message);
+
+    /* De btw-keuze hoort ook op het toestel zelf: de batchcijfers en een latere
+       heropening lezen die, niet de hardware-rij. */
+    await sb.from('refurbish_apparaten')
+      .update({marge:!!onl.marge, bijgewerkt_op:new Date().toISOString()}).eq('id', a.id);
 
     /* En dan echt online. Zonder deze stap staat er "gepubliceerd" terwijl er
        niets op de webshop is gebeurd, en dat is precies het soort halve
@@ -4888,6 +4900,15 @@ function batOnderdelen(b, devs){
    inkoop per toestel plus de losse kosten. Omzet = wat de gekoppelde, verkochte
    toestellen opbrachten, gesplitst in met bon en zonder bon. Een webshopverkoop
    telt altijd als met bon. */
+/* Welk btw-regime geldt voor dit toestel: een eigen keuze op het toestel wint,
+   anders die van de batch, en zonder batch de margeregeling (het gebruikelijke
+   voor tweedehands). null op het toestel betekent dus: volg de batch. */
+function margeVan(a){
+  if(a.marge!=null) return !!a.marge;
+  const b=a.batch_id?batches.find(x=>x.id===a.batch_id):null;
+  return b?!!b.marge:true;
+}
+
 function batCijfers(id){
   const b=batches.find(x=>x.id===id)||{};
   const devs=apparaten.filter(a=>a.batch_id===id);
@@ -4907,14 +4928,22 @@ function batCijfers(id){
   const batchKosten=(Array.isArray(b.kosten)?b.kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
   const extraInvestering=Math.round((deviceExtras+batchKosten)*100)/100;
   const investering=Math.round((devBasis+deviceExtras+batchKosten)*100)/100;
-  let omzetBon=0, omzetZb=0, verkocht=0, teKoop=0, teKoopWaarde=0;
+  let omzetBon=0, omzetZb=0, verkocht=0, teKoop=0, teKoopWaarde=0, btwSom=0, margeGemengd=false;
+  const batchMarge=!!b.marge;
   devs.forEach(a=>{
+    if(margeVan(a)!==batchMarge) margeGemengd=true;
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
     if(hw && hw.status==='verkocht'){
       verkocht++;
       const bedrag=Number(hw.verkoop)||0;
       const bet=hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash');
       if(bet==='cash_zb') omzetZb+=bedrag; else omzetBon+=bedrag;
+      /* Btw per toestel, want het regime kan per toestel verschillen. Met de
+         margeregeling betaal je btw over de winst op dat toestel, anders over de
+         hele verkoopprijs. */
+      btwSom += margeVan(a)
+        ? Math.max(0, bedrag-(Number(a.inkoop)||0))*0.21/1.21
+        : bedrag*0.21/1.21;
     }else{
       teKoop++;
       if(hw) teKoopWaarde+=(Number(hw.verkoop)||0);
@@ -4922,10 +4951,10 @@ function batCijfers(id){
   });
   const omzet=omzetBon+omzetZb;
   const winst=omzet-investering;
-  const btw=b.marge?Math.max(0,winst)*0.21/1.21:omzet*0.21/1.21;
+  const btw=Math.round(btwSom*100)/100;
   return {b, aantal:devs.length, verkocht, teKoop, teKoopWaarde,
           investering, devInkoop, devBasis, deviceExtras, batchKosten, extraInvestering,
-          omzet, omzetBon, omzetZb, winst, btw, devs};
+          omzet, omzetBon, omzetZb, winst, btw, margeGemengd, devs};
 }
 
 function batExtraSom(a){
@@ -5130,7 +5159,7 @@ function renderBatchDetail(){
         <div class="kpi"><div class="l">Nog te verkopen</div><div class="v">${euro(c.teKoopWaarde)}</div>
           <div class="muted klein" style="margin-top:6px">${c.teKoop} ${c.teKoop===1?'toestel':'toestellen'}</div></div>
         <div class="kpi"><div class="l">Btw-indicatie</div><div class="v">${euro(c.btw)}</div>
-          <div class="muted klein" style="margin-top:6px">${b.marge?'marge, over de winst':'over de omzet'}</div></div>
+          <div class="muted klein" style="margin-top:6px">${c.margeGemengd?'gemengd, per toestel gerekend':(b.marge?'marge, over de winst':'over de omzet')}</div></div>
       </div>
     </div>
 
