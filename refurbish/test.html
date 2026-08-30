@@ -227,6 +227,7 @@ function tekenVoortgang(){
   }).join('');
   document.getElementById('teller').textContent=Math.min(nu+1,TESTS.length)+' / '+TESTS.length;
   document.getElementById('terugKnop').disabled = nu<=0;
+  document.getElementById('volTerug').disabled = nu<=0;
 }
 
 function tekenTest(){

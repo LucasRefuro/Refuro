@@ -128,7 +128,7 @@ setTimeout(async()=>{
   ok('merk en model groot', /HP ZBook 15 G6 Mobile/.test(et));
   ok('nummer op het label', /A0007/.test(et));
   ok('nummer staat onder de qr', et.indexOf('etqr')<et.indexOf('etcode'));
-  ok('bekende gegevens op het label', /RAM: 16 GB/.test(et) && /Opslag: 512 GB/.test(et));
+  ok('bekende gegevens op het label', /Geheugen: 16 GB/.test(et) && /Opslag: 512 GB/.test(et));
   ok('qr wijst naar dit apparaat', /apparaat%3Da1/.test(et));
 
   w.eval(`sluit();
@@ -136,7 +136,7 @@ setTimeout(async()=>{
       categorie:'Laptop', specs:{}, status:'te_controleren'});
     labelsTonen('a9');`);
   const et2=d.getElementById('venster').innerHTML;
-  ok('zonder specs geen lege regels', !/RAM:/.test(et2) && /Latitude 5430/.test(et2));
+  ok('zonder specs geen lege regels', !/Geheugen:/.test(et2) && /Latitude 5430/.test(et2));
 
   w.eval("sluit(); apparaten[0].status='klaar'; labelsTonen('a1')");
   ok('status volgt het apparaat', /OP VOORRAAD/.test(d.getElementById('venster').innerHTML));

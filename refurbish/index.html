@@ -1023,9 +1023,9 @@ function sessieBewaar(){
          het begin van ctrTeken, vóór het hertekenen, dus de velden tonen dan nog
          de vorige stap. Specs en notitie worden bij het navigeren (ctrVeldBewaar)
          al in ctr gezet; accu en notitie ook live bij het typen. */
-      s.ctr={ id:ctr.a.id, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
+      s.ctr={ id:ctr.a.id, bijgewerkt_op:ctr.a.bijgewerkt_op, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
-        accu:ctr.accu, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
+        accu:ctr.accu, accuVoor:ctr._accuVoor, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
         notitie:ctr.notitie, opties:ctr.opties, specsBron:ctr.specsBron,
         testcode:ctr.testcode, testqr:ctr.testqr };
     }
@@ -1041,7 +1041,7 @@ function ctrHerstel(snap, a){
     accu:snap.accu!=null?snap.accu:(a.accu!=null?String(a.accu):''),
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
-    opties:snap.opties||{}, specsBron:snap.specsBron||'',
+    opties:snap.opties||{}, specsBron:snap.specsBron||'', _accuVoor:snap.accuVoor,
     testcode:snap.testcode||null, testqr:snap.testqr||null,
     pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
   };
@@ -1090,8 +1090,17 @@ async function start(){
   let doelTab=(bewaard && bewaard.tab) || 'werkbank';
   if(bewaard && bewaard.ctr){
     const a=apparaten.find(x=>x.id===bewaard.ctr.id);
-    if(a && (a.status==='te_controleren' || a.status==='installeren')) ctr=ctrHerstel(bewaard.ctr, a);
+    /* Alleen herstellen als het toestel er nog is, nog te controleren valt, en niet
+       intussen door een collega of een webhook is gewijzigd. Is de rij nieuwer dan
+       de snapshot, dan is de verse serverstand leidend en herstellen we niet. */
+    if(a && (a.status==='te_controleren' || a.status==='installeren')
+       && a.bijgewerkt_op===bewaard.ctr.bijgewerkt_op){
+      ctr=ctrHerstel(bewaard.ctr, a);
+    }
   }
+  /* Kon de controle niet hersteld worden, dan niet op een leeg detailscherm landen
+     maar op de lijst. */
+  if(doelTab==='controleren' && !ctr) doelTab='controle';
   showTab(doelTab);
 }
 
@@ -1467,17 +1476,18 @@ function labelHtml(a){
   /* Een apparaat dat gesloopt wordt heeft andere gegevens nodig dan een
      apparaat dat verkocht wordt. Op het eerste hoort wat er nog goed aan is,
      op het tweede de grade en de specificaties. */
-  const regels = a.status==='repurpose'
-    ? (goed.length ? ['Nog goed:'].concat(goed.map(d=>'· '+d)) : ['Niets meer bruikbaar'])
-    : [
-        a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie,
-        specs['Processor'] ? 'CPU: '+specs['Processor'] : null,
-        specs['Geheugen']  ? 'RAM: '+specs['Geheugen']  : null,
-        specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
-        specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null,
-        a.nieuwe_accu      ? 'Accu: nieuw (100%)'
-                           : (a.accu ? 'Accu: '+a.accu+'%' : null)
-      ].filter(Boolean);
+  let regels;
+  if(a.status==='repurpose'){
+    regels = goed.length ? ['Nog goed:'].concat(goed.map(d=>'· '+d)) : ['Niets meer bruikbaar'];
+  }else{
+    /* De specs komen uit het profiel van de categorie, zodat een telefoon of
+       monitor zijn eigen specs op het label krijgt en niet de laptop-velden. */
+    const p=CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop;
+    regels = [ a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie ]
+      .concat((p.specVelden||[]).map(v=>specs[v.sleutel]?v.sleutel+': '+specs[v.sleutel]:null))
+      .concat([ a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Accu: '+a.accu+'%' : null) ])
+      .filter(Boolean);
+  }
   return `<div class="etiket">
     <div class="etkop">
       <span class="etstatus">${esc(STATUS_KORT[a.status]||a.status)}</span>
@@ -1522,13 +1532,13 @@ function prijskaartHtml(bron){
   const a=bron.a;
   const specs=a.specs||{};
   const grade=bron.staat||a.grade||'B';
-  const regels=[
-    specs['Processor'] ? 'Processor: '+specs['Processor'] : null,
-    specs['Geheugen']  ? 'Werkgeheugen: '+specs['Geheugen'] : null,
-    specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
-    specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null,
-    a.nieuwe_accu ? 'Accu: nieuw' : (a.accu ? 'Accu: '+a.accu+'%' : null)
-  ].filter(Boolean);
+  /* De specs uit het profiel van de categorie, zodat elk soort toestel zijn eigen
+     specs op het kaartje krijgt. */
+  const p=CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop;
+  const regels=(p.specVelden||[])
+    .map(v=>specs[v.sleutel]?v.sleutel+': '+specs[v.sleutel]:null)
+    .concat([ a.nieuwe_accu ? 'Accu: nieuw' : (a.accu ? 'Accu: '+a.accu+'%' : null) ])
+    .filter(Boolean);
   const gar=Number(bron.garantie)||0;
   return `<div class="prijskaart">
     <div class="pknaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
@@ -1803,8 +1813,9 @@ async function plekOpslaan(id, knop){
     if(error) throw new Error('Opslaan mislukt');
     const a=apparaten.find(x=>x.id===id);
     if(a&&a.hardware_id){
-      await sb.from('hardware').update({plek:waarde, bijgewerkt_op:new Date().toISOString()})
+      const {error:hwFout}=await sb.from('hardware').update({plek:waarde, bijgewerkt_op:new Date().toISOString()})
         .eq('id',a.hardware_id);
+      if(hwFout) throw new Error('Plek opgeslagen, maar bijwerken aan de balie mislukte');
     }
     await allesLaden(); toast('Plek opgeslagen', true);
   });
@@ -2110,14 +2121,20 @@ function ctrKies(sleutel, antwoord){
    niet mee. */
 function ctrMisschienDoor(){
   if(!ctr) return;
+  /* Een eerder geplande sprong altijd eerst opruimen: wissel je binnen de halve
+     seconde een antwoord naar 'Nee', dan mag de oude timer je niet alsnog
+     doorschuiven terwijl je de toelichting nog moet typen. */
+  clearTimeout(ctr._doorTimer);
   if(ctr.naVraag && ctr.naVraag.uitleg) return;
   const el=document.getElementById('ctrPagina'); if(!el) return;
   if(el.querySelector('.clrij[data-open="1"]')) return;
   const stap=CTR_STAPPEN[ctr.stap]; if(!stap || !stap.knoppen) return;
   if(!(stap.knoppen()||[]).some(x=>x.auto)) return;
-  setTimeout(()=>{
-    /* Nog steeds op dezelfde, afgeronde stap zonder open vragen? Dan door. */
-    if(!ctr || CTR_STAPPEN[ctr.stap]!==stap) return;
+  const eigenCtr=ctr;
+  ctr._doorTimer=setTimeout(()=>{
+    /* Nog hetzelfde toestel, dezelfde afgeronde stap, geen open vragen? Dan door.
+       De ctr-check voorkomt dat een net geopend ander toestel meespringt. */
+    if(!ctr || ctr!==eigenCtr || CTR_STAPPEN[ctr.stap]!==stap) return;
     const el2=document.getElementById('ctrPagina');
     if(!el2 || el2.querySelector('.clrij[data-open="1"]')) return;
     const kk=(stap.knoppen()||[]).find(x=>x.auto);
@@ -2136,11 +2153,16 @@ function ctrEnter(e){
   if(t && t.tagName==='TEXTAREA') return;
   e.preventDefault();
   if(t && t.tagName==='INPUT' && t.type!=='checkbox'){
+    /* In een eigen invoerblok (bv. onderdeel uit voorraad toevoegen) drukt Enter
+       de knop van dat blok in, niet de voorwaartse voetknop. */
+    const blok=t.closest('.batkostform');
+    if(blok){ const kn=blok.querySelector('.btn'); if(kn){ kn.click(); return; } }
     const velden=[...el.querySelectorAll('input:not([type=checkbox]), textarea')].filter(x=>x.offsetParent!==null);
     const i=velden.indexOf(t);
     if(i>-1 && i<velden.length-1){ velden[i+1].focus(); return; }
   }
-  if(ctr.stap==='visueel') return;
+  /* Op de staat- en de sloop-stap rond je bewust af; Enter drukt daar geen knop in. */
+  if(ctr.stap==='visueel' || ctr.stap==='slopen') return;
   const knop=el.querySelector('.ctrvoet .btn.actie');
   if(knop) knop.click();
 }
@@ -2293,9 +2315,9 @@ const CTR_STAPPEN={
     const voor=ctrVoorWindows();
     const open=voor.filter(q=>!ctr.antwoord[q.v]).length;
     return `
-      <h2><svg class="i"><use href="#i-check"/></svg>Scherm en opladen</h2>
-      <p class="pv">Twee dingen die je nu al kunt testen. De rest van de hardware komt na Windows.
-        ${open?`<b>Nog ${open} te doen.</b>`:'<b>Allebei nagelopen.</b>'}</p>
+      <h2><svg class="i"><use href="#i-check"/></svg>${esc(prof().hardwareKop||'Scherm en opladen')}</h2>
+      <p class="pv">${esc(prof().hardwareTekst||'Twee dingen die je nu al kunt testen.')} De rest van de hardware komt na Windows.
+        ${open?`<b>Nog ${open} te doen.</b>`:`<b>${voor.length===1?'Nagelopen':'Allebei nagelopen'}.</b>`}</p>
       ${voor.map(q=>ctrVraag(q.v, q.a)).join('')}
 
       <div class="clkop">Notitie</div>
@@ -2674,6 +2696,7 @@ const CATEGORIE_PROFIEL={
   Desktop:{
     icon:'i-desktop', heeftAccu:false,
     startTekst:'Sluit een testmonitor, toetsenbord en muis aan en zet hem aan.', startDoor:'Door naar de sloten', startNee:'slopen',
+    hardwareKop:'Beeld en POST', hardwareTekst:'Wat je nu al kunt testen: komt hij door de POST met beeld.',
     specsTekst:'Lees uit wat erin zit: processor, geheugen, opslag en de videokaart.',
     stappen:['start','blokkers','hardware','upgrade','windows','nawindows','specs','visueel','klaar'],
     balk:[
@@ -5510,7 +5533,8 @@ function batCijfers(id){
       btwSom += margeHw
         ? Math.max(0, bedrag-(Number(hw.inkoop)||0))*0.21/1.21
         : bedrag*0.21/1.21;
-    }else{
+    }else if(a.status!=='geblokkeerd' && a.status!=='repurpose'){
+      /* Afgekeurde (geblokkeerd) en gesloopte toestellen staan niet te koop. */
       teKoop++;
       if(hw) teKoopWaarde+=(Number(hw.verkoop)||0);
     }
@@ -5839,7 +5863,7 @@ function batExportDoen(id){
     if(opt.grade) r.push(a.grade||'');
     if(opt.windows) r.push(windowsVan(a));
     if(opt.specs){ specKols.forEach(k=>r.push((a.specs||{})[k]||'')); r.push(a.nieuwe_accu?'nieuw':(a.accu?a.accu+'%':'')); }
-    r.push(verkocht?'verkocht':(hw?'te koop':'werkbank'), bet?batBetaalNaam(bet):'');
+    r.push(verkocht?'verkocht':(hw?'te koop':(STATUS[a.status]||'werkbank')), bet?batBetaalNaam(bet):'');
     if(opt.prijs){
       const ink=Number(a.inkoop)||0, verk=hw&&hw.verkoop!=null?Number(hw.verkoop):null;
       r.push(geld(ink), verk!=null?geld(verk):'', verk!=null?geld(verk-ink):'');
