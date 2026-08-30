@@ -35,6 +35,11 @@ setTimeout(async()=>{
   ok('start toont "Zet de telefoon aan"', /Zet de telefoon aan/.test(start));
   ok('start gebruikt het telefoon-icoon', /i-telefoon/.test(start));
 
+  // eigen winkel-checklist voor telefoon hoort in de test-stap te verschijnen
+  w.eval(`checklists=[{categorie:'Telefoon', model:null, items:[{v:'Zit de simlade erin?', a:['Ja','Nee','Ontbreekt']}]}]; ctr.stap='test';`);
+  ok('eigen checklist verschijnt in de test-stap', /Zit de simlade erin/.test(w.eval("CTR_STAPPEN.test.inhoud()")));
+  w.eval("checklists=[];");
+
   // ── blokkers: een geblokkeerd IMEI keurt af ──
   w.eval("ctr.stap='blokkers'; ctr.antwoord={};");
   ok('nog geen blokker', w.eval("ctrBlokkers().length")===0);

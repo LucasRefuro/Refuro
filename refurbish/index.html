@@ -1023,7 +1023,7 @@ function sessieBewaar(){
       s.ctr={ id:ctr.a.id, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
         accu:ctr.accu, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
-        notitie:ctr.notitie, opties:ctr.opties };
+        notitie:ctr.notitie, opties:ctr.opties, specsBron:ctr.specsBron };
     }
     localStorage.setItem(sessieSleutel(), JSON.stringify(s));
   }catch(e){}
@@ -1037,7 +1037,8 @@ function ctrHerstel(snap, a){
     accu:snap.accu!=null?snap.accu:(a.accu!=null?String(a.accu):''),
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
-    opties:snap.opties||{}, pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
+    opties:snap.opties||{}, specsBron:snap.specsBron||'',
+    pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
   };
 }
 
@@ -1968,7 +1969,12 @@ function ctrBalkStand(id){
   const volg=prof().balk.map(b=>b.id);
   const nu=CTR_STAPPEN[ctr.stap].balk;
   const i=volg.indexOf(id), j=volg.indexOf(nu);
-  return i<j ? 'gedaan' : (i===j ? 'nu' : '');
+  if(i===j) return 'nu';
+  /* Alleen echt doorlopen stappen krijgen een vinkje. Spring je van start
+     rechtstreeks naar slopen, dan blijven de overgeslagen segmenten leeg in
+     plaats van dat ze afgerond lijken. */
+  const bezocht=new Set((ctr.pad||[]).map(s=>CTR_STAPPEN[s] && CTR_STAPPEN[s].balk));
+  return (i<j && bezocht.has(id)) ? 'gedaan' : '';
 }
 
 /* Hertekenen gooit de hele kaart weg en zet er een nieuwe neer. Stond je op
@@ -2072,9 +2078,11 @@ function ctrVraag(vraag, opties, sleutel){
 }
 function ctrNotitie(sleutel, tekst){ ctr.notities[sleutel]=String(tekst||'').slice(0,120); }
 function kleurVan(opt){
-  if(['Ja','Goed','Als nieuw','Gaaf','Stevig'].includes(opt)) return 'goed';
+  if(['Ja','Goed','Als nieuw','Gaaf','Stevig','Vrij','Schoon'].includes(opt)) return 'goed';
   if(['Ontbreekt','Onbekend',NA_WINDOWS].includes(opt)) return 'mist';
-  if(['Nee','Barst of vlek','Deuken of schade','Los of beschadigd'].includes(opt)) return 'fout';
+  /* 'Op slot'/'Geblokkeerd'/'Beheerd' zijn harde blokkers: rood, geen zachte
+     waarschuwing. */
+  if(['Nee','Barst of vlek','Deuken of schade','Los of beschadigd','Op slot','Geblokkeerd','Beheerd'].includes(opt)) return 'fout';
   return 'mist';
 }
 function ctrKies(sleutel, antwoord){
@@ -2367,13 +2375,15 @@ const CTR_STAPPEN={
   /* Alle functionele hardware in één lijst. Geen Windows-knip zoals bij de laptop,
      want een telefoon draait geen installatie. De accu vraag je op de specs-stap. */
   test:{ balk:'test', inhoud:()=>{
-    const checks=prof().hardware;
+    /* De eigen controles van de winkel horen er ook bij, net als na Windows bij
+       de laptop; anders zijn ze niet te beantwoorden en telt ctrDefecten ze wel. */
+    const checks=prof().hardware.concat(ctrEigenVragen());
     const open=checks.filter(q=>!ctr.antwoord[q.v]).length;
     return `
       <h2><svg class="i"><use href="#i-check"/></svg>Alles testen</h2>
       <p class="pv">Loop de functies langs. ${open?`<b>Nog ${open} te doen.</b>`:'<b>Alles nagelopen.</b>'}</p>
-      ${checks.map(q=>ctrVraag(q.v, q.a)).join('')}`;
-  }, knoppen:()=>prof().hardware.every(q=>ctr.antwoord[q.v])
+      ${checks.map(q=>ctrVraag(q.v, q.a||['Ja','Nee'])).join('')}`;
+  }, knoppen:()=>prof().hardware.concat(ctrEigenVragen()).every(q=>ctr.antwoord[q.v])
       ? [{tekst:'Door naar de specificaties', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}] : [] },
 
   visueel:{ balk:'visueel', inhoud:()=>{
