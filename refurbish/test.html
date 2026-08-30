@@ -124,6 +124,7 @@ h1{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacin
 
 <div id="kleurvlak" hidden>
   <div class="knopjes">
+    <button class="btn ghost" onclick="document.getElementById('kleurvlak').hidden=true">Stoppen</button>
     <button class="btn ghost" onclick="kleurVorige()">Vorige</button>
     <button class="btn actie" onclick="kleurVolgende()" id="kleurKnop">Volgende</button>
   </div>
@@ -178,7 +179,11 @@ async function praat(lijf){
 /* De tests. Elk zet iets klaar in #testvak (of doet iets zoals trillen) en jij
    beoordeelt met Werkt of Niet goed. opruimen() zet camera's/microfoon weer uit. */
 let opruimer=null;
-function opruimen(){ if(opruimer){ try{ opruimer(); }catch(e){} opruimer=null; } }
+/* Elke stapwissel hoogt dit token op. Een getUserMedia die te laat terugkomt van
+   een verlaten stap ziet dat het token veranderd is en stopt zijn stream meteen,
+   zodat de camera of microfoon niet blijft draaien. */
+let stapId=0;
+function opruimen(){ stapId++; if(opruimer){ try{ opruimer(); }catch(e){} opruimer=null; } }
 
 const TESTS=[
   {id:'touch', naam:'Touchscreen', uit:'Veeg met je vinger over het hele scherm, ook de randen en hoeken. Alles moet meetekenen.', start:startTouch},
@@ -222,16 +227,31 @@ function oordeel(w){
 
 async function versturen(){
   opruimen();
+  if(!Object.keys(resultaat).length){ document.getElementById('werk').hidden=true; stop('Niets getest','Er is geen uitslag om te versturen.'); return; }
   document.getElementById('werk').hidden=true;
-  if(!Object.keys(resultaat).length){ stop('Niets getest','Er is geen uitslag om te versturen.'); return; }
+  document.getElementById('fout').hidden=true;
+  document.getElementById('watIsHet').textContent='Bezig met versturen…';
   try{
     await praat({resultaat});
+    document.getElementById('watIsHet').textContent='';
     const naam={touch:'Touchscreen',scherm:'Beeldscherm',luidspreker:'Luidspreker',microfoon:'Microfoon',
       camera_achter:'Camera achter',camera_voor:'Camera voor',trilfunctie:'Trilfunctie',sensoren:'Sensoren'};
     document.getElementById('uitslagLijst').innerHTML=Object.keys(resultaat).map(k=>
       `<div class="uitslagrij">${esc(naam[k]||k)}<span class="st ${resultaat[k]}">${resultaat[k]==='ok'?'Werkt':'Niet goed'}</span></div>`).join('');
     document.getElementById('klaarKaart').hidden=false;
-  }catch(e){ stop('Versturen lukte niet', e.message); }
+  }catch(e){
+    /* Niet leeg laten en de uitslag niet weggooien: die staat nog in het geheugen.
+       Toon de fout met een knop om het opnieuw te proberen. */
+    document.getElementById('watIsHet').textContent='';
+    document.getElementById('foutKop').textContent='Versturen lukte niet';
+    document.getElementById('foutTekst').textContent=e.message+' De uitslag staat nog klaar; probeer het opnieuw.';
+    document.getElementById('fout').hidden=false;
+    if(!document.getElementById('retryknop')){
+      const b=document.createElement('button'); b.id='retryknop'; b.className='btn actie'; b.style.marginTop='12px';
+      b.textContent='Opnieuw versturen'; b.onclick=()=>{ document.getElementById('fout').hidden=true; versturen(); };
+      document.getElementById('fout').appendChild(b);
+    }
+  }
 }
 
 /* ---- de losse tests ---- */
@@ -273,6 +293,7 @@ let audioCtx=null;
 function startLuidspreker(){
   document.getElementById('testvak').innerHTML='<button class="btn" onclick="speelToon()">Speel de toon</button>';
   speelToon();
+  opruimer=()=>{ try{ audioCtx&&audioCtx.close(); }catch(e){} audioCtx=null; };
 }
 function speelToon(){
   try{
@@ -286,9 +307,11 @@ function speelToon(){
 }
 
 function startMicrofoon(){
+  const mijnStap=stapId;
   const vak=document.getElementById('testvak');
   vak.innerHTML='<div class="meter"><i id="micbalk"></i></div>';
   navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    if(mijnStap!==stapId){ stream.getTracks().forEach(t=>t.stop()); return; }
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
     const bron=ctx.createMediaStreamSource(stream); const an=ctx.createAnalyser(); an.fftSize=512;
     bron.connect(an); const buf=new Uint8Array(an.fftSize); let loopt=true;
@@ -304,10 +327,12 @@ function startMicrofoon(){
 }
 
 function startCamera(kant){
+  const mijnStap=stapId;
   const vak=document.getElementById('testvak');
   const v=document.createElement('video'); v.id='camerabeeld'; v.autoplay=true; v.playsInline=true; v.muted=true;
   vak.appendChild(v);
   navigator.mediaDevices.getUserMedia({video:{facingMode:kant}}).then(stream=>{
+    if(mijnStap!==stapId){ stream.getTracks().forEach(t=>t.stop()); return; }
     v.srcObject=stream;
     opruimer=()=>{ stream.getTracks().forEach(t=>t.stop()); };
   }).catch(()=>{ vak.innerHTML='<p class="muted klein">Geen toegang tot de camera. Test met de hand.</p>'; });

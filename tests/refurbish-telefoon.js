@@ -83,11 +83,18 @@ setTimeout(async()=>{
   ok('testStart maakt een code aan', !!w.eval("ctr.testcode"));
   ok('code wordt naar refurbish_testcodes geschreven', w.eval("window.__geschreven.some(r=>r&&r.code&&r.apparaat_id)"));
   ok('QR verschijnt na het starten', /qrbeeld/.test(w.eval("CTR_STAPPEN.test.inhoud()")));
-  // de koppeling van uitslag naar antwoorden (zoals testOphalen doet)
-  w.eval(`const uit={touch:'ok', luidspreker:'fout'};
-    prof().hardware.forEach(q=>{ if(q.test && (uit[q.test]==='ok'||uit[q.test]==='fout')) ctr.antwoord[q.v]=uit[q.test]==='ok'?'Ja':'Nee'; });`);
-  ok('touch ok wordt Ja', w.eval("ctr.antwoord['Reageert het touchscreen overal, zonder dode zones of spooktikken?']")==='Ja');
+  ok('de testcode overleeft een herlaad (in de snapshot)', (()=>{ w.eval("sessieBewaar()"); return !!(JSON.parse(w.eval("JSON.stringify(sessieLaden())")).ctr||{}).testcode; })());
+  // de koppeling van uitslag naar antwoorden (zoals testOphalen doet): alleen lege
+  // vragen invullen, een met de hand gezet antwoord niet stil overschrijven
+  w.eval(`
+    ctr.antwoord={}; ctr.antwoord['Werkt de camera achter, scherp en zonder vlekken?']='Nee';
+    const uit={touch:'ok', luidspreker:'fout', camera_achter:'ok'};
+    prof().hardware.forEach(q=>{ if(q.test && (uit[q.test]==='ok'||uit[q.test]==='fout')){
+      const nieuw=uit[q.test]==='ok'?'Ja':'Nee', oud=ctr.antwoord[q.v];
+      if(oud&&oud!==nieuw) return; if(!oud) ctr.antwoord[q.v]=nieuw; } });`);
+  ok('touch ok wordt Ja (was leeg)', w.eval("ctr.antwoord['Reageert het touchscreen overal, zonder dode zones of spooktikken?']")==='Ja');
   ok('luidspreker fout wordt Nee', w.eval("ctr.antwoord['Werkt de luidspreker?']")==='Nee');
+  ok('handmatig Nee blijft staan ondanks test ok', w.eval("ctr.antwoord['Werkt de camera achter, scherp en zonder vlekken?']")==='Nee');
   ok('een gefaalde test wordt een defect', /Werkt de luidspreker\?/.test(w.eval("JSON.stringify(ctrDefecten())")));
 
   // ── de andere categorieën: profielen kloppen ──

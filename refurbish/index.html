@@ -1025,7 +1025,8 @@ function sessieBewaar(){
       s.ctr={ id:ctr.a.id, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
         accu:ctr.accu, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
-        notitie:ctr.notitie, opties:ctr.opties, specsBron:ctr.specsBron };
+        notitie:ctr.notitie, opties:ctr.opties, specsBron:ctr.specsBron,
+        testcode:ctr.testcode, testqr:ctr.testqr };
     }
     localStorage.setItem(sessieSleutel(), JSON.stringify(s));
   }catch(e){}
@@ -1040,6 +1041,7 @@ function ctrHerstel(snap, a){
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
     opties:snap.opties||{}, specsBron:snap.specsBron||'',
+    testcode:snap.testcode||null, testqr:snap.testqr||null,
     pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
   };
 }
@@ -2923,16 +2925,22 @@ async function testOphalen(knop){
     const uit=data&&data.resultaat;
     if(!uit || !Object.keys(uit).length){ toast('Nog geen uitslag. Rond de test op de telefoon af.','let-op'); return; }
     /* De testsleutels op de checks koppelen aan het antwoord: ok wordt Ja, fout
-       wordt Nee. Zo telt een mislukte test meteen als reparatiepunt. */
-    let n=0;
+       wordt Nee. Zo telt een mislukte test meteen als reparatiepunt. We vullen
+       alleen nog-lege vragen in en draaien een met de hand gezet antwoord nooit
+       stil terug: zag de medewerker een defect en zette hij 'Nee', dan blijft dat
+       staan ook al meldt de test 'ok'. */
+    let n=0, behouden=0;
     prof().hardware.forEach(q=>{
       if(q.test && (uit[q.test]==='ok' || uit[q.test]==='fout')){
-        ctr.antwoord[q.v] = uit[q.test]==='ok' ? 'Ja' : 'Nee';
-        n++;
+        const nieuw = uit[q.test]==='ok' ? 'Ja' : 'Nee';
+        const oud = ctr.antwoord[q.v];
+        if(oud && oud!==nieuw){ behouden++; return; }
+        if(!oud){ ctr.antwoord[q.v]=nieuw; n++; }
       }
     });
     ctrTeken();
-    toast(n+' '+(n===1?'onderdeel':'onderdelen')+' ingevuld uit de test', true);
+    toast(n+' '+(n===1?'onderdeel':'onderdelen')+' ingevuld uit de test'
+      + (behouden ? ' · '+behouden+' met de hand gezet, behouden' : ''), true);
   });
 }
 /* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Bij
