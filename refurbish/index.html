@@ -4957,6 +4957,7 @@ function renderBatchDetail(){
     <div class="pagehead">
       <button class="btn ghost" onclick="batTerug()"><svg class="i s"><use href="#i-left"/></svg>Alle batches</button>
       <div class="row" style="gap:8px">
+        <button class="btn ghost" onclick="batExport('${b.id}')"><svg class="i s"><use href="#i-print"/></svg>Exporteren</button>
         <button class="btn ghost" onclick="batBewerk('${b.id}')"><svg class="i s"><use href="#i-note"/></svg>Bewerken</button>
         <button class="btn ghost" onclick="batVerwijder('${b.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
       </div>
@@ -5044,6 +5045,42 @@ function batVulInkoop(){
   const b=batches.find(x=>x.id===sel.value);
   const inp=document.getElementById('t_inkoop');
   if(b && inp){ const ps=batPerStuk(b); if(ps) inp.value=ps; }
+}
+
+/* De hele partij als tabel eruit voor de boekhouding: elk toestel met inkoop en
+   opbrengst, en onderaan de investering, omzet en winst. Puntkomma en komma-
+   decimalen, met een BOM, zodat het meteen goed in Excel opent. */
+function batExport(id){
+  const b=batches.find(x=>x.id===id); if(!b) return;
+  const c=batCijfers(id);
+  const cel=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const geld=n=>(Number(n)||0).toFixed(2).replace('.',',');
+  const rijen=[['Toestel','Nummer','Staat','Inkoop','Verkoop','Status','Hoe verkocht']];
+  c.devs.forEach(a=>{
+    const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
+    const verkocht=hw && hw.status==='verkocht';
+    const bet=verkocht?(hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash')):'';
+    rijen.push([
+      [a.merk,a.model].filter(Boolean).join(' '), a.code||a.serienummer||'', a.staat||a.grade||'',
+      geld(a.inkoop), hw&&hw.verkoop!=null?geld(hw.verkoop):'',
+      verkocht?'verkocht':(hw?'te koop':'werkbank'), bet?batBetaalNaam(bet):''
+    ]);
+  });
+  rijen.push([]);
+  rijen.push(['Investering', geld(c.investering)]);
+  rijen.push(['waarvan extra investering', geld(c.extraInvestering)]);
+  rijen.push(['Omzet met bon', geld(c.omzetBon)]);
+  rijen.push(['Omzet zonder bon', geld(c.omzetZb)]);
+  rijen.push(['Omzet totaal', geld(c.omzet)]);
+  rijen.push(['Winst', geld(c.winst)]);
+  const csv=rijen.map(r=>r.map(cel).join(';')).join('\r\n');
+  const blob=new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='batch-'+String(b.nummer||'partij').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast('Batch geexporteerd', true);
 }
 
 function batForm(b){
