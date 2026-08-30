@@ -63,6 +63,49 @@ function winkelvoorraadMetafield(inWinkel: boolean) {
   return { namespace: "refuro", key: "winkelvoorraad", type: "number_integer", value: inWinkel ? "1" : "0" };
 }
 
+/* Een nieuwe accu is een verkoopargument: het thema toont er een badge en de
+   regel "nieuwe accu, 69 euro bespaard" bij. Storvo weet alleen of er een nieuwe
+   accu in zit; het bedrag hoort bij het losse accu-product en staat in het thema. */
+function nieuweAccuMetafield(nieuw: boolean) {
+  return { namespace: "refuro", key: "nieuwe_accu", type: "number_integer", value: nieuw ? "1" : "0" };
+}
+
+/* De gebruik-tags voeden de filters in het mega-menu en de laptop-adviseur
+   (gebruik-thuis, gebruik-studie, gebruik-werk, gebruik-programmeren,
+   gebruik-creatief, gebruik-gaming). We leiden ze grof af uit de specs. Alleen
+   voor computers; telefoons, tablets en monitoren hebben deze filters niet. Beter
+   een paar kloppende tags dan lege filters; fijnslijpen kan later in deze functie. */
+function eersteGetal(s: unknown): number {
+  const m = String(s ?? "").match(/(\d+(?:[.,]\d+)?)/);
+  return m ? parseFloat(m[1].replace(",", ".")) : 0;
+}
+function gebruikTags(h: any): string[] {
+  if (!["Laptop", "Desktop"].includes(h.categorie || "")) return [];
+  const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
+  const cpu = String(sp.Processor || sp.CPU || "").toLowerCase();
+  const gpuVeld = String(sp.Videokaart || sp.GPU || "").toLowerCase();
+  const ram = eersteGetal(sp.Geheugen || sp.RAM);
+  const ssd = /ssd|nvme|m\.?2/.test(String(sp.Opslag || "").toLowerCase());
+
+  // CPU grofweg: 3 = sterk, 2 = degelijk, 1 = instap.
+  let cpuNiv = 2;
+  if (/i7|i9|ryzen 7|ryzen 9|\bm[1-9]\b|xeon|ultra [79]/.test(cpu)) cpuNiv = 3;
+  else if (/i3|ryzen 3|celeron|pentium|athlon|atom|\bn\d{3,4}\b/.test(cpu)) cpuNiv = 1;
+  else if (/i5|ryzen 5|ultra 5/.test(cpu)) cpuNiv = 2;
+
+  // Een aparte videokaart maakt gaming en zwaar creatief werk mogelijk.
+  const losseGpu = /gtx|rtx|geforce|radeon rx|\brx ?\d|arc a\d|quadro/.test(gpuVeld) ||
+                   /gtx|rtx|geforce|radeon rx/.test(cpu);
+
+  const t = new Set<string>();
+  if (ram >= 4) t.add("gebruik-thuis");
+  if (cpuNiv >= 2 && ram >= 8 && ssd) { t.add("gebruik-studie"); t.add("gebruik-werk"); }
+  if (cpuNiv >= 2 && ram >= 16 && ssd) t.add("gebruik-programmeren");
+  if (cpuNiv >= 3 && ram >= 16) t.add("gebruik-creatief");
+  if (losseGpu && ram >= 8) t.add("gebruik-gaming");
+  return [...t];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -105,8 +148,8 @@ Deno.serve(async (req) => {
         vendor: h.merk || "Storvo",
         productType: h.categorie || "Laptop",
         status: "ACTIVE",
-        tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || ""].filter(Boolean),
-        metafields: [winkelvoorraadMetafield(inWinkel)],
+        tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || "", ...gebruikTags(h)].filter(Boolean),
+        metafields: [winkelvoorraadMetafield(inWinkel), nieuweAccuMetafield(!!h.nieuwe_accu)],
         productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
         variants: [{
           price: String(h.verkoop),
