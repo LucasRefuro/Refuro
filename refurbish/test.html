@@ -419,75 +419,128 @@ function startCamera(kant){
    geen twee achterlenzen tegelijk openen, dus we stoppen de oude stream eerst. */
 let camStream=null;
 function camStop(){ if(camStream){ try{ camStream.getTracks().forEach(t=>t.stop()); }catch(e){} camStream=null; } }
-function lensNaam(label, i){
+/* Uit het label de zoomfactor afleiden, zodat je bij het doorklikken netjes van
+   breed (0.5x) naar in-gezoomd (tele) loopt. Labels zijn in het Engels op iOS,
+   maar kunnen in een andere taal staan; ultra checken we eerst want "Back Ultra
+   Wide Camera" bevat ook "wide". */
+function lensInfo(label){
   const l=(label||'').toLowerCase();
-  if(/ultra/.test(l)) return 'Ultragroothoek';
-  if(/tele|zoom/.test(l)) return 'Tele';
-  if(/wide|groothoek/.test(l)) return 'Groothoek';
-  return 'Lens '+(i+1);
+  if(/ultra|0\.5|groothoek\+|super.?wide/.test(l)) return {naam:'Ultragroothoek', factor:'0.5x', sorteer:0.5};
+  if(/tele|zoom/.test(l))                          return {naam:'Tele', factor:'2x', sorteer:3};
+  if(/wide|groothoek|back camera|rug|rück|arrière|trasera/.test(l)) return {naam:'Groothoek', factor:'1x', sorteer:1};
+  return {naam:'Lens', factor:'', sorteer:2};
 }
-async function toonLens(deviceId){
+/* Eén lens tonen. Een lens is of een eigen deviceId (iOS + de meeste Android),
+   of dezelfde camera met een zoom onder 1.0x (sommige Android-toestellen tonen
+   de ultragroothoek niet apart maar laten hem wel via zoom bereiken). Geeft de
+   capabilities terug zodat de aanroeper kan zien of zoom onder 1.0x kan. */
+async function toonLens(lens, mijnStap){
   camStop();
-  const v=document.getElementById('camerabeeld'); if(!v) return;
+  const v=document.getElementById('camerabeeld'); if(!v) return null;
   try{
-    camStream=await navigator.mediaDevices.getUserMedia({video: deviceId?{deviceId:{exact:deviceId}}:{facingMode:'environment'}});
+    const con = (lens && lens.deviceId) ? {deviceId:{exact:lens.deviceId}} : {facingMode:{ideal:'environment'}};
+    camStream=await navigator.mediaDevices.getUserMedia({video:con});
+    if(mijnStap!==undefined && mijnStap!==stapId){ camStop(); return null; }
     v.srcObject=camStream;
-  }catch(e){ toast('Deze lens openen lukte niet','fout'); }
+    const track=camStream.getVideoTracks()[0];
+    const caps=(track && track.getCapabilities) ? track.getCapabilities() : {};
+    if(lens && lens.zoom!=null && caps.zoom){
+      try{ await track.applyConstraints({advanced:[{zoom:lens.zoom}]}); }catch(e){}
+    }
+    return caps;
+  }catch(e){ toast('Deze lens openen lukte niet','fout'); return null; }
 }
 let lensLijst=[], lensI=0;
 async function startCameraAchter(){
   const mijnStap=stapId;
   const vak=document.getElementById('testvak');
   vak.innerHTML='<video id="camerabeeld" autoplay playsinline muted></video>'+
-    '<div id="lensrij" style="display:flex; gap:12px; align-items:center; margin-top:10px"></div>';
+    '<div id="lensrij" style="display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap"></div>';
+  opruimer=()=>{ camStop(); };
   try{
-    const seed=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    /* Toestemming eerst: pas daarna geeft iOS de echte labels en device-ids.
+       Die tijdelijke stream meteen weer stoppen, we openen zo de eerste lens. */
+    const seed=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
     if(mijnStap!==stapId){ seed.getTracks().forEach(t=>t.stop()); return; }
-    camStream=seed;
-    const v=document.getElementById('camerabeeld'); if(v) v.srcObject=seed;
-    opruimer=()=>{ camStop(); };
+    seed.getTracks().forEach(t=>t.stop());
     const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
-    let lijst=cams.filter(d=>/back|rear|environment|achter|arrière|trasera/i.test(d.label||''));
-    if(!lijst.length) lijst=cams;
-    /* De virtuele combi-camera's (die zelf tussen lenzen wisselen) en dubbele
-       labels eruit, zodat je alleen de echte lenzen overhoudt. */
+    let achter=cams.filter(d=>/back|rear|environment|achter|arrière|trasera|rück|hinten/i.test(d.label||''));
+    if(!achter.length) achter=cams;
+    /* Alleen de losse fysieke lenzen. De virtuele fusie-camera's (Dual/Triple)
+       wisselen zelf van lens tijdens het filmen; die willen we juist niet, want
+       dan test je niet gericht de 0.5x. */
     const gezien=new Set();
-    lensLijst=lijst.filter(d=>{
-      if(/dual|triple|combined|virtual/i.test(d.label||'')) return false;
+    let fys=achter.filter(d=>{
+      if(/\b(dual|triple|combined|virtual)\b/i.test(d.label||'')) return false;
       const k=d.label||d.deviceId; if(gezien.has(k)) return false; gezien.add(k); return true;
     });
-    if(!lensLijst.length) lensLijst=lijst;
-    lensI=0; tekenLensrij();
+    if(!fys.length) fys=achter;
+    lensLijst=fys.map(d=>Object.assign({deviceId:d.deviceId, zoom:null}, lensInfo(d.label)))
+                 .sort((a,b)=>a.sorteer-b.sorteer);
+    lensI=0;
+    const caps=await toonLens(lensLijst[0], mijnStap);
+    if(mijnStap!==stapId) return;
+    /* Android zonder aparte ultragroothoek, maar de lens kan wel onder 1.0x
+       uitzoomen: dat IS de 0.5x-beeldhoek. Zet hem als extra eerste lens erbij. */
+    if(lensLijst.length===1 && caps && caps.zoom && caps.zoom.min < 1){
+      const id=lensLijst[0].deviceId;
+      lensLijst[0]=Object.assign({}, lensLijst[0], {naam:'Groothoek', factor:'1x', sorteer:1});
+      lensLijst.unshift({deviceId:id, zoom:caps.zoom.min, naam:'Ultragroothoek', factor:'0.5x', sorteer:0.5});
+      lensI=1; /* de zojuist geopende 1x-stream staat nu op index 1 */
+    }
+    tekenLensrij();
   }catch(e){ vak.innerHTML='<p class="muted klein">Geen toegang tot de camera. Test met de hand.</p>'; }
 }
+function lensLabel(lens){ lens=lens||{}; return (lens.factor?lens.factor+' ':'')+(lens.naam||'Lens'); }
 function tekenLensrij(){
   const rij=document.getElementById('lensrij'); if(!rij) return;
-  if(lensLijst.length<=1){ rij.innerHTML='<span class="muted klein">Eén achterlens op dit toestel.</span>'; return; }
+  const naam=lensLabel(lensLijst[lensI]);
+  if(lensLijst.length<=1){ rij.innerHTML='<span class="muted klein"><b>'+esc(naam)+'</b> · dit toestel toont maar één achterlens</span>'; return; }
   rij.innerHTML='<button class="btn ghost" style="width:auto; flex:none" onclick="volgendeLens()">Volgende lens</button>'+
-    '<span class="muted klein">'+esc(lensNaam((lensLijst[lensI]||{}).label, lensI))+' · '+(lensI+1)+' van '+lensLijst.length+'</span>';
+    '<span class="muted klein"><b>'+esc(naam)+'</b> · lens '+(lensI+1)+' van '+lensLijst.length+'</span>';
 }
 function volgendeLens(){
   if(lensLijst.length<2) return;
+  const mijnStap=stapId;
   lensI=(lensI+1)%lensLijst.length;
-  toonLens((lensLijst[lensI]||{}).deviceId);
+  toonLens(lensLijst[lensI], mijnStap);
   tekenLensrij();
 }
 
 /* ---- trilfunctie ---- */
-function startTril(){
-  document.getElementById('testvak').innerHTML=
-    '<button class="btn actie" onclick="trilNu()">Laat trillen</button>'+
-    '<p class="muted klein" id="triluit" style="margin-top:10px">Druk op de knop en voel of het toestel trilt.</p>';
-  trilNu();
-  opruimer=()=>{};
+/* Android heeft een echte trilmotor via navigator.vibrate. Een iPhone niet:
+   navigator.vibrate bestaat daar niet en komt er ook niet. Sinds iOS 17.4 kun je
+   wel de Taptic Engine (een korte haptische tik) aanspreken met een verborgen
+   schakelaar-invoer: een <label> die een <input switch> omzet, geeft native
+   haptiek. Twee valkuilen: de tik komt alleen als je de LABEL klikt (niet de
+   checkbox zelf), en alleen binnen een echte tik van de gebruiker. */
+const iosSwitchKan = (function(){ try{ const i=document.createElement('input'); i.type='checkbox'; return 'switch' in i; }catch(e){ return false; } })();
+let hapticLabel=null;
+function hapticElement(){
+  if(hapticLabel) return hapticLabel;
+  const c=document.createElement('input'); c.type='checkbox'; c.setAttribute('switch',''); c.setAttribute('aria-hidden','true'); c.tabIndex=-1;
+  const l=document.createElement('label'); l.style.cssText='position:fixed; top:-9999px; left:-9999px; opacity:0; pointer-events:none;';
+  l.appendChild(c); document.body.appendChild(l); hapticLabel=l; return l;
 }
 function trilNu(){
-  if(navigator.vibrate){ try{ navigator.vibrate(0); navigator.vibrate([400]); }catch(e){} }
-  else {
-    const u=document.getElementById('triluit');
-    if(u) u.textContent='Een iPhone laat de browser niet trillen. Zet de trilstand aan met het zijknopje en stuur jezelf een bericht of bel jezelf, en voel of hij trilt.';
-    toast('iPhone: test het trillen met de hand','');
+  if(navigator.vibrate){ try{ navigator.vibrate(0); navigator.vibrate([400]); }catch(e){} return; }
+  if(iosSwitchKan){
+    /* een paar tikjes snel achter elkaar voelt als een korte buzz */
+    const l=hapticElement();
+    for(let i=0;i<4;i++) setTimeout(()=>{ try{ l.click(); }catch(e){} }, i*70);
+    return;
   }
+  const u=document.getElementById('triluit');
+  if(u) u.textContent='Deze telefoon laat de browser niet trillen (oudere iPhone). Zet de trilstand aan met het zijknopje en bel of app jezelf, en voel of hij trilt.';
+  toast('Test het trillen met de hand','');
+}
+function startTril(){
+  const iphoneTik = iosSwitchKan && !navigator.vibrate;
+  document.getElementById('testvak').innerHTML=
+    '<button class="btn actie" onclick="trilNu()">Laat trillen</button>'+
+    '<p class="muted klein" id="triluit" style="margin-top:10px">Druk op de knop en voel of het toestel trilt.'+
+    (iphoneTik?' Op een iPhone voel je een korte tik van de Taptic Engine.':'')+'</p>';
+  opruimer=()=>{};
 }
 
 /* ---- sensoren: vloeiende kantelstip ---- */
