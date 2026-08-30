@@ -676,7 +676,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
           <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
           <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
-          <div><label>Batch</label><select id="t_batch"><option value="">Geen batch</option></select></div>
+          <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
         </div>
 
         <!-- Waar de doos heen gaat. Vul je dit hier in, dan hoeft niemand later
@@ -2093,6 +2093,7 @@ const CTR_STAPPEN={
           <option value="">Kies uit je voorraad</option>
           ${opties.map(o=>`<option value="${o.id}">${esc(o.naam)} · ${o.aantal} op voorraad · ${euro(Number(o.prijs)||0)}</option>`).join('')}
         </select>
+        <input id="ctr_upg_aantal" type="number" min="1" value="1" style="max-width:80px" title="Aantal" placeholder="Aantal">
         <button class="btn" onclick="ctrUpgrade(this)">Toevoegen</button>
         ${opties.length?'':'<span class="muted klein">Nog geen voorraad. Onderdelen voeg je toe op de Onderdelen-pagina.</span>'}
       </div>`;
@@ -2304,8 +2305,6 @@ function ctrSpecTyp(sleutel, waarde){
    meteen een advies, en met één klik zet je hem op de reparatielijst. */
 function ctrAccublok(){
   const grens=Number(instel.accu_min)||80;
-  const w=Number(ctr.accu);
-  const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
   return `<div class="accurij">
     <label>Hoeveel van de accu is er nog over?</label>
     <div class="row">
@@ -2313,34 +2312,40 @@ function ctrAccublok(){
         placeholder="bijvoorbeeld 87" style="max-width:130px" oninput="ctrAccu(this.value)">
       <span class="muted">procent van nieuw &middot; grens staat op ${grens}%</span>
     </div>
-    ${laag ? `<div class="accuwaarschuwing">
-        <div><b>Advies: accu vervangen.</b> ${w}% is onder jouw grens van ${grens}%.
-          Een koper merkt dat meteen en dat komt terug.</div>
-        <label class="accuknop">
-          <input type="checkbox" ${ctr.accuVervangen?'checked':''}
-            onchange="ctrAccuVervangen(this.checked)">
-          <span>Accu moet vervangen worden</span>
-        </label>
-      </div>`
-      : (ctr.accu!=='' && !isNaN(w) ? '<div class="accugoed">Prima, dat is boven de grens.</div>' : '')}
+    <div id="accuAdvies">${accuAdviesHtml()}</div>
     <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag.</p>
   </div>`;
 }
-/* Bij elke toetsaanslag de hele pagina opnieuw tekenen is zonde: er staan
-   dertig vragen op en er verandert alleen het blokje eronder. Dus tekenen we
-   alleen als het advies daadwerkelijk omslaat. */
-function ctrAccu(waarde){
+/* Het advies onder het accuveld staat apart, zodat het live kan meelopen zonder
+   het hele scherm opnieuw te tekenen. Deed het dat wel, dan was je bij een
+   getalveld na de eerste cijfer je plek kwijt (typ je 90, dan sloeg het advies
+   bij de 9 al om, hertekende het scherm en kon je de 0 niet meer typen). */
+function accuAdviesHtml(){
   const grens=Number(instel.accu_min)||80;
-  const stand=(w)=>{
-    const n=Number(w);
-    if(String(w||'').trim()==='' || isNaN(n)) return 'leeg';
-    return n<grens ? 'laag' : 'goed';
-  };
-  const voor=stand(ctr.accu);
+  const w=Number(ctr.accu);
+  const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
+  if(laag) return `<div class="accuwaarschuwing">
+      <div><b>Advies: accu vervangen.</b> ${w}% is onder jouw grens van ${grens}%.
+        Een koper merkt dat meteen en dat komt terug.</div>
+      <label class="accuknop">
+        <input type="checkbox" ${ctr.accuVervangen?'checked':''}
+          onchange="ctrAccuVervangen(this.checked)">
+        <span>Accu moet vervangen worden</span>
+      </label>
+    </div>`;
+  if(ctr.accu!=='' && !isNaN(w)) return '<div class="accugoed">Prima, dat is boven de grens.</div>';
+  return '';
+}
+function ctrAccu(waarde){
   ctr.accu=String(waarde||'').trim();
-  const na=stand(ctr.accu);
-  if(na!=='laag') ctr.accuVervangen=false;
-  if(voor!==na) ctrTeken();
+  const grens=Number(instel.accu_min)||80;
+  const w=Number(ctr.accu);
+  const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
+  if(!laag) ctr.accuVervangen=false;
+  /* Alleen het advies-blok bijwerken, niet het hele scherm: zo blijft je cursor
+     in het veld staan terwijl je typt. */
+  const vak=document.getElementById('accuAdvies');
+  if(vak) vak.innerHTML=accuAdviesHtml();
 }
 function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; }
 
@@ -2408,27 +2413,37 @@ async function ctrUpgrade(knop){
   const vrdId=sel?sel.value:'';
   if(!vrdId){ toast('Kies eerst iets uit de voorraad','let-op'); return; }
   const o=voorraaddelen.find(x=>x.id===vrdId); if(!o) return;
-  /* De prijs van de oudste partij, want die boeken we ook af. Zo klopt wat je
-     op het toestel bijschrijft precies met wat er van de teller gaat. */
+  const aantalEl=document.getElementById('ctr_upg_aantal');
+  const n=Math.max(1, Math.round(Number(aantalEl?aantalEl.value:1)||1));
+  /* De oudste partijen eerst afboeken, elk stuk tegen de prijs van zijn eigen
+     partij. Zo klopt wat je op het toestel bijschrijft precies met wat er van de
+     teller gaat, ook als je er meer pakt dan er in de oudste partij zitten. */
   const lots=(Array.isArray(o.lots)?o.lots:[]).map(l=>({aantal:Number(l.aantal)||0, prijs:Number(l.prijs)||0}));
-  const eerste=lots.find(l=>l.aantal>0);
-  const bedrag=eerste?Math.round(eerste.prijs*100)/100:Math.round((Number(o.prijs)||0)*100)/100;
+  const nieuweExtras=[]; let totaal=0;
+  for(let i=0;i<n;i++){
+    const eerste=lots.find(l=>l.aantal>0);
+    if(!eerste) break;
+    const prijs=Math.round(eerste.prijs*100)/100;
+    eerste.aantal-=1;
+    nieuweExtras.push({soort:o.soort||'anders', bedrag:prijs, omschrijving:o.naam, voorraad_id:o.id});
+    totaal+=prijs;
+  }
+  if(!nieuweExtras.length){ toast('Niets meer op voorraad','let-op'); return; }
+  totaal=Math.round(totaal*100)/100;
   await bezig(knop, async()=>{
-    const lijst=(Array.isArray(ctr.a.extra_kosten)?ctr.a.extra_kosten.slice():[]);
-    lijst.push({soort:o.soort||'anders', bedrag, omschrijving:o.naam, voorraad_id:o.id});
-    const nieuweInkoop=Math.round(((Number(ctr.a.inkoop)||0)+bedrag)*100)/100;
+    const lijst=(Array.isArray(ctr.a.extra_kosten)?ctr.a.extra_kosten.slice():[]).concat(nieuweExtras);
+    const nieuweInkoop=Math.round(((Number(ctr.a.inkoop)||0)+totaal)*100)/100;
     const {error}=await sb.from('refurbish_apparaten')
       .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',ctr.a.id);
     if(error) throw error;
     ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
-    if(eerste) eerste.aantal-=1;
     const sync=vrdSync(lots);
     const {error:vErr}=await sb.from('refurbish_voorraad')
       .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',o.id);
     if(vErr){ console.error('voorraad afboeken', vErr); toast('Let op: de voorraad is mogelijk niet afgeboekt','let-op'); }
     o.lots=sync.lots; o.aantal=sync.aantal; o.prijs=sync.prijs;
     ctrTeken();
-    toast('Toegevoegd, telt mee in de inkoop', true);
+    toast(nieuweExtras.length+(nieuweExtras.length>1?' onderdelen toegevoegd':' onderdeel toegevoegd'), true);
   });
 }
 async function ctrUpgradeWeg(index){
@@ -4740,10 +4755,15 @@ function batCijfers(id){
      extra's. */
   const deviceExtras=devs.reduce((n,a)=>n+(Array.isArray(a.extra_kosten)
     ?a.extra_kosten.reduce((m,k)=>m+(Number(k.bedrag)||0),0):0),0);
-  const devBasis=Math.round((devInkoop-deviceExtras)*100)/100;
+  const devBasisSom=Math.round((devInkoop-deviceExtras)*100)/100;
+  /* De basis-investering is de totale aankoopwaarde van de partij als die is
+     ingevuld: de prijs per toestel is daaruit afgeleid, dus die tellen we niet
+     nog eens mee. Zonder aankoopwaarde de som van de inkoop per toestel. */
+  const aankoopwaarde=Number(b.inkoopprijs)||0;
+  const devBasis = aankoopwaarde>0 ? aankoopwaarde : devBasisSom;
   const batchKosten=(Array.isArray(b.kosten)?b.kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
   const extraInvestering=Math.round((deviceExtras+batchKosten)*100)/100;
-  const investering=Math.round(((Number(b.inkoopprijs)||0)+devInkoop+batchKosten)*100)/100;
+  const investering=Math.round((devBasis+deviceExtras+batchKosten)*100)/100;
   let omzetBon=0, omzetZb=0, verkocht=0, teKoop=0, teKoopWaarde=0;
   devs.forEach(a=>{
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
@@ -4944,11 +4964,11 @@ function renderBatchDetail(){
 
     <div class="card">
       <h2 style="margin-bottom:2px">${esc(b.nummer||'Naamloos')}</h2>
-      <p class="muted klein">${b.leverancier?esc(b.leverancier)+' · ':''}${b.marge?'Margeregeling':'Normale btw (21%)'}${b.verwacht?' · binnengekomen als '+(b.verwacht==='ongetest'?'ongetest':'werkend'):''}</p>
+      <p class="muted klein">${b.leverancier?esc(b.leverancier)+' · ':''}${b.marge?'Margeregeling':'Normale btw (21%)'}${b.verwacht?' · binnengekomen als '+(b.verwacht==='ongetest'?'ongetest':'werkend'):''}${(Number(b.aantal)||0)?' · partij van '+b.aantal+' à '+euro(batPerStuk(b))+' per stuk':''}</p>
       ${b.notitie?`<p class="muted klein" style="margin-top:4px">${esc(b.notitie)}</p>`:''}
       <div class="kpis" style="margin-top:18px">
         <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div>
-          <div class="muted klein" style="margin-top:6px">basis ${euro(c.devBasis)}${c.deviceExtras?' · onderdelen '+euro(c.deviceExtras):''}${(Number(b.inkoopprijs)||0)?' · partij '+euro(Number(b.inkoopprijs)||0):''}${c.batchKosten?' · partijkosten '+euro(c.batchKosten):''}</div></div>
+          <div class="muted klein" style="margin-top:6px">aankoop ${euro(c.devBasis)}${c.deviceExtras?' · onderdelen '+euro(c.deviceExtras):''}${c.batchKosten?' · partijkosten '+euro(c.batchKosten):''}</div></div>
         <div class="kpi"><div class="l">Extra investering</div><div class="v">${euro(c.extraInvestering)}</div>
           <div class="muted klein" style="margin-top:6px">onderdelen en losse kosten</div></div>
         <div class="kpi"><div class="l">Omzet</div><div class="v">${euro(c.omzet)}</div>
@@ -4997,12 +5017,40 @@ function renderBatchDetail(){
 function batNieuw(){ batForm(null); }
 function batBewerk(id){ batForm(batches.find(b=>b.id===id)||null); }
 
+/* De drie velden aankoopwaarde, aantal en prijs per stuk lopen mee: totaal en
+   aantal geven de prijs per stuk, en andersom. Het veld waarin je typt raken we
+   niet aan, zodat je gewoon kunt doortypen. */
+function batRekenStuk(){
+  const t=Number(document.getElementById('bf_ink').value)||0;
+  const n=Number(document.getElementById('bf_aantal').value)||0;
+  const ps=document.getElementById('bf_perstuk');
+  if(ps && document.activeElement!==ps) ps.value = n>0 ? (Math.round((t/n)*100)/100) : '';
+}
+function batRekenTotaal(){
+  const ps=Number(document.getElementById('bf_perstuk').value)||0;
+  const n=Number(document.getElementById('bf_aantal').value)||0;
+  const t=document.getElementById('bf_ink');
+  if(t && document.activeElement!==t && ps>0 && n>0) t.value = Math.round((ps*n)*100)/100;
+}
+/* De prijs per stuk van een batch: totale aankoopwaarde gedeeld door het aantal. */
+function batPerStuk(b){
+  const n=Number(b&&b.aantal)||0;
+  return n>0 ? Math.round((Number(b.inkoopprijs)||0)/n*100)/100 : 0;
+}
+/* Bij Toevoegen: kies je een batch, dan vullen we de inkoop met de prijs per
+   stuk van die partij. */
+function batVulInkoop(){
+  const sel=document.getElementById('t_batch'); if(!sel) return;
+  const b=batches.find(x=>x.id===sel.value);
+  const inp=document.getElementById('t_inkoop');
+  if(b && inp){ const ps=batPerStuk(b); if(ps) inp.value=ps; }
+}
+
 function batForm(b){
   const vw=b?b.verwacht||'':'';
   const inhoud=`<div class="grid">
       <div style="grid-column:1/-1"><label>Naam of nummer</label><input id="bf_naam" value="${b?esc(b.nummer||''):''}" placeholder="bijv. Dell pallet januari"></div>
       <div><label>Leverancier</label><input id="bf_lev" value="${b?esc(b.leverancier||''):''}" placeholder="waar komt het vandaan"></div>
-      <div><label>Extra inkoop partij</label><input id="bf_ink" type="number" step="0.01" min="0" value="${b&&b.inkoopprijs!=null?b.inkoopprijs:''}" placeholder="0,00"></div>
       <div><label>Btw</label><select id="bf_marge">
         <option value="ja"${!b||b.marge?' selected':''}>Margeregeling</option>
         <option value="nee"${b&&!b.marge?' selected':''}>Normale btw (21%)</option>
@@ -5013,9 +5061,15 @@ function batForm(b){
         <option value="ongetest"${vw==='ongetest'?' selected':''}>Ongetest</option>
       </select></div>
     </div>
+    <div class="veldkop"><label>Aankoop</label></div>
+    <div class="grid">
+      <div><label>Totale aankoopwaarde</label><input id="bf_ink" type="number" step="0.01" min="0" value="${b&&b.inkoopprijs!=null?b.inkoopprijs:''}" placeholder="0,00" oninput="batRekenStuk()"></div>
+      <div><label>Aantal in de partij</label><input id="bf_aantal" type="number" min="0" step="1" value="${b&&b.aantal!=null?b.aantal:''}" placeholder="0" oninput="batRekenStuk()"></div>
+      <div><label>Prijs per stuk</label><input id="bf_perstuk" type="number" step="0.01" min="0" value="${b&&b.inkoopprijs&&b.aantal?Math.round((Number(b.inkoopprijs)/Number(b.aantal))*100)/100:''}" placeholder="0,00" oninput="batRekenTotaal()"></div>
+    </div>
+    <p class="muted klein" style="margin-top:6px">Vul de totale aankoopwaarde en het aantal in, dan komt de prijs per stuk er vanzelf uit. Of andersom. Bij een nieuw toestel in deze batch wordt die prijs per stuk automatisch als inkoop ingevuld.</p>
     <div class="veldkop"><label>Notitie</label></div>
-    <textarea id="bf_notitie" rows="2" placeholder="bijv. factuurnummer">${b?esc(b.notitie||''):''}</textarea>
-    <p class="muted klein" style="margin-top:8px">De inkoop per toestel vul je bij Toevoegen in; die telt al mee. Vul hier alleen iets als je de hele partij voor een los bedrag kocht.</p>`;
+    <textarea id="bf_notitie" rows="2" placeholder="bijv. factuurnummer">${b?esc(b.notitie||''):''}</textarea>`;
   venster(b?'Batch bewerken':'Nieuwe batch', inhoud, [
     {tekst:b?'Opslaan':'Aanmaken', klasse:'actie', doe:(kn)=>batBewaar(kn, b?b.id:null)}
   ]);
@@ -5028,6 +5082,7 @@ async function batBewaar(knop, id){
     nummer:naam,
     leverancier:(document.getElementById('bf_lev').value||'').trim()||null,
     inkoopprijs:Math.round((Number(document.getElementById('bf_ink').value)||0)*100)/100,
+    aantal:Math.round(Number(document.getElementById('bf_aantal').value)||0)||null,
     marge:document.getElementById('bf_marge').value==='ja',
     verwacht:document.getElementById('bf_verwacht').value||null,
     notitie:(document.getElementById('bf_notitie').value||'').trim()||null
