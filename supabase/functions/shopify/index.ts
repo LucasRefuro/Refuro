@@ -79,6 +79,35 @@ function eersteGetal(s: unknown): number {
   const m = String(s ?? "").match(/(\d+(?:[.,]\d+)?)/);
   return m ? parseFloat(m[1].replace(",", ".")) : 0;
 }
+/* Het thema leest per product een paar metafields die Storvo tot nu toe niet
+   meestuurde, waardoor de staat-badge, de spec-regels op de kaart en het
+   groeperen van hetzelfde model leeg bleven. We sturen ze nu mee, op één set
+   sleutels zodat push en thema niet uit elkaar lopen. Staat blijft A/B/C (het
+   thema mapt dat naar Uitstekend/Zeer goed/Prima). */
+function mfText(key: string, val: unknown) {
+  return { namespace: "refuro", key, type: "single_line_text_field", value: String(val) };
+}
+function slug(s: string) {
+  return String(s || "").toLowerCase()
+    .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function themaMetafields(h: any) {
+  const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
+  const out: any[] = [];
+  if (h.staat) out.push(mfText("staat", h.staat));
+  if (sp.Processor) out.push(mfText("cpu", sp.Processor));
+  if (sp.Geheugen) out.push(mfText("ram", sp.Geheugen));
+  if (sp.Opslag) out.push(mfText("opslag", sp.Opslag));
+  if (sp.Scherm) out.push(mfText("scherm", sp.Scherm));
+  const mk = slug([h.merk, h.model].filter(Boolean).join(" "));
+  if (mk) out.push(mfText("model_key", mk));
+  if (h.nieuwprijs != null && h.nieuwprijs !== "") {
+    out.push({ namespace: "refuro", key: "nieuwprijs", type: "number_decimal", value: String(Number(h.nieuwprijs)) });
+  }
+  return out;
+}
+
 function gebruikTags(h: any): string[] {
   if (!["Laptop", "Desktop"].includes(h.categorie || "")) return [];
   const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
@@ -149,7 +178,7 @@ Deno.serve(async (req) => {
         productType: h.categorie || "Laptop",
         status: "ACTIVE",
         tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || "", ...gebruikTags(h)].filter(Boolean),
-        metafields: [winkelvoorraadMetafield(inWinkel), nieuweAccuMetafield(!!h.nieuwe_accu)],
+        metafields: [winkelvoorraadMetafield(inWinkel), nieuweAccuMetafield(!!h.nieuwe_accu), ...themaMetafields(h)],
         productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
         variants: [{
           price: String(h.verkoop),
