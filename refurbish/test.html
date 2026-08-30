@@ -187,9 +187,9 @@ const ALLE_TESTS=[
   {id:'touch', naam:'Touchscreen', uit:'Veeg met je vinger over het HELE scherm, ook de randen en hoeken. Alles moet meetekenen.', soorten:['Telefoon','Tablet'], vol:true, start:startTouch},
   {id:'scherm', naam:'Beeldscherm', uit:'Het scherm loopt vanzelf door de kleuren. Zoek dode pixels, vlekken of ingebrande beelden.', soorten:['Telefoon','Tablet'], vol:true, start:startScherm},
   {id:'luidspreker', naam:'Luidspreker (onderkant)', uit:'De speaker onderaan, voor muziek en de speaker-stand. Druk op de knop en luister.', soorten:['Telefoon','Tablet'], start:startLuidspreker},
-  {id:'oorspeaker', naam:'Oorspeaker (bellen)', uit:'De speaker bovenaan die je bij het oor houdt. Bel een nummer en luister of je de ander helder hoort. Een browser kan deze speaker niet zelf aansturen.', soorten:['Telefoon'], start:startOorspeaker},
   {id:'microfoon', naam:'Microfoon', uit:'Zeg iets. De balk moet meebewegen.', soorten:['Telefoon','Tablet'], start:startMicrofoon},
-  {id:'camera_achter', naam:'Camera achter', uit:'Wissel tussen de lenzen en kijk of elke lens scherp beeld geeft, zonder vlekken.', soorten:['Telefoon','Tablet'], start:startCameraAchter},
+  {id:'oorspeaker', naam:'Oorspeaker (bovenaan)', uit:'De speaker bovenaan die je bij het oor houdt. Druk op de knop, houd het aan je oor en luister.', soorten:['Telefoon'], start:startOorspeaker},
+  {id:'camera_achter', naam:'Camera achter', uit:'Bekijk elke lens en kijk of het beeld scherp is, zonder vlekken.', soorten:['Telefoon','Tablet'], start:startCameraAchter},
   {id:'camera_voor', naam:'Camera voor', uit:'Kijk of de selfiecamera goed beeld geeft.', soorten:['Telefoon','Tablet'], start:()=>startCamera('user')},
   {id:'trilfunctie', naam:'Trilfunctie', uit:'Het toestel trilt kort. Voel je het?', soorten:['Telefoon'], start:startTril},
   {id:'sensoren', naam:'Sensoren', uit:'Kantel het toestel rustig. De stip volgt vloeiend mee.', soorten:['Telefoon','Tablet'], vol:true, start:startSensoren},
@@ -364,14 +364,22 @@ function startLuidspreker(){
   opruimer=()=>{ try{ stilEl&&stilEl.pause(); }catch(e){} };
 }
 /* ---- oorspeaker: browser kan hem niet aansturen, dus een geleid oordeel ---- */
+/* Oorspeaker in de app testen: op iOS stuurt een actieve microfoon-sessie de
+   weergave naar de oorspeaker (bovenaan), precies zoals bij bellen. We openen dus
+   kort de microfoon en spelen de toon; houd het toestel aan je oor. De microfoon
+   is meestal al toegestaan (die stap komt hiervoor), dus geen extra vraag. */
+let oorStream=null;
 function startOorspeaker(){
-  /* Een browser kan de oorspeaker (bovenaan) niet zelf aansturen, maar een echt
-     gesprek gebruikt hem altijd. Dus openen we het belscherm; de tech belt de
-     voicemail of een nummer en beoordeelt zelf. */
   document.getElementById('testvak').innerHTML=
-    '<a class="btn actie" href="tel:">Open het belscherm</a>'+
-    '<p class="muted klein" style="margin-top:10px">Bel je voicemail of een nummer en houd het toestel bij je oor. Hoor je geluid via de speaker <b>bovenaan</b> (niet die onderaan)? Kies daarna Werkt of Niet goed.</p>';
-  opruimer=()=>{};
+    '<button class="btn actie" onclick="speelOorspeaker()">Speel de toon</button>'+
+    '<p class="muted klein" style="margin-top:10px">Houd het toestel aan je oor, zoals bij bellen, en druk op de knop. Hoor je de toon via de speaker <b>bovenaan</b>?</p>';
+  opruimer=()=>{ if(oorStream){ try{ oorStream.getTracks().forEach(t=>t.stop()); }catch(e){} oorStream=null; } };
+}
+function speelOorspeaker(){
+  ensureAudio();
+  const speelEnStop=()=>{ speelToon(660); setTimeout(()=>{ if(oorStream){ try{ oorStream.getTracks().forEach(t=>t.stop()); }catch(e){} oorStream=null; } }, 1700); };
+  if(oorStream){ speelEnStop(); return; }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{ oorStream=s; speelEnStop(); }).catch(()=>{ speelToon(660); });
 }
 
 /* ---- microfoon: live meter ---- */
@@ -426,11 +434,12 @@ async function toonLens(deviceId){
     v.srcObject=camStream;
   }catch(e){ toast('Deze lens openen lukte niet','fout'); }
 }
+let lensLijst=[], lensI=0;
 async function startCameraAchter(){
   const mijnStap=stapId;
   const vak=document.getElementById('testvak');
-  vak.innerHTML='<div id="lensknoppen" style="display:flex; gap:8px; overflow-x:auto; margin-bottom:10px"></div>'+
-    '<video id="camerabeeld" autoplay playsinline muted></video>';
+  vak.innerHTML='<video id="camerabeeld" autoplay playsinline muted></video>'+
+    '<div id="lensrij" style="display:flex; gap:12px; align-items:center; margin-top:10px"></div>';
   try{
     const seed=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
     if(mijnStap!==stapId){ seed.getTracks().forEach(t=>t.stop()); return; }
@@ -438,32 +447,47 @@ async function startCameraAchter(){
     const v=document.getElementById('camerabeeld'); if(v) v.srcObject=seed;
     opruimer=()=>{ camStop(); };
     const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
-    const achter=cams.filter(d=>/back|rear|environment|achter|arrière|trasera/i.test(d.label||''));
-    const lijst=achter.length?achter:cams;
-    const kn=document.getElementById('lensknoppen');
-    if(kn && lijst.length>1){
-      kn.innerHTML=lijst.map((d,i)=>`<button class="btn ghost" style="width:auto; flex:none; padding:11px 16px" data-lens="${esc(d.deviceId)}">${esc(lensNaam(d.label,i))}</button>`).join('');
-      kn.querySelectorAll('[data-lens]').forEach(b=>b.onclick=()=>{
-        toonLens(b.dataset.lens);
-        kn.querySelectorAll('.btn').forEach(x=>x.classList.remove('actie')); b.classList.add('actie');
-      });
-      const eerste=kn.querySelector('.btn'); if(eerste) eerste.classList.add('actie');
-    } else if(kn){
-      kn.innerHTML='<span class="muted klein">Eén achterlens beschikbaar op dit toestel.</span>';
-    }
+    let lijst=cams.filter(d=>/back|rear|environment|achter|arrière|trasera/i.test(d.label||''));
+    if(!lijst.length) lijst=cams;
+    /* De virtuele combi-camera's (die zelf tussen lenzen wisselen) en dubbele
+       labels eruit, zodat je alleen de echte lenzen overhoudt. */
+    const gezien=new Set();
+    lensLijst=lijst.filter(d=>{
+      if(/dual|triple|combined|virtual/i.test(d.label||'')) return false;
+      const k=d.label||d.deviceId; if(gezien.has(k)) return false; gezien.add(k); return true;
+    });
+    if(!lensLijst.length) lensLijst=lijst;
+    lensI=0; tekenLensrij();
   }catch(e){ vak.innerHTML='<p class="muted klein">Geen toegang tot de camera. Test met de hand.</p>'; }
+}
+function tekenLensrij(){
+  const rij=document.getElementById('lensrij'); if(!rij) return;
+  if(lensLijst.length<=1){ rij.innerHTML='<span class="muted klein">Eén achterlens op dit toestel.</span>'; return; }
+  rij.innerHTML='<button class="btn ghost" style="width:auto; flex:none" onclick="volgendeLens()">Volgende lens</button>'+
+    '<span class="muted klein">'+esc(lensNaam((lensLijst[lensI]||{}).label, lensI))+' · '+(lensI+1)+' van '+lensLijst.length+'</span>';
+}
+function volgendeLens(){
+  if(lensLijst.length<2) return;
+  lensI=(lensI+1)%lensLijst.length;
+  toonLens((lensLijst[lensI]||{}).deviceId);
+  tekenLensrij();
 }
 
 /* ---- trilfunctie ---- */
 function startTril(){
-  if(navigator.vibrate){
-    document.getElementById('testvak').innerHTML='<button class="btn actie" onclick="navigator.vibrate([450])">Laat trillen</button>';
-    try{ navigator.vibrate([450]); }catch(e){}
-  } else {
-    document.getElementById('testvak').innerHTML=
-      '<p class="muted klein">Dit toestel (vaak een iPhone) laat de browser niet trillen. Test het met de hand: zet de trilstand aan en stuur jezelf een bericht of gebruik een belletje, en voel of hij trilt.</p>';
-  }
+  document.getElementById('testvak').innerHTML=
+    '<button class="btn actie" onclick="trilNu()">Laat trillen</button>'+
+    '<p class="muted klein" id="triluit" style="margin-top:10px">Druk op de knop en voel of het toestel trilt.</p>';
+  trilNu();
   opruimer=()=>{};
+}
+function trilNu(){
+  if(navigator.vibrate){ try{ navigator.vibrate(0); navigator.vibrate([400]); }catch(e){} }
+  else {
+    const u=document.getElementById('triluit');
+    if(u) u.textContent='Een iPhone laat de browser niet trillen. Zet de trilstand aan met het zijknopje en stuur jezelf een bericht of bel jezelf, en voel of hij trilt.';
+    toast('iPhone: test het trillen met de hand','');
+  }
 }
 
 /* ---- sensoren: vloeiende kantelstip ---- */
