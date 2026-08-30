@@ -786,12 +786,17 @@ async function stuurWachtwoordVergeten(email){
   }catch(e){ toast('Versturen mislukt', 'fout'); }
 }
 
-document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('aside nav button').forEach(x=>x.classList.toggle('active', x===b));
-  document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+b.dataset.tab));
+/* Onthouden op welk tabblad je stond, zodat een herlaad je niet terug op het
+   overzicht zet. */
+function adminTab(t){
+  const knop=document.querySelector('aside nav button[data-tab="'+t+'"]'); if(!knop) return;
+  document.querySelectorAll('aside nav button').forEach(x=>x.classList.toggle('active', x===knop));
+  document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   teken();
-  if(b.dataset.tab==='teams' && !teamsGeladen) laadTeams();
-}));
+  if(t==='teams' && !teamsGeladen) laadTeams();
+  try{ localStorage.setItem('storvo_admin_tab', t); }catch(e){}
+}
+document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>adminTab(b.dataset.tab)));
 
 function mrr(){ return state.klanten.filter(k=>k.status==='actief').reduce((s,k)=>s+plan(k.plan).prijs,0); }
 function tekenOverzicht(){
@@ -1156,6 +1161,8 @@ document.querySelectorAll('#fbFilter button').forEach(b=>b.addEventListener('cli
 
 function teken(){ tekenOverzicht(); tekenKlanten(); tekenPlannen(); tekenStripe(); tekenSchermen(); rolTabellen(); }
 save(); teken();
+/* Terug naar het tabblad waar je was gebleven. */
+try{ const _at=localStorage.getItem('storvo_admin_tab'); if(_at && document.getElementById('tab-'+_at)) adminTab(_at); }catch(e){}
 syncKlantenVanSupabase();
 adminPoortBoot().then(ok=>{ if(ok){ laadFeedback(); laadModules(); } });
 setInterval(syncKlantenVanSupabase, 60000);
