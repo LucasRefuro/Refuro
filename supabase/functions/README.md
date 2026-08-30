@@ -38,6 +38,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |
 | `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
 | `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
+| `refurbish-test` | ja | Neemt de functionele testuitslag aan van de telefoon, op dezelfde code-aanpak |
 | `productfotos` | nee | Haalt officiële productfoto's op bij Icecat |
 | `prijsadvies` | nee | Prijsvoorstel uit eigen geschiedenis en een marktschatting |
 | `scherm-hoeken` | nee | Zoekt met AI de vier hoeken van een beeldscherm in een foto |
