@@ -966,7 +966,7 @@ let account=null, abonnement=null;
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
 let voorraaddelen=[];
-let instel={accu_min:80};
+let instel={accu_min:85};
 let tab='werkbank';
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1413,7 +1413,8 @@ function labelHtml(a){
         specs['Geheugen']  ? 'RAM: '+specs['Geheugen']  : null,
         specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
         specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null,
-        a.accu             ? 'Accu: '+a.accu+'%'        : null
+        a.nieuwe_accu      ? 'Accu: nieuw (100%)'
+                           : (a.accu ? 'Accu: '+a.accu+'%' : null)
       ].filter(Boolean);
   return `<div class="etiket">
     <div class="etkop">
@@ -1575,7 +1576,7 @@ function tekenApparaat(){
     <div class="feiten">
       ${feit('Nummer', a.code||'—', true)}
       ${feit('Grade', a.grade||'—')}
-      ${feit('Accu', a.accu?a.accu+'%':'—')}
+      ${feit('Accu', a.nieuwe_accu?'nieuw (100%)':(a.accu?a.accu+'%':'—'))}
       ${feit('Ligt in', locNaam(plekVan(a))||'nog niet bepaald')}
       ${feit('Plek', a.plek||'—')}
       ${feit('Leverancier', a.leverancier||'—')}
@@ -1623,6 +1624,7 @@ function tekenApparaat(){
             </select>
             <select id="ex_soort">
               <option value="ssd">SSD</option><option value="ram">RAM</option>
+              <option value="accu">Accu</option>
               <option value="lader">Lader</option><option value="reparatie">Reparatie</option>
               <option value="anders">Overig</option>
             </select>
@@ -1861,6 +1863,7 @@ function appOpen(id){
     antwoord:{}, punten:{}, delen:{}, notities:{},
     specs:Object.assign({}, a.specs||{}),
     accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
+    nieuweAccu:!!a.nieuwe_accu,
     notitie:a.notitie||'', opties:{},
     pad: hervat ? ['start','hardware','upgrade','windows'] : [],
     tijdEinde:null
@@ -2401,7 +2404,7 @@ function ctrSpecTyp(sleutel, waarde){
    het meest op terugkrijgt. Onder de grens die de winkel zelf instelt komt er
    meteen een advies, en met één klik zet je hem op de reparatielijst. */
 function ctrAccublok(){
-  const grens=Number(instel.accu_min)||80;
+  const grens=Number(instel.accu_min)||85;
   return `<div class="accurij">
     <label>Hoeveel van de accu is er nog over?</label>
     <div class="row">
@@ -2410,7 +2413,11 @@ function ctrAccublok(){
       <span class="muted">procent van nieuw &middot; grens staat op ${grens}%</span>
     </div>
     <div id="accuAdvies">${accuAdviesHtml()}</div>
-    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag.</p>
+    <label class="accuknop" style="margin-top:10px">
+      <input type="checkbox" id="c_nieuwe_accu" ${ctr.nieuweAccu?'checked':''} onchange="ctrNieuweAccu(this.checked)">
+      <span>Nieuwe accu geplaatst</span>
+    </label>
+    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%.</p>
   </div>`;
 }
 /* Het advies onder het accuveld staat apart, zodat het live kan meelopen zonder
@@ -2418,7 +2425,7 @@ function ctrAccublok(){
    getalveld na de eerste cijfer je plek kwijt (typ je 90, dan sloeg het advies
    bij de 9 al om, hertekende het scherm en kon je de 0 niet meer typen). */
 function accuAdviesHtml(){
-  const grens=Number(instel.accu_min)||80;
+  const grens=Number(instel.accu_min)||85;
   const w=Number(ctr.accu);
   const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
   if(laag) return `<div class="accuwaarschuwing">
@@ -2435,7 +2442,7 @@ function accuAdviesHtml(){
 }
 function ctrAccu(waarde){
   ctr.accu=String(waarde||'').trim();
-  const grens=Number(instel.accu_min)||80;
+  const grens=Number(instel.accu_min)||85;
   const w=Number(ctr.accu);
   const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
   if(!laag) ctr.accuVervangen=false;
@@ -2445,6 +2452,17 @@ function ctrAccu(waarde){
   if(vak) vak.innerHTML=accuAdviesHtml();
 }
 function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; }
+/* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Het
+   accuveld en het advies lopen mee, zonder het hele scherm te hertekenen zodat
+   je cursor niet wegspringt. */
+function ctrNieuweAccu(aan){
+  ctr.nieuweAccu=!!aan;
+  if(aan){
+    ctr.accu='100'; ctr.accuVervangen=false;
+    const inp=document.getElementById('c_accu'); if(inp) inp.value='100';
+    const vak=document.getElementById('accuAdvies'); if(vak) vak.innerHTML=accuAdviesHtml();
+  }
+}
 
 /* Een notitie mag maar zo lang zijn als er op de sticker past. Liever een
    afgekapte zin dan een label waar de helft van afvalt. */
@@ -2472,7 +2490,7 @@ async function ctrInstalleren(knop, later){
     const {error}=await sb.from('refurbish_apparaten').update({
       status:'installeren', stap: later ? 'wachten' : 'installeren',
       checklist:ctrChecklist(), specs:ctrSchoneSpecs(),
-      accu:Number(ctr.accu)||null, notitie:ctr.notitie||null,
+      accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, notitie:ctr.notitie||null,
       /* De staat komt nu pas na de specs, dus bij het weggelegde toestel is er
          nog geen grade. Niet voortijdig een A neerzetten; dat komt bij afronden. */
       grade: ctrCompleet()?gradeVan(ctrPunten()):null,
@@ -2527,13 +2545,21 @@ async function ctrUpgrade(knop){
   }
   if(!nieuweExtras.length){ toast('Niets meer op voorraad','let-op'); return; }
   totaal=Math.round(totaal*100)/100;
+  /* Zet je een accu uit de voorraad in, dan is dat meteen een nieuwe accu: 100%
+     en geen reden meer om te vervangen. */
+  const isAccu = o.soort==='accu';
   await bezig(knop, async()=>{
     const lijst=(Array.isArray(ctr.a.extra_kosten)?ctr.a.extra_kosten.slice():[]).concat(nieuweExtras);
     const nieuweInkoop=Math.round(((Number(ctr.a.inkoop)||0)+totaal)*100)/100;
     const {error}=await sb.from('refurbish_apparaten')
-      .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',ctr.a.id);
+      .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+        isAccu?{accu:100, nieuwe_accu:true}:{})).eq('id',ctr.a.id);
     if(error) throw error;
     ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
+    if(isAccu){
+      ctr.nieuweAccu=true; ctr.accu='100'; ctr.accuVervangen=false;
+      ctr.a.nieuwe_accu=true; ctr.a.accu=100;
+    }
     const sync=vrdSync(lots);
     const {error:vErr}=await sb.from('refurbish_voorraad')
       .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',o.id);
@@ -2550,10 +2576,15 @@ async function ctrUpgradeWeg(index){
   const bedrag=Number(weg.bedrag)||0;
   lijst.splice(index,1);
   const nieuweInkoop=Math.round(Math.max(0,(Number(ctr.a.inkoop)||0)-bedrag)*100)/100;
+  /* Haal je de accu er weer af en zit er geen andere accu meer bij, dan is het
+     ook geen nieuwe accu meer. */
+  const resetAccu = weg.soort==='accu' && !lijst.some(x=>x.soort==='accu');
   const {error}=await sb.from('refurbish_apparaten')
-    .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',ctr.a.id);
+    .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+      resetAccu?{nieuwe_accu:false}:{})).eq('id',ctr.a.id);
   if(error){ toast('Mislukt','fout'); return; }
   ctr.a.extra_kosten=lijst; ctr.a.inkoop=nieuweInkoop;
+  if(resetAccu){ ctr.nieuweAccu=false; ctr.a.nieuwe_accu=false; }
   if(weg.voorraad_id){
     const o=voorraaddelen.find(x=>x.id===weg.voorraad_id);
     if(o){
@@ -2663,7 +2694,7 @@ async function ctrAfronden(knop){
     const {error}=await sb.from('refurbish_apparaten').update({
       status, checklist:ctrChecklist(), specs, grade, punten,
       defecten:defecten.map(d=>d.vraag),
-      accu:Number(ctr.accu)||null, notitie:ctr.notitie||null,
+      accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, notitie:ctr.notitie||null,
       stap:'af', bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
@@ -2679,7 +2710,7 @@ async function ctrAfronden(knop){
        iemand hem later nog ergens heen moet klikken. Dit gebeurt als laatste:
        de uitslag van de controle staat dan al vast, en die mag niet verloren
        gaan als het aanmaken van de voorraadrij hapert. */
-    if(status==='klaar') await naarVoorraad(Object.assign({}, a, {grade, specs}));
+    if(status==='klaar') await naarVoorraad(Object.assign({}, a, {grade, specs, nieuwe_accu:!!ctr.nieuweAccu}));
 
     ctr=null; await allesLaden(); showTab('controle');
     const bij=apparaten.find(x=>x.id===a.id);
@@ -2723,7 +2754,7 @@ async function ctrSlopen(knop){
 function sloopOpen(a){
   ctr={a, stap:'slopen', antwoord:{}, punten:{}, delen:{}, notities:{},
        specs:Object.assign({}, a.specs||{}), accu:a.accu!=null?String(a.accu):'',
-       accuVervangen:false, notitie:a.notitie||'', pad:[], opties:{}};
+       accuVervangen:false, nieuweAccu:!!a.nieuwe_accu, notitie:a.notitie||'', pad:[], opties:{}};
   (a.goede_delen||[]).forEach(d=>ctr.delen[d]=true);
   showTab('controleren');
 }
@@ -2835,6 +2866,7 @@ async function naarVoorraad(a){
     status: (instel.inscannen && !a.locatie_id) ? 'onderweg' : 'voorraad',
     locatie_id:a.locatie_id||null,
     plek:a.plek||null,
+    nieuwe_accu:!!a.nieuwe_accu,
     kanalen:{winkel:true}
   }).select().single();
   if(error) throw new Error('Kon hem niet in de voorraad zetten: '+error.message);
@@ -3412,7 +3444,7 @@ async function onlPubliceren(knop){
       garantie:Number(onl.garantie)||0,
       titel:onl.titel||null, omschrijving:onl.tekst||null,
       fotos:gesorteerd.map(f=>fotoUrl(f.pad)),
-      specs:a.specs||{}, kanalen,
+      specs:a.specs||{}, kanalen, nieuwe_accu:!!a.nieuwe_accu,
       bijgewerkt_op:new Date().toISOString()
     }).eq('id', hwId);
     if(error) throw new Error('Publiceren mislukt: '+error.message);
@@ -4322,6 +4354,7 @@ function vrdForm(o){
       <div><label>Soort</label><select id="vd_soort">
         <option value="ssd"${s==='ssd'?' selected':''}>SSD</option>
         <option value="ram"${s==='ram'?' selected':''}>RAM</option>
+        <option value="accu"${s==='accu'?' selected':''}>Accu</option>
         <option value="lader"${s==='lader'?' selected':''}>Lader</option>
         <option value="anders"${(!s||s==='anders')?' selected':''}>Overig</option>
       </select></div>
@@ -4420,7 +4453,7 @@ function exVoorraadKies(){
   const bedrag=document.getElementById('ex_bedrag');
   const oms=document.getElementById('ex_oms');
   if(o){
-    if(soort) soort.value=['ssd','ram','lader','reparatie','anders'].includes(o.soort)?o.soort:'anders';
+    if(soort) soort.value=['ssd','ram','accu','lader','reparatie','anders'].includes(o.soort)?o.soort:'anders';
     if(bedrag) bedrag.value=Number(o.prijs)||0;
     if(oms) oms.value=o.naam;
   }
@@ -4512,7 +4545,7 @@ async function orderKlaar(knop, id){
 
 function tekenChecklists(){
   const acc=document.getElementById('in_accu');
-  if(acc && document.activeElement!==acc) acc.value=Number(instel.accu_min)||80;
+  if(acc && document.activeElement!==acc) acc.value=Number(instel.accu_min)||85;
   const sc=document.getElementById('in_scan');
   if(sc) sc.checked=!!instel.inscannen;
   tekenLocaties();
@@ -4579,7 +4612,7 @@ async function locWeg(id){
 async function scanInstelling(aan){
   const {error}=await sb.from('refurbish_instellingen').upsert({
     team_id:account.team_id, inscannen:!!aan,
-    accu_min:Number(instel.accu_min)||80,
+    accu_min:Number(instel.accu_min)||85,
     ad_sjabloon:instel.ad_sjabloon||null,
     ad_toon:instel.ad_toon||'zakelijk en eerlijk',
     bijgewerkt_op:new Date().toISOString()
@@ -4712,7 +4745,7 @@ async function schermBewaren(){
   const st=schermInstel();
   const {error}=await sb.from('refurbish_instellingen').upsert({
     team_id:account.team_id,
-    accu_min:Number(instel.accu_min)||80,
+    accu_min:Number(instel.accu_min)||85,
     ad_sjabloon:instel.ad_sjabloon||null,
     ad_toon:instel.ad_toon||'zakelijk en eerlijk',
     inscannen:!!instel.inscannen,
@@ -4833,7 +4866,7 @@ function batBetaalNaam(bet){
   return bet==='pin'?'pin':bet==='cash'?'cash met bon':bet==='webshop'?'webshop':'zonder bon';
 }
 function batSoortNaam(s){
-  return s==='ssd'?'SSD':s==='ram'?'RAM':s==='lader'?'Lader':s==='reparatie'?'Reparatie':'Overig';
+  return s==='ssd'?'SSD':s==='ram'?'RAM':s==='accu'?'Accu':s==='lader'?'Lader':s==='reparatie'?'Reparatie':'Overig';
 }
 
 /* Korte samenvatting van de onderdelen: hoeveel ssd's, ram en laders erin gingen. */
@@ -4922,14 +4955,18 @@ async function batExtraToevoegen(id, knop){
   const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
   lijst.push({soort, bedrag, omschrijving:oms||null, voorraad_id:vrdId||null});
   const nieuweInkoop=Math.round(((Number(a.inkoop)||0)+bedrag)*100)/100;
+  /* Een accu erbij is meteen een nieuwe accu: 100%. */
+  const isAccu = soort==='accu';
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten')
-      .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+      .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+        isAccu?{accu:100, nieuwe_accu:true}:{})).eq('id',id);
     if(error) throw error;
     /* Ligt hij al in de winkelvoorraad, dan moet dezelfde inkoop naar de
        hardware-rij, anders rekent de winkelapp de marge op de oude inkoop. */
     if(a.hardware_id){
-      await sb.from('hardware').update({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',a.hardware_id);
+      await sb.from('hardware').update(Object.assign({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+        isAccu?{nieuwe_accu:true}:{})).eq('id',a.hardware_id);
     }
     /* Uit de voorraad, oudste partij eerst (FIFO). */
     if(o){
@@ -4952,12 +4989,16 @@ async function batExtraWeg(id, index){
   const bedrag=Number(weg.bedrag)||0;
   lijst.splice(index,1);
   const nieuweInkoop=Math.round(Math.max(0,(Number(a.inkoop)||0)-bedrag)*100)/100;
+  /* Weg met de accu, en geen andere accu meer erbij: dan is het geen nieuwe accu meer. */
+  const resetAccu = weg.soort==='accu' && !lijst.some(x=>x.soort==='accu');
   const {error}=await sb.from('refurbish_apparaten')
-    .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    .update(Object.assign({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+      resetAccu?{nieuwe_accu:false}:{})).eq('id',id);
   if(error){ toast('Mislukt','fout'); return; }
   /* Ligt hij al in de winkelvoorraad, dan de inkoop daar ook terugdraaien. */
   if(a.hardware_id){
-    await sb.from('hardware').update({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',a.hardware_id);
+    await sb.from('hardware').update(Object.assign({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
+      resetAccu?{nieuwe_accu:false}:{})).eq('id',a.hardware_id);
   }
   /* Kwam het uit de voorraad, dan gaat het er weer bij tegen de prijs die het
      toestel ervoor betaalde: weghalen is een correctie. Vooraan, zodat het er
