@@ -42,6 +42,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `productfotos` | nee | Haalt officiële productfoto's op bij Icecat |
 | `prijsadvies` | nee | Prijsvoorstel uit eigen geschiedenis en een marktschatting |
 | `scherm-hoeken` | nee | Zoekt met AI de vier hoeken van een beeldscherm in een foto |
+| `imaging` | nee | Werkplaats-imaging: schiet via de FOG-API een deploy-taak in (config, test, images-sync, deploy, status) |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.
