@@ -1921,8 +1921,10 @@ function appOpen(id){
   if(a.status==='repurpose')    return sloopOpen(a);
   /* Hervat je een toestel dat op installeren stond, dan land je op het nakijken,
      maar het pad ernaartoe zetten we terug zodat je alsnog naar de vorige stappen
-     kunt terugklikken. */
-  const hervat = a.status==='installeren';
+     kunt terugklikken. Alleen zinvol voor een categorie met een Windows-stap;
+     een telefoon kent die niet, dus die begint gewoon bij het begin. */
+  const _p=CATEGORIE_PROFIEL[a.categorie||'Laptop']||CATEGORIE_PROFIEL.Laptop;
+  const hervat = a.status==='installeren' && _p.stappen.includes('windows');
   ctr={
     a, stap: hervat ? 'nawindows' : 'start',
     antwoord:{}, punten:{}, delen:{}, notities:{},
@@ -2187,7 +2189,7 @@ const CTR_STAPPEN={
     ${ctrVraag('Start het apparaat op?', ['Ja','Nee'], 'start')}
   `, knoppen:()=>{
     const w=ctr.antwoord['start'];
-    if(w==='Ja')  return [{tekst:'Door naar de hardware', klasse:'actie', doe:()=>ctrGa('hardware')}];
+    if(w==='Ja')  return [{tekst:prof().startDoor||'Door', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}];
     if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa('nietaan')}];
     return [];
   }},
@@ -2220,7 +2222,7 @@ const CTR_STAPPEN={
     ${ctrVraag('Start hij nu op?', ['Ja','Nee'], 'nogmaals')}
   `, knoppen:()=>{
     const w=ctr.antwoord['nogmaals'];
-    if(w==='Ja')  return [{tekst:'Gelukt, door naar de hardware', klasse:'actie', doe:()=>ctrGa('hardware')}];
+    if(w==='Ja')  return [{tekst:prof().nietaanDoor||'Gelukt, door', klasse:'actie', doe:()=>ctrGa(prof().stappen[1])}];
     if(w==='Nee') return [{tekst:'Leeghalen voor onderdelen', klasse:'', doe:()=>ctrGa('slopen')}];
     return [];
   }},
@@ -2411,8 +2413,12 @@ const CATEGORIE_PROFIEL={
     hardware:HARDWARE_CHECKS, visueel:VISUEEL, grades:GRADES,
     specVelden:SPEC_VELDEN, specExtra:SPEC_EXTRA, specVragen:SPEC_VRAGEN,
     sloopdelen:SLOOPDELEN,
-    stappen:['start','hardware','upgrade','windows','specs','visueel','klaar'],
-    balk:CTR_BALK
+    /* De volle stappen-keten (nawindows zit in de Windows-balk maar is een eigen
+       stap). De balk hierboven toont zeven segmenten; nawindows valt onder Windows. */
+    stappen:['start','hardware','upgrade','windows','nawindows','specs','visueel','klaar'],
+    balk:CTR_BALK,
+    startDoor:'Door naar de hardware',
+    nietaanDoor:'Gelukt, door naar de hardware'
   }
 };
 
