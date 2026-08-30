@@ -187,6 +187,7 @@ tr.klikbaar{cursor:pointer;}
 .st.onderweg{background:var(--amber-soft); color:var(--amber-tekst);}
 .st.te_repareren{background:var(--amber-soft); color:var(--amber-tekst);}
 .st.repurpose{background:var(--red-soft); color:var(--red-tekst);}
+.st.geblokkeerd{background:var(--red-soft); color:var(--red-tekst);}
 .st.klaar{background:var(--green-soft); color:var(--green-tekst);}
 .st.overgedragen{background:var(--soft-2); color:var(--muted);}
 .st.besteld{background:var(--amber-soft); color:var(--amber-tekst);}
@@ -449,6 +450,8 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 
 .tip{background:var(--amber-soft); color:var(--amber-tekst); border-radius:12px;
   padding:11px 15px; font-size:13.5px; margin:10px 0;}
+.ctrblok{background:var(--red-soft); color:var(--red-tekst); border-radius:12px;
+  padding:12px 16px; font-size:14px; font-weight:600; margin:12px 0;}
 
 .gradevak{display:flex; align-items:center; gap:18px; background:var(--lblauw);
   border-radius:var(--radius-s); padding:18px 22px; margin-top:18px;}
@@ -992,6 +995,7 @@ const STATUS={
   installeren:'Windows installeren',
   te_repareren:'Te repareren',
   repurpose:'Slopen voor onderdelen',
+  geblokkeerd:'Afgekeurd, niet verkoopbaar',
   klaar:'Op voorraad',
   overgedragen:'Op voorraad'
 };
@@ -1446,6 +1450,7 @@ const STATUS_KORT={
   installeren:'WINDOWS INSTALLEREN',
   te_repareren:'TE REPAREREN',
   repurpose:'ONDERDELEN',
+  geblokkeerd:'AFGEKEURD',
   klaar:'OP VOORRAAD',
   overgedragen:'OP VOORRAAD'
 };
@@ -2184,13 +2189,13 @@ const MAX_NOTITIE=60;   /* wat er op een sticker past */
 const CTR_STAPPEN={
 
   start:{ balk:'start', inhoud:()=>`
-    <h2><svg class="i"><use href="#i-laptop"/></svg>Gaat hij aan</h2>
-    <p class="pv">Sluit de lader aan en druk op de aanknop.</p>
+    <h2><svg class="i"><use href="#${prof().icon||'i-laptop'}"/></svg>Gaat hij aan</h2>
+    <p class="pv">${esc(prof().startTekst||'Sluit de lader aan en druk op de aanknop.')}</p>
     ${ctrVraag('Start het apparaat op?', ['Ja','Nee'], 'start')}
   `, knoppen:()=>{
     const w=ctr.antwoord['start'];
     if(w==='Ja')  return [{tekst:prof().startDoor||'Door', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}];
-    if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa('nietaan')}];
+    if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa(prof().startNee||'nietaan')}];
     return [];
   }},
 
@@ -2319,7 +2324,7 @@ const CTR_STAPPEN={
     const werk=ctrSpecVragen();
     return `
       <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
-      <p class="pv">Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.</p>
+      <p class="pv">${esc(prof().specsTekst||'Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.')}</p>
       <div class="row" style="margin-bottom:14px">
         <button class="btn actie small" onclick="specsZoeken(this)">
           <svg class="i s"><use href="#i-sparkles"/></svg>Uitvoeringen opzoeken</button>
@@ -2331,10 +2336,45 @@ const CTR_STAPPEN={
       <div class="clkop">Extra uitrusting</div>
       <div class="specextra">${prof().specExtra.map(v=>ctrExtraVeld(v, sp)).join('')}</div>
 
+      ${!prof().stappen.includes('nawindows')
+        ? `<div class="clkop">Accu</div>${ctrAccublok()}` : ''}
+
       ${werk.length?`<div class="clkop">Werkt de extra uitrusting</div>
         ${werk.map(q=>ctrVraag(q.v, q.a)).join('')}`:''}`;
   }, knoppen:()=> ctrSpecVragen().every(q=>ctr.antwoord[q.v])
       ? [{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] : [] },
+
+  /* Sloten en herkomst: de harde blokkers vóór je tijd in testen steekt. Een op
+     slot staand of geblokkeerd toestel keur je hier meteen af. Alleen actief voor
+     categorieen met deze stap in hun profiel (telefoon, tablet). */
+  blokkers:{ balk:'blokkers', inhoud:()=>{
+    const bl=prof().blokkers||[];
+    const open=bl.filter(q=>!ctr.antwoord[q.v]).length;
+    const geraakt=ctrBlokkers();
+    return `
+      <h2><svg class="i"><use href="#i-search"/></svg>Sloten en herkomst</h2>
+      <p class="pv">Eerst de dingen die een reparatie niet oplost. Zit er een slot op of is hij geblokkeerd, dan stopt het hier. ${open?`<b>Nog ${open} te doen.</b>`:''}</p>
+      ${bl.map(q=>ctrVraag(q.v, q.a)).join('')}
+      ${geraakt.length?`<div class="ctrblok">Niet verkoopbaar: ${esc(geraakt.map(q=>q.deel||q.v).join(', '))}. Keur af en geef hem terug aan de inbrenger.</div>`:''}
+      <div class="clkop">Notitie</div>
+      ${ctrNotitieVeld()}`;
+  }, knoppen:()=>{
+    if(ctrBlokkers().length) return [{tekst:'Afkeuren, niet verkoopbaar', klasse:'fout', doe:(k)=>ctrAfronden(k)}];
+    return (prof().blokkers||[]).every(q=>ctr.antwoord[q.v])
+      ? [{tekst:'Alles vrij, door', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}] : [];
+  }},
+
+  /* Alle functionele hardware in één lijst. Geen Windows-knip zoals bij de laptop,
+     want een telefoon draait geen installatie. De accu vraag je op de specs-stap. */
+  test:{ balk:'test', inhoud:()=>{
+    const checks=prof().hardware;
+    const open=checks.filter(q=>!ctr.antwoord[q.v]).length;
+    return `
+      <h2><svg class="i"><use href="#i-check"/></svg>Alles testen</h2>
+      <p class="pv">Loop de functies langs. ${open?`<b>Nog ${open} te doen.</b>`:'<b>Alles nagelopen.</b>'}</p>
+      ${checks.map(q=>ctrVraag(q.v, q.a)).join('')}`;
+  }, knoppen:()=>prof().hardware.every(q=>ctr.antwoord[q.v])
+      ? [{tekst:'Door naar de specificaties', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}] : [] },
 
   visueel:{ balk:'visueel', inhoud:()=>{
     const punten=ctrPunten();
@@ -2417,8 +2457,95 @@ const CATEGORIE_PROFIEL={
        stap). De balk hierboven toont zeven segmenten; nawindows valt onder Windows. */
     stappen:['start','hardware','upgrade','windows','nawindows','specs','visueel','klaar'],
     balk:CTR_BALK,
+    blokkers:[],
+    icon:'i-laptop',
+    startTekst:'Sluit de lader aan en druk op de aanknop.',
+    startNee:'nietaan',
     startDoor:'Door naar de hardware',
-    nietaanDoor:'Gelukt, door naar de hardware'
+    nietaanDoor:'Gelukt, door naar de hardware',
+    specsTekst:'Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.',
+    schermDefect:{vlak:'Scherm', optie:'Barst of vlek', vraag:'Barst of vlek in het scherm'}
+  },
+
+  /* Telefoon (iPhone en Android). Geen Windows en geen ram/ssd-upgrade, wel eerst
+     de sloten (iCloud/Google, IMEI, bedrijfsbeheer) als triage, dan alle functies
+     in één testlijst, en een eigen grade op vier vlakken. De vragen zijn zo
+     gesteld dat 'Nee' altijd het probleem is, zodat de reparatielijst klopt. */
+  Telefoon:{
+    icon:'i-telefoon',
+    startTekst:'Zet de telefoon aan.',
+    startDoor:'Door naar de sloten',
+    startNee:'slopen',
+    specsTekst:'Zoek het model op voor de uitvoeringen. Het IMEI lees je uit met *#06#, of via Instellingen. Zet het erbij; dat hoort bij een nette inkoopregistratie.',
+    stappen:['start','blokkers','test','specs','visueel','klaar'],
+    balk:[
+      {id:'start',    naam:'Start',  uitleg:'Gaat hij aan'},
+      {id:'blokkers', naam:'Sloten', uitleg:'iCloud en IMEI'},
+      {id:'test',     naam:'Test',   uitleg:'Alles nalopen'},
+      {id:'specs',    naam:'Specs',  uitleg:'Uitlezen'},
+      {id:'visueel',  naam:'Staat',  uitleg:'Grade bepalen'},
+      {id:'klaar',    naam:'Klaar',  uitleg:'Uitkomst'}
+    ],
+    blokkers:[
+      {v:'Is het toestel vrij van iCloud- of Google-slot? Na wissen moet hij op het welkomscherm komen zonder om een account te vragen.', a:['Vrij','Op slot'], deel:'iCloud of Google-slot'},
+      {v:'Is het IMEI schoon, niet als gestolen of geblokkeerd gemeld?', a:['Schoon','Geblokkeerd'], deel:'IMEI geblokkeerd'},
+      {v:'Is het toestel vrij van bedrijfsbeheer (geen MDM of beheer op afstand)?', a:['Vrij','Beheerd'], deel:'Bedrijfsbeheer'}
+    ],
+    hardware:[
+      {v:'Is de accu vlak, niet opgezwollen?', a:['Ja','Nee'], deel:'Accu'},
+      {v:'Reageert het touchscreen overal, zonder dode zones of spooktikken?', a:['Ja','Nee'], deel:'Scherm'},
+      {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm'},
+      {v:'Werkt de oorspeaker bij bellen?', a:['Ja','Nee'], deel:'Oorspeaker'},
+      {v:'Werkt de luidspreker?', a:['Ja','Nee'], deel:'Luidspreker'},
+      {v:'Werken de microfoons? Neem een spraakmemo op en luister terug.', a:['Ja','Nee'], deel:'Microfoon'},
+      {v:'Werkt de camera achter, scherp en zonder vlekken?', a:['Ja','Nee'], deel:'Camera achter'},
+      {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor'},
+      {v:'Werkt de flitser?', a:['Ja','Nee'], deel:'Flitser'},
+      {v:'Werken alle knoppen (aan/uit, volume, stil)?', a:['Ja','Nee'], deel:'Knoppen'},
+      {v:'Werkt de trilfunctie?', a:['Ja','Nee'], deel:'Trilmotor'},
+      {v:'Laadt hij op via de kabel?', a:['Ja','Nee'], deel:'Laadpoort'},
+      {v:'Werken wifi en bluetooth?', a:['Ja','Nee'], deel:'Wifi'},
+      {v:'Werkt het mobiele netwerk? Sim erin en bellen.', a:['Ja','Nee'], deel:'Netwerk'},
+      {v:'Werkt de vingerafdruk of gezichtsontgrendeling?', a:['Ja','Nee'], deel:'Biometrie'},
+      {v:'Werken de sensoren (scherm uit bij bellen, automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren'}
+    ],
+    visueel:[
+      {t:'Voorglas / scherm', opties:[
+        {l:'Gaaf', p:0}, {l:'Lichte krasjes', p:1},
+        {l:'Duidelijke krassen', p:3}, {l:'Barst of dode zone', p:8}]},
+      {t:'Achterkant', opties:[
+        {l:'Als nieuw', p:0}, {l:'Lichte sporen', p:1},
+        {l:'Duidelijke krassen', p:3}, {l:'Barst', p:6}]},
+      {t:'Frame en randen', opties:[
+        {l:'Als nieuw', p:0}, {l:'Lichte sporen', p:1},
+        {l:'Krassen of deukje', p:3}, {l:'Deuken of buiging', p:6}]},
+      {t:'Cameraglas', opties:[
+        {l:'Gaaf', p:0}, {l:'Krasjes, beeld ok', p:1}, {l:'Kras in beeld of barst', p:4}]}
+    ],
+    grades:[
+      {g:'A', tot:2,  uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},
+      {g:'B', tot:7,  uitleg:'Gebruikt, in nette staat'},
+      {g:'C', tot:99, uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}
+    ],
+    schermDefect:{vlak:'Voorglas / scherm', optie:'Barst of dode zone', vraag:'Barst of dode zone in het scherm'},
+    specVelden:[
+      {sleutel:'Opslag', id:'c_opslag', hint:'128 GB'},
+      {sleutel:'Kleur',  id:'c_kleur',  hint:'Zwart'},
+      {sleutel:'IMEI',   id:'c_imei',   hint:'15 cijfers, via *#06#'}
+    ],
+    specExtra:[
+      {s:'eSIM',            id:'ce_esim',    type:'ja'},
+      {s:'Dual-sim',        id:'ce_dual',    type:'ja'},
+      {s:'Draadloos laden', id:'ce_draad',   type:'ja'},
+      {s:'5G',              id:'ce_5g',      type:'ja'},
+      {s:'Simlock',         id:'ce_simlock', type:'ja'}
+    ],
+    specVragen:{
+      'eSIM':           [{v:'Is de eSIM van de vorige eigenaar gewist?', a:['Ja','Nee']}],
+      'Dual-sim':       [{v:'Werken beide simsloten?', a:['Ja','Nee']}],
+      'Draadloos laden':[{v:'Laadt hij draadloos op?', a:['Ja','Nee']}]
+    },
+    sloopdelen:['Scherm','Achterglas','Accu','Moederbord','Camera achter','Camera voor','Laadpoort','Luidspreker','Frame']
   }
 };
 
@@ -2768,6 +2895,14 @@ async function specsZoeken(knop){
 
 /* ---------- afronden ---------- */
 
+/* De harde blokkers: antwoorden waarmee een toestel niet als legitiem, werkend
+   toestel verkocht mag worden (op slot, geblokkeerd IMEI, bedrijfsbeheer). Een
+   reparatie lost dit niet op; het toestel gaat terug naar de inbrenger. */
+const BLOK_FOUT=['Op slot','Geblokkeerd','Beheerd'];
+function ctrBlokkers(){
+  return (prof().blokkers||[]).filter(q=>BLOK_FOUT.includes(ctr.antwoord[q.v]));
+}
+
 function ctrDefecten(){
   const uit=[];
   prof().hardware.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
@@ -2780,7 +2915,10 @@ function ctrDefecten(){
   ctrEigenVragen().forEach(q=>{
     if(['Nee','Ontbreekt'].includes(ctr.antwoord[q.v])) uit.push({vraag:q.v, deel:null});
   });
-  if((ctr.punten['Scherm']||{}).l==='Barst of vlek') uit.push({vraag:'Barst of vlek in het scherm', deel:'Scherm'});
+  /* Een gebarsten scherm is altijd een defect, ongeacht de grade. Welk vlak en
+     welke optie dat is, staat per categorie in het profiel. */
+  const sd=prof().schermDefect;
+  if(sd && (ctr.punten[sd.vlak]||{}).l===sd.optie) uit.push({vraag:sd.vraag, deel:sd.vlak});
   return uit;
 }
 
@@ -2790,7 +2928,9 @@ async function ctrAfronden(knop){
   const defecten=ctrDefecten();
   const punten=ctrPunten();
   const grade=gradeVan(punten);
-  const status=defecten.length ? 'te_repareren' : 'klaar';
+  /* Een harde blokker (op slot, geblokkeerd IMEI, bedrijfsbeheer) gaat vóór alles:
+     dan is het toestel niet verkoopbaar en ook niet voor onderdelen te slopen. */
+  const status=ctrBlokkers().length ? 'geblokkeerd' : (defecten.length ? 'te_repareren' : 'klaar');
   const specs=ctrSchoneSpecs();
 
   await bezig(knop, async()=>{
@@ -2817,9 +2957,11 @@ async function ctrAfronden(knop){
 
     ctr=null; await allesLaden(); showTab('controle');
     const bij=apparaten.find(x=>x.id===a.id);
-    toast(status==='klaar'
-      ? 'Goedgekeurd, grade '+grade+(locNaam(a.locatie_id)?' · ligt in '+locNaam(a.locatie_id):'')
-      : defecten.length+' ding'+(defecten.length===1?'':'en')+' te repareren', true);
+    toast(status==='geblokkeerd'
+      ? 'Afgekeurd, niet verkoopbaar. Terug naar de inbrenger.'
+      : (status==='klaar'
+        ? 'Goedgekeurd, grade '+grade+(locNaam(a.locatie_id)?' · ligt in '+locNaam(a.locatie_id):'')
+        : defecten.length+' ding'+(defecten.length===1?'':'en')+' te repareren'), true);
     if(bij) labelsTonen(bij.id);
   });
 }
