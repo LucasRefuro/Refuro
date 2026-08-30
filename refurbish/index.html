@@ -3006,6 +3006,15 @@ async function testOphalen(knop){
         if(!oud){ ctr.antwoord[q.v]=nieuw; n++; }
       }
     });
+    /* De accu-conditie uit de test: alleen invullen als er nog geen getal staat,
+       zodat een met de hand ingevoerde meting niet stil wordt overschreven. */
+    if(typeof uit.accu==='number'){
+      if(!ctr.accu){
+        ctr.accu=String(uit.accu); n++;
+        const inp=document.getElementById('c_accu'); if(inp) inp.value=ctr.accu;
+        const vak=document.getElementById('accuAdvies'); if(vak) vak.innerHTML=accuAdviesHtml();
+      } else if(String(ctr.accu)!==String(uit.accu)){ behouden++; }
+    }
     ctrTeken();
     toast(n+' '+(n===1?'onderdeel':'onderdelen')+' ingevuld uit de test'
       + (behouden ? ' · '+behouden+' met de hand gezet, behouden' : ''), true);

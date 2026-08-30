@@ -189,13 +189,15 @@ const ALLE_TESTS=[
   {id:'luidspreker', naam:'Luidspreker (onderkant)', uit:'De speaker onderaan, voor muziek en de speaker-stand. Druk op de knop en luister.', soorten:['Telefoon','Tablet'], start:startLuidspreker},
   {id:'oorspeaker', naam:'Oorspeaker (bellen)', uit:'De speaker bovenaan die je bij het oor houdt. Bel een nummer en luister of je de ander helder hoort. Een browser kan deze speaker niet zelf aansturen.', soorten:['Telefoon'], start:startOorspeaker},
   {id:'microfoon', naam:'Microfoon', uit:'Zeg iets. De balk moet meebewegen.', soorten:['Telefoon','Tablet'], start:startMicrofoon},
-  {id:'camera_achter', naam:'Camera achter', uit:'Kijk of het beeld scherp is, zonder vlekken.', soorten:['Telefoon','Tablet'], start:()=>startCamera('environment')},
+  {id:'camera_achter', naam:'Camera achter', uit:'Wissel tussen de lenzen en kijk of elke lens scherp beeld geeft, zonder vlekken.', soorten:['Telefoon','Tablet'], start:startCameraAchter},
   {id:'camera_voor', naam:'Camera voor', uit:'Kijk of de selfiecamera goed beeld geeft.', soorten:['Telefoon','Tablet'], start:()=>startCamera('user')},
   {id:'trilfunctie', naam:'Trilfunctie', uit:'Het toestel trilt kort. Voel je het?', soorten:['Telefoon'], start:startTril},
-  {id:'sensoren', naam:'Sensoren', uit:'Kantel het toestel rustig. De stip volgt vloeiend mee.', soorten:['Telefoon','Tablet'], vol:true, start:startSensoren}
+  {id:'sensoren', naam:'Sensoren', uit:'Kantel het toestel rustig. De stip volgt vloeiend mee.', soorten:['Telefoon','Tablet'], vol:true, start:startSensoren},
+  {id:'accu', naam:'Accu-conditie', uit:'Lees de maximale capaciteit af in de instellingen en vul hem in. Een browser kan dit zelf niet uitlezen.', soorten:['Telefoon','Tablet'], geenOordeel:true, start:startAccu}
 ];
 let TESTS=ALLE_TESTS.slice();
 let nu=0;
+let accuWaarde='';
 const resultaat={};
 
 /* ---- fullscreen laag ---- */
@@ -222,7 +224,8 @@ function volSluit(){
 function tekenVoortgang(){
   document.getElementById('voortgang').innerHTML=TESTS.map((t,i)=>{
     const r=resultaat[t.id];
-    const s = r==='ok'?'ok' : r==='fout'?'fout' : r==='over'?'over' : (i===nu?'nu':'');
+    const gedaan = t.id==='accu' && typeof r==='number';
+    const s = gedaan?'ok' : r==='ok'?'ok' : r==='fout'?'fout' : r==='over'?'over' : (i===nu?'nu':'');
     return `<div class="vstip ${s}"></div>`;
   }).join('');
   document.getElementById('teller').textContent=Math.min(nu+1,TESTS.length)+' / '+TESTS.length;
@@ -238,6 +241,10 @@ function tekenTest(){
   document.getElementById('testnaam').textContent=t.naam;
   document.getElementById('testuit').textContent=t.uit;
   document.getElementById('testvak').innerHTML='';
+  /* De accu-stap heeft geen Werkt/Niet goed maar een eigen Doorgaan-knop. */
+  const geen=!!t.geenOordeel;
+  document.querySelector('.oordeel').style.display=geen?'none':'flex';
+  document.querySelector('.oordeeluit').style.display=geen?'none':'block';
   try{ t.start(); }catch(e){ document.getElementById('testvak').innerHTML=
     '<p class="muted klein">Automatisch starten lukte niet. Test met de hand en kies Werkt of Niet goed.</p>'; }
 }
@@ -251,7 +258,11 @@ function vorige(){ if(nu>0){ nu--; tekenTest(); } }
 
 async function versturen(){
   opruimen(); volSluit();
-  const schoon={}; Object.keys(resultaat).forEach(k=>{ if(resultaat[k]==='ok'||resultaat[k]==='fout') schoon[k]=resultaat[k]; });
+  const schoon={};
+  Object.keys(resultaat).forEach(k=>{
+    if(k==='accu'){ if(typeof resultaat[k]==='number') schoon.accu=resultaat[k]; }
+    else if(resultaat[k]==='ok'||resultaat[k]==='fout') schoon[k]=resultaat[k];
+  });
   if(!Object.keys(schoon).length){ document.getElementById('werk').hidden=true; stop('Niets getest','Er is geen uitslag om te versturen.'); return; }
   document.getElementById('werk').hidden=true; document.getElementById('fout').hidden=true;
   document.getElementById('watIsHet').textContent='Bezig met versturen…';
@@ -259,10 +270,13 @@ async function versturen(){
     await praat({resultaat:schoon});
     document.getElementById('watIsHet').textContent='';
     const naam={touch:'Touchscreen',scherm:'Beeldscherm',luidspreker:'Luidspreker',oorspeaker:'Oorspeaker',microfoon:'Microfoon',
-      camera_achter:'Camera achter',camera_voor:'Camera voor',trilfunctie:'Trilfunctie',sensoren:'Sensoren'};
-    document.getElementById('uitslagLijst').innerHTML=TESTS.filter(t=>resultaat[t.id]).map(t=>{
-      const r=resultaat[t.id]; const tk=r==='ok'?'Werkt':(r==='fout'?'Niet goed':'Overgeslagen');
-      return `<div class="uitslagrij">${esc(naam[t.id]||t.id)}<span class="st ${r}">${tk}</span></div>`; }).join('');
+      camera_achter:'Camera achter',camera_voor:'Camera voor',trilfunctie:'Trilfunctie',sensoren:'Sensoren',accu:'Accu-conditie'};
+    document.getElementById('uitslagLijst').innerHTML=TESTS.filter(t=>resultaat[t.id]!=null).map(t=>{
+      const r=resultaat[t.id];
+      const isAccu=t.id==='accu' && typeof r==='number';
+      const kl = isAccu?'ok' : r;
+      const tk = isAccu ? r+'%' : (r==='ok'?'Werkt':(r==='fout'?'Niet goed':'Overgeslagen'));
+      return `<div class="uitslagrij">${esc(naam[t.id]||t.id)}<span class="st ${kl}">${esc(tk)}</span></div>`; }).join('');
     document.getElementById('klaarKaart').hidden=false;
   }catch(e){
     document.getElementById('watIsHet').textContent='';
@@ -313,31 +327,50 @@ function startScherm(){
   opruimer=()=>{ clearInterval(timer); };
 }
 
-/* ---- luidspreker (onderkant): toon na een tik (gebaar nodig voor geluid) ---- */
-let audioCtx=null;
+/* ---- geluid: betrouwbaar afspelen na een tik, ook op iOS ----
+   Op iOS dempt de mute-schakelaar pure Web Audio; een stil audio-element en de
+   audio-session op 'playback' halen het geluid daar doorheen. Alles moet synchroon
+   in de tik gebeuren, anders vervalt het gebaar-token en blijft het stil. Nooit
+   exponentieel naar of vanaf exact 0 rampen: dat is de klassieke stille fout. */
+let audioCtx=null, stilEl=null;
+const STIL_WAV='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+function ensureAudio(){
+  if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; audioCtx=new AC(); }
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+  if(!stilEl){ stilEl=new Audio(STIL_WAV); stilEl.loop=true; stilEl.setAttribute('playsinline',''); }
+  stilEl.play().catch(()=>{});
+  if(audioCtx.state!=='running') audioCtx.resume().catch(()=>{});
+}
 function speelToon(freq){
   try{
-    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended') audioCtx.resume();
+    ensureAudio();
+    const now=audioCtx.currentTime;
     const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-    o.type='sine'; o.frequency.value=freq||440; g.gain.value=0.0001;
-    o.connect(g); g.connect(audioCtx.destination); o.start();
-    const t=audioCtx.currentTime;
-    g.gain.exponentialRampToValueAtTime(0.25, t+0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t+1.1);
-    o.stop(t+1.15);
+    o.type='sine'; o.frequency.value=freq||440;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.3, now+0.02);
+    g.gain.setTargetAtTime(0.0001, now+0.9, 0.05);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(now); o.stop(now+1.2);
+    o.onended=()=>{ try{ o.disconnect(); g.disconnect(); }catch(e){} };
   }catch(e){ toast('Geluid spelen lukte niet, test met de hand','fout'); }
 }
+/* iOS zet de context op 'interrupted' na een tabwissel of telefoontje; bij
+   terugkomst weer aanzwengelen. */
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && audioCtx && audioCtx.state!=='running') audioCtx.resume().catch(()=>{}); });
 function startLuidspreker(){
-  document.getElementById('testvak').innerHTML='<button class="btn actie" onclick="speelToon(440)">Speel de toon</button>'+
-    '<p class="muted klein" style="margin-top:10px">Zet het volume omhoog. Hoor je hem helder, zonder kraken of rammelen?</p>';
-  opruimer=()=>{ try{ audioCtx&&audioCtx.close(); }catch(e){} audioCtx=null; };
+  document.getElementById('testvak').innerHTML='<button class="btn actie" onclick="speelToon(880)">Speel de toon</button>'+
+    '<p class="muted klein" style="margin-top:10px">Zet het volume omhoog. Op een iPhone: zet het knopje aan de zijkant op geluid (niet stil). Hoor je hem helder, zonder kraken?</p>';
+  opruimer=()=>{ try{ stilEl&&stilEl.pause(); }catch(e){} };
 }
 /* ---- oorspeaker: browser kan hem niet aansturen, dus een geleid oordeel ---- */
 function startOorspeaker(){
+  /* Een browser kan de oorspeaker (bovenaan) niet zelf aansturen, maar een echt
+     gesprek gebruikt hem altijd. Dus openen we het belscherm; de tech belt de
+     voicemail of een nummer en beoordeelt zelf. */
   document.getElementById('testvak').innerHTML=
-    '<p class="klein" style="margin-bottom:8px">Bel een nummer (of je voicemail) en houd het toestel bij je oor.</p>'+
-    '<p class="muted klein">Hoor je de ander duidelijk via de speaker bovenaan? Dit is een andere speaker dan die onderaan.</p>';
+    '<a class="btn actie" href="tel:">Open het belscherm</a>'+
+    '<p class="muted klein" style="margin-top:10px">Bel je voicemail of een nummer en houd het toestel bij je oor. Hoor je geluid via de speaker <b>bovenaan</b> (niet die onderaan)? Kies daarna Werkt of Niet goed.</p>';
   opruimer=()=>{};
 }
 
@@ -371,6 +404,54 @@ function startCamera(kant){
     if(mijnStap!==stapId){ stream.getTracks().forEach(t=>t.stop()); return; }
     v.srcObject=stream; opruimer=()=>{ stream.getTracks().forEach(t=>t.stop()); };
   }).catch(()=>{ vak.innerHTML='<p class="muted klein">Geen toegang tot de camera. Test met de hand.</p>'; });
+}
+
+/* Camera achter met een lens-kiezer: eerst toestemming (anders zijn de labels
+   leeg), dan alle achterlenzen enumereren en er live doorheen wisselen. Mobiel kan
+   geen twee achterlenzen tegelijk openen, dus we stoppen de oude stream eerst. */
+let camStream=null;
+function camStop(){ if(camStream){ try{ camStream.getTracks().forEach(t=>t.stop()); }catch(e){} camStream=null; } }
+function lensNaam(label, i){
+  const l=(label||'').toLowerCase();
+  if(/ultra/.test(l)) return 'Ultragroothoek';
+  if(/tele|zoom/.test(l)) return 'Tele';
+  if(/wide|groothoek/.test(l)) return 'Groothoek';
+  return 'Lens '+(i+1);
+}
+async function toonLens(deviceId){
+  camStop();
+  const v=document.getElementById('camerabeeld'); if(!v) return;
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video: deviceId?{deviceId:{exact:deviceId}}:{facingMode:'environment'}});
+    v.srcObject=camStream;
+  }catch(e){ toast('Deze lens openen lukte niet','fout'); }
+}
+async function startCameraAchter(){
+  const mijnStap=stapId;
+  const vak=document.getElementById('testvak');
+  vak.innerHTML='<div id="lensknoppen" style="display:flex; gap:8px; overflow-x:auto; margin-bottom:10px"></div>'+
+    '<video id="camerabeeld" autoplay playsinline muted></video>';
+  try{
+    const seed=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    if(mijnStap!==stapId){ seed.getTracks().forEach(t=>t.stop()); return; }
+    camStream=seed;
+    const v=document.getElementById('camerabeeld'); if(v) v.srcObject=seed;
+    opruimer=()=>{ camStop(); };
+    const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+    const achter=cams.filter(d=>/back|rear|environment|achter|arrière|trasera/i.test(d.label||''));
+    const lijst=achter.length?achter:cams;
+    const kn=document.getElementById('lensknoppen');
+    if(kn && lijst.length>1){
+      kn.innerHTML=lijst.map((d,i)=>`<button class="btn ghost" style="width:auto; flex:none; padding:11px 16px" data-lens="${esc(d.deviceId)}">${esc(lensNaam(d.label,i))}</button>`).join('');
+      kn.querySelectorAll('[data-lens]').forEach(b=>b.onclick=()=>{
+        toonLens(b.dataset.lens);
+        kn.querySelectorAll('.btn').forEach(x=>x.classList.remove('actie')); b.classList.add('actie');
+      });
+      const eerste=kn.querySelector('.btn'); if(eerste) eerste.classList.add('actie');
+    } else if(kn){
+      kn.innerHTML='<span class="muted klein">Eén achterlens beschikbaar op dit toestel.</span>';
+    }
+  }catch(e){ vak.innerHTML='<p class="muted klein">Geen toegang tot de camera. Test met de hand.</p>'; }
 }
 
 /* ---- trilfunctie ---- */
@@ -409,6 +490,24 @@ function startSensoren(){
     };
   } else { aanhaken(); }
   opruimer=()=>{ loopt=false; window.removeEventListener('deviceorientation', onOri); };
+}
+
+/* ---- accu-conditie: eenmalig aflezen en invullen; stroomt door naar de controle ---- */
+function startAccu(){
+  const vak=document.getElementById('testvak');
+  vak.innerHTML=
+    '<input id="accuveld" type="number" min="0" max="100" inputmode="numeric" placeholder="bijvoorbeeld 87" value="'+esc(accuWaarde)+'"'+
+    ' style="width:100%; padding:16px 18px; font-size:22px; font-weight:700; border:1.5px solid var(--border); border-radius:16px; text-align:center; font-family:inherit">'+
+    '<p class="muted klein" style="margin:10px 0">iPhone: Instellingen ▸ Batterij ▸ Batterijconditie ▸ Maximale capaciteit. Android: Instellingen ▸ Batterij, of een accu-app.</p>'+
+    '<button class="btn actie" onclick="accuDoor()">Doorgaan</button>';
+  const el=document.getElementById('accuveld');
+  if(el){ el.oninput=()=>{ accuWaarde=el.value; }; el.focus(); }
+  opruimer=()=>{};
+}
+function accuDoor(){
+  const el=document.getElementById('accuveld'); if(el) accuWaarde=el.value;
+  resultaat['accu']= accuWaarde!=='' ? Math.max(0,Math.min(100,Math.round(Number(accuWaarde)))) : 'over';
+  nu++; tekenTest();
 }
 
 async function start(){

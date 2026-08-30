@@ -64,10 +64,15 @@ Deno.serve(async (req) => {
   // sleutels en geldige waarden bewaren we, zodat er niets vreemds op de rij komt.
   const binnen = (lijf?.resultaat && typeof lijf.resultaat === "object") ? lijf.resultaat : null;
   if (!binnen) return fout("Geen uitslag meegegeven");
-  const schoon: Record<string, string> = {};
+  const schoon: Record<string, string | number> = {};
   for (const k of TESTEN) {
     const w = binnen[k];
     if (w === "ok" || w === "fout") schoon[k] = w;
+  }
+  // De accu-conditie is een getal 0-100 (met de hand afgelezen in de instellingen).
+  const accuRuw = binnen.accu;
+  if (typeof accuRuw === "number" && Number.isInteger(accuRuw) && accuRuw >= 0 && accuRuw <= 100) {
+    schoon.accu = accuRuw;
   }
   if (!Object.keys(schoon).length) return fout("Geen bruikbare uitslag");
 
