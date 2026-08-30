@@ -6574,6 +6574,11 @@ function hwVenster(h){
       <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:6}"></div>
       <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
       <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
+      <div><label>Btw</label><select id="hw_marge">
+        <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
+        <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
+      </select></div>
+      <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
     </div>
 
     ${h?`<div class="hwverkoop">
@@ -6601,7 +6606,7 @@ function hwVenster(h){
       <div class="hkrij">
         <span style="flex:1">${h.status==='onderweg'
           ? '<span class="onderweg">Nog niet ingescand</span>'
-          : `<span class="locpil">${esc(hwLocatieNaam(h)||'nergens vastgelegd')}</span>`}</span>
+          : `<span class="locpil">${esc(hwLocatieNaam(h)||'nergens vastgelegd')}</span>`}${h.plek?` <span class="muted klein">${esc(h.plek)}</span>`:''}</span>
         ${hwLocaties.length?`<select id="hw_loc2" style="max-width:190px">${hwLocaties.map(l=>
           `<option value="${l.id}"${l.id===h.locatie_id?' selected':''}>${esc(l.naam)}</option>`).join('')}</select>
           <button class="btn ghost small" onclick="hwVerplaats('${h.id}', this)">Verplaatsen</button>`:''}
@@ -6705,6 +6710,10 @@ async function hwOpslaan(knop){
     garantie:Number(hwVeld('hw_gar'))||0,
     inkoop:hwGetal('hw_inkoop')||0,
     verkoop:hwGetal('hw_verkoop'),
+    /* marge = het btw-regime (margeregeling of normaal), niet hetzelfde als
+       hwMarge() dat de winst berekent. Naam gelijk aan de refurbish-kant. */
+    marge: (document.getElementById('hw_marge')||{}).value!=='nee',
+    plek: hwVeld('hw_plek')||null,
     titel:hwVeld('hw_titel')||null,
     omschrijving:hwVeld('hw_oms')||null,
     bijgewerkt_op:new Date().toISOString()
