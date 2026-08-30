@@ -102,6 +102,9 @@ function themaMetafields(h: any) {
   if (sp.Scherm) out.push(mfText("scherm", sp.Scherm));
   const mk = slug([h.merk, h.model].filter(Boolean).join(" "));
   if (mk) out.push(mfText("model_key", mk));
+  // Het btw-regime meesturen (margeregeling of normaal), voor de administratie
+  // en de bon; op de webshop zelf staat de prijs altijd inclusief.
+  out.push(mfText("btw", h.marge === false ? "normaal" : "marge"));
   if (h.nieuwprijs != null && h.nieuwprijs !== "") {
     out.push({ namespace: "refuro", key: "nieuwprijs", type: "number_decimal", value: String(Number(h.nieuwprijs)) });
   }
