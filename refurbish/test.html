@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Toestel testen · Storvo</title>
+<link rel="icon" href="/merk/app-icoon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* Functioneel testen met het toestel in de hand.
+   Deze pagina vraagt niet om inloggen: hij werkt op een code die een half uur
+   geldig is en uit de QR op de pc komt. De browser doet per onderdeel iets
+   (kleur, geluid, trillen, camera) en jij beoordeelt of het werkt. */
+:root{
+  --groen:#0B5B52; --oranje:#E88A1D; --bg:#F7F6F3; --card:#fff; --border:#ECEAE4;
+  --tekst:#17201E; --muted:#5B6663; --muted-l:#8A938F; --lblauw:#E7F1EE;
+  --green-soft:#E3F4EC; --green-tekst:#177A51; --red-soft:#FAE4E4; --red-tekst:#A33333;
+  --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+[hidden]{display:none !important;}
+body{font-family:'Instrument Sans',system-ui,sans-serif; background:var(--bg); color:var(--tekst);
+  font-size:16px; line-height:1.6; padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+  max-width:560px; margin:0 auto;}
+h1{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.02em;}
+.kop{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+.kop .mark{width:34px; height:34px; flex:none;}
+.muted{color:var(--muted);}
+.klein{font-size:13.5px;}
+.kaart{background:var(--card); border-radius:20px; padding:20px; margin-top:16px;
+  box-shadow:0 6px 24px rgba(23,32,30,.07);}
+.btn{display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+  padding:16px 20px; border:none; border-radius:var(--pil); font-family:inherit;
+  font-size:16px; font-weight:700; cursor:pointer; background:var(--groen); color:#fff;}
+.btn.actie{background:var(--oranje);}
+.btn.ghost{background:var(--card); color:var(--tekst); border:1.5px solid var(--border);}
+.btn:disabled{opacity:.5;}
+
+.voortgang{display:flex; gap:6px; margin-bottom:4px;}
+.vstip{height:6px; flex:1; border-radius:var(--pil); background:var(--border);}
+.vstip.nu{background:var(--oranje);}
+.vstip.ok{background:var(--green-tekst);}
+.vstip.fout{background:var(--red-tekst);}
+
+.testnaam{font-family:'Sora',sans-serif; font-size:19px; font-weight:800; margin-bottom:4px;}
+.testuit{color:var(--muted); font-size:14.5px; margin-bottom:16px;}
+.testvak{margin-bottom:18px;}
+.oordeel{display:flex; gap:12px;}
+.oordeel .btn{flex:1;}
+.btn.goed{background:var(--green-tekst);}
+.btn.slecht{background:var(--red-tekst);}
+
+/* het tekenvlak voor de touchtest */
+#touchdoek{width:100%; height:230px; border-radius:16px; background:#111; touch-action:none; display:block;}
+/* de kleurtest vult het hele scherm */
+#kleurvlak{position:fixed; inset:0; z-index:50; display:flex; align-items:flex-end;
+  justify-content:center; padding-bottom:calc(40px + env(safe-area-inset-bottom));}
+#kleurvlak .knopjes{display:flex; gap:12px; width:min(520px,90vw);}
+/* de meter voor de microfoon */
+.meter{height:26px; border-radius:var(--pil); background:var(--border); overflow:hidden;}
+.meter i{display:block; height:100%; width:0; background:var(--green-tekst); transition:width .05s linear;}
+/* camerabeeld */
+#camerabeeld{width:100%; height:280px; border-radius:16px; background:#111; object-fit:cover;}
+/* de kantelstip */
+.tiltvak{position:relative; height:230px; border-radius:16px; background:var(--lblauw); overflow:hidden;}
+.tiltstip{position:absolute; width:46px; height:46px; border-radius:50%; background:var(--oranje);
+  left:calc(50% - 23px); top:calc(50% - 23px); transition:transform .05s linear;}
+.tiltkruis{position:absolute; inset:0;}
+.tiltkruis::before,.tiltkruis::after{content:''; position:absolute; background:rgba(11,91,82,.18);}
+.tiltkruis::before{left:50%; top:0; bottom:0; width:2px;}
+.tiltkruis::after{top:50%; left:0; right:0; height:2px;}
+
+#toasts{position:fixed; left:16px; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:80;}
+.toast{background:var(--tekst); color:#fff; padding:13px 18px; border-radius:14px; font-size:14.5px;}
+.toast.ok{background:var(--green-tekst);}
+.toast.fout{background:var(--red-tekst);}
+.klaarvak{text-align:center; padding:10px 0;}
+.klaarvak .vink{width:60px; height:60px; margin:0 auto 14px; border-radius:50%;
+  background:var(--green-soft); color:var(--green-tekst); display:flex; align-items:center; justify-content:center;}
+.klaarvak .vink svg{width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:3;
+  stroke-linecap:round; stroke-linejoin:round;}
+.uitslagrij{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:15px;}
+.uitslagrij:last-child{border-bottom:0;}
+.uitslagrij .st{margin-left:auto; font-weight:700;}
+.uitslagrij .st.ok{color:var(--green-tekst);}
+.uitslagrij .st.fout{color:var(--red-tekst);}
+</style>
+</head>
+<body>
+
+<div class="kop">
+  <div class="mark" id="merkVlak"></div>
+  <div><h1>Toestel testen</h1></div>
+</div>
+<p class="muted klein" id="watIsHet">Bezig met openen…</p>
+
+<div id="werk" hidden>
+  <div class="kaart">
+    <div class="voortgang" id="voortgang"></div>
+    <div class="testnaam" id="testnaam"></div>
+    <div class="testuit" id="testuit"></div>
+    <div class="testvak" id="testvak"></div>
+    <div class="oordeel">
+      <button class="btn slecht" onclick="oordeel('fout')">Niet goed</button>
+      <button class="btn goed" onclick="oordeel('ok')">Werkt</button>
+    </div>
+    <button class="btn ghost" style="margin-top:10px" onclick="oordeel('overslaan')">Overslaan</button>
+  </div>
+</div>
+
+<div class="kaart" id="klaarKaart" hidden>
+  <div class="klaarvak">
+    <div class="vink"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <b>Uitslag verstuurd</b>
+    <p class="muted klein" style="margin-top:6px">Je kunt dit venster sluiten. Op de pc haal je de uitslag op in de controle.</p>
+  </div>
+  <div id="uitslagLijst" style="margin-top:14px"></div>
+</div>
+
+<div class="kaart" id="fout" hidden>
+  <b id="foutKop"></b>
+  <p class="muted klein" id="foutTekst" style="margin-top:6px"></p>
+</div>
+
+<div id="kleurvlak" hidden>
+  <div class="knopjes">
+    <button class="btn ghost" onclick="kleurVorige()">Vorige</button>
+    <button class="btn actie" onclick="kleurVolgende()" id="kleurKnop">Volgende</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+
+const code=new URLSearchParams(location.search).get('c');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(bericht, soort){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast '+(soort||'');
+  t.textContent=bericht;
+  c.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+function stop(kop, tekst){
+  document.getElementById('watIsHet').textContent='';
+  document.getElementById('werk').hidden=true;
+  document.getElementById('foutKop').textContent=kop;
+  document.getElementById('foutTekst').textContent=tekst;
+  document.getElementById('fout').hidden=false;
+}
+
+document.getElementById('merkVlak').innerHTML=
+  `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="3" width="19" height="19" rx="5" fill="#0B5B52"/>
+    <rect x="26" y="3" width="19" height="19" rx="5" fill="#6A9C93"/>
+    <rect x="3" y="26" width="19" height="19" rx="5" fill="#A7C3BD"/>
+    <path d="M28 36.5 L33 41.5 L44 28" fill="none" stroke="#0B5B52" stroke-width="5"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+async function praat(lijf){
+  const res=await fetch(SUPABASE_URL+'/functions/v1/refurbish-test',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
+    body:JSON.stringify(Object.assign({code}, lijf))
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok) throw new Error(uit.error||'Er ging iets mis');
+  return uit;
+}
+
+/* De tests. Elk zet iets klaar in #testvak (of doet iets zoals trillen) en jij
+   beoordeelt met Werkt of Niet goed. opruimen() zet camera's/microfoon weer uit. */
+let opruimer=null;
+function opruimen(){ if(opruimer){ try{ opruimer(); }catch(e){} opruimer=null; } }
+
+const TESTS=[
+  {id:'touch', naam:'Touchscreen', uit:'Veeg met je vinger over het hele scherm, ook de randen en hoeken. Alles moet meetekenen.', start:startTouch},
+  {id:'scherm', naam:'Beeldscherm', uit:'Het scherm wordt om beurten rood, groen, blauw, wit en zwart. Zoek dode pixels, vlekken of inbranden.', start:startScherm},
+  {id:'luidspreker', naam:'Luidspreker', uit:'Er speelt een toon. Hoor je hem helder, zonder kraken?', start:startLuidspreker},
+  {id:'microfoon', naam:'Microfoon', uit:'Zeg iets. De balk moet meebewegen.', start:startMicrofoon},
+  {id:'camera_achter', naam:'Camera achter', uit:'Kijk of het beeld scherp is, zonder vlekken.', start:()=>startCamera('environment')},
+  {id:'camera_voor', naam:'Camera voor', uit:'Kijk of de selfiecamera goed beeld geeft.', start:()=>startCamera('user')},
+  {id:'trilfunctie', naam:'Trilfunctie', uit:'Het toestel trilt kort. Voel je het?', start:startTril},
+  {id:'sensoren', naam:'Sensoren', uit:'Kantel het toestel. De stip moet meebewegen.', start:startSensoren}
+];
+
+let nu=0;
+const resultaat={};
+
+function tekenVoortgang(){
+  document.getElementById('voortgang').innerHTML=TESTS.map((t,i)=>{
+    const s = resultaat[t.id]==='ok' ? 'ok' : (resultaat[t.id]==='fout' ? 'fout' : (i===nu?'nu':''));
+    return `<div class="vstip ${s}"></div>`;
+  }).join('');
+}
+
+function tekenTest(){
+  opruimen();
+  if(nu>=TESTS.length){ versturen(); return; }
+  const t=TESTS[nu];
+  tekenVoortgang();
+  document.getElementById('testnaam').textContent=t.naam;
+  document.getElementById('testuit').textContent=t.uit;
+  document.getElementById('testvak').innerHTML='';
+  try{ t.start(); }catch(e){ document.getElementById('testvak').innerHTML=
+    '<p class="muted klein">Automatisch starten lukte niet. Test met de hand en kies Werkt of Niet goed.</p>'; }
+}
+
+function oordeel(w){
+  const t=TESTS[nu];
+  if(w!=='overslaan') resultaat[t.id]=w;
+  nu++;
+  tekenTest();
+}
+
+async function versturen(){
+  opruimen();
+  document.getElementById('werk').hidden=true;
+  if(!Object.keys(resultaat).length){ stop('Niets getest','Er is geen uitslag om te versturen.'); return; }
+  try{
+    await praat({resultaat});
+    const naam={touch:'Touchscreen',scherm:'Beeldscherm',luidspreker:'Luidspreker',microfoon:'Microfoon',
+      camera_achter:'Camera achter',camera_voor:'Camera voor',trilfunctie:'Trilfunctie',sensoren:'Sensoren'};
+    document.getElementById('uitslagLijst').innerHTML=Object.keys(resultaat).map(k=>
+      `<div class="uitslagrij">${esc(naam[k]||k)}<span class="st ${resultaat[k]}">${resultaat[k]==='ok'?'Werkt':'Niet goed'}</span></div>`).join('');
+    document.getElementById('klaarKaart').hidden=false;
+  }catch(e){ stop('Versturen lukte niet', e.message); }
+}
+
+/* ---- de losse tests ---- */
+
+function startTouch(){
+  const c=document.createElement('canvas'); c.id='touchdoek';
+  document.getElementById('testvak').appendChild(c);
+  const dpr=window.devicePixelRatio||1;
+  c.width=c.clientWidth*dpr; c.height=230*dpr;
+  const x=c.getContext('2d'); x.scale(dpr,dpr); x.lineWidth=6; x.lineCap='round'; x.strokeStyle='#E88A1D';
+  let teken=false, lx=0, ly=0;
+  const pos=e=>{ const r=c.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return [p.clientX-r.left, p.clientY-r.top]; };
+  const neer=e=>{ teken=true; [lx,ly]=pos(e); e.preventDefault(); };
+  const beweeg=e=>{ if(!teken) return; const [nx,ny]=pos(e); x.beginPath(); x.moveTo(lx,ly); x.lineTo(nx,ny); x.stroke(); [lx,ly]=[nx,ny]; e.preventDefault(); };
+  const op=()=>{ teken=false; };
+  c.addEventListener('touchstart',neer,{passive:false}); c.addEventListener('touchmove',beweeg,{passive:false});
+  c.addEventListener('touchend',op); c.addEventListener('mousedown',neer); c.addEventListener('mousemove',beweeg); c.addEventListener('mouseup',op);
+  opruimer=()=>{};
+}
+
+const KLEUREN=['#FF0000','#00FF00','#0000FF','#FFFFFF','#000000'];
+let kleurI=0;
+function startScherm(){
+  kleurI=0;
+  const vlak=document.getElementById('kleurvlak');
+  vlak.hidden=false; vlak.style.background=KLEUREN[0];
+  document.getElementById('kleurKnop').textContent='Volgende';
+  opruimer=()=>{ vlak.hidden=true; };
+}
+function kleurVolgende(){
+  if(kleurI>=KLEUREN.length-1){ document.getElementById('kleurvlak').hidden=true; return; }
+  kleurI++;
+  document.getElementById('kleurvlak').style.background=KLEUREN[kleurI];
+  document.getElementById('kleurKnop').textContent = kleurI===KLEUREN.length-1 ? 'Klaar met kijken' : 'Volgende';
+}
+function kleurVorige(){ if(kleurI>0){ kleurI--; document.getElementById('kleurvlak').style.background=KLEUREN[kleurI]; document.getElementById('kleurKnop').textContent='Volgende'; } }
+
+let audioCtx=null;
+function startLuidspreker(){
+  document.getElementById('testvak').innerHTML='<button class="btn" onclick="speelToon()">Speel de toon</button>';
+  speelToon();
+}
+function speelToon(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sine'; o.frequency.value=440; g.gain.value=0.18;
+    o.connect(g); g.connect(audioCtx.destination); o.start();
+    setTimeout(()=>{ o.stop(); }, 900);
+  }catch(e){ toast('Toon spelen lukte niet, test met de hand','fout'); }
+}
+
+function startMicrofoon(){
+  const vak=document.getElementById('testvak');
+  vak.innerHTML='<div class="meter"><i id="micbalk"></i></div>';
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const bron=ctx.createMediaStreamSource(stream); const an=ctx.createAnalyser(); an.fftSize=512;
+    bron.connect(an); const buf=new Uint8Array(an.fftSize); let loopt=true;
+    (function meet(){
+      if(!loopt) return;
+      an.getByteTimeDomainData(buf);
+      let piek=0; for(let i=0;i<buf.length;i++){ const v=Math.abs(buf[i]-128); if(v>piek) piek=v; }
+      const el=document.getElementById('micbalk'); if(el) el.style.width=Math.min(100, piek/1.28)+'%';
+      requestAnimationFrame(meet);
+    })();
+    opruimer=()=>{ loopt=false; stream.getTracks().forEach(t=>t.stop()); try{ctx.close();}catch(e){} };
+  }).catch(()=>{ vak.innerHTML='<p class="muted klein">Geen toegang tot de microfoon. Test met de hand.</p>'; });
+}
+
+function startCamera(kant){
+  const vak=document.getElementById('testvak');
+  const v=document.createElement('video'); v.id='camerabeeld'; v.autoplay=true; v.playsInline=true; v.muted=true;
+  vak.appendChild(v);
+  navigator.mediaDevices.getUserMedia({video:{facingMode:kant}}).then(stream=>{
+    v.srcObject=stream;
+    opruimer=()=>{ stream.getTracks().forEach(t=>t.stop()); };
+  }).catch(()=>{ vak.innerHTML='<p class="muted klein">Geen toegang tot de camera. Test met de hand.</p>'; });
+}
+
+function startTril(){
+  document.getElementById('testvak').innerHTML='<button class="btn" onclick="trilNu()">Laat trillen</button>';
+  trilNu();
+}
+function trilNu(){
+  if(navigator.vibrate){ navigator.vibrate([400]); }
+  else { toast('Dit toestel meldt geen trilfunctie aan de browser (iPhone). Voel of hij trilt bij een bericht.', ''); }
+}
+
+function startSensoren(){
+  const vak=document.getElementById('testvak');
+  vak.innerHTML='<div class="tiltvak"><div class="tiltkruis"></div><div class="tiltstip" id="tiltstip"></div></div>';
+  const beweeg=e=>{
+    const g=Math.max(-45,Math.min(45,e.gamma||0)), b=Math.max(-45,Math.min(45,e.beta||0));
+    const el=document.getElementById('tiltstip');
+    if(el) el.style.transform=`translate(${g*2}px, ${b*2}px)`;
+  };
+  const aanhaken=()=>{ window.addEventListener('deviceorientation', beweeg); };
+  /* iOS vraagt eerst toestemming, en dat mag alleen na een tik. */
+  if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+    vak.insertAdjacentHTML('afterbegin','<button class="btn" id="sensorknop" style="margin-bottom:12px">Sensoren aanzetten</button>');
+    document.getElementById('sensorknop').onclick=()=>{
+      DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') aanhaken(); else toast('Geen toegang tot de sensoren','fout'); }).catch(()=>{});
+    };
+  } else { aanhaken(); }
+  opruimer=()=>{ window.removeEventListener('deviceorientation', beweeg); };
+}
+
+async function start(){
+  if(!code){ stop('Geen code','Scan de QR-code opnieuw vanaf de computer.'); return; }
+  try{
+    const uit=await praat({actie:'kijken'});
+    const a=uit.apparaat;
+    document.getElementById('watIsHet').innerHTML=
+      `<b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${a.code?' · '+esc(a.code):''}`;
+    document.getElementById('werk').hidden=false;
+    tekenTest();
+  }catch(e){ stop('Dit werkt niet meer', e.message); }
+}
+
+start();
+</script>
+</body>
+</html>

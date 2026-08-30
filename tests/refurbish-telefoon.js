@@ -5,7 +5,7 @@ const MOCK=`<script>
 window.__geschreven=[];
 const _leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
   in(){return this;},maybeSingle:async()=>({data:null}),
-  insert(){return {select:async()=>({data:[{id:'hw1'}],error:null})};},
+  insert(r){window.__geschreven.push(r);return {select:async()=>({data:[{id:'hw1'}],error:null})};},
   update(r){window.__geschreven.push(r);return this;},delete(){return this;},then(res){res({data:[],error:null});}};
 window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:'u1'},access_token:'t'}}})},
   from:(n)=> n==='accounts'?{select(){return this;},eq(){return this;},maybeSingle:async()=>({data:{id:'u1',team_id:'t1',naam:'L'}})}:_leeg,
@@ -71,6 +71,24 @@ setTimeout(async()=>{
   // ── een functie op Nee wordt een reparatie-defect ──
   w.eval("ctr.antwoord={}; ctr.antwoord['Werkt de flitser?']='Nee';");
   ok('flitser nee -> defect', /Werkt de flitser\?/.test(w.eval("JSON.stringify(ctrDefecten())")));
+
+  // ── test met de telefoon: code aanmaken + uitslag koppelen ──
+  w.eval(`
+    apparaten=[{id:'p2', code:'P2', merk:'Apple', model:'iPhone 13', categorie:'Telefoon', specs:{},
+      status:'te_controleren', inkoop:100, accu:null, nieuwe_accu:false, extra_kosten:[],
+      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}];
+    appOpen('p2'); ctr.stap='test'; window.__geschreven=[];`);
+  ok('test-app knop in de test-stap', /Test met de telefoon/.test(w.eval("CTR_STAPPEN.test.inhoud()")));
+  await w.eval("testStart(document.createElement('button'))");
+  ok('testStart maakt een code aan', !!w.eval("ctr.testcode"));
+  ok('code wordt naar refurbish_testcodes geschreven', w.eval("window.__geschreven.some(r=>r&&r.code&&r.apparaat_id)"));
+  ok('QR verschijnt na het starten', /qrbeeld/.test(w.eval("CTR_STAPPEN.test.inhoud()")));
+  // de koppeling van uitslag naar antwoorden (zoals testOphalen doet)
+  w.eval(`const uit={touch:'ok', luidspreker:'fout'};
+    prof().hardware.forEach(q=>{ if(q.test && (uit[q.test]==='ok'||uit[q.test]==='fout')) ctr.antwoord[q.v]=uit[q.test]==='ok'?'Ja':'Nee'; });`);
+  ok('touch ok wordt Ja', w.eval("ctr.antwoord['Reageert het touchscreen overal, zonder dode zones of spooktikken?']")==='Ja');
+  ok('luidspreker fout wordt Nee', w.eval("ctr.antwoord['Werkt de luidspreker?']")==='Nee');
+  ok('een gefaalde test wordt een defect', /Werkt de luidspreker\?/.test(w.eval("JSON.stringify(ctrDefecten())")));
 
   // ── de andere categorieën: profielen kloppen ──
   const pv=(cat)=>{ w.eval("ctr={a:{categorie:'"+cat+"'}}"); return JSON.parse(w.eval(

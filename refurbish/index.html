@@ -302,6 +302,8 @@ tr.klikbaar{cursor:pointer;}
   font-size:12px; font-weight:700; color:var(--muted-l);}
 .tekens.krap{color:var(--red-tekst);}
 .accurij{background:var(--soft-2); border-radius:var(--radius-s); padding:16px 18px;}
+.testapp{background:var(--lblauw); border-radius:var(--radius-s); padding:16px 18px; margin-bottom:16px; text-align:center;}
+.testapp .clkop{margin-bottom:6px;}
 .accurij label{margin-bottom:8px;}
 
 /* ---------- online zetten ---------- */
@@ -2381,6 +2383,7 @@ const CTR_STAPPEN={
     return `
       <h2><svg class="i"><use href="#i-check"/></svg>Alles testen</h2>
       <p class="pv">Loop de functies langs. ${open?`<b>Nog ${open} te doen.</b>`:'<b>Alles nagelopen.</b>'}</p>
+      ${prof().hardware.some(q=>q.test) ? ctrTestApp() : ''}
       ${checks.map(q=>ctrVraag(q.v, q.a||['Ja','Nee'])).join('')}`;
   }, knoppen:()=>prof().hardware.concat(ctrEigenVragen()).every(q=>ctr.antwoord[q.v])
       ? [{tekst:'Door naar de specificaties', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}] : [] },
@@ -2502,21 +2505,21 @@ const CATEGORIE_PROFIEL={
     ],
     hardware:[
       {v:'Is de accu vlak, niet opgezwollen?', a:['Ja','Nee'], deel:'Accu'},
-      {v:'Reageert het touchscreen overal, zonder dode zones of spooktikken?', a:['Ja','Nee'], deel:'Scherm'},
-      {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm'},
+      {v:'Reageert het touchscreen overal, zonder dode zones of spooktikken?', a:['Ja','Nee'], deel:'Scherm', test:'touch'},
+      {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm', test:'scherm'},
       {v:'Werkt de oorspeaker bij bellen?', a:['Ja','Nee'], deel:'Oorspeaker'},
-      {v:'Werkt de luidspreker?', a:['Ja','Nee'], deel:'Luidspreker'},
-      {v:'Werken de microfoons? Neem een spraakmemo op en luister terug.', a:['Ja','Nee'], deel:'Microfoon'},
-      {v:'Werkt de camera achter, scherp en zonder vlekken?', a:['Ja','Nee'], deel:'Camera achter'},
-      {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor'},
+      {v:'Werkt de luidspreker?', a:['Ja','Nee'], deel:'Luidspreker', test:'luidspreker'},
+      {v:'Werken de microfoons? Neem een spraakmemo op en luister terug.', a:['Ja','Nee'], deel:'Microfoon', test:'microfoon'},
+      {v:'Werkt de camera achter, scherp en zonder vlekken?', a:['Ja','Nee'], deel:'Camera achter', test:'camera_achter'},
+      {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor', test:'camera_voor'},
       {v:'Werkt de flitser?', a:['Ja','Nee'], deel:'Flitser'},
       {v:'Werken alle knoppen (aan/uit, volume, stil)?', a:['Ja','Nee'], deel:'Knoppen'},
-      {v:'Werkt de trilfunctie?', a:['Ja','Nee'], deel:'Trilmotor'},
+      {v:'Werkt de trilfunctie?', a:['Ja','Nee'], deel:'Trilmotor', test:'trilfunctie'},
       {v:'Laadt hij op via de kabel?', a:['Ja','Nee'], deel:'Laadpoort'},
       {v:'Werken wifi en bluetooth?', a:['Ja','Nee'], deel:'Wifi'},
       {v:'Werkt het mobiele netwerk? Sim erin en bellen.', a:['Ja','Nee'], deel:'Netwerk'},
       {v:'Werkt de vingerafdruk of gezichtsontgrendeling?', a:['Ja','Nee'], deel:'Biometrie'},
-      {v:'Werken de sensoren (scherm uit bij bellen, automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren'}
+      {v:'Werken de sensoren (scherm uit bij bellen, automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren', test:'sensoren'}
     ],
     visueel:[
       {t:'Voorglas / scherm', opties:[
@@ -2580,17 +2583,17 @@ const CATEGORIE_PROFIEL={
     ],
     hardware:[
       {v:'Is de accu vlak, niet opgezwollen?', a:['Ja','Nee'], deel:'Accu'},
-      {v:'Reageert het touchscreen tot in de hoeken, zonder dode zones?', a:['Ja','Nee'], deel:'Scherm'},
-      {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm'},
-      {v:'Werken de luidsprekers?', a:['Ja','Nee'], deel:'Luidsprekers'},
-      {v:'Werkt de microfoon?', a:['Ja','Nee'], deel:'Microfoon'},
-      {v:'Werkt de camera achter?', a:['Ja','Nee'], deel:'Camera achter'},
-      {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor'},
+      {v:'Reageert het touchscreen tot in de hoeken, zonder dode zones?', a:['Ja','Nee'], deel:'Scherm', test:'touch'},
+      {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm', test:'scherm'},
+      {v:'Werken de luidsprekers?', a:['Ja','Nee'], deel:'Luidsprekers', test:'luidspreker'},
+      {v:'Werkt de microfoon?', a:['Ja','Nee'], deel:'Microfoon', test:'microfoon'},
+      {v:'Werkt de camera achter?', a:['Ja','Nee'], deel:'Camera achter', test:'camera_achter'},
+      {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor', test:'camera_voor'},
       {v:'Werken alle knoppen?', a:['Ja','Nee'], deel:'Knoppen'},
       {v:'Laadt hij op via de kabel?', a:['Ja','Nee'], deel:'Laadpoort'},
       {v:'Werken wifi en bluetooth?', a:['Ja','Nee'], deel:'Wifi'},
       {v:'Werkt de vingerafdruk of gezichtsontgrendeling?', a:['Ja','Nee'], deel:'Biometrie'},
-      {v:'Werken de sensoren (automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren'}
+      {v:'Werken de sensoren (automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren', test:'sensoren'}
     ],
     visueel:[
       {t:'Voorglas / scherm', opties:[{l:'Gaaf', p:0},{l:'Lichte krasjes', p:1},{l:'Duidelijke krassen', p:3},{l:'Barst of dode zone', p:8}]},
@@ -2875,6 +2878,63 @@ function ctrAccu(waarde){
   sessieBewaar();
 }
 function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; sessieBewaar(); }
+
+/* ---------- testen met de telefoon ----------
+   Het toestel-in-de-hand loopt de functies langs via /refurbish/test (touch,
+   scherm, luidspreker, microfoon, camera, trillen, sensoren) en stuurt de uitslag
+   terug. Zelfde code-aanpak als het fotograferen: een code van een half uur in
+   een QR, geen inlog op dat toestel nodig. */
+function ctrTestApp(){
+  if(ctr.testcode && ctr.testqr){
+    return `<div class="testapp">
+      <div class="clkop">Test met de telefoon</div>
+      <p class="muted klein" style="margin-bottom:12px">Scan met het toestel dat je test en loop de tests langs. Daarna haal je de uitslag hier op; de vragen hieronder vullen zich dan vanzelf.</p>
+      <img class="qrbeeld" src="${esc(ctr.testqr)}" alt="">
+      <p class="muted klein" style="margin:10px 0">Of ga op dat toestel naar <b>${esc(location.host)}/refurbish/test</b> en vul code <b>${esc(ctr.testcode)}</b> in.</p>
+      <button class="btn actie small" style="width:100%" onclick="testOphalen(this)">Uitslag ophalen</button>
+    </div>`;
+  }
+  return `<div class="testapp">
+    <div class="clkop">Test met de telefoon</div>
+    <p class="muted klein" style="margin-bottom:12px">Laat het toestel zichzelf testen: touch, scherm, luidspreker, microfoon, camera, trillen en sensoren. De uitslag vult de vragen hieronder in.</p>
+    <button class="btn actie small" onclick="testStart(this)"><svg class="i s"><use href="#i-qr"/></svg>Test met de telefoon</button>
+  </div>`;
+}
+async function testStart(knop){
+  await bezig(knop, async()=>{
+    /* Korte code, net als bij het fotograferen. Random is hier prima: het is een
+       tijdelijk toegangsbewijs van een half uur, geen geheim dat blijvend telt. */
+    const code=Math.random().toString(36).slice(2,8).toUpperCase();
+    const {error}=await sb.from('refurbish_testcodes').insert({
+      code, team_id:account.team_id, apparaat_id:ctr.a.id,
+      vervalt:new Date(Date.now()+30*60000).toISOString()
+    });
+    if(error) throw new Error('De code kon niet aangemaakt worden');
+    const doel=location.origin+'/refurbish/test?c='+code;
+    ctr.testcode=code;
+    ctr.testqr='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
+    ctrTeken();
+  });
+}
+async function testOphalen(knop){
+  if(!ctr.testcode){ toast('Start eerst een test','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {data}=await sb.from('refurbish_testcodes').select('resultaat').eq('code', ctr.testcode).maybeSingle();
+    const uit=data&&data.resultaat;
+    if(!uit || !Object.keys(uit).length){ toast('Nog geen uitslag. Rond de test op de telefoon af.','let-op'); return; }
+    /* De testsleutels op de checks koppelen aan het antwoord: ok wordt Ja, fout
+       wordt Nee. Zo telt een mislukte test meteen als reparatiepunt. */
+    let n=0;
+    prof().hardware.forEach(q=>{
+      if(q.test && (uit[q.test]==='ok' || uit[q.test]==='fout')){
+        ctr.antwoord[q.v] = uit[q.test]==='ok' ? 'Ja' : 'Nee';
+        n++;
+      }
+    });
+    ctrTeken();
+    toast(n+' '+(n===1?'onderdeel':'onderdelen')+' ingevuld uit de test', true);
+  });
+}
 /* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Bij
    uitvinken zetten we de eerder gemeten waarde terug, zodat er geen misleidende
    100% blijft staan. Het accuveld en het advies lopen mee zonder het hele scherm
