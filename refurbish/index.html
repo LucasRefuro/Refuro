@@ -998,6 +998,45 @@ const STATUS={
 const OP_VOORRAAD=['klaar','overgedragen'];
 const DEEL_STATUS={voorraad:'Op de plank', gebruikt:'Gebruikt', te_bestellen:'Te bestellen', besteld:'Besteld'};
 
+/* ── waar was je gebleven ──
+   Welk tabblad je open had, en of je middenin een controle zat (met welke stap en
+   antwoorden), bewaren we per gebruiker in localStorage. Zo gooit een herlaad je
+   niet terug naar het begin. Dit is bewust iets anders dan de werkdata hierboven:
+   die blijft in Postgres omdat er meer mensen tegelijk aan werken. Dit gaat alleen
+   over jouw eigen plek in het scherm, op deze computer. */
+function sessieSleutel(){ return 'refu_sessie_'+((account&&account.team_id)||'x'); }
+function sessieBewaar(){
+  if(!account) return;
+  try{
+    const s={tab};
+    /* Alleen een lopende controle onthouden we (te controleren of installeren);
+       slopen en repareren open je zo weer, en die hebben geen half getypt scherm. */
+    if(ctr && ctr.a && (ctr.a.status==='te_controleren' || ctr.a.status==='installeren')){
+      /* We lezen hier bewust NIET de velden opnieuw uit: sessieBewaar draait aan
+         het begin van ctrTeken, vóór het hertekenen, dus de velden tonen dan nog
+         de vorige stap. Specs en notitie worden bij het navigeren (ctrVeldBewaar)
+         al in ctr gezet; accu en notitie ook live bij het typen. */
+      s.ctr={ id:ctr.a.id, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
+        antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
+        accu:ctr.accu, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
+        notitie:ctr.notitie, opties:ctr.opties };
+    }
+    localStorage.setItem(sessieSleutel(), JSON.stringify(s));
+  }catch(e){}
+}
+function sessieLaden(){ try{ return JSON.parse(localStorage.getItem(sessieSleutel())||'null'); }catch(e){ return null; } }
+function ctrHerstel(snap, a){
+  return {
+    a, stap:snap.stap||'start',
+    antwoord:snap.antwoord||{}, punten:snap.punten||{}, delen:snap.delen||{}, notities:snap.notities||{},
+    specs:snap.specs||Object.assign({}, a.specs||{}),
+    accu:snap.accu!=null?snap.accu:(a.accu!=null?String(a.accu):''),
+    accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
+    notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
+    opties:snap.opties||{}, pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
+  };
+}
+
 /* ═══════════════ opstarten ═══════════════ */
 
 async function start(){
@@ -1030,9 +1069,20 @@ async function start(){
   document.getElementById('wie').textContent=acc.naam||acc.email||'';
   merkTekenen();
   tekenSoorten();
+  /* Vóór het laden uitlezen: allesLaden tekent het scherm en dat overschrijft de
+     bewaarde sessie meteen weer. */
+  const bewaard=sessieLaden();
   await allesLaden();
   await locatiesLaden();
-  showTab('werkbank');
+  /* Verder waar je was: het tabblad terug, en zat je middenin een controle dan
+     het toestel op de juiste stap met je antwoorden terug (zolang het toestel er
+     nog is en nog te controleren valt). */
+  let doelTab=(bewaard && bewaard.tab) || 'werkbank';
+  if(bewaard && bewaard.ctr){
+    const a=apparaten.find(x=>x.id===bewaard.ctr.id);
+    if(a && (a.status==='te_controleren' || a.status==='installeren')) ctr=ctrHerstel(bewaard.ctr, a);
+  }
+  showTab(doelTab);
 }
 
 function slot(kop, tekst, knop, waar){
@@ -1090,6 +1140,7 @@ function showTab(t){
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   tekenAlles();
   window.scrollTo(0,0);
+  sessieBewaar();
 }
 document.querySelectorAll('aside nav button').forEach(b=>
   b.addEventListener('click',()=>showTab(b.dataset.tab)));
@@ -1906,6 +1957,8 @@ function ctrBalkStand(id){
 function ctrTeken(){
   const el=document.getElementById('ctrPagina');
   if(!el) return;
+  /* Elke stap in de controle bewaren, zodat een herlaad je op dezelfde plek terugzet. */
+  sessieBewaar();
   if(!ctr){ el.innerHTML=leeg('i-check','Geen controle open','Kies een apparaat uit de lijst.'); return; }
 
   const was=document.activeElement;
@@ -2456,8 +2509,9 @@ function ctrAccu(waarde){
      in het veld staan terwijl je typt. */
   const vak=document.getElementById('accuAdvies');
   if(vak) vak.innerHTML=accuAdviesHtml();
+  sessieBewaar();
 }
-function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; }
+function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; sessieBewaar(); }
 /* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Bij
    uitvinken zetten we de eerder gemeten waarde terug, zodat er geen misleidende
    100% blijft staan. Het accuveld en het advies lopen mee zonder het hele scherm
@@ -2475,6 +2529,7 @@ function ctrNieuweAccu(aan){
     if(inp) inp.value=ctr.accu;
   }
   if(vak) vak.innerHTML=accuAdviesHtml();
+  sessieBewaar();
 }
 
 /* Een notitie mag maar zo lang zijn als er op de sticker past. Liever een
@@ -2494,6 +2549,7 @@ function ctrNotitieTel(){
   ctr.notitie=e.value;
   const over=MAX_NOTITIE-e.value.length;
   t.textContent=over; t.classList.toggle('krap', over<10);
+  sessieBewaar();
 }
 
 async function ctrInstalleren(knop, later){
