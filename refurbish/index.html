@@ -498,6 +498,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 .etnaam{font-family:'Sora',sans-serif; font-size:15pt; font-weight:800; line-height:1.15;
   letter-spacing:-.02em; overflow-wrap:anywhere; margin-bottom:1.5mm;}
 .etregels{font-size:9.5pt; line-height:1.45; margin-bottom:2.5mm;}
+.etplek{font-size:10pt; font-weight:700; margin-bottom:2mm;}
 .etnotitie{font-size:9pt; font-style:italic; border-top:0.4mm solid #000; padding-top:1.5mm;
   margin-bottom:2.5mm;}
 .etqr{width:34mm; height:34mm; display:block;}
@@ -1404,6 +1405,7 @@ function labelHtml(a){
       ${a.grade && a.status!=='repurpose' ? `<span class="etgrade">${esc(a.grade)}</span>` : ''}
     </div>
     <div class="etnaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
+    ${a.plek?`<div class="etplek">Plek: ${esc(a.plek)}</div>`:''}
     <div class="etregels">${regels.map(r=>`<div>${esc(r)}</div>`).join('')}</div>
     ${a.notitie?`<div class="etnotitie">${esc(a.notitie)}</div>`:''}
     <img class="etqr" src="${labelUrl(a.id)}" alt="" loading="lazy">
@@ -1520,6 +1522,7 @@ function tekenApparaat(){
       ${feit('Grade', a.grade||'—')}
       ${feit('Accu', a.accu?a.accu+'%':'—')}
       ${feit('Ligt in', locNaam(plekVan(a))||'nog niet bepaald')}
+      ${feit('Plek', a.plek||'—')}
       ${feit('Leverancier', a.leverancier||'—')}
       ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}))}
       ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
@@ -1581,6 +1584,16 @@ function tekenApparaat(){
             <input id="pg_notitie" maxlength="${MAX_NOTITIE}" value="${esc(a.notitie||'')}"
               placeholder="Bijvoorbeeld: kleine deuk linksachter" style="flex:1; min-width:200px">
             <button class="btn ghost small" onclick="notitieOpslaan('${a.id}', this)">Opslaan</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><svg class="i"><use href="#i-shop"/></svg>Plek</h2>
+          <p class="muted klein" style="margin-bottom:10px">Waar hij op de stelling ligt. Komt op het label en in de voorraadlijst te staan, zodat je hem zo terugvindt.</p>
+          <div class="row">
+            <input id="pg_plek" maxlength="40" value="${esc(a.plek||'')}"
+              placeholder="Bijvoorbeeld: Kast 2, plank 4" style="flex:1; min-width:200px">
+            <button class="btn ghost small" onclick="plekOpslaan('${a.id}', this)">Opslaan</button>
           </div>
         </div>
 
@@ -1656,6 +1669,25 @@ async function notitieOpslaan(id, knop){
       .update({notitie:e.value.trim()||null, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw new Error('Opslaan mislukt');
     await allesLaden(); toast('Notitie opgeslagen', true);
+  });
+}
+
+/* De stellingplek is een los tekstveld, los van winkel/magazijn/werkplaats. Ligt
+   het toestel al in de verkoopbare voorraad, dan reist de plek mee naar de
+   hardware-rij, zodat je hem ook aan de balie terugvindt. */
+async function plekOpslaan(id, knop){
+  const e=document.getElementById('pg_plek'); if(!e) return;
+  const waarde=e.value.trim()||null;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({plek:waarde, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw new Error('Opslaan mislukt');
+    const a=apparaten.find(x=>x.id===id);
+    if(a&&a.hardware_id){
+      await sb.from('hardware').update({plek:waarde, bijgewerkt_op:new Date().toISOString()})
+        .eq('id',a.hardware_id);
+    }
+    await allesLaden(); toast('Plek opgeslagen', true);
   });
 }
 
@@ -2747,6 +2779,7 @@ async function naarVoorraad(a){
        totdat iemand hem ergens neerlegt en scant. */
     status: (instel.inscannen && !a.locatie_id) ? 'onderweg' : 'voorraad',
     locatie_id:a.locatie_id||null,
+    plek:a.plek||null,
     kanalen:{winkel:true}
   }).select().single();
   if(error) throw new Error('Kon hem niet in de voorraad zetten: '+error.message);
@@ -2822,7 +2855,7 @@ function tekenVoorraad(){
           <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
               <div class="muted klein">${esc(Object.values(a.specs||{}).slice(0,3).join(' · ')||a.categorie||'')}</div></td>
           <td>${a.grade?`<span class="gradepil">${esc(a.grade)}</span>`:'—'}</td>
-          <td>${plekPil(a)}</td>
+          <td>${plekPil(a)}${a.plek?`<div class="muted klein">${esc(a.plek)}</div>`:''}</td>
           <td class="num">${h&&h.verkoop!=null?euro(h.verkoop):'<span class="muted klein">nog niet</span>'}</td>
           <td>${staatOnline(a)
             ? (url
