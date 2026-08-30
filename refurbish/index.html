@@ -304,6 +304,7 @@ tr.klikbaar{cursor:pointer;}
 .accurij{background:var(--soft-2); border-radius:var(--radius-s); padding:16px 18px;}
 .testapp{background:var(--lblauw); border-radius:var(--radius-s); padding:16px 18px; margin-bottom:16px; text-align:center;}
 .testapp .clkop{margin-bottom:6px;}
+.expkeuze{display:flex; align-items:center; gap:12px; padding:11px 0; font-size:15px; font-weight:600; cursor:pointer;}
 .accurij label{margin-bottom:8px;}
 
 /* ---------- online zetten ---------- */
@@ -2098,8 +2099,52 @@ function ctrKies(sleutel, antwoord){
   ctr.naVraag = nieuw ? {sleutel, uitleg:kleurVan(antwoord)!=='goed'} : null;
   ctrTeken();
   ctrDoorNaarVolgende();
+  ctrMisschienDoor();
   ctr.naVraag=null;
 }
+
+/* Is alles op deze stap ingevuld en staat de voorwaartse knop klaar, dan gaan we
+   vanzelf door. Alleen als er niets meer open staat en het laatste antwoord geen
+   toelichting nodig heeft; anders laten we de medewerker eerst typen. De stap
+   markeert zijn doorknop met auto:true, dus een afkeuren-knop of een zijpad telt
+   niet mee. */
+function ctrMisschienDoor(){
+  if(!ctr) return;
+  if(ctr.naVraag && ctr.naVraag.uitleg) return;
+  const el=document.getElementById('ctrPagina'); if(!el) return;
+  if(el.querySelector('.clrij[data-open="1"]')) return;
+  const stap=CTR_STAPPEN[ctr.stap]; if(!stap || !stap.knoppen) return;
+  if(!(stap.knoppen()||[]).some(x=>x.auto)) return;
+  setTimeout(()=>{
+    /* Nog steeds op dezelfde, afgeronde stap zonder open vragen? Dan door. */
+    if(!ctr || CTR_STAPPEN[ctr.stap]!==stap) return;
+    const el2=document.getElementById('ctrPagina');
+    if(!el2 || el2.querySelector('.clrij[data-open="1"]')) return;
+    const kk=(stap.knoppen()||[]).find(x=>x.auto);
+    if(kk) kk.doe();
+  }, 450);
+}
+
+/* Met Enter loop je de controle door: in een invoerveld spring je naar het
+   volgende veld, en verder druk je de voorwaartse knop in als de stap af is. Op
+   de staat-stap niet: daar rond je bewust af. */
+function ctrEnter(e){
+  if(e.key!=='Enter' || e.shiftKey || e.isComposing) return;
+  if(!ctr) return;
+  const el=document.getElementById('ctrPagina'); if(!el) return;
+  const t=e.target;
+  if(t && t.tagName==='TEXTAREA') return;
+  e.preventDefault();
+  if(t && t.tagName==='INPUT' && t.type!=='checkbox'){
+    const velden=[...el.querySelectorAll('input:not([type=checkbox]), textarea')].filter(x=>x.offsetParent!==null);
+    const i=velden.indexOf(t);
+    if(i>-1 && i<velden.length-1){ velden[i+1].focus(); return; }
+  }
+  if(ctr.stap==='visueel') return;
+  const knop=el.querySelector('.ctrvoet .btn.actie');
+  if(knop) knop.click();
+}
+(function(){ const e=document.getElementById('ctrPagina'); if(e) e.addEventListener('keydown', ctrEnter); })();
 
 /* Klik, en de volgende vraag staat voor je. Met dertig vragen op één pagina
    ben je anders vooral aan het zoeken waar je gebleven was. */
@@ -2206,7 +2251,7 @@ const CTR_STAPPEN={
     ${ctrVraag('Start het apparaat op?', ['Ja','Nee'], 'start')}
   `, knoppen:()=>{
     const w=ctr.antwoord['start'];
-    if(w==='Ja')  return [{tekst:prof().startDoor||'Door', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}];
+    if(w==='Ja')  return [{tekst:prof().startDoor||'Door', klasse:'actie', auto:true, doe:()=>ctrGa(ctrVolgende())}];
     if(w==='Nee') return [{tekst:'Uitzoeken waarom niet', klasse:'actie', doe:()=>ctrGa(prof().startNee||'nietaan')}];
     return [];
   }},
@@ -2239,7 +2284,7 @@ const CTR_STAPPEN={
     ${ctrVraag('Start hij nu op?', ['Ja','Nee'], 'nogmaals')}
   `, knoppen:()=>{
     const w=ctr.antwoord['nogmaals'];
-    if(w==='Ja')  return [{tekst:prof().nietaanDoor||'Gelukt, door', klasse:'actie', doe:()=>ctrGa(prof().stappen[1])}];
+    if(w==='Ja')  return [{tekst:prof().nietaanDoor||'Gelukt, door', klasse:'actie', auto:true, doe:()=>ctrGa(prof().stappen[1])}];
     if(w==='Nee') return [{tekst:'Leeghalen voor onderdelen', klasse:'', doe:()=>ctrGa('slopen')}];
     return [];
   }},
@@ -2256,7 +2301,7 @@ const CTR_STAPPEN={
       <div class="clkop">Notitie</div>
       ${ctrNotitieVeld()}`;
   }, knoppen:()=>ctrVoorWindows().every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Door naar de upgrade', klasse:'actie', doe:()=>ctrGa('upgrade')}] : [] },
+      ? [{tekst:'Door naar de upgrade', klasse:'actie', auto:true, doe:()=>ctrGa('upgrade')}] : [] },
 
   /* Ram en ssd erbij vóór Windows. Je kiest uit je voorraad; wat je pakt gaat
      daar van de teller af en telt mee in de inkoop van dit toestel. Niets nodig?
@@ -2326,7 +2371,7 @@ const CTR_STAPPEN={
                && na.every(q=>ctr.antwoord[q.v]);
     const later={tekst:'Nog niet klaar, later verder', klasse:'', doe:(k)=>ctrInstalleren(k)};
     return klaar
-      ? [{tekst:'Door naar de specificaties', klasse:'actie', doe:()=>ctrGa('specs')}, later]
+      ? [{tekst:'Door naar de specificaties', klasse:'actie', auto:true, doe:()=>ctrGa('specs')}, later]
       : [later];
   }},
 
@@ -2353,7 +2398,7 @@ const CTR_STAPPEN={
       ${werk.length?`<div class="clkop">Werkt de extra uitrusting</div>
         ${werk.map(q=>ctrVraag(q.v, q.a)).join('')}`:''}`;
   }, knoppen:()=> ctrSpecVragen().every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Door naar de staat', klasse:'actie', doe:()=>ctrGa('visueel')}] : [] },
+      ? [{tekst:'Door naar de staat', klasse:'actie', auto:true, doe:()=>ctrGa('visueel')}] : [] },
 
   /* Sloten en herkomst: de harde blokkers vóór je tijd in testen steekt. Een op
      slot staand of geblokkeerd toestel keur je hier meteen af. Alleen actief voor
@@ -2372,7 +2417,7 @@ const CTR_STAPPEN={
   }, knoppen:()=>{
     if(ctrBlokkers().length) return [{tekst:'Afkeuren, niet verkoopbaar', klasse:'fout', doe:(k)=>ctrAfronden(k)}];
     return (prof().blokkers||[]).every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Alles vrij, door', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}] : [];
+      ? [{tekst:'Alles vrij, door', klasse:'actie', auto:true, doe:()=>ctrGa(ctrVolgende())}] : [];
   }},
 
   /* Alle functionele hardware in één lijst. Geen Windows-knip zoals bij de laptop,
@@ -2388,7 +2433,7 @@ const CTR_STAPPEN={
       ${prof().hardware.some(q=>q.test) ? ctrTestApp() : ''}
       ${checks.map(q=>ctrVraag(q.v, q.a||['Ja','Nee'])).join('')}`;
   }, knoppen:()=>prof().hardware.concat(ctrEigenVragen()).every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Door naar de specificaties', klasse:'actie', doe:()=>ctrGa(ctrVolgende())}] : [] },
+      ? [{tekst:'Door naar de specificaties', klasse:'actie', auto:true, doe:()=>ctrGa(ctrVolgende())}] : [] },
 
   visueel:{ balk:'visueel', inhoud:()=>{
     const punten=ctrPunten();
@@ -5752,29 +5797,64 @@ function batVulInkoop(){
 /* De hele partij als tabel eruit voor de boekhouding: elk toestel met inkoop en
    opbrengst, en onderaan de investering, omzet en winst. Puntkomma en komma-
    decimalen, met een BOM, zodat het meteen goed in Excel opent. */
+/* Eerst kiezen wat erin komt: de prijzen kun je eruit laten als je de lijst
+   deelt, en grade, Windows en de specs zet je aan of uit. */
 function batExport(id){
   const b=batches.find(x=>x.id===id); if(!b) return;
+  venster('Exporteren', `
+    <p class="pv">Kies wat er in het bestand komt. Zet de prijzen uit als je de lijst deelt.</p>
+    <label class="expkeuze"><input type="checkbox" id="exp_prijs" checked> Prijzen (inkoop, verkoop, winst en de totalen)</label>
+    <label class="expkeuze"><input type="checkbox" id="exp_grade" checked> Grade</label>
+    <label class="expkeuze"><input type="checkbox" id="exp_windows" checked> Windows erop</label>
+    <label class="expkeuze"><input type="checkbox" id="exp_specs" checked> Specs (processor, geheugen, opslag, scherm en de rest)</label>
+  `, [{tekst:'Exporteren', klasse:'actie', doe:()=>batExportDoen(id)}]);
+}
+function batExportDoen(id){
+  const b=batches.find(x=>x.id===id); if(!b) return;
   const c=batCijfers(id);
+  const aan=k=>{ const e=document.getElementById(k); return e?e.checked:true; };
+  const opt={prijs:aan('exp_prijs'), grade:aan('exp_grade'), windows:aan('exp_windows'), specs:aan('exp_specs')};
   const cel=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
   const geld=n=>(Number(n)||0).toFixed(2).replace('.',',');
-  const rijen=[['Toestel','Nummer','Staat','Inkoop','Verkoop','Status','Hoe verkocht']];
+  /* Elke spec die in deze partij voorkomt krijgt zijn eigen kolom (processor,
+     geheugen, opslag, scherm met inch, videokaart, kleur, imei, wat er ook is). */
+  const specKols=[];
+  if(opt.specs) c.devs.forEach(a=>Object.keys(a.specs||{}).forEach(k=>{ if(!specKols.includes(k)) specKols.push(k); }));
+  /* Windows hoort bij de categorieen die we hier installeren (laptop en desktop);
+     telefoon, tablet en monitor draaien geen Windows. */
+  const windowsVan=a=>['Laptop','Desktop'].includes(a.categorie)?'Ja':'-';
+
+  const kop=['Toestel','Nummer','Soort'];
+  if(opt.grade) kop.push('Grade');
+  if(opt.windows) kop.push('Windows');
+  if(opt.specs){ specKols.forEach(k=>kop.push(k)); kop.push('Accu'); }
+  kop.push('Status','Hoe verkocht');
+  if(opt.prijs) kop.push('Inkoop','Verkoop','Winst');
+  const rijen=[kop];
   c.devs.forEach(a=>{
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
     const verkocht=hw && hw.status==='verkocht';
     const bet=verkocht?(hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash')):'';
-    rijen.push([
-      [a.merk,a.model].filter(Boolean).join(' '), a.code||a.serienummer||'', a.staat||a.grade||'',
-      geld(a.inkoop), hw&&hw.verkoop!=null?geld(hw.verkoop):'',
-      verkocht?'verkocht':(hw?'te koop':'werkbank'), bet?batBetaalNaam(bet):''
-    ]);
+    const r=[[a.merk,a.model].filter(Boolean).join(' '), a.code||a.serienummer||'', a.categorie||''];
+    if(opt.grade) r.push(a.grade||'');
+    if(opt.windows) r.push(windowsVan(a));
+    if(opt.specs){ specKols.forEach(k=>r.push((a.specs||{})[k]||'')); r.push(a.nieuwe_accu?'nieuw':(a.accu?a.accu+'%':'')); }
+    r.push(verkocht?'verkocht':(hw?'te koop':'werkbank'), bet?batBetaalNaam(bet):'');
+    if(opt.prijs){
+      const ink=Number(a.inkoop)||0, verk=hw&&hw.verkoop!=null?Number(hw.verkoop):null;
+      r.push(geld(ink), verk!=null?geld(verk):'', verk!=null?geld(verk-ink):'');
+    }
+    rijen.push(r);
   });
-  rijen.push([]);
-  rijen.push(['Investering', geld(c.investering)]);
-  rijen.push(['waarvan extra investering', geld(c.extraInvestering)]);
-  rijen.push(['Omzet met bon', geld(c.omzetBon)]);
-  rijen.push(['Omzet zonder bon', geld(c.omzetZb)]);
-  rijen.push(['Omzet totaal', geld(c.omzet)]);
-  rijen.push(['Winst', geld(c.winst)]);
+  if(opt.prijs){
+    rijen.push([]);
+    rijen.push(['Investering', geld(c.investering)]);
+    rijen.push(['waarvan extra investering', geld(c.extraInvestering)]);
+    rijen.push(['Omzet met bon', geld(c.omzetBon)]);
+    rijen.push(['Omzet zonder bon', geld(c.omzetZb)]);
+    rijen.push(['Omzet totaal', geld(c.omzet)]);
+    rijen.push(['Winst', geld(c.winst)]);
+  }
   const csv=rijen.map(r=>r.map(cel).join(';')).join('\r\n');
   const blob=new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
@@ -5782,7 +5862,7 @@ function batExport(id){
   a.href=url; a.download='batch-'+String(b.nummer||'partij').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast('Batch geexporteerd', true);
+  sluit(); toast('Batch geexporteerd', true);
 }
 
 function batForm(b){

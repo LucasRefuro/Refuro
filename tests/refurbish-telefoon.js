@@ -120,6 +120,21 @@ setTimeout(async()=>{
     ctr.antwoord={'Is Windows geïnstalleerd en start hij op?':'Ja'};`);
   ok('desktop nawindows toont geen accu-blok', !/Hoeveel van de accu/.test(w.eval("CTR_STAPPEN.nawindows.inhoud()")));
 
+  // ── auto-doorgaan: alles ingevuld -> vanzelf naar de volgende stap ──
+  w.eval(`
+    apparaten=[{id:'p3', code:'P3', merk:'Apple', model:'iPhone 14', categorie:'Telefoon', specs:{},
+      status:'te_controleren', inkoop:100, accu:null, nieuwe_accu:false, extra_kosten:[],
+      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}];
+    appOpen('p3'); ctrKies('start','Ja');`);
+  ok('start staat vast na antwoord (voor de timer)', w.eval("ctr.stap")==='start');
+  await new Promise(r=>setTimeout(r,650));
+  ok('start gaat vanzelf door naar de sloten', w.eval("ctr.stap")==='blokkers', 'kreeg '+w.eval("ctr.stap"));
+  // Enter drukt de voorwaartse knop als de stap af is
+  w.eval(`ctr.stap='blokkers'; ctr.antwoord={};
+    prof().blokkers.forEach(q=>ctr.antwoord[q.v]=q.a[0]); ctrTeken();
+    ctrEnter({key:'Enter', shiftKey:false, target:{tagName:'DIV'}, preventDefault:()=>{}});`);
+  ok('Enter gaat door naar de test', w.eval("ctr.stap")==='test', 'kreeg '+w.eval("ctr.stap"));
+
   ok('geen paginafouten', fouten.length===0, fouten.slice(0,2).join(' | '));
   console.log(fout?('\n'+fout+' FOUT'):'\ntelefoon-controle in orde'); w.close(); process.exit(fout?1:0);
 },450);
