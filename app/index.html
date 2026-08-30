@@ -320,6 +320,18 @@
   #hwLocFilters{display:contents;}
   .locpil{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px;
     border-radius:var(--pil); background:var(--soft-2); color:var(--muted); white-space:nowrap;}
+  /* Uitgestald (klant ziet het) of achter (voorraad), met een tik te wisselen. */
+  .uitstalrij{display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap;}
+  .uitstalknop{font-size:11px; font-weight:700; padding:2px 8px; border-radius:var(--pil);
+    border:1px solid var(--border); background:var(--card); color:var(--muted); cursor:pointer;
+    font-family:inherit; white-space:nowrap;}
+  .uitstalknop:hover{border-color:var(--muted-l);}
+  .uitstalknop.uit{background:var(--green-soft); color:var(--green-tekst); border-color:transparent;}
+  .uitstalknop.achter{background:var(--amber-soft); color:var(--amber-tekst); border-color:transparent;}
+  /* Btw-keuze in het verkoopscherm: kort en duidelijk boven de betaalknoppen. */
+  .btwkeuze{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:4px 0 14px;}
+  .btwoptie{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;}
+  .btwoptie input{margin:0;}
   .verhuisrij{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0;}
   .verhuisrij .dt{color:var(--muted-l); min-width:120px;}
   .wachtlijst{margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);}
@@ -6498,7 +6510,10 @@ function renderHardware(){
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
         <td>${h.status==='onderweg'
           ? '<span class="onderweg">Nog niet ingescand</span>'
-          : (hwLocatieNaam(h)?`<span class="locpil">${esc(hwLocatieNaam(h))}</span>`:'<span class="muted">—</span>')}</td>
+          : (hwLocatieNaam(h)?`<span class="locpil">${esc(hwLocatieNaam(h))}</span>`:'<span class="muted">—</span>')}
+          ${h.status!=='onderweg' && h.status!=='verkocht'
+            ? `<div class="uitstalrij">${h.plek?`<span class="muted klein">${esc(h.plek)}</span>`:''}<button class="uitstalknop ${h.uitstalling==='achter'?'achter':(h.uitstalling==='uitgestald'?'uit':'')}" onclick="hwUitstalToggle('${h.id}', event)">${h.uitstalling==='achter'?'Achter':(h.uitstalling==='uitgestald'?'Uitgestald':'Waar ligt hij?')}</button></div>`
+            : ''}</td>
         <td class="num">${euro(h.inkoop||0)}</td>
         <td class="num">${h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>'}</td>
         <td class="num">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
@@ -6528,6 +6543,21 @@ function hwKiesFilter(f){
   document.querySelectorAll('#hwFilter button').forEach(x=>
     x.classList.toggle('active', x.dataset.f===f));
   renderHardware();
+}
+
+/* Uitgestald of achter, met één tik vanuit de lijst te wisselen. Zo zie en zet je
+   snel wat er achter ligt als een klant vraagt wat je nog meer hebt. Eerst leeg
+   -> uitgestald, daarna heen en weer. */
+async function hwUitstalToggle(id, ev){
+  if(ev) ev.stopPropagation();
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const oud=h.uitstalling;
+  const nieuw = h.uitstalling==='uitgestald' ? 'achter' : 'uitgestald';
+  h.uitstalling=nieuw; renderHardware();
+  const {error}=await sb.from('hardware')
+    .update({uitstalling:nieuw, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ h.uitstalling=oud; renderHardware(); toast('Bijwerken mislukt','fout'); return; }
+  toast(nieuw==='achter'?'Achter gezet':'Uitgestald', true);
 }
 
 function hwKanalen(h){
@@ -6579,6 +6609,11 @@ function hwVenster(h){
         <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
       </select></div>
       <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
+      <div><label>Uitstalling</label><select id="hw_uitstalling">
+        <option value=""${(!h||!h.uitstalling)?' selected':''}>Niet ingesteld</option>
+        <option value="uitgestald"${(h&&h.uitstalling==='uitgestald')?' selected':''}>Uitgestald, klant ziet het</option>
+        <option value="achter"${(h&&h.uitstalling==='achter')?' selected':''}>Achter, in de voorraad</option>
+      </select></div>
     </div>
 
     ${h?`<div class="hwverkoop">
@@ -6714,6 +6749,7 @@ async function hwOpslaan(knop){
        hwMarge() dat de winst berekent. Naam gelijk aan de refurbish-kant. */
     marge: (document.getElementById('hw_marge')||{}).value!=='nee',
     plek: hwVeld('hw_plek')||null,
+    uitstalling: (document.getElementById('hw_uitstalling')||{}).value||null,
     titel:hwVeld('hw_titel')||null,
     omschrijving:hwVeld('hw_oms')||null,
     bijgewerkt_op:new Date().toISOString()
@@ -6788,6 +6824,11 @@ function hwVerkoop(id){
   ov.innerHTML=`<div class="popup">
     <h3>${esc([h.merk,h.model].filter(Boolean).join(' '))}</h3>
     <div class="pv">Prijs: <b>${euro(h.verkoop)}</b> &middot; ingekocht voor ${euro(h.inkoop||0)} &middot; winst <b>${euro(winst)}</b></div>
+    <div class="btwkeuze">
+      <span class="muted klein">Btw</span>
+      <label class="btwoptie"><input type="radio" name="hwbtw" value="marge" ${h.marge!==false?'checked':''}>Margeregeling</label>
+      <label class="btwoptie"><input type="radio" name="hwbtw" value="normaal" ${h.marge===false?'checked':''}>21% btw</label>
+    </div>
     <div class="acts">
       <div class="betaalrow">
         <button class="btn" onclick="hwBoek('${h.id}','pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
@@ -6803,9 +6844,14 @@ function hwVerkoop(id){
 async function hwBoek(id, bet){
   const h=hwData.find(x=>x.id===id); if(!h) return;
   const naam=[h.merk,h.model].filter(Boolean).join(' ')+(h.serienummer?' ('+h.serienummer+')':'');
+  /* De btw-keuze uit het verkoopscherm, standaard wat het toestel al had. Zo wordt
+     het regime bij de verkoop bevestigd, ook bij een toestel dat rechtstreeks
+     verkocht wordt zonder eerst online te zijn gezet. */
+  const btwEl=document.querySelector('input[name="hwbtw"]:checked');
+  const marge = btwEl ? btwEl.value==='marge' : (h.marge!==false);
   const vid=uid();
   state.verkopen.unshift({id:vid, t:Date.now(), naam, verkoop:Number(h.verkoop)||0,
-    inkoop:Number(h.inkoop)||0, aantal:1, betaal:bet, cat:vasteCat('Hardware').id,
+    inkoop:Number(h.inkoop)||0, aantal:1, betaal:bet, marge, cat:vasteCat('Hardware').id,
     door:gebruiker?gebruiker.naam:null, hardware:h.id});
   kasVerkoop(Number(h.verkoop)||0, bet, naam);
   if(state.verkopen.length>5000) state.verkopen.length=5000;
@@ -6813,8 +6859,11 @@ async function hwBoek(id, bet){
 
   await sb.from('hardware').update({
     status:'verkocht', verkocht_op:new Date().toISOString(), verkocht_via:'winkel',
-    verkocht_betaal:bet, bijgewerkt_op:new Date().toISOString()
+    verkocht_betaal:bet, marge, bijgewerkt_op:new Date().toISOString()
   }).eq('id',id);
+  /* Het regime ook op de refurbish-rij, want de batchcijfers rekenen de btw daar. */
+  sb.from('refurbish_apparaten').update({marge, bijgewerkt_op:new Date().toISOString()})
+    .eq('hardware_id', id).then(({error})=>{ if(error) console.error('marge syncen bij verkoop:', error); });
 
   hwSluit(); piep(440);
   toast('Verkocht ('+betaalNaam(bet)+'): '+naam+', '+euro(h.verkoop), true);
