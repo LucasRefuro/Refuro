@@ -1852,12 +1852,12 @@ const HARDWARE_CHECKS=[
   {v:'Werkt het geluid?',                    a:['Ja','Nee'], deel:'Luidsprekers'},
   {v:'Werken alle poorten?',                 a:['Ja','Nee'], deel:'Poorten'}
 ];
-function ctrVoorWindows(){ return HARDWARE_CHECKS.filter(q=>q.voor); }
+function ctrVoorWindows(){ return prof().hardware.filter(q=>q.voor); }
 function ctrNaWindows(){
   /* De vragen die uit de specs volgen (touchscreen, videokaart) horen NIET hier:
      de specs ken je pas in de specs-stap, die na dit nakijken komt. Ze staan
      daarom bij de specs zelf. Hier alleen de hardware en de eigen controles. */
-  return HARDWARE_CHECKS.filter(q=>!q.voor).concat(ctrEigenVragen());
+  return prof().hardware.filter(q=>!q.voor).concat(ctrEigenVragen());
 }
 
 /* De visuele inspectie met strafpunten. Hoe minder punten, hoe beter de grade.
@@ -1883,7 +1883,8 @@ const GRADES=[
   {g:'C', tot:99, uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}
 ];
 function gradeVan(punten){
-  return (GRADES.find(g=>punten<=g.tot)||GRADES[GRADES.length-1]).g;
+  const g=prof().grades;
+  return (g.find(x=>punten<=x.tot)||g[g.length-1]).g;
 }
 /* Voor "pak de slechtste eerst": C is slechter dan B is slechter dan A. Een
    toestel zonder grade (nog niet gecontroleerd) komt achteraan, want daar weet
@@ -1892,6 +1893,19 @@ function gradeRang(a){
   const r={C:0, B:1, A:2}[a.grade];
   return r===undefined ? 3 : r;
 }
+
+/* ── categorie-profiel ──
+   De controle draait dezelfde motor voor elke soort toestel, maar welke checks,
+   welke grade-vlakken, welke specs en welke stappen erbij horen, verschilt per
+   categorie. Die staat al op elk toestel (a.categorie, gezet bij het toevoegen).
+   Het profiel-register (CATEGORIE_PROFIEL, verderop) levert per categorie de
+   juiste datasets; onbekend of leeg valt terug op Laptop, zodat oude toestellen
+   niets merken. */
+function ctrCat(){ return (ctr && ctr.a && ctr.a.categorie) || 'Laptop'; }
+function prof(){ return CATEGORIE_PROFIEL[ctrCat()] || CATEGORIE_PROFIEL.Laptop; }
+/* De volgende stap komt uit het profiel, niet uit een vaste keten: laat een
+   categorie 'upgrade' of 'windows' weg, dan slaat de controle die vanzelf over. */
+function ctrVolgende(){ const s=prof().stappen; return s[s.indexOf(ctr.stap)+1]; }
 
 /* De onderdelen die de moeite waard zijn om te bewaren als een apparaat wordt
    gesloopt. */
@@ -1925,7 +1939,7 @@ function appOpen(id){
     ctr.antwoord[r.v]=r.a;
     if(r.n) ctr.notities[r.v]=r.n;
   });
-  VISUEEL.forEach(v=>{
+  prof().visueel.forEach(v=>{
     const r=(a.checklist||[]).find(x=>x.v===v.t);
     if(r){ const o=v.opties.find(o=>o.l===r.a); if(o) ctr.punten[v.t]={l:o.l, p:o.p}; }
   });
@@ -1943,10 +1957,10 @@ const CTR_BALK=[
   {id:'visueel',  naam:'Staat',    uitleg:'Grade bepalen'},
   {id:'klaar',    naam:'Klaar',    uitleg:'Uitkomst'}
 ];
-const CTR_VOLGORDE=CTR_BALK.map(b=>b.id);
 function ctrBalkStand(id){
+  const volg=prof().balk.map(b=>b.id);
   const nu=CTR_STAPPEN[ctr.stap].balk;
-  const i=CTR_VOLGORDE.indexOf(id), j=CTR_VOLGORDE.indexOf(nu);
+  const i=volg.indexOf(id), j=volg.indexOf(nu);
   return i<j ? 'gedaan' : (i===j ? 'nu' : '');
 }
 
@@ -1995,7 +2009,7 @@ function ctrTeken(){
       </div>
     </div>
 
-    <ol class="tijdlijn">${CTR_BALK.map((b,i)=>`
+    <ol class="tijdlijn">${prof().balk.map((b,i)=>`
       <li class="tl ${ctrBalkStand(b.id)}">
         <span class="tlbol">${ctrBalkStand(b.id)==='gedaan'
           ? '<svg class="i s"><use href="#i-check"/></svg>' : (i+1)}</span>
@@ -2102,7 +2116,7 @@ function ctrVeldBewaar(){
   const specs=ctrSpecsUitVelden();
   if(Object.keys(specs).length) ctr.specs=Object.assign({}, ctr.specs, specs);
   ctr.specs=ctr.specs||{};
-  SPEC_EXTRA.forEach(v=>{
+  prof().specExtra.forEach(v=>{
     if(v.type==='ja'){ const e=document.getElementById(v.id); if(e) ctr.specs[v.s]=e.checked?'ja':''; }
   });
   const not=document.getElementById('c_notitie');
@@ -2111,7 +2125,7 @@ function ctrVeldBewaar(){
 const ctrBewaarVelden=ctrVeldBewaar;
 function ctrSpecsUitVelden(){
   const uit={};
-  SPEC_VELDEN.forEach(v=>{
+  prof().specVelden.forEach(v=>{
     const e=document.getElementById(v.id);
     if(e && e.value.trim()) uit[v.sleutel]=e.value.trim();
   });
@@ -2122,7 +2136,7 @@ function ctrSchoneSpecs(){
 }
 function ctrChecklist(){
   return Object.keys(ctr.antwoord).map(k=>({v:k, a:ctr.antwoord[k], n:ctr.notities[k]||undefined}))
-    .concat(VISUEEL.filter(v=>ctr.punten[v.t]).map(v=>({v:v.t, a:ctr.punten[v.t].l})));
+    .concat(prof().visueel.filter(v=>ctr.punten[v.t]).map(v=>({v:v.t, a:ctr.punten[v.t].l})));
 }
 /* Waar je vandaan kwam, zodat je terug kunt. Een lijst en geen enkele
    vorige-stap, want de weg door de controle vertakt: via het lampje en de
@@ -2148,8 +2162,9 @@ function ctrTerug(){
    uit wat erin zit, en de eigen controles van deze winkel. */
 function ctrSpecVragen(){
   const uit=[];
-  Object.keys(SPEC_VRAGEN).forEach(k=>{
-    if(ctr.specs[k]) SPEC_VRAGEN[k].forEach(q=>uit.push(q));
+  const sv=prof().specVragen;
+  Object.keys(sv).forEach(k=>{
+    if(ctr.specs[k]) sv[k].forEach(q=>uit.push(q));
   });
   return uit;
 }
@@ -2162,10 +2177,6 @@ function ctrEigenVragen(){
     .forEach(c=>(c.items||[]).forEach(i=>uit.push(i)));
   return uit;
 }
-function ctrHardwareVragen(){
-  return HARDWARE_CHECKS.concat(ctrSpecVragen()).concat(ctrEigenVragen());
-}
-
 const MAX_NOTITIE=60;   /* wat er op een sticker past */
 
 const CTR_STAPPEN={
@@ -2313,10 +2324,10 @@ const CTR_STAPPEN={
         <span class="muted klein" id="specsBron">${esc(ctr.specsBron||'')}</span>
       </div>
 
-      ${SPEC_VELDEN.map(v=>ctrSpecVeld(v)).join('')}
+      ${prof().specVelden.map(v=>ctrSpecVeld(v)).join('')}
 
       <div class="clkop">Extra uitrusting</div>
-      <div class="specextra">${SPEC_EXTRA.map(v=>ctrExtraVeld(v, sp)).join('')}</div>
+      <div class="specextra">${prof().specExtra.map(v=>ctrExtraVeld(v, sp)).join('')}</div>
 
       ${werk.length?`<div class="clkop">Werkt de extra uitrusting</div>
         ${werk.map(q=>ctrVraag(q.v, q.a)).join('')}`:''}`;
@@ -2328,7 +2339,7 @@ const CTR_STAPPEN={
     return `
       <h2><svg class="i"><use href="#i-tag"/></svg>De staat</h2>
       <p class="pv">Kijk het apparaat na en kies per onderdeel wat het dichtst in de buurt komt. Daar rolt de grade uit.</p>
-      ${VISUEEL.map(v=>`
+      ${prof().visueel.map(v=>`
         <div class="clrij${ctr.punten[v.t]?' beantwoord':''}" data-open="${ctr.punten[v.t]?0:1}">
           <div class="clvraag">${esc(v.t)}</div>
           <div class="clknoppen">${v.opties.map(o=>`
@@ -2340,7 +2351,7 @@ const CTR_STAPPEN={
         <div class="gradeletter">${gradeVan(punten)}</div>
         <div>
           <div class="gradekop">Grade ${gradeVan(punten)}</div>
-          <div class="muted klein">${esc((GRADES.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
+          <div class="muted klein">${esc((prof().grades.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
         </div>
       </div>` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
   }, knoppen:()=>ctrCompleet()
@@ -2349,7 +2360,7 @@ const CTR_STAPPEN={
   slopen:{ balk:'klaar', inhoud:()=>`
     <h2><svg class="i"><use href="#i-recycle"/></svg>Leeghalen</h2>
     <p class="pv">Hij gaat niet meer aan. Vink aan wat er nog wél goed is; dat gaat naar de onderdelenvoorraad en komt op het label te staan.</p>
-    <div class="deelrooster">${SLOOPDELEN.map((d,i)=>`
+    <div class="deelrooster">${prof().sloopdelen.map((d,i)=>`
       <label class="deelrij">
         <input type="checkbox" id="sl_${i}" data-naam="${esc(d)}" ${ctr.delen[d]?'checked':''}
           onchange="ctrDeel(${JSON.stringify(d).replace(/"/g,'&quot;')}, this.checked)">
@@ -2390,6 +2401,21 @@ const SPEC_EXTRA=[
   {s:'Toetsenbordverlichting', id:'ce_kbd',    type:'ja'},
   {s:'Schermtype',             id:'ce_scht',   type:'keuze', opties:['Mat','Glans']}
 ];
+
+/* Het profiel-register. Laptop wijst naar de bestaande arrays hierboven, zodat de
+   laptop-controle exact hetzelfde blijft. Een nieuwe categorie is puur additief:
+   een profiel erbij, geen wijziging aan de motor. De stappen bepalen de volgorde
+   en welke stappen meedoen; de balk is de tijdlijn bovenaan. */
+const CATEGORIE_PROFIEL={
+  Laptop:{
+    hardware:HARDWARE_CHECKS, visueel:VISUEEL, grades:GRADES,
+    specVelden:SPEC_VELDEN, specExtra:SPEC_EXTRA, specVragen:SPEC_VRAGEN,
+    sloopdelen:SLOOPDELEN,
+    stappen:['start','hardware','upgrade','windows','specs','visueel','klaar'],
+    balk:CTR_BALK
+  }
+};
+
 function ctrExtraVeld(v, sp){
   const nu=String((sp||{})[v.s]||'');
   if(v.type==='keuze'){
@@ -2445,7 +2471,7 @@ function ctrSpecTyp(sleutel, waarde){
   ctr.specs[sleutel]=String(waarde||'');
   const vak=document.getElementById('ctrPagina');
   if(!vak) return;
-  SPEC_VELDEN.forEach(v=>{
+  prof().specVelden.forEach(v=>{
     if(v.sleutel!==sleutel) return;
     const rij=document.getElementById(v.id).closest('.specrij');
     rij.querySelectorAll('.optieknop').forEach(k=>
@@ -2582,9 +2608,9 @@ function ctrPunt(onderdeel, keuze, punten){
   ctrDoorNaarVolgende();
   ctr.naVraag=null;
 }
-function ctrCompleet(){ return VISUEEL.every(v=>ctr.punten[v.t]); }
+function ctrCompleet(){ return prof().visueel.every(v=>ctr.punten[v.t]); }
 function ctrPunten(){
-  return VISUEEL.reduce((n,v)=>n+((ctr.punten[v.t]||{}).p||0),0);
+  return prof().visueel.reduce((n,v)=>n+((ctr.punten[v.t]||{}).p||0),0);
 }
 function ctrDeel(naam, aan){ ctr.delen[naam]=aan; ctrTeken(); }
 
@@ -2719,7 +2745,7 @@ async function specsZoeken(knop){
     ctr.opties = (uit.opties && typeof uit.opties==='object') ? uit.opties : {};
     /* Wat je al had ingevuld blijft staan; alleen lege velden krijgen het
        voorstel. Anders gooit één klik je eigen uitgelezen waarden weg. */
-    SPEC_VELDEN.forEach(v=>{
+    prof().specVelden.forEach(v=>{
       if(!String(ctr.specs[v.sleutel]||'').trim() && sp[v.sleutel]) ctr.specs[v.sleutel]=sp[v.sleutel];
     });
     if(String(sp['Touchscreen']||'').toLowerCase()==='ja') ctr.specs['Touchscreen']='ja';
@@ -2738,11 +2764,12 @@ async function specsZoeken(knop){
 
 function ctrDefecten(){
   const uit=[];
-  HARDWARE_CHECKS.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
+  prof().hardware.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
   if(ctr.accuVervangen) uit.push({vraag:'Accu vervangen, capaciteit te laag', deel:'Accu'});
-  Object.keys(SPEC_VRAGEN).forEach(k=>{
+  const sv=prof().specVragen;
+  Object.keys(sv).forEach(k=>{
     if(!ctr.specs[k]) return;
-    SPEC_VRAGEN[k].forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:k}); });
+    sv[k].forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:k}); });
   });
   ctrEigenVragen().forEach(q=>{
     if(['Nee','Ontbreekt'].includes(ctr.antwoord[q.v])) uit.push({vraag:q.v, deel:null});
