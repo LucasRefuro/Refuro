@@ -23,7 +23,7 @@ const admin = createClient(
 
 // De testsleutels die de telefoon mag terugsturen. Onbekende sleutels negeren we.
 const TESTEN = [
-  "touch", "scherm", "luidspreker", "microfoon",
+  "touch", "scherm", "luidspreker", "oorspeaker", "microfoon",
   "camera_achter", "camera_voor", "trilfunctie", "sensoren",
 ];
 
