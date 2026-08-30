@@ -144,6 +144,9 @@ input[type=file]{padding:0; border:none; background:none;}
 .periodesel button{border:none; background:none; padding:8px 16px; border-radius:var(--pil);
   font-family:inherit; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;}
 .periodesel button.active{background:var(--card); color:var(--tekst); box-shadow:0 1px 4px rgba(23,32,30,.10);}
+/* De sorteerknop staat los van de filters: een streepje ervoor scheidt "wat toon
+   ik" van "in welke volgorde". */
+.vrsorteer{margin-left:8px; border-left:1px solid var(--border)!important; padding-left:16px!important; border-radius:0!important;}
 
 table{width:100%; border-collapse:collapse; font-size:14px;}
 th{text-align:left; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
@@ -1742,6 +1745,13 @@ const GRADES=[
 function gradeVan(punten){
   return (GRADES.find(g=>punten<=g.tot)||GRADES[GRADES.length-1]).g;
 }
+/* Voor "pak de slechtste eerst": C is slechter dan B is slechter dan A. Een
+   toestel zonder grade (nog niet gecontroleerd) komt achteraan, want daar weet
+   je de staat nog niet van. */
+function gradeRang(a){
+  const r={C:0, B:1, A:2}[a.grade];
+  return r===undefined ? 3 : r;
+}
 
 /* De onderdelen die de moeite waard zijn om te bewaren als een apparaat wordt
    gesloopt. */
@@ -2751,6 +2761,10 @@ async function naarVoorraad(a){
    je; sommige winkels hebben er drie en sommige zeven.                       */
 
 let vrFilterNu='alles';
+/* Standaard staan de slechtste toestellen bovenaan: die wil je als eerste
+   verkopen voor ze nog meer waarde verliezen. Eén knop zet het om naar de
+   nieuwste eerst. */
+let vrSlechtsteEerst=true;
 
 function vrRijen(){
   return apparaten.filter(a=>OP_VOORRAAD.includes(a.status) &&
@@ -2767,9 +2781,12 @@ function tekenVoorraadFilters(){
   if(!knoppen.some(k=>k.f===vrFilterNu)) vrFilterNu='alles';
   el.innerHTML=knoppen.map(k=>`
     <button class="${vrFilterNu===k.f?'active':''}" onclick="vrFilter('${k.f}')">
-      ${esc(k.n)}${k.t?` <span class="filtertel">${k.t}</span>`:''}</button>`).join('');
+      ${esc(k.n)}${k.t?` <span class="filtertel">${k.t}</span>`:''}</button>`).join('')
+    + `<button class="vrsorteer${vrSlechtsteEerst?' active':''}" onclick="vrSorteer()" title="Wisselt tussen slechtste eerst en nieuwste eerst">
+        ${vrSlechtsteEerst?'Slechtste eerst':'Nieuwste eerst'}</button>`;
 }
 function vrFilter(f){ vrFilterNu=f; tekenVoorraad(); }
+function vrSorteer(){ vrSlechtsteEerst=!vrSlechtsteEerst; tekenVoorraad(); }
 
 function tekenVoorraad(){
   tekenVoorraadFilters();
@@ -2790,6 +2807,9 @@ function tekenVoorraad(){
   }
 
   rijen=rijen.filter(past);
+  /* Een kopie sorteren, niet de bronlijst: anders schuift de volgorde ook in de
+     werkbank en de tellingen door elkaar. */
+  if(vrSlechtsteEerst) rijen=rijen.slice().sort((a,b)=>gradeRang(a)-gradeRang(b));
   el.innerHTML=rijen.length
     ? `<div class="tabelrol"><table>
         <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Ligt in</th>
