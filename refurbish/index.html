@@ -507,6 +507,21 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 .etcode{font-family:'Sora',sans-serif; font-size:13pt; font-weight:800;
   letter-spacing:.12em; margin-top:1.5mm; text-align:center; width:34mm;}
 
+/* Het klant-prijskaartje: geen QR of interne code, wel de prijs groot. Zwart op
+   wit met mm-maten, zodat het op elke printer scherp blijft. */
+.prijskaart-vel{display:flex; flex-wrap:wrap; gap:8mm;}
+.prijskaart{width:80mm; border:1px dashed var(--muted-l); border-radius:6px;
+  padding:7mm; background:#fff; color:#000; break-inside:avoid;
+  font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
+.pknaam{font-family:'Sora',sans-serif; font-size:17pt; font-weight:800; line-height:1.12;
+  letter-spacing:-.02em; overflow-wrap:anywhere; margin-bottom:2mm;}
+.pkgrade{font-size:10pt; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+  margin-bottom:3mm;}
+.pkregels{font-size:11pt; line-height:1.5; margin-bottom:4mm;}
+.pkprijs{font-family:'Sora',sans-serif; font-size:30pt; font-weight:800; line-height:1;
+  margin-bottom:2.5mm;}
+.pkgar{font-size:10.5pt; font-weight:700; border-top:0.4mm solid #000; padding-top:2mm;}
+
 /* zoeklijst onder het modelveld */
 .zoekveld{position:relative;}
 .zoeklijst{position:absolute; left:0; right:0; top:100%; z-index:40; background:var(--card);
@@ -550,10 +565,11 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   .acts{flex-direction:column;} .acts .btn{width:100%;}
 }
 @media print{
-  /* Alles weg behalve de labels zelf. Zonder dit print je de halve app mee. */
+  /* Alles weg behalve de labels of het prijskaartje zelf. Zonder dit print je de
+     halve app mee. */
   body *{visibility:hidden;}
-  #labelVel, #labelVel *{visibility:visible;}
-  #labelVel{position:absolute; left:0; top:0; width:100%;}
+  #labelVel, #labelVel *, #prijsVel, #prijsVel *{visibility:visible;}
+  #labelVel, #prijsVel{position:absolute; left:0; top:0; width:100%;}
   .overlay{position:static; background:none; padding:0; display:block;}
   .popup{box-shadow:none; padding:0; width:auto; max-height:none; overflow:visible;}
   .etiket{border:1px solid #ddd;}
@@ -1433,6 +1449,45 @@ async function labelsKlaar(knop, ids){
     if(error) throw new Error('Bijwerken mislukt');
     sluit(); await allesLaden(); toast('Labels afgevinkt', true);
   });
+}
+
+/* Het klant-prijskaartje hoort naast het toestel in de winkel, niet op het
+   toestel zelf. Daarom geen QR of interne code zoals op de werksticker, maar de
+   prijs groot met de grade, de belangrijkste specs en de garantie. */
+const GRADE_UITLEG={A:'Als nieuw', B:'Nette staat', C:'Zichtbare sporen'};
+function prijskaartHtml(bron){
+  const a=bron.a;
+  const specs=a.specs||{};
+  const grade=bron.staat||a.grade||'B';
+  const regels=[
+    specs['Processor'] ? 'Processor: '+specs['Processor'] : null,
+    specs['Geheugen']  ? 'Werkgeheugen: '+specs['Geheugen'] : null,
+    specs['Opslag']    ? 'Opslag: '+specs['Opslag'] : null,
+    specs['Scherm']    ? 'Scherm: '+specs['Scherm'] : null,
+    a.nieuwe_accu ? 'Accu: nieuw' : (a.accu ? 'Accu: '+a.accu+'%' : null)
+  ].filter(Boolean);
+  const gar=Number(bron.garantie)||0;
+  return `<div class="prijskaart">
+    <div class="pknaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
+    <div class="pkgrade">Grade ${esc(grade)}${GRADE_UITLEG[grade]?' &middot; '+GRADE_UITLEG[grade]:''}</div>
+    <div class="pkregels">${regels.map(r=>`<div>${esc(r)}</div>`).join('')}</div>
+    <div class="pkprijs">${bron.prijs!=null?euro(bron.prijs):''}</div>
+    ${gar?`<div class="pkgar">${gar} maanden garantie</div>`:''}
+  </div>`;
+}
+
+function prijskaartTonen(){
+  if(!onl){ toast('Kies eerst een toestel bij Voorraad','let-op'); return; }
+  onlBewaarVelden();
+  if(onl.prijs==null || !onl.prijs){
+    toast('Vul eerst een vraagprijs in','let-op');
+    const p=document.getElementById('onl_prijs'); if(p) p.focus();
+    return;
+  }
+  venster('Prijskaartje', `
+    <p class="pv">Print dit en leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
+    <div class="prijskaart-vel" id="prijsVel">${prijskaartHtml(onl)}</div>
+  `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
 }
 
 /* Iets van de ene plek naar de andere brengen. Je ziet eerst waar het nu ligt,
@@ -3091,6 +3146,8 @@ function tekenOnline(){
             <div><label>Garantie (maanden)</label>
               <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:6}" onchange="onlVeld()"></div>
           </div>
+          <button class="btn ghost small" style="margin-top:14px" onclick="prijskaartTonen()">
+            <svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>
         </div>
 
         <div class="card">
