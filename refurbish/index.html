@@ -1582,6 +1582,14 @@ function prijskaartHtml(bron){
   </div>`;
 }
 
+/* Eén plek die het kaart-venster tekent, zodat de print-id maar één keer bestaat. */
+function prijskaartVenster(bron){
+  venster('Prijskaartje', `
+    <p class="pv">Print dit A6-kaartje en leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
+    <div class="prijskaart-vel" id="prijsVel">${prijskaartHtml(bron)}</div>
+  `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
+}
+
 function prijskaartTonen(){
   if(!onl){ toast('Kies eerst een toestel bij Voorraad','let-op'); return; }
   onlBewaarVelden();
@@ -1590,10 +1598,23 @@ function prijskaartTonen(){
     const p=document.getElementById('onl_prijs'); if(p) p.focus();
     return;
   }
-  venster('Prijskaartje', `
-    <p class="pv">Print dit en leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
-    <div class="prijskaart-vel" id="prijsVel">${prijskaartHtml(onl)}</div>
-  `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
+  prijskaartVenster(onl);
+}
+
+/* Hetzelfde A6-kaartje, maar rechtstreeks vanuit de voorraad-productpagina, zonder
+   eerst het online-scherm te openen. Handig voor een toestel dat nog niet in de
+   winkel ligt: print het kaartje en leg het erbij. Prijs, staat, garantie en
+   nieuwprijs komen van de verkochte hardware-rij, of anders van het toestel zelf. */
+function prijskaartVoor(id){
+  const a=apparaten.find(x=>x.id===id);
+  if(!a){ toast('Dit apparaat bestaat niet meer','let-op'); return; }
+  const hw=hardwareVan(a)||{};
+  const prijs = hw.verkoop!=null?hw.verkoop : (a.verkoop!=null?a.verkoop : null);
+  if(prijs==null){ toast('Dit toestel heeft nog geen vraagprijs. Zet hem eerst online.','let-op'); return; }
+  prijskaartVenster({ a, prijs,
+    staat: hw.staat||a.grade||'B',
+    garantie: hw.garantie!=null?hw.garantie:12,
+    nieuwprijs: hw.nieuwprijs!=null?hw.nieuwprijs:a.nieuwprijs });
 }
 
 /* Iets van de ene plek naar de andere brengen. Je ziet eerst waar het nu ligt,
@@ -1701,6 +1722,7 @@ function tekenApparaat(){
         : `<button class="btn oranje" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`):''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
+      ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="prijskaartVoor('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>`:''}
       <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
     </div>
 
