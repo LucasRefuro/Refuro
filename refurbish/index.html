@@ -2315,8 +2315,7 @@ const CTR_STAPPEN={
       <div class="clkop">Werkt alles${open?' · nog '+open+' te doen':''}</div>
       ${na.map(q=>ctrVraag(q.v, q.a||['Ja','Nee'])).join('')}
 
-      <div class="clkop">Accu</div>
-      ${ctrAccublok()}`;
+      ${prof().heeftAccu!==false ? `<div class="clkop">Accu</div>${ctrAccublok()}` : ''}`;
   }, knoppen:()=>{
     const na=ctrNaWindows();
     const klaar = ctr.antwoord['windowsgoed']==='Ja' && ctr.antwoord['drivers']==='Ja'
@@ -2344,7 +2343,7 @@ const CTR_STAPPEN={
       <div class="clkop">Extra uitrusting</div>
       <div class="specextra">${prof().specExtra.map(v=>ctrExtraVeld(v, sp)).join('')}</div>
 
-      ${!prof().stappen.includes('nawindows')
+      ${!prof().stappen.includes('nawindows') && prof().heeftAccu!==false
         ? `<div class="clkop">Accu</div>${ctrAccublok()}` : ''}
 
       ${werk.length?`<div class="clkop">Werkt de extra uitrusting</div>
@@ -2556,6 +2555,201 @@ const CATEGORIE_PROFIEL={
       'Draadloos laden':[{v:'Laadt hij draadloos op?', a:['Ja','Nee']}]
     },
     sloopdelen:['Scherm','Achterglas','Accu','Moederbord','Camera achter','Camera voor','Laadpoort','Luidspreker','Frame']
+  },
+
+  /* Tablet: zoals de telefoon, maar zonder bellen. Pen en toetsenbord-connector
+     zitten bij de extra uitrusting. Wifi-only heeft geen IMEI; dan het
+     serienummer tegen gestolen-registers checken. */
+  Tablet:{
+    icon:'i-tablet', heeftAccu:true,
+    startTekst:'Zet de tablet aan.', startDoor:'Door naar de sloten', startNee:'slopen',
+    specsTekst:'Zoek het model op voor de uitvoeringen. Bij een cellular-model lees je het IMEI met *#06#. Wifi-only heeft geen IMEI; check dan het serienummer tegen gestolen-registers.',
+    stappen:['start','blokkers','test','specs','visueel','klaar'],
+    balk:[
+      {id:'start',    naam:'Start',  uitleg:'Gaat hij aan'},
+      {id:'blokkers', naam:'Sloten', uitleg:'iCloud en beheer'},
+      {id:'test',     naam:'Test',   uitleg:'Alles nalopen'},
+      {id:'specs',    naam:'Specs',  uitleg:'Uitlezen'},
+      {id:'visueel',  naam:'Staat',  uitleg:'Grade bepalen'},
+      {id:'klaar',    naam:'Klaar',  uitleg:'Uitkomst'}
+    ],
+    blokkers:[
+      {v:'Is de tablet vrij van iCloud- of Google-slot? Na wissen moet hij op het welkomscherm komen zonder om een account te vragen.', a:['Vrij','Op slot'], deel:'iCloud of Google-slot'},
+      {v:'Is het serienummer of IMEI schoon, niet als gestolen of geblokkeerd gemeld?', a:['Schoon','Geblokkeerd'], deel:'Gestolen of geblokkeerd'},
+      {v:'Is de tablet vrij van bedrijfsbeheer (geen MDM, DEP of Knox)?', a:['Vrij','Beheerd'], deel:'Bedrijfsbeheer'}
+    ],
+    hardware:[
+      {v:'Is de accu vlak, niet opgezwollen?', a:['Ja','Nee'], deel:'Accu'},
+      {v:'Reageert het touchscreen tot in de hoeken, zonder dode zones?', a:['Ja','Nee'], deel:'Scherm'},
+      {v:'Is het beeld gaaf, zonder lijnen, vlekken of inbranden?', a:['Ja','Nee'], deel:'Scherm'},
+      {v:'Werken de luidsprekers?', a:['Ja','Nee'], deel:'Luidsprekers'},
+      {v:'Werkt de microfoon?', a:['Ja','Nee'], deel:'Microfoon'},
+      {v:'Werkt de camera achter?', a:['Ja','Nee'], deel:'Camera achter'},
+      {v:'Werkt de camera voor?', a:['Ja','Nee'], deel:'Camera voor'},
+      {v:'Werken alle knoppen?', a:['Ja','Nee'], deel:'Knoppen'},
+      {v:'Laadt hij op via de kabel?', a:['Ja','Nee'], deel:'Laadpoort'},
+      {v:'Werken wifi en bluetooth?', a:['Ja','Nee'], deel:'Wifi'},
+      {v:'Werkt de vingerafdruk of gezichtsontgrendeling?', a:['Ja','Nee'], deel:'Biometrie'},
+      {v:'Werken de sensoren (automatisch draaien)?', a:['Ja','Nee'], deel:'Sensoren'}
+    ],
+    visueel:[
+      {t:'Voorglas / scherm', opties:[{l:'Gaaf', p:0},{l:'Lichte krasjes', p:1},{l:'Duidelijke krassen', p:3},{l:'Barst of dode zone', p:8}]},
+      {t:'Achterkant', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Barst', p:6}]},
+      {t:'Frame en randen', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Krassen of deukje', p:3},{l:'Deuken of buiging', p:6}]},
+      {t:'Cameraglas', opties:[{l:'Gaaf', p:0},{l:'Krasjes, beeld ok', p:1},{l:'Kras in beeld of barst', p:4}]}
+    ],
+    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    schermDefect:{vlak:'Voorglas / scherm', optie:'Barst of dode zone', vraag:'Barst of dode zone in het scherm'},
+    specVelden:[
+      {sleutel:'Opslag', id:'c_opslag', hint:'128 GB'},
+      {sleutel:'Kleur',  id:'c_kleur',  hint:'Zilver'},
+      {sleutel:'IMEI',   id:'c_imei',   hint:'Bij cellular, via *#06#'}
+    ],
+    specExtra:[
+      {s:'Cellular (sim)',        id:'ce_cell',  type:'ja'},
+      {s:'Pen-ondersteuning',     id:'ce_pen',   type:'ja'},
+      {s:'Toetsenbord-connector', id:'ce_tbc',   type:'ja'},
+      {s:'Draadloos laden',       id:'ce_draad', type:'ja'}
+    ],
+    specVragen:{
+      'Cellular (sim)':   [{v:'Is de tablet simlockvrij?', a:['Ja','Nee']}],
+      'Pen-ondersteuning':[{v:'Is de pen getest, druk en hover?', a:['Ja','Nee']}]
+    },
+    sloopdelen:['Scherm','Achterglas','Accu','Moederbord','Camera achter','Camera voor','Laadpoort','Luidsprekers']
+  },
+
+  /* Desktop: als de laptop (draait Windows, ram/ssd erbij), maar zonder accu,
+     scherm en scharnieren. Eigen blokkers: BIOS-wachtwoord en een verankerde
+     Computrace/Absolute-agent. */
+  Desktop:{
+    icon:'i-desktop', heeftAccu:false,
+    startTekst:'Sluit een testmonitor, toetsenbord en muis aan en zet hem aan.', startDoor:'Door naar de sloten', startNee:'slopen',
+    specsTekst:'Lees uit wat erin zit: processor, geheugen, opslag en de videokaart.',
+    stappen:['start','blokkers','hardware','upgrade','windows','nawindows','specs','visueel','klaar'],
+    balk:[
+      {id:'start',    naam:'Start',    uitleg:'Komt hij door de POST'},
+      {id:'blokkers', naam:'Sloten',   uitleg:'BIOS en Computrace'},
+      {id:'hardware', naam:'Hardware', uitleg:'Beeld en poorten'},
+      {id:'upgrade',  naam:'Upgrade',  uitleg:'Ram en ssd'},
+      {id:'windows',  naam:'Windows',  uitleg:'Installeren'},
+      {id:'specs',    naam:'Specs',    uitleg:'Uitlezen'},
+      {id:'visueel',  naam:'Staat',    uitleg:'Grade bepalen'},
+      {id:'klaar',    naam:'Klaar',    uitleg:'Uitkomst'}
+    ],
+    blokkers:[
+      {v:'Is de BIOS vrij, zonder wachtwoord dat je niet hebt?', a:['Vrij','Op slot'], deel:'BIOS-wachtwoord'},
+      {v:'Is Computrace of Absolute niet permanent geactiveerd in de BIOS?', a:['Schoon','Geblokkeerd'], deel:'Computrace verankerd'}
+    ],
+    hardware:[
+      {v:'Komt hij door de POST met beeld op een testmonitor?', a:['Ja','Nee'], deel:'Moederbord', voor:true},
+      {v:'Zijn geheugen en opslag aanwezig en SMART-gezond?', a:['Ja','Nee'], deel:'Geheugen en opslag'},
+      {v:'Geeft de videokaart beeld zonder artefacten onder belasting?', a:['Ja','Nee'], deel:'Videokaart'},
+      {v:'Is de voeding stabiel onder belasting, zonder herstarts?', a:['Ja','Nee'], deel:'Voeding'},
+      {v:'Werken alle poorten (USB voor en achter, alle video-uitgangen)?', a:['Ja','Nee'], deel:'Poorten'},
+      {v:'Werken ethernet, wifi en bluetooth?', a:['Ja','Nee'], deel:'Netwerk'},
+      {v:'Werkt het geluid via de lijn-uit?', a:['Ja','Nee'], deel:'Geluid'},
+      {v:'Draaien alle ventilatoren en blijft de temperatuur onder belasting normaal?', a:['Ja','Nee'], deel:'Koeling'}
+    ],
+    visueel:[
+      {t:'Behuizing en panelen', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Deuken of schade', p:6}]},
+      {t:'Voorkant', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Schade', p:6}]},
+      {t:'Binnenkant', opties:[{l:'Schoon', p:0},{l:'Wat stof', p:1},{l:'Vies of losse kabels', p:3}]}
+    ],
+    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    specVelden:[
+      {sleutel:'Processor',  id:'c_cpu', hint:'Intel Core i5'},
+      {sleutel:'Geheugen',   id:'c_ram', hint:'16 GB'},
+      {sleutel:'Opslag',     id:'c_ssd', hint:'512 GB SSD'},
+      {sleutel:'Videokaart', id:'c_gpu', hint:'Alleen als hij er een heeft'}
+    ],
+    specExtra:[
+      {s:'Wifi-kaart', id:'ce_wifi', type:'ja'},
+      {s:'Bluetooth',  id:'ce_bt',   type:'ja'}
+    ],
+    specVragen:{},
+    sloopdelen:['Moederbord','Geheugen','Opslag','Videokaart','Voeding','Koeler','Behuizing']
+  },
+
+  /* Monitor: alles draait om het paneel. Geen sloten, geen Windows, geen accu. */
+  Monitor:{
+    icon:'i-monitor', heeftAccu:false,
+    startTekst:'Sluit een bekende bron aan en zet de monitor aan.', startDoor:'Door naar de test', startNee:'slopen',
+    specsTekst:'Noteer de schermmaat, de resolutie en het paneeltype.',
+    stappen:['start','test','specs','visueel','klaar'],
+    balk:[
+      {id:'start',   naam:'Start', uitleg:'Krijgt hij beeld'},
+      {id:'test',    naam:'Test',  uitleg:'Paneel en poorten'},
+      {id:'specs',   naam:'Specs', uitleg:'Maat en poorten'},
+      {id:'visueel', naam:'Staat', uitleg:'Grade bepalen'},
+      {id:'klaar',   naam:'Klaar', uitleg:'Uitkomst'}
+    ],
+    blokkers:[],
+    hardware:[
+      {v:'Geeft hij beeld, met werkende achtergrondverlichting?', a:['Ja','Nee'], deel:'Paneel'},
+      {v:'Is het beeld vrij van dode of hangende pixels?', a:['Ja','Nee'], deel:'Paneel'},
+      {v:'Is het beeld vrij van inbranden (burn-in)?', a:['Ja','Nee'], deel:'Paneel'},
+      {v:'Is het beeld gelijkmatig, zonder lichtlek of vlekken?', a:['Ja','Nee'], deel:'Paneel'},
+      {v:'Is het paneel vrij van lijnen, banden of drukplekken?', a:['Ja','Nee'], deel:'Paneel'},
+      {v:'Werken alle aansluitingen (HDMI, DisplayPort, VGA, USB-C)?', a:['Ja','Nee'], deel:'Aansluitingen'},
+      {v:'Werken de knoppen en het menu (OSD)?', a:['Ja','Nee'], deel:'Knoppen'},
+      {v:'Werken de standaard, het kantelen en de VESA-bevestiging?', a:['Ja','Nee'], deel:'Standaard'},
+      {v:'Komt de juiste adapter of voedingskabel mee?', a:['Ja','Nee'], deel:'Voeding'}
+    ],
+    visueel:[
+      {t:'Scherm / glas', opties:[{l:'Gaaf', p:0},{l:'Lichte krasjes', p:1},{l:'Duidelijke krassen', p:3},{l:'Barst of lijn', p:8}]},
+      {t:'Bezel en behuizing', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Deuken of schade', p:6}]},
+      {t:'Standaard en voet', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Beschadigd of ontbreekt', p:4}]}
+    ],
+    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    schermDefect:{vlak:'Scherm / glas', optie:'Barst of lijn', vraag:'Barst of lijn in het scherm'},
+    specVelden:[
+      {sleutel:'Schermmaat', id:'c_maat',   hint:'24 inch'},
+      {sleutel:'Resolutie',  id:'c_res',    hint:'1920x1080'},
+      {sleutel:'Paneel',     id:'c_paneel', hint:'IPS'}
+    ],
+    specExtra:[
+      {s:'USB-C met beeld',     id:'ce_usbc', type:'ja'},
+      {s:'Hoogteverstelbaar',   id:'ce_hoog', type:'ja'},
+      {s:'Ingebouwde speakers', id:'ce_spk',  type:'ja'}
+    ],
+    specVragen:{},
+    sloopdelen:['Paneel','Standaard','Voeding','Aansluitingen-print']
+  },
+
+  /* Overig: een minimale, generieke controle. Te divers voor vaste checks, dus
+     kernfunctie, voeding, compleetheid en vocht, plus een grade op voor- en
+     achterkant. */
+  Overig:{
+    icon:'i-box', heeftAccu:false,
+    startTekst:'Zet het apparaat aan.', startDoor:'Door naar de test', startNee:'slopen',
+    specsTekst:'Noteer wat het is en de belangrijkste kenmerken.',
+    stappen:['start','test','specs','visueel','klaar'],
+    balk:[
+      {id:'start',   naam:'Start', uitleg:'Gaat hij aan'},
+      {id:'test',    naam:'Test',  uitleg:'Werkt alles'},
+      {id:'specs',   naam:'Specs', uitleg:'Kenmerken'},
+      {id:'visueel', naam:'Staat', uitleg:'Grade bepalen'},
+      {id:'klaar',   naam:'Klaar', uitleg:'Uitkomst'}
+    ],
+    blokkers:[],
+    hardware:[
+      {v:'Werken alle kernfuncties zoals het hoort?', a:['Ja','Nee'], deel:'Functie'},
+      {v:'Laadt hij op, of doet de voeding het?', a:['Ja','Nee'], deel:'Voeding'},
+      {v:'Zijn de bijbehorende accessoires compleet en werkend?', a:['Ja','Nee'], deel:'Compleetheid'},
+      {v:'Is het vrij van water- of corrosieschade?', a:['Ja','Nee'], deel:'Vocht'}
+    ],
+    visueel:[
+      {t:'Voorkant', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Schade', p:6}]},
+      {t:'Achterkant en behuizing', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Schade', p:6}]}
+    ],
+    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    specVelden:[
+      {sleutel:'Type',    id:'c_type',    hint:'Bijvoorbeeld smartwatch'},
+      {sleutel:'Kenmerk', id:'c_kenmerk', hint:'Maat, kleur, model'}
+    ],
+    specExtra:[],
+    specVragen:{},
+    sloopdelen:['Behuizing','Accu','Moederbord','Scherm']
   }
 };
 

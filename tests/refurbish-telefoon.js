@@ -72,6 +72,29 @@ setTimeout(async()=>{
   w.eval("ctr.antwoord={}; ctr.antwoord['Werkt de flitser?']='Nee';");
   ok('flitser nee -> defect', /Werkt de flitser\?/.test(w.eval("JSON.stringify(ctrDefecten())")));
 
+  // ── de andere categorieën: profielen kloppen ──
+  const pv=(cat)=>{ w.eval("ctr={a:{categorie:'"+cat+"'}}"); return JSON.parse(w.eval(
+    "JSON.stringify({stap:prof().stappen, accu:prof().heeftAccu!==false, blok:(prof().blokkers||[]).length, balk:prof().balk.length, icon:prof().icon})")); };
+  const tab=pv('Tablet');
+  ok('tablet: sloten-triage, geen windows', tab.stap.join(',')==='start,blokkers,test,specs,visueel,klaar');
+  ok('tablet: heeft accu en 3 blokkers', tab.accu===true && tab.blok===3);
+  const desk=pv('Desktop');
+  ok('desktop: draait Windows met upgrade', desk.stap.includes('windows') && desk.stap.includes('upgrade'));
+  ok('desktop: geen accu, wel BIOS-blokkers', desk.accu===false && desk.blok===2);
+  const mon=pv('Monitor');
+  ok('monitor: geen sloten en geen windows', !mon.stap.includes('blokkers') && !mon.stap.includes('windows'));
+  ok('monitor: geen accu', mon.accu===false);
+  const ov=pv('Overig');
+  ok('overig: minimale generieke stappen', ov.stap.join(',')==='start,test,specs,visueel,klaar');
+  ok('onbekende categorie valt terug op laptop', (()=>{ w.eval("ctr={a:{categorie:'Onzin'}}"); return w.eval("prof().icon")==='i-laptop'; })());
+
+  // heeftAccu: een desktop toont geen accu-vraag in de Windows-nakijkstap
+  w.eval(`apparaten=[{id:'d1',code:'D1',merk:'Dell',model:'Optiplex',categorie:'Desktop',specs:{},
+    status:'te_controleren',accu:null,nieuwe_accu:false,extra_kosten:[],checklist:[],defecten:[],
+    goede_delen:[],aangemaakt_op:new Date().toISOString()}]; appOpen('d1'); ctr.stap='nawindows';
+    ctr.antwoord={'Is Windows geïnstalleerd en start hij op?':'Ja'};`);
+  ok('desktop nawindows toont geen accu-blok', !/Hoeveel van de accu/.test(w.eval("CTR_STAPPEN.nawindows.inhoud()")));
+
   ok('geen paginafouten', fouten.length===0, fouten.slice(0,2).join(' | '));
   console.log(fout?('\n'+fout+' FOUT'):'\ntelefoon-controle in orde'); w.close(); process.exit(fout?1:0);
 },450);
