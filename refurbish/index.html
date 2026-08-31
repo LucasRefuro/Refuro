@@ -725,6 +725,10 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
           <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
           <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
+          <div><label>Btw</label><select id="t_marge">
+            <option value="ja" selected>Margeregeling</option>
+            <option value="nee">Normale btw (21%)</option>
+          </select></div>
         </div>
 
         <!-- Waar de doos heen gaat. Vul je dit hier in, dan hoeft niemand later
@@ -1395,6 +1399,10 @@ async function toevoegen(knop){
   const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
   const cat=soortNu;
   const batKeuze=(document.getElementById('t_batch')||{}).value||null;
+  /* Het btw-regime al bij het inkopen vastleggen: tweedehands inkoop is meestal
+     margeregeling. Reist mee tot de verkoop en de batchcijfers, en is later nog
+     per toestel aan te passen. */
+  const margeKeuze=(document.getElementById('t_marge')||{}).value!=='nee';
   const bekend=modellen.find(m=>m.model.toLowerCase()===model.toLowerCase());
 
   await bezig(knop, async()=>{
@@ -1406,6 +1414,7 @@ async function toevoegen(knop){
         inkoop:Number(v('t_inkoop'))||0,
         leverancier:v('t_lev')||null,
         batch_id:batKeuze,
+        marge:margeKeuze,
         code:volgendeCode(i),
         specs: bekend ? (bekend.specs||{}) : {},
         locatie_id: locKeuze||null,
