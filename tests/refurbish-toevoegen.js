@@ -108,7 +108,7 @@ setTimeout(async()=>{
     ok('model apart opgeslagen', r.model==='ZBook 15 G6 Mobile');
     ok('leverancier mee', r.leverancier==='Testleverancier');
     ok('inkoopprijs mee', r.inkoop===75);
-    ok('specs uit de lijst voorgevuld', !!r.specs && r.specs.Processor==='Intel Core i7-9750H');
+    ok('specs nog leeg bij toevoegen, komen bij de controle', !r.specs || Object.keys(r.specs).length===0);
     ok('geen serienummer gevraagd', !('serienummer' in r) || r.serienummer==null);
     ok('elk apparaat een eigen nummer', ins[2][0].code!==ins[2][1].code);
     ok('nummer leesbaar', /^A\d{4}$/.test(r.code));
@@ -140,6 +140,22 @@ setTimeout(async()=>{
 
   w.eval("sluit(); apparaten[0].status='klaar'; labelsTonen('a1')");
   ok('status volgt het apparaat', /OP VOORRAAD/.test(d.getElementById('venster').innerHTML));
+
+  // ── uitvoeringen-dropdown bij de controle ──
+  w.eval(`sluit();
+    modellen[0].varianten=[
+      {Processor:'Intel Core i5-8365U', Geheugen:'8 GB', Opslag:'256 GB SSD'},
+      {Processor:'Intel Core i7-8665U', Geheugen:'16 GB', Opslag:'512 GB SSD'}];
+    apparaten.push({id:'a5', code:'A0005', merk:'HP', model:'ZBook 15 G6 Mobile', categorie:'Laptop',
+      specs:{}, status:'te_controleren', accu:null, nieuwe_accu:false, extra_kosten:[],
+      checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()});
+    appOpen('a5'); ctr.stap='specs';`);
+  ok('uitvoeringen van het model gevonden', w.eval('ctrVarianten().length')===2);
+  ok('uitvoering-label leesbaar', /i7-8665U/.test(w.eval('variantLabel(ctrVarianten()[1])'))
+      && / · /.test(w.eval('variantLabel(ctrVarianten()[1])')));
+  w.eval('ctrVariantKies(1)');
+  ok('gekozen uitvoering vult alle specs', w.eval("ctr.specs.Processor")==='Intel Core i7-8665U'
+      && w.eval("ctr.specs.Geheugen")==='16 GB' && w.eval("ctr.specs.Opslag")==='512 GB SSD');
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);

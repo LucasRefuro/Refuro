@@ -1052,7 +1052,7 @@ function sessieBewaar(){
       s.ctr={ id:ctr.a.id, bijgewerkt_op:ctr.a.bijgewerkt_op, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
         accu:ctr.accu, accuVoor:ctr._accuVoor, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
-        notitie:ctr.notitie, opties:ctr.opties, specsBron:ctr.specsBron,
+        notitie:ctr.notitie, opties:ctr.opties, varianten:ctr.varianten, specsBron:ctr.specsBron,
         testcode:ctr.testcode, testqr:ctr.testqr };
     }
     localStorage.setItem(sessieSleutel(), JSON.stringify(s));
@@ -1067,7 +1067,7 @@ function ctrHerstel(snap, a){
     accu:snap.accu!=null?snap.accu:(a.accu!=null?String(a.accu):''),
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
-    opties:snap.opties||{}, specsBron:snap.specsBron||'', _accuVoor:snap.accuVoor,
+    opties:snap.opties||{}, varianten:snap.varianten||[], specsBron:snap.specsBron||'', _accuVoor:snap.accuVoor,
     testcode:snap.testcode||null, testqr:snap.testqr||null,
     pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
   };
@@ -1416,7 +1416,10 @@ async function toevoegen(knop){
         batch_id:batKeuze,
         marge:margeKeuze,
         code:volgendeCode(i),
-        specs: bekend ? (bekend.specs||{}) : {},
+        /* Nog geen specs bij het inkopen: één modelnaam heeft vaak meerdere
+           uitvoeringen. De juiste uitvoering kies je bij de controle uit de
+           dropdown, dan pas staat vast wat er echt in zit. */
+        specs: {},
         locatie_id: locKeuze||null,
         status:'te_controleren'
       });
@@ -2487,6 +2490,16 @@ const CTR_STAPPEN={
         <span class="muted klein" id="specsBron">${esc(ctr.specsBron||'')}</span>
       </div>
 
+      ${(()=>{ const vs=ctrVarianten(); return vs.length ? `
+      <div class="specrij" style="margin-bottom:16px">
+        <div class="specrijkop"><label for="ctrVariant">Kies de uitvoering</label>
+          <span class="muted klein">${vs.length} bekend</span></div>
+        <select id="ctrVariant" onchange="ctrVariantKies(this.value)">
+          <option value="">Kies een uitvoering, of vul hieronder zelf in</option>
+          ${vs.map((vr,i)=>`<option value="${i}">${esc(variantLabel(vr))}</option>`).join('')}
+        </select>
+      </div>` : ''; })()}
+
       ${prof().specVelden.map(v=>ctrSpecVeld(v)).join('')}
 
       ${prof().specExtra.length?`<div class="clkop">Extra uitrusting</div>
@@ -2940,6 +2953,28 @@ function ctrExtraKeuze(sleutel, waarde){
    videokaart invult. */
 function ctrSpecHertekenen(){ ctrVeldBewaar(); ctrTeken(); }
 
+/* De complete uitvoeringen van dit model (bijvoorbeeld i5/8GB/256 tegenover
+   i7/16GB/512): eerst wat de lookup vond, anders wat er in de modellenlijst staat. */
+function ctrVarianten(){
+  if(Array.isArray(ctr.varianten) && ctr.varianten.length) return ctr.varianten;
+  const a=ctr.a||{};
+  const m=(modellen||[]).find(x=>
+    (x.model||'').toLowerCase()===(a.model||'').toLowerCase() &&
+    (x.merk||'').toLowerCase()===(a.merk||'').toLowerCase());
+  return (m && Array.isArray(m.varianten)) ? m.varianten : [];
+}
+function variantLabel(vr){
+  const delen=(prof().specVelden||[]).map(v=>vr[v.sleutel]).filter(Boolean);
+  return (delen.length?delen:Object.values(vr||{}).filter(Boolean)).join(' · ') || 'Uitvoering';
+}
+/* Een hele uitvoering in één keer invullen. De gebruiker koos dit bewust, dus we
+   overschrijven de velden die in de uitvoering staan. */
+function ctrVariantKies(i){
+  const vr=ctrVarianten()[Number(i)];
+  if(!vr) return;
+  Object.keys(vr).forEach(k=>{ if(vr[k]) ctr.specs[k]=vr[k]; });
+  ctrTeken();
+}
 function ctrSpecVeld(v){
   const nu=String((ctr.specs||{})[v.sleutel]||'');
   const opties=((ctr.opties||{})[v.sleutel])||[];
@@ -3321,6 +3356,7 @@ async function specsZoeken(knop){
     ctrVeldBewaar();
     const sp=uit.specs||{};
     ctr.opties = (uit.opties && typeof uit.opties==='object') ? uit.opties : {};
+    ctr.varianten = Array.isArray(uit.varianten) ? uit.varianten : (ctr.varianten||[]);
     /* Wat je al had ingevuld blijft staan; alleen lege velden krijgen het
        voorstel. Anders gooit één klik je eigen uitgelezen waarden weg. */
     prof().specVelden.forEach(v=>{
