@@ -583,13 +583,23 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   .acts{flex-direction:column;} .acts .btn{width:100%;}
 }
 @media print{
-  /* Alles weg behalve de labels of het prijskaartje zelf. Zonder dit print je de
-     halve app mee. */
-  body *{visibility:hidden;}
-  #labelVel, #labelVel *, #prijsVel, #prijsVel *{visibility:visible;}
-  #labelVel, #prijsVel{position:absolute; left:0; top:0; width:100%;}
-  .overlay{position:static; background:none; padding:0; display:block;}
-  .popup{box-shadow:none; padding:0; width:auto; max-height:none; overflow:visible;}
+  /* Alleen het printvel (het prijskaartje of de labels) mag meetellen voor het
+     aantal pagina's. De hele app en het venster-chrome (titel, uitleg, knoppen)
+     halen we uit de layout, anders vult de lange app-pagina een stuk of tien lege
+     vellen. Vroeger stond hier visibility:hidden, maar dat laat de lege ruimte
+     staan; display:none haalt hem echt weg. */
+  body > *{display:none !important;}
+  #venster{display:block !important; position:static !important; inset:auto !important;
+    background:none !important; padding:0 !important; margin:0 !important;}
+  #venster .popup{display:block !important; box-shadow:none !important; padding:0 !important;
+    margin:0 !important; width:auto !important; max-width:none !important; max-height:none !important;
+    overflow:visible !important; border:none !important; background:none !important;}
+  #venster .popup > h3, #venster .popup > .acts, #vensterInhoud > .pv{display:none !important;}
+  #vensterInhoud{margin:0 !important;}
+  /* Geen randje om het prijskaartje, en de indigo kleuren ook echt afdrukken, ook
+     als "achtergronden afdrukken" uit staat in het printvenster. */
+  .speckaart{border:none !important;}
+  .speckaart, .sk-band, .sk-prijs{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
   .etiket{border:1px solid #ddd;}
   @page{margin:8mm;}
 }
