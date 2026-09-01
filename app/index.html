@@ -2049,14 +2049,11 @@
   <div class="pagehead">
     <h1>Team</h1>
     <div class="periodesel" id="teamTabs">
-      <button data-s="mw" class="active">Medewerkers</button>
-      <button data-s="teams">Teams</button>
-      <button data-s="prestaties">Prestaties</button>
-      <button data-s="accounts">Accounts &amp; inloggen</button>
+      <button data-s="accounts" class="active">Gebruikers</button>
     </div>
   </div>
 
-  <div id="team-mw" class="modules">
+  <div id="team-mw" class="modules" hidden>
     <div class="card breed">
       <h2>Medewerkers</h2>
       <div style="overflow-x:auto">
@@ -2118,7 +2115,7 @@
     </div>
   </div>
 
-  <div id="team-accounts"hidden>
+  <div id="team-accounts">
     <div class="card breed">
       <h2><svg class="i"><use href="#i-lock"/></svg>Nieuwe gebruiker</h2>
       <p class="muted" style="margin-bottom:14px">Maak een teamlid aan met een eigen e-mail en wachtwoord. Vink aan welke pagina's hij mag zien. Je geeft het begin-wachtwoord door; hij kan het later zelf wijzigen.</p>
@@ -7929,6 +7926,7 @@ function renderTeam(){
     `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderTeam(${t.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
   document.getElementById('lockToggle').checked=!!state.vergrendeld;
   renderPrestaties();
+  renderTeamAccounts();
 }
 function updMw(id,veld,val){
   const m=state.medewerkers.find(m=>m.id===id); if(!m) return;
