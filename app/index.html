@@ -6846,9 +6846,45 @@ async function renderPartners(){
   if(!partners||!partners.length){ box.innerHTML='<p class="muted">Nog geen partners. Nodig er hierboven een uit.</p>'; return; }
   const {data:hw}=await sb.from('hardware').select('partner_id').not('partner_id','is',null);
   const telling={}; (hw||[]).forEach(r=>{ if(r.partner_id) telling[r.partner_id]=(telling[r.partner_id]||0)+1; });
-  box.innerHTML=`<table><thead><tr><th>Partner</th><th class="num">Toegewezen laptops</th></tr></thead><tbody>${
-    partners.map(p=>`<tr><td><b>${esc(p.naam||'Partner')}</b></td><td class="num">${telling[p.id]||0}</td></tr>`).join('')
+  box.innerHTML=`<table><thead><tr><th>Partner</th><th class="num">Toegewezen laptops</th><th></th></tr></thead><tbody>${
+    partners.map(p=>`<tr><td><b>${esc(p.naam||'Partner')}</b></td><td class="num">${telling[p.id]||0}</td>`+
+      `<td class="num"><span style="display:inline-flex;gap:8px;justify-content:flex-end">`+
+        `<button class="btn ghost small" onclick="partnerNaamWijzig('${p.id}')">Naam</button>`+
+        `<button class="btn ghost small" onclick="partnerNieuwWw('${p.id}')">Nieuw wachtwoord</button>`+
+      `</span></td></tr>`).join('')
   }</tbody></table>`;
+}
+/* De naam van een partner aanpassen, of hem een nieuw begin-wachtwoord geven (en
+   dat desgewenst mailen). Alles loopt via partner-beheer, want de winkel mag niet
+   rechtstreeks in het partner-account of de partner-data schrijven. */
+async function partnerActie(body, okMsg){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); return null; }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify(body)
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok){ toast(j.error||'Mislukt','fout'); return null; }
+    renderPartners();
+    if(okMsg) toast(okMsg, true);
+    return j;
+  }catch(e){ toast(e.message,'fout'); return null; }
+}
+async function partnerNaamWijzig(id){
+  const naam=window.prompt('Nieuwe naam voor deze partner:');
+  if(naam===null) return;
+  if(!naam.trim()){ toast('Vul een naam in','let-op'); return; }
+  await partnerActie({actie:'partner_bijwerken', partner_id:id, naam:naam.trim()}, 'Naam bijgewerkt');
+}
+async function partnerNieuwWw(id){
+  const ww=window.prompt('Nieuw begin-wachtwoord (minstens 8 tekens):');
+  if(ww===null) return;
+  if(ww.length<8){ toast('Minstens 8 tekens','let-op'); return; }
+  const mailen=window.confirm('Het nieuwe wachtwoord per e-mail naar de partner sturen?');
+  const j=await partnerActie({actie:'partner_wachtwoord', partner_id:id, wachtwoord:ww, mailen}, null);
+  if(j) toast(mailen ? (j.gemaild ? 'Wachtwoord gewijzigd en gemaild' : 'Wachtwoord gewijzigd. Mail niet gelukt, geef het zelf door.') : 'Wachtwoord gewijzigd', true);
 }
 async function partnerAanmaken(knop){
   const naam=(document.getElementById('pt_naam').value||'').trim();
@@ -6866,7 +6902,9 @@ async function partnerAanmaken(knop){
     });
     const j=await res.json().catch(()=>({}));
     if(!res.ok||!j.ok) throw new Error(j.error||'Uitnodigen mislukt');
-    uit.textContent='Partner aangemaakt. Laat hem inloggen op storvo.nl/partner met '+email+'.';
+    uit.textContent = j.gemaild
+      ? ('Partner aangemaakt en een e-mail met de inloggegevens is verstuurd naar '+email+'.')
+      : ('Partner aangemaakt. De e-mail kon niet verstuurd worden; geef de gegevens zelf door: '+email+' met het gekozen wachtwoord.');
     document.getElementById('pt_naam').value=''; document.getElementById('pt_email').value=''; document.getElementById('pt_ww').value='';
     renderPartners(); toast('Partner aangemaakt', true);
   }catch(e){ uit.textContent=e.message; toast(e.message,'fout'); }

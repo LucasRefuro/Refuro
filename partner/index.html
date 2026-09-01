@@ -1413,6 +1413,11 @@ function rSettings(){
   '<div class="field"><label>Standaard opbouw advertentietekst (AI volgt dit bij het genereren)</label>' +
   '<textarea id="s_tpl" rows="9" placeholder="Bijvoorbeeld:\n- Begin met een pakkende openingszin\n- Dan een opsomming van de specs\n- Vermeld dat het getest is en klaar voor gebruik\n- Eventuele gebreken eerlijk onderaan\n- Afsluiten met: ophalen of verzenden mogelijk\n- Maximaal 120 woorden">'+esc(S.settings.template)+'</textarea></div>' +
   '<button class="btn green" onclick="saveSettings()">Opslaan</button></div>' +
+  '<div class="card"><b style="font-size:14px">Wachtwoord</b>' +
+  '<div class="mini" style="margin:4px 0 12px">Verander hier het wachtwoord dat je van de winkel hebt gekregen.</div>' +
+  '<div class="grid2" style="max-width:480px"><div class="field"><label>Nieuw wachtwoord</label><input type="password" id="s_ww1" placeholder="Minstens 8 tekens"></div>' +
+  '<div class="field"><label>Nog een keer</label><input type="password" id="s_ww2"></div></div>' +
+  '<button class="btn green" onclick="wachtwoordWijzigen(this)">Wachtwoord opslaan</button></div>' +
   '<div class="card"><b style="font-size:14px">Data en back-up</b>' +
   '<div class="mini" style="margin:8px 0">Je data staat veilig opgeslagen en synct automatisch. Lokaal wordt een kopie bewaard zodat je ook offline kunt werken.'+(lastSyncedAt?' Laatst gesynct: '+esc(new Date(lastSyncedAt).toLocaleString('nl-NL')):'')+'</div>' +
   '<button class="btn gray sm" onclick="pullRemote(true);toast(\'Synchroniseren...\')">Nu synchroniseren</button> ' +
@@ -1420,6 +1425,17 @@ function rSettings(){
   '<button class="btn gray sm" onclick="exportData()">Back-up downloaden (JSON)</button> ' +
   '<button class="btn gray sm" onclick="loadVersions()">Eerdere versies tonen</button>' +
   '<div id="verslist" style="margin-top:12px"></div></div>';
+}
+async function wachtwoordWijzigen(knop){
+  const a=f('s_ww1').value, b=f('s_ww2').value;
+  if (a.length<8){ toast('Minstens 8 tekens','let-op'); return; }
+  if (a!==b){ toast('De twee wachtwoorden zijn niet gelijk','let-op'); return; }
+  const oud=knop?knop.textContent:''; if (knop){ knop.disabled=true; knop.textContent='Bezig...'; }
+  const { error } = await sb.auth.updateUser({ password:a });
+  if (knop){ knop.disabled=false; knop.textContent=oud; }
+  if (error){ toast('Wachtwoord wijzigen mislukt','fout'); return; }
+  f('s_ww1').value=''; f('s_ww2').value='';
+  toast('Wachtwoord gewijzigd', true);
 }
 async function maakVersie(){
   if (!PARTNER_ID) return false;

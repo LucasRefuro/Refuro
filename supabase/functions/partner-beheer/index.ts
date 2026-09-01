@@ -86,6 +86,39 @@ async function winkelWerkruimte(teamId: string): Promise<string | null> {
   return (data as { id: string } | null)?.id || null;
 }
 
+function escHtml(s: string) {
+  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+}
+
+// Stuurt de partner een welkomstmail met de inloglink en zijn begin-wachtwoord.
+// Best-effort: lukt het versturen niet, dan blijft het account gewoon bestaan en
+// geeft de winkel de gegevens zelf door. Geeft terug of de mail gelukt is.
+async function mailPartner(email: string, naam: string, ww: string): Promise<boolean> {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return false;
+  const van = Deno.env.get("RESEND_FROM") || "Storvo <welkom@storvo.app>";
+  const url = Deno.env.get("PARTNER_URL") || "https://storvo.nl/partner";
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:15px;color:#17201E;line-height:1.6">
+    <h2 style="margin:0 0 12px">Je partner-dashboard staat klaar</h2>
+    <p>Hoi ${escHtml(naam)},</p>
+    <p>Je hebt een eigen dashboard gekregen om je toestellen te beheren, online te zetten en te verkopen. Log in met:</p>
+    <p style="background:#F7F6F3;border-radius:12px;padding:14px 16px">
+      <b>Adres:</b> <a href="${escHtml(url)}">${escHtml(url)}</a><br>
+      <b>E-mail:</b> ${escHtml(email)}<br>
+      <b>Begin-wachtwoord:</b> ${escHtml(ww)}</p>
+    <p>Verander je wachtwoord na de eerste keer inloggen, bij Instellingen in het dashboard.</p>
+    </div>`;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: van, to: [email], subject: "Je partner-dashboard staat klaar", html }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -137,7 +170,43 @@ Deno.serve(async (req) => {
       id, team_id: acc.team_id, naam, data: {},
     });
     if (pErr) { return fout("Partner opslaan mislukt: " + pErr.message, 500); }
-    return new Response(JSON.stringify({ ok: true, email }), { headers: cors });
+    const gemaild = await mailPartner(email, naam, ww);
+    return new Response(JSON.stringify({ ok: true, email, gemaild }), { headers: cors });
+  }
+
+  // ---- de gegevens van een partner aanpassen (naam) ----
+  if (actie === "partner_bijwerken") {
+    if (!magBeheer) return fout("Alleen de winkel mag dit", 403);
+    const partnerId = String(lijf.partner_id || "");
+    const naam = String(lijf.naam || "").trim();
+    if (!partnerId) return fout("Partner is nodig");
+    if (!naam) return fout("Vul een naam in");
+    // Alleen een partner van deze winkel (partners.team_id = eigen team).
+    const { data: p } = await admin.from("partners").select("id").eq("id", partnerId).eq("team_id", acc.team_id).maybeSingle();
+    if (!p) return fout("Deze partner is niet gevonden", 404);
+    await admin.from("accounts").update({ naam }).eq("id", partnerId);
+    await admin.from("partners").update({ naam }).eq("id", partnerId);
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  }
+
+  // ---- een partner een nieuw begin-wachtwoord geven (en zo nodig mailen) ----
+  if (actie === "partner_wachtwoord") {
+    if (!magBeheer) return fout("Alleen de winkel mag dit", 403);
+    const partnerId = String(lijf.partner_id || "");
+    const ww = String(lijf.wachtwoord || "");
+    const mailen = !!lijf.mailen;
+    if (!partnerId) return fout("Partner is nodig");
+    if (ww.length < 8) return fout("Kies een wachtwoord van minstens 8 tekens");
+    const { data: p } = await admin.from("partners").select("id, naam").eq("id", partnerId).eq("team_id", acc.team_id).maybeSingle();
+    if (!p) return fout("Deze partner is niet gevonden", 404);
+    const { error } = await admin.auth.admin.updateUserById(partnerId, { password: ww });
+    if (error) return fout("Wachtwoord wijzigen mislukt: " + error.message, 500);
+    let gemaild = false;
+    if (mailen) {
+      const { data: a } = await admin.from("accounts").select("email, naam").eq("id", partnerId).maybeSingle();
+      if (a?.email) gemaild = await mailPartner(String(a.email), String(a.naam || (p as any).naam || "Partner"), ww);
+    }
+    return new Response(JSON.stringify({ ok: true, gemaild }), { headers: cors });
   }
 
   // ---- een toestel toewijzen aan een partner ----
