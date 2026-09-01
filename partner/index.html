@@ -849,9 +849,9 @@ function shrink(img){
 function openCam(targetArr, afterFn){
   camTarget = targetArr; camAfter = afterFn;
   const m = f('modal');
-  m.innerHTML = '<h2> Foto maken</h2><video id="camv" autoplay playsinline muted></video>' +
+  m.innerHTML = '<h2>Foto maken</h2><video id="camv" autoplay playsinline muted></video>' +
     '<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">' +
-    '<button class="btn" onclick="camSnap()"> Vastleggen</button>' +
+    '<button class="btn" onclick="camSnap()">Vastleggen</button>' +
     '<button class="btn gray" onclick="closeCam()">Klaar</button></div>' +
     '<div class="mini" style="text-align:center;margin-top:8px" id="camcount"></div>';
   f('modalbg').style.display = 'flex';
@@ -1078,8 +1078,8 @@ function rProduct(id){
     '<div class="field"><label>RAM</label><input type="text" id="e_ram" value="'+esc(p.specs.ram)+'"></div>' +
     '<div class="field"><label>Opslag</label><input type="text" id="e_opslag" value="'+esc(p.specs.opslag)+'"></div>' +
     '<div class="field"><label>Schermgrootte</label><input type="text" id="e_scherm" value="'+esc(p.specs.scherm)+'"></div></div>';
-  html += '<div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="e_titel" value="'+esc(p.titel)+'"><button class="btn gray sm" onclick="copyTxt(\'e_titel\')"></button></div></div>' +
-    '<div class="field"><label>Advertentietekst</label><div class="copyrow"><textarea id="e_tekst" rows="6">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'e_tekst\')"></button></div></div>' +
+  html += '<div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="e_titel" value="'+esc(p.titel)+'"><button class="btn gray sm" onclick="copyTxt(\'e_titel\')">Kopieren</button></div></div>' +
+    '<div class="field"><label>Advertentietekst</label><div class="copyrow"><textarea id="e_tekst" rows="6">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'e_tekst\')">Kopieren</button></div></div>' +
     '<div class="checkrow"><input type="checkbox" id="e_fb"'+(p.fb?' checked':'')+'> <span>Facebook</span>' +
       (p.fb?' <span class="mini">('+daysSince(p.fbDatum)+'d online)</span> <label style="display:inline;font-weight:400"><input type="checkbox" id="e_fboff"'+(p.adsOffline.fb?' checked':'')+'> offline gehaald</label> <button class="btn gray sm" onclick="replaats(\''+p.id+'\',\'fb\')"> vandaag opnieuw geplaatst</button>':'') + '</div>' +
     '<div class="checkrow"><input type="checkbox" id="e_mp"'+(p.mp?' checked':'')+'> <span>Marktplaats</span>' +
@@ -1087,9 +1087,9 @@ function rProduct(id){
     '</div>';
   /* foto's */
   html += '<div class="card"><b style="font-size:14px">Foto\'s</b><div style="margin-top:10px">' +
-    '<button class="btn sm" onclick="pFotoCam(\''+p.id+'\')"> Foto maken</button> ' +
-    '<button class="btn gray sm" onclick="pFoto(\''+p.id+'\')"> Foto\'s kiezen</button>' +
-    '<div class="fotos">'+p.fotos.map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="delPFoto(\''+p.id+'\','+i+')"></button></div>').join('')+'</div></div></div>';
+    '<button class="btn sm" onclick="pFotoCam(\''+p.id+'\')">Foto maken</button> ' +
+    '<button class="btn gray sm" onclick="pFoto(\''+p.id+'\')">Foto\'s kiezen</button>' +
+    '<div class="fotos">'+p.fotos.map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="delPFoto(\''+p.id+'\','+i+')">&times;</button></div>').join('')+'</div></div></div>';
   /* voorraad-units */
   html += '<div class="card"><b style="font-size:14px">Op voorraad ('+vu.length+')</b><div style="margin-top:8px">';
   if (!vu.length) html += '<div class="empty">Geen exemplaren meer op voorraad</div>';
