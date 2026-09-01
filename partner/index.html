@@ -89,7 +89,10 @@ tr.click { cursor: pointer; }
 tr.click:hover td { background: var(--soft-2); }
 .tablewrap { border-radius: var(--radius); overflow-x: auto; background: var(--card); box-shadow: var(--schaduw); }
 /* login */
-#loginwrap { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: linear-gradient(135deg, #123F39, #0E4C44 55%, #0B5B52); }
+#loginwrap { position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: linear-gradient(135deg, #123F39, #0E4C44 55%, #0B5B52); }
+.authvoet { text-align: center; margin-top: 16px; font-size: 12.5px; color: rgba(247,246,243,.55); line-height: 1.5; }
+.authvoet b { display: block; color: rgba(247,246,243,.8); font-weight: 700; }
+.authvoet a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .logincard { background: #fff; border-radius: 24px; padding: 38px 34px 30px; width: 400px; max-width: 92vw; box-shadow: 0 30px 80px rgba(10,20,60,.35); text-align: left; }
 .logincard .mk { width: 52px; height: 52px; margin: 0 0 18px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .logincard .mk svg { width: 100%; height: 100%; }
@@ -106,7 +109,7 @@ tr.click:hover td { background: var(--soft-2); }
 .b-purple { background: var(--lblauw); color: var(--oranje); }
 .card { background: var(--card); border: none; border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--schaduw); }
 label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-l); margin-bottom: 7px; }
-input[type=text], input[type=number], input[type=password], textarea, select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 14px; font-size: 14px; font-family: inherit; background: #fff; color: var(--text); transition: .15s; }
+input[type=text], input[type=number], input[type=password], input[type=email], input[type=search], input[type=tel], textarea, select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 14px; font-size: 14px; font-family: inherit; background: #fff; color: var(--text); transition: .15s; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--oranje); box-shadow: 0 0 0 4px rgba(11,91,82,.10); }
 input[type=checkbox] { width: auto; accent-color: var(--oranje); }
 textarea { resize: vertical; border-radius: var(--radius-s); }
@@ -211,14 +214,23 @@ tr.hl td { background: #fffaf0; }
 <div id="loginwrap">
   <div class="logincard">
     <div class="mk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Storvo <span>Partner</span></h2>
+    <h2>storvo</h2>
     <p class="lmut">Log in op je partner-dashboard</p>
     <div class="field"><label>E-mail</label><input type="email" id="loginname" placeholder="jouw@email.nl" autocomplete="email" onkeydown="if(event.key==='Enter')f('loginpin').focus()"></div>
-    <div class="field"><label>Wachtwoord</label><input type="password" id="loginpin" placeholder="Wachtwoord" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="field"><label>Wachtwoord</label>
+      <div style="position:relative">
+        <input type="password" id="loginpin" placeholder="Wachtwoord" autocomplete="current-password" style="padding-right:46px" onkeydown="if(event.key==='Enter')doLogin()">
+        <button type="button" tabindex="-1" onclick="wisselWwZicht('loginpin', this)" title="Wachtwoord tonen" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; padding:8px; color:var(--muted-l); display:flex">
+          <svg class="i s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
     <div id="loginerr">Vul je e-mail en wachtwoord in</div>
-    <button class="btn" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Inloggen</button>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:16px" onclick="doLogin()">Inloggen</button>
+    <button class="btn gray" style="width:100%;justify-content:center;margin-top:8px" onclick="wachtwoordVergeten()">Wachtwoord vergeten?</button>
     <div class="mini" style="margin-top:14px">Je krijgt een uitnodiging van de winkel om je account aan te maken</div>
   </div>
+  <div class="authvoet"><b>Alles geregeld.</b>Storvo &middot; <a href="https://storvo.app">storvo.app</a></div>
 </div>
 <div id="app">
 <nav id="sidebar">
@@ -443,6 +455,48 @@ async function doLogin(){
   if (error){ f('loginerr').textContent = 'E-mail of wachtwoord onjuist'; f('loginerr').style.display='block'; return; }
   await naLogin(data.session);
 }
+const LOGO_SVG = '<svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+/* Het oogje om het wachtwoord even te kunnen zien. */
+function wisselWwZicht(id, knop){
+  const v = f(id); if (!v) return;
+  v.type = v.type === 'password' ? 'text' : 'password';
+  if (knop) knop.style.color = v.type === 'text' ? 'var(--oranje)' : 'var(--muted-l)';
+  v.focus();
+}
+/* Wachtwoord vergeten: een herstel-link naar je e-mail. */
+async function wachtwoordVergeten(){
+  const email = f('loginname').value.trim();
+  if (!email || !email.includes('@')){ f('loginerr').textContent = 'Vul eerst je e-mailadres in.'; f('loginerr').style.display='block'; return; }
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    if (error) throw error;
+    f('loginerr').style.display='none';
+    toast('Check je mail voor een link om je wachtwoord opnieuw in te stellen.', true);
+  } catch(e){ toast('Kon de herstel-mail niet versturen. Probeer het later opnieuw.', 'fout'); }
+}
+/* Terug uit de herstel-mail: een scherm om een nieuw wachtwoord te kiezen. */
+function toonHerstel(){
+  f('app').style.display='none'; f('loginwrap').style.display='flex';
+  const card = document.querySelector('#loginwrap .logincard'); if (!card) return;
+  card.innerHTML =
+    '<div class="mk">'+LOGO_SVG+'</div>' +
+    '<h2>storvo</h2>' +
+    '<p class="lmut">Kies een nieuw wachtwoord</p>' +
+    '<div class="field"><label>Nieuw wachtwoord</label><input type="password" id="herstel_ww" placeholder="Minstens 8 tekens" onkeydown="if(event.key===\'Enter\')herstelOpslaan()"></div>' +
+    '<div id="loginerr">Kies een wachtwoord van minstens 8 tekens</div>' +
+    '<button class="btn" style="width:100%;justify-content:center;margin-top:16px" onclick="herstelOpslaan(this)">Opslaan en inloggen</button>';
+}
+async function herstelOpslaan(knop){
+  const ww = (f('herstel_ww')||{}).value || '';
+  if (ww.length < 8){ f('loginerr').textContent = 'Kies een wachtwoord van minstens 8 tekens.'; f('loginerr').style.display='block'; return; }
+  const oud = knop?knop.textContent:''; if (knop){ knop.disabled=true; knop.textContent='Bezig...'; }
+  const { error } = await sb.auth.updateUser({ password: ww });
+  if (error){ if (knop){ knop.disabled=false; knop.textContent=oud; } toast('Wachtwoord instellen mislukt', 'fout'); return; }
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session){ toast('Wachtwoord ingesteld', true); await naLogin(session); }
+  else { location.reload(); }
+}
+try { sb.auth.onAuthStateChange((event)=>{ if (event === 'PASSWORD_RECOVERY') toonHerstel(); }); } catch(e){}
 /* Na een geslaagde login: het account ophalen, zo nodig een eigen werkruimte
    aanmaken, de data laden en de app tonen. Zowel een externe partner als de
    eigenaar of een teamlid kan hier inloggen (gedeelde sessie met de winkelapp). */
@@ -1522,12 +1576,19 @@ pageArg = (S.ui && S.ui.pageArg) || null;
 if (page==='product' && !S.products.find(x=>x.id===pageArg)) page = 'dash';
 /* Toon eerst het loginscherm; als er nog een geldige partner-sessie is, gaan we door. */
 f('app').style.display='none'; f('loginwrap').style.display='flex';
-(async () => {
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) await naLogin(session);
-  } catch(e){}
-})();
+/* Kom je terug uit de wachtwoord-vergeten mail (type=recovery in de link), toon dan
+   het scherm om een nieuw wachtwoord te kiezen, en log niet meteen automatisch in. */
+const _hash = new URLSearchParams((location.hash||'').replace(/^#/,''));
+if (_hash.get('type') === 'recovery') {
+  setTimeout(toonHerstel, 300); // de client verwerkt de tokens uit de link even
+} else {
+  (async () => {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) await naLogin(session);
+    } catch(e){}
+  })();
+}
 </script>
 </body>
 </html>
