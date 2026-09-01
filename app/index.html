@@ -2121,6 +2121,11 @@
       </div>
       <div id="inviteResultaat" style="margin-top:12px"></div>
     </div>
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-link"/></svg>Partners</h2>
+      <p class="muted" style="margin-bottom:14px">Een partner is een bevriende doorverkoper met een eigen dashboard. Je nodigt hem uit met een eigen login, en wijst laptops aan hem toe vanuit een toestel in de voorraad, met de knop "Toewijzen aan partner". Hij ziet alleen zijn eigen toestellen, niets van jouw winkel.</p>
+      <button class="btn" onclick="partnerUitnodigen()"><svg class="i s"><use href="#i-link"/></svg>Nodig een partner uit</button>
+    </div>
   </div>
 </section>
 
@@ -6663,9 +6668,12 @@ function hwVenster(h){
       </div>
     </div>`:''}
 
+    ${h&&h.partner_id?`<div class="infobox" style="margin-top:14px">Dit toestel is toegewezen aan een partner. Hij verkoopt het in zijn eigen dashboard.</div>`:''}
     <div class="acts">
       ${h&&h.status!=='verkocht'
         ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
+      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
+        ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Toewijzen aan partner</button>`:''}
       <button class="btn" onclick="hwOpslaan(this)">Opslaan</button>
       <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
     </div>
@@ -6675,6 +6683,68 @@ function hwVenster(h){
   if(h) hwHistorieLaden(h.id);
 }
 function hwSluit(){ const o=document.getElementById('hwOverlay'); if(o) o.remove(); hwOpen=null; }
+
+/* Een toestel toewijzen aan een partner: hij krijgt er een kopie van in zijn eigen
+   dashboard en verkoopt het daar. De verdeling (deel voor de partner) stel je hier
+   in. Alles loopt via de partner-beheer-functie, want de partner mag de hardware
+   niet zien. */
+async function hwWijsToe(id){
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const {data:partners}=await sb.from('partners').select('id,naam').order('naam');
+  if(!partners || !partners.length){
+    if(confirm('Je hebt nog geen partner. Wil je er nu een uitnodigen?')) partnerUitnodigen();
+    return;
+  }
+  hwSluit();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='hwOverlay';
+  ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
+  ov.innerHTML=`<div class="popup">
+    <h3>Toewijzen aan partner</h3>
+    <div class="pv">${esc([h.merk,h.model].filter(Boolean).join(' '))} gaat naar de partner. Hij verkoopt het in zijn eigen dashboard; jij krijgt jouw deel van de winst.</div>
+    <label>Partner</label>
+    <select id="wt_partner">${partners.map(p=>`<option value="${esc(p.id)}">${esc(p.naam||'Partner')}</option>`).join('')}</select>
+    <div class="grid" style="margin-top:12px">
+      <div><label>Deel voor de partner</label><input id="wt_deel" type="number" min="0" value="50"></div>
+      <div><label>Soort</label><select id="wt_type"><option value="pct">Procent (%)</option><option value="eur">Vast bedrag (euro)</option></select></div>
+    </div>
+    <div class="acts" style="margin-top:16px">
+      <button class="btn actie" onclick="hwWijsToeDoen('${h.id}', this)">Toewijzen</button>
+      <button class="btn ghost" onclick="hwSluit()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function hwWijsToeDoen(id, knop){
+  const partnerId=(document.getElementById('wt_partner')||{}).value;
+  const deel=Number((document.getElementById('wt_deel')||{}).value)||0;
+  const type=(document.getElementById('wt_type')||{}).value;
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'toewijzen', hardware_id:id, partner_id:partnerId, deel_type:type, deel_waarde:deel})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Toewijzen mislukt');
+    hwSluit(); await hwLaad(true); toast('Toegewezen aan de partner', true);
+  }catch(e){ knop.disabled=false; knop.textContent=oud; toast(e.message,'fout'); }
+}
+async function partnerUitnodigen(){
+  const naam=window.prompt('Naam van je partner:'); if(!naam) return;
+  const email=window.prompt('E-mailadres van je partner (dit wordt zijn login):'); if(!email) return;
+  const ww=window.prompt('Kies een begin-wachtwoord (minstens 8 tekens). Geef dit door aan je partner; hij kan het later zelf wijzigen:'); if(!ww) return;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'uitnodigen', naam, email:email.trim(), wachtwoord:ww})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Uitnodigen mislukt');
+    toast('Partner aangemaakt. Laat hem inloggen op de /partner-pagina met '+email, true);
+  }catch(e){ toast(e.message,'fout'); }
+}
 
 /* Verplaatsen kan ook zonder scanner, want soms staat het toestel al voor je
    neus en heb je alleen de muis. Hetzelfde spoor wordt vastgelegd. */
