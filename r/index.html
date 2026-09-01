@@ -151,8 +151,12 @@
 <script>
 const FUNCTIE='https://ugilfxqolemxwssbpdwu.supabase.co/functions/v1/reparatie-status';
 
-/* Adres kan zijn: /r/<winkel>/<code>  of later  <winkel>.storvo.app/<code> */
+/* Adres kan zijn: /r?w=<winkel>&c=<code>  (de gewone vorm), of het pad
+   /r/<winkel>/<code>, of later <winkel>.storvo.app/<code>. De query-vorm werkt
+   altijd, want /r wordt direct geserveerd; het pad hangt van een Vercel-rewrite af. */
 function leesAdres(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('w')) return { winkel:q.get('w'), code:(q.get('c')||'').trim() };
   const delen=location.pathname.split('/').filter(Boolean);
   const host=location.hostname.split('.');
   const opSubdomein = host.length>2 && !['www','storvo','login','admin','inloggen'].includes(host[0]);
@@ -201,7 +205,7 @@ function zoek(){
   const c=(document.getElementById('codeIn').value||'').trim().replace(/[^0-9a-zA-Z]/g,'');
   if(!c) return;
   const {winkel}=leesAdres();
-  location.href = location.pathname.includes('/r/') ? '/r/'+winkel+'/'+c : '/'+c;
+  location.href = '/r?w='+encodeURIComponent(winkel)+'&c='+encodeURIComponent(c);
 }
 
 function stijlToepassen(m){
