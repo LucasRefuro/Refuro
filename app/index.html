@@ -1504,6 +1504,7 @@
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
+    <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
   </nav>
   <div class="onderin">
     <nav>
@@ -2130,6 +2131,30 @@
 </section>
 
 <!-- INSTELLINGEN -->
+<section id="tab-partners"hidden>
+  <div class="pagehead"><h1>Partners</h1></div>
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-link"/></svg>Hoe het werkt</h2>
+    <p class="muted" style="max-width:80ch">Een partner is een bevriende doorverkoper met een eigen dashboard. Jij nodigt hem hieronder uit met een eigen login. Daarna wijs je laptops aan hem toe vanuit een toestel in de voorraad, met de knop "Toewijzen aan partner". Hij ziet alleen zijn eigen toestellen, niets van jouw winkel, en per laptop verdelen jullie de winst. Zijn dashboard staat op <b>storvo.nl/partner</b>.</p>
+    <a class="btn ghost" href="/partner/" target="_blank" rel="noopener" style="margin-top:14px"><svg class="i s"><use href="#i-globe"/></svg>Open het partner-dashboard</a>
+  </div>
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-plus"/></svg>Nieuwe partner uitnodigen</h2>
+    <p class="muted" style="margin-bottom:14px; max-width:80ch">Je kiest een begin-wachtwoord dat je aan je partner doorgeeft. Hij logt daarmee in op de partner-pagina en kan het later zelf wijzigen.</p>
+    <div class="grid">
+      <div><label>Naam</label><input id="pt_naam" placeholder="Naam van je partner"></div>
+      <div><label>E-mail (wordt zijn login)</label><input id="pt_email" type="email" placeholder="partner@email.nl"></div>
+      <div><label>Begin-wachtwoord</label><input id="pt_ww" type="text" placeholder="minstens 8 tekens"></div>
+    </div>
+    <button class="btn actie" style="margin-top:16px" onclick="partnerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Partner aanmaken</button>
+    <div id="pt_uit" class="muted klein" style="margin-top:10px"></div>
+  </div>
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-users"/></svg>Je partners</h2>
+    <div id="partnerLijst">Laden…</div>
+  </div>
+</section>
+
 <section id="tab-instellingen"hidden>
   <div class="pagehead">
     <h1>Instellingen</h1>
@@ -2578,6 +2603,7 @@ function showTab(t){
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
+  if(t==='partners') renderPartners();
   if(t==='producten') renderProducten();
   if(t==='voorraad') renderVoorraad();
   if(t==='hardware') hwLaad();
@@ -6748,6 +6774,42 @@ async function partnerUitnodigen(){
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Uitnodigen mislukt');
     toast('Partner aangemaakt. Laat hem inloggen op de /partner-pagina met '+email, true);
   }catch(e){ toast(e.message,'fout'); }
+}
+
+/* De Partners-pagina: een partner aanmaken via een formulier, en de lijst met
+   partners plus hoeveel laptops er aan elk zijn toegewezen. */
+async function renderPartners(){
+  const box=document.getElementById('partnerLijst'); if(!box) return;
+  box.innerHTML='<p class="muted">Laden…</p>';
+  const {data:partners,error}=await sb.from('partners').select('id,naam,bijgewerkt_op').order('naam');
+  if(error){ box.innerHTML='<p class="muted">Kon de partners niet laden.</p>'; return; }
+  if(!partners||!partners.length){ box.innerHTML='<p class="muted">Nog geen partners. Nodig er hierboven een uit.</p>'; return; }
+  const {data:hw}=await sb.from('hardware').select('partner_id').not('partner_id','is',null);
+  const telling={}; (hw||[]).forEach(r=>{ if(r.partner_id) telling[r.partner_id]=(telling[r.partner_id]||0)+1; });
+  box.innerHTML=`<table><thead><tr><th>Partner</th><th class="num">Toegewezen laptops</th></tr></thead><tbody>${
+    partners.map(p=>`<tr><td><b>${esc(p.naam||'Partner')}</b></td><td class="num">${telling[p.id]||0}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+async function partnerAanmaken(knop){
+  const naam=(document.getElementById('pt_naam').value||'').trim();
+  const email=(document.getElementById('pt_email').value||'').trim().toLowerCase();
+  const ww=document.getElementById('pt_ww').value||'';
+  const uit=document.getElementById('pt_uit');
+  if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'uitnodigen', naam, email, wachtwoord:ww})
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Uitnodigen mislukt');
+    uit.textContent='Partner aangemaakt. Laat hem inloggen op storvo.nl/partner met '+email+'.';
+    document.getElementById('pt_naam').value=''; document.getElementById('pt_email').value=''; document.getElementById('pt_ww').value='';
+    renderPartners(); toast('Partner aangemaakt', true);
+  }catch(e){ uit.textContent=e.message; toast(e.message,'fout'); }
+  finally{ knop.disabled=false; knop.textContent=oud; }
 }
 
 /* Verplaatsen kan ook zonder scanner, want soms staat het toestel al voor je
