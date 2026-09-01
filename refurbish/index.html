@@ -157,6 +157,8 @@ tr.klikbaar{cursor:pointer;}
 .num{text-align:right; font-variant-numeric:tabular-nums;}
 .hwact{white-space:nowrap;}
 .vract{display:inline-flex; gap:8px; align-items:center; justify-content:flex-end;}
+.btn.portaalknop{padding:7px 13px; font-size:12.5px; background:var(--soft-2); color:var(--muted); border:none; box-shadow:none;}
+.btn.portaalknop:hover{background:var(--lblauw); color:var(--oranje); filter:none;}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
 .tabelrol{overflow-x:auto; max-width:100%;}
 
@@ -3703,8 +3705,8 @@ function tekenVoorraad(){
             : '<span class="muted klein">nog niet</span>'}</td>
           <td class="num hwact"><div class="vract">${h
             ? (h.kanalen&&h.kanalen.partner
-              ? `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)">Uit portaal</button>`
-              : `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)">Naar portaal</button>`)
+              ? `<button class="btn portaalknop" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)" title="Weghalen van het partner-portaal">Uit portaal</button>`
+              : `<button class="btn portaalknop" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)" title="Op het partner-portaal zetten">Naar portaal</button>`)
             : ''}${staatOnline(a)
             ? `<button class="btn ghost small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">Aanpassen</button>`
             : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}</div></td>

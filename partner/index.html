@@ -168,6 +168,10 @@ tr.hl td { background: #fffaf0; }
 .pubcard:hover { border-color: var(--oranje); background: var(--lblauw); }
 .pubthumb { width: 56px; height: 56px; border-radius: 12px; background: var(--soft-2); display: flex; align-items: center; justify-content: center; font-size: 26px; overflow: hidden; flex-shrink: 0; }
 .pubthumb img { width: 100%; height: 100%; object-fit: cover; }
+.specgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.speccel { background: var(--soft-2); border-radius: 12px; padding: 10px 14px; }
+.speccel .specv { font-weight: 700; font-size: 14px; margin-top: 2px; color: var(--text); }
+.fotoknoppen { display: flex; gap: 8px; flex-wrap: wrap; }
 /* label preview */
 .labprev { width: 250px; height: 129px; border: 1.5px dashed var(--border); border-radius: 8px; padding: 9px 11px; display: flex; gap: 9px; align-items: center; background: #fff; margin: 0 auto; overflow: hidden; }
 .labprev .lt { flex: 1; min-width: 0; }
@@ -949,18 +953,22 @@ function rOnline(selId){
   if (sel) return rOnlineEdit(sel);
   const todo = onlineTodo();
   let html = '<h1>Nog online zetten</h1><div class="sub">Producten op voorraad die nog niet op Facebook of Marktplaats staan</div>';
-  if (!todo.length) return html + '<div class="card"><div class="empty"> Alles staat online!</div></div>';
+  if (!todo.length) return html + '<div class="card"><div class="empty">Alles staat online.</div></div>';
   todo.forEach(p=>{
     const vu = voorraadUnits(p);
     const def = vu.filter(u=>u.defect && u.defect.trim()).length;
+    const nf = (p.fotos||[]).length;
     html += '<div class="pubcard" onclick="nav(\'online\',\''+p.id+'\')">' +
-      '<div class="pubthumb">'+(p.fotos[0]?'<img src="'+p.fotos[0]+'">':(p.type==='laptop'?'':''))+'</div>' +
+      '<div class="pubthumb">'+(p.fotos[0]?'<img src="'+p.fotos[0]+'">':'')+'</div>' +
       '<div style="flex:1;min-width:0"><b>'+esc(p.model)+'</b>' +
         '<div class="mini">Productnr '+esc(p.adnummer)+(specsLine(p)?' · '+esc(specsLine(p)):'')+'</div>' +
-        (def?'<div style="margin-top:3px"><span class="badge b-bad"> '+def+' met defect</span></div>':'') +
+        '<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">' +
+          (nf ? '<span class="badge b-ok">'+nf+' foto\'s</span>' : '<span class="badge b-warn">nog foto\'s maken</span>') +
+          (def ? '<span class="badge b-bad">'+def+' met defect</span>' : '') +
+        '</div>' +
       '</div>' +
       '<div class="right"><b>'+eur(p.vraagprijs)+'</b><div class="mini">'+vu.length+'x op voorraad</div></div>' +
-      '<span class="btn sm">Online zetten →</span></div>';
+      '<span class="btn sm">Online zetten &rarr;</span></div>';
   });
   return html;
 }
@@ -968,32 +976,46 @@ function rOnlineEdit(p){
   const vu = voorraadUnits(p);
   const defects = vu.map(u=>u.defect).filter(Boolean);
   const extras = vu.map(u=>u.extra).filter(Boolean);
-  let html = '<button class="btn gray sm" onclick="nav(\'online\')">← Nog online zetten</button>' +
-    '<h1 style="margin-top:12px">'+esc(p.model)+' online zetten</h1>' +
-    '<div class="sub">'+vu.length+'x op voorraad · vraagprijs '+eur(p.vraagprijs)+(specsLine(p)?' · '+esc(specsLine(p)):'')+'</div>';
-  if (defects.length || extras.length){
-    html += '<div style="margin:-8px 0 16px">' +
-      defects.map(x=>'<span class="badge b-bad" style="margin:0 6px 6px 0"> '+esc(x)+'</span>').join('') +
-      extras.map(x=>'<span class="badge b-info" style="margin:0 6px 6px 0">+ '+esc(x)+'</span>').join('') +
-      '<span class="mini"> — wordt meegenomen in de AI-tekst</span></div>';
+  const sp = p.specs || {};
+  const specItems = [['Processor', sp.cpu], ['Werkgeheugen', sp.ram], ['Opslag', sp.opslag], ['Scherm', sp.scherm]].filter(x=>x[1]);
+  const nFotos = (p.fotos||[]).length;
+
+  let html = '<button class="btn gray sm" onclick="nav(\'online\')">&larr; Nog online zetten</button>' +
+    '<h1 style="margin-top:12px">'+esc(p.model)+'</h1>' +
+    '<div class="sub">Productnr '+esc(p.adnummer)+' · '+vu.length+'x op voorraad · vraagprijs '+eur(p.vraagprijs)+'</div>';
+
+  if (!nFotos) html += '<div class="notice orange">Nog geen foto\'s. Maak ze hieronder; een advertentie met foto\'s verkoopt veel sneller.</div>';
+
+  if (specItems.length || defects.length || extras.length){
+    html += '<div class="card"><b style="font-size:14px">Specificaties</b>' +
+      (specItems.length ? '<div class="specgrid">' + specItems.map(([l,v])=>'<div class="speccel"><div class="mini">'+esc(l)+'</div><div class="specv">'+esc(v)+'</div></div>').join('') + '</div>' : '') +
+      ((defects.length||extras.length) ? '<div style="margin-top:14px">' +
+        defects.map(x=>'<span class="badge b-bad" style="margin:0 6px 6px 0">'+esc(x)+'</span>').join('') +
+        extras.map(x=>'<span class="badge b-info" style="margin:0 6px 6px 0">+ '+esc(x)+'</span>').join('') +
+        '<div class="mini" style="margin-top:4px">Wordt automatisch meegenomen in de AI-tekst.</div></div>' : '') +
+    '</div>';
   }
-  html += '<div class="card"><b style="font-size:14px">Advertentie — kopieer &amp; plak op Marktplaats/Facebook</b>' +
-    '<div class="grid2" style="margin-top:12px"><div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="o_titel" value="'+esc(p.titel || autoTitel(p))+'"><button class="btn gray sm" onclick="copyTxt(\'o_titel\')"></button></div></div>' +
-    '<div class="field"><label>Prijs</label><div class="copyrow"><input type="text" id="o_ptxt" value="'+esc('€ '+(p.vraagprijs||0))+'"><button class="btn gray sm" onclick="copyTxt(\'o_ptxt\')"></button></div></div></div>' +
-    '<div class="field"><label>Beschrijving</label><div class="copyrow"><textarea id="o_tekst" rows="8" placeholder="Schrijf zelf, of laat AI een tekst maken — defecten en extra\'s worden er automatisch in verwerkt...">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'o_tekst\')"></button></div>' +
-    '<div style="margin-top:8px"><button class="btn purple sm" id="aibtn" onclick="genAdOnline(\''+p.id+'\')"> Maak tekst met AI</button> <span class="mini">volgt jouw sjabloon uit Instellingen</span></div></div>' +
+
+  html += '<div class="card"><b style="font-size:14px">Advertentie</b><div class="mini" style="margin:4px 0 0">Kopieer en plak op Marktplaats of Facebook.</div>' +
+    '<div class="grid2" style="margin-top:12px"><div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="o_titel" value="'+esc(p.titel || autoTitel(p))+'"><button class="btn gray sm" onclick="copyTxt(\'o_titel\')">Kopieren</button></div></div>' +
+    '<div class="field"><label>Prijs</label><div class="copyrow"><input type="text" id="o_ptxt" value="'+esc('€ '+(p.vraagprijs||0))+'"><button class="btn gray sm" onclick="copyTxt(\'o_ptxt\')">Kopieren</button></div></div></div>' +
+    '<div class="field"><label>Beschrijving</label><div class="copyrow"><textarea id="o_tekst" rows="8" placeholder="Schrijf zelf, of laat AI een tekst maken. Defecten en extra\'s worden er automatisch in verwerkt.">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'o_tekst\')">Kopieren</button></div>' +
+    '<div style="margin-top:8px"><button class="btn purple sm" id="aibtn" onclick="genAdOnline(\''+p.id+'\')">Maak tekst met AI</button> <span class="mini">volgt jouw sjabloon uit Instellingen</span></div></div>' +
   '</div>' +
-  '<div class="card"><b style="font-size:14px">Foto\'s</b><div style="margin-top:10px">' +
-    '<button class="btn sm" onclick="saveOnline(\''+p.id+'\',true);pFotoCam(\''+p.id+'\')"> Foto maken</button> ' +
-    '<button class="btn gray sm" onclick="saveOnline(\''+p.id+'\',true);pFoto(\''+p.id+'\')"> Foto\'s kiezen</button>' +
-    '<div class="fotos">'+(p.fotos.map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="saveOnline(\''+p.id+'\',true);delPFoto(\''+p.id+'\','+i+')"></button></div>').join('') || '<div class="mini" style="padding:8px 0">Nog geen foto\'s</div>')+'</div></div>' +
+  '<div class="card"><b style="font-size:14px">Foto\'s'+(nFotos?' ('+nFotos+')':'')+'</b>' +
+    '<div class="mini" style="margin:4px 0 12px">Op je telefoon opent "Foto maken" meteen de camera. Maak er gerust meerdere achter elkaar.</div>' +
+    '<div class="fotoknoppen">' +
+    '<button class="btn" onclick="saveOnline(\''+p.id+'\',true);pFotoCam(\''+p.id+'\')"><svg class="i s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto maken</button> ' +
+    '<button class="btn gray" onclick="saveOnline(\''+p.id+'\',true);pFoto(\''+p.id+'\')">Foto\'s kiezen</button>' +
+    '</div>' +
+    '<div class="fotos" style="margin-top:14px">'+((p.fotos||[]).map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="saveOnline(\''+p.id+'\',true);delPFoto(\''+p.id+'\','+i+')">&times;</button></div>').join('') || '<div class="mini" style="padding:8px 0">Nog geen foto\'s</div>')+'</div>' +
   '</div>' +
-  '<div class="card"><b style="font-size:14px">Geplaatst?</b>' +
+  '<div class="card"><b style="font-size:14px">Geplaatst?</b><div class="mini" style="margin:4px 0 0">Vink aan zodra de advertentie ergens online staat.</div>' +
     '<div class="field" style="margin-top:12px;max-width:260px"><label>Advertentiekosten (€)</label><input type="number" id="o_adk" step="0.01" min="0" value="'+p.adKosten+'"></div>' +
     '<div class="checkrow"><input type="checkbox" id="o_fb"'+(p.fb?' checked':'')+'> <span>Staat op <b>Facebook</b></span></div>' +
     '<div class="checkrow"><input type="checkbox" id="o_mp"'+(p.mp?' checked':'')+'> <span>Staat op <b>Marktplaats</b></span></div>' +
   '</div>' +
-  '<div class="savebar"><button class="btn green" onclick="saveOnline(\''+p.id+'\')"> Klaar</button></div>';
+  '<div class="savebar"><button class="btn green" onclick="saveOnline(\''+p.id+'\')">Klaar</button></div>';
   return html;
 }
 function saveOnline(pid, silent){
