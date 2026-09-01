@@ -8993,42 +8993,58 @@ function toestelTeken(){
     `<div class="tstrij">${knoppen(u.e.v)}</div>`;
 }
 
-/* Foneday heeft geen zoekpagina die op onderdeelnamen zoekt, maar een
-   catalogus per model: foneday.shop/nl/catalog/parts/Samsung/A-Series/Galaxy-A23-5G.
-   Kennen we het toestel, dan sturen we daar rechtstreeks heen. Kennen we
-   alleen het merk, dan naar de merkpagina. Verder naar de hele catalogus.
-   Twee eigenaardigheden: Apple heet daar "For-Apple", en bij Samsung krijgen
-   4G-toestellen geen achtervoegsel terwijl Xiaomi dat wel doet.             */
-const FONEDAY_MERK={
-  'Apple':   {pad:'For-Apple', serie:()=>'iPhone'},
-  'Samsung': {pad:'Samsung',   serie:n=> /^Galaxy A/.test(n) ? 'A-Series'
-                                       : /^Galaxy S/.test(n) ? 'S-Series'
-                                       : /^Galaxy Note/.test(n) ? 'Note-Series' : null},
-  'Xiaomi':  {pad:'Xiaomi',    serie:n=> /^Redmi Note/.test(n) ? 'Redmi-Note-Series'
-                                       : /^Redmi/.test(n) ? 'Redmi-Series'
-                                       : /^Poco/.test(n) ? 'Poco-Series' : null},
-  'Google':  {pad:'Google',    serie:()=>null},
-  'OnePlus': {pad:'Oneplus',   serie:()=>null},
-  'Oppo':    {pad:'Oppo',      serie:()=>null},
-  'Motorola':{pad:'Motorola',  serie:()=>null},
-  'Huawei':  {pad:'Huawei',    serie:()=>null},
-  'Honor':   {pad:'Honor',     serie:()=>null}
-};
-function fonedayModelPad(merk, naam){
-  let n=naam.replace(/\s*\([^)]*\)/g,'').trim();     /* "(2e generatie)" eraf */
-  if(merk==='Samsung') n=n.replace(/\s+4G$/,'');     /* Samsung laat 4G weg  */
-  return n.replace(/\s+/g,'-');
+/* Foneday heeft geen deelbare zoek-URL, maar wel een onderdelenpagina per
+   toestel: foneday.shop/nl/catalog/parts/<merk>/<model>. Twee dingen die dit
+   betrouwbaar maken (in de browser nagemeten): de serie-laag (S-Series, iPhone,
+   A-Series) is OPTIONEEL, Foneday vindt het model ook rechtstreeks onder het
+   merk, en de match is hoofdletter- en spelling-tolerant. Daarom bouwen we de
+   link direct uit wat de winkelier typt, losgekoppeld van de eigen modellenlijst
+   van de app, zodat ook een toestel dat de app niet kent toch op de juiste
+   pagina opent. Vroeger hing dit aan toestelCheck en belandde je bij veel merken
+   op de merk- of hoofdcatalogus: "hij opent het product niet".               */
+function fonedayMerkPad(s){
+  s=(s||'').toLowerCase();
+  if(/iphone|ipad|apple/.test(s)) return 'For-Apple';  /* Apple heet daar For-Apple */
+  if(/samsung|galaxy/.test(s)) return 'Samsung';
+  if(/pixel|google/.test(s)) return 'Google';
+  if(/oneplus|\bnord\b/.test(s)) return 'OnePlus';
+  if(/xiaomi|redmi|poco/.test(s)) return 'Xiaomi';
+  if(/honor/.test(s)) return 'Honor';                  /* Honor is bij Foneday een eigen merk */
+  if(/huawei|\bmate\b|\bp\d/.test(s)) return 'Huawei';
+  if(/oppo/.test(s)) return 'Oppo';
+  if(/motorola|\bmoto\b/.test(s)) return 'Motorola';
+  if(/realme/.test(s)) return 'Realme';
+  if(/nokia/.test(s)) return 'Nokia';
+  if(/sony|xperia/.test(s)) return 'Sony';
+  if(/nothing/.test(s)) return 'Nothing';
+  return null;
+}
+function fonedayModelPad(merkpad, naam){
+  /* "(2022)" eraf, "+" wordt "Plus" zoals Foneday het noemt. */
+  let n=naam.replace(/\s*\([^)]*\)/g,'').replace(/\+/g,' Plus ').replace(/\s+/g,' ').trim();
+  /* Het merkwoord staat al in het pad; het serie-woord (iPhone, Galaxy, Pixel,
+     Redmi) blijft staan. Alleen de merknaam vooraan halen we weg. Samsung heet
+     bij Foneday "Galaxy ...", dus dat vullen we aan als het ontbreekt.        */
+  if(merkpad==='For-Apple') n=n.replace(/^apple\s+/i,'');
+  else if(merkpad==='Samsung'){ n=n.replace(/^samsung\s+/i,''); if(!/^galaxy/i.test(n)) n='Galaxy '+n; }
+  else if(merkpad==='Google') n=n.replace(/^google\s+/i,'');
+  else if(merkpad==='Xiaomi') n=n.replace(/^xiaomi\s+/i,'');
+  else if(merkpad==='Huawei') n=n.replace(/^huawei\s+/i,'');
+  return n.trim().replace(/\s+/g,'-');
 }
 function fonedayLink(toestel){
   const taal = document.documentElement.lang==='en' ? 'en' : 'nl';
   const basis='https://foneday.shop/'+taal+'/catalog/parts';
-  const u=toestelCheck(toestel);
-  if(!u || !u.naam) return basis;
-  const merk=FONEDAY_MERK[u.e.m];
-  if(!merk) return basis;
-  const serie=merk.serie(u.naam);
-  if(!serie) return basis+'/'+merk.pad;
-  return basis+'/'+merk.pad+'/'+serie+'/'+fonedayModelPad(u.e.m, u.naam);
+  const t=(toestel||'').trim();
+  if(!t) return basis;
+  /* Kent de app het toestel, dan de nette naam; anders de letterlijke invoer. */
+  const u=toestelCheck(t);
+  const naam=(u && u.naam) ? u.naam : t;
+  const merkpad=fonedayMerkPad(((u && u.e && u.e.m) ? u.e.m+' ' : '')+naam);
+  if(!merkpad) return basis;                    /* merk onbekend: hele catalogus */
+  const model=fonedayModelPad(merkpad, naam);
+  if(!model) return basis+'/'+merkpad;          /* alleen het merk: merkpagina met modelkiezer */
+  return basis+'/'+merkpad+'/'+encodeURIComponent(model);
 }
 
 function updateZoekLinks(){
