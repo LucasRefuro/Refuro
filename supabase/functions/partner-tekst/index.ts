@@ -31,8 +31,6 @@ Deno.serve(async (req) => {
   );
   const { data: { user } } = await klant.auth.getUser();
   if (!user) return fout("Niet ingelogd", 401);
-  const { data: acc } = await admin.from("accounts").select("rol").eq("id", user.id).maybeSingle();
-  if (!acc || acc.rol !== "partner") return fout("Alleen voor partners", 403);
 
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }

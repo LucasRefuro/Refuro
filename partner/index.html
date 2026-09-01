@@ -75,7 +75,12 @@ tr.click:hover td { background: #f5f8ff; }
 .tablewrap { border-radius: 14px; overflow-x: auto; background: #fff; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
 /* login */
 #loginwrap { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: linear-gradient(135deg, #123F39, #0E4C44 55%, #0B5B52); }
-.logincard { background: #fff; border-radius: 20px; padding: 36px 34px 30px; width: 400px; max-width: 92vw; box-shadow: 0 30px 80px rgba(10,20,60,.35); }
+.logincard { background: #fff; border-radius: 24px; padding: 38px 34px 30px; width: 400px; max-width: 92vw; box-shadow: 0 30px 80px rgba(10,20,60,.35); text-align: left; }
+.logincard .mk { width: 52px; height: 52px; margin: 0 0 18px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.logincard .mk svg { width: 100%; height: 100%; }
+.logincard h2 { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -.04em; margin-bottom: 4px; color: var(--txt); }
+.logincard h2 span { color: var(--actie); }
+.logincard .lmut { color: var(--mut); font-size: 14.5px; line-height: 1.55; margin-bottom: 22px; }
 #loginerr { color: #e5484d; font-size: 12px; margin-top: 8px; display: none; }
 .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .b-ok { background: #e6f6ee; color: #12805c; }
@@ -186,13 +191,14 @@ h1 { font-family: 'Sora', sans-serif; }
 <body>
 <div id="loginwrap">
   <div class="logincard">
-    <div class="brand" style="justify-content:center;padding-bottom:4px">Storvo<span style="color:var(--actie)"> Partner</span></div>
-    <div style="text-align:center;color:var(--mut);font-size:13px;margin-bottom:18px">Log in op je partner-dashboard</div>
+    <div class="mk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h2>Storvo <span>Partner</span></h2>
+    <p class="lmut">Log in op je partner-dashboard</p>
     <div class="field"><label>E-mail</label><input type="email" id="loginname" placeholder="jouw@email.nl" autocomplete="email" onkeydown="if(event.key==='Enter')f('loginpin').focus()"></div>
     <div class="field"><label>Wachtwoord</label><input type="password" id="loginpin" placeholder="Wachtwoord" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="loginerr">Vul je e-mail en wachtwoord in</div>
-    <button class="btn" style="width:100%;justify-content:center;margin-top:14px" onclick="doLogin()">Inloggen</button>
-    <div class="mini" style="text-align:center;margin-top:12px">Je krijgt een uitnodiging van de winkel om je account aan te maken</div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Inloggen</button>
+    <div class="mini" style="margin-top:14px">Je krijgt een uitnodiging van de winkel om je account aan te maken</div>
   </div>
 </div>
 <div id="app">
@@ -231,12 +237,10 @@ const DAG = 86400000;
 /* ---- Supabase-client + sync (was Hostinger MySQL) ---- */
 const SUPABASE_URL = 'https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
-/* Eigen sessie-opslag: de partner-app en de winkelapp draaien op hetzelfde domein
-   en hetzelfde Supabase-project. Zonder een eigen storageKey delen ze dezelfde
-   inlog-sessie, en dan logt inloggen (of uitloggen) in de ene je uit in de andere. */
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { storageKey: 'storvo-partner-auth', persistSession: true, autoRefreshToken: true }
-});
+/* Gedeelde login met de winkelapp (zelfde Supabase-project, standaard opslag), net
+   zoals de refurbish-app. Ben je in de winkel ingelogd, dan kun je hier meteen in
+   zonder opnieuw in te loggen. */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let PARTNER_ID = null, ACCOUNT = null;
 let pullPromise = null, pushTimer = null, lastSyncedAt = null, pendingLocalChange = false;
 let S = load();
@@ -416,14 +420,21 @@ async function doLogin(){
    de partner-data laden en de app tonen. Een niet-partner wordt meteen uitgelogd. */
 async function naLogin(session){
   if (!session) return;
-  const { data: acc } = await sb.from('accounts').select('id,naam,rol').eq('id', session.user.id).maybeSingle();
-  if (!acc || acc.rol !== 'partner'){
-    f('loginerr').textContent = 'Dit account is geen partner-account.';
+  const { data: acc } = await sb.from('accounts').select('id,naam,rol,team_id').eq('id', session.user.id).maybeSingle();
+  if (!acc){
+    f('loginerr').textContent = 'Je account is niet gevonden.';
     f('loginerr').style.display='block';
     try { await sb.auth.signOut(); } catch(e){}
     return;
   }
   ACCOUNT = acc; PARTNER_ID = acc.id; USER = acc.naam || 'Partner';
+  /* Zorg dat er een werkruimte is. Een echte partner heeft die al; de eigenaar of
+     een teamlid die zelf dit dashboard gebruikt, krijgt hem hier aangemaakt. De RLS
+     staat alleen een eigen rij toe (id = auth.uid()). */
+  try {
+    const { data: bestaat } = await sb.from('partners').select('id').eq('id', acc.id).maybeSingle();
+    if (!bestaat) await sb.from('partners').insert({ id: acc.id, team_id: acc.team_id || null, naam: acc.naam || 'Partner', data: {} });
+  } catch(e){}
   f('loginerr').style.display='none'; f('loginpin').value='';
   f('loginwrap').style.display='none'; f('app').style.display='flex';
   await pullRemote(false);
