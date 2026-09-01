@@ -9411,12 +9411,12 @@ function klantpagina(){
    dan hoeft alleen deze functie te veranderen. */
 function kpBasisAdres(){
   const slug=(account && account.slug) || (state.klantpagina && state.klantpagina.slug) || '';
-  return slug ? 'https://storvo.app/r?w='+encodeURIComponent(slug) : '';
+  return slug ? 'https://storvo.app/r/'+encodeURIComponent(slug) : '';
 }
 function kpLinkVoor(nr){
   const basis=kpBasisAdres();
   if(!basis) return '';
-  return basis+'&c='+String(nr||'').replace(/[^0-9a-zA-Z]/g,'');
+  return basis+'/'+String(nr||'').replace(/[^0-9a-zA-Z]/g,'');
 }
 
 function renderKlantpagina(){

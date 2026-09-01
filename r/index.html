@@ -205,7 +205,7 @@ function zoek(){
   const c=(document.getElementById('codeIn').value||'').trim().replace(/[^0-9a-zA-Z]/g,'');
   if(!c) return;
   const {winkel}=leesAdres();
-  location.href = '/r?w='+encodeURIComponent(winkel)+'&c='+encodeURIComponent(c);
+  location.href = '/r/'+encodeURIComponent(winkel)+'/'+encodeURIComponent(c);
 }
 
 function stijlToepassen(m){
