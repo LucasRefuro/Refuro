@@ -685,6 +685,16 @@
   .warnbox{background:var(--amber-soft); border:none; border-radius:var(--radius-s); padding:16px 18px; line-height:1.6; color:var(--amber-tekst);}
   .infobox{background:var(--lblauw); border:none; border-radius:var(--radius-s); padding:16px 18px; line-height:1.65; color:var(--muted);}
 
+  /* prijssuggestie onder toestel/reparatie: marktprijs of schatting, met een klik over te nemen */
+  .prijssug{margin:-4px 0 12px;}
+  .prijssug-in{background:var(--green-soft); color:var(--green-tekst); border-radius:var(--radius-s); padding:12px 15px; font-size:13.5px; line-height:1.6; max-width:82ch;}
+  .prijssug-kop{display:inline-block; background:var(--oranje); color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:var(--pil); margin-right:6px;}
+  .prijssug-chips{display:flex; gap:7px; flex-wrap:wrap; margin-top:8px;}
+  .prijssug-chip{background:#fff; border:1.5px solid var(--border); color:var(--text); border-radius:var(--pil); padding:6px 13px; font-family:inherit; font-size:13px; cursor:pointer; transition:border-color .12s, transform .06s;}
+  .prijssug-chip:hover{border-color:var(--oranje);}
+  .prijssug-chip:active{transform:scale(.96);}
+  .prijssug-chip b{color:var(--oranje); margin-left:2px;}
+
   /* keuzevak onder het toestelveld: welke uitvoering is het? */
   .tstbox{border-radius:var(--radius-s); padding:14px 16px; margin:-4px 0 12px; max-width:82ch;
     animation:tstop .22s cubic-bezier(.22,1,.36,1) both;}
@@ -1714,10 +1724,11 @@
     <div class="card">
       <h2><svg class="i"><use href="#i-phone"/></svg>Toestel en reparatie</h2>
       <div class="grid" style="margin-bottom:12px">
-        <div><label>Toestel</label><input id="r_toestel" list="modellenList" placeholder="bijv. iPhone 14" oninput="updateZoekLinks(); toestelTeken()" onchange="toestelAanvullen()"><datalist id="modellenList"></datalist></div>
-        <div><label>Reparatie</label><input id="r_type" placeholder="bijv. scherm, batterij, laadpoort" oninput="checkSeal(); updateZoekLinks()"></div>
+        <div><label>Toestel</label><input id="r_toestel" list="modellenList" placeholder="bijv. iPhone 14" oninput="updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce()" onchange="toestelAanvullen()"><datalist id="modellenList"></datalist></div>
+        <div><label>Reparatie</label><input id="r_type" placeholder="bijv. scherm, batterij, laadpoort" oninput="checkSeal(); updateZoekLinks(); prijsSuggestieDebounce()"></div>
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
       </div>
+      <div id="prijsSug" class="prijssug" hidden></div>
       <div id="toestelKeuze" hidden></div>
       <div class="row" style="margin-bottom:8px">
         <a class="btn ghost small" id="zoekGsm" href="https://gsm-world.nl/reparaties/" target="_blank" rel="noopener"><svg class="i s"><use href="#i-search"/></svg>Prijs op gsm-world.nl</a>
@@ -9011,6 +9022,159 @@ function updateZoekLinks(){
 
   document.getElementById('zoekMobileparts').href='https://www.mobileparts.shop/catalogsearch/result/?q='+q;
 }
+
+/* ═══ Prijssuggestie uit de marktprijzen-database ═══
+   De winkelier typt toestel + reparatie; wij zoeken in reparatie_marktprijzen
+   (gescrapet van gsm-world, consumentenprijzen incl. btw) de bijpassende prijs.
+   Kennen we het model niet, dan schatten we uit vergelijkbare toestellen van
+   hetzelfde merk. De winkelier houdt het laatste woord: dit vult niets vanzelf
+   in, het toont een prijs die je met een klik overneemt. */
+let prijsSugTimer=null, prijsSugTeller=0;
+function prijsSuggestieDebounce(){ clearTimeout(prijsSugTimer); prijsSugTimer=setTimeout(prijsSuggestie, 350); }
+function normMarkt(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+
+/* Vrij ingetypte reparatie -> de categorie zoals die in de database staat. */
+function typeNaarCategorie(type){
+  const s=(type||'').toLowerCase();
+  if(!s) return null;
+  if(/scherm|display|glas|lcd|touch/.test(s)) return 'Scherm';
+  if(/accu|batterij|laad|dock|connector|opladen|charging|poort/.test(s)) return 'Accu & opladen';
+  if(/camera|lens/.test(s)) return 'Camera';
+  if(/back|achterkant|behuizing|cover|frame|housing/.test(s)) return 'Behuizing';
+  if(/knop|button|power|volume|home/.test(s)) return 'Knoppen';
+  if(/luidspreker|speaker|microfoon|micro|oorspeaker|geluid|trilmotor|buzzer/.test(s)) return 'Geluid';
+  if(/software|moederbord|waterschade|water|reflow|diagnos/.test(s)) return 'Software & moederbord';
+  if(/simlezer|sim|netwerk|antenne|gps|wifi|bluetooth|verbinding/.test(s)) return 'Verbinding';
+  return null; /* onbekend type: toon alle categorieen van het model */
+}
+
+/* Merk uit de vrije toesteltekst raden, voor een schatting als het model onbekend is. */
+function merkVanTekst(s){
+  s=(s||'').toLowerCase();
+  if(/iphone|ipad|apple/.test(s)) return 'Apple';
+  if(/samsung|galaxy/.test(s)) return 'Samsung';
+  if(/pixel|google/.test(s)) return 'Google';
+  if(/oneplus|nord/.test(s)) return 'OnePlus';
+  if(/xiaomi|redmi|poco/.test(s)) return 'Xiaomi';
+  if(/huawei|honor|mate/.test(s)) return 'Huawei';
+  if(/oppo/.test(s)) return 'Oppo';
+  if(/nokia/.test(s)) return 'Nokia';
+  if(/sony|xperia/.test(s)) return 'Sony';
+  if(/motorola|moto/.test(s)) return 'Motorola';
+  if(/realme/.test(s)) return 'Realme';
+  return null;
+}
+
+/* De modellenlijst uit de database, een keer opgehaald en bewaard. We matchen
+   client-side op tokens omdat de bron anders heet dan wat de winkelier typt:
+   "Samsung A54" moet "Galaxy A54 5G" vinden, "S23 Ultra" -> "Galaxy S23 Ultra". */
+let MARKT_INDEX=null, marktIndexBezig=null;
+async function laadMarktIndex(){
+  if(MARKT_INDEX) return MARKT_INDEX;
+  if(marktIndexBezig) return marktIndexBezig;
+  marktIndexBezig=(async()=>{
+    const {data}=await sb.rpc('marktprijs_modellen');
+    MARKT_INDEX=(data||[]).map(r=>({model:r.model, mn:r.model_norm, merk:r.merk, tok:r.model_norm.split(' ').filter(Boolean)}));
+    return MARKT_INDEX;
+  })();
+  return marktIndexBezig;
+}
+const MERK_WOORD=new Set(['samsung','apple','google','xiaomi','huawei','honor','oppo','nokia','sony','motorola','realme','oneplus']);
+const SERIE_WOORD=new Set(['galaxy','iphone','ipad','redmi','poco','pixel','moto','xperia','nord','mate']);
+const VARIANT_WOORD=new Set(['plus','pro','max','mini','ultra','fe','lite','neo','prime']);
+const NETWERK_WOORD=new Set(['5g','4g','lte','dual','sim','nl','eu']);
+function marktTokens(s){ return normMarkt(s).split(' ').filter(Boolean); }
+
+/* Kies het model uit de index dat het dichtst bij de ingetypte tekst ligt.
+   Regel: alle "kern"-tokens van de invoer (zonder merk- en netwerkwoorden)
+   moeten in het model voorkomen. Van de overgebleven kandidaten wint die met
+   de minste vreemde extra's; een andere uitvoering (Plus/Pro/Max) telt zwaarder
+   dan alleen een netwerk-achtervoegsel (5G). Zonder herkenbaar modeltoken (bv.
+   los "iphone") komt er geen match, dan volgt de schatting. */
+function besteMarktModel(invoer, index){
+  const inTok=marktTokens(invoer).filter(t=>!MERK_WOORD.has(t));
+  const inKern=inTok.filter(t=>!NETWERK_WOORD.has(t));
+  const spec=inKern.filter(t=>!SERIE_WOORD.has(t));
+  if(!spec.length) return null;                 /* te vaag, bv. alleen "iphone" */
+  const invoerMerk=merkVanTekst(invoer);        /* merk uit de volledige tekst */
+  let best=null, bestScore=-1;
+  for(const m of index){
+    if(inKern.some(t=>!m.tok.includes(t))) continue;   /* niet alle ingetypte kern-tokens komen voor */
+    /* merk- en seriewoorden in de modelnaam mogen de score niet drukken: "OnePlus 11"
+       heet zo, en zonder deze uitzondering won "iPhone 11" op het losse token "11". */
+    const extra=m.tok.filter(t=>!inTok.includes(t) && !SERIE_WOORD.has(t) && !MERK_WOORD.has(t));
+    const extraVariant=extra.filter(t=>VARIANT_WOORD.has(t)).length;
+    const extraNet=extra.filter(t=>NETWERK_WOORD.has(t)).length;
+    const extraEcht=extra.length-extraVariant-extraNet;
+    let score=100 - extraVariant*40 - extraEcht*20 - extraNet*2;
+    if(invoerMerk) score += (m.merk===invoerMerk ? 200 : -200);  /* zelfde merk wint altijd */
+    if(score>bestScore){ bestScore=score; best={m, extraVariant, extraEcht}; }
+  }
+  return best;
+}
+
+async function prijsSuggestie(){
+  const box=document.getElementById('prijsSug'); if(!box) return;
+  const toestel=(document.getElementById('r_toestel')||{value:''}).value.trim();
+  const type=(document.getElementById('r_type')||{value:''}).value.trim();
+  const mnorm=normMarkt(toestel);
+  if(mnorm.length<3){ box.hidden=true; box.innerHTML=''; return; }
+  const beurt=++prijsSugTeller; /* alleen het laatste antwoord telt: typen gaat sneller dan de query */
+  box.hidden=false;
+  box.innerHTML='<span class="muted klein">Prijs opzoeken...</span>';
+  const cat=typeNaarCategorie(type);
+  try{
+    const index=await laadMarktIndex();
+    if(beurt!==prijsSugTeller) return; /* een nieuwere toets heeft dit ingehaald */
+    const match=besteMarktModel(toestel, index);
+    if(match){
+      const {data:mr,error}=await sb.from('reparatie_marktprijzen')
+        .select('model,categorie,kwaliteit,prijs_min,prijs_max')
+        .eq('model_norm', match.m.mn);
+      if(beurt!==prijsSugTeller) return;
+      if(!error && mr && mr.length){
+        let toon = cat ? mr.filter(r=>r.categorie===cat) : mr;
+        if(cat && !toon.length) toon=mr; /* die categorie niet gevonden: toon alles van het model */
+        box.innerHTML=prijsSugHtml(match.m.model, cat, toon);
+        return;
+      }
+    }
+    /* Geen model gevonden: schatting uit merk + categorie (mediaan van vergelijkbare toestellen). */
+    const merk=merkVanTekst(toestel);
+    if(merk && cat){
+      const {data:est}=await sb.from('reparatie_marktprijzen')
+        .select('prijs_min').eq('merk',merk).eq('categorie',cat).limit(600);
+      if(beurt!==prijsSugTeller) return;
+      const prijzen=(est||[]).map(r=>Number(r.prijs_min)).filter(n=>n>0).sort((a,b)=>a-b);
+      if(prijzen.length){
+        const med=prijzen[Math.floor(prijzen.length/2)];
+        box.innerHTML='<div class="prijssug-in"><span class="prijssug-kop">Schatting</span>'+
+          esc(cat.toLowerCase())+' voor '+esc(merk)+': rond <b>'+euro(med)+'</b> '+
+          '<span class="muted klein">(gemiddelde van vergelijkbare toestellen, geen exacte prijs)</span>'+
+          '<div class="prijssug-chips"><button type="button" class="prijssug-chip" onclick="gebruikPrijs('+med+')">Overnemen <b>'+euro(med)+'</b></button></div></div>';
+        return;
+      }
+    }
+    box.innerHTML='<span class="muted klein">Nog geen marktprijs voor dit toestel. Vul zelf een prijs in, of kijk op gsm-world.</span>';
+  }catch(e){ box.hidden=true; box.innerHTML=''; }
+}
+
+function prijsSugHtml(model, cat, rijen){
+  /* Per kwaliteit de laagste prijs (gsm-world toont soms een range per model). */
+  const volgorde={'Replica':0,'Refurbished':1,'OEM':2,'Origineel':3,'':4};
+  const perKwal={};
+  rijen.forEach(r=>{ const k=r.kwaliteit||''; if(perKwal[k]==null||r.prijs_min<perKwal[k]) perKwal[k]=r.prijs_min; });
+  const keys=Object.keys(perKwal).sort((a,b)=>(volgorde[a]??9)-(volgorde[b]??9));
+  const chips=keys.map(k=>`<button type="button" class="prijssug-chip" onclick="gebruikPrijs(${perKwal[k]})">${k?esc(k):'Prijs'} <b>${euro(perKwal[k])}</b></button>`).join('');
+  return '<div class="prijssug-in"><span class="prijssug-kop">Marktprijs</span>'+esc(model)+
+    (cat?' <span class="muted">'+esc(cat.toLowerCase())+'</span>':'')+
+    ' <span class="muted klein">(gsm-world, incl. btw)</span>'+
+    '<div class="prijssug-chips">'+(chips||'<span class="muted klein">geen prijs voor dit type</span>')+'</div></div>';
+}
+function gebruikPrijs(p){
+  const el=document.getElementById('r_prijs');
+  if(el){ el.value=p; rekenWinst(); if(typeof toast==='function') toast('Prijs overgenomen: '+euro(p), true); }
+}
 function ondVoorraadHint(){
   const naam=document.getElementById('r_ondNaam').value.trim().toLowerCase();
   const hint=document.getElementById('ondHint');
@@ -9081,6 +9245,7 @@ function rekenWinst(){
 }
 function resetRepForm(){
   ['r_naam','r_tel','r_email','r_toestel','r_type','r_prijs','r_ondNaam','r_ondPrijs'].forEach(id=>document.getElementById(id).value='');
+  const ps=document.getElementById('prijsSug'); if(ps){ ps.hidden=true; ps.innerHTML=''; }
   document.getElementById('r_notify').value='1';
   document.getElementById('r_inleveren').checked=false;
   document.getElementById('r_exbtw').checked=false;
