@@ -416,8 +416,9 @@ async function doLogin(){
   if (error){ f('loginerr').textContent = 'E-mail of wachtwoord onjuist'; f('loginerr').style.display='block'; return; }
   await naLogin(data.session);
 }
-/* Na een geslaagde login: het account ophalen, checken dat het echt een partner is,
-   de partner-data laden en de app tonen. Een niet-partner wordt meteen uitgelogd. */
+/* Na een geslaagde login: het account ophalen, zo nodig een eigen werkruimte
+   aanmaken, de data laden en de app tonen. Zowel een externe partner als de
+   eigenaar of een teamlid kan hier inloggen (gedeelde sessie met de winkelapp). */
 async function naLogin(session){
   if (!session) return;
   const { data: acc } = await sb.from('accounts').select('id,naam,rol,team_id').eq('id', session.user.id).maybeSingle();

@@ -301,6 +301,8 @@
   .bstvoet{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;}
   .bststatus{font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
     padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
+  .gradepil{display:inline-block; font-family:'Sora',sans-serif; font-size:12px; font-weight:800;
+    padding:3px 11px; border-radius:var(--pil); background:var(--oranje); color:#fff;}
   .bststatus.betaald{background:var(--green-soft); color:var(--green-tekst);}
   .bststatus.verzonden{background:var(--soft-2); color:var(--muted);}
   .bststatus.open{background:var(--amber-soft); color:var(--amber-tekst);}
@@ -6560,7 +6562,7 @@ function renderHardware(){
 
   vak.innerHTML=`<table>
     <thead><tr>
-      <th>Toestel</th><th>Nummer</th><th>Waar</th>
+      <th>Toestel</th><th>Nummer</th><th>Grade</th><th>Waar</th>
       <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
       <th>Staat waar</th><th>Dagen</th><th></th>
     </tr></thead>
@@ -6571,6 +6573,7 @@ function renderHardware(){
         <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
             ${h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:''}</td>
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
+        <td>${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:'<span class="muted">—</span>'}</td>
         <td>${h.status==='onderweg'
           ? '<span class="onderweg">Nog niet ingescand</span>'
           : (hwLocatieNaam(h)?`<span class="locpil">${esc(hwLocatieNaam(h))}</span>`:'<span class="muted">—</span>')}
@@ -6731,6 +6734,10 @@ function hwVenster(h){
         ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
       ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
         ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Toewijzen aan partner</button>`:''}
+      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
+        ? (h.kanalen&&h.kanalen.partner
+          ? `<button class="btn ghost" onclick="hwDashboard('${h.id}',false,this)">Uit partner-dashboard halen</button>`
+          : `<button class="btn ghost" onclick="hwDashboard('${h.id}',true,this)">Zichtbaar in partner-dashboard</button>`):''}
       <button class="btn" onclick="hwOpslaan(this)">Opslaan</button>
       <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
     </div>
@@ -6789,6 +6796,25 @@ async function hwWijsToeDoen(id, knop){
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Toewijzen mislukt');
     hwSluit(); await hwLaad(true); toast('Toegewezen aan de partner', true);
   }catch(e){ knop.disabled=false; knop.textContent=oud; toast(e.message,'fout'); }
+}
+/* Een toestel zichtbaar maken op de pagina "Online zetten" van je eigen
+   partner-dashboard, of het er weer af halen. Geen winstverdeling: het toestel
+   blijft gewoon in de winkelvoorraad staan. Loopt via partner-beheer, want de
+   dashboard-data staat in de partners-tabel (waar de winkelapp niet in mag schrijven). */
+async function hwDashboard(id, aan, knop){
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); throw new Error('Geen sessie'); }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:aan?'dashboard_aan':'dashboard_uit', hardware_id:id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Mislukt');
+    hwSluit(); await hwLaad(true);
+    toast(aan?'Staat nu bij Online zetten in je partner-dashboard':'Uit het partner-dashboard gehaald', true);
+  }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
 }
 async function partnerUitnodigen(){
   const naam=window.prompt('Naam van je partner:'); if(!naam) return;
@@ -7034,6 +7060,18 @@ async function hwBoek(id, bet){
   /* Het regime ook op de refurbish-rij, want de batchcijfers rekenen de btw daar. */
   sb.from('refurbish_apparaten').update({marge, bijgewerkt_op:new Date().toISOString()})
     .eq('hardware_id', id).then(({error})=>{ if(error) console.error('marge syncen bij verkoop:', error); });
+
+  /* Stond hij bij Online zetten in het eigen partner-dashboard, haal hem daar dan ook
+     weg: een verkocht toestel hoort niet meer in de advertentielijst. Best-effort. */
+  if(h.kanalen&&h.kanalen.partner){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      if(session) await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+        method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+        body:JSON.stringify({actie:'dashboard_uit', hardware_id:id})
+      });
+    }catch(e){ console.error('uit partner-dashboard halen bij verkoop', e); }
+  }
 
   hwSluit(); piep(440);
   toast('Verkocht ('+betaalNaam(bet)+'): '+naam+', '+euro(h.verkoop), true);

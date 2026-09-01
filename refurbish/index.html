@@ -2567,7 +2567,11 @@ const CTR_STAPPEN={
           <div class="gradekop">Grade ${gradeVan(punten)}</div>
           <div class="muted klein">${esc((prof().grades.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
         </div>
-      </div>` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
+      </div>
+      <label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
+        <input type="checkbox" id="ctr_dashboard" ${ctr.naarDashboard?'checked':''} onchange="ctrDashboardToggle(this)">
+        <span>Zichtbaar maken in partner-dashboard <span class="muted klein" style="font-weight:400">— zodra hij goedgekeurd is, staat hij bij Online zetten in je dashboard</span></span>
+      </label>` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
   }, knoppen:()=>ctrCompleet()
       ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
 
@@ -3403,6 +3407,11 @@ function ctrDefecten(){
   return uit;
 }
 
+/* De keuze "zichtbaar in partner-dashboard" bij de laatste controlestap. In ctr
+   bewaren, niet alleen in de DOM: de stap tekent zichzelf opnieuw bij elke klik en
+   dan zou een vinkje in het scherm verloren gaan. */
+function ctrDashboardToggle(el){ if(ctr) ctr.naarDashboard = !!el.checked; }
+
 async function ctrAfronden(knop){
   const a=ctr.a;
   ctrVeldBewaar();
@@ -3434,7 +3443,21 @@ async function ctrAfronden(knop){
        iemand hem later nog ergens heen moet klikken. Dit gebeurt als laatste:
        de uitslag van de controle staat dan al vast, en die mag niet verloren
        gaan als het aanmaken van de voorraadrij hapert. */
-    if(status==='klaar') await naarVoorraad(Object.assign({}, a, {grade, specs, nieuwe_accu:!!ctr.nieuweAccu}));
+    let hwId=null;
+    if(status==='klaar') hwId=await naarVoorraad(Object.assign({}, a, {grade, specs, nieuwe_accu:!!ctr.nieuweAccu}));
+
+    /* Is bij de laatste stap gekozen om hem in het partner-dashboard te tonen, doe
+       dat nu de hardware-rij bestaat. Best-effort: mislukt het, dan is de controle
+       zelf wél goed afgerond en dat is wat telt. */
+    if(hwId && ctr && ctr.naarDashboard){
+      try{
+        const {data:{session}}=await sb.auth.getSession();
+        if(session) await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+          method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({actie:'dashboard_aan', hardware_id:hwId})
+        });
+      }catch(e){ console.error('naar partner-dashboard bij afronden', e); }
+    }
 
     ctr=null; await allesLaden(); showTab('controle');
     const bij=apparaten.find(x=>x.id===a.id);
@@ -3677,13 +3700,40 @@ function tekenVoorraad(){
                    onclick="event.stopPropagation()"><span class="stip"></span>Staat online</a>`
               : '<span class="onlinepil"><span class="stip"></span>Staat online</span>')
             : '<span class="muted klein">nog niet</span>'}</td>
-          <td class="num hwact">${staatOnline(a)
+          <td class="num hwact">${h
+            ? (h.kanalen&&h.kanalen.partner
+              ? `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)">Uit partner-dashboard</button>`
+              : `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)">Naar partner-dashboard</button>`)
+            : ''}
+            ${staatOnline(a)
             ? `<button class="btn ghost small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">Aanpassen</button>`
             : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">
                  <svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}</td>
         </tr>`;}).join('')}</tbody></table></div>`
     : leeg('i-shop', vrFilterNu==='alles'?'Nog niets op voorraad':'Niets in deze lijst',
         'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.');
+}
+
+/* Een toestel uit de voorraad zichtbaar maken op de pagina "Online zetten" van het
+   partner-dashboard, of het er weer af halen. Werkt op de gekoppelde hardware-rij en
+   loopt via partner-beheer (de dashboard-data staat in de partners-tabel). */
+async function vrDashboard(apparaatId, aan, knop){
+  const a=apparaten.find(x=>x.id===apparaatId); if(!a) return;
+  const h=hardwareVan(a);
+  if(!h){ toast('Dit toestel staat nog niet in de winkelvoorraad','let-op'); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd','fout'); throw new Error('Geen sessie'); }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:aan?'dashboard_aan':'dashboard_uit', hardware_id:h.id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Mislukt');
+    await allesLaden(); tekenVoorraad();
+    toast(aan?'Staat nu bij Online zetten in het partner-dashboard':'Uit het partner-dashboard gehaald', true);
+  }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
 }
 
 /* Waar hij ligt, als pil. Ligt er nog geen locatie vast, dan zeggen we dat
