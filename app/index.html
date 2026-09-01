@@ -1781,7 +1781,7 @@
     </div>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Barcode</th><th>Naam</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
+      <thead><tr><th>Barcode</th><th>Naam</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
     </div>
@@ -1803,6 +1803,7 @@
     <div class="grid" style="margin-bottom:12px">
       <div><label>Barcode</label><input id="f_barcode" placeholder="Scan of typ barcode"></div>
       <div><label>Naam</label><input id="f_naam" placeholder="bijv. iPhone 15 hoesje zwart"></div>
+      <div><label>Merk</label><input id="f_merk" placeholder="bijv. Apple, Samsung" list="merkenList"><datalist id="merkenList"></datalist></div>
       <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
       <div><label>Categorie</label><select id="f_cat" onchange="vulStandaard()"></select></div>
     </div>
@@ -3396,9 +3397,10 @@ function renderProducten(){
   const q=(document.getElementById('zoek').value||'').toLowerCase();
   const fc=document.getElementById('filterCat').value;
   const rows=state.producten
-    .filter(p=>(!q || zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||'')+' '+(p.sku||''), zoekGroepen(q)) || String(p.barcode||'').includes(q) || String(p.sku||'').toLowerCase().includes(q)) && (!fc || p.cat===Number(fc)))
+    .filter(p=>(!q || zoekPast(p.naam+' '+(p.merk||'')+' '+(p.type||'')+' '+(p.model||'')+' '+(p.sku||''), zoekGroepen(q)) || String(p.barcode||'').includes(q) || String(p.sku||'').toLowerCase().includes(q)) && (!fc || p.cat===Number(fc)))
     .sort((a,b)=>a.naam.localeCompare(b.naam))
     .map(p=>`<tr><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
+      `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
       `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
       `<td class="num${inWinkel(p)<schapNorm(p)?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
@@ -3407,7 +3409,8 @@ function renderProducten(){
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
       `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="10" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="11" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
+  vulMerkenLijst();
   const sel=document.getElementById('filterCat');
   const cur=sel.value;
   sel.innerHTML='<option value="">Alle categorieën</option>'+state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
@@ -3435,6 +3438,7 @@ function bewerk(id){
   vulCatSelect();
   document.getElementById('f_barcode').value=p.barcode;
   document.getElementById('f_naam').value=p.naam;
+  document.getElementById('f_merk').value=p.merk||'';
   document.getElementById('f_sku').value=p.sku||'';
   document.getElementById('f_cat').value=p.cat;
   document.getElementById('f_inkoop').value=p.inkoop;
@@ -3487,12 +3491,21 @@ function resetForm(){
   vulCatSelect();
   document.getElementById('f_barcode').value='';
   document.getElementById('f_naam').value='';
+  document.getElementById('f_merk').value='';
   document.getElementById('f_sku').value='';
   document.getElementById('f_voorraad').value=0;
   document.getElementById('f_min').value=0;
   document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:2;
   document.getElementById('f_bestel').value=state.minOverNorm!=null?state.minOverNorm:2;
+  vulMerkenLijst();
   vulStandaard();
+}
+/* De merk-suggesties in het toevoegformulier: de merken die je al gebruikt, zodat
+   je consistent blijft schrijven (Apple, niet apple/Aple) als je meerdere merken hebt. */
+function vulMerkenLijst(){
+  const dl=document.getElementById('merkenList'); if(!dl) return;
+  const merken=[...new Set(state.producten.map(p=>(p.merk||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  dl.innerHTML=merken.map(m=>`<option value="${esc(m)}"></option>`).join('');
 }
 /* ═══════════════ NIEUW PRODUCT MET DE TELEFOON ═══════════════
    Op de computer laten we een QR-code zien. Scan je die met je telefoon, dan
@@ -3889,6 +3902,7 @@ function opslaanProduct(){
   const overNu  =Math.max(0, Math.floor(Number(document.getElementById('f_min').value)||0));
   const data={
     barcode, naam,
+    merk:document.getElementById('f_merk').value.trim(),
     sku:document.getElementById('f_sku').value.trim().toUpperCase(),
     cat:Number(document.getElementById('f_cat').value),
     inkoop:Number(document.getElementById('f_inkoop').value)||0,
