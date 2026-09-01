@@ -2348,12 +2348,15 @@
     </div>
 
     <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-shop"/></svg>Contact en openingstijden</h2>
+    <p class="muted" style="margin:-4px 0 14px; font-size:12.5px">Dit ziet je klant op zijn reparatiepagina. Vul hier je winkelgegevens in, niet je privé-adres.</p>
     <div class="grid" style="margin-bottom:14px">
+      <div><label>E-mailadres</label><input id="kp_email" type="email" placeholder="winkel@voorbeeld.nl" onchange="slaKlantpaginaOp()"></div>
+      <div><label>Telefoonnummer</label><input id="kp_telefoon" placeholder="030 1234567" onchange="slaKlantpaginaOp()"></div>
       <div><label>WhatsApp-nummer</label><input id="kp_whatsapp" placeholder="06 12345678" onchange="slaKlantpaginaOp()"></div>
       <div><label>Adres</label><input id="kp_adres" placeholder="Dorpsstraat 1, Utrecht" onchange="slaKlantpaginaOp()"></div>
     </div>
     <div><label>Openingstijden</label><input id="kp_tijden" placeholder="Ma t/m za 10:00 tot 18:00" onchange="slaKlantpaginaOp()"></div>
-    <p class="muted" style="margin-top:8px; font-size:12.5px">Laat het WhatsApp-nummer leeg om je gewone telefoonnummer te gebruiken.</p>
+    <p class="muted" style="margin-top:8px; font-size:12.5px">Laat e-mail of telefoon leeg om je bedrijfsgegevens te gebruiken. Laat WhatsApp leeg om je telefoonnummer te gebruiken.</p>
 
     <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-message"/></svg>Teksten op de pagina</h2>
     <div class="grid">
@@ -5609,7 +5612,7 @@ async function uitloggen(){
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
                       'reparaties','onderdelen','diensten','teams','medewerkers'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten'];
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
@@ -9438,6 +9441,8 @@ function renderKlantpagina(){
   const kleuren={accent:s.oranje||h.oranje, donker:s.navy||h.navy, bg:s.bg||h.bg};
   Object.keys(kleuren).forEach(k=>{ zet('kp_'+k, kleuren[k]); zet('kp_'+k+'_hex', (kleuren[k]||'').toUpperCase()); });
 
+  zet('kp_email', kp.email||'');
+  zet('kp_telefoon', kp.telefoon||'');
   zet('kp_whatsapp', kp.whatsapp||'');
   zet('kp_adres', kp.adres||'');
   zet('kp_tijden', kp.openingstijden||'');
@@ -9492,6 +9497,8 @@ function slaKlantpaginaOp(){
     kp.stijl.navy=lees('kp_donker');
     kp.stijl.bg=lees('kp_bg');
   }
+  kp.email=lees('kp_email');
+  kp.telefoon=lees('kp_telefoon');
   kp.whatsapp=lees('kp_whatsapp');
   kp.adres=lees('kp_adres');
   kp.openingstijden=lees('kp_tijden');
