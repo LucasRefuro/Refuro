@@ -6,17 +6,24 @@
 <title>Storvo Partner</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <style>
-:root { color-scheme: light; --blue: #3b5bfd; --blue-d: #2e49d6; --bg: #eef1f8; --line: #e8ecf3; --txt: #1c2333; --mut: #8a93a6; }
+:root { color-scheme: light;
+  --navy:#123F39; --navy-2:#0E4C44; --oranje:#0B5B52; --oranje-d:#093F39;
+  --actie:#E88A1D; --actie-d:#CE7811; --lblauw:#E7F1EE;
+  --blue:#0B5B52; --blue-d:#093F39;   /* alias: StockDeck-accent wordt Storvo-groen */
+  --bg:#F7F6F3; --line:#ECEAE4; --txt:#17201E; --mut:#5B6663; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+body { font-family: 'Instrument Sans', -apple-system, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
 #app { display: flex; min-height: 100vh; }
 svg.i { width: 18px; height: 18px; flex-shrink: 0; }
-#sidebar { width: 232px; background: #fff; flex-shrink: 0; padding: 22px 14px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; padding: 0 8px 22px; color: var(--txt); }
-.navbtn { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; background: none; border: none; color: #5a6478; padding: 11px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; border-radius: 12px; margin-bottom: 3px; font-family: inherit; position: relative; }
-.navbtn:hover { background: #f1f4fb; color: var(--txt); }
-.navbtn.active { background: var(--blue); color: #fff; box-shadow: 0 8px 18px rgba(59,91,253,.32); }
+#sidebar { width: 232px; background: var(--navy); flex-shrink: 0; padding: 22px 14px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; border-right: none; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: 'Sora', sans-serif; font-weight: 800; font-size: 19px; padding: 0 8px 22px; color: var(--txt); }
+.navbtn { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; background: none; border: none; color: #A9B4B0; padding: 11px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; border-radius: 12px; margin-bottom: 3px; font-family: inherit; position: relative; }
+.navbtn:hover { background: var(--navy-2); color: #fff; }
+.navbtn.active { background: var(--oranje); color: #fff; box-shadow: none; }
 .navspacer { flex: 1; }
 .navdot { background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 18px; height: 18px; display: none; align-items: center; justify-content: center; padding: 0 5px; margin-left: auto; }
 #alertdot { background: #e5484d; }
@@ -31,7 +38,7 @@ svg.i { width: 18px; height: 18px; flex-shrink: 0; }
 .bell:hover { color: var(--blue); }
 #belldot { position: absolute; top: -5px; right: -5px; background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 17px; height: 17px; display: none; align-items: center; justify-content: center; padding: 0 4px; }
 .userchip { display: flex; align-items: center; gap: 10px; }
-.userchip .ava { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #3b5bfd, #8aa4ff); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.userchip .ava { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0B5B52, #123F39); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .userchip b { font-size: 13px; display: block; }
 .userchip small { color: var(--mut); font-size: 11px; }
 #main { flex: 1; padding: 22px 30px 34px; max-width: 1250px; width: 100%; margin: 0 auto; }
@@ -41,9 +48,9 @@ h1 { font-size: 20px; margin-bottom: 4px; letter-spacing: -.2px; }
 .kpi { background: #fff; border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; gap: 13px; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
 .kico { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #eef0f4; color: #5a6478; }
 .kpi.green .kico { background: #e2f6ec; color: #16a077; }
-.kpi.blue .kico { background: #e6ecff; color: #3b5bfd; }
-.kpi.purple .kico { background: #f0e9fe; color: #7c3aed; }
-.kpi.orange .kico { background: #fdefe2; color: #e07b1f; }
+.kpi.blue .kico { background: var(--lblauw); color: var(--oranje); }
+.kpi.purple .kico { background: var(--lblauw); color: var(--navy); }
+.kpi.orange .kico { background: #FBEEDD; color: var(--actie-d); }
 .kpi.red .kico { background: #fde8e9; color: #e5484d; }
 .kpi .lbl { font-size: 11.5px; color: var(--mut); font-weight: 600; margin-bottom: 3px; }
 .kpi .val { font-size: 19px; font-weight: 800; letter-spacing: -.3px; }
@@ -67,7 +74,7 @@ tr.click { cursor: pointer; }
 tr.click:hover td { background: #f5f8ff; }
 .tablewrap { border-radius: 14px; overflow-x: auto; background: #fff; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
 /* login */
-#loginwrap { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: linear-gradient(135deg, #2743d8, #5b7cff 55%, #8fd0ff); }
+#loginwrap { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: linear-gradient(135deg, #123F39, #0E4C44 55%, #0B5B52); }
 .logincard { background: #fff; border-radius: 20px; padding: 36px 34px 30px; width: 400px; max-width: 92vw; box-shadow: 0 30px 80px rgba(10,20,60,.35); }
 #loginerr { color: #e5484d; font-size: 12px; margin-top: 8px; display: none; }
 .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
@@ -80,7 +87,7 @@ tr.click:hover td { background: #f5f8ff; }
 .card { background: #fff; border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
 label { display: block; font-size: 12px; font-weight: 600; color: #344054; margin-bottom: 4px; }
 input[type=text], input[type=number], input[type=password], textarea, select { width: 100%; padding: 9px 11px; border: 1px solid #dde3ee; border-radius: 10px; font-size: 13px; font-family: inherit; background: #fff; color: var(--txt); }
-input:focus, textarea:focus, select:focus { outline: 2px solid #c3cffe; border-color: var(--blue); }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--mint, #7FC4B6); border-color: var(--oranje); }
 textarea { resize: vertical; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
@@ -90,10 +97,10 @@ textarea { resize: vertical; }
 .btn:hover { background: var(--blue-d); }
 .btn.gray { background: #eef0f3; color: #344054; }
 .btn.gray:hover { background: #e2e5ea; }
-.btn.green { background: #12805c; }
-.btn.green:hover { background: #0e6b4d; }
+.btn.green { background: var(--actie); }
+.btn.green:hover { background: var(--actie-d); }
 .btn.sm { padding: 5px 10px; font-size: 12px; }
-.btn.purple { background: #7c3aed; }
+.btn.purple { background: var(--oranje); }
 .btn.red { background: #e5484d; }
 .btn:disabled { opacity: .5; cursor: default; }
 .checkrow { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -163,13 +170,23 @@ tr.hl td { background: #fffaf0; }
   .exrow { grid-template-columns: 1fr; border-bottom: 1px solid #f0f2f5; padding-bottom: 10px; }
   .savebar { bottom: 60px; }
   .toast { bottom: 76px; left: 14px; right: 14px; max-width: none; }
+  #sidebar { background: var(--navy); }
+  .navbtn.active { color: var(--actie); background: none; }
+  .navbtn.active .navdot { background: var(--actie); }
 }
+/* Storvo-huisstijl afwerking */
+#sidebar .brand { color: #F7F6F3; }
+.logincard .brand { color: var(--txt); }
+.logincard .btn { background: var(--actie); }
+.logincard .btn:hover { background: var(--actie-d); }
+.kpi { border-radius: 18px; }
+h1 { font-family: 'Sora', sans-serif; }
 </style>
 </head>
 <body>
 <div id="loginwrap">
   <div class="logincard">
-    <div class="brand" style="justify-content:center;padding-bottom:4px">Storvo<span style="color:var(--blue)"> Partner</span></div>
+    <div class="brand" style="justify-content:center;padding-bottom:4px">Storvo<span style="color:var(--actie)"> Partner</span></div>
     <div style="text-align:center;color:var(--mut);font-size:13px;margin-bottom:18px">Log in op je partner-dashboard</div>
     <div class="field"><label>E-mail</label><input type="email" id="loginname" placeholder="jouw@email.nl" autocomplete="email" onkeydown="if(event.key==='Enter')f('loginpin').focus()"></div>
     <div class="field"><label>Wachtwoord</label><input type="password" id="loginpin" placeholder="Wachtwoord" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -180,7 +197,7 @@ tr.hl td { background: #fffaf0; }
 </div>
 <div id="app">
 <nav id="sidebar">
-  <div class="brand">Storvo<span style="color:var(--blue)"> Partner</span></div>
+  <div class="brand">Storvo<span style="color:var(--actie)"> Partner</span></div>
   <button class="navbtn" data-p="dash" onclick="nav('dash')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg><span class="txt">Dashboard</span></button>
   <button class="navbtn" data-p="voorraad" onclick="nav('voorraad')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 22V13"/></svg><span class="txt">Voorraad</span></button>
   <button class="navbtn" data-p="add" onclick="nav('add')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg><span class="txt">Toevoegen</span></button>
