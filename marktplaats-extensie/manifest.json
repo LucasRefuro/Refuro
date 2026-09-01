@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Storvo Marktplaats-invuller",
+  "version": "1.0.0",
+  "description": "Vult je Marktplaats-advertentie voor met de gegevens uit het Storvo-portaal. Jij controleert alles, voegt de foto's toe en klikt zelf op Plaatsen.",
+  "permissions": ["clipboardRead"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.marktplaats.nl/*"],
+      "js": ["vuller.js"],
+      "css": ["paneel.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+/* Het zwevende Storvo-paneel op Marktplaats. Bewust een eigen prefix (smp-) zodat
+   het niets van Marktplaats zelf raakt, en een hoge z-index zodat het altijd boven
+   het formulier staat. */
+
+#storvo-mp-paneel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2147483647;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  color: #17201E;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(23, 32, 30, .22), 0 2px 8px rgba(23, 32, 30, .1);
+  font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+#storvo-mp-paneel .smp-kop {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #0B5B52;
+  color: #F7F6F3;
+}
+#storvo-mp-paneel .smp-merk { font-weight: 800; font-size: 15px; letter-spacing: -.02em; }
+#storvo-mp-paneel .smp-sub { font-size: 11px; opacity: .85; }
+#storvo-mp-paneel .smp-vouw {
+  margin-left: auto;
+  background: rgba(255, 255, 255, .15);
+  color: #fff;
+  border: none;
+  width: 24px; height: 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+#storvo-mp-paneel.smp-dicht .smp-lijf { display: none; }
+
+#storvo-mp-paneel .smp-lijf { padding: 14px; }
+
+#storvo-mp-paneel .smp-knop {
+  font-family: inherit;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  font-weight: 700;
+}
+#storvo-mp-paneel .smp-primair {
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  background: #E88A1D;
+  color: #fff;
+}
+#storvo-mp-paneel .smp-primair:hover { background: #CE7811; }
+#storvo-mp-paneel .smp-mini {
+  padding: 5px 11px;
+  font-size: 11.5px;
+  background: #F0EEE8;
+  color: #5B6663;
+}
+#storvo-mp-paneel .smp-mini:hover { background: #E7F1EE; color: #0B5B52; }
+
+#storvo-mp-paneel .smp-status {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #5B6663;
+}
+
+#storvo-mp-paneel .smp-veld {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #ECEAE4;
+}
+#storvo-mp-paneel .smp-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8A938F;
+}
+#storvo-mp-paneel .smp-waarde {
+  margin: 3px 0 8px;
+  word-break: break-word;
+  color: #17201E;
+}
+#storvo-mp-paneel .smp-acties { display: flex; gap: 8px; flex-wrap: wrap; }
+
+#storvo-mp-paneel .smp-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #946C07;
+  background: #FAF0D8;
+  border-radius: 10px;
+  padding: 8px 10px;
+}

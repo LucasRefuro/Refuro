@@ -523,7 +523,29 @@ async function copyTxt(id){
   const el = f(id); const t = el.value!==undefined ? el.value : el.textContent;
   try { await navigator.clipboard.writeText(t); }
   catch(e){ if(el.select){ el.select(); document.execCommand('copy'); } }
-  toast(' Gekopieerd!');
+  toast('Gekopieerd');
+}
+/* Zet de advertentie klaar voor Marktplaats: kopieer een klein Storvo-pakketje naar het
+   klembord en open Marktplaats. Daar leest de Storvo-uitbreiding het pakketje en vult de
+   velden voor. Foto's en de plaats-knop blijven handwerk, bewust. */
+async function naarMarktplaats(pid){
+  const p = S.products.find(x=>x.id===pid); if (!p) return;
+  saveOnline(pid, true); // eerst de eventueel net getypte titel/tekst vastleggen
+  const prijs = p.vraagprijs || 0;
+  const pakket = {
+    storvo: true,
+    titel: (f('o_titel') && f('o_titel').value) || p.titel || autoTitel(p),
+    prijs: prijs,
+    tekst: (f('o_tekst') && f('o_tekst').value) || p.adtekst || '',
+    specs: p.specs || {}
+  };
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(pakket));
+    toast('Klaargezet. Open Marktplaats en klik op "Haal uit Storvo".', true);
+    window.open('https://www.marktplaats.nl/plaats', '_blank', 'noopener');
+  } catch(e){
+    toast('Kopieren mislukt. Controleer of de browser toegang tot het klembord heeft.', 'fout');
+  }
 }
 
 /* ============ dashboard ============ */
@@ -1000,7 +1022,8 @@ function rOnlineEdit(p){
     '<div class="grid2" style="margin-top:12px"><div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="o_titel" value="'+esc(p.titel || autoTitel(p))+'"><button class="btn gray sm" onclick="copyTxt(\'o_titel\')">Kopieren</button></div></div>' +
     '<div class="field"><label>Prijs</label><div class="copyrow"><input type="text" id="o_ptxt" value="'+esc('€ '+(p.vraagprijs||0))+'"><button class="btn gray sm" onclick="copyTxt(\'o_ptxt\')">Kopieren</button></div></div></div>' +
     '<div class="field"><label>Beschrijving</label><div class="copyrow"><textarea id="o_tekst" rows="8" placeholder="Schrijf zelf, of laat AI een tekst maken. Defecten en extra\'s worden er automatisch in verwerkt.">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'o_tekst\')">Kopieren</button></div>' +
-    '<div style="margin-top:8px"><button class="btn purple sm" id="aibtn" onclick="genAdOnline(\''+p.id+'\')">Maak tekst met AI</button> <span class="mini">volgt jouw sjabloon uit Instellingen</span></div></div>' +
+    '<div style="margin-top:8px"><button class="btn purple sm" id="aibtn" onclick="genAdOnline(\''+p.id+'\')">Maak tekst met AI</button> <span class="mini">volgt jouw sjabloon uit Instellingen</span></div>' +
+    '<div style="margin-top:10px"><button class="btn sm" onclick="naarMarktplaats(\''+p.id+'\')"><svg class="i s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg> Klaarzetten voor Marktplaats</button> <span class="mini">kopieert de advertentie en opent Marktplaats; de Storvo-uitbreiding vult de velden</span></div></div>' +
   '</div>' +
   '<div class="card"><b style="font-size:14px">Foto\'s'+(nFotos?' ('+nFotos+')':'')+'</b>' +
     '<div class="mini" style="margin:4px 0 12px">Op je telefoon opent "Foto maken" meteen de camera. Maak er gerust meerdere achter elkaar.</div>' +
