@@ -231,7 +231,12 @@ const DAG = 86400000;
 /* ---- Supabase-client + sync (was Hostinger MySQL) ---- */
 const SUPABASE_URL = 'https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* Eigen sessie-opslag: de partner-app en de winkelapp draaien op hetzelfde domein
+   en hetzelfde Supabase-project. Zonder een eigen storageKey delen ze dezelfde
+   inlog-sessie, en dan logt inloggen (of uitloggen) in de ene je uit in de andere. */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { storageKey: 'storvo-partner-auth', persistSession: true, autoRefreshToken: true }
+});
 let PARTNER_ID = null, ACCOUNT = null;
 let pullPromise = null, pushTimer = null, lastSyncedAt = null, pendingLocalChange = false;
 let S = load();

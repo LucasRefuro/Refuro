@@ -6751,6 +6751,7 @@ async function hwWijsToeDoen(id, knop){
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
   try{
     const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); throw new Error('Geen sessie'); }
     const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
       method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({actie:'toewijzen', hardware_id:id, partner_id:partnerId, deel_type:type, deel_waarde:deel})
@@ -6766,6 +6767,7 @@ async function partnerUitnodigen(){
   const ww=window.prompt('Kies een begin-wachtwoord (minstens 8 tekens). Geef dit door aan je partner; hij kan het later zelf wijzigen:'); if(!ww) return;
   try{
     const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); throw new Error('Geen sessie'); }
     const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
       method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({actie:'uitnodigen', naam, email:email.trim(), wachtwoord:ww})
@@ -6799,6 +6801,7 @@ async function partnerAanmaken(knop){
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
   try{
     const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); throw new Error('Geen sessie'); }
     const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
       method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({actie:'uitnodigen', naam, email, wachtwoord:ww})
