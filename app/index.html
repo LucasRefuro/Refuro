@@ -6747,7 +6747,9 @@ function hwSluit(){ const o=document.getElementById('hwOverlay'); if(o) o.remove
    niet zien. */
 async function hwWijsToe(id){
   const h=hwData.find(x=>x.id===id); if(!h) return;
-  const {data:partners}=await sb.from('partners').select('id,naam').order('naam');
+  // De eigen werkruimte (die de eigenaar krijgt als hij zelf /partner/ opent) is
+  // geen externe partner: sluit het eigen account uit zodat je niet aan jezelf toewijst.
+  const {data:partners}=await sb.from('partners').select('id,naam').neq('id', gebruiker.id).order('naam');
   if(!partners || !partners.length){
     if(confirm('Je hebt nog geen partner. Wil je er nu een uitnodigen?')) partnerUitnodigen();
     return;
@@ -6810,7 +6812,8 @@ async function partnerUitnodigen(){
 async function renderPartners(){
   const box=document.getElementById('partnerLijst'); if(!box) return;
   box.innerHTML='<p class="muted">Laden…</p>';
-  const {data:partners,error}=await sb.from('partners').select('id,naam,bijgewerkt_op').order('naam');
+  // Eigen werkruimte niet meetellen: die is van de eigenaar zelf, geen externe partner.
+  const {data:partners,error}=await sb.from('partners').select('id,naam,bijgewerkt_op').neq('id', gebruiker.id).order('naam');
   if(error){ box.innerHTML='<p class="muted">Kon de partners niet laden.</p>'; return; }
   if(!partners||!partners.length){ box.innerHTML='<p class="muted">Nog geen partners. Nodig er hierboven een uit.</p>'; return; }
   const {data:hw}=await sb.from('hardware').select('partner_id').not('partner_id','is',null);
