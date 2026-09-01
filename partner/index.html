@@ -13,7 +13,7 @@
 :root { color-scheme: light;
   --navy:#123F39; --navy-2:#0E4C44; --oranje:#0B5B52; --oranje-d:#093F39;
   --actie:#E88A1D; --actie-d:#CE7811; --lblauw:#E7F1EE;
-  --blue:#0B5B52; --blue-d:#093F39;   /* alias: StockDeck-accent wordt Storvo-groen */
+  --blue:#0B5B52; --blue-d:#093F39;   /* alias: het oude accent wordt Storvo-groen */
   --bg:#F7F6F3; --line:#ECEAE4; --txt:#17201E; --mut:#5B6663; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Instrument Sans', -apple-system, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
@@ -127,6 +127,9 @@ select.cell { width: auto; padding: 5px 7px; font-size: 12px; }
 .stepdots span { width: 26px; height: 5px; border-radius: 3px; background: #e4e7ec; }
 .stepdots span.on { background: #2563eb; }
 .toast { position: fixed; bottom: 20px; right: 20px; background: #171c26; color: #fff; padding: 11px 18px; border-radius: 9px; font-size: 13px; z-index: 99; box-shadow: 0 6px 24px rgba(0,0,0,.25); max-width: 340px; }
+.toast.ok { background: #177245; }
+.toast.err { background: #b42318; }
+.toast.waarschuw { background: #b45309; }
 .typecard { background: #fff; border: 2px solid #e4e7ec; border-radius: 12px; padding: 26px; text-align: center; cursor: pointer; font-size: 15px; font-weight: 600; }
 .typecard:hover { border-color: #4f8ef7; background: #f5f8ff; }
 .typecard .big { font-size: 34px; display: block; margin-bottom: 10px; }
@@ -242,6 +245,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
    zonder opnieuw in te loggen. */
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let PARTNER_ID = null, ACCOUNT = null;
+let uitdraaiLijst = [];   // eerdere afrekenrondes uit partner_uitdraaien
+let bekekenBatch = null;  // welke oude batch je nu terugkijkt op de Marge-pagina
+let uitbetaaldeVerkopen = new Map();  // verkoopId -> batch-id, opgebouwd uit de historie (leidend)
 let pullPromise = null, pushTimer = null, lastSyncedAt = null, pendingLocalChange = false;
 let S = load();
 function migrate(s){
@@ -291,7 +297,7 @@ function setSync(state){
   b.style.color = m[1]; b.title = m[2]; b.textContent = m[0];
 }
 async function pushRemote(){
-  if (!PARTNER_ID) return;
+  if (!PARTNER_ID) return false;
   setSync('syncing');
   try {
     const { error } = await sb.from('partners')
@@ -300,7 +306,8 @@ async function pushRemote(){
     if (error) throw error;
     pendingLocalChange = false;
     setSync('ok');
-  } catch(e){ setSync('offline'); }
+    return true;
+  } catch(e){ setSync('offline'); return false; }
 }
 async function pullRemote(renderAfter){
   if (!PARTNER_ID){ setSync('offline'); return false; }
@@ -313,6 +320,7 @@ async function pullRemote(renderAfter){
       S.products = d.products || [];
       S.settings = Object.assign({nextAd:1, template:'', pin:'1234', labW:62, labH:32}, d.settings || {});
       migrate(S);
+      herkenUitbetaald();   // markering "al uitbetaald" opnieuw uit de historie afleiden
       try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){}
     }
     lastSyncedAt = data ? data.bijgewerkt_op : null;
@@ -335,11 +343,14 @@ function daysSince(d){ if(!d) return 0; return Math.max(0, Math.floor((Date.now(
 function adShare(p){ return p.units.length ? (p.adKosten||0)/p.units.length : 0; }
 function unitCost(p,u){ return (p.inkoop||0)+(p.kosten||0)+(u.extraKosten||0)+adShare(p); }
 function unitWinst(p,u){
+  /* In hele centen rekenen en het winkeldeel afleiden als winst - jouwdeel. Anders
+     kunnen winkel en deel elk apart afronden en sluit winkel + deel niet op winst;
+     dat zou in de uitdraai-historie een cent scheef vast komen te staan. */
   const w = (u.prijs||0) - unitCost(p,u);
-  let deel = 0;
-  if (u.deelGezet){ deel = u.deelType==='eur' ? (u.deelWaarde||0) : w*(u.deelWaarde||0)/100; }
-  deel = Math.round(deel*100)/100;
-  return { winst: Math.round(w*100)/100, deel, winkel: u.deelGezet? Math.round((w-deel)*100)/100 : 0 };
+  const winstC = Math.round(w*100);
+  let deelC = 0;
+  if (u.deelGezet){ const dr = u.deelType==='eur' ? (u.deelWaarde||0) : w*(u.deelWaarde||0)/100; deelC = Math.round(dr*100); }
+  return { winst: winstC/100, deel: deelC/100, winkel: u.deelGezet ? (winstC-deelC)/100 : 0 };
 }
 function voorraadUnits(p){ return p.units.filter(u=>!u.verkocht); }
 function soldUnits(p){ return p.units.filter(u=>u.verkocht); }
@@ -439,6 +450,7 @@ async function naLogin(session){
   f('loginerr').style.display='none'; f('loginpin').value='';
   f('loginwrap').style.display='none'; f('app').style.display='flex';
   await pullRemote(false);
+  await laadUitdraaien();
   applyUser(); render();
   clearInterval(syncInterval);
   syncInterval = setInterval(()=>{ pendingLocalChange ? pushRemote() : pullRemote(page==='dash'); }, 25000);
@@ -462,6 +474,7 @@ function clearSearch(){ searchQ = ''; if (f('q')) f('q').value = ''; nav('voorra
 let page = 'dash', pageArg = null;
 function nav(p, arg){
   page = p; pageArg = arg==null?null:arg;
+  bekekenBatch = null;   // een oude uitdraai-batch bekijk je alleen zolang je op Marge blijft
   S.ui = {page, pageArg}; save();
   render();
 }
@@ -483,8 +496,11 @@ function render(){
   else if (page==='instellingen') m.innerHTML = rSettings();
   window.scrollTo(0,0);
 }
-function toast(msg){
-  const t = document.createElement('div'); t.className='toast'; t.textContent = msg;
+function toast(msg, type){
+  /* type: 'fout' (rood), 'let-op' (amber), iets anders truthy (groen/ok), leeg (neutraal).
+     Zo is een mislukte geldhandeling ook aan de kleur te zien, niet alleen aan de tekst. */
+  const kl = type==='fout' ? ' err' : (type==='let-op' ? ' waarschuw' : (type ? ' ok' : ''));
+  const t = document.createElement('div'); t.className='toast'+kl; t.textContent = msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(), 4000);
 }
 async function copyTxt(id){
@@ -1136,6 +1152,9 @@ function confirmSell(pid, uidv){
   u.mpUitbetaald = u.betaal==='mp' ? f('m_mpu').checked : undefined;
   u.levering = f('m_lev').value; u.vervoerder = f('m_vv').value; if (u.geleverd==null) u.geleverd = false;
   if (!u.datum) u.datum = today();
+  /* Een vaste sleutel per verkoop. Die komt in de uitdraai-historie te staan, zodat een
+     verkoop nooit twee keer wordt afgerekend, ook niet als de blob-markering verdwijnt. */
+  if (!u.verkoopId) u.verkoopId = uid();
   save(); closeModal();
   const rest = voorraadUnits(p).length;
   if (!wasSold){
@@ -1148,6 +1167,10 @@ function confirmSell(pid, uidv){
 function unsell(pid, uidv){
   const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
   u.verkocht=false; u.prijs=null; u.datum=null; u.betaal=null; u.deelGezet=false; u.mpUitbetaald=undefined;
+  /* Verkoop-sleutel en uitdraai-stempels wissen: gaat hij terug naar voorraad en later
+     opnieuw de deur uit, dan is dat een nieuwe verkoop die weer afgerekend moet worden.
+     De oude batch in de historie blijft die verkoop als momentopname tonen. */
+  u.verkoopId=undefined; u.uitgedraaid=undefined; u.uitgedraaidOp=undefined;
   p.adsOffline={fb:false,mp:false};
   save(); closeModal(); render();
 }
@@ -1192,7 +1215,7 @@ function rVerkocht(){
       (u.levering==='verzenden' ? '<select class="cell" id="vv_'+u.id+'" onchange="setLev(\''+p.id+'\',\''+u.id+'\')"><option'+(u.vervoerder!=='DHL'?' selected':'')+'>PostNL</option><option'+(u.vervoerder==='DHL'?' selected':'')+'>DHL</option></select> ' : '') +
       '<label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;font-size:12px"><input type="checkbox" id="gd_'+u.id+'"'+(u.geleverd?' checked':'')+' onchange="setLev(\''+p.id+'\',\''+u.id+'\')"> '+(u.levering==='verzenden'?'verstuurd':'opgehaald')+'</label>' +
       '<div style="margin-top:4px">'+levBadge(u)+'</div>';
-    html += '<tr'+(!u.deelGezet?' class="hl"':'')+'><td><a href="#" onclick="nav(\'product\',\''+p.id+'\');return false;" style="color:#2563eb;font-weight:600;text-decoration:none">'+esc(p.model)+'</a>'+(u.defect?'<div><span class="badge b-warn">'+esc(u.defect)+'</span></div>':'')+'</td><td>'+esc(p.adnummer)+'</td><td>'+esc(u.datum||'')+'</td><td class="right">'+eur(unitCost(p,u))+'</td><td class="right"><b>'+eur(u.prijs)+'</b></td>' +
+    html += '<tr'+(!u.deelGezet?' class="hl"':'')+'><td><a href="#" onclick="nav(\'product\',\''+p.id+'\');return false;" style="color:#2563eb;font-weight:600;text-decoration:none">'+esc(p.model)+'</a>'+(u.defect?'<div><span class="badge b-warn">'+esc(u.defect)+'</span></div>':'')+(isUitbetaald(u)?'<div><span class="badge b-ok">uitbetaald</span></div>':'')+'</td><td>'+esc(p.adnummer)+'</td><td>'+esc(u.datum||'')+'</td><td class="right">'+eur(unitCost(p,u))+'</td><td class="right"><b>'+eur(u.prijs)+'</b></td>' +
       (u.deelGezet ? '<td class="right">'+eur(w.winkel)+'</td><td class="right">'+eur(w.deel)+'</td>' : '<td colspan="2" class="right"><a href="#" onclick="nav(\'marge\');return false;"><span class="badge b-purple">nog verdelen →</span></a></td>') +
       '<td class="right"><b>'+eur(w.winst)+'</b></td><td>'+betaalCell+'</td><td>'+levCell+'</td><td>'+adsCell+'</td></tr>';
   });
@@ -1206,28 +1229,76 @@ function setLev(pid, uidv){
   save(); render();
 }
 
-/* ============ marge berekening ============ */
+/* ============ marge en uitbetalen ============
+   De verkopen die verdeeld zijn maar nog niet afgerekend staan hier klaar. Zodra je
+   ze uitbetaalt ("uitdraaien") gaan ze als een gedateerde batch naar de historie
+   (echte tabel partner_uitdraaien) en verdwijnen ze uit deze werklijst. Zo hoef je
+   niet meer door alle oude verkopen te scrollen en kun je elke afrekenronde
+   terugkijken. */
+async function laadUitdraaien(){
+  if (!PARTNER_ID) return;
+  try {
+    const { data } = await sb.from('partner_uitdraaien')
+      .select('*').eq('werkruimte_id', PARTNER_ID).order('datum', { ascending:false });
+    uitdraaiLijst = data || [];
+  } catch(e){ /* offline: laat de al geladen lijst staan */ }
+  herkenUitbetaald();
+}
+/* De historie (echte tabel) is leidend voor "al uitbetaald", niet de fragiele blob.
+   We bouwen een map verkoopId -> batch, en herstellen zo een markering die door een
+   mislukte of overschreven blob-push zou zijn weggevallen. Zo kan een verkoop nooit
+   twee keer worden afgerekend, ook niet na een herlaad of op een tweede apparaat. */
+function herkenUitbetaald(){
+  uitbetaaldeVerkopen = new Map();
+  uitdraaiLijst.forEach(b => (b.regels||[]).forEach(r => { if (r.verkoopId) uitbetaaldeVerkopen.set(r.verkoopId, b.id); }));
+  S.products.forEach(p => p.units.forEach(u => {
+    if (u.verkoopId && uitbetaaldeVerkopen.has(u.verkoopId) && !u.uitgedraaid) u.uitgedraaid = uitbetaaldeVerkopen.get(u.verkoopId);
+  }));
+}
+function isUitbetaald(u){ return !!u.uitgedraaid || !!(u.verkoopId && uitbetaaldeVerkopen.has(u.verkoopId)); }
+/* De verkochte units die nog niet uitgedraaid (afgerekend) zijn, nieuwste eerst. */
+function margeRijen(){ return allSold().filter(r => !isUitbetaald(r.u)); }
+
 function rMarge(){
-  const rows = allSold();
+  if (bekekenBatch) return rUitdraaiBatch(bekekenBatch);
+  const rows = margeRijen();
   const open = rows.filter(r=>!r.u.deelGezet).length;
-  let html = '<h1>Marge berekening</h1><div class="sub">Vul per verkocht artikel de werkelijke verkoopprijs en jouw deel in — alles rekent direct door en wordt opgeslagen</div>';
-  if (open) html += '<div class="notice orange"> Nog <b>'+open+'</b> verk'+(open===1?'oop':'open')+' zonder verdeling (gemarkeerd in de tabel)</div>';
-  if (!rows.length) return html + '<div class="card"><div class="empty">Nog geen verkochte artikelen</div></div>';
+  let html = '<h1>Marge en uitbetalen</h1><div class="sub">Vul per verkocht artikel de echte verkoopprijs en je verdeling in. Alles rekent direct door. Klaar met een ronde? Draai hem uit, dan is hij afgerekend en verdwijnt hij hier.</div>';
+
+  if (uitdraaiLijst.length){
+    html += '<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
+      '<b style="font-size:14px">Eerdere uitdraaien</b>' +
+      '<select class="cell" style="max-width:360px" onchange="if(this.value)toonUitdraai(this.value)">' +
+      '<option value="">Kies een afrekenronde om terug te kijken...</option>' +
+      uitdraaiLijst.map(b=>'<option value="'+b.id+'">'+esc(batchLabel(b))+'</option>').join('') +
+      '</select></div>';
+  }
+
+  if (open) html += '<div class="notice orange">Nog <b>'+open+'</b> verk'+(open===1?'oop':'open')+' zonder verdeling. Vul de verdeling in; alleen verdeelde verkopen kun je uitdraaien.</div>';
+  if (!rows.length) return html + '<div class="card"><div class="empty">Niets openstaand. Alles is uitbetaald.</div></div>';
+
   html += '<div class="tablewrap"><table><tr><th>Status</th><th>Model</th><th>Productnr</th><th class="right">Kosten p/st</th><th class="right">Werkelijke verkoopprijs</th><th>Jouw deel</th><th class="right">Winst</th><th class="right">Winkel</th><th class="right">Jij</th></tr>';
   rows.forEach(({p,u})=>{
     const w = unitWinst(p,u);
-    html += '<tr'+(!u.deelGezet?' class="hl"':'')+' id="mr_'+u.id+'"><td id="ms_'+u.id+'">'+(u.deelGezet?'<span class="badge b-ok"> verdeeld</span>':'<span class="badge b-purple">nog verdelen</span>')+'</td><td><b>'+esc(p.model)+'</b></td><td>'+esc(p.adnummer)+'</td><td class="right">'+eur(unitCost(p,u))+'</td>' +
+    html += '<tr'+(!u.deelGezet?' class="hl"':'')+' id="mr_'+u.id+'"><td id="ms_'+u.id+'">'+(u.deelGezet?'<span class="badge b-ok">verdeeld</span>':'<span class="badge b-purple">nog verdelen</span>')+'</td><td><b>'+esc(p.model)+'</b></td><td>'+esc(p.adnummer)+'</td><td class="right">'+eur(unitCost(p,u))+'</td>' +
       '<td class="right"><input class="cell" type="number" step="0.01" value="'+u.prijs+'" onchange="mUpd(\''+p.id+'\',\''+u.id+'\')" id="mp_'+u.id+'"></td>' +
       '<td><select class="cell" id="mt_'+u.id+'" onchange="mUpd(\''+p.id+'\',\''+u.id+'\')"><option value="pct"'+(u.deelType!=='eur'?' selected':'')+'>%</option><option value="eur"'+(u.deelType==='eur'?' selected':'')+'>€</option></select> ' +
       '<input class="cell" style="width:70px" type="number" step="0.01" value="'+u.deelWaarde+'" onchange="mUpd(\''+p.id+'\',\''+u.id+'\')" id="mw_'+u.id+'"></td>' +
-      '<td class="right" id="mwin_'+u.id+'">'+eur(w.winst)+'</td><td class="right" id="mluc_'+u.id+'">'+(u.deelGezet?eur(w.winkel):'—')+'</td><td class="right" id="mdaan_'+u.id+'"><b>'+(u.deelGezet?eur(w.deel):'—')+'</b></td></tr>';
+      '<td class="right" id="mwin_'+u.id+'">'+eur(w.winst)+'</td><td class="right" id="mwinkel_'+u.id+'">'+(u.deelGezet?eur(w.winkel):'—')+'</td><td class="right" id="mdeel_'+u.id+'"><b>'+(u.deelGezet?eur(w.deel):'—')+'</b></td></tr>';
   });
   html += '</table></div><div class="card" style="margin-top:16px" id="mtot">'+margeTotals()+'</div>';
   return html;
 }
+/* Totalen over de openstaande (nog niet uitgedraaide) verkopen, plus de uitdraaiknop. */
 function margeTotals(){
-  const t = totals();
-  return '<div style="display:flex;gap:30px;flex-wrap:wrap;font-size:14px"><span>Totale winst: <b>'+eur(t.winst)+'</b></span><span>Winkel: <b>'+eur(t.winkel)+'</b></span><span>Jij: <b>'+eur(t.deel)+'</b></span>' + (t.teVerdelen>0?'<span style="color:#c2540a">Nog te verdelen: <b>'+eur(t.teVerdelen)+'</b></span>':'') + '</div>';
+  const klaar = margeRijen().filter(r=>r.u.deelGezet);
+  let winst=0, winkel=0, deel=0;
+  klaar.forEach(({p,u})=>{ const w=unitWinst(p,u); winst+=w.winst; winkel+=w.winkel; deel+=w.deel; });
+  const teVerdelen = margeRijen().filter(r=>!r.u.deelGezet).length;
+  let html = '<div style="display:flex;gap:30px;flex-wrap:wrap;font-size:14px;margin-bottom:14px"><span>Klaar om uit te betalen: <b>'+klaar.length+'</b></span><span>Winst: <b>'+eur(winst)+'</b></span><span>Winkel: <b>'+eur(winkel)+'</b></span><span>Jij: <b>'+eur(deel)+'</b></span>' + (teVerdelen>0?'<span style="color:#c2540a">Nog te verdelen: <b>'+teVerdelen+'</b></span>':'') + '</div>';
+  html += '<button class="btn green" onclick="uitDraaien(this)"'+(klaar.length?'':' disabled')+'>Uitdraaien'+(klaar.length?' (' + klaar.length + ' artikel'+(klaar.length===1?'':'en')+', '+eur(deel)+' voor jou)':'')+'</button>';
+  html += '<div class="mini" style="margin-top:8px">Uitdraaien betaalt de verdeelde verkopen af: ze gaan naar de historie en verdwijnen uit deze lijst.</div>';
+  return html;
 }
 function mUpd(pid, uidv){
   const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
@@ -1238,11 +1309,65 @@ function mUpd(pid, uidv){
   save();
   const w = unitWinst(p,u);
   f('mr_'+uidv).classList.remove('hl');
-  f('ms_'+uidv).innerHTML = '<span class="badge b-ok"> verdeeld</span>';
+  f('ms_'+uidv).innerHTML = '<span class="badge b-ok">verdeeld</span>';
   f('mwin_'+uidv).innerHTML = eur(w.winst);
-  f('mluc_'+uidv).innerHTML = eur(w.winkel);
-  f('mdaan_'+uidv).innerHTML = '<b>'+eur(w.deel)+'</b>';
+  f('mwinkel_'+uidv).innerHTML = eur(w.winkel);
+  f('mdeel_'+uidv).innerHTML = '<b>'+eur(w.deel)+'</b>';
   f('mtot').innerHTML = margeTotals();
+}
+/* Een afrekenronde uitdraaien: de verdeelde, nog niet uitbetaalde verkopen als een
+   gedateerde batch wegschrijven (echte tabel), ze markeren, en uit de lijst halen. */
+async function uitDraaien(knop){
+  const klaar = [];
+  S.products.forEach(p=>p.units.forEach(u=>{ if (u.verkocht && u.deelGezet && !isUitbetaald(u)) klaar.push({p,u}); }));
+  if (!klaar.length){ toast('Niets om uit te draaien','let-op'); return; }
+  /* Oude verkopen zonder sleutel (van voor deze functie) krijgen er nu een, zodat de
+     historie ze eenduidig vasthoudt en ze niet nog eens kunnen worden afgerekend. */
+  klaar.forEach(({u})=>{ if (!u.verkoopId) u.verkoopId = uid(); });
+  const regels = klaar.map(({p,u})=>{ const w=unitWinst(p,u); return { verkoopId:u.verkoopId, productId:p.id, unitId:u.id, model:p.model, adnummer:p.adnummer, verkoopprijs:u.prijs||0, kosten:Math.round(unitCost(p,u)*100)/100, winst:w.winst, winkel:w.winkel, deel:w.deel, betaal:u.betaal||null, verkocht_op:u.datum||null }; });
+  const totalen = regels.reduce((t,r)=>({ omzet:t.omzet+r.verkoopprijs, winst:t.winst+r.winst, winkel:t.winkel+r.winkel, deel:t.deel+r.deel, aantal:t.aantal+1 }), {omzet:0,winst:0,winkel:0,deel:0,aantal:0});
+  ['omzet','winst','winkel','deel'].forEach(k=>{ totalen[k]=Math.round(totalen[k]*100)/100; });
+  if (!confirm('Deze '+totalen.aantal+' verkopen afrekenen en uitdraaien? Ze verdwijnen daarna uit deze lijst en komen in de historie.')) return;
+  const oud = knop?knop.textContent:''; if (knop){ knop.disabled=true; knop.textContent='Bezig...'; }
+  try {
+    const { data, error } = await sb.from('partner_uitdraaien')
+      .insert({ werkruimte_id: PARTNER_ID, door: USER || null, regels, totalen }).select().single();
+    if (error) throw error;
+    const stempel = data.datum || new Date().toISOString();
+    klaar.forEach(({u})=>{ u.uitgedraaid = data.id; u.uitgedraaidOp = stempel; });
+    uitdraaiLijst.unshift(data);
+    herkenUitbetaald();
+    save();
+    const gesynct = await pushRemote();
+    toast(gesynct
+      ? ('Uitgedraaid: '+totalen.aantal+' artikel'+(totalen.aantal===1?'':'en'))
+      : 'Uitgedraaid en vastgelegd. Nog niet gesynct, controleer je verbinding.',
+      gesynct ? true : 'let-op');
+    render();
+  } catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast('Uitdraaien mislukt','fout'); }
+}
+function batchLabel(b){
+  const d = new Date(b.datum);
+  const dt = isNaN(d.getTime()) ? '' : d.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+  const t = b.totalen||{};
+  return dt+' | '+(t.aantal||0)+' artikel'+((t.aantal||0)===1?'':'en')+', '+eur(t.deel||0)+' voor jou';
+}
+function toonUitdraai(id){ bekekenBatch = uitdraaiLijst.find(b=>b.id===id) || null; render(); }
+function sluitUitdraai(){ bekekenBatch = null; render(); }
+function rUitdraaiBatch(b){
+  const d = new Date(b.datum);
+  const dt = isNaN(d.getTime()) ? '' : d.toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const t = b.totalen||{}; const regels = Array.isArray(b.regels)?b.regels:[];
+  let html = '<button class="btn gray sm" onclick="sluitUitdraai()">← Terug naar openstaand</button>' +
+    '<h1 style="margin-top:12px">Uitdraai van '+esc(dt)+'</h1>' +
+    '<div class="sub">'+(t.aantal||0)+' artikel'+((t.aantal||0)===1?'':'en')+' afgerekend'+(b.door?' door '+esc(b.door):'')+'</div>' +
+    '<div class="kpis">'+kpi('Omzet', eur(t.omzet||0),'blue')+kpi('Winst', eur(t.winst||0),'green')+kpi('Voor de winkel', eur(t.winkel||0),'green')+kpi('Voor jou', eur(t.deel||0),'green')+'</div>' +
+    '<div class="tablewrap"><table><tr><th>Model</th><th>Productnr</th><th>Verkocht</th><th class="right">Kosten p/st</th><th class="right">Verkoopprijs</th><th class="right">Winst</th><th class="right">Winkel</th><th class="right">Jij</th></tr>';
+  regels.forEach(r=>{
+    html += '<tr><td><b>'+esc(r.model)+'</b></td><td>'+esc(r.adnummer||'')+'</td><td>'+esc(r.verkocht_op||'')+'</td><td class="right">'+eur(r.kosten||0)+'</td><td class="right">'+eur(r.verkoopprijs||0)+'</td><td class="right">'+eur(r.winst||0)+'</td><td class="right">'+eur(r.winkel||0)+'</td><td class="right"><b>'+eur(r.deel||0)+'</b></td></tr>';
+  });
+  html += '</table></div>';
+  return html;
 }
 
 /* ============ instellingen ============ */
