@@ -113,11 +113,21 @@ Deno.serve(async (req) => {
     const { data: gemaakt, error: uErr } = await admin.auth.admin.createUser({
       email, password: ww, email_confirm: true,
     });
-    if (uErr || !gemaakt?.user) {
-      return fout("Aanmaken mislukt: " + (uErr?.message || "onbekend") +
-        (uErr?.message?.includes("already") ? " (dit e-mailadres bestaat al)" : ""), 400);
+    let id = gemaakt?.user?.id || "";
+    if (uErr || !id) {
+      // Bestond de auth-gebruiker al (bv. door een eerdere poging die daarna strandde),
+      // ga dan door met die gebruiker en zet het wachtwoord alsnog. Zo is uitnodigen
+      // herhaalbaar en herstelt het een half-aangemaakt partner-account.
+      if (uErr?.message?.includes("already") || uErr?.message?.toLowerCase().includes("registered")) {
+        const { data: lijst } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const bestaand = lijst?.users?.find((u: any) => (u.email || "").toLowerCase() === email);
+        if (!bestaand) return fout("Dit e-mailadres bestaat al, maar de gebruiker is niet te vinden", 400);
+        id = bestaand.id;
+        await admin.auth.admin.updateUserById(id, { password: ww, email_confirm: true });
+      } else {
+        return fout("Aanmaken mislukt: " + (uErr?.message || "onbekend"), 400);
+      }
     }
-    const id = gemaakt.user.id;
     // team_id BEWUST null: zo matcht de partner geen enkele winkel-RLS.
     const { error: aErr } = await admin.from("accounts").upsert({
       id, naam, rol: "partner", team_id: null, email, gebruikersnaam: email,

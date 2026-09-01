@@ -360,6 +360,7 @@
   .kan.winkel{background:var(--soft-2); color:var(--muted);}
   .kan.shop{background:var(--green-soft); color:var(--green-tekst);}
   .kan.mp{background:var(--amber-soft); color:var(--amber-tekst);}
+  .kan.portaal{background:var(--lblauw); color:var(--oranje);}
   a.kan.shop:hover{filter:brightness(.96);}
   .hwpop textarea{width:100%; font-family:inherit; font-size:14px;}
   .veldkop{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px;}
@@ -2154,8 +2155,8 @@
   <div class="pagehead"><h1>Partners</h1></div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-link"/></svg>Hoe het werkt</h2>
-    <p class="muted" style="max-width:80ch">Een partner is een bevriende doorverkoper met een eigen dashboard. Jij nodigt hem hieronder uit met een eigen login. Daarna wijs je laptops aan hem toe vanuit een toestel in de voorraad, met de knop "Toewijzen aan partner". Hij ziet alleen zijn eigen toestellen, niets van jouw winkel, en per laptop verdelen jullie de winst. Zijn dashboard staat op <b>storvo.nl/partner</b>.</p>
-    <a class="btn ghost" href="/partner/" target="_blank" rel="noopener" style="margin-top:14px"><svg class="i s"><use href="#i-globe"/></svg>Open het partner-dashboard</a>
+    <p class="muted" style="max-width:80ch; margin-bottom:18px">Een partner is een bevriende doorverkoper met een eigen dashboard. Jij nodigt hem hieronder uit met een eigen login. Daarna wijs je laptops aan hem toe vanuit een toestel in de voorraad, met de knop "Toewijzen aan partner". Hij ziet alleen zijn eigen toestellen, niets van jouw winkel, en per laptop verdelen jullie de winst. Zijn dashboard staat op <b>storvo.nl/partner</b>.</p>
+    <a class="btn ghost" href="/partner/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-globe"/></svg>Open het partner-dashboard</a>
   </div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-plus"/></svg>Nieuwe partner uitnodigen</h2>
@@ -6630,6 +6631,7 @@ function hwKanalen(h){
   const k=h.kanalen||{};
   const b=[];
   if(k.winkel!==false) b.push('<span class="kan winkel">Winkel</span>');
+  if(k.partner) b.push('<span class="kan portaal">Portaal</span>');
   if(k.shopify && k.shopify.id){
     b.push(k.shopify.url
       ? `<a class="kan shop" href="${esc(k.shopify.url)}" target="_blank" rel="noopener">Webshop</a>`

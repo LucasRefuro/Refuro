@@ -156,6 +156,7 @@ tr:hover td{background:var(--soft);}
 tr.klikbaar{cursor:pointer;}
 .num{text-align:right; font-variant-numeric:tabular-nums;}
 .hwact{white-space:nowrap;}
+.vract{display:inline-flex; gap:8px; align-items:center; justify-content:flex-end;}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
 .tabelrol{overflow-x:auto; max-width:100%;}
 
@@ -3700,15 +3701,13 @@ function tekenVoorraad(){
                    onclick="event.stopPropagation()"><span class="stip"></span>Staat online</a>`
               : '<span class="onlinepil"><span class="stip"></span>Staat online</span>')
             : '<span class="muted klein">nog niet</span>'}</td>
-          <td class="num hwact">${h
+          <td class="num hwact"><div class="vract">${h
             ? (h.kanalen&&h.kanalen.partner
-              ? `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)">Uit partner-dashboard</button>`
-              : `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)">Naar partner-dashboard</button>`)
-            : ''}
-            ${staatOnline(a)
+              ? `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)">Uit portaal</button>`
+              : `<button class="btn ghost small" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)">Naar portaal</button>`)
+            : ''}${staatOnline(a)
             ? `<button class="btn ghost small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">Aanpassen</button>`
-            : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">
-                 <svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}</td>
+            : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}</div></td>
         </tr>`;}).join('')}</tbody></table></div>`
     : leeg('i-shop', vrFilterNu==='alles'?'Nog niets op voorraad':'Niets in deze lijst',
         'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.');
