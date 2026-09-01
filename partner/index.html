@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Storvo Partner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root { color-scheme: light; --blue: #3b5bfd; --blue-d: #2e49d6; --bg: #eef1f8; --line: #e8ecf3; --txt: #1c2333; --mut: #8a93a6; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+#app { display: flex; min-height: 100vh; }
+svg.i { width: 18px; height: 18px; flex-shrink: 0; }
+#sidebar { width: 232px; background: #fff; flex-shrink: 0; padding: 22px 14px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; padding: 0 8px 22px; color: var(--txt); }
+.navbtn { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; background: none; border: none; color: #5a6478; padding: 11px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; border-radius: 12px; margin-bottom: 3px; font-family: inherit; position: relative; }
+.navbtn:hover { background: #f1f4fb; color: var(--txt); }
+.navbtn.active { background: var(--blue); color: #fff; box-shadow: 0 8px 18px rgba(59,91,253,.32); }
+.navspacer { flex: 1; }
+.navdot { background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 18px; height: 18px; display: none; align-items: center; justify-content: center; padding: 0 5px; margin-left: auto; }
+#alertdot { background: #e5484d; }
+#margedot { background: #f59e0b; }
+.navbtn.active .navdot { background: rgba(255,255,255,.28); }
+#content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#topbar { display: flex; align-items: center; gap: 16px; padding: 18px 30px 0; max-width: 1250px; width: 100%; margin: 0 auto; }
+.search { flex: 1; max-width: 420px; display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; color: var(--mut); }
+.search input { border: none; outline: none; flex: 1; font-size: 13px; background: none; color: var(--txt); }
+.topright { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.bell { position: relative; background: #fff; border: 1px solid var(--line); width: 40px; height: 40px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #5a6478; }
+.bell:hover { color: var(--blue); }
+#belldot { position: absolute; top: -5px; right: -5px; background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 17px; height: 17px; display: none; align-items: center; justify-content: center; padding: 0 4px; }
+.userchip { display: flex; align-items: center; gap: 10px; }
+.userchip .ava { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #3b5bfd, #8aa4ff); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.userchip b { font-size: 13px; display: block; }
+.userchip small { color: var(--mut); font-size: 11px; }
+#main { flex: 1; padding: 22px 30px 34px; max-width: 1250px; width: 100%; margin: 0 auto; }
+h1 { font-size: 20px; margin-bottom: 4px; letter-spacing: -.2px; }
+.sub { color: var(--mut); font-size: 13px; margin-bottom: 20px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.kpi { background: #fff; border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; gap: 13px; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
+.kico { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #eef0f4; color: #5a6478; }
+.kpi.green .kico { background: #e2f6ec; color: #16a077; }
+.kpi.blue .kico { background: #e6ecff; color: #3b5bfd; }
+.kpi.purple .kico { background: #f0e9fe; color: #7c3aed; }
+.kpi.orange .kico { background: #fdefe2; color: #e07b1f; }
+.kpi.red .kico { background: #fde8e9; color: #e5484d; }
+.kpi .lbl { font-size: 11.5px; color: var(--mut); font-weight: 600; margin-bottom: 3px; }
+.kpi .val { font-size: 19px; font-weight: 800; letter-spacing: -.3px; }
+.chartrow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart { display: flex; align-items: stretch; gap: 8px; height: 185px; margin-top: 34px; }
+.cb { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: flex-end; position: relative; min-width: 0; }
+.cb .bar { width: 68%; max-width: 36px; background: #e8ecf3; border-radius: 9px; min-height: 6px; transition: background .15s; }
+.cb:hover .bar, .cb.hot .bar { background: var(--blue); }
+.cb.green:hover .bar, .cb.green.hot .bar { background: #16a077; }
+.cb .m { font-size: 11px; color: var(--mut); }
+.cb .tip { position: absolute; top: -34px; left: 50%; transform: translateX(-50%); background: #171c26; color: #fff; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 2; }
+.cb:hover .tip, .cb.hot .tip { opacity: 1; }
+.cb.hot:not(:hover) .tip { opacity: 0; }
+.chart:hover .cb.hot:not(:hover) .bar { background: #e8ecf3; }
+.chart:hover .cb.green.hot:not(:hover) .bar { background: #e8ecf3; }
+table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--mut); background: #fff; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 11px 12px; border-bottom: 1px solid #f2f4f9; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: #f5f8ff; }
+.tablewrap { border-radius: 14px; overflow-x: auto; background: #fff; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
+/* login */
+#loginwrap { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: linear-gradient(135deg, #2743d8, #5b7cff 55%, #8fd0ff); }
+.logincard { background: #fff; border-radius: 20px; padding: 36px 34px 30px; width: 400px; max-width: 92vw; box-shadow: 0 30px 80px rgba(10,20,60,.35); }
+#loginerr { color: #e5484d; font-size: 12px; margin-top: 8px; display: none; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.b-ok { background: #e6f6ee; color: #12805c; }
+.b-warn { background: #fdf0e5; color: #c2540a; }
+.b-bad { background: #fdebec; color: #ce2c31; }
+.b-info { background: #e8f0fe; color: #2563eb; }
+.b-gray { background: #eef0f3; color: #556; }
+.b-purple { background: #f1e8fd; color: #7c3aed; }
+.card { background: #fff; border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(28,35,51,.05); }
+label { display: block; font-size: 12px; font-weight: 600; color: #344054; margin-bottom: 4px; }
+input[type=text], input[type=number], input[type=password], textarea, select { width: 100%; padding: 9px 11px; border: 1px solid #dde3ee; border-radius: 10px; font-size: 13px; font-family: inherit; background: #fff; color: var(--txt); }
+input:focus, textarea:focus, select:focus { outline: 2px solid #c3cffe; border-color: var(--blue); }
+textarea { resize: vertical; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+.field { margin-bottom: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn:hover { background: var(--blue-d); }
+.btn.gray { background: #eef0f3; color: #344054; }
+.btn.gray:hover { background: #e2e5ea; }
+.btn.green { background: #12805c; }
+.btn.green:hover { background: #0e6b4d; }
+.btn.sm { padding: 5px 10px; font-size: 12px; }
+.btn.purple { background: #7c3aed; }
+.btn.red { background: #e5484d; }
+.btn:disabled { opacity: .5; cursor: default; }
+.checkrow { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 8px; flex-wrap: wrap; }
+.checkrow input { width: auto; }
+.dupbanner { background: #fff8e6; border: 1px solid #f0d47a; color: #8a6a10; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+.notice { background: #fdebec; border: 1px solid #f4b0b4; color: #ce2c31; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+.notice.blue { background: #e8f0fe; border-color: #b9d0fb; color: #2563eb; }
+.notice.green { background: #e6f6ee; border-color: #a8dcc5; color: #12805c; }
+.notice.orange { background: #fdf0e5; border-color: #f3c99a; color: #c2540a; }
+.empty { color: #98a2b3; text-align: center; padding: 34px; font-size: 13px; }
+#modalbg { position: fixed; inset: 0; background: rgba(15,20,30,.45); display: none; align-items: center; justify-content: center; z-index: 50; }
+#modal { background: #fff; border-radius: 12px; padding: 22px; width: 460px; max-width: 94vw; max-height: 88vh; overflow-y: auto; }
+#modal h2 { font-size: 16px; margin-bottom: 14px; }
+.mini { font-size: 12px; color: #667085; }
+.right { text-align: right; }
+input.cell { width: 90px; padding: 5px 7px; font-size: 13px; }
+select.cell { width: auto; padding: 5px 7px; font-size: 12px; }
+.stepdots { display: flex; gap: 6px; margin-bottom: 16px; }
+.stepdots span { width: 26px; height: 5px; border-radius: 3px; background: #e4e7ec; }
+.stepdots span.on { background: #2563eb; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #171c26; color: #fff; padding: 11px 18px; border-radius: 9px; font-size: 13px; z-index: 99; box-shadow: 0 6px 24px rgba(0,0,0,.25); max-width: 340px; }
+.typecard { background: #fff; border: 2px solid #e4e7ec; border-radius: 12px; padding: 26px; text-align: center; cursor: pointer; font-size: 15px; font-weight: 600; }
+.typecard:hover { border-color: #4f8ef7; background: #f5f8ff; }
+.typecard .big { font-size: 34px; display: block; margin-bottom: 10px; }
+.copyrow { display: flex; gap: 8px; align-items: flex-start; }
+.copyrow > :first-child { flex: 1; }
+.fotos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.foto { position: relative; width: 92px; height: 92px; border-radius: 8px; overflow: hidden; border: 1px solid #e4e7ec; }
+.foto img { width: 100%; height: 100%; object-fit: cover; }
+.foto .del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 11px; line-height: 1; }
+.exrow { display: grid; grid-template-columns: 90px 1fr 1fr 110px; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.exrow b { font-size: 12px; color: #344054; }
+tr.hl td { background: #fffaf0; }
+.savebar { position: sticky; bottom: 0; background: linear-gradient(transparent, var(--bg) 30%); padding: 14px 0 4px; z-index: 5; }
+#camv { width: 100%; border-radius: 10px; background: #000; max-height: 55vh; }
+/* ---------- nog online zetten ---------- */
+.pubcard { display: flex; gap: 14px; align-items: center; background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s; }
+.pubcard:hover { border-color: #4f8ef7; background: #f5f8ff; }
+.pubthumb { width: 56px; height: 56px; border-radius: 10px; background: #eef0f3; display: flex; align-items: center; justify-content: center; font-size: 26px; overflow: hidden; flex-shrink: 0; }
+.pubthumb img { width: 100%; height: 100%; object-fit: cover; }
+/* label preview */
+.labprev { width: 250px; height: 129px; border: 1.5px dashed #c7cede; border-radius: 8px; padding: 9px 11px; display: flex; gap: 9px; align-items: center; background: #fff; margin: 0 auto; overflow: hidden; }
+.labprev .lt { flex: 1; min-width: 0; }
+.labprev .lm { font-size: 12px; font-weight: 800; line-height: 1.15; }
+.labprev .ls { font-size: 9px; margin-top: 4px; line-height: 1.3; color: #333; }
+.labprev .lp { font-size: 13px; font-weight: 800; margin-top: 4px; }
+.labprev .ld { font-size: 9px; margin-top: 3px; font-style: italic; }
+.labprev .lq { width: 68px; text-align: center; flex-shrink: 0; }
+.labprev .lq img { width: 62px; height: 62px; image-rendering: pixelated; }
+.labprev .ln { font-size: 10px; font-weight: 700; letter-spacing: .5px; }
+/* ---------- mobiel ---------- */
+@media (max-width: 760px) {
+  #app { flex-direction: column; }
+  #sidebar { position: fixed; bottom: 0; left: 0; right: 0; top: auto; width: 100%; height: 60px; flex-direction: row; padding: 0; z-index: 40; align-items: stretch; justify-content: space-around; border-top: 1px solid var(--line); border-right: none; }
+  #sidebar .brand, .navspacer, .hidemob { display: none; }
+  .navbtn { flex-direction: column; gap: 2px; padding: 7px 2px; flex: 1; align-items: center; justify-content: center; margin: 0; border-radius: 0; }
+  .navbtn.active { background: none; color: var(--blue); box-shadow: none; }
+  .navbtn .txt { font-size: 9px; }
+  .navdot { position: absolute; top: 4px; right: 12%; margin: 0; }
+  .navbtn.active .navdot { background: var(--blue); }
+  #topbar { padding: 12px 14px 0; }
+  .userchip div:last-child { display: none; }
+  .search { max-width: none; }
+  #main { padding: 16px 14px 92px; }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .grid2, .grid3, .grid4, .chartrow { grid-template-columns: 1fr; }
+  .exrow { grid-template-columns: 1fr; border-bottom: 1px solid #f0f2f5; padding-bottom: 10px; }
+  .savebar { bottom: 60px; }
+  .toast { bottom: 76px; left: 14px; right: 14px; max-width: none; }
+}
+</style>
+</head>
+<body>
+<div id="loginwrap">
+  <div class="logincard">
+    <div class="brand" style="justify-content:center;padding-bottom:4px">Storvo<span style="color:var(--blue)"> Partner</span></div>
+    <div style="text-align:center;color:var(--mut);font-size:13px;margin-bottom:18px">Log in op je partner-dashboard</div>
+    <div class="field"><label>E-mail</label><input type="email" id="loginname" placeholder="jouw@email.nl" autocomplete="email" onkeydown="if(event.key==='Enter')f('loginpin').focus()"></div>
+    <div class="field"><label>Wachtwoord</label><input type="password" id="loginpin" placeholder="Wachtwoord" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="loginerr">Vul je e-mail en wachtwoord in</div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:14px" onclick="doLogin()">Inloggen</button>
+    <div class="mini" style="text-align:center;margin-top:12px">Je krijgt een uitnodiging van de winkel om je account aan te maken</div>
+  </div>
+</div>
+<div id="app">
+<nav id="sidebar">
+  <div class="brand">Storvo<span style="color:var(--blue)"> Partner</span></div>
+  <button class="navbtn" data-p="dash" onclick="nav('dash')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg><span class="txt">Dashboard</span></button>
+  <button class="navbtn" data-p="voorraad" onclick="nav('voorraad')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 22V13"/></svg><span class="txt">Voorraad</span></button>
+  <button class="navbtn" data-p="add" onclick="nav('add')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg><span class="txt">Toevoegen</span></button>
+  <button class="navbtn" data-p="online" onclick="nav('online')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg><span class="txt">Online zetten</span><span id="onlinedot" class="navdot"></span></button>
+  <button class="navbtn" data-p="verkocht" onclick="nav('verkocht')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4L12 14l-3-3"/></svg><span class="txt">Verkocht</span><span id="alertdot" class="navdot"></span></button>
+  <button class="navbtn" data-p="marge" onclick="nav('marge')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg><span class="txt">Marge</span><span id="margedot" class="navdot"></span></button>
+  <div class="navspacer"></div>
+  <button class="navbtn" data-p="instellingen" onclick="nav('instellingen')"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="txt">Instellingen</span></button>
+  <button class="navbtn hidemob" onclick="logout()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="txt">Uitloggen</span></button>
+</nav>
+<div id="content">
+<header id="topbar">
+  <div class="search"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input id="q" placeholder="Zoek op model of productnummer..." onkeydown="if(event.key==='Enter')doSearch()"></div>
+  <div class="topright">
+    <span id="syncbadge" style="font-size:18px;cursor:pointer;line-height:1" onclick="pullRemote(true);toast(' Synchroniseren...')" title="Synchronisatiestatus — klik om te vernieuwen">●</span>
+    <button class="bell" onclick="nav('online')" title="Nog online zetten"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span id="belldot"></span></button>
+    <div class="userchip"><div class="ava" id="uava">P</div><div><b id="uname">Partner</b><small>Partner-dashboard</small></div></div>
+  </div>
+</header>
+<main id="main"></main>
+</div>
+</div>
+<div id="modalbg"><div id="modal"></div></div>
+<input type="file" id="camIn" accept="image/*" capture="environment" style="display:none" onchange="fotoPick(this)">
+<input type="file" id="fileIn" accept="image/*" multiple style="display:none" onchange="fotoPick(this)">
+
+<script>
+/* ============ data & migratie ============ */
+const KEY = 'ld-handel-v1';
+const DAG = 86400000;
+/* ---- Supabase-client + sync (was Hostinger MySQL) ---- */
+const SUPABASE_URL = 'https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let PARTNER_ID = null, ACCOUNT = null;
+let pullPromise = null, pushTimer = null, lastSyncedAt = null, pendingLocalChange = false;
+let S = load();
+function migrate(s){
+  s.products = s.products || [];
+  s.settings = Object.assign({nextAd: 1, template: '', pin: '1234', labW: 62, labH: 32}, s.settings || {});
+  const today = new Date().toISOString().slice(0,10);
+  s.products.forEach(p => {
+    if (!p.type) p.type = 'anders';
+    p.specs = p.specs || {cpu:'', ram:'', scherm:'', opslag:''};
+    if (p.adKosten == null) p.adKosten = 0;
+    p.fotos = p.fotos || [];
+    if (!p.titel) p.titel = p.model;
+    p.adsOffline = p.adsOffline || {fb:false, mp:false};
+    if (p.fb && !p.fbDatum) p.fbDatum = today;
+    if (p.mp && !p.mpDatum) p.mpDatum = today;
+    p.units.forEach(u => {
+      if (u.extra == null) u.extra = '';
+      if (u.extraKosten == null) u.extraKosten = 0;
+      if (u.verkocht){
+        if (u.deelGezet == null) u.deelGezet = true;
+        if (!u.levering) u.levering = 'ophalen';
+        if (u.geleverd == null) u.geleverd = false;
+        if (!u.vervoerder) u.vervoerder = 'PostNL';
+        if (u.betaal === 'mp' && u.mpUitbetaald == null) u.mpUitbetaald = false;
+      }
+    });
+  });
+  return s;
+}
+function load(){
+  let s; try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ s = {}; }
+  s.ui = s.ui || {page:'dash', pageArg:null};
+  s.draft = s.draft || null;
+  return migrate(s);
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ toast(' Opslag vol! Verwijder een paar foto\'s.'); }
+  pendingLocalChange = true;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushRemote, 700);
+}
+function setSync(state){
+  const b = f('syncbadge'); if (!b) return;
+  const map = { ok:['●','#16a077','Live gesynct'], syncing:['○','#e07b1f','Synchroniseren...'], offline:['●','#e5484d','Niet gesynct — lokaal opgeslagen'] };
+  const m = map[state] || map.offline;
+  b.style.color = m[1]; b.title = m[2]; b.textContent = m[0];
+}
+async function pushRemote(){
+  if (!PARTNER_ID) return;
+  setSync('syncing');
+  try {
+    const { error } = await sb.from('partners')
+      .update({ data: { products: S.products, settings: S.settings }, bijgewerkt_op: new Date().toISOString() })
+      .eq('id', PARTNER_ID);
+    if (error) throw error;
+    pendingLocalChange = false;
+    setSync('ok');
+  } catch(e){ setSync('offline'); }
+}
+async function pullRemote(renderAfter){
+  if (!PARTNER_ID){ setSync('offline'); return false; }
+  try {
+    const { data, error } = await sb.from('partners').select('data, bijgewerkt_op').eq('id', PARTNER_ID).maybeSingle();
+    if (error) throw error;
+    const d = (data && data.data && typeof data.data === 'object') ? data.data : null;
+    /* niet-gesyncte lokale wijzigingen nooit overschrijven met (oudere) serverdata */
+    if (!pendingLocalChange && d && (d.products || d.settings)){
+      S.products = d.products || [];
+      S.settings = Object.assign({nextAd:1, template:'', pin:'1234', labW:62, labH:32}, d.settings || {});
+      migrate(S);
+      try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){}
+    }
+    lastSyncedAt = data ? data.bijgewerkt_op : null;
+    setSync('ok');
+    if (renderAfter) render();
+    return true;
+  } catch(e){ setSync('offline'); return false; }
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function eur(n){ return '€ ' + (Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function num(v){ const n = parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
+function norm(s){ return String(s||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function pad4(n){ return String(n).padStart(4,'0'); }
+function f(id){ return document.getElementById(id); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function daysSince(d){ if(!d) return 0; return Math.max(0, Math.floor((Date.now() - new Date(d+'T00:00').getTime())/DAG)); }
+
+/* ============ berekeningen ============ */
+function adShare(p){ return p.units.length ? (p.adKosten||0)/p.units.length : 0; }
+function unitCost(p,u){ return (p.inkoop||0)+(p.kosten||0)+(u.extraKosten||0)+adShare(p); }
+function unitWinst(p,u){
+  const w = (u.prijs||0) - unitCost(p,u);
+  let deel = 0;
+  if (u.deelGezet){ deel = u.deelType==='eur' ? (u.deelWaarde||0) : w*(u.deelWaarde||0)/100; }
+  deel = Math.round(deel*100)/100;
+  return { winst: Math.round(w*100)/100, deel, winkel: u.deelGezet? Math.round((w-deel)*100)/100 : 0 };
+}
+function voorraadUnits(p){ return p.units.filter(u=>!u.verkocht); }
+function soldUnits(p){ return p.units.filter(u=>u.verkocht); }
+function allSold(){ const r=[]; S.products.forEach(p=>soldUnits(p).forEach(u=>r.push({p,u}))); r.sort((a,b)=>(b.u.datum||'').localeCompare(a.u.datum||'')); return r; }
+function potWinst(p){ /* verwachte winst voorraad, zonder marge-verdeling */
+  return voorraadUnits(p).reduce((a,u)=>a + (p.vraagprijs - unitCost(p,u)), 0);
+}
+function totals(){
+  let omzet=0, inkoop=0, winst=0, winkel=0, deel=0, cash=0, bank=0, mpOnderweg=0, voorraadWaarde=0, opVoorraad=0, teVerdelen=0;
+  S.products.forEach(p=>{
+    p.units.forEach(u=>{
+      inkoop += unitCost(p,u);
+      if (u.verkocht){
+        omzet += u.prijs||0;
+        const w = unitWinst(p,u);
+        winst += w.winst;
+        if (u.deelGezet){ winkel += w.winkel; deel += w.deel; } else teVerdelen += w.winst;
+        if (u.betaal==='cash') cash += u.prijs||0;
+        else if (u.betaal==='mp'){ if (u.mpUitbetaald) bank += u.prijs||0; else mpOnderweg += u.prijs||0; }
+        else bank += u.prijs||0;
+      } else { voorraadWaarde += unitCost(p,u); opVoorraad++; }
+    });
+  });
+  return {omzet, inkoop, winst, winkel, deel, cash, bank, mpOnderweg, voorraadWaarde, opVoorraad, teVerdelen};
+}
+function voorraadTotals(){
+  let omzet=0, investering=0, extraK=0, winst=0;
+  S.products.forEach(p=>{
+    voorraadUnits(p).forEach(u=>{
+      omzet += p.vraagprijs||0;
+      investering += p.inkoop||0;
+      extraK += (u.extraKosten||0) + adShare(p) + (p.kosten||0);
+      winst += (p.vraagprijs||0) - unitCost(p,u);
+    });
+  });
+  return {omzet, investering, extraK, winst};
+}
+function adsTodo(){
+  return S.products.filter(p => p.units.length>0 && voorraadUnits(p).length===0 &&
+    ((p.fb && !p.adsOffline.fb) || (p.mp && !p.adsOffline.mp)));
+}
+function onlineTodo(){
+  return S.products.filter(p => voorraadUnits(p).length>0 && !p.fb && !p.mp);
+}
+function adsChannels(p){ const c=[]; if(p.fb&&!p.adsOffline.fb)c.push('Facebook'); if(p.mp&&!p.adsOffline.mp)c.push('Marktplaats'); return c; }
+function specsLine(p){
+  if (p.type!=='laptop') return '';
+  return [p.specs.cpu, p.specs.ram, p.specs.opslag, p.specs.scherm].filter(Boolean).join(' · ');
+}
+function maxDagenOnline(p){
+  let m = 0;
+  if (p.fb && p.fbDatum) m = Math.max(m, daysSince(p.fbDatum));
+  if (p.mp && p.mpDatum) m = Math.max(m, daysSince(p.mpDatum));
+  return m;
+}
+function onlineBadges(p){
+  const parts = [];
+  if (p.fb){ const d = daysSince(p.fbDatum); parts.push('<span class="badge '+(d>=18?'b-bad':d>=14?'b-warn':'b-info')+'">FB '+d+'d</span>'); }
+  if (p.mp){ const d = daysSince(p.mpDatum); parts.push('<span class="badge '+(d>=18?'b-bad':d>=14?'b-warn':'b-info')+'">MP '+d+'d</span>'); }
+  return parts.join(' ') || '<span class="badge b-gray">niet online</span>';
+}
+
+/* ============ login & zoeken ============ */
+let USER = null, searchQ = '';
+let syncInterval = null;
+async function doLogin(){
+  const email = f('loginname').value.trim();
+  const pw = f('loginpin').value;
+  if (!email || !pw){ f('loginerr').textContent = 'Vul je e-mail en wachtwoord in'; f('loginerr').style.display='block'; return; }
+  const btn = document.querySelector('.logincard .btn');
+  if (btn){ btn.disabled = true; btn.textContent = 'Bezig...'; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (btn){ btn.disabled = false; btn.textContent = 'Inloggen'; }
+  if (error){ f('loginerr').textContent = 'E-mail of wachtwoord onjuist'; f('loginerr').style.display='block'; return; }
+  await naLogin(data.session);
+}
+/* Na een geslaagde login: het account ophalen, checken dat het echt een partner is,
+   de partner-data laden en de app tonen. Een niet-partner wordt meteen uitgelogd. */
+async function naLogin(session){
+  if (!session) return;
+  const { data: acc } = await sb.from('accounts').select('id,naam,rol').eq('id', session.user.id).maybeSingle();
+  if (!acc || acc.rol !== 'partner'){
+    f('loginerr').textContent = 'Dit account is geen partner-account.';
+    f('loginerr').style.display='block';
+    try { await sb.auth.signOut(); } catch(e){}
+    return;
+  }
+  ACCOUNT = acc; PARTNER_ID = acc.id; USER = acc.naam || 'Partner';
+  f('loginerr').style.display='none'; f('loginpin').value='';
+  f('loginwrap').style.display='none'; f('app').style.display='flex';
+  await pullRemote(false);
+  applyUser(); render();
+  clearInterval(syncInterval);
+  syncInterval = setInterval(()=>{ pendingLocalChange ? pushRemote() : pullRemote(page==='dash'); }, 25000);
+}
+function applyUser(){
+  if (!USER) return;
+  f('uava').textContent = USER[0].toUpperCase();
+  f('uname').textContent = USER;
+}
+async function logout(){
+  clearInterval(syncInterval);
+  try { await sb.auth.signOut(); } catch(e){}
+  USER = null; PARTNER_ID = null; ACCOUNT = null;
+  f('app').style.display='none'; f('loginwrap').style.display='flex';
+}
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && USER) pullRemote(page==='dash'); });
+function doSearch(){ searchQ = f('q').value.trim(); nav('voorraad'); }
+function clearSearch(){ searchQ = ''; if (f('q')) f('q').value = ''; nav('voorraad'); }
+
+/* ============ router ============ */
+let page = 'dash', pageArg = null;
+function nav(p, arg){
+  page = p; pageArg = arg==null?null:arg;
+  S.ui = {page, pageArg}; save();
+  render();
+}
+function render(){
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.p===page || (page==='product'&&b.dataset.p==='voorraad')));
+  const todo = adsTodo().length, otodo = onlineTodo().length;
+  const mtodo = allSold().filter(r=>!r.u.deelGezet).length;
+  const setDot = (id,n)=>{ const el=f(id); el.style.display = n?'flex':'none'; el.textContent = n; };
+  setDot('alertdot', todo); setDot('onlinedot', otodo); setDot('margedot', mtodo);
+  setDot('belldot', todo + otodo + mtodo);
+  const m = f('main');
+  if (page==='dash') m.innerHTML = rDash();
+  else if (page==='voorraad') m.innerHTML = rVoorraad();
+  else if (page==='add') m.innerHTML = rAdd();
+  else if (page==='online') m.innerHTML = rOnline(pageArg);
+  else if (page==='verkocht') m.innerHTML = rVerkocht();
+  else if (page==='marge') m.innerHTML = rMarge();
+  else if (page==='product') m.innerHTML = rProduct(pageArg);
+  else if (page==='instellingen') m.innerHTML = rSettings();
+  window.scrollTo(0,0);
+}
+function toast(msg){
+  const t = document.createElement('div'); t.className='toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 4000);
+}
+async function copyTxt(id){
+  const el = f(id); const t = el.value!==undefined ? el.value : el.textContent;
+  try { await navigator.clipboard.writeText(t); }
+  catch(e){ if(el.select){ el.select(); document.execCommand('copy'); } }
+  toast(' Gekopieerd!');
+}
+
+/* ============ dashboard ============ */
+const KICONS = {
+  blue: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>',
+  green: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>',
+  orange: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  purple: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>',
+  red: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
+  '': '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 22V13"/></svg>'
+};
+function kpi(l,v,c){ return '<div class="kpi '+(c||'')+'"><div class="kico">'+(KICONS[c||'']||KICONS[''])+'</div><div><div class="lbl">'+l+'</div><div class="val">'+v+'</div></div></div>'; }
+const MND = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+function monthChart(title, mode, color){
+  const now = new Date(), cols = [];
+  let vals = [];
+  for (let i=8; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const pref = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    let sum = 0;
+    allSold().forEach(({p,u})=>{
+      if ((u.datum||'').slice(0,7) === pref) sum += mode==='winst' ? unitWinst(p,u).winst : (u.prijs||0);
+    });
+    cols.push({d, sum});
+  }
+  const max = Math.max(1, ...cols.map(c=>c.sum));
+  const bars = cols.map((c,i)=>
+    '<div class="cb'+(i===cols.length-1?' hot':'')+(color==='green'?' green':'')+'"><span class="tip">'+eur(c.sum)+'</span>' +
+    '<div class="bar" style="height:'+Math.max(4, Math.round(c.sum/max*82))+'%"></div>' +
+    '<span class="m">'+MND[c.d.getMonth()]+'</span></div>').join('');
+  return '<div class="card" style="margin-bottom:0"><div class="mini" style="font-weight:600">'+title+'</div>' +
+    '<div style="font-size:23px;font-weight:800;margin-top:2px">'+eur(cols[cols.length-1].sum)+'<span class="mini" style="font-weight:600"> deze maand</span></div>' +
+    '<div class="chart">'+bars+'</div></div>';
+}
+function adsWarnHtml(){
+  const todo = adsTodo();
+  if (!todo.length) return '';
+  return '<div class="notice"> Ads offline halen: ' + todo.map(p=>
+    '<a href="#" onclick="adsPopup(\''+p.id+'\');return false;" style="color:inherit;font-weight:600">'+esc(p.model)+'</a> ('+adsChannels(p).join(' & ')+')'
+  ).join(' · ') + '</div>';
+}
+function rDash(){
+  const t = totals();
+  let extra = '';
+  const ot = onlineTodo();
+  if (ot.length) extra += '<div class="notice blue"> <b>'+ot.length+'</b> product'+(ot.length===1?'':'en')+' nog online zetten — <a href="#" onclick="nav(\'online\');return false;" style="color:inherit;font-weight:600">naar Online zetten</a></div>';
+  if (t.teVerdelen > 0) extra += '<div class="notice orange"> <b>'+eur(t.teVerdelen)+'</b> winst nog te verdelen — <a href="#" onclick="nav(\'marge\');return false;" style="color:inherit;font-weight:600">Marge berekening</a></div>';
+  return '<h1>Dashboard</h1><div class="sub">Overzicht van de handel</div>' + adsWarnHtml() + extra +
+  '<div class="kpis">' +
+    kpi('Omzet', eur(t.omzet), 'blue') + kpi('Inkoop totaal', eur(t.inkoop), '') +
+    kpi('Winst', eur(t.winst), 'green') + kpi('Voor de winkel', eur(t.winkel), 'green') + kpi('Jouw winst', eur(t.deel), 'green') +
+  '</div><div class="kpis">' +
+    kpi('Cash', eur(t.cash), 'orange') + kpi('Bank', eur(t.bank), 'purple') +
+    (t.mpOnderweg>0 ? kpi('MP nog uit te betalen', eur(t.mpOnderweg), 'red') : '') +
+    kpi('Op voorraad', t.opVoorraad + ' stuks', '') + kpi('Voorraadwaarde', eur(t.voorraadWaarde), '') +
+  '</div>' +
+  '<div class="chartrow">' + monthChart('Omzet per maand', 'omzet') + monthChart('Winst per maand', 'winst', 'green') + '</div>' +
+  '<div class="card"><b style="font-size:14px">Laatste verkopen</b>' + lastSales() + '</div>';
+}
+function lastSales(){
+  const rows = allSold().slice(0,5);
+  if (!rows.length) return '<div class="empty">Nog geen verkopen</div>';
+  return '<div class="tablewrap" style="margin-top:10px"><table><tr><th>Model</th><th>Datum</th><th class="right">Verkoopprijs</th><th class="right">Winst</th><th>Betaald</th></tr>' +
+    rows.map(({p,u})=>{ const w=unitWinst(p,u);
+      return '<tr class="click" onclick="nav(\'product\',\''+p.id+'\')"><td>'+esc(p.model)+'</td><td>'+esc(u.datum||'')+'</td><td class="right">'+eur(u.prijs)+'</td><td class="right">'+eur(w.winst)+'</td><td>'+betaalLabel(u)+'</td></tr>';
+    }).join('') + '</table></div>';
+}
+function betaalLabel(u){
+  if (u.betaal==='cash') return ' Cash';
+  if (u.betaal==='mp') return u.mpUitbetaald ? ' MP ' : ' MP ';
+  return ' Bank';
+}
+
+/* ============ voorraad ============ */
+function defectBadge(p){
+  const units = voorraadUnits(p);
+  const def = units.filter(u=>u.defect && u.defect.trim());
+  if (!units.length) return '<span class="badge b-gray">—</span>';
+  if (!def.length) return '<span class="badge b-ok">Allemaal in orde</span>';
+  if (def.length === units.length){
+    const txt = def.length===1 ? esc(def[0].defect) : 'Alle '+def.length+' met defect';
+    return '<span class="badge b-bad"> '+txt+'</span>';
+  }
+  return '<span class="badge b-warn"> '+def.length+' van '+units.length+' met defect — rest in orde</span>';
+}
+function rVoorraad(){
+  let prods = S.products.filter(p=>voorraadUnits(p).length>0);
+  const vt = voorraadTotals();
+  let html = '<h1>Voorraad</h1><div class="sub">Klik op een product voor de productpagina</div>';
+  if (searchQ){
+    const q = norm(searchQ);
+    prods = prods.filter(p=>norm(p.model).includes(q) || norm(p.adnummer).includes(q));
+    html += '<div class="notice blue">Zoekresultaten voor "<b>'+esc(searchQ)+'</b>" ('+prods.length+') — <a href="#" onclick="clearSearch();return false;" style="color:inherit;font-weight:600">wissen</a></div>';
+  }
+  /* te lang online waarschuwingen */
+  const lang = prods.filter(p=>maxDagenOnline(p)>=14).sort((a,b)=>maxDagenOnline(b)-maxDagenOnline(a));
+  if (lang.length){
+    html += '<div class="notice orange"> <b>Lang online:</b><br>' + lang.map(p=>{
+      const d = maxDagenOnline(p);
+      let s = '<a href="#" onclick="nav(\'product\',\''+p.id+'\');return false;" style="color:inherit;font-weight:600">'+esc(p.model)+'</a> — '+d+' dagen';
+      if (d>=21) s += ' → <b>overweeg de prijs te verlagen of de advertentie opnieuw te plaatsen</b>';
+      return s;
+    }).join('<br>') + '</div>';
+  }
+  html += '<div class="kpis">' +
+    kpi('Te behalen omzet', eur(vt.omzet), 'blue') +
+    kpi('Investering (inkoop)', eur(vt.investering), '') +
+    kpi('Extra kosten', eur(vt.extraK), 'orange') +
+    kpi('Te behalen winst', eur(vt.winst), 'green') +
+  '</div>';
+  if (!prods.length) return html + '<div class="card"><div class="empty">Niks op voorraad. Voeg een product toe via het menu.</div></div>';
+  html += '<div class="tablewrap"><table><tr><th>Model</th><th>Productnr</th><th>Defect</th><th>Online</th><th class="right">Inkoop</th><th class="right">Extra kosten</th><th class="right">Vraagprijs</th><th class="right">Winst (verwacht)</th><th class="right">Voorraad</th></tr>';
+  prods.forEach(p=>{
+    const vu = voorraadUnits(p);
+    const extraTot = vu.reduce((a,u)=>a+(u.extraKosten||0)+adShare(p)+(p.kosten||0),0);
+    const pw = potWinst(p);
+    html += '<tr class="click" onclick="nav(\'product\',\''+p.id+'\')"><td><b>'+esc(p.model)+'</b>'+(specsLine(p)?'<div class="mini">'+esc(specsLine(p))+'</div>':'')+'</td><td>'+esc(p.adnummer)+'</td><td>'+defectBadge(p)+'</td><td>'+onlineBadges(p)+'</td><td class="right">'+eur(p.inkoop)+'</td><td class="right">'+eur(extraTot)+'</td><td class="right">'+eur(p.vraagprijs)+'</td><td class="right" style="color:#12805c"><b>'+eur(pw)+'</b>'+(vu.length>1?'<div class="mini">'+eur(pw/vu.length)+' p/st</div>':'')+'</td><td class="right"><b>'+vu.length+'</b></td></tr>';
+  });
+  return html + '</table></div>';
+}
+
+/* ============ product toevoegen (3 stappen, concept blijft bewaard) ============ */
+let addStep = 0, addData = null;
+let draftTimer = null;
+function captureDraft(){
+  try {
+    if (page==='add' && addData){
+      if (addStep===1 && f('f_model')) saveStep1();
+    }
+    S.draft = addData ? {step: addStep, data: addData} : null;
+    save();
+  } catch(e){}
+}
+document.addEventListener('input', ()=>{
+  if (page!=='add' || !addData) return;
+  clearTimeout(draftTimer); draftTimer = setTimeout(captureDraft, 400);
+});
+function resetAdd(){ addStep = 0; addData = null; S.draft = null; save(); }
+function blankAdd(type){
+  return { type: type, model:'', adnummer: pad4(S.settings.nextAd), inkoop:0, vraagprijs:0, aantal:1,
+    specs:{cpu:'',ram:'',scherm:'',opslag:''}, unitRows:[{defect:'',extra:'',extraKosten:0}],
+    titel:'', adtekst:'', adKosten:0, fb:false, mp:false, fotos:[], notitie:'' };
+}
+function rAdd(){
+  const dots = '<div class="stepdots"><span class="'+(addStep>=0?'on':'')+'"></span><span class="'+(addStep>=1?'on':'')+'"></span></div>';
+  const reset = addData ? ' <button class="btn gray sm" onclick="if(confirm(\'Concept weggooien en opnieuw beginnen?\')){resetAdd();render()}"> Opnieuw</button>' : '';
+  if (addStep === 0){
+    return '<h1>Product toevoegen</h1><div class="sub">Stap 1 van 2 — wat voor product is het?</div>' + dots +
+    '<div class="grid2" style="max-width:560px">' +
+      '<div class="typecard" onclick="pickType(\'laptop\')"><span class="big"></span>Laptop</div>' +
+      '<div class="typecard" onclick="pickType(\'anders\')"><span class="big"></span>Ander product</div>' +
+    '</div>';
+  }
+  const d0 = addData, isL0 = d0.type==='laptop';
+  {
+    const d = d0, isL = isL0;
+    let html = '<h1>Product toevoegen'+reset+'</h1><div class="sub">Stap 2 van 2 — '+(isL?' laptop':' product')+' inchecken (concept wordt automatisch bewaard)</div>' + dots +
+    '<div class="dupbanner" id="dup"></div><div class="card">' +
+      '<div class="grid2"><div class="field"><label>Model *</label><input type="text" id="f_model" value="'+esc(d.model)+'" placeholder="bv. Lenovo ThinkPad T480" oninput="checkDup()"></div>' +
+      '<div class="field"><label>Productnummer (loopt automatisch op)</label><input type="text" id="f_ad" value="'+esc(d.adnummer)+'"></div></div>';
+    if (isL) html += '<div class="grid4">' +
+      '<div class="field"><label>Processor</label><input type="text" id="f_cpu" value="'+esc(d.specs.cpu)+'" placeholder="i5-8250U"></div>' +
+      '<div class="field"><label>RAM</label><input type="text" id="f_ram" value="'+esc(d.specs.ram)+'" placeholder="8GB"></div>' +
+      '<div class="field"><label>Opslag</label><input type="text" id="f_opslag" value="'+esc(d.specs.opslag)+'" placeholder="256GB SSD"></div>' +
+      '<div class="field"><label>Schermgrootte</label><input type="text" id="f_scherm" value="'+esc(d.specs.scherm)+'" placeholder="14 inch"></div></div>';
+    html += '<div class="grid3">' +
+      '<div class="field"><label>Inkoopprijs p/st (€)</label><input type="number" id="f_inkoop" step="0.01" min="0" value="'+d.inkoop+'"></div>' +
+      '<div class="field"><label>Vraagprijs (€)</label><input type="number" id="f_prijs" step="0.01" min="0" value="'+d.vraagprijs+'"></div>' +
+      '<div class="field"><label>Aantal</label><input type="number" id="f_aantal" min="1" value="'+d.aantal+'" onchange="syncRows()"></div></div>' +
+      '<div class="field"><label>Per exemplaar — aantekening/defect &amp; extra onderdelen (bv. RAM, SSD, toetsenbord) + kosten daarvan</label><div id="unitrows"></div></div>' +
+      '<div class="notice blue" style="margin-bottom:14px"> De advertentie (tekst, foto\'s en plaatsing) maak je daarna op de pagina <b>Online zetten</b>.</div>' +
+      '<button class="btn gray" onclick="saveStep1();captureDraft();addStep=0;render()">← Terug</button> ' +
+      '<button class="btn green" onclick="addSave()"> Product opslaan</button>' +
+    '</div>';
+    setTimeout(renderRows, 0);
+    return html;
+  }
+}
+function pickType(t){ if (!addData) addData = blankAdd(t); else addData.type = t; addStep = 1; captureDraft(); render(); }
+function autoTitel(d){
+  if (d.type==='laptop') return [d.model, d.specs.cpu, d.specs.ram, d.specs.opslag].filter(Boolean).join(' | ');
+  return d.model;
+}
+function renderRows(){
+  const box = f('unitrows'); if (!box || !addData) return;
+  box.innerHTML = addData.unitRows.map((r,i)=>
+    '<div class="exrow"><b>Exemplaar '+(i+1)+'</b>' +
+    '<input type="text" placeholder="aantekening / defect..." value="'+esc(r.defect)+'" oninput="addData.unitRows['+i+'].defect=this.value">' +
+    '<input type="text" placeholder="extra\'s: bv. 8GB RAM + SSD..." value="'+esc(r.extra)+'" oninput="addData.unitRows['+i+'].extra=this.value">' +
+    '<input type="number" step="0.01" min="0" placeholder="kosten €" value="'+(r.extraKosten||'')+'" oninput="addData.unitRows['+i+'].extraKosten=num(this.value)"></div>'
+  ).join('');
+}
+function syncRows(){
+  const n = Math.max(1, parseInt(f('f_aantal').value)||1);
+  while (addData.unitRows.length < n) addData.unitRows.push({defect:'',extra:'',extraKosten:0});
+  addData.unitRows.length = n;
+  renderRows(); captureDraft();
+}
+function saveStep1(){
+  const d = addData;
+  if (!f('f_model')) return;
+  d.model = f('f_model').value.trim(); d.adnummer = f('f_ad').value.trim();
+  d.inkoop = num(f('f_inkoop').value);
+  d.vraagprijs = num(f('f_prijs').value); d.aantal = Math.max(1, parseInt(f('f_aantal').value)||1);
+  if (d.type==='laptop' && f('f_cpu')) d.specs = {cpu:f('f_cpu').value.trim(), ram:f('f_ram').value.trim(), opslag:f('f_opslag').value.trim(), scherm:f('f_scherm').value.trim()};
+}
+function findByModel(m){ return S.products.find(p=>norm(p.model)===norm(m) && norm(m)); }
+function checkDup(){
+  const p = findByModel(f('f_model').value); const dEl = f('dup');
+  if (p){ dEl.style.display='block';
+    dEl.innerHTML = ' <b>'+esc(p.model)+'</b> staat al in het systeem ('+voorraadUnits(p).length+' op voorraad, '+soldUnits(p).length+' verkocht). Het aantal wordt <b>bij dit bestaande product</b> gezet en het productnummer blijft '+esc(p.adnummer)+'.';
+    f('f_ad').value = p.adnummer;
+    if (!num(f('f_inkoop').value)){ f('f_inkoop').value=p.inkoop; f('f_prijs').value=p.vraagprijs;
+      if (p.type==='laptop' && f('f_cpu')){ f('f_cpu').value=p.specs.cpu; f('f_ram').value=p.specs.ram; f('f_opslag').value=p.specs.opslag; f('f_scherm').value=p.specs.scherm; } }
+  } else { dEl.style.display='none'; }
+}
+function addSave(){
+  saveStep1();
+  const d = addData;
+  if (!d.model){ toast('Vul een model in'); return; }
+  const n0 = Math.max(1, d.aantal);
+  while (d.unitRows.length < n0) d.unitRows.push({defect:'',extra:'',extraKosten:0});
+  d.unitRows.length = n0;
+  let p = findByModel(d.model);
+  const isNew = !p;
+  if (isNew){
+    p = { id: uid(), type: d.type, model: d.model, adnummer: d.adnummer, inkoop: d.inkoop, kosten: 0, vraagprijs: d.vraagprijs,
+      specs: d.specs, deelType: 'pct', deelWaarde: 50, titel: autoTitel(d), adtekst: '', adKosten: 0,
+      fb: false, mp: false, fbDatum: null, mpDatum: null, adsOffline:{fb:false,mp:false}, fotos: [], units: [] };
+    S.products.push(p);
+    const n = parseInt(d.adnummer, 10);
+    S.settings.nextAd = (isNaN(n) ? S.settings.nextAd : Math.max(S.settings.nextAd, n)) + 1;
+  } else {
+    p.inkoop = d.inkoop; p.vraagprijs = d.vraagprijs; p.specs = d.specs; p.type = d.type;
+    if (voorraadUnits(p).length===0) p.adsOffline = {fb:false,mp:false};
+  }
+  const newIds = [];
+  d.unitRows.forEach(r=>{
+    const nu = { id: uid(), defect: (r.defect||'').trim(), extra: (r.extra||'').trim(), extraKosten: r.extraKosten||0,
+      verkocht:false, prijs:null, datum:null, betaal:null, deelType:'pct', deelWaarde:50, deelGezet:false };
+    newIds.push(nu.id);
+    p.units.push(nu);
+  });
+  S.draft = null; addStep = 0; addData = null;
+  save();
+  toast(isNew ? ' Product toegevoegd ('+d.aantal+'x), productnummer '+d.adnummer : ' '+d.aantal+'x toegevoegd aan bestaand product');
+  if (!p.fb && !p.mp) nav('online', p.id);
+  else nav('product', p.id);
+  labelPopup(p.id, newIds, isNew);
+}
+async function genAdOnline(pid){
+  const p = S.products.find(x=>x.id===pid), btn = f('aibtn');
+  saveOnline(pid, true);
+  btn.disabled = true; btn.textContent = ' Bezig...';
+  const units = voorraadUnits(p);
+  const defects = units.map(u=>u.defect).filter(Boolean);
+  const extras = units.map(u=>u.extra).filter(Boolean);
+  let prompt = 'Schrijf een Nederlandse advertentietekst (alleen de beschrijving, geen titel, geen uitleg) voor Marktplaats/Facebook voor dit tweedehands product.\n';
+  if (S.settings.template) prompt += 'BELANGRIJK — volg deze standaard opbouw/richtlijnen van de verkoper:\n' + S.settings.template + '\n\n';
+  prompt += 'Product: ' + (p.titel || p.model) + '.';
+  if (p.type==='laptop') prompt += ' Specificaties: processor ' + (p.specs.cpu||'-') + ', RAM ' + (p.specs.ram||'-') + ', opslag ' + (p.specs.opslag||'-') + ', scherm ' + (p.specs.scherm||'-') + '.';
+  prompt += ' Vraagprijs: €' + p.vraagprijs + '.';
+  if (extras.length) prompt += ' Recent geüpgraded/vervangen: ' + extras.join('; ') + '.';
+  if (defects.length) prompt += ' Vermeld deze gebreken eerlijk, verwerkt in of onderaan de tekst: ' + defects.join('; ') + '.';
+  else prompt += ' Product is in nette staat.';
+  if (p.notitie) prompt += ' Extra aantekeningen van de verkoper: ' + p.notitie + '.';
+  prompt += ' Sluit af met: ophalen of verzenden mogelijk.';
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const r = await fetch(SUPABASE_URL + '/functions/v1/partner-tekst', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+(session?session.access_token:'')},
+      body: JSON.stringify({ prompt })
+    });
+    const j = await r.json().catch(()=>({}));
+    if (!r.ok || !j.ok) throw 0;
+    const txt = j.tekst || '';
+    if (txt) { f('o_tekst').value = String(txt).trim(); p.adtekst = f('o_tekst').value; save(); } else throw 0;
+  } catch(e){
+    f('o_tekst').value = fallbackTekst(p, defects, extras);
+    p.adtekst = f('o_tekst').value; save();
+    toast('AI niet beschikbaar — standaardtekst ingevuld');
+  }
+  btn.disabled = false; btn.textContent = 'Maak tekst met AI';
+}
+function fallbackTekst(d, defects, extras){
+  let t = 'Te koop: ' + (d.titel||d.model) + '\n\n';
+  if (d.type==='laptop') t += 'Specificaties:\n- Processor: '+(d.specs.cpu||'-')+'\n- RAM: '+(d.specs.ram||'-')+'\n- Opslag: '+(d.specs.opslag||'-')+'\n- Scherm: '+(d.specs.scherm||'-')+'\n\n';
+  t += 'Nette ' + d.model + ', werkt goed en is klaar voor gebruik.\n';
+  if (extras.length) t += 'Recent geüpgraded: ' + extras.join(', ') + '.\n';
+  if (defects.length) t += '\nLet op: ' + defects.join('; ') + '.\n';
+  if (d.notitie) t += '\n' + d.notitie + '\n';
+  t += '\nVraagprijs: ' + eur(d.vraagprijs) + '\nOphalen of verzenden mogelijk. Interesse? Stuur een bericht!';
+  return t;
+}
+
+/* ============ foto's & camera ============ */
+let fotoTarget = null, fotoAfter = null, camStream = null, camTarget = null, camAfter = null;
+function fotoPick(input){
+  const files = Array.from(input.files||[]); input.value = '';
+  if (!files.length || !fotoTarget) return;
+  let left = files.length;
+  files.forEach(file=>{
+    const rd = new FileReader();
+    rd.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        fotoTarget.push(shrink(img));
+        if (--left===0){ if (fotoAfter) fotoAfter(); else { save(); render(); } }
+      };
+      img.src = e.target.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
+function shrink(img){
+  const max = 900; let w = img.width||img.videoWidth, h = img.height||img.videoHeight;
+  if (w>max||h>max){ const s = max/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  c.getContext('2d').drawImage(img,0,0,w,h);
+  return c.toDataURL('image/jpeg',0.72);
+}
+function openCam(targetArr, afterFn){
+  camTarget = targetArr; camAfter = afterFn;
+  const m = f('modal');
+  m.innerHTML = '<h2> Foto maken</h2><video id="camv" autoplay playsinline muted></video>' +
+    '<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">' +
+    '<button class="btn" onclick="camSnap()"> Vastleggen</button>' +
+    '<button class="btn gray" onclick="closeCam()">Klaar</button></div>' +
+    '<div class="mini" style="text-align:center;margin-top:8px" id="camcount"></div>';
+  f('modalbg').style.display = 'flex';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false})
+    .then(s=>{ camStream = s; f('camv').srcObject = s; })
+    .catch(()=>{ /* geen camera-toegang → val terug op systeem-camera via bestand */
+      closeCam();
+      fotoTarget = targetArr; fotoAfter = afterFn;
+      f('camIn').click();
+    });
+}
+function camSnap(){
+  const v = f('camv');
+  if (!v || !v.videoWidth){ toast('Camera nog niet klaar...'); return; }
+  camTarget.push(shrink(v));
+  f('camcount').textContent = ' foto toegevoegd';
+  setTimeout(()=>{ const c=f('camcount'); if(c) c.textContent=''; }, 1200);
+}
+function closeCam(){
+  if (camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+  closeModal();
+  if (camAfter){ camAfter(); camAfter = null; }
+  else render();
+}
+/* ============ labels (Brother QL-800) ============ */
+let labelPid = null, labelUids = null;
+function qrDataUrl(text){
+  try {
+    const div = document.createElement('div');
+    new QRCode(div, {text: String(text), width: 256, height: 256, correctLevel: QRCode.CorrectLevel.M});
+    const c = div.querySelector('canvas');
+    return c ? c.toDataURL('image/png') : null;
+  } catch(e){ return null; }
+}
+function labelInner(p, u, qr){
+  return '<div class="lt">' +
+    '<div class="lm">'+esc(p.model)+'</div>' +
+    (specsLine(p) ? '<div class="ls">'+esc(specsLine(p))+'</div>' : '') +
+    '<div class="lp">'+eur(p.vraagprijs)+'</div>' +
+    (u && u.defect ? '<div class="ld">! '+esc(u.defect)+'</div>' : '') +
+    (u && u.extra ? '<div class="ld">+ '+esc(u.extra)+'</div>' : '') +
+    '</div><div class="lq">'+(qr?'<img src="'+qr+'">':'')+'<div class="ln">'+esc(p.adnummer)+'</div></div>';
+}
+function labelUnits(p, unitIds){
+  let units = unitIds && unitIds.length ? p.units.filter(u=>unitIds.includes(u.id)) : voorraadUnits(p);
+  if (!units.length) units = [null];
+  return units;
+}
+function printLabels(pid, unitIds){
+  const p = S.products.find(x=>x.id===pid);
+  if (!p) return;
+  const qr = qrDataUrl(p.adnummer);
+  if (!qr) toast('Geen internet voor de QR-code — label print zonder QR');
+  const units = labelUnits(p, unitIds);
+  const w = window.open('', '_blank');
+  if (!w){ toast('Popup geblokkeerd — sta popups toe voor deze pagina om te printen'); return; }
+  const LW = S.settings.labW || 62, LH = S.settings.labH || 32;
+  const base = Math.max(6, 10 * LH / 32);           /* basisfontgrootte schaalt mee */
+  const qrmm = Math.max(10, Math.min(16, Math.round(LH * 0.55)));
+  const css = '@page { size: '+LW+'mm '+LH+'mm; margin: 0; }' +
+    'html,body{margin:0;padding:0;}body{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#000;}' +
+    '.lab{width:'+LW+'mm;height:'+LH+'mm;box-sizing:border-box;padding:1.5mm 2mm;display:flex;gap:1.5mm;align-items:center;overflow:hidden;page-break-after:always;font-size:'+base.toFixed(1)+'pt;}' +
+    '.lt{flex:1;min-width:0;}' +
+    '.lm{font-size:1em;font-weight:800;line-height:1.1;}' +
+    '.ls{font-size:.65em;margin-top:.8mm;line-height:1.25;}' +
+    '.lp{font-size:1.1em;font-weight:800;margin-top:.8mm;}' +
+    '.ld{font-size:.65em;margin-top:.6mm;font-style:italic;}' +
+    '.lq{width:'+(qrmm+1)+'mm;text-align:center;flex-shrink:0;}' +
+    '.lq img{width:'+qrmm+'mm;height:'+qrmm+'mm;image-rendering:pixelated;}' +
+    '.ln{font-size:.7em;font-weight:700;letter-spacing:.5px;}';
+  w.document.write('<html><head><title>Labels '+esc(p.adnummer)+'</title><style>'+css+'</style></head><body>' +
+    units.map(u=>'<div class="lab">'+labelInner(p,u,qr)+'</div>').join('') +
+    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);};</scr'+'ipt></body></html>');
+  w.document.close();
+}
+function printLabelsPending(){ if (labelPid) printLabels(labelPid, labelUids); }
+function labelPopup(pid, unitIds, isNew){
+  const p = S.products.find(x=>x.id===pid);
+  labelPid = pid; labelUids = unitIds || null;
+  const units = labelUnits(p, unitIds);
+  const n = units.length;
+  const qr = qrDataUrl(p.adnummer);
+  const m = f('modal');
+  m.innerHTML = '<h2>Product opgeslagen — label printen?</h2>' +
+    '<div class="notice green" style="margin-bottom:14px">'+(isNew?'Toegevoegd':'Bijgewerkt')+': <b>'+esc(p.model)+'</b> · productnummer <b>'+esc(p.adnummer)+'</b> · '+n+'x</div>' +
+    '<div class="labprev">'+labelInner(p, units[0], qr)+'</div>' +
+    '<div class="mini" style="text-align:center;margin-top:6px">Label '+(S.settings.labW||62)+' × '+(S.settings.labH||32)+' mm (instelbaar bij Instellingen) · 1 per exemplaar'+(n>1?' ('+n+' labels, elk met eigen defect/extra\'s)':'')+'</div>' +
+    '<div class="notice blue" style="margin-top:12px">Printvenster: kies je labelprinter · papierformaat <b>'+(S.settings.labW||62)+' x '+(S.settings.labH||32)+' mm</b> · marges <b>Geen</b> · schaal <b>100%</b>.</div>' +
+    '<div class="notice orange" style="margin-top:8px"><b>QL-800 niet zichtbaar in Chrome?</b> 1) Houd de <b>Editor Lite</b>-knop op de printer ingedrukt tot het groene lampje uitgaat (anders ziet je Mac hem als USB-stick, niet als printer). 2) Installeer de Brother-driver via support.brother.com en voeg hem toe bij Systeeminstellingen → Printers.</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap">' +
+    '<button class="btn gray" onclick="closeModal()">Overslaan</button>' +
+    '<button class="btn" onclick="printLabelsPending()">Print '+(n>1?n+' labels':'label')+'</button></div>';
+  f('modalbg').style.display = 'flex';
+}
+
+/* ============ nog online zetten ============ */
+function rOnline(selId){
+  const sel = selId ? S.products.find(x=>x.id===selId) : null;
+  if (sel) return rOnlineEdit(sel);
+  const todo = onlineTodo();
+  let html = '<h1>Nog online zetten</h1><div class="sub">Producten op voorraad die nog niet op Facebook of Marktplaats staan</div>';
+  if (!todo.length) return html + '<div class="card"><div class="empty"> Alles staat online!</div></div>';
+  todo.forEach(p=>{
+    const vu = voorraadUnits(p);
+    const def = vu.filter(u=>u.defect && u.defect.trim()).length;
+    html += '<div class="pubcard" onclick="nav(\'online\',\''+p.id+'\')">' +
+      '<div class="pubthumb">'+(p.fotos[0]?'<img src="'+p.fotos[0]+'">':(p.type==='laptop'?'':''))+'</div>' +
+      '<div style="flex:1;min-width:0"><b>'+esc(p.model)+'</b>' +
+        '<div class="mini">Productnr '+esc(p.adnummer)+(specsLine(p)?' · '+esc(specsLine(p)):'')+'</div>' +
+        (def?'<div style="margin-top:3px"><span class="badge b-bad"> '+def+' met defect</span></div>':'') +
+      '</div>' +
+      '<div class="right"><b>'+eur(p.vraagprijs)+'</b><div class="mini">'+vu.length+'x op voorraad</div></div>' +
+      '<span class="btn sm">Online zetten →</span></div>';
+  });
+  return html;
+}
+function rOnlineEdit(p){
+  const vu = voorraadUnits(p);
+  const defects = vu.map(u=>u.defect).filter(Boolean);
+  const extras = vu.map(u=>u.extra).filter(Boolean);
+  let html = '<button class="btn gray sm" onclick="nav(\'online\')">← Nog online zetten</button>' +
+    '<h1 style="margin-top:12px">'+esc(p.model)+' online zetten</h1>' +
+    '<div class="sub">'+vu.length+'x op voorraad · vraagprijs '+eur(p.vraagprijs)+(specsLine(p)?' · '+esc(specsLine(p)):'')+'</div>';
+  if (defects.length || extras.length){
+    html += '<div style="margin:-8px 0 16px">' +
+      defects.map(x=>'<span class="badge b-bad" style="margin:0 6px 6px 0"> '+esc(x)+'</span>').join('') +
+      extras.map(x=>'<span class="badge b-info" style="margin:0 6px 6px 0">+ '+esc(x)+'</span>').join('') +
+      '<span class="mini"> — wordt meegenomen in de AI-tekst</span></div>';
+  }
+  html += '<div class="card"><b style="font-size:14px">Advertentie — kopieer &amp; plak op Marktplaats/Facebook</b>' +
+    '<div class="grid2" style="margin-top:12px"><div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="o_titel" value="'+esc(p.titel || autoTitel(p))+'"><button class="btn gray sm" onclick="copyTxt(\'o_titel\')"></button></div></div>' +
+    '<div class="field"><label>Prijs</label><div class="copyrow"><input type="text" id="o_ptxt" value="'+esc('€ '+(p.vraagprijs||0))+'"><button class="btn gray sm" onclick="copyTxt(\'o_ptxt\')"></button></div></div></div>' +
+    '<div class="field"><label>Beschrijving</label><div class="copyrow"><textarea id="o_tekst" rows="8" placeholder="Schrijf zelf, of laat AI een tekst maken — defecten en extra\'s worden er automatisch in verwerkt...">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'o_tekst\')"></button></div>' +
+    '<div style="margin-top:8px"><button class="btn purple sm" id="aibtn" onclick="genAdOnline(\''+p.id+'\')"> Maak tekst met AI</button> <span class="mini">volgt jouw sjabloon uit Instellingen</span></div></div>' +
+  '</div>' +
+  '<div class="card"><b style="font-size:14px">Foto\'s</b><div style="margin-top:10px">' +
+    '<button class="btn sm" onclick="saveOnline(\''+p.id+'\',true);pFotoCam(\''+p.id+'\')"> Foto maken</button> ' +
+    '<button class="btn gray sm" onclick="saveOnline(\''+p.id+'\',true);pFoto(\''+p.id+'\')"> Foto\'s kiezen</button>' +
+    '<div class="fotos">'+(p.fotos.map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="saveOnline(\''+p.id+'\',true);delPFoto(\''+p.id+'\','+i+')"></button></div>').join('') || '<div class="mini" style="padding:8px 0">Nog geen foto\'s</div>')+'</div></div>' +
+  '</div>' +
+  '<div class="card"><b style="font-size:14px">Geplaatst?</b>' +
+    '<div class="field" style="margin-top:12px;max-width:260px"><label>Advertentiekosten (€)</label><input type="number" id="o_adk" step="0.01" min="0" value="'+p.adKosten+'"></div>' +
+    '<div class="checkrow"><input type="checkbox" id="o_fb"'+(p.fb?' checked':'')+'> <span>Staat op <b>Facebook</b></span></div>' +
+    '<div class="checkrow"><input type="checkbox" id="o_mp"'+(p.mp?' checked':'')+'> <span>Staat op <b>Marktplaats</b></span></div>' +
+  '</div>' +
+  '<div class="savebar"><button class="btn green" onclick="saveOnline(\''+p.id+'\')"> Klaar</button></div>';
+  return html;
+}
+function saveOnline(pid, silent){
+  const p = S.products.find(x=>x.id===pid);
+  if (!f('o_titel')) return;
+  p.titel = f('o_titel').value.trim();
+  p.adtekst = f('o_tekst').value;
+  p.adKosten = num(f('o_adk').value);
+  const nfb = f('o_fb').checked, nmp = f('o_mp').checked;
+  const td = today();
+  if (nfb && !p.fb) p.fbDatum = td; if (!nfb) p.fbDatum = null;
+  if (nmp && !p.mp) p.mpDatum = td; if (!nmp) p.mpDatum = null;
+  p.fb = nfb; p.mp = nmp;
+  if (!p.fb) p.adsOffline.fb = false;
+  if (!p.mp) p.adsOffline.mp = false;
+  save();
+  if (!silent){
+    if (nfb || nmp){ toast(' '+p.model+' staat online!'); nav('online'); }
+    else { toast(' Opgeslagen — nog niet online gezet'); nav('online'); }
+  }
+}
+
+/* ============ productpagina ============ */
+function rProduct(id){
+  const p = S.products.find(x=>x.id===id);
+  if (!p) return '<div class="empty">Product niet gevonden</div>';
+  const vu = voorraadUnits(p), su = soldUnits(p);
+  /* winsten van dit product */
+  let gereal = 0, mpOpen = 0;
+  su.forEach(u=>{ gereal += unitWinst(p,u).winst; if (u.betaal==='mp' && !u.mpUitbetaald) mpOpen += u.prijs||0; });
+  const pot = potWinst(p);
+  let html = '<button class="btn gray sm" onclick="nav(\'voorraad\')">← Voorraad</button>' +
+    '<h1 style="margin-top:12px">'+esc(p.model)+'</h1><div class="sub">Productnummer '+esc(p.adnummer||'—')+(specsLine(p)?' · '+esc(specsLine(p)):'')+' · '+onlineBadges(p)+'</div>';
+  if (vu.length===0 && p.units.length>0){
+    const ch = adsChannels(p);
+    html += ch.length ? '<div class="notice"> Alles verkocht!  <b>Ads offline halen op: '+ch.join(' en ')+'</b> — <a href="#" onclick="adsPopup(\''+p.id+'\');return false;" style="color:inherit">afvinken</a></div>'
+                      : '<div class="notice green"> Alles verkocht en ads zijn offline gehaald.</div>';
+  } else if (vu.length>0){
+    html += '<div class="notice blue"> Nog <b>'+vu.length+'</b> beschikbaar' +
+      (!p.fb && !p.mp ? ' — nog niet online! <a href="#" onclick="nav(\'online\',\''+p.id+'\');return false;" style="color:inherit;font-weight:600"> Online zetten</a>' : '') + '</div>';
+    if (maxDagenOnline(p)>=21) html += '<div class="notice orange"> Staat al '+maxDagenOnline(p)+' dagen online — overweeg de prijs te verlagen of de advertentie opnieuw te plaatsen.</div>';
+  }
+  if (mpOpen>0) html += '<div class="notice orange"> Marktplaats moet nog <b>'+eur(mpOpen)+'</b> uitbetalen (kopersbescherming) — vink af in de tabel hieronder zodra het binnen is.</div>';
+  /* bedragen boven het product */
+  html += '<div class="kpis">'+
+    kpi('Inkoopprijs p/st', eur(p.inkoop),'')+
+    kpi('Extra kosten (ads p/st)', eur(adShare(p)+(p.kosten||0)),'orange')+
+    kpi('Vraagprijs', eur(p.vraagprijs),'blue')+
+    kpi('Winst gerealiseerd', eur(gereal),'green')+
+    kpi('Winst te behalen', eur(pot),'green')+
+  '</div>';
+  /* bewerken met opslaan-knop */
+  html += '<div class="card"><b style="font-size:14px">Product bewerken</b>' +
+    '<div class="grid3" style="margin-top:12px">' +
+    '<div class="field"><label>Productnummer</label><input type="text" id="e_ad" value="'+esc(p.adnummer)+'"></div>' +
+    '<div class="field"><label>Vraagprijs (€)</label><input type="number" id="e_prijs" step="0.01" value="'+p.vraagprijs+'"></div>' +
+    '<div class="field"><label>Advertentiekosten (€)</label><input type="number" id="e_adk" step="0.01" value="'+p.adKosten+'"></div></div>';
+  if (p.type==='laptop') html += '<div class="grid4">' +
+    '<div class="field"><label>Processor</label><input type="text" id="e_cpu" value="'+esc(p.specs.cpu)+'"></div>' +
+    '<div class="field"><label>RAM</label><input type="text" id="e_ram" value="'+esc(p.specs.ram)+'"></div>' +
+    '<div class="field"><label>Opslag</label><input type="text" id="e_opslag" value="'+esc(p.specs.opslag)+'"></div>' +
+    '<div class="field"><label>Schermgrootte</label><input type="text" id="e_scherm" value="'+esc(p.specs.scherm)+'"></div></div>';
+  html += '<div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="e_titel" value="'+esc(p.titel)+'"><button class="btn gray sm" onclick="copyTxt(\'e_titel\')"></button></div></div>' +
+    '<div class="field"><label>Advertentietekst</label><div class="copyrow"><textarea id="e_tekst" rows="6">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'e_tekst\')"></button></div></div>' +
+    '<div class="checkrow"><input type="checkbox" id="e_fb"'+(p.fb?' checked':'')+'> <span>Facebook</span>' +
+      (p.fb?' <span class="mini">('+daysSince(p.fbDatum)+'d online)</span> <label style="display:inline;font-weight:400"><input type="checkbox" id="e_fboff"'+(p.adsOffline.fb?' checked':'')+'> offline gehaald</label> <button class="btn gray sm" onclick="replaats(\''+p.id+'\',\'fb\')"> vandaag opnieuw geplaatst</button>':'') + '</div>' +
+    '<div class="checkrow"><input type="checkbox" id="e_mp"'+(p.mp?' checked':'')+'> <span>Marktplaats</span>' +
+      (p.mp?' <span class="mini">('+daysSince(p.mpDatum)+'d online)</span> <label style="display:inline;font-weight:400"><input type="checkbox" id="e_mpoff"'+(p.adsOffline.mp?' checked':'')+'> offline gehaald</label> <button class="btn gray sm" onclick="replaats(\''+p.id+'\',\'mp\')"> vandaag opnieuw geplaatst</button>':'') + '</div>' +
+    '</div>';
+  /* foto's */
+  html += '<div class="card"><b style="font-size:14px">Foto\'s</b><div style="margin-top:10px">' +
+    '<button class="btn sm" onclick="pFotoCam(\''+p.id+'\')"> Foto maken</button> ' +
+    '<button class="btn gray sm" onclick="pFoto(\''+p.id+'\')"> Foto\'s kiezen</button>' +
+    '<div class="fotos">'+p.fotos.map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="delPFoto(\''+p.id+'\','+i+')"></button></div>').join('')+'</div></div></div>';
+  /* voorraad-units */
+  html += '<div class="card"><b style="font-size:14px">Op voorraad ('+vu.length+')</b><div style="margin-top:8px">';
+  if (!vu.length) html += '<div class="empty">Geen exemplaren meer op voorraad</div>';
+  vu.forEach(u=>{
+    html += '<div class="exrow" style="grid-template-columns:80px 1fr 1fr 100px 110px">' +
+      '<span class="badge '+(u.defect?'b-bad':'b-ok')+'">'+(u.defect?' defect':'in orde')+'</span>' +
+      '<input type="text" placeholder="aantekening / defect..." value="'+esc(u.defect)+'" id="ud_'+u.id+'">' +
+      '<input type="text" placeholder="extra\'s (RAM, SSD...)" value="'+esc(u.extra)+'" id="ue_'+u.id+'">' +
+      '<input type="number" step="0.01" placeholder="kosten €" value="'+(u.extraKosten||'')+'" id="uk_'+u.id+'">' +
+      '<button class="btn green sm" onclick="saveProduct(\''+p.id+'\',true);openSell(\''+p.id+'\',\''+u.id+'\')">Verkocht </button></div>';
+  });
+  html += '</div></div>';
+  /* verkochte units */
+  if (su.length){
+    html += '<div class="card"><b style="font-size:14px">Verkocht ('+su.length+')</b><div class="tablewrap" style="margin-top:10px"><table><tr><th>Datum</th><th class="right">Verkoopprijs</th><th class="right">Winst</th><th class="right">Winkel</th><th class="right">Jij</th><th>Betaald</th><th>Levering</th><th></th></tr>';
+    su.forEach(u=>{ const w=unitWinst(p,u);
+      const betaalCell = u.betaal==='mp'
+        ? ' MP <label style="font-weight:400;font-size:12px"><input type="checkbox"'+(u.mpUitbetaald?' checked':'')+' onchange="setMpU(\''+p.id+'\',\''+u.id+'\',this.checked)"> uitbetaald</label>'
+        : betaalLabel(u);
+      html += '<tr><td>'+esc(u.datum||'')+'</td><td class="right">'+eur(u.prijs)+'</td><td class="right">'+eur(w.winst)+'</td>' +
+        (u.deelGezet ? '<td class="right">'+eur(w.winkel)+'</td><td class="right">'+eur(w.deel)+'</td>' : '<td colspan="2" class="right"><span class="badge b-purple">verdeling → marge</span></td>') +
+        '<td>'+betaalCell+'</td><td>'+levBadge(u)+'</td><td><button class="btn gray sm" onclick="openSell(\''+p.id+'\',\''+u.id+'\')"></button></td></tr>';
+    });
+    html += '</table></div></div>';
+  }
+  html += '<div class="savebar"><button class="btn green" onclick="saveProduct(\''+p.id+'\')"> Opslaan</button> ' +
+    (vu.length ? '<button class="btn gray" onclick="saveProduct(\''+p.id+'\',true);printLabels(\''+p.id+'\')"> Labels printen ('+vu.length+')</button>' : '') + '</div>';
+  return html;
+}
+function replaats(pid, k){
+  const p = S.products.find(x=>x.id===pid);
+  saveProduct(pid, true);
+  if (k==='fb') p.fbDatum = today(); else p.mpDatum = today();
+  save(); toast(' Online-datum gereset naar vandaag'); render();
+}
+function saveProduct(pid, silent){
+  const p = S.products.find(x=>x.id===pid);
+  if (!f('e_ad')) return;
+  p.adnummer = f('e_ad').value.trim(); p.vraagprijs = num(f('e_prijs').value); p.adKosten = num(f('e_adk').value);
+  if (p.type==='laptop' && f('e_cpu')) p.specs = {cpu:f('e_cpu').value.trim(), ram:f('e_ram').value.trim(), opslag:f('e_opslag').value.trim(), scherm:f('e_scherm').value.trim()};
+  p.titel = f('e_titel').value.trim(); p.adtekst = f('e_tekst').value;
+  const nfb = f('e_fb').checked, nmp = f('e_mp').checked;
+  if (nfb && !p.fb) p.fbDatum = today(); if (!nfb) p.fbDatum = null;
+  if (nmp && !p.mp) p.mpDatum = today(); if (!nmp) p.mpDatum = null;
+  p.fb = nfb; p.mp = nmp;
+  if (f('e_fboff')) p.adsOffline.fb = f('e_fboff').checked; if (!p.fb) p.adsOffline.fb = false;
+  if (f('e_mpoff')) p.adsOffline.mp = f('e_mpoff').checked; if (!p.mp) p.adsOffline.mp = false;
+  voorraadUnits(p).forEach(u=>{
+    if (f('ud_'+u.id)){ u.defect = f('ud_'+u.id).value.trim(); u.extra = f('ue_'+u.id).value.trim(); u.extraKosten = num(f('uk_'+u.id).value); }
+  });
+  save();
+  if (!silent){ toast(' Opgeslagen'); render(); }
+}
+function pFoto(pid){
+  const p = S.products.find(x=>x.id===pid);
+  fotoTarget = p.fotos; fotoAfter = ()=>{ fotoAfter=null; save(); render(); };
+  f('fileIn').click();
+}
+function pFotoCam(pid){
+  const p = S.products.find(x=>x.id===pid);
+  openCam(p.fotos, ()=>{ save(); render(); });
+}
+function delPFoto(pid, i){ const p=S.products.find(x=>x.id===pid); p.fotos.splice(i,1); save(); render(); }
+function setMpU(pid, uidv, v){
+  const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
+  u.mpUitbetaald = v; save(); render();
+}
+
+/* ============ verkoop ============ */
+function openSell(pid, uidv){
+  const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
+  const m = f('modal');
+  const prijs = u.prijs!=null ? u.prijs : p.vraagprijs;
+  m.innerHTML = '<h2>'+(u.verkocht?'Verkoop aanpassen':'Verkopen')+' — '+esc(p.model)+'</h2>' +
+    '<div class="field"><label>Werkelijke verkoopprijs (€)</label><input type="number" id="m_prijs" step="0.01" value="'+prijs+'"></div>' +
+    '<div class="grid2"><div class="field"><label>Betaald via</label><select id="m_betaal" onchange="f(\'m_mpbox\').style.display=this.value===\'mp\'?\'block\':\'none\'">' +
+      '<option value="bank"'+(u.betaal==='bank'||!u.betaal?' selected':'')+'> Bank</option>' +
+      '<option value="cash"'+(u.betaal==='cash'?' selected':'')+'> Cash</option>' +
+      '<option value="mp"'+(u.betaal==='mp'?' selected':'')+'> Marktplaats (kopersbescherming)</option></select></div>' +
+    '<div class="field"><label>Levering</label><select id="m_lev" onchange="f(\'m_vvbox\').style.display=this.value===\'verzenden\'?\'block\':\'none\'"><option value="ophalen"'+(u.levering!=='verzenden'?' selected':'')+'> Ophalen</option><option value="verzenden"'+(u.levering==='verzenden'?' selected':'')+'> Verzenden</option></select></div></div>' +
+    '<div class="field" id="m_mpbox" style="display:'+(u.betaal==='mp'?'block':'none')+'"><div class="checkrow"><input type="checkbox" id="m_mpu"'+(u.mpUitbetaald?' checked':'')+'> <span>Marktplaats heeft al uitbetaald</span></div></div>' +
+    '<div class="field" id="m_vvbox" style="display:'+(u.levering==='verzenden'?'block':'none')+'"><label>Vervoerder</label><select id="m_vv"><option'+(u.vervoerder!=='DHL'?' selected':'')+'>PostNL</option><option'+(u.vervoerder==='DHL'?' selected':'')+'>DHL</option></select></div>' +
+    '<div class="notice blue" style="margin-top:6px">Je winstdeel bepaal je straks op de pagina <b>Marge berekening</b>.</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' +
+    (u.verkocht?'<button class="btn gray" onclick="unsell(\''+pid+'\',\''+uidv+'\')">↩ Terug naar voorraad</button>':'') +
+    '<button class="btn gray" onclick="closeModal()">Annuleren</button>' +
+    '<button class="btn green" onclick="confirmSell(\''+pid+'\',\''+uidv+'\')">'+(u.verkocht?'Opslaan':' Verkocht')+'</button></div>';
+  f('modalbg').style.display = 'flex';
+}
+function confirmSell(pid, uidv){
+  const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
+  const wasSold = u.verkocht;
+  u.verkocht = true; u.prijs = num(f('m_prijs').value); u.betaal = f('m_betaal').value;
+  u.mpUitbetaald = u.betaal==='mp' ? f('m_mpu').checked : undefined;
+  u.levering = f('m_lev').value; u.vervoerder = f('m_vv').value; if (u.geleverd==null) u.geleverd = false;
+  if (!u.datum) u.datum = today();
+  save(); closeModal();
+  const rest = voorraadUnits(p).length;
+  if (!wasSold){
+    if (rest === 0 && adsChannels(p).length){ adsPopup(pid); }
+    else if (rest === 0) toast(' Laatste exemplaar verkocht!');
+    else toast('Verkocht! Nog '+rest+' van dit model beschikbaar.');
+  }
+  render();
+}
+function unsell(pid, uidv){
+  const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
+  u.verkocht=false; u.prijs=null; u.datum=null; u.betaal=null; u.deelGezet=false; u.mpUitbetaald=undefined;
+  p.adsOffline={fb:false,mp:false};
+  save(); closeModal(); render();
+}
+function adsPopup(pid){
+  const p = S.products.find(x=>x.id===pid);
+  const m = f('modal');
+  m.innerHTML = '<h2> Alles verkocht — ads offline halen!</h2>' +
+    '<div class="notice" style="margin-bottom:14px">De advertentie van <b>'+esc(p.model)+'</b> (productnr '+esc(p.adnummer)+') moet offline gehaald worden. Vink af zodra het gedaan is:</div>' +
+    (p.fb ? '<div class="checkrow"><input type="checkbox"'+(p.adsOffline.fb?' checked':'')+' onchange="S.products.find(x=>x.id===\''+pid+'\').adsOffline.fb=this.checked;save()"> <span><b>Facebook</b> — advertentie offline gehaald</span></div>' : '') +
+    (p.mp ? '<div class="checkrow"><input type="checkbox"'+(p.adsOffline.mp?' checked':'')+' onchange="S.products.find(x=>x.id===\''+pid+'\').adsOffline.mp=this.checked;save()"> <span><b>Marktplaats</b> — advertentie offline gehaald</span></div>' : '') +
+    '<div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn" onclick="closeModal();render()">Klaar</button></div>';
+  f('modalbg').style.display = 'flex';
+}
+function closeModal(){ f('modalbg').style.display='none'; }
+f('modalbg').addEventListener('click', e=>{ if(e.target.id==='modalbg'){ if(camStream){ closeCam(); } else { closeModal(); render(); } } });
+
+/* ============ verkocht ============ */
+function levBadge(u){
+  if (u.levering==='verzenden')
+    return u.geleverd ? '<span class="badge b-ok"> Verstuurd ('+esc(u.vervoerder)+')</span>' : '<span class="badge b-warn"> Nog versturen ('+esc(u.vervoerder)+')</span>';
+  return u.geleverd ? '<span class="badge b-ok"> Opgehaald</span>' : '<span class="badge b-warn"> Nog ophalen</span>';
+}
+function rVerkocht(){
+  const t = totals();
+  const rows = allSold();
+  let html = '<h1>Verkocht</h1><div class="sub">Alle verkochte producten</div>' +
+  '<div class="kpis">'+kpi('Omzet', eur(t.omzet),'blue')+kpi('Winst', eur(t.winst),'green')+kpi('Voor de winkel', eur(t.winkel),'green')+kpi('Jouw winst', eur(t.deel),'green')+kpi('Cash', eur(t.cash),'orange')+kpi('Bank', eur(t.bank),'purple')+(t.mpOnderweg>0?kpi('MP nog uit te betalen', eur(t.mpOnderweg),'red'):'')+'</div>';
+  html += adsWarnHtml();
+  if (t.teVerdelen>0) html += '<div class="notice orange"> <b>'+eur(t.teVerdelen)+'</b> winst nog te verdelen — <a href="#" onclick="nav(\'marge\');return false;" style="color:inherit;font-weight:600">Marge berekening</a></div>';
+  if (!rows.length) return html + '<div class="card"><div class="empty">Nog niks verkocht</div></div>';
+  html += '<div class="tablewrap"><table><tr><th>Model</th><th>Productnr</th><th>Datum</th><th class="right">Kosten p/st</th><th class="right">Werkelijke verkoopprijs</th><th class="right">Voor de winkel</th><th class="right">Jouw winst</th><th class="right">Totale winst</th><th>Betaald</th><th>Levering</th><th>Ads</th></tr>';
+  rows.forEach(({p,u})=>{
+    const w = unitWinst(p,u);
+    const adsCh = adsChannels(p);
+    const adsCell = (voorraadUnits(p).length===0 && adsCh.length)
+      ? '<button class="btn sm red" onclick="adsPopup(\''+p.id+'\')"> nog online</button>'
+      : ((p.fb||p.mp) ? '<span class="badge b-ok"> offline</span>' : '<span class="badge b-gray">—</span>');
+    const betaalCell = u.betaal==='mp'
+      ? ' MP<br><label style="font-weight:400;font-size:12px"><input type="checkbox" onchange="setMpU(\''+p.id+'\',\''+u.id+'\',this.checked)"'+(u.mpUitbetaald?' checked':'')+'> uitbetaald</label>' + (u.mpUitbetaald?'':'<div><span class="badge b-bad"> wacht op MP</span></div>')
+      : (u.betaal==='cash'?'':'');
+    const levCell = '<select class="cell" id="lv_'+u.id+'" onchange="setLev(\''+p.id+'\',\''+u.id+'\')"><option value="ophalen"'+(u.levering!=='verzenden'?' selected':'')+'>Ophalen</option><option value="verzenden"'+(u.levering==='verzenden'?' selected':'')+'>Verzenden</option></select> ' +
+      (u.levering==='verzenden' ? '<select class="cell" id="vv_'+u.id+'" onchange="setLev(\''+p.id+'\',\''+u.id+'\')"><option'+(u.vervoerder!=='DHL'?' selected':'')+'>PostNL</option><option'+(u.vervoerder==='DHL'?' selected':'')+'>DHL</option></select> ' : '') +
+      '<label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;font-size:12px"><input type="checkbox" id="gd_'+u.id+'"'+(u.geleverd?' checked':'')+' onchange="setLev(\''+p.id+'\',\''+u.id+'\')"> '+(u.levering==='verzenden'?'verstuurd':'opgehaald')+'</label>' +
+      '<div style="margin-top:4px">'+levBadge(u)+'</div>';
+    html += '<tr'+(!u.deelGezet?' class="hl"':'')+'><td><a href="#" onclick="nav(\'product\',\''+p.id+'\');return false;" style="color:#2563eb;font-weight:600;text-decoration:none">'+esc(p.model)+'</a>'+(u.defect?'<div><span class="badge b-warn">'+esc(u.defect)+'</span></div>':'')+'</td><td>'+esc(p.adnummer)+'</td><td>'+esc(u.datum||'')+'</td><td class="right">'+eur(unitCost(p,u))+'</td><td class="right"><b>'+eur(u.prijs)+'</b></td>' +
+      (u.deelGezet ? '<td class="right">'+eur(w.winkel)+'</td><td class="right">'+eur(w.deel)+'</td>' : '<td colspan="2" class="right"><a href="#" onclick="nav(\'marge\');return false;"><span class="badge b-purple">nog verdelen →</span></a></td>') +
+      '<td class="right"><b>'+eur(w.winst)+'</b></td><td>'+betaalCell+'</td><td>'+levCell+'</td><td>'+adsCell+'</td></tr>';
+  });
+  return html + '</table></div>';
+}
+function setLev(pid, uidv){
+  const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
+  u.levering = f('lv_'+uidv).value;
+  if (f('vv_'+uidv)) u.vervoerder = f('vv_'+uidv).value;
+  u.geleverd = f('gd_'+uidv).checked;
+  save(); render();
+}
+
+/* ============ marge berekening ============ */
+function rMarge(){
+  const rows = allSold();
+  const open = rows.filter(r=>!r.u.deelGezet).length;
+  let html = '<h1>Marge berekening</h1><div class="sub">Vul per verkocht artikel de werkelijke verkoopprijs en jouw deel in — alles rekent direct door en wordt opgeslagen</div>';
+  if (open) html += '<div class="notice orange"> Nog <b>'+open+'</b> verk'+(open===1?'oop':'open')+' zonder verdeling (gemarkeerd in de tabel)</div>';
+  if (!rows.length) return html + '<div class="card"><div class="empty">Nog geen verkochte artikelen</div></div>';
+  html += '<div class="tablewrap"><table><tr><th>Status</th><th>Model</th><th>Productnr</th><th class="right">Kosten p/st</th><th class="right">Werkelijke verkoopprijs</th><th>Jouw deel</th><th class="right">Winst</th><th class="right">Winkel</th><th class="right">Jij</th></tr>';
+  rows.forEach(({p,u})=>{
+    const w = unitWinst(p,u);
+    html += '<tr'+(!u.deelGezet?' class="hl"':'')+' id="mr_'+u.id+'"><td id="ms_'+u.id+'">'+(u.deelGezet?'<span class="badge b-ok"> verdeeld</span>':'<span class="badge b-purple">nog verdelen</span>')+'</td><td><b>'+esc(p.model)+'</b></td><td>'+esc(p.adnummer)+'</td><td class="right">'+eur(unitCost(p,u))+'</td>' +
+      '<td class="right"><input class="cell" type="number" step="0.01" value="'+u.prijs+'" onchange="mUpd(\''+p.id+'\',\''+u.id+'\')" id="mp_'+u.id+'"></td>' +
+      '<td><select class="cell" id="mt_'+u.id+'" onchange="mUpd(\''+p.id+'\',\''+u.id+'\')"><option value="pct"'+(u.deelType!=='eur'?' selected':'')+'>%</option><option value="eur"'+(u.deelType==='eur'?' selected':'')+'>€</option></select> ' +
+      '<input class="cell" style="width:70px" type="number" step="0.01" value="'+u.deelWaarde+'" onchange="mUpd(\''+p.id+'\',\''+u.id+'\')" id="mw_'+u.id+'"></td>' +
+      '<td class="right" id="mwin_'+u.id+'">'+eur(w.winst)+'</td><td class="right" id="mluc_'+u.id+'">'+(u.deelGezet?eur(w.winkel):'—')+'</td><td class="right" id="mdaan_'+u.id+'"><b>'+(u.deelGezet?eur(w.deel):'—')+'</b></td></tr>';
+  });
+  html += '</table></div><div class="card" style="margin-top:16px" id="mtot">'+margeTotals()+'</div>';
+  return html;
+}
+function margeTotals(){
+  const t = totals();
+  return '<div style="display:flex;gap:30px;flex-wrap:wrap;font-size:14px"><span>Totale winst: <b>'+eur(t.winst)+'</b></span><span>Winkel: <b>'+eur(t.winkel)+'</b></span><span>Jij: <b>'+eur(t.deel)+'</b></span>' + (t.teVerdelen>0?'<span style="color:#c2540a">Nog te verdelen: <b>'+eur(t.teVerdelen)+'</b></span>':'') + '</div>';
+}
+function mUpd(pid, uidv){
+  const p = S.products.find(x=>x.id===pid), u = p.units.find(x=>x.id===uidv);
+  u.prijs = num(f('mp_'+uidv).value);
+  u.deelType = f('mt_'+uidv).value;
+  u.deelWaarde = num(f('mw_'+uidv).value);
+  u.deelGezet = true;
+  save();
+  const w = unitWinst(p,u);
+  f('mr_'+uidv).classList.remove('hl');
+  f('ms_'+uidv).innerHTML = '<span class="badge b-ok"> verdeeld</span>';
+  f('mwin_'+uidv).innerHTML = eur(w.winst);
+  f('mluc_'+uidv).innerHTML = eur(w.winkel);
+  f('mdaan_'+uidv).innerHTML = '<b>'+eur(w.deel)+'</b>';
+  f('mtot').innerHTML = margeTotals();
+}
+
+/* ============ instellingen ============ */
+function rSettings(){
+  return '<h1>Instellingen</h1><div class="sub">Standaardinstellingen voor het dashboard</div>' +
+  '<div class="card"><div class="grid2" style="max-width:480px"><div class="field"><label>Volgend productnummer</label><input type="number" id="s_next" min="1" value="'+S.settings.nextAd+'"><div class="mini" style="margin-top:4px">Wordt '+pad4(S.settings.nextAd)+' bij het volgende product</div></div></div>' +
+  '<div class="grid2" style="max-width:480px"><div class="field"><label>Labelbreedte (mm)</label><input type="number" id="s_labw" min="20" max="102" value="'+(S.settings.labW||62)+'"></div>' +
+  '<div class="field"><label>Labelhoogte (mm)</label><input type="number" id="s_labh" min="15" max="100" value="'+(S.settings.labH||32)+'"><div class="mini" style="margin-top:4px">Brother QL-800: 62 × 32 · DYMO LW450: 54 × 22</div></div></div>' +
+  '<div class="field"><label>Standaard opbouw advertentietekst (AI volgt dit bij het genereren)</label>' +
+  '<textarea id="s_tpl" rows="9" placeholder="Bijvoorbeeld:\n- Begin met een pakkende openingszin\n- Dan een opsomming van de specs\n- Vermeld dat het getest is en klaar voor gebruik\n- Eventuele gebreken eerlijk onderaan\n- Afsluiten met: ophalen of verzenden mogelijk\n- Maximaal 120 woorden">'+esc(S.settings.template)+'</textarea></div>' +
+  '<button class="btn green" onclick="saveSettings()">Opslaan</button></div>' +
+  '<div class="card"><b style="font-size:14px">Data en back-up</b>' +
+  '<div class="mini" style="margin:8px 0">Je data staat veilig opgeslagen en synct automatisch. Lokaal wordt een kopie bewaard zodat je ook offline kunt werken.'+(lastSyncedAt?' Laatst gesynct: '+esc(new Date(lastSyncedAt).toLocaleString('nl-NL')):'')+'</div>' +
+  '<button class="btn gray sm" onclick="pullRemote(true);toast(\'Synchroniseren...\')">Nu synchroniseren</button> ' +
+  '<button class="btn gray sm" onclick="bewaarVersie()">Nu een versie bewaren</button> ' +
+  '<button class="btn gray sm" onclick="exportData()">Back-up downloaden (JSON)</button> ' +
+  '<button class="btn gray sm" onclick="loadVersions()">Eerdere versies tonen</button>' +
+  '<div id="verslist" style="margin-top:12px"></div></div>';
+}
+async function maakVersie(){
+  if (!PARTNER_ID) return false;
+  const snap = { products: S.products, settings: S.settings };
+  try {
+    await sb.from('partner_versies').insert({ partner_id: PARTNER_ID, snapshot: snap, saved_by: USER, grootte: JSON.stringify(snap).length });
+    return true;
+  } catch(e){ return false; }
+}
+async function bewaarVersie(){
+  toast(await maakVersie() ? 'Versie bewaard' : 'Bewaren mislukt');
+  loadVersions();
+}
+async function loadVersions(){
+  const box = f('verslist'); if (!box) return;
+  box.innerHTML = '<div class="mini">Laden...</div>';
+  try {
+    const { data, error } = await sb.from('partner_versies')
+      .select('id, saved_at, saved_by, grootte').eq('partner_id', PARTNER_ID)
+      .order('saved_at', { ascending:false }).limit(20);
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length){ box.innerHTML = '<div class="mini">Nog geen eerdere versies opgeslagen.</div>'; return; }
+    box.innerHTML = '<div class="tablewrap"><table><tr><th>Opgeslagen op</th><th>Door</th><th class="right">Grootte</th><th></th></tr>' +
+      rows.map(v => '<tr><td>'+esc(new Date(v.saved_at).toLocaleString('nl-NL'))+'</td><td>'+esc(v.saved_by||'—')+'</td><td class="right">'+Math.round((v.grootte||0)/1024)+' KB</td>' +
+        '<td><button class="btn gray sm" onclick="restoreVersion(\''+v.id+'\')">Herstel</button></td></tr>').join('') + '</table></div>';
+  } catch(e){ box.innerHTML = '<div class="notice">Kon versies niet laden — controleer de verbinding.</div>'; }
+}
+async function restoreVersion(id){
+  if (!confirm('Deze versie terugzetten? De huidige data wordt eerst zelf ook als back-up bewaard.')) return;
+  try {
+    await maakVersie();
+    const { data, error } = await sb.from('partner_versies').select('snapshot').eq('id', id).maybeSingle();
+    if (error || !data || !data.snapshot) throw new Error('niet gevonden');
+    S.products = data.snapshot.products || [];
+    S.settings = Object.assign({nextAd:1, template:'', pin:'1234', labW:62, labH:32}, data.snapshot.settings || {});
+    migrate(S);
+    save();
+    toast('Versie hersteld');
+    nav('instellingen');
+  } catch(e){ toast('Herstellen mislukt'); }
+}
+function saveSettings(){
+  S.settings.nextAd = Math.max(1, parseInt(f('s_next').value)||1);
+  S.settings.template = f('s_tpl').value;
+  S.settings.labW = Math.min(102, Math.max(20, num(f('s_labw').value) || 62));
+  S.settings.labH = Math.min(100, Math.max(15, num(f('s_labh').value) || 32));
+  save(); toast(' Instellingen opgeslagen'); render();
+}
+function exportData(){
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(S, null, 2));
+  a.download = 'handel-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+/* ============ start: sessie herstellen ============ */
+if (S.draft && S.draft.data){ addData = S.draft.data; addStep = Math.min(1, S.draft.step||0); }
+page = (S.ui && S.ui.page) || 'dash';
+pageArg = (S.ui && S.ui.pageArg) || null;
+if (page==='product' && !S.products.find(x=>x.id===pageArg)) page = 'dash';
+/* Toon eerst het loginscherm; als er nog een geldige partner-sessie is, gaan we door. */
+f('app').style.display='none'; f('loginwrap').style.display='flex';
+(async () => {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await naLogin(session);
+  } catch(e){}
+})();
+</script>
+</body>
+</html>
