@@ -77,8 +77,8 @@ h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4
 .cb .tip { position: absolute; top: -34px; left: 50%; transform: translateX(-50%); background: #171c26; color: #fff; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 2; }
 .cb:hover .tip, .cb.hot .tip { opacity: 1; }
 .cb.hot:not(:hover) .tip { opacity: 0; }
-.chart:hover .cb.hot:not(:hover) .bar { background: #e8ecf3; }
-.chart:hover .cb.green.hot:not(:hover) .bar { background: #e8ecf3; }
+.chart:hover .cb.hot:not(:hover) .bar { background: var(--lblauw); }
+.chart:hover .cb.green.hot:not(:hover) .bar { background: var(--lblauw); }
 table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 13.5px; }
 th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted-l); background: var(--card); padding: 13px 12px; border-bottom: 1px solid var(--soft-2); white-space: nowrap; }
 td { padding: 13px 12px; border-bottom: 1px solid var(--soft-2); vertical-align: middle; }
@@ -129,7 +129,7 @@ textarea { resize: vertical; border-radius: var(--radius-s); }
 .btn:disabled { opacity: .5; cursor: default; box-shadow: none; transform: none; }
 .checkrow { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 8px; flex-wrap: wrap; }
 .checkrow input { width: auto; }
-.dupbanner { background: #fff8e6; border: 1px solid #f0d47a; color: #8a6a10; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+.dupbanner { background: var(--amber-soft); border: none; color: var(--amber-tekst); border-radius: var(--radius-s); padding: 13px 16px; font-size: 13.5px; margin-bottom: 16px; display: none; }
 .notice { background: var(--red-soft); border: none; color: var(--red-tekst); border-radius: var(--radius-s); padding: 13px 16px; font-size: 13.5px; margin-bottom: 16px; }
 .notice.blue { background: var(--lblauw); color: var(--oranje); }
 .notice.green { background: var(--green-soft); color: var(--green-tekst); }
@@ -138,12 +138,12 @@ textarea { resize: vertical; border-radius: var(--radius-s); }
 #modalbg { position: fixed; inset: 0; background: rgba(18,63,57,.44); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
 #modal { background: #fff; border-radius: var(--radius); padding: 30px; width: 460px; max-width: 94vw; max-height: 88vh; overflow-y: auto; box-shadow: var(--schaduw-l); }
 #modal h2 { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 14px; }
-.mini { font-size: 12px; color: #667085; }
+.mini { font-size: 12px; color: var(--muted); }
 .right { text-align: right; }
 input.cell { width: 100px; padding: 8px 10px; font-size: 13px; border-radius: 10px; }
 select.cell { width: auto; padding: 8px 10px; font-size: 13px; border-radius: 10px; }
 .stepdots { display: flex; gap: 6px; margin-bottom: 16px; }
-.stepdots span { width: 26px; height: 5px; border-radius: 3px; background: #e4e7ec; }
+.stepdots span { width: 26px; height: 5px; border-radius: 3px; background: var(--soft-2); }
 .stepdots span.on { background: var(--oranje); }
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); color: var(--text); padding: 15px 18px; border-radius: var(--radius-s); font-size: 14px; font-weight: 500; z-index: 99; box-shadow: 0 12px 32px rgba(23,32,30,.18), 0 2px 6px rgba(23,32,30,.08); border-left: 4px solid var(--muted-l); max-width: 360px; }
 .toast.ok { border-left-color: var(--green); }
@@ -155,11 +155,11 @@ select.cell { width: auto; padding: 8px 10px; font-size: 13px; border-radius: 10
 .copyrow { display: flex; gap: 8px; align-items: flex-start; }
 .copyrow > :first-child { flex: 1; }
 .fotos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-.foto { position: relative; width: 92px; height: 92px; border-radius: 8px; overflow: hidden; border: 1px solid #e4e7ec; }
+.foto { position: relative; width: 92px; height: 92px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
 .foto img { width: 100%; height: 100%; object-fit: cover; }
 .foto .del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,.6); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 11px; line-height: 1; }
 .exrow { display: grid; grid-template-columns: 90px 1fr 1fr 110px; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 13px; }
-.exrow b { font-size: 12px; color: #344054; }
+.exrow b { font-size: 12px; color: var(--muted); }
 tr.hl td { background: #fffaf0; }
 .savebar { position: sticky; bottom: 0; background: linear-gradient(transparent, var(--bg) 30%); padding: 14px 0 4px; z-index: 5; }
 #camv { width: 100%; border-radius: 10px; background: #000; max-height: 55vh; }
@@ -169,7 +169,7 @@ tr.hl td { background: #fffaf0; }
 .pubthumb { width: 56px; height: 56px; border-radius: 12px; background: var(--soft-2); display: flex; align-items: center; justify-content: center; font-size: 26px; overflow: hidden; flex-shrink: 0; }
 .pubthumb img { width: 100%; height: 100%; object-fit: cover; }
 /* label preview */
-.labprev { width: 250px; height: 129px; border: 1.5px dashed #c7cede; border-radius: 8px; padding: 9px 11px; display: flex; gap: 9px; align-items: center; background: #fff; margin: 0 auto; overflow: hidden; }
+.labprev { width: 250px; height: 129px; border: 1.5px dashed var(--border); border-radius: 8px; padding: 9px 11px; display: flex; gap: 9px; align-items: center; background: #fff; margin: 0 auto; overflow: hidden; }
 .labprev .lt { flex: 1; min-width: 0; }
 .labprev .lm { font-size: 12px; font-weight: 800; line-height: 1.15; }
 .labprev .ls { font-size: 9px; margin-top: 4px; line-height: 1.3; color: #333; }
@@ -184,25 +184,23 @@ tr.hl td { background: #fffaf0; }
   #sidebar { position: fixed; bottom: 0; left: 0; right: 0; top: auto; width: 100%; height: 60px; flex-direction: row; padding: 0; z-index: 40; align-items: stretch; justify-content: space-around; border-top: 1px solid var(--line); border-right: none; }
   #sidebar .brand, .navspacer, .hidemob { display: none; }
   .navbtn { flex-direction: column; gap: 2px; padding: 7px 2px; flex: 1; align-items: center; justify-content: center; margin: 0; border-radius: 0; }
-  .navbtn.active { background: none; color: var(--blue); box-shadow: none; }
+  .navbtn.active { background: none; color: var(--oranje); box-shadow: none; }
   .navbtn .txt { font-size: 9px; }
   .navdot { position: absolute; top: 4px; right: 12%; margin: 0; }
-  .navbtn.active .navdot { background: var(--blue); }
+  .navbtn.active .navdot { background: var(--oranje); color: #fff; }
   #topbar { padding: 12px 14px 0; }
   .userchip div:last-child { display: none; }
   .search { max-width: none; }
   #main { padding: 16px 14px 92px; }
   .kpis { grid-template-columns: 1fr 1fr; }
   .grid2, .grid3, .grid4, .chartrow { grid-template-columns: 1fr; }
-  .exrow { grid-template-columns: 1fr; border-bottom: 1px solid #f0f2f5; padding-bottom: 10px; }
+  .exrow { grid-template-columns: 1fr; border-bottom: 1px solid var(--soft-2); padding-bottom: 10px; }
   .savebar { bottom: 60px; }
   .toast { bottom: 76px; left: 14px; right: 14px; max-width: none; }
-  .navbtn.active { background: none; color: var(--oranje); }
-  .navbtn.active .navdot { background: var(--oranje); color: #fff; }
 }
 /* Storvo-huisstijl afwerking */
-.logincard .btn { background: var(--actie); }
-.logincard .btn:hover { background: var(--actie-d); }
+.logincard .btn { background: var(--actie); box-shadow: 0 5px 16px rgba(232,138,29,.24); }
+.logincard .btn:hover { background: var(--actie-d); box-shadow: 0 9px 22px rgba(232,138,29,.3); }
 </style>
 </head>
 <body>
@@ -1079,7 +1077,7 @@ function rProduct(id){
       '<input type="text" placeholder="aantekening / defect..." value="'+esc(u.defect)+'" id="ud_'+u.id+'">' +
       '<input type="text" placeholder="extra\'s (RAM, SSD...)" value="'+esc(u.extra)+'" id="ue_'+u.id+'">' +
       '<input type="number" step="0.01" placeholder="kosten €" value="'+(u.extraKosten||'')+'" id="uk_'+u.id+'">' +
-      '<button class="btn green sm" onclick="saveProduct(\''+p.id+'\',true);openSell(\''+p.id+'\',\''+u.id+'\')">Verkocht </button></div>';
+      '<button class="btn sm" onclick="saveProduct(\''+p.id+'\',true);openSell(\''+p.id+'\',\''+u.id+'\')">Verkocht</button></div>';
   });
   html += '</div></div>';
   /* verkochte units */
