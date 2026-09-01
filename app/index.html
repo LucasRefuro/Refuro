@@ -5908,6 +5908,10 @@ async function ladAccountEnStart(session){
   account=acc;
   gebruiker={id:acc.id, naam:acc.naam, rol:acc.rol};
 
+  /* Een partner hoort niet in de winkelapp maar in zijn eigen dashboard. Hij heeft
+     ook geen winkel-team, dus de rest van deze functie is niet voor hem bedoeld. */
+  if(acc.rol==='partner'){ location.replace('/partner/'); return; }
+
   /* Logt er iemand van een ander team in op dit apparaat, dan mogen de
      gegevens van de vorige winkel niet blijven staan. */
   if(state.teamId && state.teamId!==acc.team_id){
