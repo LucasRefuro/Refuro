@@ -333,6 +333,15 @@
   .btwoptie{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;
     text-transform:none; letter-spacing:0; color:var(--tekst); margin:0;}
   .btwoptie input{margin:0;}
+  /* Per-account paginakeuze in het teambeheer */
+  .paginakeuze{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:8px;}
+  .paginakeuze label{display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:500;
+    text-transform:none; letter-spacing:0; color:var(--tekst); cursor:pointer; margin:0;}
+  .paginakeuze input{margin:0;}
+  .teamRij2{display:flex; flex-direction:column; gap:10px; padding:16px 0; border-top:1px solid var(--border);}
+  .teamRij2 .kop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .teamRij2 .kop b{font-size:15px;}
+  .teamRij2 .acts2{display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;}
   .verhuisrij{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0;}
   .verhuisrij .dt{color:var(--muted-l); min-width:120px;}
   .wachtlijst{margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);}
@@ -2111,21 +2120,32 @@
 
   <div id="team-accounts"hidden>
     <div class="card breed">
-      <h2><svg class="i"><use href="#i-lock"/></svg>Accounts &amp; inloggen</h2>
-      <p class="muted" style="margin-bottom:14px">Dit is het echte inlogsysteem: elke medewerker krijgt een eigen gebruikersnaam, e-mailadres en wachtwoord, met optionele twee-staps-verificatie. Nodig nieuwe collega's uit via een deelbare link — zij doorlopen bij hun eerste keer inloggen automatisch dezelfde rondleiding.</p>
-      <div id="teamAccBody">Bezig met laden…</div>
-      <div class="row" style="margin-top:16px; align-items:flex-end">
-        <div style="min-width:180px"><label>Rol voor uitnodiging</label>
-          <select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select>
-        </div>
-        <div><button class="btn" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Uitnodigingslink maken</button></div>
+      <h2><svg class="i"><use href="#i-lock"/></svg>Nieuwe gebruiker</h2>
+      <p class="muted" style="margin-bottom:14px">Maak een teamlid aan met een eigen e-mail en wachtwoord. Vink aan welke pagina's hij mag zien. Je geeft het begin-wachtwoord door; hij kan het later zelf wijzigen.</p>
+      <div class="grid">
+        <div><label>Naam</label><input id="nw_naam" placeholder="Naam"></div>
+        <div><label>Gebruikersnaam</label><input id="nw_gebruikersnaam" placeholder="voor het inloggen"></div>
+        <div><label>E-mail</label><input id="nw_email" type="email" placeholder="collega@email.nl"></div>
+        <div><label>Begin-wachtwoord</label><input id="nw_ww" type="text" placeholder="minstens 8 tekens"></div>
+        <div><label>Rol</label><select id="nw_rol" onchange="nwRolVerandert()"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
       </div>
-      <div id="inviteResultaat" style="margin-top:12px"></div>
+      <label style="margin-top:14px; display:block">Welke pagina's mag hij zien</label>
+      <div id="nw_paginas" class="paginakeuze"></div>
+      <button class="btn actie" style="margin-top:16px" onclick="gebruikerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Gebruiker aanmaken</button>
+      <div id="nw_uit" class="muted klein" style="margin-top:10px"></div>
+      <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border)">
+        <p class="muted klein" style="margin-bottom:8px">Liever een uitnodigingslink sturen zodat je collega zelf zijn wachtwoord zet:</p>
+        <div class="row" style="align-items:flex-end">
+          <div style="min-width:160px"><label>Rol</label><select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
+          <div><button class="btn ghost" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Uitnodigingslink maken</button></div>
+        </div>
+        <div id="inviteResultaat" style="margin-top:12px"></div>
+      </div>
     </div>
     <div class="card breed">
-      <h2><svg class="i"><use href="#i-link"/></svg>Partners</h2>
-      <p class="muted" style="margin-bottom:14px">Een partner is een bevriende doorverkoper met een eigen dashboard. Je nodigt hem uit met een eigen login, en wijst laptops aan hem toe vanuit een toestel in de voorraad, met de knop "Toewijzen aan partner". Hij ziet alleen zijn eigen toestellen, niets van jouw winkel.</p>
-      <button class="btn" onclick="partnerUitnodigen()"><svg class="i s"><use href="#i-link"/></svg>Nodig een partner uit</button>
+      <h2><svg class="i"><use href="#i-users"/></svg>Teamleden</h2>
+      <p class="muted" style="margin-bottom:14px">Per teamlid stel je de rol en de pagina's in. Sla je een eigen paginakeuze op, dan wint die boven de rol. De eigenaar ziet altijd alles.</p>
+      <div id="teamAccBody">Bezig met laden…</div>
     </div>
   </div>
 </section>
@@ -2591,7 +2611,7 @@ document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('cli
 function showTab(t){
   /* Een pagina die uitstaat of die deze rol niet mag zien, gaat ook niet open
      via een link of een snelkoppeling. */
-  if(typeof mag==='function' && !mag(t)) t = mag('dashboard') ? 'dashboard' : 'scan';
+  if(typeof mag==='function' && !mag(t)) t = eersteTab();
   /* Nieuw product heeft geen eigen menuknop meer; hij hangt onder Producten.
      Daarom blijft die knop oplichten zolang je in het formulier zit.        */
   const menu = t==='nieuw' ? 'producten' : t;
@@ -5353,8 +5373,18 @@ function mag(tab){
   const hoort = tab==='nieuw' ? 'producten' : tab;
   if(!paginaAan(hoort)) return false;
   const r=gebruiker?gebruiker.rol:'eigenaar';
+  if(r==='eigenaar') return true;   /* de eigenaar ziet altijd alles */
+  /* Heeft dit account een eigen paginalijst (door de eigenaar ingesteld), dan wint
+     die boven de rol-standaard. Zo bepaal je per gebruiker wat hij ziet. */
+  const eigen = gebruiker && Array.isArray(gebruiker.tabs) ? gebruiker.tabs : null;
+  if(eigen) return eigen.includes(hoort);
   const toegestaan=ROL_TABS[r];
   return !toegestaan || toegestaan.includes(tab);
+}
+/* De eerste pagina die deze gebruiker mag zien, als landingsplek. */
+function eersteTab(){
+  const volgorde=['dashboard','scan','kassa','voorraad','hardware','reparaties','aanvragen','producten','diensten','webshop','inruil','bestellen','team','partners','instellingen'];
+  return volgorde.find(t=>mag(t)) || 'instellingen';
 }
 function paginaWissel(tab, aan){
   const lijst=verborgen().filter(t=>t!==tab);
@@ -5932,7 +5962,7 @@ async function ladAccountEnStart(session){
     return;
   }
   account=acc;
-  gebruiker={id:acc.id, naam:acc.naam, rol:acc.rol};
+  gebruiker={id:acc.id, naam:acc.naam, rol:acc.rol, tabs:Array.isArray(acc.tabs)?acc.tabs:null};
 
   /* Een partner hoort niet in de winkelapp maar in zijn eigen dashboard. Hij heeft
      ook geen winkel-team, dus de rest van deze functie is niet voor hem bedoeld. */
@@ -7662,19 +7692,109 @@ async function maakInviteAccount(token, knop){
 }
 
 /* -- teamledenbeheer (eigenaar/beheerder) -- */
+/* De pagina's die je per teamlid aan of uit kunt zetten (team en partners zijn
+   eigenaar-only en staan er niet bij). */
+const PAGINAS_BEHEER=[
+  ['dashboard','Dashboard'],['scan','Scan'],['diensten','Diensten'],['reparaties','Reparaties'],
+  ['aanvragen','Aanvragen'],['producten','Producten'],['voorraad','Voorraad'],['hardware','Hardware'],
+  ['webshop','Webshop'],['inruil','Inruil'],['kassa','Kassa'],['bestellen','Bestellingen'],['instellingen','Instellingen']
+];
+function rolDefaultTabs(rol){
+  const t=ROL_TABS[rol];
+  const alle=PAGINAS_BEHEER.map(p=>p[0]);
+  return !t ? alle : alle.filter(id=>t.includes(id));
+}
+function teamPaginaVinkjes(prefix, actief){
+  return PAGINAS_BEHEER.map(([id,label])=>
+    `<label><input type="checkbox" id="${prefix}_${id}" ${actief.includes(id)?'checked':''}>${esc(label)}</label>`).join('');
+}
+function paginasUit(prefix){
+  return PAGINAS_BEHEER.filter(([id])=>{ const el=document.getElementById(prefix+'_'+id); return el&&el.checked; }).map(p=>p[0]);
+}
+function nwRolVerandert(){
+  const rol=(document.getElementById('nw_rol')||{}).value||'medewerker';
+  const vak=document.getElementById('nw_paginas'); if(vak) vak.innerHTML=teamPaginaVinkjes('nw', rolDefaultTabs(rol));
+}
 async function renderTeamAccounts(){
   const body=document.getElementById('teamAccBody');
   if(!account){ body.innerHTML='<p class="muted">Laden…</p>'; return; }
+  const nwvak=document.getElementById('nw_paginas');
+  if(nwvak && !nwvak.innerHTML.trim()){
+    nwvak.innerHTML=teamPaginaVinkjes('nw', rolDefaultTabs((document.getElementById('nw_rol')||{}).value||'medewerker'));
+  }
   const {data:leden,error}=await sb.from('accounts').select('*').order('created_at',{ascending:true});
   if(error){ body.innerHTML='<p class="muted">Kon teamleden niet laden.</p>'; return; }
-  body.innerHTML=(leden||[]).map(l=>`<div class="teamRij">
-    <div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
-    <div style="flex:1; min-width:160px"><b>${esc(l.naam)}</b>${l.id===account.id?' <span class="muted">(jij)</span>':''}<br>
-      <span class="muted">${esc(l.gebruikersnaam)} · ${esc(l.email)}</span></div>
-    <span class="rolTag">${esc(l.rol)}</span>
-    <span class="${l.tweestaps_actief?'fa2Aan':'fa2Uit'}">${l.tweestaps_actief?'2FA aan':'2FA uit'}</span>
-    <button class="btn ghost small" data-id="${l.id}" data-naam="${esc(l.naam)}" onclick="teamWachtwoordInstellen(this.dataset.id,this.dataset.naam)"><svg class="i s"><use href="#i-lock"/></svg>Wachtwoord instellen</button>
-  </div>`).join('') || '<p class="muted">Nog geen teamleden.</p>';
+  body.innerHTML=(leden||[]).map(l=>{
+    const isJij=l.id===account.id;
+    if(l.rol==='eigenaar'){
+      return `<div class="teamRij2"><div class="kop"><div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
+        <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}<span class="rolTag">eigenaar</span>
+        <span class="muted">${esc(l.gebruikersnaam||'')} · ${esc(l.email||'')}</span></div>
+        <p class="muted klein">De eigenaar ziet altijd alle pagina's.</p></div>`;
+    }
+    const actief = Array.isArray(l.tabs) ? l.tabs : rolDefaultTabs(l.rol);
+    return `<div class="teamRij2">
+      <div class="kop"><div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
+        <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}
+        <span class="muted">${esc(l.gebruikersnaam||'')} · ${esc(l.email||'')}</span></div>
+      <div class="row" style="align-items:flex-end; gap:12px; margin-top:2px">
+        <div style="min-width:160px"><label>Rol</label><select id="rol_${l.id}">
+          <option value="medewerker"${l.rol==='medewerker'?' selected':''}>Medewerker</option>
+          <option value="beheerder"${l.rol==='beheerder'?' selected':''}>Beheerder</option></select></div>
+      </div>
+      <label style="display:block; margin-top:4px">Pagina's</label>
+      <div class="paginakeuze">${teamPaginaVinkjes('acc'+l.id, actief)}</div>
+      <div class="acts2">
+        <button class="btn small" onclick="gebruikerOpslaan('${l.id}', this)">Opslaan</button>
+        <button class="btn ghost small" onclick="gebruikerWachtwoord('${l.id}','${esc(l.naam)}')"><svg class="i s"><use href="#i-lock"/></svg>Wachtwoord</button>
+        <button class="btn ghost small" onclick="gebruikerVerwijder('${l.id}','${esc(l.naam)}')">Verwijderen</button>
+      </div>
+    </div>`;
+  }).join('') || '<p class="muted">Nog geen teamleden. Maak er hierboven een aan.</p>';
+}
+/* Alle team-acties lopen via de team-beheer-functie (service_role), zodat de sessie
+   van de eigenaar niet vervangen wordt bij het aanmaken van een account. */
+async function teamActie(actie, extra, knop, uitEl, onOk){
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/team-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify(Object.assign({actie}, extra))
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Mislukt');
+    if(onOk) onOk(j);
+  }catch(e){ if(uitEl) uitEl.textContent=e.message; toast(e.message,'fout'); }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
+}
+async function gebruikerAanmaken(knop){
+  const naam=(document.getElementById('nw_naam').value||'').trim();
+  const gebruikersnaam=(document.getElementById('nw_gebruikersnaam').value||'').trim();
+  const email=(document.getElementById('nw_email').value||'').trim().toLowerCase();
+  const ww=document.getElementById('nw_ww').value||'';
+  const rol=document.getElementById('nw_rol').value;
+  const uit=document.getElementById('nw_uit');
+  if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
+  await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs:paginasUit('nw')}, knop, uit, ()=>{
+    ['nw_naam','nw_gebruikersnaam','nw_email','nw_ww'].forEach(i=>{ const e=document.getElementById(i); if(e) e.value=''; });
+    uit.textContent='Gebruiker aangemaakt. Laat hem inloggen met '+email+'.';
+    toast('Gebruiker aangemaakt', true); renderTeamAccounts();
+  });
+}
+async function gebruikerOpslaan(id, knop){
+  const rol=(document.getElementById('rol_'+id)||{}).value;
+  await teamActie('bijwerken', {account_id:id, rol, tabs:paginasUit('acc'+id)}, knop, null, ()=>toast('Opgeslagen', true));
+}
+async function gebruikerWachtwoord(id, naam){
+  const ww=window.prompt('Nieuw wachtwoord voor '+naam+' (minstens 8 tekens):'); if(!ww) return;
+  if(ww.length<8){ toast('Minstens 8 tekens.','let-op'); return; }
+  await teamActie('wachtwoord', {account_id:id, nieuw_wachtwoord:ww}, null, null, ()=>toast('Wachtwoord gewijzigd', true));
+}
+async function gebruikerVerwijder(id, naam){
+  if(!confirm('Account van '+naam+' verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  await teamActie('verwijderen', {account_id:id}, null, null, ()=>{ toast('Account verwijderd', true); renderTeamAccounts(); });
 }
 async function teamWachtwoordInstellen(accountId, naam){
   const ww=window.prompt('Nieuw wachtwoord voor '+naam+' (min. 8 tekens):');
