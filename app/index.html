@@ -1744,8 +1744,8 @@
     <div class="card">
       <h2><svg class="i"><use href="#i-phone"/></svg>Toestel en reparatie</h2>
       <div class="grid" style="margin-bottom:12px">
-        <div><label>Toestel</label><input id="r_toestel" list="modellenList" placeholder="bijv. iPhone 14" oninput="updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce()" onchange="toestelAanvullen()"><datalist id="modellenList"></datalist></div>
-        <div><label>Reparatie</label><input id="r_type" placeholder="bijv. scherm, batterij, laadpoort" oninput="checkSeal(); updateZoekLinks(); prijsSuggestieDebounce()"></div>
+        <div class="zoekveld"><label>Toestel</label><input id="r_toestel" autocomplete="off" placeholder="bijv. iPhone 14" oninput="toestelTyp(); updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce()" onfocus="toestelTyp()" onblur="setTimeout(toestelSluit,180)" onkeydown="toestelToets(event)" onchange="toestelAanvullen()"><div class="zoeklijst" id="toestelLijst" hidden></div></div>
+        <div class="zoekveld"><label>Reparatie</label><input id="r_type" autocomplete="off" placeholder="bijv. scherm, batterij, laadpoort" oninput="repTypeTyp(); checkSeal(); updateZoekLinks(); prijsSuggestieDebounce()" onfocus="repTypeTyp()" onblur="setTimeout(repTypeSluit,180)" onkeydown="repTypeToets(event)"><div class="zoeklijst" id="repTypeLijst" hidden></div></div>
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
       </div>
       <div id="prijsSug" class="prijssug" hidden></div>
@@ -8714,14 +8714,79 @@ function repLeverTekst(ts){
   return dstr;
 }
 function vulRepDatalists(){
-  /* Eerst de modellen van de winkel zelf, daarna de landelijke lijst. Wat de
-     winkel zelf heeft ingevoerd staat dus bovenaan bij het typen.           */
-  const eigen=state.modellen.map(m=>m.naam);
-  const eigenPlat=new Set(eigen.map(tstNorm));
-  const rest=tstAlleNamen().filter(n=>!eigenPlat.has(tstNorm(n)));
-  document.getElementById('modellenList').innerHTML=eigen.concat(rest).map(n=>`<option value="${esc(n)}">`).join('');
+  /* Alleen nog de onderdelenlijst; het toestelveld heeft een eigen zoeklijst
+     (toestelTyp) in plaats van een keuzelijst van het besturingssysteem.     */
   document.getElementById('ondList').innerHTML=state.onderdelen.map(o=>`<option value="${esc(o.naam)}">`).join('');
 }
+
+/* ═══ Eigen zoeklijsten voor toestel en reparatie ═══
+   Geen kale keuzelijst van het besturingssysteem, maar dezelfde huisstijl als
+   de rest van de app. Zelfde patroon en toetsbediening als de aanvraag-picker. */
+function toestelBron(){
+  const eigen=state.modellen.map(m=>m.naam);
+  const eigenPlat=new Set(eigen.map(tstNorm));
+  return eigen.concat(tstAlleNamen().filter(n=>!eigenPlat.has(tstNorm(n))));
+}
+function zoekrijHtml(naam, kiesFn){
+  const veilig=String(naam).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<button type="button" class="zoekrij" onmousedown="event.preventDefault(); ${kiesFn}('${veilig}')"><span class="zrnaam" data-onvertaald>${esc(naam)}</span></button>`;
+}
+function zoekToets(e, lijstId, sluitFn){
+  const lijst=document.getElementById(lijstId);
+  if(!lijst || lijst.hidden) return;
+  const rijen=[...lijst.querySelectorAll('.zoekrij')];
+  if(!rijen.length) return;
+  let i=rijen.findIndex(r=>r.classList.contains('aan'));
+  if(e.key==='ArrowDown'){ e.preventDefault(); i=(i+1)%rijen.length; }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); i=(i<=0?rijen.length:i)-1; }
+  else if(e.key==='Enter'){ if(i>=0){ e.preventDefault(); rijen[i].dispatchEvent(new MouseEvent('mousedown')); } return; }
+  else if(e.key==='Escape'){ sluitFn(); return; }
+  else return;
+  rijen.forEach((r,k)=>r.classList.toggle('aan', k===i));
+}
+function toestelTyp(){
+  const veld=document.getElementById('r_toestel'), lijst=document.getElementById('toestelLijst');
+  if(!veld || !lijst) return;
+  const q=tstNorm(veld.value.trim());
+  const bron=toestelBron();
+  const treffers=(q ? bron.filter(n=>tstNorm(n).includes(q)) : bron).slice(0,10);
+  if(!treffers.length){ toestelSluit(); return; }
+  lijst.hidden=false;
+  lijst.innerHTML=treffers.map(n=>zoekrijHtml(n,'toestelKies')).join('');
+}
+function toestelKies(naam){
+  const veld=document.getElementById('r_toestel'); if(!veld) return;
+  veld.value=naam;
+  toestelSluit();
+  updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce();
+  const t=document.getElementById('r_type'); if(t) t.focus();
+}
+function toestelSluit(){ const l=document.getElementById('toestelLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
+function toestelToets(e){ zoekToets(e,'toestelLijst',toestelSluit); }
+
+/* Veelvoorkomende reparaties; eerder gebruikte types komen er automatisch bij. */
+const REP_TYPES=['Scherm','Accu','Laadpoort','Achtercamera','Frontcamera','Achterkant / backcover',
+  'Oorspeaker','Luidspreker','Trilmotor','Aan/uit-knop','Volumeknop','Simlezer','Waterschade',
+  'Software / herinstallatie','Diagnose'];
+function repTypeTyp(){
+  const veld=document.getElementById('r_type'), lijst=document.getElementById('repTypeLijst');
+  if(!veld || !lijst) return;
+  const q=veld.value.trim().toLowerCase();
+  const eerder=[...new Set((state.reparaties||[]).map(r=>r.type).filter(Boolean))];
+  const alle=[...new Set(REP_TYPES.concat(eerder))];
+  const treffers=(q ? alle.filter(n=>n.toLowerCase().includes(q)) : alle).slice(0,12);
+  if(!treffers.length){ repTypeSluit(); return; }
+  lijst.hidden=false;
+  lijst.innerHTML=treffers.map(n=>zoekrijHtml(n,'repTypeKies')).join('');
+}
+function repTypeKies(naam){
+  const veld=document.getElementById('r_type'); if(!veld) return;
+  veld.value=naam;
+  repTypeSluit();
+  checkSeal(); updateZoekLinks(); prijsSuggestieDebounce();
+}
+function repTypeSluit(){ const l=document.getElementById('repTypeLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
+function repTypeToets(e){ zoekToets(e,'repTypeLijst',repTypeSluit); }
 /* gsm-world heeft per toestel een eigen pagina: gsm-world.nl/iphone-16,
    gsm-world.nl/galaxy-a53-5g. Zoeken op "iPhone 16 scherm" levert daar niets
    op, want de reparatiesoort staat óp die pagina. We sturen dus alleen het
@@ -9175,13 +9240,15 @@ async function prijsSuggestie(){
     const match=besteMarktModel(toestel, index);
     if(match){
       const {data:mr,error}=await sb.from('reparatie_marktprijzen')
-        .select('model,categorie,kwaliteit,prijs_min,prijs_max')
+        .select('model,categorie,optie,kwaliteit,prijs_min,prijs_max')
         .eq('model_norm', match.m.mn);
       if(beurt!==prijsSugTeller) return;
       if(!error && mr && mr.length){
-        let toon = cat ? mr.filter(r=>r.categorie===cat) : mr;
-        if(cat && !toon.length) toon=mr; /* die categorie niet gevonden: toon alles van het model */
-        box.innerHTML=prijsSugHtml(match.m.model, cat, toon);
+        /* Nog geen reparatie getypt? Dan het scherm tonen, de meest gevraagde. */
+        let toonCat = cat || 'Scherm';
+        let toon = mr.filter(r=>r.categorie===toonCat);
+        if(!toon.length){ toon=mr; toonCat=null; } /* categorie niet gevonden: alles van het model */
+        box.innerHTML=prijsSugHtml(match.m.model, toonCat, toon);
         return;
       }
     }
@@ -9205,13 +9272,35 @@ async function prijsSuggestie(){
   }catch(e){ box.hidden=true; box.innerHTML=''; }
 }
 
+/* De ruwe kwaliteit van gsm-world (Replica/Refurbished/Origineel) omgezet naar de
+   grades die de winkel zelf verkoopt. De optie-tekst van gsm-world noemt het type
+   vaak letterlijk ("(Incell / Soft) REPLICA", "REFURBISHED", "(pulled) ORIGINEEL").
+   Schermen: Incell/Soft OLED, Refurbished, Servicepack. Accu's: OEM, Servicepack
+   (genuine zit daar tussenin maar staat niet los in de bron). Rest: OEM, Servicepack. */
+function repGrade(categorie, optie, kwaliteit){
+  const o=(optie||'').toLowerCase(), k=(kwaliteit||'').toLowerCase();
+  if(categorie==='Scherm'){
+    if(k==='refurbished') return {label:'Refurbished', rang:1};
+    if(k==='replica' || /incell|soft/.test(o)) return {label:'Incell / Soft OLED', rang:0};
+    if(k==='origineel' || /pulled|origineel|service/.test(o)) return {label:'Servicepack', rang:2};
+    return {label:'Servicepack', rang:2};
+  }
+  if(categorie==='Accu & opladen'){
+    if(k==='origineel' || /genuine|origineel|service/.test(o)) return {label:'Servicepack', rang:1};
+    return {label:'OEM', rang:0};
+  }
+  if(k==='origineel' || /origineel|service/.test(o)) return {label:'Servicepack', rang:1};
+  return {label:'OEM', rang:0};
+}
 function prijsSugHtml(model, cat, rijen){
-  /* Per kwaliteit de laagste prijs (gsm-world toont soms een range per model). */
-  const volgorde={'Replica':0,'Refurbished':1,'OEM':2,'Origineel':3,'':4};
-  const perKwal={};
-  rijen.forEach(r=>{ const k=r.kwaliteit||''; if(perKwal[k]==null||r.prijs_min<perKwal[k]) perKwal[k]=r.prijs_min; });
-  const keys=Object.keys(perKwal).sort((a,b)=>(volgorde[a]??9)-(volgorde[b]??9));
-  const chips=keys.map(k=>`<button type="button" class="prijssug-chip" onclick="gebruikPrijs(${perKwal[k]})">${k?esc(k):'Prijs'} <b>${euro(perKwal[k])}</b></button>`).join('');
+  /* Laagste prijs per grade (gsm-world toont soms een range en meerdere opties). */
+  const perGrade={};
+  rijen.forEach(r=>{
+    const g=repGrade(r.categorie, r.optie, r.kwaliteit);
+    if(perGrade[g.label]==null || r.prijs_min<perGrade[g.label].prijs) perGrade[g.label]={prijs:r.prijs_min, rang:g.rang};
+  });
+  const keys=Object.keys(perGrade).sort((a,b)=>perGrade[a].rang-perGrade[b].rang);
+  const chips=keys.map(k=>`<button type="button" class="prijssug-chip" onclick="gebruikPrijs(${perGrade[k].prijs})">${esc(k)} <b>${euro(perGrade[k].prijs)}</b></button>`).join('');
   return '<div class="prijssug-in"><span class="prijssug-kop">Marktprijs</span>'+esc(model)+
     (cat?' <span class="muted">'+esc(cat.toLowerCase())+'</span>':'')+
     ' <span class="muted klein">(gsm-world, incl. btw)</span>'+
