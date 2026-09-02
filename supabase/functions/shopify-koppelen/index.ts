@@ -11,23 +11,26 @@
 
 import {
   admin, cors, fout, wieBelt, graphql, versleutel, ontsleutel,
-  domeinOpschonen, winkelVerkennen, webhooksZetten, nieuwPad,
+  domeinOpschonen, winkelVerkennen, webhooksZetten, nieuwPad, effectieveScopes,
   RECHTEN, SCOPES, MELDINGEN,
 } from "../_gedeeld/shopify.ts";
 
-/* Welke rechten er werkelijk op een geplakt token staan. Dit is een vast adres
-   buiten de versies om, en het is de enige manier om vóórdat er iets misgaat te
-   zeggen "je bent write_publications vergeten". */
+/* Welke rechten er werkelijk op een token staan. We lezen de effectieve scopes
+   (currentAppInstallation), want die bevatten ook de leesrechten die Shopify
+   impliciet meegeeft bij een schrijfrecht. De oude weg via access_scopes.json gaf
+   alleen de gevraagde scopes, waardoor de check "read_products ontbreekt" riep
+   terwijl het token het wel had. Zo kunnen we vóórdat er iets misgaat zeggen "je
+   bent write_publications vergeten". */
 async function rechtenVan(domein: string, token: string) {
-  const res = await fetch(`https://${domein}/admin/oauth/access_scopes.json`, {
-    headers: { "X-Shopify-Access-Token": token, "Accept": "application/json" },
-  });
-  if (res.status === 401 || res.status === 403) {
-    throw new Error("Shopify herkent dit token niet. Kijk of je hem helemaal hebt gekopieerd.");
+  try {
+    return await effectieveScopes({ domein, token });
+  } catch (e) {
+    const m = e instanceof Error ? e.message : "";
+    if (/token/i.test(m)) {
+      throw new Error("Shopify herkent dit token niet. Kijk of je hem helemaal hebt gekopieerd.");
+    }
+    throw e;
   }
-  if (!res.ok) throw new Error("Shopify gaf status " + res.status + " bij het uitlezen van de rechten");
-  const uit = await res.json();
-  return (uit?.access_scopes || []).map((s: any) => String(s.handle));
 }
 
 /* Wat de browser mag zien. Geen token, alleen genoeg om te herkennen wat er

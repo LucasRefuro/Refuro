@@ -21,7 +21,7 @@
 
 import {
   admin, versleutel, domeinOpschonen, terugkomstKlopt,
-  winkelVerkennen, webhooksZetten, nieuwPad, SCOPES,
+  winkelVerkennen, webhooksZetten, nieuwPad, SCOPES, effectieveScopes,
 } from "../_gedeeld/shopify.ts";
 
 /* Terug naar Storvo, met in het adres wat er gebeurd is. De instellingenpagina
@@ -96,7 +96,12 @@ Deno.serve(async (req) => {
       return terug("Shopify gaf geen toegang terug. Probeer het opnieuw.", false);
     }
     const token = String(uit.access_token);
-    const scopes = String(uit.scope || SCOPES).split(",").map((s) => s.trim()).filter(Boolean);
+    /* De effectieve rechten (met de leesrechten die Shopify impliciet bij een
+       schrijfrecht geeft), zodat de rechtencheck later niet ten onrechte
+       "read_products ontbreekt" roept. Lukt het niet, dan vallen we terug op wat
+       Shopify bij het token teruggaf. */
+    let scopes = String(uit.scope || SCOPES).split(",").map((s) => s.trim()).filter(Boolean);
+    try { scopes = await effectieveScopes({ domein: winkel, token }); } catch (_e) { /* terugval hierboven */ }
 
     const info = await winkelVerkennen({ domein: winkel, token });
 

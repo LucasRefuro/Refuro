@@ -157,6 +157,17 @@ export async function koppelingVan(teamId: string): Promise<Koppeling | null> {
   return { ...data, token: await ontsleutel(data.token_versleuteld) };
 }
 
+/* De rechten die het token echt heeft. We lezen de effectieve scopes via
+   currentAppInstallation; die bevatten ook de leesrechten die Shopify impliciet
+   meegeeft bij een schrijfrecht (write_products geeft read_products erbij). De
+   oude weg via /admin/oauth/access_scopes.json gaf alleen de gevraagde scopes
+   terug, waardoor de check "read_products ontbreekt" riep terwijl het token het
+   wel degelijk had. */
+export async function effectieveScopes(k: { domein: string; token: string }): Promise<string[]> {
+  const d = await graphql(k, `query { currentAppInstallation { accessScopes { handle } } }`);
+  return (d?.currentAppInstallation?.accessScopes || []).map((s: any) => String(s.handle));
+}
+
 /* Eén ingang voor alle GraphQL-aanroepen, zodat foutafhandeling en snelheids-
    limieten op één plek staan.
 
@@ -318,6 +329,10 @@ export async function wieBelt(req: Request) {
    Twee dingen komen niet van de hardware-rij maar uit de controle (refurbish_apparaten):
    het accupercentage en de conditie-items voor de toelichting. Die geven we los mee. */
 
+// Vaste tekst voor "Nagekeken door ..." op de productpagina. Eén plek om te
+// veranderen; het thema zet er zelf "Nagekeken door" voor.
+export const MONTEUR_TEKST = "ons team";
+
 // De grade A/B/C zoals de winkelier hem kent, naar de code die het thema mapt naar
 // Uitstekend/Zeer goed/Prima (zie snippets/staat-naam.liquid). Stuur je A/B/C rauw,
 // dan valt het thema terug op de letter zelf.
@@ -375,12 +390,18 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (code) out.push(mfText("staat", code));
   out.push(mfText("staat_toelichting", staatToelichting(h, refurbish)));
 
-  // De spec-sleutels van de refurbish-app zijn Nederlands; het thema leest ze
-  // onder de Engelse metafield-namen die de spec-chips en de spec-tabel vullen.
+  // De spec-sleutels van de refurbish-app zijn Nederlands en verschillen per
+  // categorie; het thema leest ze onder de Engelse metafield-namen die de
+  // spec-chips en de spec-tabel vullen. We zetten alleen wat er is, dus een
+  // telefoon (Opslag) en een laptop (Processor/Geheugen/...) vullen elk het hunne.
   if (sp.Processor) out.push(mfText("cpu", sp.Processor));
   if (sp.Geheugen) out.push(mfText("ram", sp.Geheugen));
   if (sp.Opslag) out.push(mfText("opslag", sp.Opslag));
-  if (sp.Scherm) out.push(mfText("scherm", sp.Scherm));
+  // Het scherm: laptop en telefoon hebben "Scherm"; een monitor beschrijft het
+  // met losse velden (maat, paneel, resolutie, verversing). Die plakken we tot
+  // een leesbare regel voor dezelfde scherm-chip.
+  const scherm = sp.Scherm || [sp.Schermmaat, sp.Paneel, sp.Resolutie, sp.Verversing].filter(Boolean).join(" ");
+  if (scherm) out.push(mfText("scherm", scherm));
   if (sp.Videokaart) out.push(mfText("gpu", sp.Videokaart));
   if (sp.Besturingssysteem) out.push(mfText("os", sp.Besturingssysteem));
   if (sp.Toetsenbord) out.push(mfText("toetsenbord", sp.Toetsenbord));
@@ -390,6 +411,8 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
 
   const accu = refurbish?.accu;
   if (accu != null && Number.isFinite(Number(accu))) out.push(mfInt("accu_gezondheid", Number(accu)));
+
+  out.push(mfText("monteur", MONTEUR_TEKST));
 
   if (h.garantie != null && h.garantie !== "") out.push(mfInt("garantie_maanden", Number(h.garantie)));
 
