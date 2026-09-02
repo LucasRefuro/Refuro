@@ -11,7 +11,10 @@
 //
 // Het token komt uit de koppeling van díé winkel en komt nooit in de browser.
 
-import { admin, cors, fout, wieBelt, graphql, letOp, koppelingVan } from "../_gedeeld/shopify.ts";
+import {
+  admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
+  bouwProductMetafields, winkelvoorraadMetafield,
+} from "../_gedeeld/shopify.ts";
 
 // De omschrijving die op de webshop komt te staan. Specificaties als lijstje,
 // want dat is wat een koper van tweedehands hardware wil zien.
@@ -40,7 +43,7 @@ function beschrijving(h: any) {
    zelf doet bij een product zonder varianten. */
 const ENIGE_OPTIE = { optionName: "Title", name: "Default Title" };
 
-async function fotosVan(h: any) {
+function fotosVan(h: any) {
   const lijst = Array.isArray(h.fotos) ? h.fotos.filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
   return lijst.slice(0, 10).map((u: string) => ({
     originalSource: u, alt: [h.merk, h.model].filter(Boolean).join(" "), contentType: "IMAGE",
@@ -58,16 +61,14 @@ async function ligtInWinkel(locatieId: string | null): Promise<boolean> {
   return loc?.soort === "winkel";
 }
 
-// Eén regel voor het metafield, hergebruikt bij online zetten en bij verplaatsen.
-function winkelvoorraadMetafield(inWinkel: boolean) {
-  return { namespace: "refuro", key: "winkelvoorraad", type: "number_integer", value: inWinkel ? "1" : "0" };
-}
-
-/* Een nieuwe accu is een verkoopargument: het thema toont er een badge en de
-   regel "nieuwe accu, 69 euro bespaard" bij. Storvo weet alleen of er een nieuwe
-   accu in zit; het bedrag hoort bij het losse accu-product en staat in het thema. */
-function nieuweAccuMetafield(nieuw: boolean) {
-  return { namespace: "refuro", key: "nieuwe_accu", type: "number_integer", value: nieuw ? "1" : "0" };
+/* De accu en de conditie-items staan niet op de hardware-rij maar op de controle
+   (refurbish_apparaten). Die halen we erbij zodat de accu-badge en de "wat wij
+   zagen"-tekst op de productpagina kloppen. Geen controle gevonden (een toestel
+   dat handmatig in de voorraad is gezet)? Dan blijven die twee gewoon leeg. */
+async function controleBij(hardwareId: string) {
+  const { data } = await admin.from("refurbish_apparaten")
+    .select("accu, checklist, grade, notitie").eq("hardware_id", hardwareId).limit(1);
+  return data?.[0] ?? null;
 }
 
 /* De gebruik-tags voeden de filters in het mega-menu en de laptop-adviseur
@@ -79,38 +80,6 @@ function eersteGetal(s: unknown): number {
   const m = String(s ?? "").match(/(\d+(?:[.,]\d+)?)/);
   return m ? parseFloat(m[1].replace(",", ".")) : 0;
 }
-/* Het thema leest per product een paar metafields die Storvo tot nu toe niet
-   meestuurde, waardoor de staat-badge, de spec-regels op de kaart en het
-   groeperen van hetzelfde model leeg bleven. We sturen ze nu mee, op één set
-   sleutels zodat push en thema niet uit elkaar lopen. Staat blijft A/B/C (het
-   thema mapt dat naar Uitstekend/Zeer goed/Prima). */
-function mfText(key: string, val: unknown) {
-  return { namespace: "refuro", key, type: "single_line_text_field", value: String(val) };
-}
-function slug(s: string) {
-  return String(s || "").toLowerCase()
-    .normalize("NFKD").replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
-function themaMetafields(h: any) {
-  const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
-  const out: any[] = [];
-  if (h.staat) out.push(mfText("staat", h.staat));
-  if (sp.Processor) out.push(mfText("cpu", sp.Processor));
-  if (sp.Geheugen) out.push(mfText("ram", sp.Geheugen));
-  if (sp.Opslag) out.push(mfText("opslag", sp.Opslag));
-  if (sp.Scherm) out.push(mfText("scherm", sp.Scherm));
-  const mk = slug([h.merk, h.model].filter(Boolean).join(" "));
-  if (mk) out.push(mfText("model_key", mk));
-  // Het btw-regime meesturen (margeregeling of normaal), voor de administratie
-  // en de bon; op de webshop zelf staat de prijs altijd inclusief.
-  out.push(mfText("btw", h.marge === false ? "normaal" : "marge"));
-  if (h.nieuwprijs != null && h.nieuwprijs !== "") {
-    out.push({ namespace: "refuro", key: "nieuwprijs", type: "number_decimal", value: String(Number(h.nieuwprijs)) });
-  }
-  return out;
-}
-
 function gebruikTags(h: any): string[] {
   if (!["Laptop", "Desktop"].includes(h.categorie || "")) return [];
   const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
@@ -169,6 +138,12 @@ Deno.serve(async (req) => {
       const titel = h.titel || [h.merk, h.model].filter(Boolean).join(" ");
       const bestaand = kanalen.shopify?.id || null;
       const inWinkel = await ligtInWinkel(h.locatie_id);
+      const controle = await controleBij(id);
+
+      // De doorstreepprijs alleen als de nieuwprijs echt hoger is; anders weigert
+      // Shopify hem, of toont het thema een korting van nul.
+      const nieuwprijs = h.nieuwprijs != null && h.nieuwprijs !== "" ? Number(h.nieuwprijs) : null;
+      const vergelijk = nieuwprijs != null && nieuwprijs > Number(h.verkoop) ? String(nieuwprijs) : undefined;
 
       /* productSet doet in één keer wat vroeger vier aanroepen kostte: het
          product, de variant, de prijs en de voorraad. Dat scheelt niet alleen
@@ -181,10 +156,11 @@ Deno.serve(async (req) => {
         productType: h.categorie || "Laptop",
         status: "ACTIVE",
         tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || "", ...gebruikTags(h)].filter(Boolean),
-        metafields: [winkelvoorraadMetafield(inWinkel), nieuweAccuMetafield(!!h.nieuwe_accu), ...themaMetafields(h)],
+        metafields: bouwProductMetafields(h, controle, inWinkel),
         productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
         variants: [{
           price: String(h.verkoop),
+          ...(vergelijk ? { compareAtPrice: vergelijk } : {}),
           sku: h.code || h.serienummer || undefined,
           inventoryPolicy: "DENY",
           optionValues: [ENIGE_OPTIE],
@@ -195,7 +171,7 @@ Deno.serve(async (req) => {
       };
       if (bestaand) invoer.id = bestaand;
 
-      const files = await fotosVan(h);
+      const files = fotosVan(h);
       if (files.length && !bestaand) invoer.files = files;
 
       const uit = await graphql(k, `

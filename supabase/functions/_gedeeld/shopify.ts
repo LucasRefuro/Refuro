@@ -307,3 +307,100 @@ export async function wieBelt(req: Request) {
     .select("id, team_id, rol").eq("id", wie.user.id).maybeSingle();
   return acc || null;
 }
+
+/* ── de metafields voor de productpagina ──
+   Het thema (sections/hoofd-product.liquid en snippets/product-kaart.liquid) leest
+   per product een reeks refuro-metafields: de spec-chips (cpu, ram, opslag, scherm,
+   gpu, accu), de staatkeuze, de "wat wij zagen"-tekst en de nieuwprijs. Staan die
+   niet gevuld, dan valt de pagina terug op een kale weergave. Deze bouwer zet alles
+   op één plek, zodat het online zetten (shopify) en de test niet uit elkaar lopen.
+
+   Twee dingen komen niet van de hardware-rij maar uit de controle (refurbish_apparaten):
+   het accupercentage en de conditie-items voor de toelichting. Die geven we los mee. */
+
+// De grade A/B/C zoals de winkelier hem kent, naar de code die het thema mapt naar
+// Uitstekend/Zeer goed/Prima (zie snippets/staat-naam.liquid). Stuur je A/B/C rauw,
+// dan valt het thema terug op de letter zelf.
+export function staatCode(staat: string) {
+  const s = String(staat || "").toUpperCase();
+  return s === "A" ? "uitstekend" : s === "B" ? "zeer_goed" : s === "C" ? "prima" : "";
+}
+
+// "Wat wij zagen": eerst de conditie-items die de winkelier bij de controle zelf
+// heeft ingevuld (Behuizing, Scherm, Toetsenbord, Scharnieren), anders een vaste
+// zin per grade. Zo staat er altijd iets echts, niet alleen "grade A".
+export function staatToelichting(h: any, refurbish: any) {
+  const CONDITIE = ["behuizing", "scherm", "toetsenbord", "scharnieren en deksel"];
+  const cl = refurbish?.checklist;
+  if (Array.isArray(cl)) {
+    const items = cl
+      .filter((x: any) => x && x.a && CONDITIE.includes(String(x.v || "").toLowerCase()))
+      .map((x: any) => `${x.v}: ${String(x.a).toLowerCase()}`);
+    const uniek = [...new Set(items)];
+    if (uniek.length) return uniek.join(". ") + ".";
+  }
+  const perGrade: Record<string, string> = {
+    A: "Als nieuw. Je moet de gebruikssporen echt zoeken.",
+    B: "Lichte gebruikssporen, netjes verzorgd. Werkt zoals het hoort.",
+    C: "Zichtbare gebruikssporen. Werkt helemaal naar behoren.",
+  };
+  return perGrade[String(h.staat || "").toUpperCase()] || "Volledig nagekeken en klaar voor gebruik.";
+}
+
+function mfText(key: string, val: unknown) {
+  return { namespace: "refuro", key, type: "single_line_text_field", value: String(val) };
+}
+function mfInt(key: string, val: number) {
+  return { namespace: "refuro", key, type: "number_integer", value: String(Math.round(val)) };
+}
+function slug(s: string) {
+  // Merk en model zijn hier altijd ASCII; geen NFKD nodig, dan ook geen
+  // onzichtbare combineertekens in de bron.
+  return String(s || "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+// Losstaand, zodat het verplaatsen van een toestel alleen deze ene hoeft bij te werken.
+export function winkelvoorraadMetafield(inWinkel: boolean) {
+  return mfInt("winkelvoorraad", inWinkel ? 1 : 0);
+}
+
+export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean) {
+  const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
+  const out: any[] = [];
+  out.push(winkelvoorraadMetafield(inWinkel));
+  out.push(mfInt("nieuwe_accu", h.nieuwe_accu ? 1 : 0));
+
+  const code = staatCode(h.staat);
+  if (code) out.push(mfText("staat", code));
+  out.push(mfText("staat_toelichting", staatToelichting(h, refurbish)));
+
+  // De spec-sleutels van de refurbish-app zijn Nederlands; het thema leest ze
+  // onder de Engelse metafield-namen die de spec-chips en de spec-tabel vullen.
+  if (sp.Processor) out.push(mfText("cpu", sp.Processor));
+  if (sp.Geheugen) out.push(mfText("ram", sp.Geheugen));
+  if (sp.Opslag) out.push(mfText("opslag", sp.Opslag));
+  if (sp.Scherm) out.push(mfText("scherm", sp.Scherm));
+  if (sp.Videokaart) out.push(mfText("gpu", sp.Videokaart));
+  if (sp.Besturingssysteem) out.push(mfText("os", sp.Besturingssysteem));
+  if (sp.Toetsenbord) out.push(mfText("toetsenbord", sp.Toetsenbord));
+  if (sp.Poorten) out.push(mfText("poorten", sp.Poorten));
+  if (sp.Gewicht) out.push(mfText("gewicht", sp.Gewicht));
+  if (sp.Bouwjaar) out.push(mfText("bouwjaar", sp.Bouwjaar));
+
+  const accu = refurbish?.accu;
+  if (accu != null && Number.isFinite(Number(accu))) out.push(mfInt("accu_gezondheid", Number(accu)));
+
+  if (h.garantie != null && h.garantie !== "") out.push(mfInt("garantie_maanden", Number(h.garantie)));
+
+  // Zelfde model, verschillende exemplaren horen op de collectiepagina bij elkaar.
+  const mk = slug([h.merk, h.model].filter(Boolean).join(" "));
+  if (mk) out.push(mfText("model_key", mk));
+  // Het btw-regime voor de administratie; op de webshop staat de prijs altijd inclusief.
+  out.push(mfText("btw", h.marge === false ? "normaal" : "marge"));
+  // De nieuwprijs voedt de doorstreepprijs en de "onder de nieuwprijs"-regel.
+  if (h.nieuwprijs != null && h.nieuwprijs !== "") {
+    out.push({ namespace: "refuro", key: "nieuwprijs", type: "number_decimal", value: String(Number(h.nieuwprijs)) });
+  }
+  return out;
+}
