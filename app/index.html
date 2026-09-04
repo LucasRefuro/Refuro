@@ -1850,7 +1850,7 @@
       <button class="btn actie" id="formOpslaan" onclick="opslaanProduct()">Product toevoegen</button>
       <button class="btn ghost" onclick="resetForm()">Leegmaken</button>
     </div>
-    <p class="muted" style="margin-top:10px">Moet hetzelfde product op tien of twintig telefoonmodellen? Dan werkt Snel toevoegen een stuk sneller: daar scan je alleen de barcodes achter elkaar. <a href="#" onclick="naarSnelToevoegen(); return false;">Naar Snel toevoegen</a></p>
+    <p class="muted" style="margin-top:10px">Meerdere modellen van dezelfde serie, bijvoorbeeld van MondiParts of NovaNL? Met Serie inscannen leg je de serie een keer vast en scan je alleen nog per model. <a href="#" onclick="naarSnelToevoegen(); return false;">Naar Serie inscannen</a></p>
   </div>
 </section>
 
@@ -2215,7 +2215,7 @@
   <div class="instlay">
     <nav class="instmenu" id="instTabs" aria-label="Instellingen">
       <div class="instgroep">Assortiment</div>
-      <button data-s="snel" class="active"><svg class="i"><use href="#i-zap"/></svg>Snel toevoegen</button>
+      <button data-s="snel" class="active"><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</button>
       <button data-s="types"><svg class="i"><use href="#i-tag"/></svg>Producttypes</button>
       <button data-s="modellen"><svg class="i"><use href="#i-phone"/></svg>Modellen</button>
       <button data-s="cats"><svg class="i"><use href="#i-layers"/></svg>Categorieën</button>
@@ -2240,22 +2240,36 @@
 
     <div class="instpaneel">
   <div class="card" id="inst-snel">
-    <h2><svg class="i"><use href="#i-zap"/></svg>Snel toevoegen per model</h2>
-    <div class="npbron" style="background:var(--lblauw); color:var(--muted); margin-bottom:16px">
-      <div class="npbronkop" style="color:var(--tekst)">Eén product, of een hele serie?</div>
-      Voor één los product neem je de knop Nieuw product toevoegen: daar scan je het doosje met je telefoon en vult Storvo naam, categorie en prijzen zelf in. Deze pagina is voor het omgekeerde geval: hetzelfde product voor twintig verschillende telefoonmodellen achter elkaar.
-      <div style="margin-top:12px"><button class="btn ghost small" onclick="startNieuwProduct()"><svg class="i s"><use href="#i-camera"/></svg>Naar Nieuw product toevoegen</button></div>
+    <h2><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</h2>
+    <p class="muted" style="margin-bottom:14px">Voor accessoires die je in meerdere modellen hebt en die niet uit een leveranciersfeed komen, zoals van MondiParts of NovaNL. Leg de serie een keer vast en scan dan per model het doosje. Zit een product wel in je OneStopMobile-catalogus? Neem dan Los product toevoegen; daar vult het zich vanzelf.</p>
+    <div class="row" id="serieVelden">
+      <div style="flex:1; min-width:150px"><label>Merk</label><input id="se_merk" list="merkenList" placeholder="bijv. XSSIVE" autocomplete="off"></div>
+      <div style="flex:1; min-width:150px"><label>Serie</label><input id="se_serie" placeholder="bijv. Clear case" autocomplete="off"></div>
+      <div style="min-width:150px"><label>Categorie</label><select id="se_cat"></select></div>
+      <div style="min-width:130px"><label>Leverancier</label><input id="se_lev" list="serieLevs" placeholder="bijv. MondiParts" autocomplete="off"><datalist id="serieLevs"></datalist></div>
+      <div style="min-width:110px"><label>Verkoop (€)</label><input id="se_verkoop" type="number" step="0.01" min="0"></div>
+      <div style="min-width:110px"><label>Inkoop (€) <span class="muted">optioneel</span></label><input id="se_inkoop" type="number" step="0.01" min="0"></div>
     </div>
-    <div class="row" style="margin-bottom:6px">
-      <div style="flex:2; min-width:220px"><label>Producttype</label><select id="snelType" onchange="renderSnelRows()"></select></div>
-      <div style="flex:1; min-width:140px"><label>Beginvoorraad per model <span class="muted">(ligt achter)</span></label><input id="snelVoorraad" type="number" min="0" value="0"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn actie" onclick="serieStart()"><svg class="i s"><use href="#i-search"/></svg>Serie starten</button>
+      <button class="btn ghost" onclick="startNieuwProduct()">Los product toevoegen</button>
     </div>
-    <p class="muted" style="margin-bottom:12px">Kies een type, bijvoorbeeld Screenprotector Clear. Scan per model de barcode en druk op Enter. Het product wordt direct aangemaakt en de cursor springt naar het volgende model.</p>
-    <div style="overflow-x:auto">
-    <table>
-      <thead><tr><th>Model</th><th>Barcode</th><th class="num">Voorraad</th><th></th></tr></thead>
-      <tbody id="snelBody"></tbody>
-    </table>
+    <div id="serieScanVak" hidden style="margin-top:18px">
+      <div id="serieKop" style="font-weight:700; margin-bottom:10px"></div>
+      <label>Scan het doosje</label>
+      <input id="serieScan" class="scanbox" placeholder="Scan barcode…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); serieScanVerwerk();}">
+      <div id="serieModelVak" hidden style="margin-top:10px">
+        <label>Welk model? <span class="muted" id="serieCodeToon"></span></label>
+        <input id="serieModel" list="serieModellen" placeholder="bijv. iPhone 15 of Galaxy S23" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); serieModelOk();}">
+        <datalist id="serieModellen"></datalist>
+        <div class="row" style="margin-top:8px">
+          <button class="btn secondary" onclick="serieModelOk()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen aan voorraad</button>
+          <button class="btn ghost" onclick="serieAnnuleer()">Overslaan</button>
+        </div>
+      </div>
+      <div id="serieFeedback" style="margin-top:10px; font-weight:600"></div>
+      <div id="serieLijst" style="margin-top:12px"></div>
+      <div class="row" style="margin-top:14px"><button class="btn ghost" onclick="serieStop()">Andere serie</button></div>
     </div>
   </div>
 
@@ -3483,60 +3497,88 @@ function piep(freq){
   }catch(e){}
 }
 
-/* ---------- snel toevoegen ---------- */
+/* ---------- serie inscannen (handmatig, voor leveranciers zonder feed) ----------
+   Voor accessoires die je in meerdere modellen hebt (MondiParts, NovaNL, ...). Leg
+   de serie een keer vast: merk, serie, prijs. Scan of typ dan per model de barcode,
+   kies het model, en het product staat in je voorraad. De serie blijft staan, dus
+   een reeks van hetzelfde hoesje kost daarna alleen nog het model. */
+let serie=null, serieCode=null, serieToegevoegd=[];
 function renderSnel(){
-  const sel=document.getElementById('snelType');
-  const cur=sel.value;
-  sel.innerHTML=state.types.map(t=>`<option value="${t.id}">${esc(t.naam)}</option>`).join('');
-  if(cur && state.types.some(t=>t.id===Number(cur))) sel.value=cur;
-  renderSnelRows();
+  const cat=document.getElementById('se_cat');
+  if(cat) cat.innerHTML=state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
+  const dl=document.getElementById('serieModellen');
+  if(dl) dl.innerHTML=state.modellen.map(m=>`<option value="${esc(m.naam)}">`).join('');
+  const lv=document.getElementById('serieLevs');
+  if(lv) lv.innerHTML=['MondiParts','NovaNL','OneStopMobile'].map(n=>`<option value="${n}">`).join('');
+  if(typeof vulMerkenLijst==='function') vulMerkenLijst();
 }
-function renderSnelRows(){
-  const typeId=Number(document.getElementById('snelType').value);
-  const type=state.types.find(t=>t.id===typeId);
-  if(!type){ document.getElementById('snelBody').innerHTML='<tr><td colspan="4" class="muted">Maak eerst een producttype aan bij Instellingen.</td></tr>'; return; }
-  document.getElementById('snelBody').innerHTML=state.modellen.map(m=>{
-    const bestaand=state.producten.find(p=>p.typeId===typeId && p.modelId===m.id);
-    if(bestaand){
-      return `<tr class="snelrij"><td>${esc(m.naam)}</td><td><span class="ok-icon"></span> ${esc(bestaand.barcode)}</td>`+
-        `<td class="num">${bestaand.voorraad}</td><td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${bestaand.id})"><svg class="i s"><use href="#i-edit"/></svg></button></td></tr>`;
-    }
-    return `<tr class="snelrij"><td>${esc(m.naam)}</td>`+
-      `<td><input placeholder="Scan barcode…" data-model="${m.id}" onkeydown="snelKey(event,${m.id})"></td>`+
-      `<td class="num muted">0</td><td></td></tr>`;
-  }).join('') || '<tr><td colspan="4" class="muted">Voeg eerst telefoonmodellen toe bij Instellingen.</td></tr>';
+function serieStart(){
+  const merk=(document.getElementById('se_merk').value||'').trim();
+  const naam=(document.getElementById('se_serie').value||'').trim();
+  if(!merk && !naam){ toast('Vul een merk of serie in','let-op'); document.getElementById('se_merk').focus(); return; }
+  const catId=Number(document.getElementById('se_cat').value);
+  const cat=state.categorieen.find(c=>c.id===catId);
+  const verkoop=Number(document.getElementById('se_verkoop').value)||(cat?cat.verkoop:0);
+  const inkoop=Number(document.getElementById('se_inkoop').value)||0;
+  serie={merk, naam, catId, verkoop, inkoop, min:cat?cat.min:2, bestel:cat?cat.bestel:10,
+    leverancier:(document.getElementById('se_lev').value||'').trim()};
+  serieToegevoegd=[];
+  document.getElementById('serieVelden').style.opacity='.55';
+  document.getElementById('serieScanVak').hidden=false;
+  document.getElementById('serieKop').textContent=[merk,naam].filter(Boolean).join(' ')+' · '+euro(verkoop);
+  tekenSerieLijst();
+  document.getElementById('serieScan').focus();
 }
-function snelKey(e,modelId){
-  if(e.key!=='Enter') return;
-  e.preventDefault();
-  const code=e.target.value.trim();
-  if(!code) return;
-  const typeId=Number(document.getElementById('snelType').value);
-  const type=state.types.find(t=>t.id===typeId);
-  const model=state.modellen.find(m=>m.id===modelId);
-  if(!type || !model) return;
-  const dubbel=state.producten.find(p=>p.barcode===code);
-  if(dubbel){ alert('Barcode bestaat al bij: '+dubbel.naam); e.target.select(); return; }
-  state.producten.push({
-    id:uid(), barcode:code,
-    naam:type.naam+' – '+model.naam,
-    cat:type.cat, typeId:typeId, modelId:modelId,
-    inkoop:type.inkoop, verkoop:type.verkoop,
-    winkel:0, voorraad:Number(document.getElementById('snelVoorraad').value)||0,
-    schap:type.min, minOver:type.bestel, besteld:false, besteldOp:null
-  });
-  save(); updateBadge();
-  piep(880);
-  toast('Aangemaakt: '+type.naam+' – '+model.naam, true);
-  renderSnelRows();
-  /* Verder naar het eerstvolgende model dat nog geen product heeft, en wel
-     zónder de pagina te laten verspringen. Pakten we gewoon het eerste lege
-     vakje, dan sprong de cursor naar bovenaan de lijst en schoot de pagina
-     mee omhoog. preventScroll houdt de pagina waar hij staat. */
-  const invoer=[...document.querySelectorAll('#snelBody input[data-model]')];
-  const idx=state.modellen.findIndex(m=>m.id===modelId);
-  const volgende=invoer.find(inp=>state.modellen.findIndex(m=>m.id===Number(inp.getAttribute('data-model')))>idx) || invoer[0];
-  if(volgende) volgende.focus({preventScroll:true});
+function serieStop(){
+  serie=null; serieCode=null;
+  document.getElementById('serieScanVak').hidden=true;
+  document.getElementById('serieModelVak').hidden=true;
+  document.getElementById('serieVelden').style.opacity='';
+  document.getElementById('serieFeedback').textContent='';
+}
+function serieScanVerwerk(){
+  const inp=document.getElementById('serieScan');
+  const code=inp.value.trim(); inp.value='';
+  if(!code || !serie) return;
+  const p=state.producten.find(p=>p.barcode===code);
+  const fb=document.getElementById('serieFeedback');
+  if(p){
+    p.voorraad=(p.voorraad||0)+1; p.winkel=(p.winkel||0)+1;
+    save(); updateBadge(); piep(880);
+    fb.style.color='var(--green-tekst)'; fb.textContent='+1 '+p.naam+' · nu '+p.voorraad+' op voorraad';
+    serieToegevoegd.unshift({naam:p.naam, voorraad:p.voorraad}); tekenSerieLijst();
+    document.getElementById('serieModelVak').hidden=true; inp.focus(); return;
+  }
+  serieCode=code;
+  document.getElementById('serieCodeToon').textContent='code '+code;
+  document.getElementById('serieModelVak').hidden=false;
+  const mi=document.getElementById('serieModel'); mi.value=''; mi.focus();
+  fb.textContent='';
+}
+function serieModelOk(){
+  if(!serie || !serieCode) return;
+  const model=(document.getElementById('serieModel').value||'').trim();
+  if(!model){ document.getElementById('serieModel').focus(); return; }
+  const naam=[serie.merk, serie.naam, model].filter(Boolean).join(' ');
+  state.producten.push({ id:uid(), barcode:serieCode, naam, merk:serie.merk||'', sku:'',
+    leverancier:serie.leverancier||'', cat:serie.catId, inkoop:serie.inkoop, verkoop:serie.verkoop,
+    winkel:1, voorraad:1, schap:serie.min, minOver:serie.bestel, besteld:false, besteldOp:null });
+  save(); updateBadge(); piep(880);
+  const fb=document.getElementById('serieFeedback');
+  fb.style.color='var(--green-tekst)'; fb.textContent='Toegevoegd: '+naam;
+  serieToegevoegd.unshift({naam, voorraad:1}); tekenSerieLijst();
+  document.getElementById('serieModelVak').hidden=true; serieCode=null;
+  document.getElementById('serieScan').focus();
+}
+function serieAnnuleer(){
+  serieCode=null; document.getElementById('serieModelVak').hidden=true;
+  document.getElementById('serieScan').focus();
+}
+function tekenSerieLijst(){
+  const el=document.getElementById('serieLijst'); if(!el) return;
+  if(!serieToegevoegd.length){ el.innerHTML='<span class="muted">Nog niets in deze serie.</span>'; return; }
+  el.innerHTML='<div class="muted" style="margin-bottom:6px">Deze sessie ('+serieToegevoegd.length+')</div>'+
+    serieToegevoegd.slice(0,15).map(r=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--soft-2)"><span data-onvertaald>${esc(r.naam)}</span><b>${r.voorraad}</b></div>`).join('');
 }
 
 /* ---------- producten ---------- */
@@ -3570,7 +3612,7 @@ function renderProducten(){
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
       `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="11" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Snel toevoegen bij Instellingen voor een hele serie.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="11" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
   vulMerkenLijst();
   const sel=document.getElementById('filterCat');
   const cur=sel.value;
@@ -3721,8 +3763,8 @@ function naarSnelToevoegen(){
   showTab('instellingen');
   const knop=document.querySelector('#instTabs button[data-s="snel"]');
   if(knop) knop.click();
-  const kaart=document.getElementById('snelType');
-  if(kaart && kaart.scrollIntoView) kaart.scrollIntoView({block:'center', behavior:'smooth'});
+  const kaart=document.getElementById('se_merk');
+  if(kaart){ if(kaart.scrollIntoView) kaart.scrollIntoView({block:'center', behavior:'smooth'}); kaart.focus(); }
 }
 function startNieuwProduct(){
   editId=null;
