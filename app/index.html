@@ -1832,7 +1832,7 @@
   <div class="card">
     <div id="npHerkomst"></div>
     <div class="grid" style="margin-bottom:12px">
-      <div><label>Barcode</label><input id="f_barcode" placeholder="Scan of typ barcode" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}" onchange="barcodeOpzoeken()"><input type="hidden" id="f_foto"></div>
+      <div><label>Barcode</label><input id="f_barcode" placeholder="Scan of typ barcode" autocomplete="off" oninput="barcodeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}"><input type="hidden" id="f_foto"></div>
       <div class="zoekveld"><label>Naam</label><input id="f_naam" placeholder="Typ of scan; kies uit de catalogus" autocomplete="off" oninput="naamZoek()" onfocus="naamZoek()" onblur="setTimeout(naamSluit,180)" onkeydown="naamToets(event)"><div class="zoeklijst" id="naamLijst" hidden></div></div>
       <div><label>Merk</label><input id="f_merk" placeholder="bijv. Apple, Samsung" list="merkenList"><datalist id="merkenList"></datalist></div>
       <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
@@ -3328,9 +3328,31 @@ function nieuwMetBarcode(code){
    producten alleen te hebben wat je echt inscant. */
 let assortResultaten=[], assortZoekTimer=null;
 
+/* Scannen van typen onderscheiden: een handscanner tikt alle tekens binnen enkele
+   milliseconden achter elkaar, een mens niet. Bij zo'n snelle reeks zoeken we
+   meteen vanzelf op; typ je met de hand, dan gebeurt er niets tot je op Enter
+   drukt, zodat een half ingetypte code niet voortijdig wordt gepakt. */
+let bcLaatste=0, bcTraag=false, bcTimer=null, bcVorige='', bcVorigeT=0;
+function barcodeInput(){
+  const veld=document.getElementById('f_barcode');
+  const now=performance.now();
+  const gap=now-bcLaatste; bcLaatste=now;
+  if(veld.value.length<=1) bcTraag=false;      /* een nieuwe invoer begint */
+  else if(gap>60) bcTraag=true;                /* een menselijke pauze tussen toetsen */
+  clearTimeout(bcTimer);
+  bcTimer=setTimeout(()=>{
+    const code=veld.value.trim();
+    if(!bcTraag && /^[0-9]{8,14}$/.test(code)) barcodeOpzoeken();
+  }, 140);
+}
+
 async function barcodeOpzoeken(){
+  clearTimeout(bcTimer);
   const code=document.getElementById('f_barcode').value.trim();
   if(!code) return;
+  const nu=performance.now();
+  if(code===bcVorige && nu-bcVorigeT<800) return;  /* dubbele trigger (Enter + auto) negeren */
+  bcVorige=code; bcVorigeT=nu;
   const eigen=state.producten.find(p=>p.barcode===code && p.id!==editId);
   if(eigen){ toast('Dit product staat al in je voorraad: '+eigen.naam, true); bewerk(eigen.id); return; }
   try{
@@ -3348,11 +3370,20 @@ function vulUitAssortiment(a){
   const catId=zorgCategorie(feedCat(a));
   vulCatSelect();
   document.getElementById('f_cat').value=catId;
-  if(a.inkoop!=null) document.getElementById('f_inkoop').value=a.inkoop;
+  /* De groothandelsprijs in de feed is ex btw; onze verkoop (de adviesprijs) is
+     incl btw. We rekenen de inkoop om naar incl btw, zodat inkoop en verkoop op
+     dezelfde voet staan en je marge klopt. */
+  const inclInkoop = a.inkoop!=null ? Math.round(Number(a.inkoop)*1.21*100)/100 : null;
+  if(inclInkoop!=null) document.getElementById('f_inkoop').value=inclInkoop;
   document.getElementById('f_verkoop').value=(a.adviesprijs!=null?a.adviesprijs:'');
   /* Je scant om toe te voegen, dus zet er meteen eentje in de winkel (het doosje
      dat je in je hand hebt). Staat er al een aantal, dan laten we dat staan. */
   const vv=document.getElementById('f_voorraad'); if(!Number(vv.value)) vv.value=1;
+  const hk=document.getElementById('npHerkomst');
+  if(hk) hk.innerHTML='<div class="npbron"><div class="npbronkop">Uit je OneStopMobile-catalogus</div>'+
+    'Inkoop is de groothandelsprijs <b>omgerekend naar incl. btw</b>'+
+    (a.inkoop!=null?' ('+euro(a.inkoop)+' ex, '+euro(inclInkoop)+' incl)':'')+
+    '. Verkoop is de adviesprijs. Pas gerust aan.</div>';
   naamSluit();
   if(typeof piep==='function') piep(880);
   toast('Gevonden in catalogus: '+a.naam, true);
@@ -3625,6 +3656,7 @@ function resetForm(){
   document.getElementById('f_merk').value='';
   document.getElementById('f_sku').value='';
   document.getElementById('f_foto').value='';
+  bcVorige=''; bcTraag=false;
   naamSluit();
   document.getElementById('f_voorraad').value=0;
   document.getElementById('f_min').value=0;
