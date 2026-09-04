@@ -3370,7 +3370,10 @@ async function barcodeOpzoeken(){
   const eigen=state.producten.find(p=>p.barcode===code && p.id!==editId);
   if(eigen){ toast('Dit product staat al in je voorraad: '+eigen.naam, true); bewerk(eigen.id); return; }
   try{
-    const {data}=await sb.from('assortiment').select('*').eq('ean', code).maybeSingle();
+    /* De streepjescode op het doosje kan de EAN zijn of de artikelcode van de
+       leverancier; we zoeken op allebei, zodat het scannen altijd raak is. */
+    let {data}=await sb.from('assortiment').select('*').eq('ean', code).maybeSingle();
+    if(!data){ const r=await sb.from('assortiment').select('*').eq('leverancier_id', code).limit(1); data=(r.data&&r.data[0])||null; }
     if(data) vulUitAssortiment(data);
   }catch(e){ /* offline of geen catalogus: gewoon handmatig invullen */ }
 }
@@ -3389,15 +3392,25 @@ function vulUitAssortiment(a){
      dezelfde voet staan en je marge klopt. */
   const inclInkoop = a.inkoop!=null ? Math.round(Number(a.inkoop)*1.21*100)/100 : null;
   if(inclInkoop!=null) document.getElementById('f_inkoop').value=inclInkoop;
-  document.getElementById('f_verkoop').value=(a.adviesprijs!=null?a.adviesprijs:'');
+  /* Verkoop: eerst de adviesprijs uit de feed; heeft die er geen (zoals bij
+     MondiParts), dan de vaste prijs van de categorie; en anders een nette marge
+     op de inkoop, zodat er altijd iets staat. */
+  const catObj=state.categorieen.find(c=>c.id===catId);
+  const verkoop = a.adviesprijs!=null ? Number(a.adviesprijs)
+    : (catObj && catObj.verkoop>0 ? catObj.verkoop
+    : (inclInkoop!=null ? Math.max(0.95, Math.ceil(inclInkoop*2)-0.05) : ''));
+  document.getElementById('f_verkoop').value=verkoop;
   /* Je scant om toe te voegen, dus zet er meteen eentje in de winkel (het doosje
      dat je in je hand hebt). Staat er al een aantal, dan laten we dat staan. */
   const vv=document.getElementById('f_voorraad'); if(!Number(vv.value)) vv.value=1;
+  const bronNaam = a.bron==='mondiparts' ? 'MondiParts' : (a.bron==='onestopmobile' ? 'OneStopMobile' : 'leveranciers');
+  const verkoopUit = a.adviesprijs!=null ? 'de adviesprijs'
+    : (catObj && catObj.verkoop>0 ? 'de vaste prijs voor '+String(catObj.naam).toLowerCase() : 'een marge op de inkoop');
   const hk=document.getElementById('npHerkomst');
-  if(hk) hk.innerHTML='<div class="npbron"><div class="npbronkop">Uit je OneStopMobile-catalogus</div>'+
+  if(hk) hk.innerHTML='<div class="npbron"><div class="npbronkop">Uit je '+esc(bronNaam)+'-catalogus</div>'+
     'Inkoop is de groothandelsprijs <b>omgerekend naar incl. btw</b>'+
     (a.inkoop!=null?' ('+euro(a.inkoop)+' ex, '+euro(inclInkoop)+' incl)':'')+
-    '. Verkoop is de adviesprijs. Pas gerust aan.</div>';
+    '. Verkoop is '+verkoopUit+'. Pas gerust aan.</div>';
   naamSluit();
   if(typeof piep==='function') piep(880);
   toast('Gevonden in catalogus: '+a.naam, true);
