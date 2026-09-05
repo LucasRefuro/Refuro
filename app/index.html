@@ -3407,7 +3407,11 @@ async function barcodeOpzoeken(){
 }
 
 function vulUitAssortiment(a){
-  document.getElementById('f_barcode').value=a.ean||'';
+  /* Staat er al een (gescande) code in het veld, dan laten we die staan: bij
+     sommige merken (XSSIVE) staat op het doosje een andere streepjescode dan de
+     EAN uit de leveranciersdata, en jij wil op JOUW doosjescode kunnen scannen. */
+  const bc=document.getElementById('f_barcode');
+  if(!bc.value.trim()) bc.value=a.ean||'';
   document.getElementById('f_naam').value=a.naam||'';
   document.getElementById('f_merk').value=a.merk||'';
   if(a.leverancier_id) document.getElementById('f_sku').value=a.leverancier_id;
