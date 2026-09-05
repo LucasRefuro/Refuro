@@ -1803,7 +1803,10 @@
   <div class="wijzer" id="hwWijzer" hidden></div>
   <div class="pagehead">
     <h1>Producten</h1>
-    <button class="btn actie" onclick="startNieuwProduct()"><svg class="i"><use href="#i-plus"/></svg> Nieuw product toevoegen</button>
+    <div class="row" style="gap:8px">
+      <button class="btn secondary" onclick="showTab('catalogus')"><svg class="i s"><use href="#i-search"/></svg> Catalogus</button>
+      <button class="btn actie" onclick="startNieuwProduct()"><svg class="i"><use href="#i-plus"/></svg> Nieuw product toevoegen</button>
+    </div>
   </div>
   <div class="card">
     <div class="row" style="margin-bottom:12px">
@@ -1816,6 +1819,25 @@
       <tbody id="prodBody"></tbody>
     </table>
     </div>
+  </div>
+</section>
+
+<!-- CATALOGUS: bladeren in wat je leveranciers verkopen -->
+<section id="tab-catalogus" hidden>
+  <div class="pagehead">
+    <h1>Catalogus</h1>
+    <button class="btn ghost" onclick="showTab('producten')">Terug naar producten</button>
+  </div>
+  <div class="card">
+    <p class="muted" style="margin-bottom:12px">Alles wat je leveranciers verkopen, om in op te zoeken of tegenaan te scannen. Kies iets en zet het met een druk op voorraad. Alleen wat je toevoegt komt in je eigen voorraad.</p>
+    <div class="row" style="margin-bottom:10px">
+      <div style="flex:2; min-width:220px"><input id="cat_zoek" placeholder="Zoek op naam of merk" autocomplete="off" oninput="catFilterTyp()"></div>
+      <div style="min-width:180px"><select id="cat_bron" onchange="catLaad(true)"><option value="">Alle leveranciers</option><option value="onestopmobile">OneStopMobile</option><option value="mondiparts">MondiParts</option></select></div>
+    </div>
+    <div class="row" id="cat_soorten" style="gap:6px; margin-bottom:14px"></div>
+    <div id="cat_info" class="muted" style="margin-bottom:10px"></div>
+    <div id="catalogusBody" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:10px"></div>
+    <div class="row" style="margin-top:16px; justify-content:center"><button class="btn ghost" id="catMeerKnop" onclick="catMeer()" hidden>Meer laden</button></div>
   </div>
 </section>
 
@@ -2673,7 +2695,7 @@ function showTab(t){
   if(typeof mag==='function' && !mag(t)) t = eersteTab();
   /* Nieuw product heeft geen eigen menuknop meer; hij hangt onder Producten.
      Daarom blijft die knop oplichten zolang je in het formulier zit.        */
-  const menu = t==='nieuw' ? 'producten' : t;
+  const menu = (t==='nieuw'||t==='catalogus') ? 'producten' : t;
   document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
   if(t!=='nieuw' && typeof npStop==='function') npStop();
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
@@ -2684,6 +2706,7 @@ function showTab(t){
   if(t==='team') renderTeam();
   if(t==='partners') renderPartners();
   if(t==='producten') renderProducten();
+  if(t==='catalogus') catOpen();
   if(t==='voorraad') renderVoorraad();
   if(t==='hardware') hwLaad();
   if(t==='webshop') bstLaad();
@@ -3466,6 +3489,80 @@ async function naamZoekNu(){
 function naamKies(i){ const a=assortResultaten[i]; if(a) vulUitAssortiment(a); }
 function naamSluit(){ const l=document.getElementById('naamLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
 function naamToets(e){ zoekToets(e,'naamLijst',naamSluit); }
+
+/* ═══ Catalogus bladeren: alles wat je leveranciers verkopen ═══
+   Bladeren in de assortiment-tabel (beide bronnen), zoeken, filteren op soort en
+   leverancier, en met een druk op voorraad zetten. Gepagineerd, want het zijn er
+   duizenden; we halen 40 per keer op. */
+const CAT_SOORTEN=[['Alles',''],['Hoesjes','case,cover,hoesje'],['Screenprotectors','protector,glass,tempered,screen'],
+  ['Opladers','charger,oplader,lader,adapter'],['Kabels','cable,kabel'],['Houders','holder,houder,mount'],
+  ['Audio','audio,headphone,earbud,speaker,oordop'],['Powerbanks','powerbank']];
+let catSoort='', catQ='', catPage=0, catCount=0, catBezig=false, catFilterTimer=null;
+function catOpen(){
+  const s=document.getElementById('cat_soorten');
+  if(s && !s.dataset.klaar){
+    s.innerHTML=CAT_SOORTEN.map((x,i)=>`<button type="button" class="btn small ghost" data-i="${i}" onclick="catSoortKies(${i})">${esc(x[0])}</button>`).join('');
+    s.dataset.klaar='1';
+  }
+  catMarkeer();
+  catLaad(true);
+}
+function catMarkeer(){
+  [...document.querySelectorAll('#cat_soorten button')].forEach(b=>{
+    const aan = CAT_SOORTEN[Number(b.dataset.i)][1]===catSoort;
+    b.style.background = aan?'var(--oranje)':''; b.style.color = aan?'#fff':''; b.style.borderColor = aan?'var(--oranje)':'';
+  });
+}
+function catSoortKies(i){ catSoort=CAT_SOORTEN[i][1]; catMarkeer(); catLaad(true); }
+function catFilterTyp(){ clearTimeout(catFilterTimer); catFilterTimer=setTimeout(()=>catLaad(true), 300); }
+async function catLaad(reset){
+  if(catBezig) return; catBezig=true;
+  if(reset){ catPage=0; document.getElementById('catalogusBody').innerHTML=''; }
+  const per=40, van=catPage*per;
+  const bron=document.getElementById('cat_bron').value;
+  catQ=(document.getElementById('cat_zoek').value||'').replace(/[,%()]/g,' ').trim();
+  try{
+    let q=sb.from('assortiment').select('ean,naam,merk,inkoop,adviesprijs,foto,bron,leverancier_id',{count:'exact'});
+    if(bron) q=q.eq('bron',bron);
+    if(catQ) q=q.ilike('naam','%'+catQ+'%');
+    if(catSoort) q=q.or(catSoort.split(',').map(w=>'naam.ilike.%'+w.trim()+'%').join(','));
+    q=q.order('naam').range(van, van+per-1);
+    const {data,count}=await q;
+    catCount=count||0;
+    catTeken(data||[], reset);
+    document.getElementById('cat_info').textContent = catCount.toLocaleString('nl-NL')+' product'+(catCount===1?'':'en')+(bron?' bij '+(bron==='mondiparts'?'MondiParts':'OneStopMobile'):'')+(catSoort?' in dit soort':'');
+    document.getElementById('catMeerKnop').hidden = (van+per)>=catCount;
+    catPage++;
+  }catch(e){ document.getElementById('cat_info').textContent='Kon de catalogus niet laden.'; }
+  catBezig=false;
+}
+function catMeer(){ catLaad(false); }
+function catTeken(rows, reset){
+  const el=document.getElementById('catalogusBody');
+  if(reset) el.innerHTML='';
+  const heb = r => state.producten.some(p=>p.barcode===r.ean || (r.leverancier_id && p.barcode===r.leverancier_id));
+  el.insertAdjacentHTML('beforeend', rows.map(r=>{
+    const incl = r.inkoop!=null ? euro(Math.round(Number(r.inkoop)*1.21*100)/100) : '';
+    const bronkort = r.bron==='mondiparts'?'MondiParts':(r.bron==='onestopmobile'?'OneStopMobile':(r.bron||''));
+    const knop = heb(r)
+      ? '<span class="tag" style="background:var(--green-soft); color:var(--green-tekst)">Op voorraad</span>'
+      : `<button type="button" class="btn small secondary" onclick="catKies('${(r.ean||'').replace(/[^0-9A-Za-z]/g,'')}')"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button>`;
+    return `<div style="display:flex; gap:12px; padding:10px; border:1px solid var(--border); border-radius:14px; align-items:center">
+      ${r.foto?`<img src="${esc(r.foto)}" loading="lazy" style="width:56px; height:56px; object-fit:contain; border-radius:8px; background:#fff; flex:none">`:'<div style="width:56px; height:56px; border-radius:8px; background:var(--soft-2); flex:none"></div>'}
+      <div style="flex:1; min-width:0">
+        <div data-onvertaald style="font-weight:600; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(r.naam)}</div>
+        <div class="muted" style="font-size:12px; margin-top:2px">${esc(bronkort)}${r.merk?' · '+esc(r.merk):''}${incl?' · inkoop '+incl:''}</div>
+      </div>
+      <div style="flex:none">${knop}</div>
+    </div>`;
+  }).join(''));
+}
+function catKies(ean){
+  if(!ean) return;
+  showTab('nieuw'); resetForm();
+  document.getElementById('f_barcode').value=ean;
+  barcodeOpzoeken();
+}
 function renderScanLog(){
   document.getElementById('scanLog').innerHTML = state.log.map(l=>{
     const d=new Date(l.t);
@@ -5608,7 +5705,7 @@ function paginaAan(tab){ return !verborgen().includes(tab); }
 
 function mag(tab){
   /* Producten uit betekent ook geen nieuw product kunnen aanmaken. */
-  const hoort = tab==='nieuw' ? 'producten' : tab;
+  const hoort = (tab==='nieuw'||tab==='catalogus') ? 'producten' : tab;
   if(!paginaAan(hoort)) return false;
   const r=gebruiker?gebruiker.rol:'eigenaar';
   if(r==='eigenaar') return true;   /* de eigenaar ziet altijd alles */
