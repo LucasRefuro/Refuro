@@ -1656,6 +1656,7 @@
     </div>
     <input id="scanInput" class="scanbox" placeholder="Scan barcode…" autocomplete="off">
     <div id="scanFeedback"></div>
+    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-cart"/></svg>Handmatig verkopen zonder scanner</button>
     <p class="muted" style="margin-top:12px">Elke scan boekt één stuk. Kwam er een bestelling binnen met meer stuks, scan dan één keer en pas daarna het aantal aan bij Laatste scans. Uitscannen telt als verkoop met pin, cash met bon of cash zonder bon en komt in de dashboardcijfers.</p>
   </div>
   <div class="card breed">
@@ -3341,6 +3342,141 @@ function herteken(){
   if(!document.getElementById('tab-bestellen').hidden) renderBestellen();
   if(!document.getElementById('tab-reparaties').hidden) renderReparaties();
   if(typeof mobielBijwerken==='function') mobielBijwerken();
+}
+
+/* ═══════════════ HANDMATIG VERKOPEN (zonder scanner) ═══════════════
+   Soms wil je iets afrekenen zonder de scanner: een product uit je voorraad
+   waarvan de code niet leest, of iets dat niet in het systeem staat. Je zoekt
+   op naam (je eigen producten en de catalogus), of je vult zelf naam, prijs,
+   inkoop en aantal in. Zit het in je voorraad, dan gaat het van de voorraad af;
+   is het een los product, dan telt het gewoon mee in de omzet en het kasboek
+   zonder de voorraad te raken. */
+function boekHandmatig(p, naam, verkoopStuk, inkoopStuk, aantal, bet){
+  const id=uid();
+  let uitMagazijn=0;
+  if(p) uitMagazijn=haalUitVoorraad(p, aantal);
+  kasVerkoop(verkoopStuk*aantal, bet, naam);
+  if(uitMagazijn>0) toast(uitMagazijn+'× '+naam+' kwam uit het magazijn. Hang bij.','let-op');
+  state.verkopen.unshift({id, t:Date.now(), naam, verkoop:verkoopStuk*aantal, inkoop:inkoopStuk*aantal,
+    aantal, betaal:bet, cat:p?p.cat:null, door:gebruiker?gebruiker.naam:null, los:p?undefined:true});
+  if(state.verkopen.length>5000) state.verkopen.length=5000;
+  if(p){ state.log.unshift({id, t:Date.now(), naam, m:'uit', v:p.voorraad, aantal, pid:p.id}); state.log=state.log.slice(0,50); }
+  save(); renderScanLog(); updateBadge();
+  return id;
+}
+
+let hvProductId=null, hvBetaalKeuze='pin', hvAssortResult=[], hvZoekTimer=null;
+function hvOpen(){
+  hvSluit();
+  hvProductId=null; hvBetaalKeuze='pin'; hvAssortResult=[];
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='hvOverlay';
+  ov.onclick=e=>{ if(e.target===ov) hvSluit(); };
+  ov.innerHTML='<div class="popup" id="hvPop" style="max-width:560px">'+
+    '<h3>Handmatig verkopen</h3>'+
+    '<p class="pv">Zoek een product uit je voorraad of catalogus, of vul zelf iets in dat niet in het systeem staat.</p>'+
+    '<div class="zoekveld" style="margin-bottom:12px"><label>Naam</label>'+
+      '<input id="hvNaam" placeholder="Typ of kies uit de lijst" autocomplete="off" oninput="hvZoek()" onkeydown="zoekToets(event,\'hvLijst\',hvSluitLijst)">'+
+      '<div class="zoeklijst" id="hvLijst" hidden></div></div>'+
+    '<div id="hvVoorraad" class="pv" style="margin:-4px 0 12px"></div>'+
+    '<div class="row" style="gap:10px">'+
+      '<div style="flex:1; min-width:90px"><label>Aantal</label><input id="hvAantal" type="number" min="1" step="1" value="1"></div>'+
+      '<div style="flex:1; min-width:120px"><label>Verkoopprijs (€) p/st</label><input id="hvVerkoopP" type="number" min="0" step="0.01"></div>'+
+      '<div style="flex:1; min-width:120px"><label>Inkoopprijs (€) p/st</label><input id="hvInkoopP" type="number" min="0" step="0.01"></div>'+
+    '</div>'+
+    '<label style="margin-top:12px; display:block">Betaalwijze</label>'+
+    '<div class="betaalrow" style="margin-bottom:14px">'+
+      '<button class="btn" id="hvBetPin" onclick="hvBetaalKies(\'pin\')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>'+
+      '<button class="btn secondary" id="hvBetCash" onclick="hvBetaalKies(\'cash\')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>'+
+      '<button class="btn secondary" id="hvBetCashZb" onclick="hvBetaalKies(\'cash_zb\')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>'+
+    '</div>'+
+    '<div class="acts" style="flex-direction:row; gap:8px">'+
+      '<button class="btn" style="background:var(--green)" onclick="hvVerkopen()"><svg class="i s"><use href="#i-cart"/></svg>Verkopen</button>'+
+      '<button class="btn ghost" onclick="hvSluit()">Annuleren</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  hvBetaalKies('pin');
+  const f=document.getElementById('hvNaam'); if(f) f.focus();
+}
+function hvSluit(){ const o=document.getElementById('hvOverlay'); if(o) o.remove(); }
+function hvSluitLijst(){ const l=document.getElementById('hvLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
+function hvBetaalKies(b){
+  hvBetaalKeuze=b;
+  const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
+  set('hvBetPin', b==='pin'); set('hvBetCash', b==='cash'); set('hvBetCashZb', b==='cash_zb');
+}
+function hvZoek(){ clearTimeout(hvZoekTimer); hvZoekTimer=setTimeout(hvZoekNu, 220); }
+async function hvZoekNu(){
+  const veld=document.getElementById('hvNaam'), lijst=document.getElementById('hvLijst');
+  if(!veld || !lijst) return;
+  hvProductId=null; hvVoorraadInfo();   /* je typt weer, dus een eerdere keuze vervalt */
+  const q=veld.value.trim();
+  if(q.length<2){ hvSluitLijst(); return; }
+  const ql=q.toLowerCase();
+  const eigen=state.producten
+    .filter(p=>(p.naam+' '+(p.barcode||'')+' '+(p.sku||'')+' '+(p.merk||'')).toLowerCase().includes(ql))
+    .slice(0,6);
+  let cat=[];
+  try{
+    const {data}=await sb.from('assortiment').select('ean,naam,merk,adviesprijs,inkoop').ilike('naam','%'+q+'%').limit(6);
+    cat=data||[];
+  }catch(e){ /* catalogus offline: alleen eigen producten */ }
+  hvAssortResult=cat;
+  if(!eigen.length && !cat.length){ hvSluitLijst(); return; }
+  const rijenEigen=eigen.map(p=>
+    '<button type="button" class="zoekrij" onmousedown="event.preventDefault(); hvKiesEigen('+p.id+')">'+
+    '<span class="zrnaam">'+esc(p.naam)+'</span>'+
+    '<span class="zrprijs">'+euro(p.verkoop)+'</span>'+
+    '<span class="zrvoor">voorraad '+inWinkel(p)+' · '+esc(p.merk||catNaam(p.cat))+'</span></button>').join('');
+  const rijenCat=cat.map((a,i)=>
+    '<button type="button" class="zoekrij" onmousedown="event.preventDefault(); hvKiesCatalog('+i+')">'+
+    '<span class="zrnaam" style="white-space:normal">'+esc(a.naam)+'</span>'+
+    '<span class="zrprijs">'+euro(a.adviesprijs||0)+'</span>'+
+    '<span class="zrvoor">catalogus · '+esc(a.merk||'')+'</span></button>').join('');
+  lijst.hidden=false;
+  lijst.innerHTML=rijenEigen+rijenCat;
+}
+function hvKiesEigen(id){
+  const p=state.producten.find(x=>x.id===id); if(!p) return;
+  hvProductId=p.id;
+  document.getElementById('hvNaam').value=p.naam;
+  document.getElementById('hvVerkoopP').value=(p.verkoop||0);
+  document.getElementById('hvInkoopP').value=(p.inkoop||0);
+  hvSluitLijst(); hvVoorraadInfo();
+}
+function hvKiesCatalog(i){
+  const a=hvAssortResult[i]; if(!a) return;
+  hvProductId=null;   /* niet in je voorraad: losse verkoop */
+  document.getElementById('hvNaam').value=a.naam;
+  document.getElementById('hvVerkoopP').value=(a.adviesprijs||0);
+  /* inkoop uit de catalogus is ex btw; omgerekend naar incl, net als bij toevoegen */
+  document.getElementById('hvInkoopP').value=(a.inkoop? Math.round(a.inkoop*1.21*100)/100 : 0);
+  hvSluitLijst(); hvVoorraadInfo();
+}
+function hvVoorraadInfo(){
+  const el=document.getElementById('hvVoorraad'); if(!el) return;
+  if(hvProductId!=null){
+    const p=state.producten.find(x=>x.id===hvProductId);
+    el.innerHTML = p ? 'In voorraad: <b>'+(p.voorraad||0)+'</b> (winkel '+inWinkel(p)+', achter '+overVoorraad(p)+'). De verkoop gaat van de voorraad af.' : '';
+  }else{
+    el.innerHTML='<span style="color:var(--amber-tekst)">Niet in het systeem: losse verkoop, de voorraad verandert niet.</span>';
+  }
+}
+function hvVerkopen(){
+  const naam=document.getElementById('hvNaam').value.trim();
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('hvAantal').value)||1));
+  const verkoopP=Math.max(0, Number(document.getElementById('hvVerkoopP').value)||0);
+  const inkoopP=Math.max(0, Number(document.getElementById('hvInkoopP').value)||0);
+  if(!naam){ alert('Vul een naam in.'); return; }
+  let p=null;
+  if(hvProductId!=null){
+    p=state.producten.find(x=>x.id===hvProductId)||null;
+    if(p && (p.voorraad||0)<aantal && !confirm(p.naam+': er zijn er maar '+(p.voorraad||0)+' in voorraad. Toch verkopen?')) return;
+  }
+  boekHandmatig(p, naam, verkoopP, inkoopP, aantal, hvBetaalKeuze);
+  hvSluit(); piep(440);
+  toast('Verkocht ('+betaalNaam(hvBetaalKeuze)+'): '+aantal+'× '+naam, true);
+  herteken();
 }
 /* Melding rechtsonder. soort: 'ok' (groen), 'let-op' (amber), 'fout' (rood), anders neutraal. */
 function toast(msg, soort){
