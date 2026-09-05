@@ -2277,6 +2277,8 @@
       <div style="min-width:130px"><label>Leverancier</label><input id="se_lev" list="serieLevs" placeholder="bijv. MondiParts" autocomplete="off"><datalist id="serieLevs"></datalist></div>
       <div style="min-width:110px"><label>Verkoop (€)</label><input id="se_verkoop" type="number" step="0.01" min="0"></div>
       <div style="min-width:110px"><label>Inkoop (€) <span class="muted">optioneel</span></label><input id="se_inkoop" type="number" step="0.01" min="0"></div>
+      <div style="min-width:100px"><label>Min. winkel</label><input id="se_min" type="number" step="1" min="0"></div>
+      <div style="min-width:100px"><label>Min. over</label><input id="se_over" type="number" step="1" min="0"></div>
     </div>
     <div class="row" style="margin-top:12px">
       <button class="btn actie" onclick="serieStart()"><svg class="i s"><use href="#i-search"/></svg>Serie starten</button>
@@ -3813,6 +3815,9 @@ function renderSnel(){
   if(dl) dl.innerHTML=state.modellen.map(m=>`<option value="${esc(m.naam)}">`).join('');
   const lv=document.getElementById('serieLevs');
   if(lv) lv.innerHTML=['MondiParts','NovaNL','OneStopMobile'].map(n=>`<option value="${n}">`).join('');
+  /* De min. voorraad staat standaard op de winkelnorm; je kunt hem per serie aanpassen. */
+  const smin=document.getElementById('se_min'); if(smin && smin.value==='') smin.value=(state.schapNorm!=null?state.schapNorm:1);
+  const sover=document.getElementById('se_over'); if(sover && sover.value==='') sover.value=(state.minOverNorm!=null?state.minOverNorm:0);
   if(typeof vulMerkenLijst==='function') vulMerkenLijst();
 }
 function serieStart(){
@@ -3823,7 +3828,11 @@ function serieStart(){
   const cat=state.categorieen.find(c=>c.id===catId);
   const verkoop=Number(document.getElementById('se_verkoop').value)||(cat?cat.verkoop:0);
   const inkoop=Number(document.getElementById('se_inkoop').value)||0;
-  serie={merk, naam, catId, verkoop, inkoop, min:(state.schapNorm!=null?state.schapNorm:1), bestel:(state.minOverNorm!=null?state.minOverNorm:0),
+  const minV=document.getElementById('se_min').value;
+  const overV=document.getElementById('se_over').value;
+  const min = minV!=='' ? Math.max(0, Math.floor(Number(minV)||0)) : (state.schapNorm!=null?state.schapNorm:1);
+  const bestel = overV!=='' ? Math.max(0, Math.floor(Number(overV)||0)) : (state.minOverNorm!=null?state.minOverNorm:0);
+  serie={merk, naam, catId, verkoop, inkoop, min, bestel,
     leverancier:(document.getElementById('se_lev').value||'').trim()};
   serieToegevoegd=[];
   document.getElementById('serieVelden').style.opacity='.55';
@@ -3862,6 +3871,18 @@ function serieModelOk(){
   if(!serie || !serieCode) return;
   const model=(document.getElementById('serieModel').value||'').trim();
   if(!model){ document.getElementById('serieModel').focus(); return; }
+  /* Een handscanner tikt makkelijk de volgende dooscode in dit veld: dan zou je
+     product 'Xssive Color Backcase 2100485' heten. Een echt model heeft altijd
+     letters. Een kale code (alleen cijfers) of een bestaande barcode is dus een
+     misscan: weiger hem en vraag om het model. Zo voegt hij niets meer verkeerd toe. */
+  if(/^[0-9]{5,}$/.test(model) || state.producten.some(p=>p.barcode===model)){
+    const fb=document.getElementById('serieFeedback');
+    fb.style.color='var(--amber-tekst)';
+    fb.textContent='Dat lijkt een gescande code, geen model. Typ eerst het model (bijvoorbeeld iPhone 16 Cream) en scan daarna pas de volgende doos.';
+    piep(200);
+    const mi=document.getElementById('serieModel'); mi.value=''; mi.focus();
+    return;
+  }
   const naam=[serie.merk, serie.naam, model].filter(Boolean).join(' ');
   state.producten.push({ id:uid(), barcode:serieCode, naam, merk:serie.merk||'', sku:'',
     leverancier:serie.leverancier||'', cat:serie.catId, inkoop:serie.inkoop, verkoop:serie.verkoop,
