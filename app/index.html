@@ -3524,7 +3524,9 @@ async function catLaad(reset){
   try{
     let q=sb.from('assortiment').select('ean,naam,merk,inkoop,adviesprijs,foto,bron,leverancier_id',{count:'exact'});
     if(bron) q=q.eq('bron',bron);
-    if(catQ) q=q.ilike('naam','%'+catQ+'%');
+    /* Elk woord apart zoeken, in elke volgorde: "clear iphone 17" vindt ook
+       "...iPhone 17 - Clear". Alle woorden moeten voorkomen (AND). */
+    if(catQ){ for(const w of catQ.split(/\s+/).filter(Boolean)) q=q.ilike('naam','%'+w+'%'); }
     if(catSoort) q=q.or(catSoort.split(',').map(w=>'naam.ilike.%'+w.trim()+'%').join(','));
     q=q.order('naam').range(van, van+per-1);
     const {data,count}=await q;
