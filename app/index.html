@@ -1813,9 +1813,14 @@
       <div style="flex:2"><input id="zoek" placeholder="Zoek op naam, barcode of artikelcode" oninput="renderProducten()"></div>
       <div style="flex:1"><select id="filterCat" onchange="renderProducten()"><option value="">Alle categorieën</option></select></div>
     </div>
+    <div id="prodBulk" hidden style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--lblauw); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:12px">
+      <span id="prodBulkAantal" style="font-weight:700"></span>
+      <button class="btn small danger" onclick="verwijderBulk()"><svg class="i s"><use href="#i-trash"/></svg>Verwijder geselecteerde</button>
+      <button class="btn small ghost" onclick="prodSelectieWissen()">Selectie wissen</button>
+    </div>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Barcode</th><th>Naam</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
+      <thead><tr><th style="width:34px"><input type="checkbox" id="prodAlle" onclick="prodSelectAlle(this.checked)" title="Alles selecteren"></th><th>Barcode</th><th>Naam</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
     </div>
@@ -3711,14 +3716,45 @@ function hardwareWijzer(){
       <a onclick="showTab('hardware')">Hardware</a>, niet in deze lijst.</span>`;
 }
 
+/* Bulk verwijderen uit de productenlijst: vink rijen aan en verwijder in een keer.
+   Werkt op je eigen voorraad (state.producten), niet op de leverancierscatalogus. */
+let prodGeselecteerd=new Set(), prodZichtbaar=[];
+function prodSelect(id,aan){ if(aan) prodGeselecteerd.add(id); else prodGeselecteerd.delete(id); prodSelectieBalk(); }
+function prodSelectAlle(aan){
+  prodZichtbaar.forEach(id=>{ if(aan) prodGeselecteerd.add(id); else prodGeselecteerd.delete(id); });
+  renderProducten();
+}
+function prodSelectieWissen(){ prodGeselecteerd.clear(); renderProducten(); }
+function prodSelectieBalk(){
+  const n=prodGeselecteerd.size;
+  const balk=document.getElementById('prodBulk'); if(balk) balk.hidden = n===0;
+  const t=document.getElementById('prodBulkAantal'); if(t) t.textContent = n+' geselecteerd';
+  const alle=document.getElementById('prodAlle');
+  if(alle){
+    const zicht=prodZichtbaar.filter(id=>prodGeselecteerd.has(id)).length;
+    alle.checked = prodZichtbaar.length>0 && zicht===prodZichtbaar.length;
+    alle.indeterminate = zicht>0 && zicht<prodZichtbaar.length;
+  }
+}
+function verwijderBulk(){
+  const n=prodGeselecteerd.size;
+  if(!n) return;
+  if(!confirm(n+' product'+(n===1?'':'en')+' verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  state.producten=state.producten.filter(p=>!prodGeselecteerd.has(p.id));
+  prodGeselecteerd.clear();
+  save(); renderProducten(); updateBadge();
+  toast(n+' product'+(n===1?'':'en')+' verwijderd');
+}
 function renderProducten(){
   hardwareWijzer();
   const q=(document.getElementById('zoek').value||'').toLowerCase();
   const fc=document.getElementById('filterCat').value;
-  const rows=state.producten
+  const zichtbaar=state.producten
     .filter(p=>(!q || zoekPast(p.naam+' '+(p.merk||'')+' '+(p.type||'')+' '+(p.model||'')+' '+(p.sku||''), zoekGroepen(q)) || String(p.barcode||'').includes(q) || String(p.sku||'').toLowerCase().includes(q)) && (!fc || p.cat===Number(fc)))
-    .sort((a,b)=>a.naam.localeCompare(b.naam))
-    .map(p=>`<tr><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
+    .sort((a,b)=>a.naam.localeCompare(b.naam));
+  prodZichtbaar=zichtbaar.map(p=>p.id);
+  const rows=zichtbaar
+    .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
       `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
       `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
@@ -3728,7 +3764,8 @@ function renderProducten(){
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
       `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="11" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="12" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
+  prodSelectieBalk();
   vulMerkenLijst();
   const sel=document.getElementById('filterCat');
   const cur=sel.value;
