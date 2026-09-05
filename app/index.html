@@ -3490,7 +3490,7 @@ async function naamZoekNu(){
     lijst.hidden=false;
     lijst.innerHTML=assortResultaten.map((a,i)=>
       `<button type="button" class="zoekrij" onmousedown="event.preventDefault(); naamKies(${i})">`+
-      `<span class="zrnaam" data-onvertaald>${esc(a.naam)}</span>`+
+      `<span class="zrnaam" data-onvertaald style="white-space:normal; overflow:visible; line-height:1.35">${esc(a.naam)}</span>`+
       `<span class="zrprijs">${euro(a.adviesprijs||0)}</span>`+
       `<span class="zrvoor">${esc(a.merk||'')}</span></button>`).join('');
   }catch(e){ naamSluit(); }
@@ -3567,7 +3567,7 @@ function catTeken(rows, reset){
     return `<div style="display:flex; gap:12px; padding:10px; border:1px solid var(--border); border-radius:14px; align-items:center">
       ${r.foto?`<img src="${esc(r.foto)}" loading="lazy" style="width:56px; height:56px; object-fit:contain; border-radius:8px; background:#fff; flex:none">`:'<div style="width:56px; height:56px; border-radius:8px; background:var(--soft-2); flex:none"></div>'}
       <div style="flex:1; min-width:0">
-        <div data-onvertaald style="font-weight:600; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(r.naam)}</div>
+        <div data-onvertaald style="font-weight:600; font-size:13.5px; line-height:1.35">${esc(r.naam)}</div>
         <div class="muted" style="font-size:12px; margin-top:2px">${esc(bronkort)}${r.merk?' · '+esc(r.merk):''}${incl?' · inkoop '+incl:''}</div>
       </div>
       <div style="flex:none">${knop}</div>
