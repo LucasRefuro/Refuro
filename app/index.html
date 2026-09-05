@@ -2646,6 +2646,10 @@ function load(){
   if(!Array.isArray(s.verborgen)) s.verborgen=[];
   if(s.schapNorm==null) s.schapNorm=2;
   if(s.minOverNorm==null) s.minOverNorm=0;
+  /* De overvoorraad-standaard stond vroeger op 2. Die was nergens bewust
+     gekozen, dus zetten we hem eenmalig om naar 0. De vlag zorgt dat dit
+     maar een keer gebeurt: kies je later zelf weer 2, dan blijft dat staan. */
+  if(!s.overNorm0){ if(s.minOverNorm===2) s.minOverNorm=0; s.overNorm0=true; }
   if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
