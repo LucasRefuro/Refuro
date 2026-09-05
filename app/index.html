@@ -1836,7 +1836,7 @@
   <div class="card">
     <p class="muted" style="margin-bottom:12px">Alles wat je leveranciers verkopen, om in op te zoeken of tegenaan te scannen. Kies iets en zet het met een druk op voorraad. Alleen wat je toevoegt komt in je eigen voorraad.</p>
     <div class="row" style="margin-bottom:10px">
-      <div style="flex:2; min-width:220px"><input id="cat_zoek" placeholder="Zoek op naam of merk" autocomplete="off" oninput="catFilterTyp()"></div>
+      <div style="flex:2; min-width:220px"><input id="cat_zoek" placeholder="Zoek op naam, of scan een streepjescode" autocomplete="off" oninput="catFilterTyp()" onkeydown="if(event.key==='Enter'){event.preventDefault(); catLaad(true);}"></div>
       <div style="min-width:180px"><select id="cat_bron" onchange="catLaad(true)"><option value="">Alle leveranciers</option><option value="onestopmobile">OneStopMobile</option><option value="mondiparts">MondiParts</option></select></div>
     </div>
     <div class="row" id="cat_soorten" style="gap:6px; margin-bottom:14px"></div>
@@ -3521,6 +3521,7 @@ function catMarkeer(){
 function catSoortKies(i){ catSoort=CAT_SOORTEN[i][1]; catMarkeer(); catLaad(true); }
 function catFilterTyp(){ clearTimeout(catFilterTimer); catFilterTimer=setTimeout(()=>catLaad(true), 300); }
 async function catLaad(reset){
+  clearTimeout(catFilterTimer);   /* een lopende zoek-timer inhalen, bv. bij Enter */
   if(catBezig) return; catBezig=true;
   if(reset){ catPage=0; catRijen={}; document.getElementById('catalogusBody').innerHTML=''; }
   const per=40, van=catPage*per;
@@ -3529,9 +3530,13 @@ async function catLaad(reset){
   try{
     let q=sb.from('assortiment').select('ean,naam,merk,categorie,subcategorie,inkoop,adviesprijs,foto,bron,leverancier_id',{count:'exact'});
     if(bron) q=q.eq('bron',bron);
-    /* Elk woord apart zoeken, in elke volgorde: "clear iphone 17" vindt ook
-       "...iPhone 17 - Clear". Alle woorden moeten voorkomen (AND). */
-    if(catQ){ for(const w of catQ.split(/\s+/).filter(Boolean)) q=q.ilike('naam','%'+w+'%'); }
+    /* Een streepjescode (alleen cijfers) zoeken we op EAN of artikelcode, want die
+       staat niet in de naam. Anders elk woord apart in de naam, in elke volgorde:
+       "clear iphone 17" vindt ook "...iPhone 17 - Clear" (alle woorden moeten voorkomen). */
+    if(catQ){
+      if(/^[0-9]{6,}$/.test(catQ)) q=q.or('ean.eq.'+catQ+',leverancier_id.eq.'+catQ);
+      else for(const w of catQ.split(/\s+/).filter(Boolean)) q=q.ilike('naam','%'+w+'%');
+    }
     if(catSoort) q=q.or(catSoort.split(',').map(w=>'naam.ilike.%'+w.trim()+'%').join(','));
     q=q.order('naam').range(van, van+per-1);
     const {data,count}=await q;
