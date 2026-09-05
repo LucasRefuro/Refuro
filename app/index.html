@@ -2313,7 +2313,7 @@
       <div style="flex:1; min-width:140px"><label>Categorie</label><select id="t_cat"></select></div>
       <div><label>Inkoop (€)</label><input id="t_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoop (€)</label><input id="t_verkoop" type="number" step="0.01" min="0"></div>
-      <div><label>Min. winkel</label><input id="t_min" type="number" step="1" min="0" value="2"></div>
+      <div><label>Min. winkel</label><input id="t_min" type="number" step="1" min="0" value="1"></div>
       <div><label>Min. over</label><input id="t_bestel" type="number" step="1" min="0" value="0"></div>
       <div><button class="btn" onclick="voegTypeToe()">Toevoegen</button></div>
     </div>
@@ -2341,7 +2341,7 @@
       <div style="flex:2; min-width:160px"><label>Nieuwe categorie</label><input id="c_naam" placeholder="bijv. Opladers"></div>
       <div><label>Inkoop (€)</label><input id="c_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoop (€)</label><input id="c_verkoop" type="number" step="0.01" min="0"></div>
-      <div><label>Min. winkel</label><input id="c_min" type="number" step="1" min="0" value="2"></div>
+      <div><label>Min. winkel</label><input id="c_min" type="number" step="1" min="0" value="1"></div>
       <div><label>Min. over</label><input id="c_bestel" type="number" step="1" min="0" value="0"></div>
       <div><button class="btn" onclick="voegCatToe()">Toevoegen</button></div>
     </div>
@@ -2644,12 +2644,15 @@ function load(){
   if(!s.teams) s.teams=[{id:1, naam:'Winkel'}];
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
   if(!Array.isArray(s.verborgen)) s.verborgen=[];
-  if(s.schapNorm==null) s.schapNorm=2;
+  if(s.schapNorm==null) s.schapNorm=1;
   if(s.minOverNorm==null) s.minOverNorm=0;
   /* De overvoorraad-standaard stond vroeger op 2. Die was nergens bewust
      gekozen, dus zetten we hem eenmalig om naar 0. De vlag zorgt dat dit
      maar een keer gebeurt: kies je later zelf weer 2, dan blijft dat staan. */
   if(!s.overNorm0){ if(s.minOverNorm===2) s.minOverNorm=0; s.overNorm0=true; }
+  /* Idem voor de min. winkelvoorraad: die stond vroeger standaard op 2,
+     nu op 1. Eenmalig omzetten, met dezelfde eigen-keuze-bescherming. */
+  if(!s.schapNorm1){ if(s.schapNorm===2) s.schapNorm=1; s.schapNorm1=true; }
   if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
@@ -2659,7 +2662,7 @@ function load(){
      verdelen wat er is: het schap eerst vol, de rest ligt achter. */
   (s.producten||[]).forEach(p=>{
     if(p.winkel==null){
-      const norm=p.schap!=null?p.schap:(s.schapNorm!=null?s.schapNorm:2);
+      const norm=p.schap!=null?p.schap:(s.schapNorm!=null?s.schapNorm:1);
       p.winkel=Math.min(p.voorraad||0, norm);
     }
     /* Nieuw: de overvoorraad krijgt een eigen ondergrens. Oudere producten
@@ -3177,7 +3180,7 @@ function verwerkScan(code){
 
 function schapNorm(p){
   if(p && p.schap!=null) return Math.max(0, p.schap);
-  return state.schapNorm!=null ? Math.max(0, state.schapNorm) : 2;
+  return state.schapNorm!=null ? Math.max(0, state.schapNorm) : 1;
 }
 function inWinkel(p){ return Math.max(0, Math.min(p.winkel||0, p.voorraad||0)); }
 function achterLiggen(p){ return Math.max(0, (p.voorraad||0) - inWinkel(p)); }
@@ -3440,7 +3443,7 @@ function vulUitAssortiment(a){
   /* De minimale winkel- en overvoorraad: eerst de standaard van de categorie (in
      te stellen bij Instellingen, Categorieën), anders de algemene standaard uit
      Instellingen, Voorraad. */
-  document.getElementById('f_schap').value = (catObj && catObj.min>0) ? catObj.min : (state.schapNorm!=null?state.schapNorm:2);
+  document.getElementById('f_schap').value = (catObj && catObj.min>0) ? catObj.min : (state.schapNorm!=null?state.schapNorm:1);
   document.getElementById('f_bestel').value = (catObj && catObj.bestel>0) ? catObj.bestel : (state.minOverNorm!=null?state.minOverNorm:0);
   /* Je scant om toe te voegen, dus zet er meteen eentje in de winkel (het doosje
      dat je in je hand hebt). Staat er al een aantal, dan laten we dat staan. */
@@ -3482,7 +3485,7 @@ function zorgCategorie(naam){
   let cat=state.categorieen.find(c=>String(c.naam).toLowerCase()===naam.toLowerCase());
   if(!cat){
     const id=Math.max(0,...state.categorieen.map(c=>Number(c.id)||0))+1;
-    cat={id, naam, inkoop:0, verkoop:0, min:2, bestel:0};
+    cat={id, naam, inkoop:0, verkoop:0, min:1, bestel:0};
     state.categorieen.push(cat); save();
   }
   return cat.id;
@@ -3665,7 +3668,7 @@ function serieStart(){
   const cat=state.categorieen.find(c=>c.id===catId);
   const verkoop=Number(document.getElementById('se_verkoop').value)||(cat?cat.verkoop:0);
   const inkoop=Number(document.getElementById('se_inkoop').value)||0;
-  serie={merk, naam, catId, verkoop, inkoop, min:cat?cat.min:2, bestel:cat?cat.bestel:0,
+  serie={merk, naam, catId, verkoop, inkoop, min:cat?cat.min:1, bestel:cat?cat.bestel:0,
     leverancier:(document.getElementById('se_lev').value||'').trim()};
   serieToegevoegd=[];
   document.getElementById('serieVelden').style.opacity='.55';
@@ -3848,7 +3851,7 @@ function vulStandaard(){
   if(sel.value==='__nieuw'){
     const naam=prompt('Naam van de nieuwe categorie:');
     if(naam && naam.trim()){
-      const c={id:uid(), naam:naam.trim(), inkoop:0, verkoop:0, min:2, bestel:0};
+      const c={id:uid(), naam:naam.trim(), inkoop:0, verkoop:0, min:1, bestel:0};
       state.categorieen.push(c); save();
       vulCatSelect(); sel.value=c.id;
       toast('Categorie toegevoegd: '+c.naam, true);
@@ -3861,7 +3864,7 @@ function vulStandaard(){
   document.getElementById('f_inkoop').value=c.inkoop;
   document.getElementById('f_verkoop').value=c.verkoop;
   /* De categorie levert de standaard-minima; de actuele tellingen vul je zelf. */
-  document.getElementById('f_schap').value=c.min>0?c.min:(state.schapNorm!=null?state.schapNorm:2);
+  document.getElementById('f_schap').value=c.min>0?c.min:(state.schapNorm!=null?state.schapNorm:1);
   document.getElementById('f_bestel').value=c.bestel>0?c.bestel:(state.minOverNorm!=null?state.minOverNorm:0);
 }
 function resetForm(){
@@ -3879,7 +3882,7 @@ function resetForm(){
   naamSluit();
   document.getElementById('f_voorraad').value=0;
   document.getElementById('f_min').value=0;
-  document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:2;
+  document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:1;
   document.getElementById('f_bestel').value=state.minOverNorm!=null?state.minOverNorm:0;
   vulMerkenLijst();
   vulStandaard();
@@ -8747,7 +8750,7 @@ function slaBedrijfOp(){
 function renderInstellingen(){
   shopTabAls();
   renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
-  document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:2;
+  document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:1;
   document.getElementById('s_minover').value=state.minOverNorm!=null?state.minOverNorm:0;
   document.getElementById('s_kasmax').value=kasMax();
   document.getElementById('s_marge').value=stdMarge();
