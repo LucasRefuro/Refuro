@@ -2600,6 +2600,7 @@ const STANDAARD_MODELLEN=[
 let state=load();
 let mode='in';
 let editId=null;
+let opvolgerVoor=null;   /* id van het uitlopende product waarvoor je nu de opvolger toevoegt */
 let periode='dag';
 let betaal='pin';
 let dagDatum=null;
@@ -3194,13 +3195,27 @@ function minOverNorm(p){
   if(p && p.minOver!=null) return Math.max(0, p.minOver);
   return state.minOverNorm!=null ? Math.max(0, state.minOverNorm) : 0;
 }
+/* Uitlopende producten en hun opvolger.
+   Een uitlopend product bestellen we niet meer bij: je verkoopt de voorraad uit.
+   De opvolger 'wacht' op zijn voorganger (wachtOpId) en komt pas op de
+   bestellijst zodra die voorganger op is (voorraad 0). Zo neemt het nieuwe
+   product het vanzelf over als het oude uitverkocht is. */
+function isUitlopend(p){ return !!(p && p.uitlopend); }
+function voorganger(p){ return (p && p.wachtOpId!=null) ? state.producten.find(x=>x.id===p.wachtOpId) : null; }
+function wachtNog(p){ const v=voorganger(p); return !!(v && (v.voorraad||0)>0); }
+function opvolgerVan(p){ return (p && p.opvolgerId!=null) ? state.producten.find(x=>x.id===p.opvolgerId) : null; }
+
 /* Bijbestellen bij de leverancier: de achtervoorraad is op of onder z'n
    minimum, óf de winkel staat te laag en er ligt niets meer achter om bij te
    hangen. Zolang je nog kunt bijhangen hoef je niet te bestellen.
    Houd je geen achtervoorraad bij (min. over 0), dan is een lege achtervoorraad
    geen reden om te bestellen; anders zou een volle winkel met een leeg magazijn
-   altijd op de bestellijst komen. Dan telt puur het winkel-minimum. */
+   altijd op de bestellijst komen. Dan telt puur het winkel-minimum.
+   Een uitlopend product bestellen we nooit bij; een opvolger pas als zijn
+   voorganger op is. */
 function moetBestellen(p){
+  if(isUitlopend(p)) return false;
+  if(wachtNog(p)) return false;
   const min=minOverNorm(p);
   return (min>0 && overVoorraad(p) <= min) || (schapTekort(p) > 0 && !nogAchterGenoeg(p));
 }
@@ -3785,15 +3800,18 @@ function renderProducten(){
     .sort((a,b)=>a.naam.localeCompare(b.naam));
   prodZichtbaar=zichtbaar.map(p=>p.id);
   const rows=zichtbaar
-    .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.barcode)}</td><td>${esc(p.naam)}</td>`+
+    .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.barcode)}</td><td>${esc(p.naam)}`+
+      `${isUitlopend(p)?' <span class="tag" style="background:var(--amber-soft);color:var(--amber-tekst)">loopt uit</span>':''}`+
+      `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}</td>`+
       `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
       `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
-      `<td class="num${inWinkel(p)<schapNorm(p)?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
+      `<td class="num${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
-      `<td class="num${overVoorraad(p)<=minOverNorm(p)?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
+      `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
-      `<td class="num"><button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
+      `<td class="num"><button class="btn small ghost icoknop" title="Loopt uit / vervangen" onclick="uitloopOpen(${p.id})"><svg class="i s"><use href="#i-recycle"/></svg></button> `+
+      `<button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
   document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="12" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
   prodSelectieBalk();
@@ -3874,6 +3892,7 @@ function vulStandaard(){
 }
 function resetForm(){
   editId=null;
+  opvolgerVoor=null;
   document.getElementById('formTitel').textContent='Nieuw product toevoegen';
   const hk=document.getElementById('npHerkomst'); if(hk) hk.innerHTML='';
   document.getElementById('formOpslaan').textContent='Product toevoegen';
@@ -4311,16 +4330,129 @@ function opslaanProduct(){
     toast('Wijzigingen opgeslagen: '+naam, true);
   }else{
     data.id=uid(); data.besteld=false; data.besteldOp=null;
+    /* Voeg je dit product toe als opvolger van een uitlopend product, dan koppelen
+       we ze: het nieuwe wacht op de voorganger en komt op de bestellijst zodra
+       die op is. */
+    const koppelAan=opvolgerVoor;
+    if(koppelAan!=null){
+      const oud=state.producten.find(p=>p.id===koppelAan);
+      if(oud){ data.wachtOpId=oud.id; }
+    }
     state.producten.push(data);
+    if(koppelAan!=null){
+      const oud=state.producten.find(p=>p.id===koppelAan);
+      if(oud){ oud.uitlopend=true; oud.opvolgerId=data.id; }
+    }
     save();
     const n=naam;
     resetForm();
     document.getElementById('formTitel').textContent='"'+n+'"is toegevoegd';
     document.getElementById('f_barcode').focus();
-    toast('Product toegevoegd: '+n, true);
+    toast(koppelAan!=null ? 'Opvolger gekoppeld: '+n : 'Product toegevoegd: '+n, true);
   }
   updateBadge();
 }
+
+/* ═══════════════ UITLOPEND PRODUCT EN OPVOLGER ═══════════════
+   Een product dat je niet meer terug in het schap wilt: markeer het als
+   uitlopend. Het wordt niet meer besteld en verkoopt uit. Wil je er een ander
+   product voor in de plaats, dan koppel je een opvolger (nieuw of bestaand).
+   Die staat in de wacht en komt op de bestellijst zodra de voorganger op is. */
+
+function uitloopOpen(id){
+  uitloopSluit();
+  const p=state.producten.find(x=>x.id===id); if(!p) return;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='uitloopOverlay';
+  ov.onclick=e=>{ if(e.target===ov) uitloopSluit(); };
+  ov.innerHTML='<div class="popup" id="uitloopPop" style="max-width:520px"></div>';
+  document.body.appendChild(ov);
+  uitloopTeken(id);
+}
+function uitloopTeken(id){
+  const pop=document.getElementById('uitloopPop'); if(!pop) return;
+  const p=state.producten.find(x=>x.id===id); if(!p){ uitloopSluit(); return; }
+  if(isUitlopend(p)){
+    const opv=opvolgerVan(p);
+    pop.innerHTML='<h3>'+esc(p.naam)+'</h3>'+
+      '<p class="muted">Dit product loopt uit; we bestellen het niet meer bij. '+
+      (opv?'Opvolger: <b>'+esc(opv.naam)+'</b>. Die komt op de bestellijst zodra dit product op is.':'Er is nog geen opvolger gekozen.')+'</p>'+
+      '<div style="display:flex; flex-direction:column; gap:8px; margin-top:12px">'+
+      (opv?'':'<button class="btn" onclick="uitloopNieuw('+id+')"><svg class="i s"><use href="#i-plus"/></svg>Opvolger: nieuw product toevoegen</button>'+
+        '<button class="btn secondary" onclick="uitloopBestaand('+id+')"><svg class="i s"><use href="#i-search"/></svg>Opvolger: bestaand product kiezen</button>')+
+      '<button class="btn ghost" onclick="uitloopTerug('+id+')"><svg class="i s"><use href="#i-undo"/></svg>Toch weer gewoon bestellen</button>'+
+      '</div>'+
+      '<div style="text-align:right; margin-top:14px"><button class="btn ghost small" onclick="uitloopSluit()">Sluiten</button></div>';
+    return;
+  }
+  pop.innerHTML='<h3>'+esc(p.naam)+' laten uitlopen</h3>'+
+    '<p class="muted">We bestellen dit product dan niet meer bij; je verkoopt de voorraad gewoon uit. Wat komt ervoor in de plaats?</p>'+
+    '<div style="display:flex; flex-direction:column; gap:8px; margin-top:12px">'+
+    '<button class="btn" onclick="uitloopNieuw('+id+')"><svg class="i s"><use href="#i-plus"/></svg>Nieuw product toevoegen</button>'+
+    '<button class="btn secondary" onclick="uitloopBestaand('+id+')"><svg class="i s"><use href="#i-search"/></svg>Bestaand product kiezen</button>'+
+    '<button class="btn ghost" onclick="uitloopGeen('+id+')">Geen opvolger, alleen uitverkopen</button>'+
+    '</div>'+
+    '<div style="text-align:right; margin-top:14px"><button class="btn ghost small" onclick="uitloopSluit()">Annuleren</button></div>';
+}
+function uitloopBestaand(id){
+  const pop=document.getElementById('uitloopPop'); if(!pop) return;
+  pop.innerHTML='<h3>Kies de opvolger</h3>'+
+    '<p class="muted">Zoek het product dat in de plaats komt.</p>'+
+    '<input id="uitloopZoek" placeholder="Zoek op naam of barcode" autocomplete="off" oninput="uitloopZoekTeken('+id+')" style="width:100%; margin:8px 0">'+
+    '<div id="uitloopRes" style="max-height:300px; overflow:auto"></div>'+
+    '<div style="text-align:right; margin-top:12px"><button class="btn ghost small" onclick="uitloopTeken('+id+')">Terug</button></div>';
+  uitloopZoekTeken(id);
+  const z=document.getElementById('uitloopZoek'); if(z) z.focus();
+}
+function uitloopZoekTeken(id){
+  const res=document.getElementById('uitloopRes'); if(!res) return;
+  const veld=document.getElementById('uitloopZoek');
+  const q=(veld?veld.value:'').toLowerCase().trim();
+  const lijst=state.producten
+    .filter(p=>p.id!==id && !isUitlopend(p) && p.wachtOpId==null)
+    .filter(p=>!q || (p.naam+' '+(p.barcode||'')+' '+(p.merk||'')).toLowerCase().includes(q))
+    .sort((a,b)=>a.naam.localeCompare(b.naam)).slice(0,40);
+  res.innerHTML = lijst.length ? lijst.map(p=>
+    '<button class="btn ghost" style="display:block; width:100%; text-align:left; margin-bottom:4px" onclick="uitloopKies('+id+','+p.id+')">'+esc(p.naam)+' <span class="muted">'+esc(p.barcode||'')+'</span></button>'
+  ).join('') : '<p class="muted">Niets gevonden.</p>';
+}
+function uitloopKies(oudId, nieuwId){
+  const oud=state.producten.find(p=>p.id===oudId), nieuw=state.producten.find(p=>p.id===nieuwId);
+  if(!oud || !nieuw) return;
+  oud.uitlopend=true; oud.opvolgerId=nieuw.id; nieuw.wachtOpId=oud.id;
+  save(); renderProducten(); updateBadge();
+  uitloopSluit();
+  toast('Opvolger gekoppeld: '+nieuw.naam, true);
+}
+function uitloopGeen(id){
+  const p=state.producten.find(x=>x.id===id); if(!p) return;
+  p.uitlopend=true; p.opvolgerId=null;
+  save(); renderProducten(); updateBadge();
+  uitloopSluit();
+  toast(p.naam+' loopt uit', true);
+}
+function uitloopNieuw(id){
+  const p=state.producten.find(x=>x.id===id); if(!p) return;
+  uitloopSluit();
+  showTab('producten');
+  resetForm();
+  opvolgerVoor=id;
+  document.getElementById('formTitel').textContent='Opvolger toevoegen voor "'+p.naam+'"';
+  const hk=document.getElementById('npHerkomst');
+  if(hk) hk.innerHTML='<div style="background:var(--amber-soft); color:var(--amber-tekst); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:10px">Dit nieuwe product wordt de opvolger van <b>'+esc(p.naam)+'</b>. Zodra die op is, komt dit op de bestellijst.</div>';
+  const f=document.getElementById('f_barcode'); if(f){ f.focus(); f.scrollIntoView({behavior:'smooth', block:'center'}); }
+}
+function uitloopTerug(id){
+  const p=state.producten.find(x=>x.id===id); if(!p) return;
+  p.uitlopend=false;
+  const opv=opvolgerVan(p);
+  if(opv && opv.wachtOpId===p.id) opv.wachtOpId=null;
+  p.opvolgerId=null;
+  save(); renderProducten(); updateBadge();
+  uitloopSluit();
+  toast(p.naam+' wordt weer normaal besteld', true);
+}
+function uitloopSluit(){ const o=document.getElementById('uitloopOverlay'); if(o) o.remove(); }
 
 /* ═══════════════ BIJHANGEN MET DE SCANNER ═══════════════
    Je staat met een doos in je handen bij het rek. Dan wil je niet op je scherm

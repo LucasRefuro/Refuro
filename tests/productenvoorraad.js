@@ -69,6 +69,17 @@ setTimeout(()=>{
   w.eval("state.producten=[{id:'v',naam:'Hoesje',cat:1,winkel:1,voorraad:1,schap:1,minOver:0}];");
   ok('vol rek zonder over-minimum staat niet op de bestellijst', w.eval("!bestelLijst().some(p=>p.id==='v')"));
 
+  // ── uitlopend product wordt niet meer besteld, ook niet met een leeg rek ──
+  w.eval("state.producten=[{id:'u',naam:'Oud hoesje',cat:1,winkel:0,voorraad:0,schap:1,minOver:0,uitlopend:true}];");
+  ok('uitlopend product staat niet op de bestellijst', w.eval("!bestelLijst().some(p=>p.id==='u')"));
+
+  // ── opvolger wacht op de voorganger en komt pas op de lijst als die op is ──
+  w.eval("state.producten=[{id:'ov',naam:'Oud',cat:1,winkel:1,voorraad:2,schap:1,minOver:0,uitlopend:true,opvolgerId:'nw'},"+
+    "{id:'nw',naam:'Nieuw',cat:1,winkel:0,voorraad:0,schap:1,minOver:0,wachtOpId:'ov'}];");
+  ok('opvolger wacht zolang de voorganger voorraad heeft', w.eval("!bestelLijst().some(p=>p.id==='nw')"));
+  w.eval("var vg=state.producten.find(p=>p.id==='ov'); vg.voorraad=0; vg.winkel=0;");
+  ok('opvolger komt op de bestellijst zodra de voorganger op is', w.eval("bestelLijst().some(p=>p.id==='nw')"));
+
   // ── de vier getallen zijn direct in de tabel te bewerken ──
   w.eval("account={team_id:'t1',rol:'eigenaar'};"+
     "state.producten=[{id:'d',naam:'Glas',cat:1,winkel:2,voorraad:5,schap:2,minOver:2}]; zetVeld('d','over',4);");
