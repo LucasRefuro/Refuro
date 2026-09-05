@@ -3444,11 +3444,11 @@ function vulUitAssortiment(a){
     : (catObj && catObj.verkoop>0 ? catObj.verkoop
     : (inclInkoop!=null ? Math.max(0.95, Math.ceil(inclInkoop*2)-0.05) : ''));
   document.getElementById('f_verkoop').value=verkoop;
-  /* De minimale winkel- en overvoorraad: eerst de standaard van de categorie (in
-     te stellen bij Instellingen, Categorieën), anders de algemene standaard uit
-     Instellingen, Voorraad. */
-  document.getElementById('f_schap').value = (catObj && catObj.min>0) ? catObj.min : (state.schapNorm!=null?state.schapNorm:1);
-  document.getElementById('f_bestel').value = (catObj && catObj.bestel>0) ? catObj.bestel : (state.minOverNorm!=null?state.minOverNorm:0);
+  /* De minimale winkel- en overvoorraad komen uit één vaste standaard (in te
+     stellen bij Instellingen, Voorraad), niet per categorie. Zo begint elk nieuw
+     product hetzelfde. */
+  document.getElementById('f_schap').value = state.schapNorm!=null?state.schapNorm:1;
+  document.getElementById('f_bestel').value = state.minOverNorm!=null?state.minOverNorm:0;
   /* Je scant om toe te voegen, dus zet er meteen eentje in de winkel (het doosje
      dat je in je hand hebt). Staat er al een aantal, dan laten we dat staan. */
   const vv=document.getElementById('f_voorraad'); if(!Number(vv.value)) vv.value=1;
@@ -3672,7 +3672,7 @@ function serieStart(){
   const cat=state.categorieen.find(c=>c.id===catId);
   const verkoop=Number(document.getElementById('se_verkoop').value)||(cat?cat.verkoop:0);
   const inkoop=Number(document.getElementById('se_inkoop').value)||0;
-  serie={merk, naam, catId, verkoop, inkoop, min:cat?cat.min:1, bestel:cat?cat.bestel:0,
+  serie={merk, naam, catId, verkoop, inkoop, min:(state.schapNorm!=null?state.schapNorm:1), bestel:(state.minOverNorm!=null?state.minOverNorm:0),
     leverancier:(document.getElementById('se_lev').value||'').trim()};
   serieToegevoegd=[];
   document.getElementById('serieVelden').style.opacity='.55';
@@ -3867,9 +3867,10 @@ function vulStandaard(){
   if(!c) return;
   document.getElementById('f_inkoop').value=c.inkoop;
   document.getElementById('f_verkoop').value=c.verkoop;
-  /* De categorie levert de standaard-minima; de actuele tellingen vul je zelf. */
-  document.getElementById('f_schap').value=c.min>0?c.min:(state.schapNorm!=null?state.schapNorm:1);
-  document.getElementById('f_bestel').value=c.bestel>0?c.bestel:(state.minOverNorm!=null?state.minOverNorm:0);
+  /* De minima komen uit de vaste standaard (Instellingen, Voorraad), niet per
+     categorie; de actuele tellingen vul je zelf. */
+  document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:1;
+  document.getElementById('f_bestel').value=state.minOverNorm!=null?state.minOverNorm:0;
 }
 function resetForm(){
   editId=null;
