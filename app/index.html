@@ -3497,7 +3497,7 @@ function naamToets(e){ zoekToets(e,'naamLijst',naamSluit); }
 const CAT_SOORTEN=[['Alles',''],['Hoesjes','case,cover,hoesje'],['Screenprotectors','protector,glass,tempered,screen'],
   ['Opladers','charger,oplader,lader,adapter'],['Kabels','cable,kabel'],['Houders','holder,houder,mount'],
   ['Audio','audio,headphone,earbud,speaker,oordop'],['Powerbanks','powerbank']];
-let catSoort='', catQ='', catPage=0, catCount=0, catBezig=false, catFilterTimer=null;
+let catSoort='', catQ='', catPage=0, catCount=0, catBezig=false, catFilterTimer=null, catRijen={};
 function catOpen(){
   const s=document.getElementById('cat_soorten');
   if(s && !s.dataset.klaar){
@@ -3517,12 +3517,12 @@ function catSoortKies(i){ catSoort=CAT_SOORTEN[i][1]; catMarkeer(); catLaad(true
 function catFilterTyp(){ clearTimeout(catFilterTimer); catFilterTimer=setTimeout(()=>catLaad(true), 300); }
 async function catLaad(reset){
   if(catBezig) return; catBezig=true;
-  if(reset){ catPage=0; document.getElementById('catalogusBody').innerHTML=''; }
+  if(reset){ catPage=0; catRijen={}; document.getElementById('catalogusBody').innerHTML=''; }
   const per=40, van=catPage*per;
   const bron=document.getElementById('cat_bron').value;
   catQ=(document.getElementById('cat_zoek').value||'').replace(/[,%()]/g,' ').trim();
   try{
-    let q=sb.from('assortiment').select('ean,naam,merk,inkoop,adviesprijs,foto,bron,leverancier_id',{count:'exact'});
+    let q=sb.from('assortiment').select('ean,naam,merk,categorie,subcategorie,inkoop,adviesprijs,foto,bron,leverancier_id',{count:'exact'});
     if(bron) q=q.eq('bron',bron);
     /* Elk woord apart zoeken, in elke volgorde: "clear iphone 17" vindt ook
        "...iPhone 17 - Clear". Alle woorden moeten voorkomen (AND). */
@@ -3542,6 +3542,7 @@ function catMeer(){ catLaad(false); }
 function catTeken(rows, reset){
   const el=document.getElementById('catalogusBody');
   if(reset) el.innerHTML='';
+  rows.forEach(r=>{ if(r && r.ean) catRijen[r.ean]=r; });   /* bewaren zodat Toevoegen direct kan invullen */
   const heb = r => state.producten.some(p=>p.barcode===r.ean || (r.leverancier_id && p.barcode===r.leverancier_id));
   el.insertAdjacentHTML('beforeend', rows.map(r=>{
     const incl = r.inkoop!=null ? euro(Math.round(Number(r.inkoop)*1.21*100)/100) : '';
@@ -3562,8 +3563,11 @@ function catTeken(rows, reset){
 function catKies(ean){
   if(!ean) return;
   showTab('nieuw'); resetForm();
-  document.getElementById('f_barcode').value=ean;
-  barcodeOpzoeken();
+  /* We hebben de rij al in beeld, dus vul meteen in plaats van opnieuw op te
+     zoeken. Onbekend (bijvoorbeeld na verversen)? Dan alsnog opzoeken op de code. */
+  const a=catRijen[ean];
+  if(a){ document.getElementById('f_barcode').value=a.ean||ean; vulUitAssortiment(a); }
+  else { document.getElementById('f_barcode').value=ean; barcodeOpzoeken(); }
 }
 function renderScanLog(){
   document.getElementById('scanLog').innerHTML = state.log.map(l=>{
