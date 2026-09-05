@@ -64,6 +64,11 @@ setTimeout(()=>{
   ok('leeg magazijn met laag rek → bestellen', w.eval("bestelLijst().some(p=>p.id==='c')"));
   ok('dit hoeft niet op de bijvullijst', w.eval("!bijvulLijst().some(p=>p.id==='c')"));
 
+  // ── vol rek zonder achtervoorraad-minimum → NIET bestellen ──
+  // (over=0 en min.over=0 mag geen reden zijn; anders komt elk accessoire op de lijst)
+  w.eval("state.producten=[{id:'v',naam:'Hoesje',cat:1,winkel:1,voorraad:1,schap:1,minOver:0}];");
+  ok('vol rek zonder over-minimum staat niet op de bestellijst', w.eval("!bestelLijst().some(p=>p.id==='v')"));
+
   // ── de vier getallen zijn direct in de tabel te bewerken ──
   w.eval("account={team_id:'t1',rol:'eigenaar'};"+
     "state.producten=[{id:'d',naam:'Glas',cat:1,winkel:2,voorraad:5,schap:2,minOver:2}]; zetVeld('d','over',4);");

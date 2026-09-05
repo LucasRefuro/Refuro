@@ -3196,9 +3196,13 @@ function minOverNorm(p){
 }
 /* Bijbestellen bij de leverancier: de achtervoorraad is op of onder z'n
    minimum, óf de winkel staat te laag en er ligt niets meer achter om bij te
-   hangen. Zolang je nog kunt bijhangen hoef je niet te bestellen. */
+   hangen. Zolang je nog kunt bijhangen hoef je niet te bestellen.
+   Houd je geen achtervoorraad bij (min. over 0), dan is een lege achtervoorraad
+   geen reden om te bestellen; anders zou een volle winkel met een leeg magazijn
+   altijd op de bestellijst komen. Dan telt puur het winkel-minimum. */
 function moetBestellen(p){
-  return overVoorraad(p) <= minOverNorm(p) || (schapTekort(p) > 0 && !nogAchterGenoeg(p));
+  const min=minOverNorm(p);
+  return (min>0 && overVoorraad(p) <= min) || (schapTekort(p) > 0 && !nogAchterGenoeg(p));
 }
 /* Zoveel bestellen dat winkel én over samen weer op hun minimum komen. */
 function teBestellen(p){ return Math.max(0, (schapNorm(p) + minOverNorm(p)) - (p.voorraad||0)); }
