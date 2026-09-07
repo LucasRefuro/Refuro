@@ -1699,9 +1699,20 @@
     <div id="vkFeedback"></div>
     <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Los product zoeken of iets buiten het systeem</button>
   </div>
+  <div class="card breed" id="vkMandjeKaart">
+    <h2><svg class="i"><use href="#i-cart"/></svg>Deze verkoop</h2>
+    <div id="vkMandje"></div>
+    <div id="vkMandjeVoet" hidden style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap">
+      <div style="font-size:20px; font-weight:800" id="vkTotaal">€ 0,00</div>
+      <div class="row">
+        <button class="btn ghost" onclick="mandjeLeeg()">Leegmaken</button>
+        <button class="btn actie" id="vkAfrekenen" onclick="afrekenen()"><svg class="i s"><use href="#i-receipt"/></svg>Afrekenen</button>
+      </div>
+    </div>
+  </div>
   <div class="card breed">
     <h2>Snel verkopen</h2>
-    <p class="muted" style="margin-bottom:12px">Kies een soort. Je vult het model en de uitvoering in, en Storvo rekent de categorieprijs. Zet je 'bijbestellen' aan, dan komt het op de bestellijst.</p>
+    <p class="muted" style="margin-bottom:12px">Kies een soort. Je vult het model en de uitvoering in, en Storvo rekent de categorieprijs. Alles komt in 'Deze verkoop'; daarna reken je in één keer af.</p>
     <div class="blokjes" id="vkBlokjes"></div>
   </div>
   <div class="card breed">
@@ -2666,6 +2677,7 @@ const STANDAARD_MODELLEN=[
 ];
 let state=load();
 let mode='in';
+let mandje=[];   /* het winkelmandje van de Verkoop-pagina (niet bewaard, per verkoop) */
 let editId=null;
 let opvolgerVoor=null;   /* id van het uitlopende product waarvoor je nu de opvolger toevoegt */
 let periode='dag';
@@ -3516,8 +3528,8 @@ function hvOpen(){
   ov.className='overlay'; ov.id='hvOverlay';
   ov.onclick=e=>{ if(e.target===ov) hvSluit(); };
   ov.innerHTML='<div class="popup" id="hvPop" style="max-width:560px">'+
-    '<h3>Handmatig verkopen</h3>'+
-    '<p class="pv">Zoek een product uit je voorraad of catalogus, of vul zelf iets in dat niet in het systeem staat.</p>'+
+    '<h3>Toevoegen aan verkoop</h3>'+
+    '<p class="pv">Zoek een product uit je voorraad of catalogus, of vul zelf iets in dat niet in het systeem staat. Het komt in "Deze verkoop"; afrekenen doe je daarna.</p>'+
     '<div class="zoekveld" style="margin-bottom:12px"><label>Naam</label>'+
       '<input id="hvNaam" placeholder="Typ of kies uit de lijst" autocomplete="off" oninput="hvZoek()" onkeydown="zoekToets(event,\'hvLijst\',hvSluitLijst)">'+
       '<div class="zoeklijst" id="hvLijst" hidden></div></div>'+
@@ -3527,18 +3539,11 @@ function hvOpen(){
       '<div style="flex:1; min-width:120px"><label>Verkoopprijs (€) p/st</label><input id="hvVerkoopP" type="number" min="0" step="0.01"></div>'+
       '<div style="flex:1; min-width:120px"><label>Inkoopprijs (€) p/st</label><input id="hvInkoopP" type="number" min="0" step="0.01"></div>'+
     '</div>'+
-    '<label style="margin-top:12px; display:block">Betaalwijze</label>'+
-    '<div class="betaalrow" style="margin-bottom:14px">'+
-      '<button class="btn" id="hvBetPin" onclick="hvBetaalKies(\'pin\')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>'+
-      '<button class="btn secondary" id="hvBetCash" onclick="hvBetaalKies(\'cash\')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>'+
-      '<button class="btn secondary" id="hvBetCashZb" onclick="hvBetaalKies(\'cash_zb\')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>'+
-    '</div>'+
     '<div class="acts" style="flex-direction:row; gap:8px">'+
-      '<button class="btn" style="background:var(--green)" onclick="hvVerkopen()"><svg class="i s"><use href="#i-cart"/></svg>Verkopen</button>'+
+      '<button class="btn" style="background:var(--green)" onclick="hvVerkopen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button>'+
       '<button class="btn ghost" onclick="hvSluit()">Annuleren</button>'+
     '</div></div>';
   document.body.appendChild(ov);
-  hvBetaalKies('pin');
   const f=document.getElementById('hvNaam'); if(f) f.focus();
 }
 function hvSluit(){ const o=document.getElementById('hvOverlay'); if(o) o.remove(); }
@@ -3611,15 +3616,9 @@ function hvVerkopen(){
   const verkoopP=Math.max(0, Number(document.getElementById('hvVerkoopP').value)||0);
   const inkoopP=Math.max(0, Number(document.getElementById('hvInkoopP').value)||0);
   if(!naam){ alert('Vul een naam in.'); return; }
-  let p=null;
-  if(hvProductId!=null){
-    p=state.producten.find(x=>x.id===hvProductId)||null;
-    if(p && (p.voorraad||0)<aantal && !confirm(p.naam+': er zijn er maar '+(p.voorraad||0)+' in voorraad. Toch verkopen?')) return;
-  }
-  boekHandmatig(p, naam, verkoopP, inkoopP, aantal, hvBetaalKeuze);
-  hvSluit(); piep(440);
-  toast('Verkocht ('+betaalNaam(hvBetaalKeuze)+'): '+aantal+'× '+naam, true);
-  herteken();
+  const p = hvProductId!=null ? state.producten.find(x=>x.id===hvProductId) : null;
+  mandjeToevoegen({naam, aantal, verkoopStuk:verkoopP, inkoopStuk:inkoopP, productId: p?p.id:null});
+  hvSluit();
 }
 
 /* ═══════════════ VERKOOP-PAGINA ═══════════════
@@ -3632,6 +3631,7 @@ function vkBetaalKies(b){
   betaal=b;
   const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
   set('vkBetPin', b==='pin'); set('vkBetCash', b==='cash'); set('vkBetCashZb', b==='cash_zb');
+  renderMandje();
 }
 function catIcoon(naam){
   const n=(naam||'').toLowerCase();
@@ -3662,6 +3662,7 @@ function renderVerkoop(){
       `<div style="display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--border)"><span data-onvertaald>${esc(v.naam)}</span><span class="muted">${v.aantal||1}× · ${euro(v.verkoop)} · ${betaalNaam(v.betaal)}</span></div>`
     ).join('') : '<div class="muted">Nog niets verkocht.</div>';
   }
+  renderMandje();
   const s=document.getElementById('vkScan'); if(s) setTimeout(()=>s.focus(),50);
 }
 function vkScanVerwerk(code){
@@ -3673,12 +3674,52 @@ function vkScanVerwerk(code){
     fb.innerHTML='Onbekende code <b>'+esc(code)+'</b>. <button class="btn small" onclick="hvOpen()">Los verkopen</button>';
     piep(200); return;
   }
-  if((p.voorraad||0)<1){ fb.className='err'; fb.textContent=p.naam+', voorraad is al 0'; piep(200); return; }
-  boekVerkoop(p,1,betaal);
   fb.className='ok';
-  fb.textContent='Verkocht ('+betaalNaam(betaal)+'): '+p.naam+' · voorraad: '+p.voorraad+(moetBestellen(p)?' · bestellen':'');
-  piep(440);
-  renderVerkoop();
+  fb.textContent=(p.voorraad||0)<1 ? (p.naam+' toegevoegd (let op: voorraad is 0)') : (p.naam+' toegevoegd');
+  mandjeToevoegen({naam:p.naam, aantal:1, verkoopStuk:Number(p.verkoop)||0, inkoopStuk:Number(p.inkoop)||0, productId:p.id});
+}
+/* Het winkelmandje: je bouwt eerst de hele verkoop op (scannen, zoeken, blokjes),
+   ziet 'm compleet, en rekent daarna in één keer af met één betaalwijze.
+   (mandje staat als top-level variabele hoger in het bestand.) */
+function mandjeToevoegen(item){
+  const zelfde=mandje.find(m=>(m.productId||null)===(item.productId||null) && m.naam===item.naam && m.verkoopStuk===item.verkoopStuk && (m.bijbestelCat||null)===(item.bijbestelCat||null));
+  if(zelfde){ zelfde.aantal+=item.aantal; }
+  else { item.id=uid(); mandje.push(item); }
+  renderMandje(); piep(660);
+}
+function mandjeAantal(id, delta){
+  const m=mandje.find(x=>x.id===id); if(!m) return;
+  m.aantal=Math.max(1, m.aantal+delta); renderMandje();
+}
+function mandjeWeg(id){ mandje=mandje.filter(x=>x.id!==id); renderMandje(); }
+function mandjeLeeg(){ mandje=[]; renderMandje(); }
+function mandjeTotaal(){ return mandje.reduce((s,m)=>s+m.verkoopStuk*m.aantal,0); }
+function renderMandje(){
+  const el=document.getElementById('vkMandje'), voet=document.getElementById('vkMandjeVoet');
+  if(!el) return;
+  if(!mandje.length){ el.innerHTML='<div class="muted">Nog niets. Scan iets, zoek een product, of tik een blokje aan.</div>'; if(voet) voet.hidden=true; return; }
+  el.innerHTML='<div style="overflow-x:auto"><table><tbody>'+mandje.map(m=>
+    `<tr><td><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk</span></td>`+
+    `<td class="num" style="white-space:nowrap"><button class="btn small ghost icoknop" title="Minder" onclick="mandjeAantal(${m.id},-1)">–</button> <b>${m.aantal}</b> <button class="btn small ghost icoknop" title="Meer" onclick="mandjeAantal(${m.id},1)">+</button></td>`+
+    `<td class="num"><b>${euro(m.verkoopStuk*m.aantal)}</b></td>`+
+    `<td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="mandjeWeg(${m.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`
+  ).join('')+'</tbody></table></div>';
+  if(voet) voet.hidden=false;
+  const tot=document.getElementById('vkTotaal'); if(tot) tot.textContent=euro(mandjeTotaal());
+  const af=document.getElementById('vkAfrekenen'); if(af) af.innerHTML='<svg class="i s"><use href="#i-receipt"/></svg>Afrekenen ('+betaalNaam(betaal)+')';
+}
+function afrekenen(){
+  if(!mandje.length){ toast('Er staat nog niks in de verkoop','let-op'); return; }
+  const tot=mandjeTotaal();
+  mandje.forEach(m=>{
+    const p = m.productId!=null ? state.producten.find(x=>x.id===m.productId) : null;
+    boekHandmatig(p, m.naam, m.verkoopStuk, m.inkoopStuk, m.aantal, betaal);
+    if(m.bijbestelCat){ if(!state.bijbestel||typeof state.bijbestel!=='object') state.bijbestel={}; state.bijbestel[m.bijbestelCat]=(Number(state.bijbestel[m.bijbestelCat])||0)+m.aantal; }
+  });
+  save();
+  mandje=[]; piep(440);
+  toast('Afgerekend ('+betaalNaam(betaal)+'): '+euro(tot), true);
+  renderVerkoop(); updateBadge();
 }
 /* Het blokje: een dialoog om snel een generiek product van deze categorie te verkopen. */
 let blokCat=null;
@@ -3707,7 +3748,7 @@ function blokOpen(catId){
     '<label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer"><input type="checkbox" id="bk_bijbestel" checked> Bijbestellen (op de bestellijst zetten)</label>'+
     '<div id="bk_totaal" style="font-weight:700; margin-bottom:12px"></div>'+
     '<div class="acts" style="flex-direction:row; gap:8px">'+
-      '<button class="btn" style="background:var(--green)" onclick="blokVerkoop()"><svg class="i s"><use href="#i-receipt"/></svg>Verkopen ('+betaalNaam(betaal)+')</button>'+
+      '<button class="btn" style="background:var(--green)" onclick="blokVerkoop()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen aan verkoop</button>'+
       '<button class="btn ghost" onclick="blokSluit()">Annuleren</button>'+
     '</div></div>';
   document.body.appendChild(ov);
@@ -3733,15 +3774,9 @@ function blokVerkoop(){
   const svc=blokSvc(); const svcEl=document.getElementById('bk_svc'); const svcAan=svc && svcEl && svcEl.checked;
   const perStuk=prijs + (svcAan ? Number(svc.prijs)||0 : 0);
   const naam=[c.naam, model, uitv].filter(Boolean).join(' ') + (svcAan ? ' + '+svc.label : '');
-  boekHandmatig(null, naam, perStuk, Number(c.inkoop)||0, aantal, betaal);
-  if(document.getElementById('bk_bijbestel').checked){
-    if(!state.bijbestel || typeof state.bijbestel!=='object') state.bijbestel={};
-    state.bijbestel[c.id]=(Number(state.bijbestel[c.id])||0)+aantal;
-    save();
-  }
-  blokSluit(); piep(440);
-  toast('Verkocht ('+betaalNaam(betaal)+'): '+aantal+'× '+naam, true);
-  renderVerkoop(); updateBadge();
+  const bijbestel=document.getElementById('bk_bijbestel').checked;
+  mandjeToevoegen({naam, aantal, verkoopStuk:perStuk, inkoopStuk:Number(c.inkoop)||0, productId:null, bijbestelCat: bijbestel ? c.id : null});
+  blokSluit();
 }
 function blokVarKies(btn){
   const wrap=btn.parentElement;
