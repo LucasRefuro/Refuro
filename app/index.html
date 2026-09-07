@@ -59,6 +59,9 @@
   .planwanneer{font-size:12px; color:var(--muted);}
   .planrij.laat .planwanneer{color:var(--red-tekst); font-weight:700;}
   .planacties{display:flex; gap:4px;}
+  .bkvarr{display:flex; gap:8px; flex-wrap:wrap;}
+  .bkvar{padding:9px 15px; border:1.5px solid var(--border); border-radius:var(--pil); background:var(--card); cursor:pointer; font-weight:600; font-size:13px; font-family:inherit;}
+  .bkvar.aan{background:var(--green); color:#fff; border-color:var(--green);}
   h2{font-size:15px; font-weight:600; margin-bottom:14px;}
   label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500;}
   input,select{width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--text);}
@@ -2722,6 +2725,14 @@ function load(){
   if(!Array.isArray(s.urgent)) s.urgent=[];
   if(!Array.isArray(s.taken)) s.taken=[];
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
+  /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
+     als keuze-uitvoeringen klaar voor het verkoopblokje, tenzij je al iets hebt ingesteld. */
+  if(!s.varSeed){
+    (s.categorieen||[]).forEach(c=>{
+      if(/screenprotector/i.test(c.naam||'') && (!Array.isArray(c.varianten)||!c.varianten.length)) c.varianten=['Clear','Privacy'];
+    });
+    s.varSeed=true;
+  }
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
   if(!Array.isArray(s.kasboek)) s.kasboek=[];
@@ -3685,7 +3696,7 @@ function blokOpen(catId){
     '<div class="row" style="margin-bottom:10px">'+
       '<div style="flex:2; min-width:160px"><label>Welk model?</label><input id="bk_model" list="serieModellen" placeholder="bijv. iPhone 12 mini" autocomplete="off"></div>'+
       (varr.length
-        ? '<div style="flex:1; min-width:130px"><label>Uitvoering</label><select id="bk_var_kies">'+varr.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></div>'
+        ? '<div style="flex:1; min-width:180px"><label>Uitvoering</label><div class="bkvarr">'+varr.map((v,i)=>`<button type="button" class="bkvar${i===0?' aan':''}" data-v="${esc(v)}" onclick="blokVarKies(this)">${esc(v)}</button>`).join('')+'</div><input type="hidden" id="bk_var_val" value="'+esc(varr[0])+'"></div>'
         : '<div style="flex:1; min-width:130px"><label>Uitvoering <span class="muted">(optioneel)</span></label><input id="bk_var_typ" placeholder="bijv. Clear" autocomplete="off"></div>')+
     '</div>'+
     '<div class="row" style="margin-bottom:10px">'+
@@ -3715,7 +3726,7 @@ function blokPrijs(){
 function blokVerkoop(){
   const c=state.categorieen.find(c=>c.id===blokCat); if(!c) return;
   const model=(document.getElementById('bk_model').value||'').trim();
-  const varEl=document.getElementById('bk_var_kies')||document.getElementById('bk_var_typ');
+  const varEl=document.getElementById('bk_var_val')||document.getElementById('bk_var_typ');
   const uitv=varEl?(varEl.value||'').trim():'';
   const aantal=Math.max(1, Math.floor(Number(document.getElementById('bk_aantal').value)||1));
   const prijs=Math.max(0, Number(document.getElementById('bk_prijs').value)||0);
@@ -3731,6 +3742,12 @@ function blokVerkoop(){
   blokSluit(); piep(440);
   toast('Verkocht ('+betaalNaam(betaal)+'): '+aantal+'× '+naam, true);
   renderVerkoop(); updateBadge();
+}
+function blokVarKies(btn){
+  const wrap=btn.parentElement;
+  [...wrap.querySelectorAll('.bkvar')].forEach(b=>b.classList.remove('aan'));
+  btn.classList.add('aan');
+  const v=document.getElementById('bk_var_val'); if(v) v.value=btn.dataset.v||'';
 }
 function blokSluit(){ const o=document.getElementById('blokOverlay'); if(o) o.remove(); }
 /* Instellen wat een blokje vraagt: uitvoeringen (Clear/Privacy) en een service (aanbrengen). */
