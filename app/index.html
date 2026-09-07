@@ -49,6 +49,11 @@
   .pagehead .datum{font-size:13px; color:var(--muted);}
 
   .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:18px; box-shadow:0 1px 3px rgba(27,34,84,.05);}
+  .blokjes{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;}
+  .blokje{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:22px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--card); cursor:pointer; font-weight:700; font-size:15px; text-align:center;}
+  .blokje:hover{border-color:var(--oranje);}
+  .blokje svg{color:var(--oranje); width:26px; height:26px;}
+  .blokje .bkprijs{font-weight:600; font-size:12px; color:var(--muted);}
   h2{font-size:15px; font-weight:600; margin-bottom:14px;}
   label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500;}
   input,select{width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--text);}
@@ -1534,6 +1539,7 @@
   <nav>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
     <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Scannen</button>
+    <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
     <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
@@ -1662,6 +1668,32 @@
   <div class="card breed">
     <h2>Laatste scans</h2>
     <div class="loglist" id="scanLog"></div>
+  </div>
+  </div>
+</section>
+
+<!-- VERKOOP -->
+<section id="tab-verkoop"hidden>
+  <div class="pagehead"><h1>Verkoop</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <div class="betaalrow" id="vkBetaal" style="margin-bottom:14px">
+      <button class="btn" id="vkBetPin" onclick="vkBetaalKies('pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
+      <button class="btn secondary" id="vkBetCash" onclick="vkBetaalKies('cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
+      <button class="btn secondary" id="vkBetCashZb" onclick="vkBetaalKies('cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
+    </div>
+    <input id="vkScan" class="scanbox" placeholder="Scan om te verkopen…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); vkScanVerwerk(this.value.trim()); this.value='';}">
+    <div id="vkFeedback"></div>
+    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Los product zoeken of iets buiten het systeem</button>
+  </div>
+  <div class="card breed">
+    <h2>Snel verkopen</h2>
+    <p class="muted" style="margin-bottom:12px">Kies een soort. Je vult het model en de uitvoering in, en Storvo rekent de categorieprijs. Zet je 'bijbestellen' aan, dan komt het op de bestellijst.</p>
+    <div class="blokjes" id="vkBlokjes"></div>
+  </div>
+  <div class="card breed">
+    <h2>Laatste verkopen</h2>
+    <div class="loglist" id="vkLog"></div>
   </div>
   </div>
 </section>
@@ -2115,6 +2147,11 @@
     </div>
     <p class="muted" style="margin-top:10px">Klik op een code om hem te kopiëren en in het zoekvak van de webshop te plakken. Staat er een artikelcode van de leverancier bij het product, dan gebruikt Storvo die; anders de streepjescode. Met de knop bovenaan krijg je de hele lijst in één keer, met aantal en naam erbij.</p>
     <p class="muted" style="margin-top:10px">Vink aan wanneer je bestelt. Vóór 17:00 besteld betekent morgen binnen, daarna overmorgen. De verwachte leverdatum staat hier en op het dashboard, handig om aan klanten door te geven. Zodra de levering is ingescand en de voorraad boven het minimum komt, verdwijnt de regel.</p>
+  </div>
+  <div class="card" id="bijbestelKaart" hidden>
+    <h2><svg class="i"><use href="#i-cart"/></svg>Verkocht via de blokjes, nog bijbestellen</h2>
+    <div id="bijbestelLijst"></div>
+    <p class="muted" style="margin-top:10px">Elke verkoop via een categorie-blokje telt hier op. Vink af zodra je hebt besteld; de teller gaat dan weer op nul.</p>
   </div>
 </section>
 
@@ -2731,6 +2768,7 @@ function showTab(t){
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   if(t==='dashboard') renderDashboard();
   if(t==='scan') focusScan();
+  if(t==='verkoop') renderVerkoop();
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
@@ -3493,6 +3531,183 @@ function hvVerkopen(){
   hvSluit(); piep(440);
   toast('Verkocht ('+betaalNaam(hvBetaalKeuze)+'): '+aantal+'× '+naam, true);
   herteken();
+}
+
+/* ═══════════════ VERKOOP-PAGINA ═══════════════
+   De toonbank. Betaalwijze bovenaan; verkopen kan via scannen, een los product
+   zoeken (hvOpen), of een categorie-blokje. Bij een blokje vul je model en
+   uitvoering in; Storvo rekent de categorieprijs plus een eventuele service
+   (bijv. screenprotector aanbrengen). Zet je 'bijbestellen' aan, dan telt het op
+   bij de bijbestel-teller van die categorie op de bestellijst. */
+function vkBetaalKies(b){
+  betaal=b;
+  const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
+  set('vkBetPin', b==='pin'); set('vkBetCash', b==='cash'); set('vkBetCashZb', b==='cash_zb');
+}
+function catIcoon(naam){
+  const n=(naam||'').toLowerCase();
+  if(/screen|glas|protector/.test(n)) return 'i-phone';
+  if(/hoes|case|book/.test(n)) return 'i-phone';
+  if(/kabel|cable/.test(n)) return 'i-link';
+  if(/lader|charg|oplad/.test(n)) return 'i-euro';
+  if(/hou|mount|stand/.test(n)) return 'i-box';
+  if(/audio|oordop|speaker/.test(n)) return 'i-message';
+  if(/dienst/.test(n)) return 'i-tool';
+  return 'i-tag';
+}
+function renderVerkoop(){
+  vkBetaalKies(betaal);
+  const blok=document.getElementById('vkBlokjes');
+  if(blok){
+    blok.innerHTML = state.categorieen.map(c=>
+      `<button type="button" class="blokje" onclick="blokOpen(${c.id})">`+
+      `<svg class="i"><use href="#${catIcoon(c.naam)}"/></svg>`+
+      `<span data-onvertaald>${esc(c.naam)}</span>`+
+      `<span class="bkprijs">${c.verkoop>0?euro(c.verkoop):'prijs zelf'}</span></button>`
+    ).join('') || '<span class="muted">Nog geen categorieën. Voeg ze toe bij Instellingen, Categorieën.</span>';
+  }
+  const log=document.getElementById('vkLog');
+  if(log){
+    const items=(state.verkopen||[]).slice(0,12);
+    log.innerHTML = items.length ? items.map(v=>
+      `<div style="display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--border)"><span data-onvertaald>${esc(v.naam)}</span><span class="muted">${v.aantal||1}× · ${euro(v.verkoop)} · ${betaalNaam(v.betaal)}</span></div>`
+    ).join('') : '<div class="muted">Nog niets verkocht.</div>';
+  }
+  const s=document.getElementById('vkScan'); if(s) setTimeout(()=>s.focus(),50);
+}
+function vkScanVerwerk(code){
+  const fb=document.getElementById('vkFeedback');
+  if(!code || !fb) return;
+  const p=state.producten.find(p=>p.barcode===code);
+  if(!p){
+    fb.className='err';
+    fb.innerHTML='Onbekende code <b>'+esc(code)+'</b>. <button class="btn small" onclick="hvOpen()">Los verkopen</button>';
+    piep(200); return;
+  }
+  if((p.voorraad||0)<1){ fb.className='err'; fb.textContent=p.naam+', voorraad is al 0'; piep(200); return; }
+  boekVerkoop(p,1,betaal);
+  fb.className='ok';
+  fb.textContent='Verkocht ('+betaalNaam(betaal)+'): '+p.naam+' · voorraad: '+p.voorraad+(moetBestellen(p)?' · bestellen':'');
+  piep(440);
+  renderVerkoop();
+}
+/* Het blokje: een dialoog om snel een generiek product van deze categorie te verkopen. */
+let blokCat=null;
+function blokOpen(catId){
+  blokSluit();
+  const c=state.categorieen.find(c=>c.id===catId); if(!c) return;
+  blokCat=catId;
+  const varr=Array.isArray(c.varianten)?c.varianten.filter(Boolean):[];
+  const svc=c.service && c.service.label ? c.service : null;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='blokOverlay';
+  ov.onclick=e=>{ if(e.target===ov) blokSluit(); };
+  ov.innerHTML='<div class="popup" id="blokPop" style="max-width:520px">'+
+    '<h3>'+esc(c.naam)+' verkopen</h3>'+
+    '<div class="row" style="margin-bottom:10px">'+
+      '<div style="flex:2; min-width:160px"><label>Welk model?</label><input id="bk_model" list="serieModellen" placeholder="bijv. iPhone 12 mini" autocomplete="off"></div>'+
+      (varr.length
+        ? '<div style="flex:1; min-width:130px"><label>Uitvoering</label><select id="bk_var_kies">'+varr.map(v=>'<option>'+esc(v)+'</option>').join('')+'</select></div>'
+        : '<div style="flex:1; min-width:130px"><label>Uitvoering <span class="muted">(optioneel)</span></label><input id="bk_var_typ" placeholder="bijv. Clear" autocomplete="off"></div>')+
+    '</div>'+
+    '<div class="row" style="margin-bottom:10px">'+
+      '<div style="min-width:90px"><label>Aantal</label><input id="bk_aantal" type="number" min="1" step="1" value="1" oninput="blokPrijs()"></div>'+
+      '<div style="min-width:120px"><label>Prijs p/st (€)</label><input id="bk_prijs" type="number" min="0" step="0.01" value="'+(c.verkoop||0)+'" oninput="blokPrijs()"></div>'+
+    '</div>'+
+    (svc? '<label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer"><input type="checkbox" id="bk_svc" onchange="blokPrijs()"> '+esc(svc.label)+' (+'+euro(svc.prijs)+' per stuk)</label>' : '')+
+    '<label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer"><input type="checkbox" id="bk_bijbestel" checked> Bijbestellen (op de bestellijst zetten)</label>'+
+    '<div id="bk_totaal" style="font-weight:700; margin-bottom:12px"></div>'+
+    '<div class="acts" style="flex-direction:row; gap:8px">'+
+      '<button class="btn" style="background:var(--green)" onclick="blokVerkoop()"><svg class="i s"><use href="#i-receipt"/></svg>Verkopen ('+betaalNaam(betaal)+')</button>'+
+      '<button class="btn ghost" onclick="blokSluit()">Annuleren</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  blokPrijs();
+  const m=document.getElementById('bk_model'); if(m) m.focus();
+}
+function blokSvc(){ const c=state.categorieen.find(c=>c.id===blokCat); return c && c.service && c.service.label ? c.service : null; }
+function blokPrijs(){
+  const el=document.getElementById('bk_totaal'); if(!el) return;
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('bk_aantal').value)||1));
+  const prijs=Math.max(0, Number(document.getElementById('bk_prijs').value)||0);
+  const svc=blokSvc(); const svcEl=document.getElementById('bk_svc');
+  const perStuk=prijs + (svc && svcEl && svcEl.checked ? Number(svc.prijs)||0 : 0);
+  el.textContent='Totaal: '+euro(perStuk*aantal)+'  ('+aantal+'× '+euro(perStuk)+')';
+}
+function blokVerkoop(){
+  const c=state.categorieen.find(c=>c.id===blokCat); if(!c) return;
+  const model=(document.getElementById('bk_model').value||'').trim();
+  const varEl=document.getElementById('bk_var_kies')||document.getElementById('bk_var_typ');
+  const uitv=varEl?(varEl.value||'').trim():'';
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('bk_aantal').value)||1));
+  const prijs=Math.max(0, Number(document.getElementById('bk_prijs').value)||0);
+  const svc=blokSvc(); const svcEl=document.getElementById('bk_svc'); const svcAan=svc && svcEl && svcEl.checked;
+  const perStuk=prijs + (svcAan ? Number(svc.prijs)||0 : 0);
+  const naam=[c.naam, model, uitv].filter(Boolean).join(' ') + (svcAan ? ' + '+svc.label : '');
+  boekHandmatig(null, naam, perStuk, Number(c.inkoop)||0, aantal, betaal);
+  if(document.getElementById('bk_bijbestel').checked){
+    if(!state.bijbestel || typeof state.bijbestel!=='object') state.bijbestel={};
+    state.bijbestel[c.id]=(Number(state.bijbestel[c.id])||0)+aantal;
+    save();
+  }
+  blokSluit(); piep(440);
+  toast('Verkocht ('+betaalNaam(betaal)+'): '+aantal+'× '+naam, true);
+  renderVerkoop(); updateBadge();
+}
+function blokSluit(){ const o=document.getElementById('blokOverlay'); if(o) o.remove(); }
+/* Instellen wat een blokje vraagt: uitvoeringen (Clear/Privacy) en een service (aanbrengen). */
+function blokConfig(catId){
+  const c=state.categorieen.find(c=>c.id===catId); if(!c) return;
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='blokCfgOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const varr=Array.isArray(c.varianten)?c.varianten.join(', '):'';
+  const svc=c.service||{};
+  ov.innerHTML='<div class="popup" style="max-width:520px">'+
+    '<h3>Verkoopblokje: '+esc(c.naam)+'</h3>'+
+    '<p class="muted">Wat kan je kiezen als je dit blokje op de verkooppagina gebruikt?</p>'+
+    '<div style="margin-bottom:10px"><label>Uitvoeringen <span class="muted">(komma-gescheiden)</span></label><input id="cfg_var" value="'+esc(varr)+'" placeholder="bijv. Clear, Privacy"></div>'+
+    '<div class="row" style="margin-bottom:12px">'+
+      '<div style="flex:2; min-width:180px"><label>Service <span class="muted">(optioneel)</span></label><input id="cfg_svc_label" value="'+esc(svc.label||'')+'" placeholder="bijv. Aanbrengen (14 dagen garantie)"></div>'+
+      '<div style="min-width:110px"><label>Prijs service (€)</label><input id="cfg_svc_prijs" type="number" min="0" step="0.01" value="'+(svc.prijs!=null?svc.prijs:'')+'"></div>'+
+    '</div>'+
+    '<div class="acts" style="flex-direction:row; gap:8px">'+
+      '<button class="btn" onclick="blokConfigOp('+catId+')">Opslaan</button>'+
+      '<button class="btn ghost" onclick="blokCfgSluit()">Annuleren</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+}
+function blokCfgSluit(){ const o=document.getElementById('blokCfgOverlay'); if(o) o.remove(); }
+function blokConfigOp(catId){
+  const c=state.categorieen.find(c=>c.id===catId); if(!c) return;
+  c.varianten=(document.getElementById('cfg_var').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const label=(document.getElementById('cfg_svc_label').value||'').trim();
+  const prijs=Number(document.getElementById('cfg_svc_prijs').value)||0;
+  c.service = label ? {label, prijs} : null;
+  save(); blokCfgSluit();
+  toast('Verkoopblokje opgeslagen', true);
+}
+/* De bijbestel-teller op de bestellijst: per categorie hoeveel er via de blokjes
+   verkocht is, gegroepeerd per leverancier, tot je het afvinkt. */
+function bijbestelRender(){
+  const kaart=document.getElementById('bijbestelKaart'), el=document.getElementById('bijbestelLijst');
+  if(!kaart||!el) return;
+  const bb=state.bijbestel||{};
+  const items=state.categorieen.filter(c=>Number(bb[c.id])>0).map(c=>({c, n:Number(bb[c.id])}));
+  if(!items.length){ kaart.hidden=true; el.innerHTML=''; return; }
+  kaart.hidden=false;
+  const groepen={};
+  items.forEach(it=>{ const l=(it.c.leverancier||'').trim()||'Zonder leverancier'; (groepen[l]=groepen[l]||[]).push(it); });
+  const order=Object.keys(groepen).sort((a,b)=>a==='Zonder leverancier'?1:(b==='Zonder leverancier'?-1:a.localeCompare(b)));
+  el.innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>Categorie</th><th class="num">Aantal</th><th></th></tr></thead><tbody>'+
+    order.map(l=>`<tr><td colspan="3" style="background:var(--lblauw); font-weight:700">${esc(l)}</td></tr>`+
+      groepen[l].map(it=>`<tr><td>${esc(it.c.naam)}</td><td class="num"><b>${it.n}</b></td>`+
+        `<td class="num"><button class="btn small ghost icoknop" title="Besteld, teller op nul" onclick="bijbestelKlaar(${it.c.id})"><svg class="i s"><use href="#i-check"/></svg></button></td></tr>`).join('')
+    ).join('')+'</tbody></table></div>';
+}
+function bijbestelKlaar(catId){
+  if(state.bijbestel) delete state.bijbestel[catId];
+  save(); bijbestelRender();
+  toast('Teller op nul', true);
 }
 /* Melding rechtsonder. soort: 'ok' (groen), 'let-op' (amber), 'fout' (rood), anders neutraal. */
 function toast(msg, soort){
@@ -5533,6 +5748,7 @@ function renderBestellen(){
         </div>` : '';
   }
   renderUrgent();
+  bijbestelRender();
   updateBadge();
 }
 /* De urgente bestellijst: handmatig neerzetten wat met spoed besteld moet worden,
@@ -9247,7 +9463,8 @@ function renderCats(){
     `<td><input class="num" type="number" step="1" value="${c.min}" onchange="updCat(${c.id},'min',this.value)"></td>`+
     `<td><input class="num" type="number" step="1" value="${c.bestel}" onchange="updCat(${c.id},'bestel',this.value)"></td>`+
     `<td><input value="${esc(c.leverancier||'')}" list="levsList" placeholder="—" onchange="updCat(${c.id},'leverancier',this.value)"></td>`+
-    `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderCat(${c.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
+    `<td class="num"><button class="btn small ghost icoknop" title="Verkoopblokje instellen (uitvoeringen, service)" onclick="blokConfig(${c.id})"><svg class="i s"><use href="#i-settings"/></svg></button> `+
+    `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderCat(${c.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
 }
 function updCat(id,veld,val){
   const c=state.categorieen.find(c=>c.id===id); if(!c) return;
