@@ -1544,7 +1544,7 @@
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
-    <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span></button>
+    <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
     <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
   </nav>
@@ -2093,6 +2093,16 @@
   <div class="pagehead">
     <h1>Bestellingen</h1>
     <button class="btn ghost" onclick="kopieerBestellijst()"><svg class="i"><use href="#i-clipboard"/></svg>Hele lijst kopiëren</button>
+  </div>
+  <div class="card">
+    <h2><svg class="i"><use href="#i-cart"/></svg>Urgent bestellen <span class="muted">(handmatig)</span></h2>
+    <div class="row" style="margin-bottom:12px">
+      <div style="flex:2; min-width:180px"><label>Wat</label><input id="u_naam" placeholder="bijv. iPhone 15 scherm" autocomplete="off" onkeydown="if(event.key==='Enter')voegUrgentToe()"></div>
+      <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="u_lev" list="levsList" placeholder="bijv. Foneday" autocomplete="off"></div>
+      <div style="min-width:90px"><label>Aantal</label><input id="u_aantal" type="number" min="1" step="1" value="1"></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn actie" onclick="voegUrgentToe()"><svg class="i s"><use href="#i-plus"/></svg>Zet erbij</button></div>
+    </div>
+    <div id="urgentLijst"></div>
   </div>
   <div class="card">
     <div id="eerstHangen"></div>
@@ -2660,6 +2670,8 @@ function load(){
      nu op 1. Eenmalig omzetten, met dezelfde eigen-keuze-bescherming. */
   if(!s.schapNorm1){ if(s.schapNorm===2) s.schapNorm=1; s.schapNorm1=true; }
   if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
+  if(!Array.isArray(s.urgent)) s.urgent=[];
+  if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
   if(!Array.isArray(s.kasboek)) s.kasboek=[];
@@ -5520,7 +5532,37 @@ function renderBestellen(){
           <div style="margin-top:12px"><button class="btn ghost small" onclick="openBijhangen()"><svg class="i s"><use href="#i-scan"/></svg>Nu bijhangen</button></div>
         </div>` : '';
   }
+  renderUrgent();
   updateBadge();
+}
+/* De urgente bestellijst: handmatig neerzetten wat met spoed besteld moet worden,
+   los van de automatische voorraad-bestellijst. Krijgt een eigen rood telbolletje. */
+function voegUrgentToe(){
+  const veld=document.getElementById('u_naam');
+  const naam=veld.value.trim();
+  if(!naam){ veld.focus(); return; }
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('u_aantal').value)||1));
+  const lev=document.getElementById('u_lev').value.trim();
+  if(!Array.isArray(state.urgent)) state.urgent=[];
+  state.urgent.unshift({id:uid(), naam, leverancier:lev, aantal, op:Date.now()});
+  save();
+  veld.value=''; document.getElementById('u_lev').value=''; document.getElementById('u_aantal').value=1;
+  renderUrgent(); updateBadge();
+  toast('Urgent toegevoegd: '+naam, true);
+  veld.focus();
+}
+function urgentWeg(id){
+  state.urgent=(state.urgent||[]).filter(u=>u.id!==id);
+  save(); renderUrgent(); updateBadge();
+}
+function renderUrgent(){
+  const el=document.getElementById('urgentLijst'); if(!el) return;
+  const lijst=state.urgent||[];
+  if(!lijst.length){ el.innerHTML='<div class="muted">Niets urgent. Zet hier neer wat je met spoed moet bestellen.</div>'; return; }
+  el.innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>Wat</th><th>Leverancier</th><th class="num">Aantal</th><th></th></tr></thead><tbody>'+
+    lijst.map(u=>`<tr><td>${esc(u.naam)}</td><td>${u.leverancier?esc(u.leverancier):'<span class="muted">—</span>'}</td><td class="num">${u.aantal}</td>`+
+      `<td class="num"><button class="btn small ghost icoknop" title="Klaar, weghalen" onclick="urgentWeg(${u.id})"><svg class="i s"><use href="#i-check"/></svg></button></td></tr>`).join('')+
+    '</tbody></table></div>';
 }
 function toggleBesteld(id){
   const p=state.producten.find(p=>p.id===id);
@@ -5535,6 +5577,10 @@ function updateBadge(){
   const n=bestelLijst().filter(p=>!p.besteld).length;
   const b=document.getElementById('bestelBadge');
   b.textContent=n; b.style.display=n?'':'none';
+  /* De urgente lijst krijgt een eigen rood telbolletje, naast het gewone. */
+  const un=(state.urgent||[]).length;
+  const ub=document.getElementById('urgentBadge');
+  if(ub){ ub.textContent=un; ub.style.display=un?'':'none'; ub.title=un?un+' urgent te bestellen':''; }
   const lopend=repTeDoen();
   const rn=lopend.filter(r=>repActie(r).urgent).length;
   const rb=document.getElementById('repBadge');
@@ -6099,8 +6145,8 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','instellingen','team'],
-  medewerker:['scan','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen']
+  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','instellingen','team'],
+  medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -6364,8 +6410,8 @@ async function uitloggen(){
 
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
-                      'reparaties','onderdelen','diensten','teams','medewerkers'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten'];
+                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel'];
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
