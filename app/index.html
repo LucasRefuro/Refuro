@@ -2745,6 +2745,18 @@ function load(){
     });
     s.varSeed=true;
   }
+  /* Startprijzen voor de accessoire-categorieën, afgeleid van de mediane
+     dealerprijzen in de catalogus (afgerond voor een generiek toonbankartikel).
+     Alleen invullen waar nog niks staat, zodat we niks van jou overschrijven;
+     bij te stellen bij Instellingen, Categorieën. inkoop/verkoop incl btw. */
+  if(!s.prijsSeed){
+    const sug={opladers:[6.50,19.95], kabels:[4,12.95], audio:[8,24.95], powerbanks:[15,39.95], houders:[4.50,14.95], accessoires:[4,12.95]};
+    (s.categorieen||[]).forEach(c=>{
+      const v=sug[(c.naam||'').toLowerCase().trim()];
+      if(v && !(Number(c.inkoop)>0) && !(Number(c.verkoop)>0)){ c.inkoop=v[0]; c.verkoop=v[1]; }
+    });
+    s.prijsSeed=true;
+  }
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
   if(!Array.isArray(s.kasboek)) s.kasboek=[];
