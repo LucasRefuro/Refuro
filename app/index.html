@@ -1669,7 +1669,11 @@
   <div class="pagehead"><h1>Inscannen</h1></div>
   <div class="modules">
   <div class="card breed">
-    <p class="muted" style="margin-bottom:12px">Nieuwe voorraad die binnenkomt. Elke scan zet er één bij. Verkopen doe je op de <a onclick="showTab('verkoop')">Verkoop</a>-pagina.</p>
+    <p class="muted" style="margin-bottom:12px">Voorraad erbij of eraf, zonder verkoop. Inscannen zet er één bij, uitscannen haalt er één af (bijvoorbeeld kapot, retour of correctie). Verkopen doe je op de <a onclick="showTab('verkoop')">Verkoop</a>-pagina.</p>
+    <div class="modeToggle">
+      <button class="in active" id="modeIn" onclick="setMode('in')"><svg class="i l"><use href="#i-down"/></svg> Inscannen (erbij)</button>
+      <button class="uit" id="modeUit" onclick="setMode('uit')"><svg class="i l"><use href="#i-up"/></svg> Uitscannen (eraf)</button>
+    </div>
     <input id="scanInput" class="scanbox" placeholder="Scan wat er binnenkomt…" autocomplete="off">
     <div id="scanFeedback"></div>
     <div class="row" style="margin-top:12px">
@@ -3325,11 +3329,21 @@ function verwerkScan(code){
     fb.textContent=p.naam+', voorraad is al 0';
     piep(200); return;
   }
-  if(mode==='in') boekIn(p,1); else boekVerkoop(p,1,betaal);
+  if(mode==='in') boekIn(p,1); else boekUit(p,1);
   fb.className='ok';
-  fb.textContent=(mode==='in'?'+1 ':'Verkocht ('+betaalNaam(betaal)+'): ')+p.naam+' · voorraad: '+p.voorraad+(moetBestellen(p)?' · bestellen':'');
+  fb.textContent=(mode==='in'?'+1 ':'-1 ')+p.naam+' · voorraad: '+p.voorraad+(mode==='in'&&moetBestellen(p)?' · nog bestellen':'');
   piep(mode==='in'?880:440);
-  toast((mode==='in'?' +1 ':'Verkocht: ')+p.naam+' voorraad '+p.voorraad, true);
+  toast((mode==='in'?'+1 ':'-1 ')+p.naam+' · voorraad '+p.voorraad, true);
+}
+/* Uitscannen op de Inscannen-pagina: voorraad eraf zonder verkoop (kapot, retour,
+   correctie). Haalt van winkel/over af en logt het, maar boekt geen omzet. */
+function boekUit(p,n){
+  const id=uid();
+  haalUitVoorraad(p,n);
+  state.log.unshift({id, t:Date.now(), naam:p.naam, m:'uit', v:p.voorraad, aantal:n, pid:p.id});
+  state.log=state.log.slice(0,50);
+  save(); renderScanLog(); updateBadge();
+  return id;
 }
 /* ═══════════════ WINKEL EN OVERVOORRAAD ═══════════════
    Van elk product horen er een paar in de winkel te hangen. Wat daarboven
