@@ -1860,10 +1860,11 @@
   <div class="card">
     <div id="npHerkomst"></div>
     <div class="grid" style="margin-bottom:12px">
-      <div><label>Barcode</label><div style="display:flex; gap:6px"><input id="f_barcode" style="flex:1; min-width:0" placeholder="Scan of typ barcode" autocomplete="off" oninput="barcodeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}"><button type="button" class="btn ghost small" onclick="wisBarcode()" title="Barcode leegmaken"><svg class="i s"><use href="#i-trash"/></svg></button></div><input type="hidden" id="f_foto"></div>
+      <div><label>Barcode <span class="muted">(optioneel)</span></label><div style="display:flex; gap:6px"><input id="f_barcode" style="flex:1; min-width:0" placeholder="Scan, typ, of laat leeg" autocomplete="off" oninput="barcodeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}"><button type="button" class="btn ghost small" onclick="wisBarcode()" title="Barcode leegmaken"><svg class="i s"><use href="#i-trash"/></svg></button></div><input type="hidden" id="f_foto"></div>
       <div class="zoekveld"><label>Naam</label><input id="f_naam" placeholder="Typ of scan; kies uit de catalogus" autocomplete="off" oninput="naamZoek()" onfocus="naamZoek()" onblur="setTimeout(naamSluit,180)" onkeydown="naamToets(event)"><div class="zoeklijst" id="naamLijst" hidden></div></div>
       <div><label>Merk</label><input id="f_merk" placeholder="bijv. Apple, Samsung" list="merkenList"><datalist id="merkenList"></datalist></div>
       <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
+      <div><label>Leverancier</label><input id="f_leverancier" placeholder="bijv. Foneday, MondiParts" list="levsList" autocomplete="off"><datalist id="levsList"></datalist></div>
       <div><label>Categorie</label><select id="f_cat" onchange="vulStandaard()"></select></div>
     </div>
     <div class="grid" style="margin-bottom:16px">
@@ -2098,7 +2099,7 @@
     <h2>Te bestellen <span class="muted">(voorraad ≤ minimum)</span></h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th></th><th>Naam</th><th>Code</th><th class="num">Over</th><th class="num">Min. over</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
+      <thead><tr><th></th><th>Naam</th><th>Merk</th><th>Code</th><th class="num">Over</th><th class="num">Min. over</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
       <tbody id="bestelBody"></tbody>
     </table>
     </div>
@@ -3580,6 +3581,10 @@ function vulUitAssortiment(a){
   document.getElementById('f_naam').value=a.naam||'';
   document.getElementById('f_merk').value=a.merk||'';
   if(a.leverancier_id) document.getElementById('f_sku').value=a.leverancier_id;
+  /* De leverancier volgt uit de bron van de catalogus, zodat het product meteen
+     onder de juiste leverancier op de bestellijst komt. */
+  const levNaam={foneday:'Foneday', mondiparts:'MondiParts', onestopmobile:'OneStopMobile'}[a.bron]||'';
+  if(levNaam) document.getElementById('f_leverancier').value=levNaam;
   document.getElementById('f_foto').value=a.foto||'';
   const catId=zorgCategorie(feedCat(a));
   vulCatSelect();
@@ -3657,7 +3662,7 @@ async function naamZoekNu(){
   if(q.length<2){ naamSluit(); return; }
   try{
     const {data}=await sb.from('assortiment')
-      .select('ean,naam,merk,adviesprijs,inkoop,foto,categorie,subcategorie,leverancier_id')
+      .select('ean,naam,merk,adviesprijs,inkoop,foto,categorie,subcategorie,leverancier_id,bron')
       .ilike('naam', '%'+q+'%').limit(8);
     assortResultaten=data||[];
     if(!assortResultaten.length){ naamSluit(); return; }
@@ -3998,10 +4003,13 @@ function bewerk(id){
   document.getElementById('formTitel').textContent='Product bewerken';
   document.getElementById('formOpslaan').textContent='Wijzigingen opslaan';
   vulCatSelect();
-  document.getElementById('f_barcode').value=p.barcode;
+  /* Een interne code (standaardproduct zonder doosje) tonen we niet: dan kun je
+     er de echte streepjescode overheen scannen. */
+  document.getElementById('f_barcode').value=(p.barcode && !String(p.barcode).startsWith('INT-'))?p.barcode:'';
   document.getElementById('f_naam').value=p.naam;
   document.getElementById('f_merk').value=p.merk||'';
   document.getElementById('f_sku').value=p.sku||'';
+  document.getElementById('f_leverancier').value=p.leverancier||'';
   document.getElementById('f_foto').value=p.foto||'';
   document.getElementById('f_cat').value=p.cat;
   document.getElementById('f_inkoop').value=p.inkoop;
@@ -4058,6 +4066,7 @@ function resetForm(){
   document.getElementById('f_naam').value='';
   document.getElementById('f_merk').value='';
   document.getElementById('f_sku').value='';
+  document.getElementById('f_leverancier').value='';
   document.getElementById('f_foto').value='';
   bcVorige=''; bcTraag=false;
   naamSluit();
@@ -4066,6 +4075,7 @@ function resetForm(){
   document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:1;
   document.getElementById('f_bestel').value=state.minOverNorm!=null?state.minOverNorm:0;
   vulMerkenLijst();
+  vulLevsLijst();
   vulStandaard();
 }
 /* De merk-suggesties in het toevoegformulier: de merken die je al gebruikt, zodat
@@ -4074,6 +4084,14 @@ function vulMerkenLijst(){
   const dl=document.getElementById('merkenList'); if(!dl) return;
   const merken=[...new Set(state.producten.map(p=>(p.merk||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   dl.innerHTML=merken.map(m=>`<option value="${esc(m)}"></option>`).join('');
+}
+/* Idem voor de leveranciers: de leveranciers die je al gebruikt plus een paar
+   bekende, zodat je ze consistent spelt en snel kiest. */
+function vulLevsLijst(){
+  const dl=document.getElementById('levsList'); if(!dl) return;
+  const eigen=state.producten.map(p=>(p.leverancier||'').trim()).filter(Boolean);
+  const levs=[...new Set([...eigen,'Foneday','MondiParts','NovaNL','OneStopMobile'])].sort((a,b)=>a.localeCompare(b));
+  dl.innerHTML=levs.map(m=>`<option value="${esc(m)}"></option>`).join('');
 }
 /* ═══════════════ NIEUW PRODUCT MET DE TELEFOON ═══════════════
    Op de computer laten we een QR-code zien. Scan je die met je telefoon, dan
@@ -4458,9 +4476,13 @@ function npTeken(){
 }
 
 function opslaanProduct(){
-  const barcode=document.getElementById('f_barcode').value.trim();
+  let barcode=document.getElementById('f_barcode').value.trim();
   const naam=document.getElementById('f_naam').value.trim();
-  if(!barcode || !naam){ alert('Barcode en naam zijn verplicht.'); return; }
+  if(!naam){ alert('Naam is verplicht.'); return; }
+  /* Barcode mag leeg blijven voor een standaardproduct dat je invoert zonder
+     doosje. Het krijgt dan een eigen interne code; scan je later de echte
+     streepjescode, dan zet je die er via Bewerken overheen. */
+  if(!barcode) barcode='INT-'+uid();
   if(document.getElementById('f_cat').value==='__nieuw'){ alert('Kies eerst een categorie.'); return; }
   const dubbel=state.producten.find(p=>p.barcode===barcode && p.id!==editId);
   if(dubbel){ alert('Barcode bestaat al bij: '+dubbel.naam); return; }
@@ -4472,6 +4494,7 @@ function opslaanProduct(){
     barcode, naam,
     merk:document.getElementById('f_merk').value.trim(),
     sku:document.getElementById('f_sku').value.trim().toUpperCase(),
+    leverancier:document.getElementById('f_leverancier').value.trim(),
     cat:Number(document.getElementById('f_cat').value),
     inkoop:Number(document.getElementById('f_inkoop').value)||0,
     verkoop:Number(document.getElementById('f_verkoop').value)||0,
@@ -5409,7 +5432,26 @@ function eerstBijhangen(){
    hier dus met een knop ernaast, zodat je hem in één klik in het zoekvak van
    de webshop kunt plakken. Heeft een product geen artikelcode, dan pakken we
    de streepjescode; daar kun je bij de meeste groothandels ook op zoeken.  */
-function bestelCode(p){ return (p.sku||'').trim() || p.barcode || ''; }
+function bestelCode(p){
+  const sku=(p.sku||'').trim();
+  if(sku) return sku;
+  /* Een interne code (standaardproduct zonder doosje) is geen bestelcode. */
+  return (p.barcode && !String(p.barcode).startsWith('INT-')) ? p.barcode : '';
+}
+/* De bestellijst gegroepeerd per leverancier: je bestelt immers per leverancier.
+   Zonder leverancier komt onderaan. */
+function bestelPerLeverancier(){
+  const groepen={};
+  for(const p of bestelLijst()){
+    const l=(p.leverancier||'').trim()||'Zonder leverancier';
+    (groepen[l]=groepen[l]||[]).push(p);
+  }
+  return Object.keys(groepen).sort((a,b)=>{
+    if(a==='Zonder leverancier') return 1;
+    if(b==='Zonder leverancier') return -1;
+    return a.localeCompare(b);
+  }).map(l=>({leverancier:l, producten:groepen[l].sort((x,y)=>x.naam.localeCompare(y.naam))}));
+}
 
 function kopieer(tekst, melding){
   const gelukt=()=>toast(melding||'Gekopieerd', true);
@@ -5432,24 +5474,34 @@ function kopieerCode(id){
   kopieer(c, 'Gekopieerd: '+c);
 }
 function kopieerBestellijst(){
-  const lijst=bestelLijst().filter(p=>!p.besteld);
-  if(!lijst.length){ toast('Er staat niets open om te bestellen','let-op'); return; }
-  const regels=lijst.map(p=>[bestelCode(p), teBestellen(p), p.naam].join('\t')).join('\n');
-  kopieer(regels, lijst.length+' regels gekopieerd, klaar om te plakken');
+  const groepen=bestelPerLeverancier()
+    .map(g=>({leverancier:g.leverancier, producten:g.producten.filter(p=>!p.besteld)}))
+    .filter(g=>g.producten.length);
+  const totaal=groepen.reduce((s,g)=>s+g.producten.length,0);
+  if(!totaal){ toast('Er staat niets open om te bestellen','let-op'); return; }
+  const tekst=groepen.map(g=>
+    g.leverancier+'\n'+g.producten.map(p=>[bestelCode(p), teBestellen(p), p.naam].join('\t')).join('\n')
+  ).join('\n\n');
+  kopieer(tekst, totaal+' regels gekopieerd, per leverancier');
 }
 
 function renderBestellen(){
-  const rows=bestelLijst().map(p=>{
-    const c=bestelCode(p);
-    return `<tr class="${p.besteld?'done':''}">`+
-    `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${p.besteld?'checked':''} onchange="toggleBesteld(${p.id})"></td>`+
-    `<td>${esc(p.naam)}</td>`+
-    `<td>${c?`<button class="codeknop" title="Code kopiëren om in de webshop te plakken" onclick="kopieerCode(${p.id})"><span data-onvertaald>${esc(c)}</span><svg class="i s"><use href="#i-clipboard"/></svg></button>`:'<span class="muted">geen code</span>'}</td>`+
-    `<td class="num low">${overVoorraad(p)}</td><td class="num">${minOverNorm(p)}</td>`+
-    `<td class="num"><b>${teBestellen(p)}</b></td>`+
-    `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
-  }).join('');
-  document.getElementById('bestelBody').innerHTML = rows || '<tr><td colspan="7" class="muted">Alles is op voorraad, niets te bestellen.</td></tr>';
+  const groepen=bestelPerLeverancier();
+  const rows=groepen.map(g=>
+    `<tr><td style="background:var(--lblauw)"></td><td colspan="7" style="background:var(--lblauw); font-weight:700; padding-top:14px">${esc(g.leverancier)} <span class="muted" style="font-weight:400">(${g.producten.length})</span></td></tr>`+
+    g.producten.map(p=>{
+      const c=bestelCode(p);
+      return `<tr class="${p.besteld?'done':''}">`+
+      `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${p.besteld?'checked':''} onchange="toggleBesteld(${p.id})"></td>`+
+      `<td>${esc(p.naam)}</td>`+
+      `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
+      `<td>${c?`<button class="codeknop" title="Code kopiëren om in de webshop te plakken" onclick="kopieerCode(${p.id})"><span data-onvertaald>${esc(c)}</span><svg class="i s"><use href="#i-clipboard"/></svg></button>`:'<span class="muted">geen code</span>'}</td>`+
+      `<td class="num low">${overVoorraad(p)}</td><td class="num">${minOverNorm(p)}</td>`+
+      `<td class="num"><b>${teBestellen(p)}</b></td>`+
+      `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
+    }).join('')
+  ).join('');
+  document.getElementById('bestelBody').innerHTML = rows || '<tr><td colspan="8" class="muted">Alles is op voorraad, niets te bestellen.</td></tr>';
 
   /* Wat laag staat maar nog in je eigen magazijn ligt hoort niet besteld te
      worden. Dat zeggen we hier, anders lijkt het alsof het vergeten is. */

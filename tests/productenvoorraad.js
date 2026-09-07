@@ -69,6 +69,11 @@ setTimeout(()=>{
   w.eval("state.producten=[{id:'v',naam:'Hoesje',cat:1,winkel:1,voorraad:1,schap:1,minOver:0}];");
   ok('vol rek zonder over-minimum staat niet op de bestellijst', w.eval("!bestelLijst().some(p=>p.id==='v')"));
 
+  // ── de bestellijst groepeert per leverancier, zonder leverancier onderaan ──
+  w.eval("state.producten=[{id:'g1',naam:'A',cat:1,winkel:0,voorraad:0,schap:1,minOver:0,leverancier:'Foneday'},"+
+    "{id:'g2',naam:'B',cat:1,winkel:0,voorraad:0,schap:1,minOver:0}];");
+  ok('bestellijst groepeert per leverancier', w.eval("var g=bestelPerLeverancier(); g.length===2 && g[0].leverancier==='Foneday' && g[g.length-1].leverancier==='Zonder leverancier'"));
+
   // ── uitlopend product wordt niet meer besteld, ook niet met een leeg rek ──
   w.eval("state.producten=[{id:'u',naam:'Oud hoesje',cat:1,winkel:0,voorraad:0,schap:1,minOver:0,uitlopend:true}];");
   ok('uitlopend product staat niet op de bestellijst', w.eval("!bestelLijst().some(p=>p.id==='u')"));
