@@ -54,6 +54,11 @@
   .blokje:hover{border-color:var(--oranje);}
   .blokje svg{color:var(--oranje); width:26px; height:26px;}
   .blokje .bkprijs{font-weight:600; font-size:12px; color:var(--muted);}
+  .planrij{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .planlinks{display:flex; align-items:center; gap:10px;}
+  .planwanneer{font-size:12px; color:var(--muted);}
+  .planrij.laat .planwanneer{color:var(--red-tekst); font-weight:700;}
+  .planacties{display:flex; gap:4px;}
   h2{font-size:15px; font-weight:600; margin-bottom:14px;}
   label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500;}
   input,select{width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--text);}
@@ -1601,6 +1606,16 @@
   <div class="kpis" id="kpiRow2"></div>
   <div class="modules">
   <div class="card breed">
+    <h2><svg class="i"><use href="#i-clipboard"/></svg>Taken en planning</h2>
+    <div class="row" style="margin-bottom:12px">
+      <div style="flex:2; min-width:200px"><label>Nieuwe taak</label><input id="taak_titel" placeholder="bijv. Bestelling ophalen bij PostNL" autocomplete="off" onkeydown="if(event.key==='Enter')voegTaakToe()"></div>
+      <div style="min-width:180px"><label>Wanneer <span class="muted">(optioneel)</span></label><input id="taak_wanneer" type="datetime-local"></div>
+      <div style="min-width:160px"><label>Bij reparatie <span class="muted">(optioneel)</span></label><select id="taak_rep"></select></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn actie" onclick="voegTaakToe()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
+    </div>
+    <div id="planningLijst"></div>
+  </div>
+  <div class="card breed">
     <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px">
       <h2 id="chartTitel" style="margin-bottom:0">Omzet &amp; winst</h2>
       <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap">
@@ -1775,6 +1790,8 @@
         <div class="zoekveld"><label>Toestel</label><input id="r_toestel" autocomplete="off" placeholder="bijv. iPhone 14" oninput="toestelTyp(); updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce()" onfocus="toestelTyp()" onblur="setTimeout(toestelSluit,180)" onkeydown="toestelToets(event)" onchange="toestelAanvullen()"><div class="zoeklijst" id="toestelLijst" hidden></div></div>
         <div class="zoekveld"><label>Reparatie</label><input id="r_type" autocomplete="off" placeholder="bijv. scherm, batterij, laadpoort" oninput="repTypeTyp(); checkSeal(); updateZoekLinks(); prijsSuggestieDebounce()" onfocus="repTypeTyp()" onblur="setTimeout(repTypeSluit,180)" onkeydown="repTypeToets(event)"><div class="zoeklijst" id="repTypeLijst" hidden></div></div>
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
+        <div><label>Klaar voor <span class="muted">(datum en tijd)</span></label><input id="r_klaar" type="datetime-local"></div>
+        <div><label>Als het klaar is</label><select id="r_voorkeur"><option value="">Kies...</option><option>Zelf ophalen</option><option>Bellen</option><option>Appen</option><option>Mailen</option></select></div>
       </div>
       <div id="prijsSug" class="prijssug" hidden></div>
       <div id="toestelKeuze" hidden></div>
@@ -2703,6 +2720,7 @@ function load(){
   if(!s.schapNorm1){ if(s.schapNorm===2) s.schapNorm=1; s.schapNorm1=true; }
   if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
   if(!Array.isArray(s.urgent)) s.urgent=[];
+  if(!Array.isArray(s.taken)) s.taken=[];
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
   if(!s.aanvNr) s.aanvNr=0;
   if(s.marge==null) s.marge=50;
@@ -2977,8 +2995,71 @@ function hangHerinnering(){
   setTimeout(()=>{ if(bijvulLijst().length) openBijhangen(); }, 500);
 }
 
+/* ═══════════════ TAKEN EN PLANNING ═══════════════
+   Losse taken (datum en tijd, optioneel aan een reparatie gekoppeld) plus de
+   reparatie-deadlines samen op het dashboard, op tijd gesorteerd, te laat in rood. */
+function taakRepOpties(){
+  const sel=document.getElementById('taak_rep'); if(!sel) return;
+  const bewaard=sel.value;
+  const open=(state.reparaties||[]).filter(r=>!['opgehaald','geannuleerd','afgehaald'].includes(r.status));
+  sel.innerHTML='<option value="">Niet koppelen</option>'+open.map(r=>`<option value="${r.id}">${esc(r.nr+' · '+(r.klant?r.klant.naam:''))}</option>`).join('');
+  sel.value=bewaard;
+}
+function voegTaakToe(){
+  const veld=document.getElementById('taak_titel');
+  const titel=veld.value.trim();
+  if(!titel){ veld.focus(); return; }
+  const wanneer=document.getElementById('taak_wanneer').value||'';
+  const repRaw=document.getElementById('taak_rep').value||'';
+  if(!Array.isArray(state.taken)) state.taken=[];
+  state.taken.push({id:uid(), titel, wanneer, repId:repRaw?(Number(repRaw)||repRaw):'', gedaan:false, op:Date.now(), door:gebruiker?gebruiker.naam:null});
+  save();
+  veld.value=''; document.getElementById('taak_wanneer').value=''; document.getElementById('taak_rep').value='';
+  renderPlanning();
+  toast('Taak toegevoegd', true);
+  veld.focus();
+}
+function taakGedaan(id){
+  const t=(state.taken||[]).find(t=>t.id===id); if(!t) return;
+  t.gedaan=!t.gedaan; save(); renderPlanning();
+}
+function taakWeg(id){
+  state.taken=(state.taken||[]).filter(t=>t.id!==id); save(); renderPlanning();
+}
+function planWanneer(iso){
+  if(!iso) return {tekst:'geen datum', laat:false, sort:8.64e15};
+  const d=new Date(iso); const t=d.getTime();
+  if(isNaN(t)) return {tekst:esc(iso), laat:false, sort:8.64e15};
+  return {tekst:d.toLocaleString('nl-NL',{weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}), laat:t<Date.now(), sort:t};
+}
+function renderPlanning(){
+  taakRepOpties();
+  const el=document.getElementById('planningLijst'); if(!el) return;
+  const rijen=[];
+  (state.taken||[]).filter(t=>!t.gedaan).forEach(t=>{
+    const w=planWanneer(t.wanneer);
+    const sub=t.repId ? (state.reparaties||[]).find(r=>r.id===t.repId) : null;
+    rijen.push({sort:w.sort, html:
+      `<div class="planrij${w.laat?' laat':''}"><div class="planlinks"><svg class="i s"><use href="#i-clipboard"/></svg>`+
+      `<span><b data-onvertaald>${esc(t.titel)}</b>${sub?` <span class="muted">· ${esc(sub.nr)}</span>`:''}<br><span class="planwanneer">${esc(w.tekst)}</span></span></div>`+
+      `<div class="planacties"><button class="btn small ghost icoknop" title="Klaar" onclick="taakGedaan(${t.id})"><svg class="i s"><use href="#i-check"/></svg></button>`+
+      `<button class="btn small ghost icoknop" title="Weghalen" onclick="taakWeg(${t.id})"><svg class="i s"><use href="#i-trash"/></svg></button></div></div>`});
+  });
+  (state.reparaties||[]).filter(r=>r.klaarVoor && !['opgehaald','geannuleerd','afgehaald'].includes(r.status)).forEach(r=>{
+    const w=planWanneer(r.klaarVoor);
+    const voork = r.voorkeur ? ' · '+r.voorkeur : '';
+    rijen.push({sort:w.sort, html:
+      `<div class="planrij${w.laat?' laat':''}"><div class="planlinks"><svg class="i s"><use href="#i-wrench"/></svg>`+
+      `<span><b data-onvertaald>${esc((r.nr||'')+' '+(r.toestel||'')+' '+(r.type||''))}</b><br><span class="planwanneer">Klaar voor ${esc(w.tekst+voork)}</span></span></div>`+
+      `<div class="planacties"><button class="btn small ghost" onclick="showTab('reparaties')">Open</button></div></div>`});
+  });
+  rijen.sort((a,b)=>a.sort-b.sort);
+  el.innerHTML = rijen.length ? rijen.map(r=>r.html).join('') : '<div class="muted">Niets gepland. Zet hierboven een taak neer, of geef een reparatie een deadline.</div>';
+}
+
 function renderDashboard(){
   hangHerinnering();
+  renderPlanning();
   const b=bereik(), vb=vorigBereik(b);
   const s=stats(b), vs=vb?stats(vb):null;
   const marge=s.omzet>0?(s.winst/s.omzet*100):0;
@@ -6623,7 +6704,7 @@ async function uitloggen(){
 
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
-                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent'];
+                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken'];
 const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel'];
 
 let syncVersie = 0;          // versie van het document in de cloud
@@ -10345,6 +10426,8 @@ function resetRepForm(){
   document.getElementById('r_notify').value='1';
   document.getElementById('r_inleveren').checked=false;
   document.getElementById('r_exbtw').checked=false;
+  document.getElementById('r_klaar').value='';
+  document.getElementById('r_voorkeur').value='';
   repOnd=[]; renderRepOnd();
   document.getElementById('sealHint').innerHTML='';
   document.getElementById('ondHint').textContent='';
@@ -10386,6 +10469,8 @@ function maakReparatie(){
     type:document.getElementById('r_type').value.trim(),
     prijs, onderdelen:repOnd.map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad})),
     inleveren:document.getElementById('r_inleveren').checked,
+    klaarVoor:document.getElementById('r_klaar').value||null,
+    voorkeur:document.getElementById('r_voorkeur').value||'',
     status:'aangemeld', besteldOp:null,
     door:gebruiker?gebruiker.naam:null,
     tijdlijn:[{status:'aangemeld', t:Date.now()}]
