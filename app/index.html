@@ -2337,7 +2337,7 @@
     <h2><svg class="i"><use href="#i-tag"/></svg>Categorieën</h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th>Naam</th><th class="num">Std. inkoop</th><th class="num">Std. verkoop</th><th class="num">Std. min. winkel</th><th class="num">Std. min. over</th><th></th></tr></thead>
+      <thead><tr><th>Naam</th><th class="num">Std. inkoop</th><th class="num">Std. verkoop</th><th class="num">Std. min. winkel</th><th class="num">Std. min. over</th><th>Leverancier</th><th></th></tr></thead>
       <tbody id="catBody"></tbody>
     </table>
     </div>
@@ -2347,6 +2347,7 @@
       <div><label>Verkoop (€)</label><input id="c_verkoop" type="number" step="0.01" min="0"></div>
       <div><label>Min. winkel</label><input id="c_min" type="number" step="1" min="0" value="1"></div>
       <div><label>Min. over</label><input id="c_bestel" type="number" step="1" min="0" value="0"></div>
+      <div style="min-width:140px"><label>Leverancier</label><input id="c_lev" list="levsList" placeholder="bijv. Foneday" autocomplete="off"></div>
       <div><button class="btn" onclick="voegCatToe()">Toevoegen</button></div>
     </div>
   </div>
@@ -4050,6 +4051,10 @@ function vulStandaard(){
   if(!c) return;
   document.getElementById('f_inkoop').value=c.inkoop;
   document.getElementById('f_verkoop').value=c.verkoop;
+  /* Heeft de categorie een vaste leverancier, en heb je er zelf nog geen ingevuld,
+     dan nemen we die over zodat het product bij de juiste leverancier belandt. */
+  const lev=document.getElementById('f_leverancier');
+  if(c.leverancier && lev && !lev.value.trim()) lev.value=c.leverancier;
   /* De minima komen uit de vaste standaard (Instellingen, Voorraad), niet per
      categorie; de actuele tellingen vul je zelf. */
   document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:1;
@@ -9195,11 +9200,12 @@ function renderCats(){
     `<td><input class="num" type="number" step="0.01" value="${c.verkoop}" onchange="updCat(${c.id},'verkoop',this.value)"></td>`+
     `<td><input class="num" type="number" step="1" value="${c.min}" onchange="updCat(${c.id},'min',this.value)"></td>`+
     `<td><input class="num" type="number" step="1" value="${c.bestel}" onchange="updCat(${c.id},'bestel',this.value)"></td>`+
+    `<td><input value="${esc(c.leverancier||'')}" list="levsList" placeholder="—" onchange="updCat(${c.id},'leverancier',this.value)"></td>`+
     `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderCat(${c.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
 }
 function updCat(id,veld,val){
   const c=state.categorieen.find(c=>c.id===id); if(!c) return;
-  c[veld]=(veld==='naam')?val:Number(val)||0;
+  c[veld]=(veld==='naam'||veld==='leverancier')?val:Number(val)||0;
   save();
   toast('Opgeslagen', true);
 }
@@ -9211,10 +9217,12 @@ function voegCatToe(){
     inkoop:Number(document.getElementById('c_inkoop').value)||0,
     verkoop:Number(document.getElementById('c_verkoop').value)||0,
     min:Number(document.getElementById('c_min').value)||0,
-    bestel:Number(document.getElementById('c_bestel').value)||0
+    bestel:Number(document.getElementById('c_bestel').value)||0,
+    leverancier:document.getElementById('c_lev').value.trim()
   });
   save();
   document.getElementById('c_naam').value='';
+  document.getElementById('c_lev').value='';
   renderCats();
   toast('Categorie toegevoegd: '+naam, true);
 }
