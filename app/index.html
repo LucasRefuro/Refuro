@@ -3749,11 +3749,18 @@ function afrekenen(){
 }
 /* Het blokje: een dialoog om snel een generiek product van deze categorie te verkopen. */
 let blokCat=null;
+/* Een uitvoering kan een simpele naam zijn (oude data) of een eigen mini-product
+   met een eigen inkoop en verkoop (bijv. Clear en Privacy die verschillend inkopen). */
+function varLijst(c){
+  return (Array.isArray(c.varianten)?c.varianten:[]).filter(Boolean).map(v=>
+    typeof v==='string' ? {naam:v, inkoop:null, verkoop:null}
+    : {naam:v.naam||'', inkoop:(v.inkoop!=null?v.inkoop:null), verkoop:(v.verkoop!=null?v.verkoop:null)});
+}
 function blokOpen(catId){
   blokSluit();
   const c=state.categorieen.find(c=>c.id===catId); if(!c) return;
   blokCat=catId;
-  const varr=Array.isArray(c.varianten)?c.varianten.filter(Boolean):[];
+  const varr=varLijst(c);
   const svc=c.service && c.service.label ? c.service : null;
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='blokOverlay';
@@ -3763,12 +3770,12 @@ function blokOpen(catId){
     '<div class="row" style="margin-bottom:10px">'+
       '<div style="flex:2; min-width:160px"><label>Welk model?</label><input id="bk_model" list="serieModellen" placeholder="bijv. iPhone 12 mini" autocomplete="off"></div>'+
       (varr.length
-        ? '<div style="flex:1; min-width:180px"><label>Uitvoering</label><div class="bkvarr">'+varr.map((v,i)=>`<button type="button" class="bkvar${i===0?' aan':''}" data-v="${esc(v)}" onclick="blokVarKies(this)">${esc(v)}</button>`).join('')+'</div><input type="hidden" id="bk_var_val" value="'+esc(varr[0])+'"></div>'
+        ? '<div style="flex:1; min-width:180px"><label>Uitvoering</label><div class="bkvarr">'+varr.map((v,i)=>`<button type="button" class="bkvar${i===0?' aan':''}" data-v="${esc(v.naam)}" data-ink="${v.inkoop!=null?v.inkoop:''}" data-vk="${v.verkoop!=null?v.verkoop:''}" onclick="blokVarKies(this)">${esc(v.naam)}</button>`).join('')+'</div><input type="hidden" id="bk_var_val" value="'+esc(varr[0].naam)+'"><input type="hidden" id="bk_var_ink" value="'+(varr[0].inkoop!=null?varr[0].inkoop:'')+'"></div>'
         : '<div style="flex:1; min-width:130px"><label>Uitvoering <span class="muted">(optioneel)</span></label><input id="bk_var_typ" placeholder="bijv. Clear" autocomplete="off"></div>')+
     '</div>'+
     '<div class="row" style="margin-bottom:10px">'+
       '<div style="min-width:90px"><label>Aantal</label><input id="bk_aantal" type="number" min="1" step="1" value="1" oninput="blokPrijs()"></div>'+
-      '<div style="min-width:120px"><label>Prijs p/st (€)</label><input id="bk_prijs" type="number" min="0" step="0.01" value="'+(c.verkoop||0)+'" oninput="blokPrijs()"></div>'+
+      '<div style="min-width:120px"><label>Prijs p/st (€)</label><input id="bk_prijs" type="number" min="0" step="0.01" value="'+((varr.length && varr[0].verkoop!=null)?varr[0].verkoop:(c.verkoop||0))+'" oninput="blokPrijs()"></div>'+
     '</div>'+
     (svc? '<label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer"><input type="checkbox" id="bk_svc" onchange="blokPrijs()"> '+esc(svc.label)+' (+'+euro(svc.prijs)+' per stuk)</label>' : '')+
     '<label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer"><input type="checkbox" id="bk_bijbestel" checked> Bijbestellen (op de bestellijst zetten)</label>'+
@@ -3799,9 +3806,13 @@ function blokVerkoop(){
   const prijs=Math.max(0, Number(document.getElementById('bk_prijs').value)||0);
   const svc=blokSvc(); const svcEl=document.getElementById('bk_svc'); const svcAan=svc && svcEl && svcEl.checked;
   const perStuk=prijs + (svcAan ? Number(svc.prijs)||0 : 0);
+  /* De inkoop volgt de gekozen uitvoering (bijv. Privacy duurder dan Clear); is er
+     voor de uitvoering geen eigen inkoop, dan de categorie-inkoop. */
+  const inkEl=document.getElementById('bk_var_ink');
+  const inkoopStuk = (inkEl && inkEl.value!=='') ? (Number(inkEl.value)||0) : (Number(c.inkoop)||0);
   const naam=[c.naam, model, uitv].filter(Boolean).join(' ') + (svcAan ? ' + '+svc.label : '');
   const bijbestel=document.getElementById('bk_bijbestel').checked;
-  mandjeToevoegen({naam, aantal, verkoopStuk:perStuk, inkoopStuk:Number(c.inkoop)||0, productId:null, bijbestelCat: bijbestel ? c.id : null});
+  mandjeToevoegen({naam, aantal, verkoopStuk:perStuk, inkoopStuk, productId:null, bijbestelCat: bijbestel ? c.id : null});
   blokSluit();
 }
 function blokVarKies(btn){
@@ -3809,19 +3820,27 @@ function blokVarKies(btn){
   [...wrap.querySelectorAll('.bkvar')].forEach(b=>b.classList.remove('aan'));
   btn.classList.add('aan');
   const v=document.getElementById('bk_var_val'); if(v) v.value=btn.dataset.v||'';
+  const ink=document.getElementById('bk_var_ink'); if(ink) ink.value=btn.dataset.ink||'';
+  /* Heeft deze uitvoering een eigen verkoopprijs, dan vullen we die in. */
+  if(btn.dataset.vk){ const pr=document.getElementById('bk_prijs'); if(pr) pr.value=btn.dataset.vk; }
+  blokPrijs();
 }
 function blokSluit(){ const o=document.getElementById('blokOverlay'); if(o) o.remove(); }
-/* Instellen wat een blokje vraagt: uitvoeringen (Clear/Privacy) en een service (aanbrengen). */
+/* Instellen wat een blokje vraagt: uitvoeringen (elk met een eigen inkoop en
+   verkoop, bijv. Clear en Privacy die verschillend inkopen) en een service. */
+let cfgVarState=[];
 function blokConfig(catId){
   const c=state.categorieen.find(c=>c.id===catId); if(!c) return;
+  cfgVarState=varLijst(c).map(v=>({naam:v.naam, inkoop:v.inkoop, verkoop:v.verkoop}));
+  const svc=c.service||{};
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='blokCfgOverlay';
   ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  const varr=Array.isArray(c.varianten)?c.varianten.join(', '):'';
-  const svc=c.service||{};
-  ov.innerHTML='<div class="popup" style="max-width:520px">'+
+  ov.innerHTML='<div class="popup" style="max-width:560px">'+
     '<h3>Verkoopblokje: '+esc(c.naam)+'</h3>'+
-    '<p class="muted">Wat kan je kiezen als je dit blokje op de verkooppagina gebruikt?</p>'+
-    '<div style="margin-bottom:10px"><label>Uitvoeringen <span class="muted">(komma-gescheiden)</span></label><input id="cfg_var" value="'+esc(varr)+'" placeholder="bijv. Clear, Privacy"></div>'+
+    '<p class="muted">Uitvoeringen die je kunt aanklikken bij de verkoop. Vul per uitvoering een eigen inkoop en verkoop in als die verschillen; laat leeg om de categorieprijs te gebruiken.</p>'+
+    '<div id="cfg_varr" style="margin-bottom:8px"></div>'+
+    '<button class="btn ghost small" onclick="cfgVarRij()"><svg class="i s"><use href="#i-plus"/></svg>Uitvoering erbij</button>'+
+    '<hr style="border:none; border-top:1px solid var(--border); margin:16px 0">'+
     '<div class="row" style="margin-bottom:12px">'+
       '<div style="flex:2; min-width:180px"><label>Service <span class="muted">(optioneel)</span></label><input id="cfg_svc_label" value="'+esc(svc.label||'')+'" placeholder="bijv. Aanbrengen (14 dagen garantie)"></div>'+
       '<div style="min-width:110px"><label>Prijs service (€)</label><input id="cfg_svc_prijs" type="number" min="0" step="0.01" value="'+(svc.prijs!=null?svc.prijs:'')+'"></div>'+
@@ -3831,11 +3850,29 @@ function blokConfig(catId){
       '<button class="btn ghost" onclick="blokCfgSluit()">Annuleren</button>'+
     '</div></div>';
   document.body.appendChild(ov);
+  cfgVarTeken();
 }
+function cfgVarTeken(){
+  const el=document.getElementById('cfg_varr'); if(!el) return;
+  el.innerHTML = cfgVarState.length ? cfgVarState.map((v,i)=>
+    '<div class="row" style="margin-bottom:8px; align-items:flex-end">'+
+    `<div style="flex:2; min-width:120px"><label>Uitvoering</label><input value="${esc(v.naam||'')}" placeholder="bijv. Clear" onchange="cfgVarZet(${i},'naam',this.value)"></div>`+
+    `<div style="min-width:100px"><label>Inkoop (€)</label><input type="number" min="0" step="0.01" value="${v.inkoop!=null?v.inkoop:''}" placeholder="cat." onchange="cfgVarZet(${i},'inkoop',this.value)"></div>`+
+    `<div style="min-width:100px"><label>Verkoop (€)</label><input type="number" min="0" step="0.01" value="${v.verkoop!=null?v.verkoop:''}" placeholder="cat." onchange="cfgVarZet(${i},'verkoop',this.value)"></div>`+
+    `<div><button class="btn small ghost icoknop" title="Weg" onclick="cfgVarWeg(${i})"><svg class="i s"><use href="#i-trash"/></svg></button></div></div>`
+  ).join('') : '<div class="muted" style="margin-bottom:8px">Nog geen uitvoeringen. Voeg er een toe, of laat leeg voor alleen een vrij tekstveld.</div>';
+}
+function cfgVarZet(i, veld, val){
+  if(!cfgVarState[i]) return;
+  if(veld==='naam') cfgVarState[i].naam=val;
+  else cfgVarState[i][veld] = (val===''?null:(Number(val)||0));
+}
+function cfgVarRij(){ cfgVarState.push({naam:'', inkoop:null, verkoop:null}); cfgVarTeken(); }
+function cfgVarWeg(i){ cfgVarState.splice(i,1); cfgVarTeken(); }
 function blokCfgSluit(){ const o=document.getElementById('blokCfgOverlay'); if(o) o.remove(); }
 function blokConfigOp(catId){
   const c=state.categorieen.find(c=>c.id===catId); if(!c) return;
-  c.varianten=(document.getElementById('cfg_var').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  c.varianten=cfgVarState.filter(v=>(v.naam||'').trim()).map(v=>({naam:v.naam.trim(), inkoop:v.inkoop, verkoop:v.verkoop}));
   const label=(document.getElementById('cfg_svc_label').value||'').trim();
   const prijs=Number(document.getElementById('cfg_svc_prijs').value)||0;
   c.service = label ? {label, prijs} : null;
