@@ -1538,7 +1538,7 @@
   </div>
   <nav>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
-    <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Scannen</button>
+    <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Inscannen</button>
     <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
     <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
@@ -1646,24 +1646,19 @@
   </div>
 </section>
 
-<!-- SCANNEN -->
+<!-- INSCANNEN -->
 <section id="tab-scan"hidden>
-  <div class="pagehead"><h1>Scannen</h1></div>
+  <div class="pagehead"><h1>Inscannen</h1></div>
   <div class="modules">
   <div class="card breed">
-    <div class="modeToggle">
-      <button class="in active" id="modeIn" onclick="setMode('in')"><svg class="i l"><use href="#i-down"/></svg> Inscannen</button>
-      <button class="uit" id="modeUit" onclick="setMode('uit')"><svg class="i l"><use href="#i-up"/></svg> Uitscannen en verkoop</button>
-    </div>
-    <div class="betaalrow" id="scanBetaal" style="display:none; margin-bottom:12px">
-      <button class="btn" id="betPin" onclick="setBetaal('pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
-      <button class="btn secondary" id="betCash" onclick="setBetaal('cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
-      <button class="btn secondary" id="betCashZb" onclick="setBetaal('cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
-    </div>
-    <input id="scanInput" class="scanbox" placeholder="Scan barcode…" autocomplete="off">
+    <p class="muted" style="margin-bottom:12px">Nieuwe voorraad die binnenkomt. Elke scan zet er één bij. Verkopen doe je op de <a onclick="showTab('verkoop')">Verkoop</a>-pagina.</p>
+    <input id="scanInput" class="scanbox" placeholder="Scan wat er binnenkomt…" autocomplete="off">
     <div id="scanFeedback"></div>
-    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-cart"/></svg>Handmatig verkopen zonder scanner</button>
-    <p class="muted" style="margin-top:12px">Elke scan boekt één stuk. Kwam er een bestelling binnen met meer stuks, scan dan één keer en pas daarna het aantal aan bij Laatste scans. Uitscannen telt als verkoop met pin, cash met bon of cash zonder bon en komt in de dashboardcijfers.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" onclick="showTab('nieuw')"><svg class="i s"><use href="#i-plus"/></svg>Nieuw product</button>
+      <button class="btn ghost" onclick="naarSnelToevoegen()"><svg class="i s"><use href="#i-zap"/></svg>Serie inscannen</button>
+    </div>
+    <p class="muted" style="margin-top:12px">Kwam er een bestelling binnen met meer stuks? Scan één keer en pas daarna het aantal aan bij Laatste scans. Een onbekende code kun je meteen aanmaken.</p>
   </div>
   <div class="card breed">
     <h2>Laatste scans</h2>
@@ -3181,18 +3176,20 @@ function focusScan(){ setTimeout(()=>scanInput.focus(),50); }
 document.addEventListener('click',e=>{
   if(!document.getElementById('tab-scan').hidden && !['INPUT','SELECT','BUTTON'].includes(e.target.tagName)) focusScan();
 });
+/* De Inscannen-pagina kent alleen nog inscannen; verkopen zit op de Verkoop-pagina.
+   setMode/setBetaal blijven bestaan omdat de scan-popup ze aanroept, maar de oude
+   knoppen zijn weg, dus we werken alleen bij wat er nog is. */
 function setMode(m){
   mode=m;
-  document.getElementById('modeIn').classList.toggle('active', m==='in');
-  document.getElementById('modeUit').classList.toggle('active', m==='uit');
-  document.getElementById('scanBetaal').style.display = m==='uit'?'flex':'none';
+  const mi=document.getElementById('modeIn'); if(mi) mi.classList.toggle('active', m==='in');
+  const mu=document.getElementById('modeUit'); if(mu) mu.classList.toggle('active', m==='uit');
+  const sb=document.getElementById('scanBetaal'); if(sb) sb.style.display = m==='uit'?'flex':'none';
   focusScan();
 }
 function setBetaal(b){
   betaal=b;
-  document.getElementById('betPin').className = b==='pin'?'btn':'btn secondary';
-  document.getElementById('betCash').className = b==='cash'?'btn':'btn secondary';
-  document.getElementById('betCashZb').className = b==='cash_zb'?'btn':'btn secondary';
+  const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
+  set('betPin', b==='pin'); set('betCash', b==='cash'); set('betCashZb', b==='cash_zb');
   focusScan();
 }
 scanInput.addEventListener('keydown',e=>{
