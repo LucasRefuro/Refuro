@@ -3596,7 +3596,17 @@ async function hvZoekNu(){
     cat=data||[];
   }catch(e){ /* catalogus offline: alleen eigen producten */ }
   hvAssortResult=cat;
-  if(!eigen.length && !cat.length){ hvSluitLijst(); return; }
+  /* Ook losse toestellen (laptops e.d. uit de hardware-tabel) die nog niet verkocht
+     zijn. Die verkoop je via hun eigen scherm (btw-keuze, gaat offline in de webshop). */
+  const hw=(typeof hwData!=='undefined'?hwData:[])
+    .filter(h=>h.status!=='verkocht' && [h.merk,h.model,h.serienummer].filter(Boolean).join(' ').toLowerCase().includes(ql))
+    .slice(0,6);
+  if(!eigen.length && !cat.length && !hw.length){ hvSluitLijst(); return; }
+  const rijenHw=hw.map(h=>
+    '<button type="button" class="zoekrij" onmousedown="event.preventDefault(); hvKiesHardware(\''+h.id+'\')">'+
+    '<span class="zrnaam">'+esc([h.merk,h.model].filter(Boolean).join(' '))+'</span>'+
+    '<span class="zrprijs">'+euro(h.verkoop||0)+'</span>'+
+    '<span class="zrvoor">toestel'+(h.serienummer?' · '+esc(h.serienummer):'')+'</span></button>').join('');
   const rijenEigen=eigen.map(p=>
     '<button type="button" class="zoekrij" onmousedown="event.preventDefault(); hvKiesEigen('+p.id+')">'+
     '<span class="zrnaam">'+esc(p.naam)+'</span>'+
@@ -3608,7 +3618,11 @@ async function hvZoekNu(){
     '<span class="zrprijs">'+euro(a.adviesprijs||0)+'</span>'+
     '<span class="zrvoor">catalogus · '+esc(a.merk||'')+'</span></button>').join('');
   lijst.hidden=false;
-  lijst.innerHTML=rijenEigen+rijenCat;
+  lijst.innerHTML=rijenHw+rijenEigen+rijenCat;
+}
+function hvKiesHardware(id){
+  hvSluit();
+  if(typeof hwVerkoop==='function') hwVerkoop(id);
 }
 function hvKiesEigen(id){
   const p=state.producten.find(x=>x.id===id); if(!p) return;
@@ -3672,6 +3686,9 @@ function catIcoon(naam){
 }
 function renderVerkoop(){
   vkBetaalKies(betaal);
+  /* Hardware (laptops e.d.) laden zodat je ze via 'Los product zoeken' kunt vinden
+     en verkopen. Stil, en alleen als de gebruiker hardware mag zien. */
+  if(typeof hwData!=='undefined' && !hwData.length && typeof mag==='function' && mag('hardware') && typeof hwLaad==='function') hwLaad(true);
   const blok=document.getElementById('vkBlokjes');
   if(blok){
     blok.innerHTML = state.categorieen.map(c=>
