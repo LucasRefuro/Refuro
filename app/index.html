@@ -1694,11 +1694,6 @@
   <div class="pagehead"><h1>Verkoop</h1></div>
   <div class="modules">
   <div class="card breed">
-    <div class="betaalrow" id="vkBetaal" style="margin-bottom:14px">
-      <button class="btn" id="vkBetPin" onclick="vkBetaalKies('pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
-      <button class="btn secondary" id="vkBetCash" onclick="vkBetaalKies('cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
-      <button class="btn secondary" id="vkBetCashZb" onclick="vkBetaalKies('cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
-    </div>
     <input id="vkScan" class="scanbox" placeholder="Scan om te verkopen…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); vkScanVerwerk(this.value.trim()); this.value='';}">
     <div id="vkFeedback"></div>
     <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Los product zoeken of iets buiten het systeem</button>
@@ -1706,11 +1701,20 @@
   <div class="card breed" id="vkMandjeKaart">
     <h2><svg class="i"><use href="#i-cart"/></svg>Deze verkoop</h2>
     <div id="vkMandje"></div>
-    <div id="vkMandjeVoet" hidden style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap">
-      <div style="font-size:20px; font-weight:800" id="vkTotaal">€ 0,00</div>
-      <div class="row">
+    <div id="vkMandjeVoet" hidden style="margin-top:14px">
+      <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+        <div style="min-width:150px"><label>Korting (€)</label><input id="vkKorting" type="number" min="0" step="0.01" value="0" oninput="renderMandje()"></div>
+        <div style="margin-left:auto; text-align:right">
+          <div class="muted" id="vkSubtotaal"></div>
+          <div style="font-size:22px; font-weight:800" id="vkTotaal">€ 0,00</div>
+        </div>
+      </div>
+      <label style="margin-top:12px; display:block">Afrekenen met</label>
+      <div class="betaalrow">
+        <button class="btn" style="background:var(--green)" onclick="afrekenen('pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
+        <button class="btn" onclick="afrekenen('cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
+        <button class="btn" onclick="afrekenen('cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
         <button class="btn ghost" onclick="mandjeLeeg()">Leegmaken</button>
-        <button class="btn actie" id="vkAfrekenen" onclick="afrekenen()"><svg class="i s"><use href="#i-receipt"/></svg>Afrekenen</button>
       </div>
     </div>
   </div>
@@ -2741,6 +2745,7 @@ function load(){
   if(!Array.isArray(s.urgent)) s.urgent=[];
   if(!Array.isArray(s.taken)) s.taken=[];
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
+  if(!s.bijbestelBesteld || typeof s.bijbestelBesteld!=='object') s.bijbestelBesteld={};
   /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
      als keuze-uitvoeringen klaar voor het verkoopblokje, tenzij je al iets hebt ingesteld. */
   if(!s.varSeed){
@@ -3473,6 +3478,10 @@ document.addEventListener('keydown',e=>{
   if(e.key.length===1) gBuf+=e.key;
 });
 function scanPopup(code){
+  /* Op de Verkoop-pagina hoort een scan altijd in het winkelmandje, niet in de
+     losse verkoop-popup. Zo valt een order nooit stilletjes uiteen. */
+  const vk=document.getElementById('tab-verkoop');
+  if(vk && !vk.hidden){ vkScanVerwerk(code); const s=document.getElementById('vkScan'); if(s){ try{ s.focus(); }catch(e){} } return; }
   const p=state.producten.find(p=>p.barcode===code);
   if(!p){
     piep(200);
@@ -3532,14 +3541,18 @@ function herteken(){
    inkoop en aantal in. Zit het in je voorraad, dan gaat het van de voorraad af;
    is het een los product, dan telt het gewoon mee in de omzet en het kasboek
    zonder de voorraad te raken. */
-function boekHandmatig(p, naam, verkoopStuk, inkoopStuk, aantal, bet){
+function boekHandmatig(p, naam, verkoopStuk, inkoopStuk, aantal, bet, cat, bijbestel){
   const id=uid();
   let uitMagazijn=0;
   if(p) uitMagazijn=haalUitVoorraad(p, aantal);
   kasVerkoop(verkoopStuk*aantal, bet, naam);
   if(uitMagazijn>0) toast(uitMagazijn+'× '+naam+' kwam uit het magazijn. Hang bij.','let-op');
+  /* cat wordt altijd vastgelegd (ook voor blokje-verkopen zonder eigen product),
+     zodat de omzet/winst bij de juiste categorie landt. bijbestel markeert een
+     blokje-verkoop die op de bestellijst moet; daaruit leiden we de teller af. */
   state.verkopen.unshift({id, t:Date.now(), naam, verkoop:verkoopStuk*aantal, inkoop:inkoopStuk*aantal,
-    aantal, betaal:bet, cat:p?p.cat:null, door:gebruiker?gebruiker.naam:null, los:p?undefined:true});
+    aantal, betaal:bet, cat:(cat!=null?cat:(p?p.cat:null)), door:gebruiker?gebruiker.naam:null,
+    los:p?undefined:true, pid:p?p.id:undefined, bijbestel:bijbestel?true:undefined});
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   if(p){ state.log.unshift({id, t:Date.now(), naam, m:'uit', v:p.voorraad, aantal, pid:p.id}); state.log=state.log.slice(0,50); }
   save(); renderScanLog(); updateBadge();
@@ -3621,8 +3634,11 @@ async function hvZoekNu(){
   lijst.innerHTML=rijenHw+rijenEigen+rijenCat;
 }
 function hvKiesHardware(id){
+  const h=(typeof hwData!=='undefined'?hwData:[]).find(x=>x.id===id); if(!h) return;
+  if(h.verkoop==null){ toast('Dit toestel heeft nog geen vraagprijs; zet die eerst bij Hardware.','let-op'); return; }
   hvSluit();
-  if(typeof hwVerkoop==='function') hwVerkoop(id);
+  const naam=[h.merk,h.model].filter(Boolean).join(' ')+(h.serienummer?' ('+h.serienummer+')':'');
+  mandjeToevoegen({naam, aantal:1, verkoopStuk:Number(h.verkoop)||0, inkoopStuk:Number(h.inkoop)||0, hwId:h.id, marge:(h.marge!==false)});
 }
 function hvKiesEigen(id){
   const p=state.producten.find(x=>x.id===id); if(!p) return;
@@ -3667,11 +3683,11 @@ function hvVerkopen(){
    uitvoering in; Storvo rekent de categorieprijs plus een eventuele service
    (bijv. screenprotector aanbrengen). Zet je 'bijbestellen' aan, dan telt het op
    bij de bijbestel-teller van die categorie op de bestellijst. */
-function vkBetaalKies(b){
-  betaal=b;
-  const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
-  set('vkBetPin', b==='pin'); set('vkBetCash', b==='cash'); set('vkBetCashZb', b==='cash_zb');
-  renderMandje();
+/* De modellenlijst voor de datalist 'Welk model?' in de blokjes, gedeeld met de
+   serie-flow, zodat de suggesties ook op de Verkoop-pagina werken. */
+function vulModellenLijst(){
+  const dl=document.getElementById('serieModellen'); if(!dl) return;
+  dl.innerHTML=(state.modellen||[]).map(m=>`<option value="${esc(m.naam)}">`).join('');
 }
 function catIcoon(naam){
   const n=(naam||'').toLowerCase();
@@ -3685,84 +3701,154 @@ function catIcoon(naam){
   return 'i-tag';
 }
 function renderVerkoop(){
-  vkBetaalKies(betaal);
+  if(!mandje.length) mandjeHerstel();   /* na een verse pagina de order terughalen */
   /* Hardware (laptops e.d.) laden zodat je ze via 'Los product zoeken' kunt vinden
-     en verkopen. Stil, en alleen als de gebruiker hardware mag zien. */
+     en meenemen in de verkoop. Stil, en alleen als de gebruiker hardware mag zien. */
   if(typeof hwData!=='undefined' && !hwData.length && typeof mag==='function' && mag('hardware') && typeof hwLaad==='function') hwLaad(true);
+  vulModellenLijst();
+  const fb=document.getElementById('vkFeedback'); if(fb){ fb.className=''; fb.textContent=''; }
   const blok=document.getElementById('vkBlokjes');
   if(blok){
     blok.innerHTML = state.categorieen.map(c=>
-      `<button type="button" class="blokje" onclick="blokOpen(${c.id})">`+
-      `<svg class="i"><use href="#${catIcoon(c.naam)}"/></svg>`+
-      `<span data-onvertaald>${esc(c.naam)}</span>`+
-      `<span class="bkprijs">${c.verkoop>0?euro(c.verkoop):'prijs zelf'}</span></button>`
+      `<button type="button" class="blokje" onclick="blokOpen(${c.id})"><svg class="i"><use href="#${catIcoon(c.naam)}"/></svg><span data-onvertaald>${esc(c.naam)}</span><span class="bkprijs">${c.verkoop>0?euro(c.verkoop):'prijs zelf'}</span></button>`
     ).join('') || '<span class="muted">Nog geen categorieën. Voeg ze toe bij Instellingen, Categorieën.</span>';
   }
   const log=document.getElementById('vkLog');
   if(log){
     const items=(state.verkopen||[]).slice(0,12);
     log.innerHTML = items.length ? items.map(v=>
-      `<div style="display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--border)"><span data-onvertaald>${esc(v.naam)}</span><span class="muted">${v.aantal||1}× · ${euro(v.verkoop)} · ${betaalNaam(v.betaal)}</span></div>`
+      `<div style="display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--border)"><span data-onvertaald>${esc(v.naam)}</span><span style="display:flex; gap:10px; align-items:center; white-space:nowrap"><span class="muted">${v.aantal||1}× · ${euro(v.verkoop)} · ${betaalNaam(v.betaal)}</span><button class="btn small ghost" onclick="verkoopTerug('${v.id}')">Terugdraaien</button></span></div>`
     ).join('') : '<div class="muted">Nog niets verkocht.</div>';
   }
   renderMandje();
-  const s=document.getElementById('vkScan'); if(s) setTimeout(()=>s.focus(),50);
+  const s=document.getElementById('vkScan'); if(s) setTimeout(()=>{ try{ s.focus(); }catch(e){} },50);
 }
 function vkScanVerwerk(code){
   const fb=document.getElementById('vkFeedback');
-  if(!code || !fb) return;
+  if(!code) return;
   const p=state.producten.find(p=>p.barcode===code);
   if(!p){
-    fb.className='err';
-    fb.innerHTML='Onbekende code <b>'+esc(code)+'</b>. <button class="btn small" onclick="hvOpen()">Los verkopen</button>';
+    if(fb){ fb.className='err'; fb.innerHTML='Onbekende code <b>'+esc(code)+'</b>. <button class="btn small" onclick="hvOpen()">Los verkopen</button>'; }
     piep(200); return;
   }
-  fb.className='ok';
-  fb.textContent=(p.voorraad||0)<1 ? (p.naam+' toegevoegd (let op: voorraad is 0)') : (p.naam+' toegevoegd');
-  mandjeToevoegen({naam:p.naam, aantal:1, verkoopStuk:Number(p.verkoop)||0, inkoopStuk:Number(p.inkoop)||0, productId:p.id});
+  if(fb){ fb.className='ok'; fb.textContent=(p.voorraad||0)<1 ? (p.naam+' toegevoegd (let op: voorraad is 0)') : (p.naam+' toegevoegd'); }
+  mandjeToevoegen({naam:p.naam, aantal:1, verkoopStuk:Number(p.verkoop)||0, inkoopStuk:Number(p.inkoop)||0, productId:p.id, cat:p.cat});
 }
-/* Het winkelmandje: je bouwt eerst de hele verkoop op (scannen, zoeken, blokjes),
-   ziet 'm compleet, en rekent daarna in één keer af met één betaalwijze.
-   (mandje staat als top-level variabele hoger in het bestand.) */
+/* Het winkelmandje: je bouwt eerst de hele verkoop op (scannen, zoeken, blokjes,
+   losse toestellen), ziet 'm compleet, en rekent daarna in één keer af met één
+   betaalwijze. Het mandje wordt lokaal bewaard zodat een verse pagina de order
+   niet weggooit; het gaat niet naar de cloud (per apparaat, per verkoop). */
+function mandjeFocus(){ const s=document.getElementById('vkScan'), t=document.getElementById('tab-verkoop'); if(s && t && !t.hidden) setTimeout(()=>{ try{ s.focus(); }catch(e){} },30); }
+function mandjeBewaar(){ try{ localStorage.setItem('storvo_mandje', JSON.stringify(mandje)); }catch(e){} }
+function mandjeHerstel(){ try{ const r=localStorage.getItem('storvo_mandje'); if(r){ const a=JSON.parse(r); if(Array.isArray(a)) mandje=a; } }catch(e){} }
 function mandjeToevoegen(item){
-  const zelfde=mandje.find(m=>(m.productId||null)===(item.productId||null) && m.naam===item.naam && m.verkoopStuk===item.verkoopStuk && (m.bijbestelCat||null)===(item.bijbestelCat||null));
+  const zelfde=mandje.find(m=>!m.hwId && !item.hwId && (m.productId||null)===(item.productId||null) && m.naam===item.naam && m.verkoopStuk===item.verkoopStuk && m.inkoopStuk===item.inkoopStuk && (m.bijbestelCat||null)===(item.bijbestelCat||null));
   if(zelfde){ zelfde.aantal+=item.aantal; }
   else { item.id=uid(); mandje.push(item); }
-  renderMandje(); piep(660);
+  mandjeBewaar(); renderMandje(); piep(660); mandjeFocus();
 }
 function mandjeAantal(id, delta){
-  const m=mandje.find(x=>x.id===id); if(!m) return;
-  m.aantal=Math.max(1, m.aantal+delta); renderMandje();
+  const m=mandje.find(x=>x.id===id); if(!m || m.hwId) return;
+  m.aantal=Math.max(1, m.aantal+delta); mandjeBewaar(); renderMandje();
 }
-function mandjeWeg(id){ mandje=mandje.filter(x=>x.id!==id); renderMandje(); }
-function mandjeLeeg(){ mandje=[]; renderMandje(); }
-function mandjeTotaal(){ return mandje.reduce((s,m)=>s+m.verkoopStuk*m.aantal,0); }
+function mandjeWeg(id){ mandje=mandje.filter(x=>x.id!==id); mandjeBewaar(); renderMandje(); }
+function mandjeLeeg(){ mandje=[]; mandjeBewaar(); renderMandje(); }
+function mandjeSubtotaal(){ return mandje.reduce((s,m)=>s+m.verkoopStuk*m.aantal,0); }
+function mandjeKorting(){ const el=document.getElementById('vkKorting'); return Math.min(mandjeSubtotaal(), Math.max(0, Number(el&&el.value)||0)); }
+function mandjeTotaal(){ return Math.max(0, mandjeSubtotaal()-mandjeKorting()); }
 function renderMandje(){
   const el=document.getElementById('vkMandje'), voet=document.getElementById('vkMandjeVoet');
   if(!el) return;
-  if(!mandje.length){ el.innerHTML='<div class="muted">Nog niets. Scan iets, zoek een product, of tik een blokje aan.</div>'; if(voet) voet.hidden=true; return; }
+  if(!mandje.length){ el.innerHTML='<div class="muted">Nog niets. Scan iets, zoek een product, of tik een blokje aan.</div>'; if(voet) voet.hidden=true; const k=document.getElementById('vkKorting'); if(k) k.value=0; return; }
   el.innerHTML='<div style="overflow-x:auto"><table><tbody>'+mandje.map(m=>
-    `<tr><td><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk</span></td>`+
-    `<td class="num" style="white-space:nowrap"><button class="btn small ghost icoknop" title="Minder" onclick="mandjeAantal(${m.id},-1)">–</button> <b>${m.aantal}</b> <button class="btn small ghost icoknop" title="Meer" onclick="mandjeAantal(${m.id},1)">+</button></td>`+
+    `<tr><td><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk${m.hwId?' · los toestel':''}</span></td>`+
+    `<td class="num" style="white-space:nowrap">`+(m.hwId?'<b>1</b>':`<button class="btn small ghost icoknop" title="Minder" onclick="mandjeAantal(${m.id},-1)">−</button> <b>${m.aantal}</b> <button class="btn small ghost icoknop" title="Meer" onclick="mandjeAantal(${m.id},1)">+</button>`)+`</td>`+
     `<td class="num"><b>${euro(m.verkoopStuk*m.aantal)}</b></td>`+
     `<td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="mandjeWeg(${m.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`
   ).join('')+'</tbody></table></div>';
   if(voet) voet.hidden=false;
-  const tot=document.getElementById('vkTotaal'); if(tot) tot.textContent=euro(mandjeTotaal());
-  const af=document.getElementById('vkAfrekenen'); if(af) af.innerHTML='<svg class="i s"><use href="#i-receipt"/></svg>Afrekenen ('+betaalNaam(betaal)+')';
+  const sub=mandjeSubtotaal(), kort=mandjeKorting(), tot=mandjeTotaal();
+  const st=document.getElementById('vkSubtotaal'); if(st) st.textContent = kort>0 ? ('Subtotaal '+euro(sub)+', korting '+euro(kort)) : '';
+  const tt=document.getElementById('vkTotaal'); if(tt) tt.textContent=euro(tot);
 }
-function afrekenen(){
+/* Afrekenen: bij contant eerst wisselgeld helpen, dan alles in één keer boeken met
+   de gekozen betaalwijze. Korting verdelen we evenredig over de regels, zodat de
+   omzet en winst per categorie kloppen. */
+function afrekenen(bet){
   if(!mandje.length){ toast('Er staat nog niks in de verkoop','let-op'); return; }
-  const tot=mandjeTotaal();
-  mandje.forEach(m=>{
+  const sub=mandjeSubtotaal(), tot=mandjeTotaal();
+  const factor = sub>0 ? tot/sub : 1;
+  if(bet==='cash' || bet==='cash_zb'){ wisselDialog(bet, tot, ()=>afrekenenDoen(bet, factor, tot)); return; }
+  afrekenenDoen(bet, factor, tot);
+}
+async function afrekenenDoen(bet, factor, tot){
+  const items=mandje.slice();
+  mandje=[]; mandjeBewaar();   /* meteen leeg zodat een half gelukte afrekening niet dubbel te boeken valt */
+  for(const m of items){
+    const vStuk=Math.round((m.verkoopStuk*factor)*100)/100;
+    if(m.hwId){ await hwBoekMandje(m, vStuk, bet); continue; }
     const p = m.productId!=null ? state.producten.find(x=>x.id===m.productId) : null;
-    boekHandmatig(p, m.naam, m.verkoopStuk, m.inkoopStuk, m.aantal, betaal);
-    if(m.bijbestelCat){ if(!state.bijbestel||typeof state.bijbestel!=='object') state.bijbestel={}; state.bijbestel[m.bijbestelCat]=(Number(state.bijbestel[m.bijbestelCat])||0)+m.aantal; }
-  });
-  save();
-  mandje=[]; piep(440);
-  toast('Afgerekend ('+betaalNaam(betaal)+'): '+euro(tot), true);
+    boekHandmatig(p, m.naam, vStuk, m.inkoopStuk, m.aantal, bet, (m.cat!=null?m.cat:(p?p.cat:null)), !!m.bijbestelCat);
+  }
+  save(); piep(440);
+  toast('Afgerekend ('+betaalNaam(bet)+'): '+euro(tot), true);
   renderVerkoop(); updateBadge();
+}
+/* Een los toestel (hardware) uit het mandje afrekenen: zelfde afhandeling als het
+   eigen verkoopscherm (voorraad-status, refurbish-marge, partner, webshop offline),
+   maar met de betaalwijze van de order. */
+async function hwBoekMandje(m, vStuk, bet){
+  const h=(typeof hwData!=='undefined'?hwData:[]).find(x=>x.id===m.hwId);
+  const marge = m.marge!==false;
+  const vid=uid();
+  state.verkopen.unshift({id:vid, t:Date.now(), naam:m.naam, verkoop:vStuk, inkoop:Number(m.inkoopStuk)||0, aantal:1,
+    betaal:bet, marge, cat:(typeof vasteCat==='function'?vasteCat('Hardware').id:null), door:gebruiker?gebruiker.naam:null, hardware:m.hwId});
+  if(state.verkopen.length>5000) state.verkopen.length=5000;
+  kasVerkoop(vStuk, bet, m.naam);
+  save();
+  try{
+    await sb.from('hardware').update({status:'verkocht', verkocht_op:new Date().toISOString(), verkocht_via:'winkel', verkocht_betaal:bet, marge, bijgewerkt_op:new Date().toISOString()}).eq('id', m.hwId);
+    sb.from('refurbish_apparaten').update({marge, bijgewerkt_op:new Date().toISOString()}).eq('hardware_id', m.hwId).then(({error})=>{ if(error) console.error('marge syncen bij verkoop:', error); });
+    if(h && h.kanalen && h.kanalen.partner){ const {data:{session}}=await sb.auth.getSession(); if(session) await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({actie:'dashboard_uit', hardware_id:m.hwId})}); }
+    if(h && typeof hwOnline==='function' && hwOnline(h) && typeof hwShopify==='function') hwShopify(m.hwId,'offline');
+  }catch(e){ console.error('hardware verkoop bij afrekenen', e); }
+  if(typeof hwLaad==='function') hwLaad(true);
+}
+/* Wisselgeld bij contant: laat 'gekregen' invullen en toon 'terug'. */
+function wisselDialog(bet, tot, klaar){
+  const bestaand=document.getElementById('wisselOverlay'); if(bestaand) bestaand.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='wisselOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML='<div class="popup" style="max-width:420px">'+
+    '<h3>Afrekenen: '+betaalNaam(bet)+'</h3>'+
+    '<div class="pv">Te betalen: <b>'+euro(tot)+'</b></div>'+
+    '<div style="margin-bottom:10px"><label>Gekregen (€) <span class="muted">(optioneel)</span></label><input id="wissel_geg" type="number" min="0" step="0.01" oninput="wisselTeken('+tot+')"></div>'+
+    '<div id="wissel_terug" style="font-size:18px; font-weight:800; margin-bottom:14px"></div>'+
+    '<div class="acts" style="flex-direction:row; gap:8px">'+
+      '<button class="btn" style="background:var(--green)" id="wissel_ok"><svg class="i s"><use href="#i-check"/></svg>Afrekenen</button>'+
+      '<button class="btn ghost" onclick="document.getElementById(\'wisselOverlay\').remove()">Annuleren</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  document.getElementById('wissel_ok').onclick=()=>{ ov.remove(); klaar(); };
+  const g=document.getElementById('wissel_geg'); if(g) g.focus();
+}
+function wisselTeken(tot){
+  const g=Number(document.getElementById('wissel_geg').value)||0;
+  const el=document.getElementById('wissel_terug'); if(!el) return;
+  el.textContent = g>0 ? ('Terug: '+euro(Math.max(0, g-tot))) : '';
+}
+/* Een verkoop terugdraaien: uit de omzet halen, kasboek corrigeren (alleen bij cash
+   met bon, want pin en cash-zonder-bon staan sowieso niet in de lade), voorraad
+   terug voor eigen producten, en een verkocht toestel terug op voorraad. */
+function verkoopTerug(id){
+  const v=(state.verkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  if(!confirm('Deze verkoop terugdraaien? '+v.naam+' ('+euro(v.verkoop)+')')) return;
+  if(v.pid!=null){ const p=state.producten.find(pp=>pp.id===v.pid); if(p){ p.voorraad=(p.voorraad||0)+(v.aantal||1); if(p.winkel!=null) p.winkel=(p.winkel||0)+(v.aantal||1); } }
+  if(v.betaal==='cash') kasVerkoop(-(Number(v.verkoop)||0), 'cash', 'Teruggedraaid: '+v.naam);
+  if(v.hardware){ sb.from('hardware').update({status:'voorraad', verkocht_op:null, verkocht_via:null, verkocht_betaal:null, bijgewerkt_op:new Date().toISOString()}).eq('id', v.hardware).then(()=>{ if(typeof hwLaad==='function') hwLaad(true); }); }
+  state.verkopen=(state.verkopen||[]).filter(x=>String(x.id)!==String(id));
+  save(); renderVerkoop(); updateBadge();
+  toast('Verkoop teruggedraaid: '+v.naam, true);
 }
 /* Het blokje: een dialoog om snel een generiek product van deze categorie te verkopen. */
 let blokCat=null;
@@ -3838,8 +3924,13 @@ function blokVarKies(btn){
   btn.classList.add('aan');
   const v=document.getElementById('bk_var_val'); if(v) v.value=btn.dataset.v||'';
   const ink=document.getElementById('bk_var_ink'); if(ink) ink.value=btn.dataset.ink||'';
-  /* Heeft deze uitvoering een eigen verkoopprijs, dan vullen we die in. */
-  if(btn.dataset.vk){ const pr=document.getElementById('bk_prijs'); if(pr) pr.value=btn.dataset.vk; }
+  /* Heeft deze uitvoering een eigen verkoopprijs, dan die; anders terug naar de
+     categorieprijs (zodat een vorige, afwijkende prijs niet blijft staan). */
+  const pr=document.getElementById('bk_prijs');
+  if(pr){
+    if(btn.dataset.vk) pr.value=btn.dataset.vk;
+    else { const c=state.categorieen.find(c=>c.id===blokCat); pr.value=(c&&c.verkoop)||0; }
+  }
   blokPrijs();
 }
 function blokSluit(){ const o=document.getElementById('blokOverlay'); if(o) o.remove(); }
@@ -3897,12 +3988,17 @@ function blokConfigOp(catId){
   toast('Verkoopblokje opgeslagen', true);
 }
 /* De bijbestel-teller op de bestellijst: per categorie hoeveel er via de blokjes
-   verkocht is, gegroepeerd per leverancier, tot je het afvinkt. */
+   verkocht is (met 'bijbestellen' aan), tot je het afvinkt. We leiden het aantal af
+   uit de verkopen sinds het laatste 'besteld'-moment, zodat het meesynct (verkopen
+   syncen per regel) en niet stil verdwijnt bij twee apparaten. */
+function bijbestelAantal(catId){
+  const sinds = (state.bijbestelBesteld && state.bijbestelBesteld[catId]) || 0;
+  return (state.verkopen||[]).filter(v=>v.bijbestel && v.cat===catId && (v.t||0)>sinds).reduce((s,v)=>s+(v.aantal||1),0);
+}
 function bijbestelRender(){
   const kaart=document.getElementById('bijbestelKaart'), el=document.getElementById('bijbestelLijst');
   if(!kaart||!el) return;
-  const bb=state.bijbestel||{};
-  const items=state.categorieen.filter(c=>Number(bb[c.id])>0).map(c=>({c, n:Number(bb[c.id])}));
+  const items=state.categorieen.map(c=>({c, n:bijbestelAantal(c.id)})).filter(x=>x.n>0);
   if(!items.length){ kaart.hidden=true; el.innerHTML=''; return; }
   kaart.hidden=false;
   const groepen={};
@@ -3915,7 +4011,8 @@ function bijbestelRender(){
     ).join('')+'</tbody></table></div>';
 }
 function bijbestelKlaar(catId){
-  if(state.bijbestel) delete state.bijbestel[catId];
+  if(!state.bijbestelBesteld || typeof state.bijbestelBesteld!=='object') state.bijbestelBesteld={};
+  state.bijbestelBesteld[catId]=Date.now();
   save(); bijbestelRender();
   toast('Teller op nul', true);
 }
@@ -6837,7 +6934,7 @@ async function uitloggen(){
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
                       'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld'];
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
