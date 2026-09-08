@@ -85,6 +85,19 @@ setTimeout(()=>{
   w.eval("var vg=state.producten.find(p=>p.id==='ov'); vg.voorraad=0; vg.winkel=0;");
   ok('opvolger komt op de bestellijst zodra de voorganger op is', w.eval("bestelLijst().some(p=>p.id==='nw')"));
 
+  // ── blokje-verkoop houdt zijn categorie en de bijbestel-vlag (niet 'Overig') ──
+  w.eval("state.verkopen=[]; state.bijbestelBesteld={}; state.kasboek=[]; boekHandmatig(null,'Screenprotector iPhone 12 Clear',9.95,3,2,'pin',1,true);");
+  ok('blokje-verkoop legt de categorie vast', w.eval("var v=state.verkopen[0]; v.cat===1 && v.bijbestel===true && v.aantal===2"));
+  ok('bijbestel-teller telt uit de verkopen', w.eval("bijbestelAantal(1)===2"));
+  w.eval("bijbestelKlaar(1);");
+  ok('afvinken zet de bijbestel-teller op nul', w.eval("bijbestelAantal(1)===0"));
+
+  // ── cash zonder bon blijft buiten de kassa, cash met bon niet ──
+  w.eval("state.kasboek=[]; kasVerkoop(10,'cash_zb','X');");
+  ok('cash zonder bon komt niet in het kasboek', w.eval("state.kasboek.length===0"));
+  w.eval("kasVerkoop(10,'cash','Y');");
+  ok('cash met bon komt wel in het kasboek', w.eval("state.kasboek.length===1"));
+
   // ── de vier getallen zijn direct in de tabel te bewerken ──
   w.eval("account={team_id:'t1',rol:'eigenaar'};"+
     "state.producten=[{id:'d',naam:'Glas',cat:1,winkel:2,voorraad:5,schap:2,minOver:2}]; zetVeld('d','over',4);");

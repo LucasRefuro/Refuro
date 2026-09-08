@@ -120,9 +120,9 @@
   .modeToggle button.in.active{background:var(--green); color:#fff;}
   .modeToggle button.uit.active{background:var(--oranje); color:#fff;}
   .scanbox{font-size:20px; padding:16px; text-align:center; letter-spacing:2px; font-weight:600;}
-  #scanFeedback{margin-top:12px; padding:14px; border-radius:10px; font-size:15px; text-align:center; display:none; font-weight:500;}
-  #scanFeedback.ok{display:block; background:#e2f6ea; color:#14683c;}
-  #scanFeedback.err{display:block; background:#fdeaea; color:#8f2626;}
+  #scanFeedback, #vkFeedback{margin-top:12px; padding:14px; border-radius:10px; font-size:15px; text-align:center; display:none; font-weight:500;}
+  #scanFeedback.ok, #vkFeedback.ok{display:block; background:#e2f6ea; color:#14683c;}
+  #scanFeedback.err, #vkFeedback.err{display:block; background:#fdeaea; color:#8f2626;}
   .loglist{font-size:12.5px; color:var(--muted); max-height:260px; overflow:auto;}
   .loglist div{padding:6px 0; border-bottom:1px solid var(--border);}
 
@@ -148,7 +148,7 @@
 
   /* scan-popup */
   .overlay{position:fixed; inset:0; background:rgba(27,34,84,.5); display:flex; align-items:center; justify-content:center; z-index:100;}
-  .popup{background:#fff; border-radius:16px; padding:24px; width:min(440px,92vw); box-shadow:0 12px 44px rgba(0,0,0,.3);}
+  .popup{background:var(--card); border-radius:16px; padding:24px; width:min(440px,92vw); box-shadow:0 12px 44px rgba(0,0,0,.3);}
   .popup h3{font-size:17px; margin-bottom:4px;}
   .popup .pv{font-size:13px; color:var(--muted); margin-bottom:16px;}
   .popup .acts{display:flex; flex-direction:column; gap:8px;}
@@ -670,9 +670,9 @@
   .modeToggle button.in.active{background:var(--green); color:#fff; border-color:var(--green); box-shadow:0 8px 22px rgba(30,158,106,.24);}
   .modeToggle button.uit.active{background:var(--oranje); color:#fff; border-color:var(--oranje); box-shadow:0 8px 22px rgba(11,91,82,.24);}
   .scanbox{font-size:19px; padding:18px; border-radius:var(--radius-s);}
-  #scanFeedback{margin-top:14px; padding:16px; border-radius:var(--radius-s); font-size:14.5px; font-weight:600;}
-  #scanFeedback.ok{background:var(--green-soft); color:var(--green-tekst);}
-  #scanFeedback.err{background:var(--red-soft); color:var(--red-tekst);}
+  #scanFeedback, #vkFeedback{margin-top:14px; padding:16px; border-radius:var(--radius-s); font-size:14.5px; font-weight:600;}
+  #scanFeedback.ok, #vkFeedback.ok{background:var(--green-soft); color:var(--green-tekst);}
+  #scanFeedback.err, #vkFeedback.err{background:var(--red-soft); color:var(--red-tekst);}
   .loglist{max-height:280px;}
   .loglist div{padding:10px 2px; border-bottom:1px solid var(--soft-2);}
   .loglist div:last-child{border-bottom:none;}
@@ -954,7 +954,7 @@
 
   .overlay{background:rgba(18,63,57,.44); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:20px; animation:fadein .18s ease;}
   @keyframes fadein{from{opacity:0}to{opacity:1}}
-  .popup{background:#fff; border-radius:var(--radius); padding:30px; width:min(460px,94vw); box-shadow:var(--schaduw-l);
+  .popup{background:var(--card); border-radius:var(--radius); padding:30px; width:min(460px,94vw); box-shadow:var(--schaduw-l);
     animation:popin .22s cubic-bezier(.34,1.4,.64,1);}
   @keyframes popin{from{opacity:0; transform:scale(.94) translateY(10px)}to{opacity:1; transform:none}}
   .popup.groot{width:min(700px,94vw);}
@@ -3290,9 +3290,9 @@ function levBinnen(id){
 function renderVerkoopLog(){
   document.getElementById('verkoopLog').innerHTML = state.verkopen.slice(0,25).map(v=>{
     const d=new Date(v.t);
-    const bet=v.betaal==='cash'?'<span class="muted">bon</span>':(v.betaal==='cash_zb'?'<span class="muted">cash</span>':'<span class="muted">pin</span>');
+    const bet='<span class="muted">'+esc(betaalNaam(v.betaal))+'</span>';
     return `<div>${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)} <b>${euro(v.verkoop)}</b> ${bet}${v.door?' <span class="muted">· '+esc(v.door)+'</span>':''} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-  }).join('') || '<div>Nog geen verkopen. Uitscannen = verkoop.</div>';
+  }).join('') || '<div>Nog geen verkopen. Verkopen doe je op de Verkoop-pagina.</div>';
 }
 
 /* ---------- scannen ---------- */
@@ -3301,20 +3301,13 @@ function focusScan(){ setTimeout(()=>scanInput.focus(),50); }
 document.addEventListener('click',e=>{
   if(!document.getElementById('tab-scan').hidden && !['INPUT','SELECT','BUTTON'].includes(e.target.tagName)) focusScan();
 });
-/* De Inscannen-pagina kent alleen nog inscannen; verkopen zit op de Verkoop-pagina.
-   setMode/setBetaal blijven bestaan omdat de scan-popup ze aanroept, maar de oude
-   knoppen zijn weg, dus we werken alleen bij wat er nog is. */
+/* De Inscannen-pagina kent inscannen en uitscannen (beide zonder verkoop); verkopen
+   zit op de Verkoop-pagina. setMode zet de in/uit-schakelaar en wordt ook door de
+   scan-popup aangeroepen. */
 function setMode(m){
   mode=m;
   const mi=document.getElementById('modeIn'); if(mi) mi.classList.toggle('active', m==='in');
   const mu=document.getElementById('modeUit'); if(mu) mu.classList.toggle('active', m==='uit');
-  const sb=document.getElementById('scanBetaal'); if(sb) sb.style.display = m==='uit'?'flex':'none';
-  focusScan();
-}
-function setBetaal(b){
-  betaal=b;
-  const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
-  set('betPin', b==='pin'); set('betCash', b==='cash'); set('betCashZb', b==='cash_zb');
   focusScan();
 }
 scanInput.addEventListener('keydown',e=>{
@@ -3498,8 +3491,8 @@ function scanPopup(code){
       <button class="btn" style="background:var(--green); box-shadow:0 5px 16px rgba(30,158,106,.22)" onclick="popupIn(${p.id})"><svg class="i s"><use href="#i-down"/></svg>Inscannen (+1)</button>
       <div class="betaalrow">
         <button class="btn" onclick="popupUit(${p.id},'pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
-        <button class="btn" onclick="popupUit(${p.id},'cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash bon</button>
-        <button class="btn" onclick="popupUit(${p.id},'cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash</button>
+        <button class="btn" onclick="popupUit(${p.id},'cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
+        <button class="btn" onclick="popupUit(${p.id},'cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
       </div>
       <button class="btn secondary" onclick="sluitPopup(); setMode('in'); showTab('scan')"><svg class="i s"><use href="#i-plus"/></svg>Meer inscannen op scanpagina</button>
       <button class="btn ghost" onclick="sluitPopup()">Sluiten (Esc)</button>
@@ -3559,10 +3552,10 @@ function boekHandmatig(p, naam, verkoopStuk, inkoopStuk, aantal, bet, cat, bijbe
   return id;
 }
 
-let hvProductId=null, hvBetaalKeuze='pin', hvAssortResult=[], hvZoekTimer=null;
+let hvProductId=null, hvAssortResult=[], hvZoekTimer=null;
 function hvOpen(){
   hvSluit();
-  hvProductId=null; hvBetaalKeuze='pin'; hvAssortResult=[];
+  hvProductId=null; hvAssortResult=[];
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='hvOverlay';
   ov.onclick=e=>{ if(e.target===ov) hvSluit(); };
@@ -3587,11 +3580,6 @@ function hvOpen(){
 }
 function hvSluit(){ const o=document.getElementById('hvOverlay'); if(o) o.remove(); }
 function hvSluitLijst(){ const l=document.getElementById('hvLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
-function hvBetaalKies(b){
-  hvBetaalKeuze=b;
-  const set=(id,aan)=>{ const el=document.getElementById(id); if(el) el.className=aan?'btn':'btn secondary'; };
-  set('hvBetPin', b==='pin'); set('hvBetCash', b==='cash'); set('hvBetCashZb', b==='cash_zb');
-}
 function hvZoek(){ clearTimeout(hvZoekTimer); hvZoekTimer=setTimeout(hvZoekNu, 220); }
 async function hvZoekNu(){
   const veld=document.getElementById('hvNaam'), lijst=document.getElementById('hvLijst');
@@ -5547,9 +5535,10 @@ function maakAanvraag(){
     tijdlijn:[{status:'aangevraagd', t:Date.now()}], notities:[]
   };
   aanvragen().unshift(a);
-  /* Contant aanbetaald geld gaat de lade in; pin komt op de rekening.
+  /* Contant met bon aanbetaald geld gaat de lade in; pin komt op de rekening en
+     cash zonder bon houden we buiten de kassa (consistent met de verkoop).
      De aanbetaling is nog geen omzet: dat wordt het pas bij het ophalen. */
-  if(aanbet>0 && (bet==='cash'||bet==='cash_zb')){
+  if(aanbet>0 && bet==='cash'){
     kasBoek(aanbet, 'in', 'Aanbetaling '+nr+' · '+naam, true);
   }
   save(); renderAanvragen(); updateBadge(); renderKassa();
@@ -5591,8 +5580,8 @@ function aanvAfrekenen(id){
     <div class="acts">
       <div class="betaalrow">
         <button class="btn" onclick="aanvBoek(${a.id},'pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
-        <button class="btn" onclick="aanvBoek(${a.id},'cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash bon</button>
-        <button class="btn" onclick="aanvBoek(${a.id},'cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash</button>
+        <button class="btn" onclick="aanvBoek(${a.id},'cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
+        <button class="btn" onclick="aanvBoek(${a.id},'cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
       </div>
       <button class="btn ghost" onclick="sluitPopup()">Annuleren (Esc)</button>
     </div>
@@ -5751,7 +5740,9 @@ function kasBoek(bedrag, soort, tekst, stil){
 /* Een contante verkoop gaat automatisch de lade in. Pin niet, die komt op de
    rekening. */
 function kasVerkoop(bedrag, bet, naam){
-  if(bet!=='cash' && bet!=='bon') return;
+  /* Alleen cash met bon gaat de lade in. Pin komt op de rekening; cash zonder bon
+     houden we bewust buiten de kassa-telling. */
+  if(bet!=='cash') return;
   kasBoek(bedrag, 'verkoop', naam||'Verkoop', true);
   if(kasTeVol()) setTimeout(kasWaarschuw, 400);
 }
@@ -8393,8 +8384,8 @@ function hwVerkoop(id){
     <div class="acts">
       <div class="betaalrow">
         <button class="btn" onclick="hwBoek('${h.id}','pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
-        <button class="btn" onclick="hwBoek('${h.id}','cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash bon</button>
-        <button class="btn" onclick="hwBoek('${h.id}','cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash</button>
+        <button class="btn" onclick="hwBoek('${h.id}','cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
+        <button class="btn" onclick="hwBoek('${h.id}','cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
       </div>
       <button class="btn ghost" onclick="hwSluit()">Annuleren</button>
     </div>
@@ -9868,8 +9859,8 @@ function betaalPopup(naam,prijs,kosten,los,repId){
     <div class="acts">
       <div class="betaalrow">
         <button class="btn" onclick="boekDienst('pin')"><svg class="i s"><use href="#i-card"/></svg>Pin</button>
-        <button class="btn" onclick="boekDienst('cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash bon</button>
-        <button class="btn" onclick="boekDienst('cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash</button>
+        <button class="btn" onclick="boekDienst('cash')"><svg class="i s"><use href="#i-receipt"/></svg>Cash met bon</button>
+        <button class="btn" onclick="boekDienst('cash_zb')"><svg class="i s"><use href="#i-cash"/></svg>Cash zonder bon</button>
       </div>
       <button class="btn ghost" onclick="sluitPopup()">Annuleren (Esc)</button>
     </div>
