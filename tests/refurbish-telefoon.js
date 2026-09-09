@@ -156,15 +156,17 @@ setTimeout(async()=>{
   w.eval("ctr={a:{categorie:'Overig'},antwoord:{},punten:{},specs:{},accu:'',notities:{},opties:{}}");
   ok('overig: geen lege kop Extra uitrusting', !/Extra uitrusting/.test(w.eval("CTR_STAPPEN.specs.inhoud()")));
 
-  // ── auto-doorgaan: alles ingevuld -> vanzelf naar de volgende stap ──
+  // ── geen auto-doorgaan meer: je drukt zelf op de voorwaartse knop ──
   w.eval(`
     apparaten=[{id:'p3', code:'P3', merk:'Apple', model:'iPhone 14', categorie:'Telefoon', specs:{},
       status:'te_controleren', inkoop:100, accu:null, nieuwe_accu:false, extra_kosten:[],
       checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}];
     appOpen('p3'); ctrKies('start','Ja');`);
-  ok('start staat vast na antwoord (voor de timer)', w.eval("ctr.stap")==='start');
+  ok('start staat vast na antwoord', w.eval("ctr.stap")==='start');
   await new Promise(r=>setTimeout(r,650));
-  ok('start gaat vanzelf door naar de sloten', w.eval("ctr.stap")==='blokkers', 'kreeg '+w.eval("ctr.stap"));
+  ok('start gaat NIET vanzelf door (handmatig)', w.eval("ctr.stap")==='start', 'kreeg '+w.eval("ctr.stap"));
+  w.eval(`ctrEnter({key:'Enter', shiftKey:false, target:{tagName:'DIV'}, preventDefault:()=>{}});`);
+  ok('handmatig door naar de sloten', w.eval("ctr.stap")==='blokkers', 'kreeg '+w.eval("ctr.stap"));
   // Enter drukt de voorwaartse knop als de stap af is
   w.eval(`ctr.stap='blokkers'; ctr.antwoord={};
     prof().blokkers.forEach(q=>ctr.antwoord[q.v]=q.a[0]); ctrTeken();

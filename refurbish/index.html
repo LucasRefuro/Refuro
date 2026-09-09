@@ -2204,26 +2204,11 @@ function ctrKies(sleutel, antwoord){
    markeert zijn doorknop met auto:true, dus een afkeuren-knop of een zijpad telt
    niet mee. */
 function ctrMisschienDoor(){
+  /* Bewust GEEN automatische sprong meer naar de volgende stap. De medewerker drukt
+     zelf op de voorwaartse knop (of Enter) als de stap af is; de checklist bleef
+     anders vanzelf doorschieten. Een eventueel oude timer ruimen we nog wel op. */
   if(!ctr) return;
-  /* Een eerder geplande sprong altijd eerst opruimen: wissel je binnen de halve
-     seconde een antwoord naar 'Nee', dan mag de oude timer je niet alsnog
-     doorschuiven terwijl je de toelichting nog moet typen. */
   clearTimeout(ctr._doorTimer);
-  if(ctr.naVraag && ctr.naVraag.uitleg) return;
-  const el=document.getElementById('ctrPagina'); if(!el) return;
-  if(el.querySelector('.clrij[data-open="1"]')) return;
-  const stap=CTR_STAPPEN[ctr.stap]; if(!stap || !stap.knoppen) return;
-  if(!(stap.knoppen()||[]).some(x=>x.auto)) return;
-  const eigenCtr=ctr;
-  ctr._doorTimer=setTimeout(()=>{
-    /* Nog hetzelfde toestel, dezelfde afgeronde stap, geen open vragen? Dan door.
-       De ctr-check voorkomt dat een net geopend ander toestel meespringt. */
-    if(!ctr || ctr!==eigenCtr || CTR_STAPPEN[ctr.stap]!==stap) return;
-    const el2=document.getElementById('ctrPagina');
-    if(!el2 || el2.querySelector('.clrij[data-open="1"]')) return;
-    const kk=(stap.knoppen()||[]).find(x=>x.auto);
-    if(kk) kk.doe();
-  }, 450);
 }
 
 /* Met Enter loop je de controle door: in een invoerveld spring je naar het
