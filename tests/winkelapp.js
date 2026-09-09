@@ -66,6 +66,11 @@ setTimeout(async()=>{
 
   const lijst=d.getElementById('hwLijst').innerHTML;
   ok('toestellen in de lijst', /Latitude 5430/.test(lijst) && /EliteBook/.test(lijst));
+  // ── multi-select op de hardwaretabel (zoals bij producten) ──
+  ok('hardware heeft een selecteer-alles', !!d.getElementById('hwAlle'));
+  ok('een toestel aanvinken vult de selectie', w.eval("hwSelect('h1',true); hwGeselecteerd.has('h1')"));
+  ok('bulkbalk verschijnt bij een selectie', w.eval("hwSelectieBalk(); !document.getElementById('hwBulk').hidden"));
+  w.eval("hwSelectieWissen();");
   ok('verkochte niet in de voorraadlijst', !/MacBook Air/.test(lijst));
   ok('marge berekend (349 - 75)', /274,00/.test(lijst));
   ok('webshoplabel bij het online toestel', /Webshop/.test(lijst));

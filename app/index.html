@@ -8679,8 +8679,15 @@ function renderHardware(){
     return;
   }
 
-  vak.innerHTML=`<table>
+  hwZichtbaarIds=rijen.map(h=>h.id);
+  vak.innerHTML=`<div id="hwBulk" ${hwGeselecteerd.size?'':'hidden'} style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--lblauw); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:12px">
+      <span id="hwBulkAantal" style="font-weight:700">${hwGeselecteerd.size} geselecteerd</span>
+      <button class="btn small danger" onclick="hwBulkVerwijder()"><svg class="i s"><use href="#i-trash"/></svg>Verwijder geselecteerde</button>
+      <button class="btn small ghost" onclick="hwSelectieWissen()">Selectie wissen</button>
+    </div>
+    <table>
     <thead><tr>
+      <th style="width:34px"><input type="checkbox" id="hwAlle" onclick="hwSelectAlle(this.checked)" title="Alles selecteren"></th>
       <th>Toestel</th><th>Nummer</th><th>Grade</th><th>Waar</th>
       <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
       <th>Staat waar</th><th>Dagen</th><th></th>
@@ -8689,6 +8696,7 @@ function renderHardware(){
       const m=hwMarge(h);
       const d=hwDagen(h);
       return `<tr>
+        <td><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
         <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
             ${h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:''}</td>
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
@@ -8709,7 +8717,45 @@ function renderHardware(){
           :`<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
+  hwSelectieBalk();
   if(typeof rolTabellen==='function') rolTabellen();
+}
+/* Meerdere toestellen tegelijk aanvinken en in een keer verwijderen, net als bij de
+   productenlijst. Hardware is een echte tabel, dus verwijderen gaat via Supabase; een
+   toestel dat online staat halen we eerst best-effort van de webshop. */
+let hwGeselecteerd=new Set(), hwZichtbaarIds=[];
+function hwSelect(id,aan){ if(aan) hwGeselecteerd.add(id); else hwGeselecteerd.delete(id); hwSelectieBalk(); }
+function hwSelectAlle(aan){ hwZichtbaarIds.forEach(id=>{ if(aan) hwGeselecteerd.add(id); else hwGeselecteerd.delete(id); }); renderHardware(); }
+function hwSelectieWissen(){ hwGeselecteerd.clear(); renderHardware(); }
+function hwSelectieBalk(){
+  const n=hwGeselecteerd.size;
+  const balk=document.getElementById('hwBulk'); if(balk) balk.hidden=n===0;
+  const t=document.getElementById('hwBulkAantal'); if(t) t.textContent=n+' geselecteerd';
+  const alle=document.getElementById('hwAlle');
+  if(alle){ const zicht=hwZichtbaarIds.filter(id=>hwGeselecteerd.has(id)).length;
+    alle.checked=hwZichtbaarIds.length>0 && zicht===hwZichtbaarIds.length;
+    alle.indeterminate=zicht>0 && zicht<hwZichtbaarIds.length; }
+}
+async function hwBulkVerwijder(){
+  const ids=[...hwGeselecteerd]; const n=ids.length;
+  if(!n) return;
+  if(!confirm(n+' toestel'+(n===1?'':'len')+' verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  try{
+    const online=ids.filter(id=>{ const h=hwData.find(x=>x.id===id); return h && hwOnline(h); });
+    if(online.length){
+      const {data:{session}}=await sb.auth.getSession();
+      for(const id of online){
+        try{ await fetch(SUPABASE_URL+'/functions/v1/shopify',{method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+(session?session.access_token:'')},
+          body:JSON.stringify({actie:'offline', hardware_id:id})}); }catch(e){}
+      }
+    }
+  }catch(e){}
+  const {error}=await sb.from('hardware').delete().in('id', ids);
+  if(error){ toast('Verwijderen mislukt','fout'); return; }
+  hwGeselecteerd.clear();
+  await hwLaad(true);
+  toast(n+' toestel'+(n===1?'':'len')+' verwijderd', true);
 }
 
 /* De locatieknoppen staan tussen de vaste filters in, want ze horen bij
