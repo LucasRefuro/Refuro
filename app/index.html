@@ -3545,7 +3545,7 @@ function renderFacturen(){
         `<td><select onchange="facStatus(${f.id}, this.value)">${opties.map(s=>`<option value="${s}"${(f.status||'concept')===s?' selected':''}>${FAC_STATUS_LABEL[s]}</option>`).join('')}</select></td>`+
         `<td class="num" style="white-space:nowrap">`+
           `<button class="btn small ghost icoknop" title="Bekijken en printen" onclick="facPrint(${f.id})"><svg class="i s"><use href="#i-download"/></svg></button> `+
-          `<button class="btn small ghost icoknop" title="Per e-mail versturen naar de klant" onclick="facVerstuur(${f.id})"><svg class="i s"><use href="#i-mail"/></svg></button> `+
+          `<button class="btn small ghost icoknop" title="Open je mailprogramma met deze factuur" onclick="facMail(${f.id})"><svg class="i s"><use href="#i-mail"/></svg></button> `+
           `<button class="btn small ghost icoknop" title="Bewerken" onclick="facOpen(${f.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
           `<button class="btn small danger icoknop" title="Verwijderen" onclick="facWeg(${f.id})"><svg class="i s"><use href="#i-trash"/></svg></button>`+
         `</td></tr>`; }).join('')+'</tbody></table></div>'
@@ -3735,33 +3735,44 @@ function facPrintDoc(f){
   if(!w){ toast('Sta pop-ups toe om de factuur te openen','let-op'); return; }
   w.document.write(facDocHtml(f, true)); w.document.close();
 }
-/* De factuur/offerte per e-mail versturen vanuit Storvo zelf (Resend), met de factuur
-   in de mail. Verstuurt via de Edge Function factuur-mail, die de ingelogde winkelier
-   controleert. Reply-to gaat naar het e-mailadres van de winkel, zodat een antwoord van
-   de klant bij de winkel binnenkomt en niet bij Storvo. */
-async function facVerstuur(id){
+/* De factuur/offerte niet zelf versturen, maar het eigen mailprogramma openen met de
+   factuur als tekst erin. Zo gaat de mail vanaf je eigen adres en bepaal jij wanneer
+   hij eruit gaat. mailto kan alleen platte tekst, dus we zetten de factuur netjes als
+   tekst in de body; de opgemaakte pdf kun je er zelf bij doen via Printen. */
+function facMail(id){
   const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
   const kl=f.klant||{};
   if(!kl.email){ toast('Geen e-mailadres bij deze klant','let-op'); return; }
-  const soort=f.soort==='offerte'?'offerte':'factuur';
-  if(!confirm(soort.charAt(0).toUpperCase()+soort.slice(1)+' '+(f.nummer||'')+' per e-mail versturen naar '+kl.email+'?')) return;
-  const br=facBranding(), b=state.bedrijf||{};
-  const onderwerp=(f.soort==='offerte'?'Offerte ':'Factuur ')+(f.nummer||'')+(br.naam?(' van '+br.naam):'');
-  const html=facDocHtml(f, false);
-  try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session){ toast('Je bent uitgelogd. Log opnieuw in.','fout'); return; }
-    const res=await fetch(SUPABASE_URL+'/functions/v1/factuur-mail',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({ naar:kl.email, onderwerp, html, replyTo:b.email||'', afzendernaam:br.naam })
-    });
-    const j=await res.json().catch(()=>({}));
-    if(!res.ok||!j.ok) throw new Error(j.error||'Versturen mislukt');
-    if((f.status||'concept')==='concept'){ f.status='verstuurd'; }
-    save(); renderFacturen();
-    toast((f.soort==='offerte'?'Offerte':'Factuur')+' verstuurd naar '+kl.email, true);
-  }catch(e){ toast(e.message||'Versturen mislukt','fout'); }
+  const br=facBranding(), b=state.bedrijf||{}, t=facTotalen(f);
+  const isOff=f.soort==='offerte';
+  const geld=n=>'EUR '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const verval=isOff?facDatumPlus(f.datum,30):facDatumPlus(f.datum, br.termijn);
+  const kop=[br.naam, b.adres, [b.pc,b.plaats].filter(Boolean).join(' '), b.email, b.tel].filter(Boolean).join('\n');
+  const regels=f.regels.map(r=>{
+    const bedrag=(Number(r.aantal)||0)*(Number(r.stukprijs)||0);
+    return '- '+(r.omschrijving||'')+'  '+(Number(r.aantal)||0)+' x '+geld(r.stukprijs)+'  ('+(Number(r.btw)||0)+'%)  = '+geld(bedrag);
+  }).join('\n');
+  const btwR=Object.keys(t.btwMap).sort((a,b)=>b-a).map(k=>'Btw '+k+'%: '+geld(t.btwMap[k])).join('\n');
+  const body=
+    'Beste '+(kl.naam||'')+',\n\n'+
+    'Hierbij de '+(isOff?'offerte':'factuur')+' met nummer '+(f.nummer||'')+'.\n\n'+
+    kop+'\n\n'+
+    (isOff?'Offerte':'Factuur')+' '+(f.nummer||'')+'\n'+
+    'Datum: '+(f.datum||'')+'\n'+
+    (verval?((isOff?'Geldig tot: ':'Vervaldatum: ')+verval+'\n'):'')+'\n'+
+    'Aan: '+(kl.naam||'')+'\n'+
+    ([kl.adres,[kl.pc,kl.plaats].filter(Boolean).join(' ')].filter(Boolean).join('\n'))+
+    '\n\n'+regels+'\n\n'+
+    'Subtotaal (excl. btw): '+geld(t.subtotaal)+'\n'+
+    (btwR?btwR+'\n':'')+
+    'Totaal: '+geld(t.totaal)+'\n'+
+    ((!isOff && b.iban)?('\nGraag betalen op '+b.iban+' o.v.v. '+(f.nummer||'')+'.\n'):'')+
+    (br.voettekst?('\n'+br.voettekst+'\n'):'')+
+    '\nMet vriendelijke groet,\n'+(br.naam||'')+
+    [b.kvk?('\nKVK '+b.kvk):'', b.btw?('\nBtw '+b.btw):''].join('');
+  const onderwerp=(isOff?'Offerte ':'Factuur ')+(f.nummer||'')+(br.naam?(' - '+br.naam):'');
+  toast('Je mailprogramma opent. Voeg de pdf toe met Printen als je die wilt meesturen.', true);
+  window.location.href='mailto:'+encodeURIComponent(kl.email)+'?subject='+encodeURIComponent(onderwerp)+'&body='+encodeURIComponent(body);
 }
 /* Een reparatieprijs is een consumentenprijs incl. 21% btw. Op de factuur werken we
    excl. btw, dus rekenen we terug: excl = prijs / 1,21. */
