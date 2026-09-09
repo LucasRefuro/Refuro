@@ -1781,6 +1781,7 @@ function tekenApparaat(){
               <option value="anders">Overig</option>
             </select>
             <input id="ex_bedrag" type="number" step="0.01" min="0" style="max-width:120px" placeholder="Kosten in euro">
+            <input id="ex_aantal" type="number" min="1" value="1" style="max-width:80px" title="Aantal" placeholder="Aantal">
             <input id="ex_oms" placeholder="Omschrijving (mag leeg)" style="min-width:140px; flex:1">
             <button class="btn" onclick="batExtraToevoegen('${a.id}', this)">Toevoegen</button>
           </div>
@@ -5747,18 +5748,33 @@ async function batExtraToevoegen(id, knop){
   const omsEl=document.getElementById('ex_oms');
   const oms=omsEl?omsEl.value.trim():'';
   const o = vrdId ? voorraaddelen.find(x=>x.id===vrdId) : null;
-  /* Komt het uit de voorraad, dan is de prijs die van de oudste partij (die we
-     ook afboeken), niet het bewerkbare veld: anders klopt de afboeking niet met
-     wat je op het toestel schrijft. Los onderdeel: het ingevulde bedrag. */
+  const aantalEl=document.getElementById('ex_aantal');
+  const n=Math.max(1, Math.round(Number(aantalEl?aantalEl.value:1)||1));
+  /* Komt het uit de voorraad, dan is de prijs die van de oudste partij (die we ook
+     afboeken), niet het bewerkbare veld: anders klopt de afboeking niet met wat je op
+     het toestel schrijft. Bij een aantal boeken we de oudste partijen eerst af, elk stuk
+     tegen de prijs van zijn eigen partij. Los onderdeel: het ingevulde bedrag, maal het
+     aantal. */
   const lots = o ? (Array.isArray(o.lots)?o.lots:[]).map(l=>({aantal:Number(l.aantal)||0, prijs:Number(l.prijs)||0})) : null;
-  const eerste = lots ? lots.find(l=>l.aantal>0) : null;
-  const bedrag = o
-    ? Math.round((eerste?eerste.prijs:(Number(o.prijs)||0))*100)/100
-    : Math.round((Number(document.getElementById('ex_bedrag').value)||0)*100)/100;
-  if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
-  const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice();
-  lijst.push({soort, bedrag, omschrijving:oms||null, voorraad_id:vrdId||null});
-  const nieuweInkoop=Math.round(((Number(a.inkoop)||0)+bedrag)*100)/100;
+  const nieuweExtras=[]; let totaal=0;
+  if(o){
+    for(let i=0;i<n;i++){
+      const eerste=lots.find(l=>l.aantal>0);
+      if(!eerste) break;
+      const prijs=Math.round(eerste.prijs*100)/100;
+      eerste.aantal-=1;
+      nieuweExtras.push({soort, bedrag:prijs, omschrijving:oms||o.naam||null, voorraad_id:o.id});
+      totaal+=prijs;
+    }
+    if(!nieuweExtras.length){ toast('Niets meer op voorraad','let-op'); return; }
+  }else{
+    const bedrag=Math.round((Number(document.getElementById('ex_bedrag').value)||0)*100)/100;
+    if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
+    for(let i=0;i<n;i++){ nieuweExtras.push({soort, bedrag, omschrijving:oms||null, voorraad_id:null}); totaal+=bedrag; }
+  }
+  totaal=Math.round(totaal*100)/100;
+  const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice().concat(nieuweExtras);
+  const nieuweInkoop=Math.round(((Number(a.inkoop)||0)+totaal)*100)/100;
   /* Een accu erbij is meteen een nieuwe accu: 100%. */
   const isAccu = soort==='accu';
   await bezig(knop, async()=>{
@@ -5772,16 +5788,15 @@ async function batExtraToevoegen(id, knop){
       await sb.from('hardware').update(Object.assign({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()},
         isAccu?{nieuwe_accu:true}:{})).eq('id',a.hardware_id);
     }
-    /* Uit de voorraad, oudste partij eerst (FIFO). */
+    /* Uit de voorraad afboeken (oudste partij eerst, FIFO). */
     if(o){
-      if(eerste) eerste.aantal-=1;
       const sync=vrdSync(lots);
       const {error:vErr}=await sb.from('refurbish_voorraad')
         .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',o.id);
       if(vErr){ console.error('voorraad afboeken', vErr); toast('Let op: de voorraad is mogelijk niet afgeboekt','let-op'); }
     }
     await allesLaden();
-    toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
+    toast(nieuweExtras.length+(nieuweExtras.length>1?' onderdelen toegevoegd':' onderdeel toegevoegd')+', telt mee in de inkoop', true);
   });
 }
 
