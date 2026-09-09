@@ -16,6 +16,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 |---|---|---|
 | `create-owner-account` | ja | Maakt de eigenaar aan bij een nieuwe winkel |
 | `redeem-invite` | ja | Werknemer maakt zijn account via een uitnodigingslink |
+| `uitnodiging-mail` | nee | Mailt een uitnodigingslink naar een nieuwe collega (Resend); eigenaar/beheerder-only |
 | `team-admin` | nee | Wachtwoorden en uitnodigingen binnen een winkel |
 | `admin-teams` | nee | Beheerpaneel van Storvo zelf |
 | `feedback` | nee | Neemt feedback aan, bewaart hem en mailt hem naar info@storvo.nl |

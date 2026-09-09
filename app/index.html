@@ -2412,11 +2412,13 @@
       <button class="btn actie" style="margin-top:16px" onclick="gebruikerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Gebruiker aanmaken</button>
       <div id="nw_uit" class="muted klein" style="margin-top:10px"></div>
       <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border)">
-        <p class="muted klein" style="margin-bottom:8px">Liever een uitnodigingslink sturen zodat je collega zelf zijn wachtwoord zet:</p>
-        <div class="row" style="align-items:flex-end">
-          <div style="min-width:160px"><label>Rol</label><select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
-          <div><button class="btn ghost" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Uitnodigingslink maken</button></div>
+        <p class="muted klein" style="margin-bottom:8px">Of stuur een uitnodiging per e-mail: je collega zet dan zelf zijn wachtwoord en verschijnt daarna vanzelf in je team.</p>
+        <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+          <div style="flex:2; min-width:200px"><label>E-mail van je collega</label><input id="inv_email" type="email" placeholder="collega@email.nl" autocomplete="off"></div>
+          <div style="min-width:150px"><label>Rol</label><select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
+          <div><button class="btn actie" onclick="mailUitnodiging(this)"><svg class="i s"><use href="#i-mail"/></svg>Uitnodiging e-mailen</button></div>
         </div>
+        <div style="margin-top:8px"><button class="btn ghost small" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Of maak alleen een link om zelf te delen</button></div>
         <div id="inviteResultaat" style="margin-top:12px"></div>
       </div>
     </div>
@@ -10034,6 +10036,34 @@ async function maakUitnodiging(){
     <input readonly value="${esc(link)}" style="margin-top:8px" onclick="this.select()">
     <button class="btn ghost small" style="margin-top:8px" onclick="navigator.clipboard.writeText('${esc(link)}').then(()=>toast('Link gekopieerd', true))"><svg class="i s"><use href="#i-clipboard"/></svg>Kopiëren</button>
   </div>`;
+}
+/* Uitnodiging per e-mail: maak een invite en laat de server (uitnodiging-mail) de link
+   naar je collega mailen. Zo hoef je zelf niets te kopiëren; na het instellen van zijn
+   wachtwoord verschijnt hij vanzelf in je team. */
+async function mailUitnodiging(knop){
+  if(!account){ return; }
+  const email=(document.getElementById('inv_email').value||'').trim().toLowerCase();
+  const rol=document.getElementById('inv_rol').value;
+  const uit=document.getElementById('inviteResultaat');
+  if(!email.includes('@')){ uit.innerHTML='<p style="color:var(--red-tekst)">Vul een geldig e-mailadres in.</p>'; return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
+  try{
+    const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol}).select().single();
+    if(error || !data) throw new Error('Kon geen uitnodiging aanmaken.');
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/uitnodiging-mail',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({ token:data.token, naar:email })
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Versturen mislukt.');
+    uit.innerHTML=`<div class="infobox">Uitnodiging verstuurd naar <b>${esc(email)}</b>. De link is 14 dagen geldig. Zodra je collega zijn wachtwoord heeft ingesteld, staat hij in je team.</div>`;
+    document.getElementById('inv_email').value='';
+    toast('Uitnodiging verstuurd', true);
+  }catch(e){ uit.innerHTML='<p style="color:var(--red-tekst)">'+esc(e.message||'Versturen mislukt.')+'</p>'; }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
 }
 
 /* -- mijn account (alle rollen): naam, wachtwoord, 2FA -- */
