@@ -24,7 +24,8 @@
   /* aliassen zodat oudere verwijzingen in dit bestand blijven werken */
   --blue:#0B5B52; --blue-d:#093F39; --line:#ECEAE4; --txt:#17201E; --mut:#5B6663; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; -webkit-font-smoothing: antialiased; }
+html { overflow-x: clip; }
+body { font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; -webkit-font-smoothing: antialiased; overflow-x: clip; max-width: 100vw; }
 h1,h2,h3,.sora { font-family: 'Sora', sans-serif; letter-spacing: 0; }
 ::selection { background: var(--lblauw); color: var(--oranje); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -188,7 +189,12 @@ tr.hl td { background: #fffaf0; }
 /* ---------- mobiel ---------- */
 @media (max-width: 760px) {
   #app { flex-direction: column; }
-  #sidebar { position: fixed; bottom: 0; left: 0; right: 0; top: auto; width: 100%; height: 60px; flex-direction: row; padding: 0; z-index: 40; align-items: stretch; justify-content: space-around; border-top: 1px solid var(--line); border-right: none; }
+  #main { overflow-x: clip; }
+  /* Onder 16px zoomt iOS in bij het tikken op een veld (ook bij inloggen). */
+  input[type=text], input[type=number], input[type=password], input[type=email], input[type=search], input[type=tel], textarea, select { font-size: 16px; }
+  /* De vaste onderbalk moet boven de iPhone home-indicator blijven; zonder deze
+     ruimte valt de streep over de menuknoppen. viewport-fit=cover staat al aan. */
+  #sidebar { position: fixed; bottom: 0; left: 0; right: 0; top: auto; width: 100%; height: calc(60px + env(safe-area-inset-bottom)); padding: 0 0 env(safe-area-inset-bottom); flex-direction: row; z-index: 40; align-items: stretch; justify-content: space-around; border-top: 1px solid var(--line); border-right: none; }
   #sidebar .brand, .navspacer, .hidemob { display: none; }
   .navbtn { flex-direction: column; gap: 2px; padding: 7px 2px; flex: 1; align-items: center; justify-content: center; margin: 0; border-radius: 0; }
   .navbtn.active { background: none; color: var(--oranje); box-shadow: none; }
@@ -202,8 +208,8 @@ tr.hl td { background: #fffaf0; }
   .kpis { grid-template-columns: 1fr 1fr; }
   .grid2, .grid3, .grid4, .chartrow { grid-template-columns: 1fr; }
   .exrow { grid-template-columns: 1fr; border-bottom: 1px solid var(--soft-2); padding-bottom: 10px; }
-  .savebar { bottom: 60px; }
-  .toast { bottom: 76px; left: 14px; right: 14px; max-width: none; }
+  .savebar { bottom: calc(60px + env(safe-area-inset-bottom)); }
+  .toast { bottom: calc(76px + env(safe-area-inset-bottom)); left: 14px; right: 14px; max-width: none; }
 }
 /* Storvo-huisstijl afwerking */
 .logincard .btn { background: var(--actie); box-shadow: 0 5px 16px rgba(232,138,29,.24); }

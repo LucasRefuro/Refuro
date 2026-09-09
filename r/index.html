@@ -23,9 +23,10 @@
     --schaduw:0 6px 24px rgba(23,32,30,.07);
   }
   *{box-sizing:border-box; margin:0; padding:0;}
+  html{overflow-x:clip;}
   body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
     background:var(--bg); color:var(--tekst); line-height:1.55; -webkit-font-smoothing:antialiased;
-    padding:24px 16px 48px;}
+    padding:24px 16px 48px; overflow-x:clip; max-width:100vw;}
   .wrap{max-width:640px; margin:0 auto;}
   h1,h2,h3,.sora{font-family:'Sora',sans-serif; letter-spacing:-.01em;}
 
@@ -95,7 +96,12 @@
     color:var(--tekst); text-decoration:none; font-weight:600; font-size:15px; transition:.16s;}
   .knop:hover{transform:translateY(-1px); box-shadow:var(--schaduw);}
   .knop .ic{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex:none; color:#fff;}
-  .knop small{display:block; font-weight:400; font-size:13px; color:var(--muted-l); margin-top:1px;}
+  /* Een lang e-mailadres heeft geen spaties en kan niet afbreken; zonder min-width:0
+     op het tekstblok en overflow-wrap op de small werd de knop breder dan de kaart
+     en kon je de hele pagina zijwaarts trekken. Deze pagina opent bijna altijd op
+     een telefoon, dus dat mag niet. */
+  .knop span{min-width:0;}
+  .knop small{display:block; font-weight:400; font-size:13px; color:var(--muted-l); margin-top:1px; overflow-wrap:anywhere; word-break:break-word;}
   .knop.wa .ic{background:#25D366;}
   .knop.bel .ic{background:var(--accent);}
   .knop.mail .ic{background:var(--donker);}

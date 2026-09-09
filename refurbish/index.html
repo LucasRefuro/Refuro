@@ -584,6 +584,15 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   .card{padding:20px; border-radius:var(--radius-s);}
   .pagehead h1{font-size:23px;}
   .acts{flex-direction:column;} .acts .btn{width:100%;}
+  /* Telefoon aan de werkbank: velden op 16px zodat iOS niet inzoomt bij focus,
+     de knoppenvoet stapelt met de hoofdknop onderaan (duim), Ja/Nee en de
+     filterpillen worden echte tikdoelen en breken af in plaats van weg te vallen. */
+  input,select,textarea,.zoekvak input{font-size:16px;}
+  .ctrvoet{flex-direction:column-reverse; align-items:stretch;}
+  .ctrvoet .btn{width:100%;}
+  .clknoppen button,.optieknop,.periodesel button{min-height:44px;}
+  .periodesel{flex-wrap:wrap;}
+  #toasts{max-width:min(380px,calc(100vw - 32px)); left:16px; right:16px;}
 }
 @media print{
   /* Alleen het printvel (het prijskaartje of de labels) mag meetellen voor het
@@ -1184,10 +1193,14 @@ async function allesLaden(){
 
 function showTab(t){
   tab=t;
-  document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  let actief=null;
+  document.querySelectorAll('aside nav button').forEach(b=>{ const aan=b.dataset.tab===t; b.classList.toggle('active', aan); if(aan) actief=b; });
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   tekenAlles();
   window.scrollTo(0,0);
+  /* Op de telefoon is het menu een horizontaal schuivende balk; zet de actieve
+     knop in beeld zodat je diep in de app niet denkt dat er maar vijf tabs zijn. */
+  if(actief&&actief.scrollIntoView) actief.scrollIntoView({inline:'center', block:'nearest'});
   sessieBewaar();
 }
 document.querySelectorAll('aside nav button').forEach(b=>
@@ -2176,6 +2189,10 @@ function ctrTeken(){
     }
   }
   if(Math.abs(window.scrollY-rol)>2) window.scrollTo({top:rol});
+  /* De tijdlijn scrollt horizontaal; op een telefoon staat de huidige stap anders
+     vaak rechts buiten beeld. block:'nearest' voorkomt dat de pagina verticaal
+     springt, dus dit botst niet met het scroll-herstel hierboven. */
+  const nu=el.querySelector('.tl.nu'); if(nu&&nu.scrollIntoView) nu.scrollIntoView({inline:'center', block:'nearest'});
   if(stap.na) stap.na();
 }
 

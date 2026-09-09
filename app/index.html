@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Storvo Winkel Stock</title>
 <link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
@@ -1111,7 +1111,18 @@
     .grid{grid-template-columns:1fr;}
     .betaalrow{flex-direction:column;} .betaalrow .btn{width:100%;}
     .modeToggle{flex-direction:column;}
-    .popup{padding:24px; border-radius:var(--radius-s);}
+    /* Lange vensters (aanvraag, inruil) waren op een telefoon niet te scrollen en
+       de sluitknop viel bovenaan weg. Nu begint het venster bovenaan en scrolt
+       het mee, met een maximale hoogte op de zichtbare schermhoogte. */
+    .overlay{align-items:flex-start; overflow-y:auto;}
+    .popup{padding:24px; border-radius:var(--radius-s); max-height:calc(100dvh - 40px); overflow-y:auto;}
+    /* Onder 16px zoomt iOS in bij focus; nu op alle mobiele breedtes, ook de tablet. */
+    input,select,textarea,.zoekvak input{font-size:16px;}
+    /* Tikdoelen groot genoeg voor de duim (richtlijn 44px). */
+    .btn.small{min-height:40px; padding-block:9px;}
+    .periodesel button{padding:11px 16px;}
+    .dagnav button.pijl{width:44px; height:44px;}
+    .uitstalknop{padding:6px 12px;}
     #toasts{left:14px; right:14px; bottom:14px; top:auto; align-items:stretch; max-width:none;} .toast{max-width:none;}
   }
   /* ═══════════ NIETS SCHUIFT ZIJWAARTS ═══════════
@@ -1580,7 +1591,7 @@
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
-    <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
+    <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bijbestellen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
     <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
     <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
@@ -2106,7 +2117,7 @@
   </div>
   <div class="kpis" id="bstKpis"></div>
   <div class="card breed">
-    <h2><svg class="i"><use href="#i-cart"/></svg>Bestellingen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
+    <h2><svg class="i"><use href="#i-cart"/></svg>Bijbestellen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
     <div id="bstLijst">Bezig met laden…</div>
   </div>
 </section>
@@ -2175,7 +2186,7 @@
   </div>
 
   <div class="card">
-    <h2><svg class="i"><use href="#i-scan"/></svg>Nulmeting</h2>
+    <h2><svg class="i"><use href="#i-scan"/></svg>Voorraad tellen</h2>
     <p class="muted" style="margin-bottom:16px; max-width:80ch">Loop je winkel langs en tel wat er echt is. Scan de barcode, vul in hoeveel er hangen en hoeveel er achter liggen, en druk op Enter. De cursor springt vanzelf naar het volgende product. Wat je niet telt blijft ongemoeid.</p>
     <div class="row" style="margin-bottom:14px">
       <div style="flex:2; min-width:200px"><label>Scan of typ de barcode</label><input id="nm_code" placeholder="Scan barcode…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); nulZoek();}"></div>
@@ -2189,7 +2200,7 @@
 <!-- BESTELLINGEN -->
 <section id="tab-bestellen"hidden>
   <div class="pagehead">
-    <h1>Bestellingen</h1>
+    <h1>Bijbestellen</h1>
     <button class="btn ghost" onclick="kopieerBestellijst()"><svg class="i"><use href="#i-clipboard"/></svg>Hele lijst kopiëren</button>
   </div>
   <div class="card">
@@ -3256,7 +3267,7 @@ function hangHerinnering(){
 function taakRepOpties(){
   const sel=document.getElementById('taak_rep'); if(!sel) return;
   const bewaard=sel.value;
-  const open=(state.reparaties||[]).filter(r=>!['opgehaald','geannuleerd','afgehaald'].includes(r.status));
+  const open=(state.reparaties||[]).filter(r=>r.status!=='afgerond');
   sel.innerHTML='<option value="">Niet koppelen</option>'+open.map(r=>`<option value="${r.id}">${esc(r.nr+' · '+(r.klant?r.klant.naam:''))}</option>`).join('');
   sel.value=bewaard;
 }
@@ -3300,7 +3311,7 @@ function renderPlanning(){
       `<div class="planacties"><button class="btn small ghost icoknop" title="Klaar" onclick="taakGedaan(${t.id})"><svg class="i s"><use href="#i-check"/></svg></button>`+
       `<button class="btn small ghost icoknop" title="Weghalen" onclick="taakWeg(${t.id})"><svg class="i s"><use href="#i-trash"/></svg></button></div></div>`});
   });
-  (state.reparaties||[]).filter(r=>r.klaarVoor && !['opgehaald','geannuleerd','afgehaald'].includes(r.status)).forEach(r=>{
+  (state.reparaties||[]).filter(r=>r.klaarVoor && r.status!=='afgerond').forEach(r=>{
     const w=planWanneer(r.klaarVoor);
     const voork = r.voorkeur ? ' · '+r.voorkeur : '';
     rijen.push({sort:w.sort, html:
@@ -7482,11 +7493,11 @@ const UITZETBAAR=[
   {tab:'diensten',    naam:'Diensten',     uitleg:'Losse werkzaamheden zoals simkaart knippen of data overzetten.'},
   {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
   {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
-  {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en de nulmeting.'},
+  {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en het tellen van de voorraad.'},
   {tab:'hardware',    naam:'Hardware',     uitleg:'Losse toestellen met een serienummer, zoals tweedehands laptops en telefoons.'},
   {tab:'aanvragen',   naam:'Aanvragen',    uitleg:'Bestellingen op aanvraag voor klanten, met marge en aanbetaling.'},
   {tab:'kassa',       naam:'Kassa',        uitleg:'Het kasboek, wat er in de lade zit en een melding als het te veel wordt.'},
-  {tab:'bestellen',   naam:'Bestellingen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
+  {tab:'bestellen',   naam:'Bijbestellen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
   {tab:'team',        naam:'Team',         uitleg:'Medewerkers, rollen en wachtwoorden.'}
 ];
 function verborgen(){ return Array.isArray(state.verborgen)?state.verborgen:[]; }
@@ -10123,7 +10134,7 @@ async function maakInviteAccount(token, knop){
 const PAGINAS_BEHEER=[
   ['dashboard','Dashboard'],['scan','Inscannen'],['verkoop','Verkoop'],['diensten','Diensten'],['reparaties','Reparaties'],
   ['aanvragen','Aanvragen'],['producten','Producten'],['voorraad','Voorraad'],['hardware','Hardware'],
-  ['webshop','Webshop'],['inruil','Inruil'],['kassa','Kassa'],['bestellen','Bestellingen'],['uren','Uren'],['instellingen','Instellingen']
+  ['webshop','Webshop'],['inruil','Inruil'],['kassa','Kassa'],['bestellen','Bijbestellen'],['uren','Uren'],['instellingen','Instellingen']
 ];
 function rolDefaultTabs(rol){
   const t=ROL_TABS[rol];
