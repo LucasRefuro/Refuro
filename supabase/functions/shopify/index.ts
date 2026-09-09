@@ -52,31 +52,15 @@ async function inCollectiesZetten(k: any, productId: string, h: any): Promise<st
   return gelukt;
 }
 
-// De omschrijving die op de webshop komt te staan. Specificaties als lijstje,
-// want dat is wat een koper van tweedehands hardware wil zien.
+// De omschrijving op de webshop is alleen het verhaaltje. De specificaties, de staat
+// en de garantie staan als metafields in hun eigen blokken op de productpagina; die
+// zetten we hier NIET nog eens in de tekst, anders staat alles dubbel.
 function beschrijving(h: any) {
-  const specs = h.specs && typeof h.specs === "object" ? h.specs : {};
-  /* IMEI en serienummers horen niet op een openbare productpagina: daarmee kan
-     iemand een toestel laten blokkeren of namaak legitiem laten lijken. Ze staan
-     wel in Storvo, alleen niet op de webshop. */
-  const VERBERG = /imei|serien/i;
-  const regels = Object.entries(specs)
-    .filter(([k, v]) => v != null && String(v).trim() !== "" && !VERBERG.test(k))
-    .map(([k, v]) => `<li><b>${k}:</b> ${String(v)}</li>`)
-    .join("");
-  const staat: Record<string, string> = {
-    A: "Als nieuw, nauwelijks gebruikssporen",
-    B: "Gebruikt, in goede staat",
-    C: "Zichtbare gebruikssporen, werkt naar behoren",
-  };
-  // Bij een telefoon of tablet is het serienummer meestal het IMEI; dat laten we
-  // weg. Bij een laptop helpt het serienummer de koper juist met de echtheid.
+  // Bij een telefoon of tablet is het serienummer meestal het IMEI; dat laten we weg.
+  // Bij een laptop helpt het serienummer de koper juist met de echtheid.
   const toonSerie = !["Telefoon", "Tablet"].includes(h.categorie || "");
   return [
     h.omschrijving ? `<p>${h.omschrijving}</p>` : "",
-    regels ? `<h3>Specificaties</h3><ul>${regels}</ul>` : "",
-    h.staat ? `<p><b>Staat:</b> ${staat[h.staat] || h.staat}</p>` : "",
-    h.garantie ? `<p><b>Garantie:</b> ${h.garantie} maanden</p>` : "",
     h.serienummer && toonSerie ? `<p class="serie"><small>Serienummer ${h.serienummer}</small></p>` : "",
   ].filter(Boolean).join("\n");
 }

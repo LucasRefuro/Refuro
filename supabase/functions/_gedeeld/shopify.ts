@@ -345,21 +345,25 @@ export function staatCode(staat: string) {
 // heeft ingevuld (Behuizing, Scherm, Toetsenbord, Scharnieren), anders een vaste
 // zin per grade. Zo staat er altijd iets echts, niet alleen "grade A".
 export function staatToelichting(h: any, refurbish: any) {
-  const CONDITIE = ["behuizing", "scherm", "toetsenbord", "scharnieren en deksel"];
+  const CONDITIE = ["behuizing", "scherm", "toetsenbord", "scharnieren en deksel", "scharnieren", "deksel", "onderkant", "poorten"];
+  const perGrade: Record<string, string> = {
+    A: "Als nieuw. Je moet de gebruikssporen echt zoeken.",
+    B: "Lichte gebruikssporen, netjes verzorgd. Werkt precies zoals het hoort.",
+    C: "Zichtbare gebruikssporen, maar werkt helemaal naar behoren.",
+  };
+  const delen: string[] = [];
+  const opening = perGrade[String(h.staat || "").toUpperCase()];
+  if (opening) delen.push(opening);
   const cl = refurbish?.checklist;
   if (Array.isArray(cl)) {
     const items = cl
       .filter((x: any) => x && x.a && CONDITIE.includes(String(x.v || "").toLowerCase()))
-      .map((x: any) => `${x.v}: ${String(x.a).toLowerCase()}`);
+      .map((x: any) => { const v = String(x.v || ""); return v.charAt(0).toUpperCase() + v.slice(1) + ": " + String(x.a).toLowerCase(); });
     const uniek = [...new Set(items)];
-    if (uniek.length) return uniek.join(". ") + ".";
+    if (uniek.length) delen.push("Wat ons opviel — " + uniek.join(". ") + ".");
   }
-  const perGrade: Record<string, string> = {
-    A: "Als nieuw. Je moet de gebruikssporen echt zoeken.",
-    B: "Lichte gebruikssporen, netjes verzorgd. Werkt zoals het hoort.",
-    C: "Zichtbare gebruikssporen. Werkt helemaal naar behoren.",
-  };
-  return perGrade[String(h.staat || "").toUpperCase()] || "Volledig nagekeken en klaar voor gebruik.";
+  delen.push("Volledig nagekeken en getest door ons eigen team, en klaar voor gebruik.");
+  return delen.join(" ");
 }
 
 function mfText(key: string, val: unknown) {
@@ -408,13 +412,24 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (sp.Poorten) out.push(mfText("poorten", sp.Poorten));
   if (sp.Gewicht) out.push(mfText("gewicht", sp.Gewicht));
   if (sp.Bouwjaar) out.push(mfText("bouwjaar", sp.Bouwjaar));
+  // De extra uitrusting uit de controle (SPEC_EXTRA): schermtype is een keuze, de rest
+  // ja/nee. Zo wordt de speclijst op de webshop compleet in plaats van vijf regels.
+  if (sp.Schermtype) out.push(mfText("schermtype", sp.Schermtype));
+  const jaNee = (v: unknown) => /^(ja|1|true|waar)$/i.test(String(v ?? "").trim());
+  if (jaNee(sp.Vingerafdruk)) out.push(mfText("vingerafdruk", "Ja"));
+  if (jaNee(sp.Toetsenbordverlichting)) out.push(mfText("toetsenbordverlichting", "Ja"));
+  if (jaNee(sp.Touchscreen)) out.push(mfText("touchscreen", "Ja"));
+  if (jaNee(sp["Face ID"])) out.push(mfText("faceid", "Ja"));
+  if (jaNee(sp["GSM-module"])) out.push(mfText("gsm", "Ja"));
 
   const accu = refurbish?.accu;
   if (accu != null && Number.isFinite(Number(accu))) out.push(mfInt("accu_gezondheid", Number(accu)));
 
   out.push(mfText("monteur", MONTEUR_TEKST));
 
-  if (h.garantie != null && h.garantie !== "") out.push(mfInt("garantie_maanden", Number(h.garantie)));
+  // Garantie alleen als hij echt > 0 is; anders laten we het metafield weg zodat het
+  // thema terugvalt op de standaard (12 maanden) en er nooit "0 maanden" verschijnt.
+  if (Number(h.garantie) > 0) out.push(mfInt("garantie_maanden", Number(h.garantie)));
 
   // Zelfde model, verschillende exemplaren horen op de collectiepagina bij elkaar.
   const mk = slug([h.merk, h.model].filter(Boolean).join(" "));

@@ -63,18 +63,21 @@ Deno.serve(async (req) => {
     .filter(([, v]) => v != null && String(v).trim() !== "")
     .map(([k, v]) => `- ${k}: ${v}`).join("\n");
 
-  const prompt = `Schrijf een advertentie voor een tweedehands apparaat.
+  const prompt = `Schrijf een korte, eerlijke omschrijving voor een tweedehands apparaat.
 
 Merk: ${h.merk || "onbekend"}
 Model: ${h.model}
 Categorie: ${h.categorie || "Laptop"}
-Staat: ${STAAT[h.staat] || h.staat || "gebruikt"}
-Garantie: ${h.garantie || 0} maanden
-${specregels ? "Specificaties:\n" + specregels : "Geen specificaties bekend."}
+${specregels ? "Specificaties (alleen als achtergrond, NIET letterlijk noemen):\n" + specregels : ""}
 
-Schrijf in het Nederlands, voor een particuliere koper. Eerlijk en concreet,
-geen superlatieven, geen uitroeptekens, geen verkooppraat. Noem wat het apparaat
-in de praktijk aankan. Wees eerlijk over de staat. Vier tot zes zinnen.
+Schrijf in het Nederlands, voor een particuliere koper. Twee tot vier korte zinnen over
+waar dit apparaat in de praktijk goed voor is en voor wie het geschikt is. Eerlijk en
+concreet, geen superlatieven, geen uitroeptekens, geen verkooppraat.
+
+BELANGRIJK: de specificaties, de staat en de garantie staan op de webshop al in een eigen
+blok. Herhaal ze NIET in de omschrijving: geen opsomming van processor/geheugen/opslag/
+scherm, geen losse cijfers, en noem de garantie of de staat niet. Gebruik de specs hooguit
+om te zeggen waarvoor het apparaat geschikt is (bijvoorbeeld prima voor thuiswerk of studie).
 
 Antwoord uitsluitend met JSON in deze vorm:
 {"titel": "...", "omschrijving": "..."}

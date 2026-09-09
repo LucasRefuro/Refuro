@@ -8903,7 +8903,7 @@ function hwVenster(h){
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
         </select></div>
-        <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:6}"></div>
+        <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:12}"></div>
         <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
         <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
         <div><label>Btw</label><select id="hw_marge">
