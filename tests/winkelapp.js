@@ -46,8 +46,8 @@ setTimeout(async()=>{
   if(fouten.length) console.log('   ', fouten.slice(0,3).join(' | '));
 
   ok('hardwarepagina bestaat', !!d.getElementById('tab-hardware'));
-  ok('hardware bereikbaar via Meer', !!d.querySelector('#tab-meer [data-tab="hardware"]'));
-  ok('Meer in de onderbalk', w.eval("MOB_VOLGORDE.includes('meer')"));
+  ok('hardware in het menu', !!d.querySelector('aside nav button[data-tab="hardware"]'));
+  ok('hardware in de onderbalk', w.eval("MOB_VOLGORDE.includes('hardware')"));
   ok('refurbish-link staat uit zonder module', d.getElementById('refurbLink').hidden);
 
   w.eval("abonnement={modules:['refurbish']}; moduleLinks();");
