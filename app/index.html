@@ -1560,6 +1560,7 @@
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
     <button data-tab="uren"><svg class="i"><use href="#i-clock"/></svg> Uren</button>
+    <button data-tab="vastelasten"><svg class="i"><use href="#i-euro"/></svg> Vaste lasten</button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
     <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
   </nav>
@@ -2219,6 +2220,29 @@
   </div>
 </section>
 
+<!-- VASTE LASTEN -->
+<section id="tab-vastelasten"hidden>
+  <div class="pagehead"><h1>Vaste lasten</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-euro"/></svg>Vaste last toevoegen</h2>
+    <p class="muted" style="margin-bottom:12px">Kosten die elke maand of elk jaar terugkomen, zoals huur, verzekering of software. Ze worden van je resultaat afgehaald.</p>
+    <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+      <div style="flex:2; min-width:180px"><label>Wat</label><input id="vl_naam" placeholder="bijv. Huur pand" autocomplete="off"></div>
+      <div style="min-width:130px"><label>Bedrag (€)</label><input id="vl_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
+      <div style="min-width:140px"><label>Hoe vaak</label><select id="vl_periode"><option value="maand">Per maand</option><option value="jaar">Per jaar</option></select></div>
+      <div style="flex:1; min-width:150px"><label>Soort <span class="muted">(optioneel)</span></label><input id="vl_cat" placeholder="bijv. Pand" autocomplete="off"></div>
+      <div><button class="btn actie" onclick="vlToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
+    </div>
+  </div>
+  <div class="card breed">
+    <h2 style="margin-bottom:8px">Overzicht</h2>
+    <div id="vlTotalen" style="margin-bottom:12px"></div>
+    <div id="vlLijst"></div>
+  </div>
+  </div>
+</section>
+
 <!-- TEAM / ADMIN -->
 <section id="tab-team"hidden>
   <div class="pagehead">
@@ -2777,6 +2801,7 @@ function load(){
   if(!Array.isArray(s.urgent)) s.urgent=[];
   if(!Array.isArray(s.taken)) s.taken=[];
   if(!Array.isArray(s.uren)) s.uren=[];
+  if(!Array.isArray(s.vasteLasten)) s.vasteLasten=[];
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
   if(!s.bijbestelBesteld || typeof s.bijbestelBesteld!=='object') s.bijbestelBesteld={};
   /* Uurtarief per teamlid, bewaard op het account-id (het echte team loopt via de
@@ -2864,6 +2889,7 @@ function showTab(t){
   if(t==='scan') focusScan();
   if(t==='verkoop') renderVerkoop();
   if(t==='uren') renderUren();
+  if(t==='vastelasten') renderVasteLasten();
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
@@ -3225,6 +3251,72 @@ function urenWeg(id){
   const u=(state.uren||[]).find(x=>x.id===id); if(!u) return;
   if(!urenMagAlles() && u.medewerker!==(gebruiker?gebruiker.id:null)){ toast('Je kunt alleen je eigen uren weghalen','let-op'); return; }
   state.uren=(state.uren||[]).filter(x=>x.id!==id); save(); renderUren();
+}
+
+/* ═══════════════ VASTE LASTEN ═══════════════
+   Kosten die elke maand of elk jaar terugkomen (huur, verzekering, software).
+   Ze verlagen straks het resultaat in het rapport. We rekenen alles om naar een
+   maandbedrag: een jaarpost telt voor een twaalfde per maand. Zo is het per
+   periode op te tellen naast inkoop en loon. Alleen eigenaar/beheerder zien dit. */
+function vlMaandbedrag(v){ const b=Number(v.bedrag)||0; return v.periode==='jaar' ? b/12 : b; }
+function vasteLastenPerMaand(){ return (state.vasteLasten||[]).filter(v=>v.actief!==false).reduce((s,v)=>s+vlMaandbedrag(v),0); }
+/* Kosten over een periode: het maandbedrag maal het aantal maanden erin. Bij benadering
+   met de gemiddelde maandlengte; het rapport hangt hier straks de nette periodes aan. */
+function vasteLastenInPeriode(van, tot){
+  const maanden=Math.max(0,(tot-van)/(365.25/12*864e5));
+  return vasteLastenPerMaand()*maanden;
+}
+function renderVasteLasten(){
+  const lijst=(state.vasteLasten||[]).slice().sort((a,b)=>(b.op||0)-(a.op||0));
+  const perMaand=vasteLastenPerMaand(), perJaar=perMaand*12;
+  const tot=document.getElementById('vlTotalen');
+  if(tot){
+    tot.innerHTML=`<div class="row" style="gap:28px; flex-wrap:wrap">
+      <div><div class="muted klein">Per maand</div><b class="groot">${euro(perMaand)}</b></div>
+      <div><div class="muted klein">Per jaar</div><b class="groot">${euro(perJaar)}</b></div></div>`;
+  }
+  const el=document.getElementById('vlLijst'); if(!el) return;
+  el.innerHTML = lijst.length
+    ? '<div style="overflow-x:auto"><table><thead><tr><th>Wat</th><th>Soort</th><th>Hoe vaak</th><th class="num">Bedrag</th><th class="num">Per maand</th><th>Aan</th><th></th></tr></thead><tbody>'+
+      lijst.map(v=>`<tr>`+
+        `<td><input value="${esc(v.naam||'')}" onchange="vlUpd(${v.id},'naam',this.value)"></td>`+
+        `<td><input value="${esc(v.categorie||'')}" placeholder="—" style="width:120px" onchange="vlUpd(${v.id},'categorie',this.value)"></td>`+
+        `<td><select onchange="vlUpd(${v.id},'periode',this.value)"><option value="maand"${v.periode!=='jaar'?' selected':''}>Per maand</option><option value="jaar"${v.periode==='jaar'?' selected':''}>Per jaar</option></select></td>`+
+        `<td class="num"><input class="num" type="number" step="0.01" min="0" style="width:100px" value="${v.bedrag!=null?v.bedrag:''}" onchange="vlUpd(${v.id},'bedrag',this.value)"></td>`+
+        `<td class="num">${euro(vlMaandbedrag(v))}</td>`+
+        `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${v.actief!==false?'checked':''} onchange="vlUpd(${v.id},'actief',this.checked)"></td>`+
+        `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="vlWeg(${v.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('')+
+      '</tbody></table></div>'
+    : '<div class="muted">Nog geen vaste lasten. Voeg er hierboven een toe.</div>';
+}
+function vlToevoegen(){
+  const naam=(document.getElementById('vl_naam').value||'').trim();
+  if(!naam){ toast('Vul in wat de vaste last is','let-op'); document.getElementById('vl_naam').focus(); return; }
+  const bedrag=Math.max(0, Number(document.getElementById('vl_bedrag').value)||0);
+  if(!bedrag){ toast('Vul een bedrag in','let-op'); document.getElementById('vl_bedrag').focus(); return; }
+  const periode=document.getElementById('vl_periode').value==='jaar'?'jaar':'maand';
+  const categorie=(document.getElementById('vl_cat').value||'').trim();
+  if(!Array.isArray(state.vasteLasten)) state.vasteLasten=[];
+  state.vasteLasten.push({id:uid(), naam, bedrag, periode, categorie, actief:true, op:Date.now()});
+  save();
+  document.getElementById('vl_naam').value=''; document.getElementById('vl_bedrag').value=''; document.getElementById('vl_cat').value='';
+  renderVasteLasten();
+  toast('Vaste last toegevoegd: '+naam, true);
+}
+function vlUpd(id,veld,val){
+  const v=(state.vasteLasten||[]).find(x=>x.id===id); if(!v) return;
+  if(veld==='bedrag') val=Math.max(0, Number(val)||0);
+  if(veld==='periode') val = val==='jaar'?'jaar':'maand';
+  v[veld]=val;
+  save(); renderVasteLasten();
+  toast('Opgeslagen', true);
+}
+function vlWeg(id){
+  const v=(state.vasteLasten||[]).find(x=>x.id===id); if(!v) return;
+  if(!confirm('"'+(v.naam||'deze vaste last')+'" verwijderen?')) return;
+  state.vasteLasten=(state.vasteLasten||[]).filter(x=>x.id!==id);
+  save(); renderVasteLasten();
+  toast('Verwijderd');
 }
 
 function renderDashboard(){
@@ -6785,7 +6877,7 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','instellingen','team'],
+  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','instellingen','team'],
   medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren']
 };
 /* ---------- pagina's aan of uit ----------
@@ -7054,7 +7146,7 @@ async function uitloggen(){
 
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
-                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren'];
+                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren','vasteLasten'];
 const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen'];
 
 let syncVersie = 0;          // versie van het document in de cloud

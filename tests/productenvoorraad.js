@@ -102,6 +102,12 @@ setTimeout(()=>{
   w.eval("state.lonen={'acc1':15}; state.uren=[{id:1,medewerker:'acc1',datum:'2026-09-01',uren:8},{id:2,medewerker:'acc1',datum:'2026-09-02',uren:2}];");
   ok('loonkosten = uren maal tarief', w.eval("urenLoonInPeriode(0, Date.now()+864e5)===150"));
 
+  // ── vaste lasten: maandbedrag + jaarbedrag/12, inactieve tellen niet mee ──
+  w.eval("state.vasteLasten=[{id:1,naam:'Huur',bedrag:1000,periode:'maand',actief:true},"+
+    "{id:2,naam:'Verzekering',bedrag:1200,periode:'jaar',actief:true},"+
+    "{id:3,naam:'Oud',bedrag:50,periode:'maand',actief:false}];");
+  ok('vaste lasten per maand = maand + jaar/12, zonder inactieve', w.eval("vasteLastenPerMaand()===1100"));
+
   // ── Verkoop en Uren staan in de paginakeuze en gaan standaard aan ──
   ok('Verkoop staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='verkoop')"));
   ok('Uren staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='uren')"));
