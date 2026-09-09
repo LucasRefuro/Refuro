@@ -1559,6 +1559,7 @@
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
+    <button data-tab="uren"><svg class="i"><use href="#i-clock"/></svg> Uren</button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
     <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
   </nav>
@@ -2189,6 +2190,35 @@
   </div>
 </section>
 
+<!-- UREN -->
+<section id="tab-uren"hidden>
+  <div class="pagehead"><h1>Uren</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-clock"/></svg>Uren invullen</h2>
+    <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+      <div style="min-width:160px" id="urenWieVak"><label>Wie</label><select id="uren_wie"></select></div>
+      <div style="min-width:150px"><label>Datum</label><input id="uren_datum" type="date"></div>
+      <div style="min-width:100px"><label>Uren</label><input id="uren_aantal" type="number" step="0.25" min="0" placeholder="bijv. 7,5"></div>
+      <div style="flex:2; min-width:180px"><label>Notitie <span class="muted">(optioneel)</span></label><input id="uren_notitie" placeholder="bijv. schermreparaties" autocomplete="off"></div>
+      <div><button class="btn actie" onclick="urenToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
+    </div>
+  </div>
+  <div class="card breed">
+    <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px">
+      <h2 style="margin-bottom:0">Overzicht</h2>
+      <div class="periodesel" id="urenPeriode">
+        <button data-up="week" class="active" onclick="urenKiesPeriode('week')">7 dagen</button>
+        <button data-up="maand" onclick="urenKiesPeriode('maand')">Deze maand</button>
+        <button data-up="alles" onclick="urenKiesPeriode('alles')">Alles</button>
+      </div>
+    </div>
+    <div id="urenTotalen" style="margin-bottom:12px"></div>
+    <div id="urenLijst"></div>
+  </div>
+  </div>
+</section>
+
 <!-- TEAM / ADMIN -->
 <section id="tab-team"hidden>
   <div class="pagehead">
@@ -2203,7 +2233,7 @@
       <h2>Medewerkers</h2>
       <div style="overflow-x:auto">
       <table>
-        <thead><tr><th>Naam</th><th>Rol</th><th>Team</th><th>Pincode</th><th>Actief</th><th></th></tr></thead>
+        <thead><tr><th>Naam</th><th>Rol</th><th>Team</th><th>Pincode</th><th class="num">Uurtarief (€)</th><th>Actief</th><th></th></tr></thead>
         <tbody id="mwBody"></tbody>
       </table>
       </div>
@@ -2212,6 +2242,7 @@
         <div><label>Rol</label><select id="mw_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option><option value="eigenaar">Eigenaar</option></select></div>
         <div><label>Team</label><select id="mw_team"></select></div>
         <div><label>Pincode (4 cijfers)</label><input id="mw_pin" maxlength="4" inputmode="numeric" placeholder="1234"></div>
+        <div style="min-width:110px"><label>Uurtarief (€)</label><input id="mw_tarief" type="number" step="0.01" min="0" placeholder="0"></div>
         <div><button class="btn" onclick="voegMwToe()">Toevoegen</button></div>
       </div>
       <div class="infobox" style="margin-top:14px"><b>Rollen:</b> <b>Eigenaar</b> ziet en doet alles (incl. omzet, instellingen en team). <b>Beheerder</b> ziet alles behalve het team- en huisstijlbeheer. <b>Medewerker</b> kan scannen, verkopen en reparaties doen, maar ziet geen omzetcijfers of instellingen.</div>
@@ -2744,6 +2775,7 @@ function load(){
   if(!Array.isArray(s.aanvragen)) s.aanvragen=[];
   if(!Array.isArray(s.urgent)) s.urgent=[];
   if(!Array.isArray(s.taken)) s.taken=[];
+  if(!Array.isArray(s.uren)) s.uren=[];
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
   if(!s.bijbestelBesteld || typeof s.bijbestelBesteld!=='object') s.bijbestelBesteld={};
   /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
@@ -2826,6 +2858,7 @@ function showTab(t){
   if(t==='dashboard') renderDashboard();
   if(t==='scan') focusScan();
   if(t==='verkoop') renderVerkoop();
+  if(t==='uren') renderUren();
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
@@ -3099,6 +3132,76 @@ function renderPlanning(){
   });
   rijen.sort((a,b)=>a.sort-b.sort);
   el.innerHTML = rijen.length ? rijen.map(r=>r.html).join('') : '<div class="muted">Niets gepland. Zet hierboven een taak neer, of geef een reparatie een deadline.</div>';
+}
+
+/* ═══════════════ UREN EN LOONKOSTEN ═══════════════
+   Medewerkers loggen hun uren (of de eigenaar/beheerder doet dat), met een
+   uurtarief per medewerker. Loonkosten = uren × tarief; die gaan straks mee in
+   het resultaat-rapport. Een medewerker ziet en logt alleen zijn eigen uren en
+   ziet geen loonbedragen; eigenaar/beheerder zien alles. */
+let urenPeriodeNu='week';
+function urenMagAlles(){ const r=gebruiker?gebruiker.rol:'eigenaar'; return r==='eigenaar'||r==='beheerder'; }
+function urenVanaf(){
+  const nu=new Date();
+  if(urenPeriodeNu==='week') return Date.now()-7*864e5;
+  if(urenPeriodeNu==='maand') return new Date(nu.getFullYear(), nu.getMonth(), 1).getTime();
+  return 0;
+}
+function urenDatumTijd(u){ return u.datum ? new Date(u.datum).getTime() : (u.op||0); }
+function urenLoonInPeriode(van, tot){
+  return (state.uren||[]).reduce((s,u)=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ const m=state.medewerkers.find(x=>x.id===u.medewerker); s+=(Number(u.uren)||0)*(m?Number(m.uurtarief)||0:0); } return s; },0);
+}
+function renderUren(){
+  const alles=urenMagAlles();
+  const wieVak=document.getElementById('urenWieVak'), wie=document.getElementById('uren_wie');
+  const actief=state.medewerkers.filter(m=>m.actief!==false);
+  if(wie){
+    if(alles){ wie.innerHTML=actief.map(m=>`<option value="${m.id}">${esc(m.naam)}</option>`).join(''); if(wieVak) wieVak.style.display=''; }
+    else { const self=gebruiker||actief[0]; wie.innerHTML=self?`<option value="${self.id}">${esc(self.naam)}</option>`:''; if(wieVak) wieVak.style.display='none'; }
+  }
+  [...document.querySelectorAll('#urenPeriode button')].forEach(b=>b.classList.toggle('active', b.dataset.up===urenPeriodeNu));
+  const van=urenVanaf();
+  let lijst=(state.uren||[]).filter(u=>urenDatumTijd(u)>=van);
+  if(!alles){ const zelf=gebruiker?gebruiker.id:null; lijst=lijst.filter(u=>u.medewerker===zelf); }
+  lijst=lijst.slice().sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||'')) || (b.op||0)-(a.op||0));
+  const perM={};
+  lijst.forEach(u=>{ const m=state.medewerkers.find(x=>x.id===u.medewerker); const tarief=m?Number(m.uurtarief)||0:0; if(!perM[u.medewerker]) perM[u.medewerker]={naam:m?m.naam:'?', uren:0, loon:0}; perM[u.medewerker].uren+=Number(u.uren)||0; perM[u.medewerker].loon+=(Number(u.uren)||0)*tarief; });
+  const tot=document.getElementById('urenTotalen');
+  if(tot){
+    const rows=Object.values(perM);
+    const totUren=rows.reduce((s,r)=>s+r.uren,0), totLoon=rows.reduce((s,r)=>s+r.loon,0);
+    tot.innerHTML = rows.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Medewerker</th><th class="num">Uren</th>'+(alles?'<th class="num">Loonkosten</th>':'')+'</tr></thead><tbody>'+
+      rows.map(r=>`<tr><td>${esc(r.naam)}</td><td class="num">${r.uren.toLocaleString('nl-NL')}</td>`+(alles?`<td class="num">${euro(r.loon)}</td>`:'')+`</tr>`).join('')+
+      `<tr style="font-weight:800"><td>Totaal</td><td class="num">${totUren.toLocaleString('nl-NL')}</td>`+(alles?`<td class="num">${euro(totLoon)}</td>`:'')+`</tr></tbody></table></div>` : '<div class="muted">Nog geen uren in deze periode.</div>';
+  }
+  const el=document.getElementById('urenLijst');
+  if(el){
+    el.innerHTML = lijst.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Datum</th><th>Medewerker</th><th class="num">Uren</th><th>Notitie</th><th></th></tr></thead><tbody>'+
+      lijst.map(u=>{ const m=state.medewerkers.find(x=>x.id===u.medewerker); return `<tr><td>${esc(u.datum||'')}</td><td>${esc(m?m.naam:'?')}</td><td class="num">${(Number(u.uren)||0).toLocaleString('nl-NL')}</td><td><span data-onvertaald>${esc(u.notitie||'')}</span></td><td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="urenWeg(${u.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`; }).join('')+'</tbody></table></div>'
+      : '';
+  }
+  const dd=document.getElementById('uren_datum'); if(dd && !dd.value) dd.value=new Date().toISOString().slice(0,10);
+}
+function urenKiesPeriode(p){ urenPeriodeNu=p; renderUren(); }
+function urenToevoegen(){
+  const alles=urenMagAlles();
+  const wieEl=document.getElementById('uren_wie');
+  const medewerker = alles ? (Number(wieEl.value)||wieEl.value) : (gebruiker?gebruiker.id:(wieEl?(Number(wieEl.value)||wieEl.value):null));
+  const datum=document.getElementById('uren_datum').value || new Date().toISOString().slice(0,10);
+  const uren=Math.max(0, Number(document.getElementById('uren_aantal').value)||0);
+  if(!uren){ toast('Vul een aantal uren in','let-op'); document.getElementById('uren_aantal').focus(); return; }
+  const notitie=document.getElementById('uren_notitie').value.trim();
+  if(!Array.isArray(state.uren)) state.uren=[];
+  state.uren.push({id:uid(), medewerker, datum, uren, notitie, door:gebruiker?gebruiker.naam:null, op:Date.now()});
+  save();
+  document.getElementById('uren_aantal').value=''; document.getElementById('uren_notitie').value='';
+  renderUren();
+  toast('Uren toegevoegd: '+uren, true);
+}
+function urenWeg(id){
+  const u=(state.uren||[]).find(x=>x.id===id); if(!u) return;
+  if(!urenMagAlles() && u.medewerker!==(gebruiker?gebruiker.id:null)){ toast('Je kunt alleen je eigen uren weghalen','let-op'); return; }
+  state.uren=(state.uren||[]).filter(x=>x.id!==id); save(); renderUren();
 }
 
 function renderDashboard(){
@@ -6659,8 +6762,8 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','instellingen','team'],
-  medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen']
+  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','instellingen','team'],
+  medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -6924,7 +7027,7 @@ async function uitloggen(){
 
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
-                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken'];
+                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren'];
 const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld'];
 
 let syncVersie = 0;          // versie van het document in de cloud
@@ -9314,6 +9417,7 @@ function renderTeam(){
     `<td><select onchange="updMw(${m.id},'rol',this.value)">${['medewerker','beheerder','eigenaar'].map(r=>`<option value="${r}" ${m.rol===r?'selected':''}>${r}</option>`).join('')}</select></td>`+
     `<td><select onchange="updMw(${m.id},'team',this.value)">${state.teams.map(t=>`<option value="${t.id}" ${t.id===m.team?'selected':''}>${esc(t.naam)}</option>`).join('')}</select></td>`+
     `<td><input value="${esc(m.pin||'')}" maxlength="4" inputmode="numeric" placeholder="geen" style="width:80px" onchange="updMw(${m.id},'pin',this.value)"></td>`+
+    `<td class="num"><input class="num" type="number" step="0.01" min="0" style="width:90px" value="${m.uurtarief!=null?m.uurtarief:''}" placeholder="0" onchange="updMw(${m.id},'uurtarief',this.value)"></td>`+
     `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${m.actief!==false?'checked':''} onchange="updMw(${m.id},'actief',this.checked)"></td>`+
     `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderMw(${m.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
   document.getElementById('mw_team').innerHTML=state.teams.map(t=>`<option value="${t.id}">${esc(t.naam)}</option>`).join('');
@@ -9329,6 +9433,7 @@ function updMw(id,veld,val){
   const m=state.medewerkers.find(m=>m.id===id); if(!m) return;
   if(veld==='pin'){ val=String(val).replace(/\D/g,'').slice(0,4); if(val && val.length<4){ toast('Pincode moet 4 cijfers zijn.'); renderTeam(); return; } }
   if(veld==='team') val=Number(val);
+  if(veld==='uurtarief') val=Math.max(0, Number(val)||0);
   m[veld]=val;
   save(); renderTeam();
   if(gebruiker && gebruiker.id===id){ gebruiker=m; pasRechtenToe(); }
@@ -9339,9 +9444,9 @@ function voegMwToe(){
   if(!naam){ toast('Vul een naam in.'); return; }
   const pin=document.getElementById('mw_pin').value.replace(/\D/g,'');
   if(pin && pin.length!==4){ toast('Pincode moet 4 cijfers zijn.'); return; }
-  state.medewerkers.push({id:uid(), naam, rol:document.getElementById('mw_rol').value, team:Number(document.getElementById('mw_team').value)||1, pin, actief:true});
+  state.medewerkers.push({id:uid(), naam, rol:document.getElementById('mw_rol').value, team:Number(document.getElementById('mw_team').value)||1, pin, uurtarief:Math.max(0, Number(document.getElementById('mw_tarief').value)||0), actief:true});
   save();
-  document.getElementById('mw_naam').value=''; document.getElementById('mw_pin').value='';
+  document.getElementById('mw_naam').value=''; document.getElementById('mw_pin').value=''; document.getElementById('mw_tarief').value='';
   renderTeam();
   toast('Medewerker toegevoegd: '+naam, true);
 }
