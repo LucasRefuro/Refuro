@@ -1562,7 +1562,6 @@
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
     <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Inscannen</button>
     <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
-    <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
     <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
@@ -1572,6 +1571,7 @@
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
     <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
     <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
+    <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
   </nav>
@@ -7541,7 +7541,7 @@ const MOB={
   meer:        {naam:'Meer',         ico:'i-layers'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','verkoop','kassa','reparaties','diensten','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','meer','instellingen'];
+const MOB_VOLGORDE=['dashboard','scan','verkoop','reparaties','diensten','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa','meer','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
