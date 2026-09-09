@@ -3662,6 +3662,37 @@ function facPrint(id){
   if(!w){ toast('Sta pop-ups toe om de factuur te openen','let-op'); return; }
   w.document.write(doc); w.document.close();
 }
+/* Een reparatieprijs is een consumentenprijs incl. 21% btw. Op de factuur werken we
+   excl. btw, dus rekenen we terug: excl = prijs / 1,21. */
+function facVanReparatie(id){
+  const r=(state.reparaties||[]).find(x=>x.id===id); if(!r) return;
+  sluitPopup();
+  facBewerkId=null;
+  const excl=Math.round(((Number(r.prijs)||0)/1.21)*100)/100;
+  facConcept={ soort:'factuur', datum:new Date().toISOString().slice(0,10),
+    klant:{naam:(r.klant&&r.klant.naam)||'', email:(r.klant&&r.klant.email)||'', adres:'', pc:'', plaats:'', btwnr:''},
+    regels:[{omschrijving:('Reparatie '+(r.toestel||'')+' '+(r.type||'')).replace(/\s+/g,' ').trim(), aantal:1, stukprijs:excl, btw:21}],
+    notitie:'', bron:{type:'reparatie', ref:r.nr} };
+  showTab('facturen'); facEditRender();
+}
+/* Een laptop met margeregeling toont geen aparte btw (die zit in de marge); dan zetten
+   we de regel op 0% met een notitie. Bij normale btw rekenen we de vraagprijs terug
+   naar excl. btw, net als bij een reparatie. */
+function facVanHardware(id){
+  const h=(typeof hwData!=='undefined'?hwData:[]).find(x=>x.id===id); if(!h) return;
+  hwSluit();
+  facBewerkId=null;
+  const marge = h.marge!==false;
+  const prijs=Number(h.verkoop)||0;
+  const naam=((h.merk||'')+' '+(h.model||'')).replace(/\s+/g,' ').trim()||'Laptop';
+  const oms=naam+(h.serienummer?(' (SN '+h.serienummer+')'):'');
+  const stukprijs = marge ? Math.round(prijs*100)/100 : Math.round((prijs/1.21)*100)/100;
+  facConcept={ soort:'factuur', datum:new Date().toISOString().slice(0,10),
+    klant:{naam:'', email:'', adres:'', pc:'', plaats:'', btwnr:''},
+    regels:[{omschrijving:oms, aantal:1, stukprijs, btw: marge?0:21}],
+    notitie: marge?'Margeregeling van toepassing.':'', bron:{type:'hardware', ref:h.id} };
+  showTab('facturen'); facEditRender();
+}
 
 function renderDashboard(){
   hangHerinnering();
@@ -8622,6 +8653,7 @@ function hwVenster(h){
         ? (h.kanalen&&h.kanalen.partner
           ? `<button class="btn ghost" onclick="hwDashboard('${h.id}',false,this)">Uit partner-dashboard halen</button>`
           : `<button class="btn ghost" onclick="hwDashboard('${h.id}',true,this)">Zichtbaar in partner-dashboard</button>`):''}
+      ${h&&mag('facturen')?`<button class="btn ghost" onclick="facVanHardware('${h.id}')"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
       <button class="btn" onclick="hwOpslaan(this)">Opslaan</button>
       <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
     </div>
@@ -11349,6 +11381,7 @@ function repDetail(id){
       ${REP_STATUS[r.status].volgende?`<button class="btn" onclick="sluitPopup(); repVolgende(${r.id})"><svg class="i s"><use href="#${REP_STATUS[r.status].ico}"/></svg>${REP_STATUS[r.status].knop}</button>`:''}
       <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
       <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
+      ${mag('facturen')?`<button class="btn ghost" onclick="facVanReparatie(${r.id})"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
       <button class="btn ghost" onclick="sluitPopup()">Sluiten (Esc)</button>
     </div>
   </div>`;

@@ -125,6 +125,19 @@ setTimeout(()=>{
   ok('volgend factuurnummer telt door', w.eval("facVolgnr('factuur',2026)===3"));
   ok('offertes hebben hun eigen reeks', w.eval("facVolgnr('offerte',2026)===2"));
 
+  // ── factuur voorinvullen vanaf een reparatie: prijs incl. btw wordt excl. ──
+  w.eval("state.reparaties=[{id:99,nr:'R-99',toestel:'iPhone 13',type:'Scherm',prijs:121,klant:{naam:'Jan',email:'j@x.nl'}}]; facVanReparatie(99);");
+  ok('factuur uit reparatie vult klant en rekent btw terug',
+    w.eval("facConcept.klant.naam==='Jan' && facConcept.regels[0].btw===21 && facConcept.regels[0].stukprijs===100"));
+
+  // ── factuur voorinvullen vanaf een laptop: marge = 0% + notitie, normaal = 21% ──
+  w.eval("hwData.length=0; hwData.push({id:'h1',merk:'Dell',model:'Latitude',verkoop:500,marge:true}); facVanHardware('h1');");
+  ok('laptop met margeregeling: 0% btw, volle prijs, met notitie',
+    w.eval("facConcept.regels[0].btw===0 && facConcept.regels[0].stukprijs===500 && /Margeregeling/.test(facConcept.notitie)"));
+  w.eval("hwData.length=0; hwData.push({id:'h2',merk:'HP',model:'X',verkoop:121,marge:false}); facVanHardware('h2');");
+  ok('laptop met normale btw: 21% en teruggerekend naar excl.',
+    w.eval("facConcept.regels[0].btw===21 && facConcept.regels[0].stukprijs===100"));
+
   // ── Verkoop en Uren staan in de paginakeuze en gaan standaard aan ──
   ok('Verkoop staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='verkoop')"));
   ok('Uren staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='uren')"));
