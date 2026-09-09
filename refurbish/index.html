@@ -1699,6 +1699,20 @@ function appPagina(id){
   showTab('apparaat');
 }
 
+/* Een toestel later alsnog aan een batch koppelen (of eruit halen). Alleen het
+   batch_id verandert; de eigen inkoop blijft staan. Zonder eigen marge volgt het
+   toestel voortaan de marge van de nieuwe batch, en het telt mee in die batchcijfers. */
+async function apparaatBatchZetten(id, val){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const batch_id = val || null;
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({batch_id, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Kon de batch niet wijzigen','fout'); return; }
+  a.batch_id=batch_id;
+  const naam=batch_id?((batches.find(b=>b.id===batch_id)||{}).nummer||'batch'):null;
+  toast(batch_id?('Toegewezen aan '+naam):'Uit de batch gehaald', true);
+  tekenApparaat(); if(typeof tekenBatches==='function') tekenBatches();
+}
 function tekenApparaat(){
   const el=document.getElementById('appPagina');
   if(!el) return;
@@ -1759,6 +1773,15 @@ function tekenApparaat(){
             ? `<table><tbody>${specrijen.map(([k,w])=>
                 `<tr><td class="muted" style="width:40%">${esc(k)}</td><td><b>${esc(w)}</b></td></tr>`).join('')}</tbody></table>`
             : '<p class="muted klein">Nog niets bekend. De specificaties worden ingevuld bij de controle.</p>'}
+        </div>
+
+        <div class="card">
+          <h2><svg class="i"><use href="#i-box"/></svg>Batch</h2>
+          <p class="muted klein" style="margin-bottom:10px">Koppel dit toestel aan een ingekochte partij, of haal het eruit. Het telt dan mee in de cijfers van die batch.</p>
+          <select onchange="apparaatBatchZetten('${a.id}', this.value)">
+            <option value="">Geen batch</option>
+            ${batches.map(b=>`<option value="${b.id}"${a.batch_id===b.id?' selected':''}>${esc(b.nummer||'Naamloos')}</option>`).join('')}
+          </select>
         </div>
 
         <div class="card">
