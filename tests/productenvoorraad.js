@@ -114,6 +114,17 @@ setTimeout(()=>{
   ok('rapport telt omzet, inkoop, loon en vaste lasten samen',
     w.eval("var c=rapportCijfers({van:0,tot:Date.now()+864e5}); c.omzet===150 && c.inkoop===60 && c.brutowinst===90 && c.loon===50 && c.vast===0 && c.resultaat===40"));
 
+  // ── factuur: btw excl.+percentage, per tarief apart, totaal incl. ──
+  w.eval("window.__ft=facTotalen({regels:[{aantal:2,stukprijs:50,btw:21},{aantal:1,stukprijs:100,btw:9}]});");
+  ok('factuur: subtotaal is excl. btw', w.eval("window.__ft.subtotaal===200"));
+  ok('factuur: btw 21% en 9% apart', w.eval("window.__ft.btwMap[21]===21 && window.__ft.btwMap[9]===9"));
+  ok('factuur: totaal is incl. btw', w.eval("window.__ft.totaal===230"));
+
+  // ── factuurnummers lopen door per soort per jaar ──
+  w.eval("state.facturen=[{soort:'factuur',jaar:2026,volgnr:1},{soort:'factuur',jaar:2026,volgnr:2},{soort:'offerte',jaar:2026,volgnr:1}];");
+  ok('volgend factuurnummer telt door', w.eval("facVolgnr('factuur',2026)===3"));
+  ok('offertes hebben hun eigen reeks', w.eval("facVolgnr('offerte',2026)===2"));
+
   // ── Verkoop en Uren staan in de paginakeuze en gaan standaard aan ──
   ok('Verkoop staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='verkoop')"));
   ok('Uren staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='uren')"));

@@ -1562,6 +1562,7 @@
     <button data-tab="uren"><svg class="i"><use href="#i-clock"/></svg> Uren</button>
     <button data-tab="vastelasten"><svg class="i"><use href="#i-euro"/></svg> Vaste lasten</button>
     <button data-tab="rapport"><svg class="i"><use href="#i-chart"/></svg> Rapport</button>
+    <button data-tab="facturen"><svg class="i"><use href="#i-card"/></svg> Facturen</button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
     <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
   </nav>
@@ -2270,6 +2271,40 @@
   </div>
 </section>
 
+<!-- FACTUREN / OFFERTES -->
+<section id="tab-facturen"hidden>
+  <div class="pagehead"><h1>Facturen</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-shop"/></svg>Bedrijfsgegevens</h2>
+    <p class="muted" style="margin-bottom:12px">Deze staan op elke factuur en offerte. Eén keer invullen.</p>
+    <div class="grid">
+      <div><label>Bedrijfsnaam</label><input id="fb_naam" autocomplete="off"></div>
+      <div><label>E-mail</label><input id="fb_email" type="email" autocomplete="off"></div>
+      <div><label>Telefoon</label><input id="fb_tel" autocomplete="off"></div>
+      <div><label>Adres</label><input id="fb_adres" autocomplete="off"></div>
+      <div><label>Postcode</label><input id="fb_pc" autocomplete="off"></div>
+      <div><label>Plaats</label><input id="fb_plaats" autocomplete="off"></div>
+      <div><label>KVK-nummer</label><input id="fb_kvk" autocomplete="off"></div>
+      <div><label>Btw-nummer</label><input id="fb_btw" autocomplete="off"></div>
+      <div><label>IBAN</label><input id="fb_iban" autocomplete="off"></div>
+    </div>
+    <button class="btn" style="margin-top:14px" onclick="facBedrijfOpslaan()"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
+  </div>
+  <div class="card breed" id="facLijstVak">
+    <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:10px">
+      <h2 style="margin-bottom:0">Facturen en offertes</h2>
+      <div class="row" style="gap:8px">
+        <button class="btn actie" onclick="facNieuw('factuur')"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe factuur</button>
+        <button class="btn secondary" onclick="facNieuw('offerte')"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe offerte</button>
+      </div>
+    </div>
+    <div id="facLijst"></div>
+  </div>
+  <div class="card breed" id="facEditVak"hidden></div>
+  </div>
+</section>
+
 <!-- TEAM / ADMIN -->
 <section id="tab-team"hidden>
   <div class="pagehead">
@@ -2829,6 +2864,8 @@ function load(){
   if(!Array.isArray(s.taken)) s.taken=[];
   if(!Array.isArray(s.uren)) s.uren=[];
   if(!Array.isArray(s.vasteLasten)) s.vasteLasten=[];
+  if(!Array.isArray(s.facturen)) s.facturen=[];
+  if(!s.bedrijf || typeof s.bedrijf!=='object') s.bedrijf={};
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
   if(!s.bijbestelBesteld || typeof s.bijbestelBesteld!=='object') s.bijbestelBesteld={};
   /* Uurtarief per teamlid, bewaard op het account-id (het echte team loopt via de
@@ -2918,6 +2955,7 @@ function showTab(t){
   if(t==='uren') renderUren();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
+  if(t==='facturen') renderFacturen();
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
@@ -3412,6 +3450,217 @@ function renderRapport(){
        <div><div class="muted klein">Pin</div><b class="groot">${euro(c.pin)}</b></div>
        <div><div class="muted klein">Contant</div><b class="groot">${euro(c.cash)}</b></div>
      </div>`;
+}
+
+/* ═══════════════ FACTUREN EN OFFERTES ═══════════════
+   Eigen facturen en offertes in Storvo (geen Moneybird). Bedragen excl. btw met
+   21%/9%/0% per regel; de btw wordt apart getoond, want dat hoort op een NL-factuur.
+   Nummers lopen door per soort per jaar (factuur "2026-0001", offerte "OFF-2026-0001"),
+   afgeleid uit de bestaande lijst zodat er geen losse teller kan misgaan. Printen
+   gaat via een eigen, zelfstandige printpagina (opslaan als pdf of printen).
+   Alleen eigenaar/beheerder. */
+let facConcept=null, facBewerkId=null;
+function facTotalen(f){
+  let subtotaal=0; const btwMap={};
+  (f.regels||[]).forEach(r=>{
+    const bedrag=(Number(r.aantal)||0)*(Number(r.stukprijs)||0);
+    subtotaal+=bedrag;
+    const tar=Number(r.btw)||0;
+    btwMap[tar]=(btwMap[tar]||0)+bedrag*tar/100;
+  });
+  let btwTotaal=0;
+  Object.keys(btwMap).forEach(k=>{ btwMap[k]=Math.round(btwMap[k]*100)/100; btwTotaal+=btwMap[k]; });
+  subtotaal=Math.round(subtotaal*100)/100;
+  btwTotaal=Math.round(btwTotaal*100)/100;
+  return {subtotaal, btwMap, btwTotaal, totaal:Math.round((subtotaal+btwTotaal)*100)/100};
+}
+function facVolgnr(soort, jaar){
+  const b=(state.facturen||[]).filter(f=>f.soort===soort && f.jaar===jaar).map(f=>Number(f.volgnr)||0);
+  return (b.length?Math.max(...b):0)+1;
+}
+function facBedrijfOpslaan(){
+  const g=id=>((document.getElementById(id)||{}).value||'').trim();
+  state.bedrijf={ naam:g('fb_naam'), email:g('fb_email'), tel:g('fb_tel'),
+    adres:g('fb_adres'), pc:g('fb_pc'), plaats:g('fb_plaats'),
+    kvk:g('fb_kvk'), btw:g('fb_btw'), iban:g('fb_iban') };
+  save(); toast('Bedrijfsgegevens opgeslagen', true);
+}
+function renderFacturen(){
+  const b=state.bedrijf||{}, h=huisstijl();
+  const zet=(id,val)=>{ const el=document.getElementById(id); if(el && document.activeElement!==el) el.value=val||''; };
+  zet('fb_naam', b.naam || h.naam || ''); zet('fb_email', b.email); zet('fb_tel', b.tel);
+  zet('fb_adres', b.adres); zet('fb_pc', b.pc); zet('fb_plaats', b.plaats);
+  zet('fb_kvk', b.kvk); zet('fb_btw', b.btw); zet('fb_iban', b.iban);
+  const ev=document.getElementById('facEditVak'); if(ev){ ev.hidden=true; ev.innerHTML=''; }
+  const lv=document.getElementById('facLijstVak'); if(lv) lv.hidden=false;
+  const lijst=(state.facturen||[]).slice().sort((a,b)=>(b.op||0)-(a.op||0));
+  const el=document.getElementById('facLijst'); if(!el) return;
+  el.innerHTML = lijst.length
+    ? '<div style="overflow-x:auto"><table><thead><tr><th>Nummer</th><th>Soort</th><th>Datum</th><th>Klant</th><th class="num">Totaal</th><th></th></tr></thead><tbody>'+
+      lijst.map(f=>{ const t=facTotalen(f); return `<tr>`+
+        `<td>${esc(f.nummer||'')}</td>`+
+        `<td>${f.soort==='offerte'?'Offerte':'Factuur'}</td>`+
+        `<td>${esc(f.datum||'')}</td>`+
+        `<td>${esc((f.klant&&f.klant.naam)||'')}</td>`+
+        `<td class="num">${euro(t.totaal)}</td>`+
+        `<td class="num" style="white-space:nowrap">`+
+          `<button class="btn small ghost icoknop" title="Bekijken en printen" onclick="facPrint(${f.id})"><svg class="i s"><use href="#i-download"/></svg></button> `+
+          `<button class="btn small ghost icoknop" title="Bewerken" onclick="facOpen(${f.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
+          `<button class="btn small danger icoknop" title="Verwijderen" onclick="facWeg(${f.id})"><svg class="i s"><use href="#i-trash"/></svg></button>`+
+        `</td></tr>`; }).join('')+'</tbody></table></div>'
+    : '<div class="muted">Nog geen facturen of offertes. Maak er hierboven een.</div>';
+}
+function facLeegRegel(){ return {omschrijving:'',aantal:1,stukprijs:0,btw:21}; }
+function facNieuw(soort){
+  facBewerkId=null;
+  facConcept={ soort, datum:new Date().toISOString().slice(0,10),
+    klant:{naam:'',adres:'',pc:'',plaats:'',email:'',btwnr:''},
+    regels:[facLeegRegel()], notitie:'' };
+  facEditRender();
+}
+function facOpen(id){
+  const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
+  facBewerkId=id;
+  facConcept=JSON.parse(JSON.stringify(f));
+  if(!facConcept.klant) facConcept.klant={};
+  if(!Array.isArray(facConcept.regels) || !facConcept.regels.length) facConcept.regels=[facLeegRegel()];
+  facEditRender();
+}
+function facTotalenHtml(t){
+  const rows=Object.keys(t.btwMap).sort((a,b)=>b-a)
+    .map(k=>`<div class="row" style="justify-content:space-between"><span class="muted">Btw ${k}%</span><span>${euro(t.btwMap[k])}</span></div>`).join('');
+  return `<div style="max-width:320px; margin-left:auto">
+    <div class="row" style="justify-content:space-between"><span class="muted">Subtotaal (excl. btw)</span><span>${euro(t.subtotaal)}</span></div>
+    ${rows}
+    <div class="row" style="justify-content:space-between; font-weight:800; border-top:2px solid var(--border); margin-top:6px; padding-top:6px"><span>Totaal</span><span>${euro(t.totaal)}</span></div></div>`;
+}
+function facEditRender(){
+  const lv=document.getElementById('facLijstVak'); if(lv) lv.hidden=true;
+  const ev=document.getElementById('facEditVak'); if(!ev) return;
+  ev.hidden=false;
+  const f=facConcept, isOff=f.soort==='offerte';
+  const regels=f.regels.map((r,i)=>`<tr>`+
+    `<td><input value="${esc(r.omschrijving||'')}" placeholder="Omschrijving" oninput="facLees()"></td>`+
+    `<td class="num"><input class="num" type="number" step="1" min="0" style="width:70px" value="${r.aantal!=null?r.aantal:1}" oninput="facLees()"></td>`+
+    `<td class="num"><input class="num" type="number" step="0.01" min="0" style="width:100px" value="${r.stukprijs!=null?r.stukprijs:0}" oninput="facLees()"></td>`+
+    `<td><select onchange="facLees()"><option value="21"${Number(r.btw)===21?' selected':''}>21%</option><option value="9"${Number(r.btw)===9?' selected':''}>9%</option><option value="0"${Number(r.btw)===0?' selected':''}>0% / verlegd</option></select></td>`+
+    `<td class="num">${euro((Number(r.aantal)||0)*(Number(r.stukprijs)||0))}</td>`+
+    `<td class="num"><button class="btn small ghost icoknop" title="Regel weg" onclick="facRegelWeg(${i})"><svg class="i s"><use href="#i-trash"/></svg></button></td>`+
+  `</tr>`).join('');
+  ev.innerHTML=`
+    <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px">
+      <h2 style="margin-bottom:0">${facBewerkId?'Bewerken':'Nieuw'}: ${isOff?'offerte':'factuur'}</h2>
+      <button class="btn ghost small" onclick="renderFacturen()"><svg class="i s"><use href="#i-left"/></svg>Terug naar de lijst</button>
+    </div>
+    <div class="grid">
+      <div><label>Klantnaam</label><input id="fk_naam" value="${esc(f.klant.naam||'')}" oninput="facLees()" autocomplete="off"></div>
+      <div><label>E-mail <span class="muted">(optioneel)</span></label><input id="fk_email" value="${esc(f.klant.email||'')}" oninput="facLees()" autocomplete="off"></div>
+      <div><label>Adres <span class="muted">(optioneel)</span></label><input id="fk_adres" value="${esc(f.klant.adres||'')}" oninput="facLees()" autocomplete="off"></div>
+      <div><label>Postcode <span class="muted">(optioneel)</span></label><input id="fk_pc" value="${esc(f.klant.pc||'')}" oninput="facLees()" autocomplete="off"></div>
+      <div><label>Plaats <span class="muted">(optioneel)</span></label><input id="fk_plaats" value="${esc(f.klant.plaats||'')}" oninput="facLees()" autocomplete="off"></div>
+      <div><label>Btw-nummer klant <span class="muted">(optioneel)</span></label><input id="fk_btw" value="${esc(f.klant.btwnr||'')}" oninput="facLees()" autocomplete="off"></div>
+      <div><label>Datum</label><input id="fk_datum" type="date" value="${esc(f.datum||'')}" oninput="facLees()"></div>
+    </div>
+    <div style="overflow-x:auto; margin-top:14px"><table><thead><tr><th>Omschrijving</th><th class="num">Aantal</th><th class="num">Stukprijs (excl.)</th><th>Btw</th><th class="num">Bedrag (excl.)</th><th></th></tr></thead><tbody id="facRegels">${regels}</tbody></table></div>
+    <button class="btn ghost small" style="margin-top:10px" onclick="facRegelToe()"><svg class="i s"><use href="#i-plus"/></svg>Regel erbij</button>
+    <div style="margin-top:10px"><label>Notitie <span class="muted">(optioneel)</span></label><input id="fk_notitie" value="${esc(f.notitie||'')}" oninput="facLees()" placeholder="bijv. betaaltermijn 14 dagen" autocomplete="off"></div>
+    <div id="facTotVak" style="margin-top:14px">${facTotalenHtml(facTotalen(f))}</div>
+    <div class="row" style="gap:8px; margin-top:16px; flex-wrap:wrap">
+      <button class="btn actie" onclick="facOpslaan(false)"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
+      <button class="btn" onclick="facOpslaan(true)"><svg class="i s"><use href="#i-download"/></svg>Opslaan en printen</button>
+    </div>`;
+}
+function facLees(){
+  if(!facConcept) return;
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  facConcept.klant={ naam:g('fk_naam'), email:g('fk_email'), adres:g('fk_adres'),
+    pc:g('fk_pc'), plaats:g('fk_plaats'), btwnr:g('fk_btw') };
+  facConcept.datum=g('fk_datum')||facConcept.datum;
+  facConcept.notitie=g('fk_notitie');
+  const body=document.getElementById('facRegels');
+  if(body){
+    facConcept.regels=[...body.querySelectorAll('tr')].map(tr=>{
+      const inp=tr.querySelectorAll('input'), sel=tr.querySelector('select');
+      return { omschrijving:(inp[0]||{}).value||'', aantal:Number((inp[1]||{}).value)||0,
+        stukprijs:Number((inp[2]||{}).value)||0, btw:Number(sel?sel.value:21)||0 };
+    });
+  }
+  const tv=document.getElementById('facTotVak'); if(tv) tv.innerHTML=facTotalenHtml(facTotalen(facConcept));
+}
+function facRegelToe(){ facLees(); facConcept.regels.push(facLeegRegel()); facEditRender(); }
+function facRegelWeg(i){ facLees(); facConcept.regels.splice(i,1); if(!facConcept.regels.length) facConcept.regels.push(facLeegRegel()); facEditRender(); }
+function facOpslaan(print){
+  facLees();
+  const f=facConcept;
+  if(!(f.klant.naam||'').trim()){ toast('Vul de klantnaam in','let-op'); const el=document.getElementById('fk_naam'); if(el) el.focus(); return; }
+  const echt=f.regels.filter(r=>(r.omschrijving||'').trim() || (Number(r.aantal)*Number(r.stukprijs)));
+  if(!echt.length){ toast('Voeg minstens één regel toe','let-op'); return; }
+  f.regels=echt;
+  if(!Array.isArray(state.facturen)) state.facturen=[];
+  if(facBewerkId){
+    const idx=state.facturen.findIndex(x=>x.id===facBewerkId);
+    if(idx>=0){ f.id=facBewerkId; f.op=state.facturen[idx].op||Date.now(); state.facturen[idx]=f; }
+  }else{
+    const jaar=new Date().getFullYear(), volgnr=facVolgnr(f.soort, jaar);
+    f.id=uid(); f.jaar=jaar; f.volgnr=volgnr;
+    f.nummer=(f.soort==='offerte'?'OFF-':'')+jaar+'-'+String(volgnr).padStart(4,'0');
+    f.op=Date.now();
+    state.facturen.push(f);
+    facBewerkId=f.id;
+  }
+  save();
+  toast((f.soort==='offerte'?'Offerte':'Factuur')+' opgeslagen: '+f.nummer, true);
+  if(print) facPrint(f.id); else renderFacturen();
+}
+function facWeg(id){
+  const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
+  if(!confirm((f.soort==='offerte'?'Offerte ':'Factuur ')+(f.nummer||'')+' verwijderen?')) return;
+  state.facturen=(state.facturen||[]).filter(x=>x.id!==id);
+  save(); renderFacturen(); toast('Verwijderd');
+}
+function facPrint(id){
+  const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
+  const b=state.bedrijf||{}, h=huisstijl(), bn=b.naam||h.naam||'';
+  const t=facTotalen(f), kl=f.klant||{};
+  const soortLabel=f.soort==='offerte'?'Offerte':'Factuur';
+  const geld=n=>'€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const bedrijfRegels=[b.adres, [b.pc,b.plaats].filter(Boolean).join('  '), b.email, b.tel].filter(Boolean).join('\n');
+  const klantRegels=[kl.adres, [kl.pc,kl.plaats].filter(Boolean).join('  '), kl.email, kl.btwnr?('Btw: '+kl.btwnr):''].filter(Boolean).join('\n');
+  const voet=[bn, b.kvk?('KVK '+b.kvk):'', b.btw?('Btw '+b.btw):'', b.iban?('IBAN '+b.iban):''].filter(Boolean).map(esc).join(' &middot; ');
+  const regelHtml=f.regels.map(r=>{
+    const bedrag=(Number(r.aantal)||0)*(Number(r.stukprijs)||0);
+    return `<tr><td style="padding:8px 6px; border-bottom:1px solid #eee">${esc(r.omschrijving||'')}</td>`+
+      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${Number(r.aantal)||0}</td>`+
+      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${geld(r.stukprijs)}</td>`+
+      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${Number(r.btw)||0}%</td>`+
+      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${geld(bedrag)}</td></tr>`;
+  }).join('');
+  const btwRows=Object.keys(t.btwMap).sort((a,b)=>b-a)
+    .map(k=>`<tr><td style="text-align:right; padding:2px 6px; color:#555">Btw ${k}%</td><td style="text-align:right; padding:2px 6px; width:130px">${geld(t.btwMap[k])}</td></tr>`).join('');
+  const doc='<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>'+soortLabel+' '+esc(f.nummer||'')+'</title></head>'+
+    '<body style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#1a1a1a; max-width:720px; margin:24px auto; padding:0 24px; font-size:14px; line-height:1.5">'+
+    '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px">'+
+      '<div><div style="font-size:20px; font-weight:800">'+esc(bn)+'</div>'+
+        '<div style="color:#555; white-space:pre-line">'+esc(bedrijfRegels)+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:22px; font-weight:800; text-transform:uppercase; letter-spacing:1px">'+soortLabel+'</div>'+
+        '<div style="color:#555">Nr. '+esc(f.nummer||'')+'</div><div style="color:#555">Datum: '+esc(f.datum||'')+'</div></div></div>'+
+    '<div style="margin-bottom:20px"><div style="color:#555; font-size:12px; text-transform:uppercase; letter-spacing:1px">Aan</div>'+
+      '<div style="font-weight:700">'+esc(kl.naam||'')+'</div>'+
+      '<div style="color:#555; white-space:pre-line">'+esc(klantRegels)+'</div></div>'+
+    '<table style="width:100%; border-collapse:collapse; margin-bottom:16px"><thead><tr style="border-bottom:2px solid #1a1a1a">'+
+      '<th style="text-align:left; padding:6px">Omschrijving</th><th style="text-align:right; padding:6px">Aantal</th>'+
+      '<th style="text-align:right; padding:6px">Stukprijs</th><th style="text-align:right; padding:6px">Btw</th>'+
+      '<th style="text-align:right; padding:6px">Bedrag</th></tr></thead><tbody>'+regelHtml+'</tbody></table>'+
+    '<table style="margin-left:auto; border-collapse:collapse; margin-bottom:24px">'+
+      '<tr><td style="text-align:right; padding:2px 6px; color:#555">Subtotaal</td><td style="text-align:right; padding:2px 6px; width:130px">'+geld(t.subtotaal)+'</td></tr>'+
+      btwRows+
+      '<tr style="font-weight:800; border-top:2px solid #1a1a1a"><td style="text-align:right; padding:6px">Totaal</td><td style="text-align:right; padding:6px">'+geld(t.totaal)+'</td></tr></table>'+
+    (f.notitie?'<div style="color:#555; margin-bottom:16px">'+esc(f.notitie)+'</div>':'')+
+    '<div style="color:#555; border-top:1px solid #eee; padding-top:12px; font-size:12px">'+voet+'</div>'+
+    '<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt></body></html>';
+  const w=window.open('', '_blank');
+  if(!w){ toast('Sta pop-ups toe om de factuur te openen','let-op'); return; }
+  w.document.write(doc); w.document.close();
 }
 
 function renderDashboard(){
@@ -6972,7 +7221,7 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','instellingen','team'],
+  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team'],
   medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren']
 };
 /* ---------- pagina's aan of uit ----------
@@ -7241,8 +7490,8 @@ async function uitloggen(){
 
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
-                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren','vasteLasten'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen'];
+                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren','vasteLasten','facturen'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','bedrijf'];
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
