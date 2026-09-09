@@ -10051,8 +10051,10 @@ function toonMijnAccount(){
       <button class="btn ghost" style="width:100%; margin-top:10px" onclick="slaMijnWachtwoordOp()">Wachtwoord wijzigen</button>
       <hr style="margin:16px 0; border:none; border-top:1px solid var(--border,#ECEAE4)">
       <div id="ma_2fa"></div>
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--border,#ECEAE4)">
+      <button class="btn danger" style="width:100%" onclick="document.getElementById('mijnAccountPopup').remove(); uitloggen()"><svg class="i s"><use href="#i-lock"/></svg>Uitloggen</button>
     </div>
-    <button class="btn ghost" style="width:100%; margin-top:16px" onclick="document.getElementById('mijnAccountPopup').remove()">Sluiten</button>
+    <button class="btn ghost" style="width:100%; margin-top:12px" onclick="document.getElementById('mijnAccountPopup').remove()">Sluiten</button>
   </div>`;
   document.body.appendChild(el);
   render2FAStatus();
