@@ -98,8 +98,8 @@ setTimeout(()=>{
   w.eval("kasVerkoop(10,'cash','Y');");
   ok('cash met bon komt wel in het kasboek', w.eval("state.kasboek.length===1"));
 
-  // ── loonkosten = uren maal uurtarief per medewerker ──
-  w.eval("state.medewerkers=[{id:1,naam:'Sara',uurtarief:15,actief:true}]; state.uren=[{id:'x',medewerker:1,datum:'2026-09-01',uren:8},{id:'y',medewerker:1,datum:'2026-09-02',uren:2}];");
+  // ── loonkosten = uren maal uurtarief per teamlid (tarief in state.lonen, op account-id) ──
+  w.eval("state.lonen={'acc1':15}; state.uren=[{id:1,medewerker:'acc1',datum:'2026-09-01',uren:8},{id:2,medewerker:'acc1',datum:'2026-09-02',uren:2}];");
   ok('loonkosten = uren maal tarief', w.eval("urenLoonInPeriode(0, Date.now()+864e5)===150"));
 
   // ── de vier getallen zijn direct in de tabel te bewerken ──

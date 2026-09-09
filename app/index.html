@@ -2724,6 +2724,7 @@ let betaal='pin';
 let dagDatum=null;
 let chartMode='uur';
 let gebruiker=null;
+let teamLeden=[]; /* lichte kopie van de accounts-tabel (id, naam, rol) voor de Uren-pagina */
 let prestPeriode='dag';
 const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
@@ -2778,6 +2779,10 @@ function load(){
   if(!Array.isArray(s.uren)) s.uren=[];
   if(!s.bijbestel || typeof s.bijbestel!=='object') s.bijbestel={};
   if(!s.bijbestelBesteld || typeof s.bijbestelBesteld!=='object') s.bijbestelBesteld={};
+  /* Uurtarief per teamlid, bewaard op het account-id (het echte team loopt via de
+     accounts-tabel, niet via de oude medewerkers-lijst). De loonkosten worden hieruit
+     berekend, dus dit hoort bij de blob-financiën en niet in state.medewerkers. */
+  if(!s.lonen || typeof s.lonen!=='object') s.lonen={};
   /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
      als keuze-uitvoeringen klaar voor het verkoopblokje, tenzij je al iets hebt ingesteld. */
   if(!s.varSeed){
@@ -3135,12 +3140,25 @@ function renderPlanning(){
 }
 
 /* ═══════════════ UREN EN LOONKOSTEN ═══════════════
-   Medewerkers loggen hun uren (of de eigenaar/beheerder doet dat), met een
-   uurtarief per medewerker. Loonkosten = uren × tarief; die gaan straks mee in
+   Teamleden loggen hun uren (of de eigenaar/beheerder doet dat), met een
+   uurtarief per teamlid. Loonkosten = uren × tarief; die gaan straks mee in
    het resultaat-rapport. Een medewerker ziet en logt alleen zijn eigen uren en
-   ziet geen loonbedragen; eigenaar/beheerder zien alles. */
+   ziet geen loonbedragen; eigenaar/beheerder zien alles.
+
+   Belangrijk: het echte team loopt via de accounts-tabel (Gebruikers), niet via
+   de oude state.medewerkers-lijst (die is verstopt en wordt niet meer gebruikt).
+   Daarom draait dit op teamLeden (kopie van accounts) en op state.lonen[id]. */
 let urenPeriodeNu='week';
 function urenMagAlles(){ const r=gebruiker?gebruiker.rol:'eigenaar'; return r==='eigenaar'||r==='beheerder'; }
+/* Haalt een lichte kopie van de accounts op voor de Wie-keuze. Alleen nodig als je
+   alle uren mag zien; een medewerker logt enkel voor zichzelf en heeft dit niet nodig. */
+async function laadTeamLeden(){
+  if(!account) return teamLeden;
+  try{ const {data}=await sb.from('accounts').select('id,naam,rol').order('created_at',{ascending:true});
+    if(data) teamLeden=data.map(l=>({id:l.id, naam:l.naam, rol:l.rol})); }catch(e){}
+  return teamLeden;
+}
+function urenNaam(u){ if(u.medewerkerNaam) return u.medewerkerNaam; const m=teamLeden.find(x=>x.id===u.medewerker); if(m) return m.naam; if(gebruiker&&gebruiker.id===u.medewerker) return gebruiker.naam; return '?'; }
 function urenVanaf(){
   const nu=new Date();
   if(urenPeriodeNu==='week') return Date.now()-7*864e5;
@@ -3148,13 +3166,17 @@ function urenVanaf(){
   return 0;
 }
 function urenDatumTijd(u){ return u.datum ? new Date(u.datum).getTime() : (u.op||0); }
+function loonTarief(id){ return Number((state.lonen||{})[id])||0; }
 function urenLoonInPeriode(van, tot){
-  return (state.uren||[]).reduce((s,u)=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ const m=state.medewerkers.find(x=>x.id===u.medewerker); s+=(Number(u.uren)||0)*(m?Number(m.uurtarief)||0:0); } return s; },0);
+  return (state.uren||[]).reduce((s,u)=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ s+=(Number(u.uren)||0)*loonTarief(u.medewerker); } return s; },0);
 }
 function renderUren(){
   const alles=urenMagAlles();
   const wieVak=document.getElementById('urenWieVak'), wie=document.getElementById('uren_wie');
-  const actief=state.medewerkers.filter(m=>m.actief!==false);
+  /* Wie-keuze uit de accounts. Als de eigenaar/beheerder de lijst nog niet heeft,
+     halen we hem één keer op en tekenen daarna opnieuw. */
+  if(alles && !teamLeden.length && account){ laadTeamLeden().then(()=>{ if(!document.getElementById('tab-uren').hidden) renderUren(); }); }
+  const actief = teamLeden.length ? teamLeden : (gebruiker?[{id:gebruiker.id, naam:gebruiker.naam}]:[]);
   if(wie){
     if(alles){ wie.innerHTML=actief.map(m=>`<option value="${m.id}">${esc(m.naam)}</option>`).join(''); if(wieVak) wieVak.style.display=''; }
     else { const self=gebruiker||actief[0]; wie.innerHTML=self?`<option value="${self.id}">${esc(self.naam)}</option>`:''; if(wieVak) wieVak.style.display='none'; }
@@ -3165,7 +3187,7 @@ function renderUren(){
   if(!alles){ const zelf=gebruiker?gebruiker.id:null; lijst=lijst.filter(u=>u.medewerker===zelf); }
   lijst=lijst.slice().sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||'')) || (b.op||0)-(a.op||0));
   const perM={};
-  lijst.forEach(u=>{ const m=state.medewerkers.find(x=>x.id===u.medewerker); const tarief=m?Number(m.uurtarief)||0:0; if(!perM[u.medewerker]) perM[u.medewerker]={naam:m?m.naam:'?', uren:0, loon:0}; perM[u.medewerker].uren+=Number(u.uren)||0; perM[u.medewerker].loon+=(Number(u.uren)||0)*tarief; });
+  lijst.forEach(u=>{ const naam=urenNaam(u); const tarief=loonTarief(u.medewerker); if(!perM[u.medewerker]) perM[u.medewerker]={naam, uren:0, loon:0}; perM[u.medewerker].uren+=Number(u.uren)||0; perM[u.medewerker].loon+=(Number(u.uren)||0)*tarief; });
   const tot=document.getElementById('urenTotalen');
   if(tot){
     const rows=Object.values(perM);
@@ -3177,7 +3199,7 @@ function renderUren(){
   const el=document.getElementById('urenLijst');
   if(el){
     el.innerHTML = lijst.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Datum</th><th>Medewerker</th><th class="num">Uren</th><th>Notitie</th><th></th></tr></thead><tbody>'+
-      lijst.map(u=>{ const m=state.medewerkers.find(x=>x.id===u.medewerker); return `<tr><td>${esc(u.datum||'')}</td><td>${esc(m?m.naam:'?')}</td><td class="num">${(Number(u.uren)||0).toLocaleString('nl-NL')}</td><td><span data-onvertaald>${esc(u.notitie||'')}</span></td><td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="urenWeg(${u.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`; }).join('')+'</tbody></table></div>'
+      lijst.map(u=>`<tr><td>${esc(u.datum||'')}</td><td>${esc(urenNaam(u))}</td><td class="num">${(Number(u.uren)||0).toLocaleString('nl-NL')}</td><td><span data-onvertaald>${esc(u.notitie||'')}</span></td><td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="urenWeg(${u.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('')+'</tbody></table></div>'
       : '';
   }
   const dd=document.getElementById('uren_datum'); if(dd && !dd.value) dd.value=new Date().toISOString().slice(0,10);
@@ -3186,13 +3208,14 @@ function urenKiesPeriode(p){ urenPeriodeNu=p; renderUren(); }
 function urenToevoegen(){
   const alles=urenMagAlles();
   const wieEl=document.getElementById('uren_wie');
-  const medewerker = alles ? (Number(wieEl.value)||wieEl.value) : (gebruiker?gebruiker.id:(wieEl?(Number(wieEl.value)||wieEl.value):null));
+  const medewerker = alles ? wieEl.value : (gebruiker?gebruiker.id:(wieEl?wieEl.value:null));
+  const naam = (teamLeden.find(m=>m.id===medewerker)||{}).naam || (gebruiker&&gebruiker.id===medewerker?gebruiker.naam:null) || (wieEl&&wieEl.selectedOptions[0]?wieEl.selectedOptions[0].textContent:null);
   const datum=document.getElementById('uren_datum').value || new Date().toISOString().slice(0,10);
   const uren=Math.max(0, Number(document.getElementById('uren_aantal').value)||0);
   if(!uren){ toast('Vul een aantal uren in','let-op'); document.getElementById('uren_aantal').focus(); return; }
   const notitie=document.getElementById('uren_notitie').value.trim();
   if(!Array.isArray(state.uren)) state.uren=[];
-  state.uren.push({id:uid(), medewerker, datum, uren, notitie, door:gebruiker?gebruiker.naam:null, op:Date.now()});
+  state.uren.push({id:uid(), medewerker, medewerkerNaam:naam, datum, uren, notitie, door:gebruiker?gebruiker.naam:null, op:Date.now()});
   save();
   document.getElementById('uren_aantal').value=''; document.getElementById('uren_notitie').value='';
   renderUren();
@@ -7028,7 +7051,7 @@ async function uitloggen(){
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
                       'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen'];
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
@@ -9221,13 +9244,19 @@ async function renderTeamAccounts(){
   }
   const {data:leden,error}=await sb.from('accounts').select('*').order('created_at',{ascending:true});
   if(error){ body.innerHTML='<p class="muted">Kon teamleden niet laden.</p>'; return; }
+  /* Meteen de lichte kopie bijwerken die de Uren-pagina gebruikt. */
+  teamLeden=(leden||[]).map(l=>({id:l.id, naam:l.naam, rol:l.rol}));
+  /* Uurtarief-veld (per account, bewaard in state.lonen). Zichtbaar bij ieder teamlid,
+     zodat de loonkosten kloppen; leeg = telt niet mee. */
+  const loonVeld=l=>`<div style="min-width:130px"><label>Uurtarief (€)</label><input type="number" step="0.01" min="0" style="width:110px" value="${state.lonen&&state.lonen[l.id]!=null?state.lonen[l.id]:''}" placeholder="0" onchange="zetLoon('${l.id}',this.value)"></div>`;
   body.innerHTML=(leden||[]).map(l=>{
     const isJij=l.id===account.id;
     if(l.rol==='eigenaar'){
       return `<div class="teamRij2"><div class="kop"><div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
         <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}<span class="rolTag">eigenaar</span>
         <span class="muted">${esc(l.gebruikersnaam||'')} · ${esc(l.email||'')}</span></div>
-        <p class="muted klein">De eigenaar ziet altijd alle pagina's.</p></div>`;
+        <p class="muted klein">De eigenaar ziet altijd alle pagina's.</p>
+        <div class="row" style="align-items:flex-end; gap:12px; margin-top:2px">${loonVeld(l)}</div></div>`;
     }
     const actief = Array.isArray(l.tabs) ? l.tabs : rolDefaultTabs(l.rol);
     return `<div class="teamRij2">
@@ -9238,6 +9267,7 @@ async function renderTeamAccounts(){
         <div style="min-width:160px"><label>Rol</label><select id="rol_${l.id}">
           <option value="medewerker"${l.rol==='medewerker'?' selected':''}>Medewerker</option>
           <option value="beheerder"${l.rol==='beheerder'?' selected':''}>Beheerder</option></select></div>
+        ${loonVeld(l)}
       </div>
       <label style="display:block; margin-top:4px">Pagina's</label>
       <div class="paginakeuze">${teamPaginaVinkjes('acc'+l.id, actief)}</div>
@@ -9248,6 +9278,14 @@ async function renderTeamAccounts(){
       </div>
     </div>`;
   }).join('') || '<p class="muted">Nog geen teamleden. Maak er hierboven een aan.</p>';
+}
+/* Uurtarief opslaan per teamlid. Staat in de blob (state.lonen), niet in de accounts-
+   tabel: de loonkosten worden lokaal en synchroon berekend en horen bij de financiën. */
+function zetLoon(id, val){
+  if(!state.lonen || typeof state.lonen!=='object') state.lonen={};
+  const n=Math.max(0, Number(String(val).replace(',','.'))||0);
+  if(n) state.lonen[id]=n; else delete state.lonen[id];
+  save(); toast('Uurtarief opgeslagen', true);
 }
 /* Alle team-acties lopen via de team-beheer-functie (service_role), zodat de sessie
    van de eigenaar niet vervangen wordt bij het aanmaken van een account. */
