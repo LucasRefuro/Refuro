@@ -90,8 +90,8 @@ setTimeout(async()=>{
   ok('filter oud toont alleen Dell', /Latitude/.test(oud) && !/EliteBook/.test(oud));
 
   w.eval("hwFilterNu='voorraad'; renderHardware(); hwBewerk('h1');");
-  const v=d.getElementById('hwOverlay');
-  ok('bewerkvenster opent', !!v);
+  const v=d.getElementById('hwDetail');
+  ok('bewerkvenster opent (volledige pagina)', !!v && !v.hidden);
   ok('velden gevuld', d.getElementById('hw_model').value==='Latitude 5430');
   ok('inkoopprijs gevuld', d.getElementById('hw_inkoop').value==='75');
   ok('shopify-knop aanwezig', /Op Shopify zetten/.test(v.innerHTML));
@@ -104,10 +104,10 @@ setTimeout(async()=>{
   ok('bron van het voorstel genoemd', d.getElementById('hwPrijsBron').textContent.length>10);
   ok('verkoopknop aanwezig', /Verkopen aan de balie/.test(v.innerHTML));
   w.eval("hwSluit()");
-  ok('venster sluit', !d.getElementById('hwOverlay'));
+  ok('venster sluit', d.getElementById('hwDetail').hidden && !d.getElementById('hwLijstWeergave').hidden);
 
   w.eval("hwBewerk('h2')");
-  ok('online toestel toont offline-knop', /Offline halen/.test(d.getElementById('hwOverlay').innerHTML));
+  ok('online toestel toont offline-knop', /Offline halen/.test(d.getElementById('hwDetail').innerHTML));
   w.eval("hwSluit()");
 
   // ── inscannen ──

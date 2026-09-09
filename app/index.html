@@ -2122,28 +2122,31 @@
      staan ze niet tussen de gewone producten maar hier, met een kolom die laat
      zien waar hij online staat. -->
 <section id="tab-hardware"hidden>
-  <div class="pagehead">
-    <h1>Hardware</h1>
-    <div class="row" style="gap:10px">
-      <div class="periodesel" id="hwFilter">
-        <button data-f="voorraad" class="active">Op voorraad</button>
-        <span id="hwLocFilters"></span>
-        <button data-f="onderweg">Onderweg</button>
-        <button data-f="online">Staat online</button>
-        <button data-f="oud">Langer dan 30 dagen</button>
-        <button data-f="verkocht">Verkocht</button>
+  <div id="hwLijstWeergave">
+    <div class="pagehead">
+      <h1>Hardware</h1>
+      <div class="row" style="gap:10px">
+        <div class="periodesel" id="hwFilter">
+          <button data-f="voorraad" class="active">Op voorraad</button>
+          <span id="hwLocFilters"></span>
+          <button data-f="onderweg">Onderweg</button>
+          <button data-f="online">Staat online</button>
+          <button data-f="oud">Langer dan 30 dagen</button>
+          <button data-f="verkocht">Verkocht</button>
+        </div>
+        <button class="btn" onclick="hwInscannen()"><svg class="i"><use href="#i-scan"/></svg>Inscannen</button>
+        <button class="btn actie" onclick="hwNieuw()"><svg class="i"><use href="#i-plus"/></svg>Toestel toevoegen</button>
       </div>
-      <button class="btn" onclick="hwInscannen()"><svg class="i"><use href="#i-scan"/></svg>Inscannen</button>
-      <button class="btn actie" onclick="hwNieuw()"><svg class="i"><use href="#i-plus"/></svg>Toestel toevoegen</button>
+    </div>
+
+    <div class="kpis" id="hwKpis"></div>
+
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-laptop"/></svg>Toestellen <span class="muted" id="hwTelling"></span></h2>
+      <div id="hwLijst">Bezig met laden…</div>
     </div>
   </div>
-
-  <div class="kpis" id="hwKpis"></div>
-
-  <div class="card breed">
-    <h2><svg class="i"><use href="#i-laptop"/></svg>Toestellen <span class="muted" id="hwTelling"></span></h2>
-    <div id="hwLijst">Bezig met laden…</div>
-  </div>
+  <div id="hwDetail"hidden></div>
 </section>
 
 <section id="tab-voorraad"hidden>
@@ -8813,63 +8816,102 @@ function hwBewerk(id){ hwVenster(hwData.find(h=>h.id===id)||null); }
 
 function hwVenster(h){
   hwOpen=h;
+  const d=document.getElementById('hwDetail'); if(!d) return;
+  const lv=document.getElementById('hwLijstWeergave'); if(lv) lv.hidden=true;
+  d.hidden=false;
   const k=(h&&h.kanalen)||{};
-  const ov=document.createElement('div');
-  ov.className='overlay'; ov.id='hwOverlay';
-  ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
-  ov.innerHTML=`<div class="popup groot hwpop">
-    <h3>${h?esc([h.merk,h.model].filter(Boolean).join(' ')):'Toestel toevoegen'}</h3>
-    ${h?`<p class="pv">Binnengekomen ${new Date(h.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${h.herkomst?' &middot; '+esc(h.herkomst):''}</p>`:''}
-
-    <div class="grid">
-      <div><label>Merk</label><input id="hw_merk" value="${esc((h&&h.merk)||'')}" placeholder="Dell"></div>
-      <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430"></div>
-      <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
-      <div><label>Categorie</label><select id="hw_cat">
-        ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
-          `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
-      </select></div>
-      <div><label>Staat</label><select id="hw_staat">
-        ${Object.keys(HW_STAAT).map(s=>
-          `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
-      </select></div>
-      <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:6}"></div>
-      <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
-      <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
-      <div><label>Btw</label><select id="hw_marge">
-        <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
-        <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
-      </select></div>
-      <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
-      <div><label>Uitstalling</label><select id="hw_uitstalling">
-        <option value=""${(!h||!h.uitstalling)?' selected':''}>Niet ingesteld</option>
-        <option value="uitgestald"${(h&&h.uitstalling==='uitgestald')?' selected':''}>Uitgestald, klant ziet het</option>
-        <option value="achter"${(h&&h.uitstalling==='achter')?' selected':''}>Achter, in de voorraad</option>
-      </select></div>
+  const titel = h ? (esc([h.merk,h.model].filter(Boolean).join(' '))||'Toestel') : 'Toestel toevoegen';
+  const statusLabel = h ? ({voorraad:'Op voorraad', onderweg:'Onderweg', verkocht:'Verkocht'}[h.status]||h.status) : '';
+  const marge = h ? hwMarge(h) : null;
+  d.innerHTML=`
+    <div class="pagehead">
+      <div>
+        <button class="btn ghost small" onclick="hwSluit()"><svg class="i s"><use href="#i-left"/></svg>Terug naar Hardware</button>
+        <h1 style="margin:10px 0 0">${titel}</h1>
+        ${h?`<p class="muted klein" style="margin-top:4px">Binnengekomen ${new Date(h.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${h.herkomst?' · '+esc(h.herkomst):''}</p>`:''}
+      </div>
+      ${h?`<div class="row" style="gap:8px; align-items:center">
+        <span class="chip">${esc(statusLabel)}</span>
+        ${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:''}
+      </div>`:''}
     </div>
 
-    ${h?`<div class="hwverkoop">
-      <div class="hkkop">Tekst voor online</div>
-      <div class="row" style="gap:8px; margin-bottom:12px">
+    ${h?`<div class="kpis">
+      <div class="kpi"><div class="l">Nummer</div><div class="v" style="font-size:16px">${esc(h.code||h.serienummer||'—')}</div></div>
+      <div class="kpi"><div class="l">Inkoop</div><div class="v">${euro(h.inkoop||0)}</div></div>
+      <div class="kpi"><div class="l">Vraagprijs</div><div class="v">${h.verkoop!=null?euro(h.verkoop):'—'}</div></div>
+      <div class="kpi"><div class="l">Marge</div><div class="v ${marge!=null?(marge>=0?'groen':'rood'):''}">${marge==null?'—':euro(marge)}</div></div>
+      <div class="kpi"><div class="l">Waar</div><div class="v" style="font-size:15px">${esc(hwLocatieNaam(h)||(h.status==='onderweg'?'onderweg':'—'))}</div></div>
+      <div class="kpi"><div class="l">Dagen</div><div class="v">${h.status==='verkocht'?'verkocht':hwDagen(h)}</div></div>
+    </div>`:''}
+
+    ${h&&h.partner_id?`<div class="infobox">Dit toestel is toegewezen aan een partner. Hij verkoopt het in zijn eigen dashboard.</div>`:''}
+
+    <div class="row" style="gap:8px; flex-wrap:wrap; margin:4px 0 18px">
+      ${h&&h.status!=='verkocht'
+        ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
+      <button class="btn" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
+      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
+        ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Toewijzen aan partner</button>`:''}
+      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
+        ? (h.kanalen&&h.kanalen.partner
+          ? `<button class="btn ghost" onclick="hwDashboard('${h.id}',false,this)">Uit partner-dashboard halen</button>`
+          : `<button class="btn ghost" onclick="hwDashboard('${h.id}',true,this)">Zichtbaar in partner-dashboard</button>`):''}
+      ${h&&mag('facturen')?`<button class="btn ghost" onclick="facVanHardware('${h.id}')"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
+      ${h?`<button class="btn ghost" onclick="hwVerwijder('${h.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>`:''}
+    </div>
+
+    <div class="modules">
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-laptop"/></svg>Gegevens</h2>
+      <div class="grid">
+        <div><label>Merk</label><input id="hw_merk" value="${esc((h&&h.merk)||'')}" placeholder="Dell"></div>
+        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430"></div>
+        <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
+        <div><label>Categorie</label><select id="hw_cat">
+          ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
+            `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
+        </select></div>
+        <div><label>Staat</label><select id="hw_staat">
+          ${Object.keys(HW_STAAT).map(s=>
+            `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
+        </select></div>
+        <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:6}"></div>
+        <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
+        <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
+        <div><label>Btw</label><select id="hw_marge">
+          <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
+          <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
+        </select></div>
+        <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
+        <div><label>Uitstalling</label><select id="hw_uitstalling">
+          <option value=""${(!h||!h.uitstalling)?' selected':''}>Niet ingesteld</option>
+          <option value="uitgestald"${(h&&h.uitstalling==='uitgestald')?' selected':''}>Uitgestald, klant ziet het</option>
+          <option value="achter"${(h&&h.uitstalling==='achter')?' selected':''}>Achter, in de voorraad</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-globe"/></svg>Tekst voor online</h2>
+      ${h?`<div class="row" style="gap:8px; margin-bottom:12px">
         <button class="btn ghost small" onclick="hwSchrijf(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Laat AI dit schrijven</button>
         <button class="btn ghost small" onclick="hwPrijsvoorstel(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Prijs voorstellen</button>
         <span class="muted klein" id="hwPrijsBron"></span>
-      </div>
-    </div>`:''}
+      </div>`:''}
+      <div class="veldkop"><label>Titel voor online</label>
+        ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_titel\', this)">Kopiëren</button>':''}</div>
+      <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="Dell Latitude 5430 · i5 · 16 GB · 512 GB SSD">
+      <div class="veldkop"><label>Omschrijving</label>
+        ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_oms\', this)">Kopiëren</button>':''}</div>
+      <textarea id="hw_oms" rows="5" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
+      ${h?`<div class="row" style="gap:8px; margin-top:8px">
+        <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-copy"/></svg>Alles kopiëren voor Marktplaats</button>
+      </div>`:''}
+    </div>
 
-    <div class="veldkop"><label>Titel voor online</label>
-      ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_titel\', this)">Kopiëren</button>':''}</div>
-    <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="Dell Latitude 5430 · i5 · 16 GB · 512 GB SSD">
-
-    <div class="veldkop"><label>Omschrijving</label>
-      ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_oms\', this)">Kopiëren</button>':''}</div>
-    <textarea id="hw_oms" rows="5" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
-    ${h?`<div class="row" style="gap:8px; margin-top:8px">
-      <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-copy"/></svg>Alles kopiëren voor Marktplaats</button>
-    </div>`:''}
-
-    ${h?`<div class="hwkanaal">
-      <div class="hkkop">Waar ligt hij</div>
+    ${h?`<div class="card breed">
+      <h2><svg class="i"><use href="#i-package"/></svg>Waar ligt hij</h2>
       <div class="hkrij">
         <span style="flex:1">${h.status==='onderweg'
           ? '<span class="onderweg">Nog niet ingescand</span>'
@@ -8881,8 +8923,8 @@ function hwVenster(h){
       <div id="hwHistorie" class="muted klein" style="margin-top:6px">Geschiedenis laden…</div>
     </div>
 
-    <div class="hwkanaal">
-      <div class="hkkop">Waar staat hij online</div>
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-cart"/></svg>Waar staat hij online</h2>
       <label class="hkrij"><input type="checkbox" id="hw_k_winkel" ${k.winkel!==false?'checked':''}> In de winkel</label>
       <label class="hkrij"><input type="checkbox" id="hw_k_mp" ${k.marktplaats?'checked':''}> Op Marktplaats gezet</label>
       <div class="hkrij">
@@ -8893,27 +8935,18 @@ function hwVenster(h){
           : `<button class="btn ghost small" onclick="hwShopify('${h.id}','online',this)">Op Shopify zetten</button>`}
       </div>
     </div>`:''}
-
-    ${h&&h.partner_id?`<div class="infobox" style="margin-top:14px">Dit toestel is toegewezen aan een partner. Hij verkoopt het in zijn eigen dashboard.</div>`:''}
-    <div class="acts">
-      ${h&&h.status!=='verkocht'
-        ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
-      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
-        ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Toewijzen aan partner</button>`:''}
-      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
-        ? (h.kanalen&&h.kanalen.partner
-          ? `<button class="btn ghost" onclick="hwDashboard('${h.id}',false,this)">Uit partner-dashboard halen</button>`
-          : `<button class="btn ghost" onclick="hwDashboard('${h.id}',true,this)">Zichtbaar in partner-dashboard</button>`):''}
-      ${h&&mag('facturen')?`<button class="btn ghost" onclick="facVanHardware('${h.id}')"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
-      <button class="btn" onclick="hwOpslaan(this)">Opslaan</button>
-      <button class="btn ghost" onclick="hwSluit()">Sluiten</button>
-    </div>
-    ${h?`<button class="btn ghost small" style="margin-top:10px" onclick="hwVerwijder('${h.id}')">Toestel verwijderen</button>`:''}
-  </div>`;
-  document.body.appendChild(ov);
+    </div>`;
+  window.scrollTo(0,0);
   if(h) hwHistorieLaden(h.id);
 }
-function hwSluit(){ const o=document.getElementById('hwOverlay'); if(o) o.remove(); hwOpen=null; }
+function hwSluit(){
+  /* Sluit zowel een los dialoog (partner toewijzen, verkopen) als de volledige
+     detailpagina, en toont de lijst weer. */
+  const o=document.getElementById('hwOverlay'); if(o) o.remove();
+  const d=document.getElementById('hwDetail'); if(d){ d.hidden=true; d.innerHTML=''; }
+  const lv=document.getElementById('hwLijstWeergave'); if(lv) lv.hidden=false;
+  hwOpen=null;
+}
 
 /* Een toestel toewijzen aan een partner: hij krijgt er een kopie van in zijn eigen
    dashboard en verkoopt het daar. De verdeling (deel voor de partner) stel je hier
