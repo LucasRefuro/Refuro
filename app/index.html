@@ -97,6 +97,8 @@
   .kpi.accent .v{color:#fff;}
   .kpi .v.groen{color:var(--green);}
   .kpi .v.oranje{color:var(--oranje);}
+  .kpi .v.rood{color:var(--red);}
+  .kpi.accent .v.groen,.kpi.accent .v.rood{color:#fff;}
   .periodesel{display:flex; gap:6px;}
   .periodesel button{background:#fff; border:1.5px solid var(--border); padding:7px 14px; border-radius:20px; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); cursor:pointer;}
   .periodesel button.active{background:var(--navy); border-color:var(--navy); color:#fff;}
@@ -1611,6 +1613,7 @@
   </div>
   <div class="kpis" id="kpiRow"></div>
   <div class="kpis" id="kpiRow2"></div>
+  <div class="kpis" id="kpiRow3"></div>
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Taken en planning</h2>
@@ -3425,7 +3428,12 @@ function rapportBereik(){
 function rapportCijfers(b){
   const s=stats(b);
   const loon=urenLoonInPeriode(b.van,b.tot);
-  const vast=vasteLastenInPeriode(b.van,b.tot);
+  /* Vaste lasten gaan per tijd; bij een open begin (periode "alles", van=0) zou je
+     ze vanaf 1970 optellen. Klem het begin dan op de eerste verkoop, zodat het de
+     echte looptijd van de winkel volgt. */
+  let vlVan=b.van;
+  if(vlVan<=0){ const e=(state.verkopen||[]).reduce((m,v)=>Math.min(m, v.t||Infinity), Infinity); vlVan=isFinite(e)?e:b.tot; }
+  const vast=vasteLastenInPeriode(vlVan,b.tot);
   return {omzet:s.omzet, inkoop:s.kosten, brutowinst:s.winst, loon, vast,
           resultaat:s.winst-loon-vast, stuks:s.stuks, pin:s.pin, cash:s.cash, cashzb:s.cashzb,
           btw:s.btw, omzetExcl:Math.round((s.omzet-s.btw)*100)/100};
@@ -3829,6 +3837,14 @@ function renderDashboard(){
     `<div class="kpi"><div class="l">Producten</div><div class="v">${state.producten.length}</div></div>`+
     `<div class="kpi"><div class="l">Voorraadwaarde</div><div class="v">${euro(waarde)}</div></div>`+
     `<div class="kpi"><div class="l">Onder minimum</div><div class="v${laag?'oranje':''}">${laag}</div></div>`;
+  /* Het echte resultaat, met dezelfde periode als hierboven: brutowinst min loon en
+     vaste lasten. Zo zie je op je startscherm wat je overhoudt, niet alleen de omzet. */
+  const c=rapportCijfers(b);
+  document.getElementById('kpiRow3').innerHTML=
+    `<div class="kpi"><div class="l">Brutowinst</div><div class="v groen">${euro(c.brutowinst)}</div></div>`+
+    `<div class="kpi"><div class="l">Loonkosten</div><div class="v">${euro(c.loon)}</div></div>`+
+    `<div class="kpi"><div class="l">Vaste lasten</div><div class="v">${euro(c.vast)}</div></div>`+
+    `<div class="kpi"><div class="l">Resultaat</div><div class="v ${c.resultaat>=0?'groen':'rood'}">${euro(c.resultaat)}</div></div>`;
   document.getElementById('dagPick').value=dagDatum||'';
   renderCatWinst(b,vb);
   renderRepDash();
