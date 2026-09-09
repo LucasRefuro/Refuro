@@ -108,6 +108,12 @@ setTimeout(()=>{
     "{id:3,naam:'Oud',bedrag:50,periode:'maand',actief:false}];");
   ok('vaste lasten per maand = maand + jaar/12, zonder inactieve', w.eval("vasteLastenPerMaand()===1100"));
 
+  // ── rapport: resultaat = omzet - inkoop(bij verkoop) - loon - vaste lasten ──
+  w.eval("state.vasteLasten=[]; state.lonen={a:10}; state.uren=[{id:1,medewerker:'a',datum:'2026-09-01',uren:5}];"+
+    "state.verkopen=[{t:5,verkoop:100,inkoop:40,aantal:1,betaal:'pin'},{t:6,verkoop:50,inkoop:20,aantal:1,betaal:'cash'}];");
+  ok('rapport telt omzet, inkoop, loon en vaste lasten samen',
+    w.eval("var c=rapportCijfers({van:0,tot:Date.now()+864e5}); c.omzet===150 && c.inkoop===60 && c.brutowinst===90 && c.loon===50 && c.vast===0 && c.resultaat===40"));
+
   // ── Verkoop en Uren staan in de paginakeuze en gaan standaard aan ──
   ok('Verkoop staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='verkoop')"));
   ok('Uren staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='uren')"));

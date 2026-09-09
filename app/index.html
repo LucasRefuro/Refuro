@@ -1561,6 +1561,7 @@
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
     <button data-tab="uren"><svg class="i"><use href="#i-clock"/></svg> Uren</button>
     <button data-tab="vastelasten"><svg class="i"><use href="#i-euro"/></svg> Vaste lasten</button>
+    <button data-tab="rapport"><svg class="i"><use href="#i-chart"/></svg> Rapport</button>
     <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
     <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
   </nav>
@@ -2243,6 +2244,32 @@
   </div>
 </section>
 
+<!-- RAPPORT -->
+<section id="tab-rapport"hidden>
+  <div class="pagehead">
+    <h1>Rapport</h1>
+    <div class="periodesel" id="rapPeriode">
+      <button data-rp="week" class="active" onclick="rapKiesPeriode('week')">7 dagen</button>
+      <button data-rp="maand" onclick="rapKiesPeriode('maand')">Deze maand</button>
+      <button data-rp="jaar" onclick="rapKiesPeriode('jaar')">Dit jaar</button>
+      <button data-rp="vrij" onclick="rapKiesPeriode('vrij')">Vrij</button>
+    </div>
+  </div>
+  <div class="modules">
+  <div class="card breed" id="rapVrijVak"hidden>
+    <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+      <div><label>Van</label><input id="rap_van" type="date" onchange="renderRapport()"></div>
+      <div><label>Tot en met</label><input id="rap_tot" type="date" onchange="renderRapport()"></div>
+    </div>
+  </div>
+  <div class="card breed">
+    <h2 style="margin-bottom:4px">Resultaat <span class="muted" id="rapBereikTekst"></span></h2>
+    <div id="rapResultaat"></div>
+    <p class="muted klein" style="margin-top:12px">Bedragen zijn inclusief btw; de btw-afdracht is hier nog niet apart berekend. De inkoop telt mee op het moment dat een product verkocht wordt.</p>
+  </div>
+  </div>
+</section>
+
 <!-- TEAM / ADMIN -->
 <section id="tab-team"hidden>
   <div class="pagehead">
@@ -2890,6 +2917,7 @@ function showTab(t){
   if(t==='verkoop') renderVerkoop();
   if(t==='uren') renderUren();
   if(t==='vastelasten') renderVasteLasten();
+  if(t==='rapport') renderRapport();
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
@@ -3317,6 +3345,73 @@ function vlWeg(id){
   state.vasteLasten=(state.vasteLasten||[]).filter(x=>x.id!==id);
   save(); renderVasteLasten();
   toast('Verwijderd');
+}
+
+/* ═══════════════ RAPPORT (resultaat) ═══════════════
+   Resultaat = omzet - inkoop - loon - vaste lasten, over een gekozen periode.
+   De omzet en de inkoop komen uit stats(): die telt de inkoop mee op het moment
+   van verkoop (kostprijs van wat verkocht is), niet bij het inslaan. Loon en
+   vaste lasten komen uit de uren- en vaste-lastenmodule. Alleen eigenaar/beheerder. */
+let rapPeriodeNu='week';
+function rapportBereik(){
+  const nu=Date.now();
+  if(rapPeriodeNu==='maand'){ const d=new Date(); return {van:new Date(d.getFullYear(),d.getMonth(),1).getTime(), tot:nu+1}; }
+  if(rapPeriodeNu==='jaar'){ const d=new Date(); return {van:new Date(d.getFullYear(),0,1).getTime(), tot:nu+1}; }
+  if(rapPeriodeNu==='vrij'){
+    const v=document.getElementById('rap_van'), t=document.getElementById('rap_tot');
+    const van=v&&v.value?new Date(v.value+'T00:00:00').getTime():0;
+    const tot=t&&t.value?new Date(t.value+'T23:59:59').getTime():nu+1;
+    return {van, tot};
+  }
+  return {van:nu-7*864e5, tot:nu+1};
+}
+function rapportCijfers(b){
+  const s=stats(b);
+  const loon=urenLoonInPeriode(b.van,b.tot);
+  const vast=vasteLastenInPeriode(b.van,b.tot);
+  return {omzet:s.omzet, inkoop:s.kosten, brutowinst:s.winst, loon, vast,
+          resultaat:s.winst-loon-vast, stuks:s.stuks, pin:s.pin, cash:s.cash, cashzb:s.cashzb};
+}
+function rapBereikLabel(b){
+  if(rapPeriodeNu==='week') return '(laatste 7 dagen)';
+  if(rapPeriodeNu==='maand') return '(deze maand)';
+  if(rapPeriodeNu==='jaar') return '(dit jaar)';
+  const f=t=>new Date(t).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'});
+  return '('+f(b.van)+' t/m '+f(Math.min(b.tot,Date.now()))+')';
+}
+function rapKiesPeriode(p){
+  rapPeriodeNu=p;
+  document.querySelectorAll('#rapPeriode button').forEach(b=>b.classList.toggle('active', b.dataset.rp===p));
+  const vrij=document.getElementById('rapVrijVak'); if(vrij) vrij.hidden = p!=='vrij';
+  if(p==='vrij'){
+    const v=document.getElementById('rap_van'), t=document.getElementById('rap_tot');
+    if(t && !t.value) t.value=new Date().toISOString().slice(0,10);
+    if(v && !v.value) v.value=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+  }
+  renderRapport();
+}
+function renderRapport(){
+  const b=rapportBereik();
+  const c=rapportCijfers(b);
+  const lbl=document.getElementById('rapBereikTekst'); if(lbl) lbl.textContent=rapBereikLabel(b);
+  const el=document.getElementById('rapResultaat'); if(!el) return;
+  const rij=(naam,bedrag,o)=>{ o=o||{};
+    return `<tr${o.totaal?' style="font-weight:800; border-top:2px solid var(--border)"':''}>`+
+      `<td>${esc(naam)}</td>`+
+      `<td class="num">${o.min&&bedrag?'− ':''}${euro(bedrag)}</td></tr>`; };
+  el.innerHTML='<div style="overflow-x:auto"><table><tbody>'+
+    rij('Omzet', c.omzet)+
+    rij('Inkoop van verkochte producten', c.inkoop, {min:true})+
+    rij('Brutowinst', c.brutowinst, {totaal:true})+
+    rij('Loonkosten', c.loon, {min:true})+
+    rij('Vaste lasten', c.vast, {min:true})+
+    rij('Resultaat', c.resultaat, {totaal:true})+
+    '</tbody></table></div>'+
+    `<div class="row" style="gap:28px; flex-wrap:wrap; margin-top:14px">
+       <div><div class="muted klein">Aantal verkopen</div><b class="groot">${c.stuks}</b></div>
+       <div><div class="muted klein">Pin</div><b class="groot">${euro(c.pin)}</b></div>
+       <div><div class="muted klein">Contant</div><b class="groot">${euro(c.cash)}</b></div>
+     </div>`;
 }
 
 function renderDashboard(){
@@ -6877,7 +6972,7 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','instellingen','team'],
+  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','instellingen','team'],
   medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren']
 };
 /* ---------- pagina's aan of uit ----------
