@@ -3986,7 +3986,7 @@ function tekenOnline(){
               <option value="C"${(onl.staat||onl.a.grade)==='C'?' selected':''}>C · zichtbare sporen</option>
             </select></div>
             <div><label>Garantie (maanden)</label>
-              <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:6}" onchange="onlVeld()"></div>
+              <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:12}" onchange="onlVeld()"></div>
             <div><label>Btw</label><select id="onl_marge" onchange="onlVeld()">
               <option value="ja"${onl.marge?' selected':''}>Margeregeling</option>
               <option value="nee"${!onl.marge?' selected':''}>Normale btw (21%)</option>
