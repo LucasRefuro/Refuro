@@ -114,6 +114,11 @@ setTimeout(()=>{
   ok('rapport telt omzet, inkoop, loon en vaste lasten samen',
     w.eval("var c=rapportCijfers({van:0,tot:Date.now()+864e5}); c.omzet===150 && c.inkoop===60 && c.brutowinst===90 && c.loon===50 && c.vast===0 && c.resultaat===40"));
 
+  // ── btw wordt exact per verkoop berekend, niet geschat ──
+  w.eval("state.verkopen=[{t:5,verkoop:121,inkoop:40,aantal:1,betaal:'pin'}]; state.uren=[]; state.vasteLasten=[]; window.__rc=rapportCijfers({van:0,tot:Date.now()+864e5});");
+  ok('rapport: btw exact en omzet excl. btw (21%)', w.eval("window.__rc.btw===21 && window.__rc.omzetExcl===100"));
+  ok('btw over de marge bij margeregeling', w.eval("Math.abs(vBtw({verkoop:100,inkoop:60,marge:true})-6.94)<0.01"));
+
   // ── factuur: btw excl.+percentage, per tarief apart, totaal incl. ──
   w.eval("window.__ft=facTotalen({regels:[{aantal:2,stukprijs:50,btw:21},{aantal:1,stukprijs:100,btw:9}]});");
   ok('factuur: subtotaal is excl. btw', w.eval("window.__ft.subtotaal===200"));

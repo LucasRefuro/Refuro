@@ -25,6 +25,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `stripe-checkout` | nee | Start het afrekenen van proef naar abonnement, met of zonder korting |
 | `reparatie-status` | ja | Voedt de publieke klantpagina, alleen veilige velden |
 | `klantbericht` | ja | Stuurt e-mail en WhatsApp naar de klant |
+| `factuur-mail` | nee | Mailt een factuur of offerte naar de klant (Resend), reply-to naar de winkel |
 | `whatsapp-webhook` | ja | Ontvangt berichten en meldingen van Meta |
 | `whatsapp-koppelen` | nee | Rondt het koppelen van een eigen nummer af |
 | `whatsapp-status` | nee | Geeft de browser het app-ID voor de koppelflow |
