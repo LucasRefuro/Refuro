@@ -102,13 +102,20 @@ setTimeout(()=>{
   w.eval("state.lonen={'acc1':15}; state.uren=[{id:1,medewerker:'acc1',datum:'2026-09-01',uren:8},{id:2,medewerker:'acc1',datum:'2026-09-02',uren:2}];");
   ok('loonkosten = uren maal tarief', w.eval("urenLoonInPeriode(0, Date.now()+864e5)===150"));
 
-  // ── een medewerker met een eigen paginalijst ziet tóch Verkoop en Uren ──
-  // (die staan niet in de picker; anders zou een oude lijst ze verbergen)
-  w.eval("gebruiker={id:'m1',naam:'Sam',rol:'medewerker',tabs:['scan','reparaties','producten']};");
-  ok('Verkoop volgt de rol, niet de oude paginalijst', w.eval("mag('verkoop')===true"));
-  ok('Uren volgt de rol, niet de oude paginalijst', w.eval("mag('uren')===true"));
-  ok('een uitgezette picker-pagina blijft verborgen', w.eval("mag('kassa')===false"));
-  ok('een aangezette picker-pagina blijft zichtbaar', w.eval("mag('producten')===true"));
+  // ── Verkoop en Uren staan in de paginakeuze en gaan standaard aan ──
+  ok('Verkoop staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='verkoop')"));
+  ok('Uren staat in de paginakeuze', w.eval("PAGINAS_BEHEER.some(p=>p[0]==='uren')"));
+  ok('nieuw medewerker-account krijgt Verkoop en Uren standaard aan',
+    w.eval("var d=rolDefaultTabs('medewerker'); d.includes('verkoop')&&d.includes('uren')"));
+
+  // ── de eigen paginalijst bepaalt per pagina wat een medewerker ziet ──
+  w.eval("gebruiker={id:'m1',naam:'Sam',rol:'medewerker',tabs:['scan','verkoop','uren','producten']};");
+  ok('aangevinkte Verkoop is zichtbaar', w.eval("mag('verkoop')===true"));
+  ok('aangevinkte Uren is zichtbaar', w.eval("mag('uren')===true"));
+  ok('uitgevinkte Kassa blijft verborgen', w.eval("mag('kassa')===false"));
+  ok('nieuw volgt producten uit de lijst', w.eval("mag('nieuw')===true"));
+  // een pagina buiten de picker (later toegevoegd) volgt de rol, niet de oude lijst
+  ok('pagina buiten de picker volgt de rol', w.eval("ROL_TABS.medewerker.push('toekomst'); var r=mag('toekomst'); ROL_TABS.medewerker.pop(); r===true"));
   w.eval("gebruiker=null;");
 
   // ── de vier getallen zijn direct in de tabel te bewerken ──
