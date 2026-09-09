@@ -8654,6 +8654,20 @@ function hwZichtbaar(h){
   return true;
 }
 
+/* Korte specs-regel onder het model in de lijst, net als in de refurbish-voorraad:
+   de dingen die een koper meteen wil weten. Leeg als er nog geen specs zijn. */
+function hwSpecsKort(h){
+  const sp=(h.specs && typeof h.specs==='object')?h.specs:{};
+  return [sp.Opslag, sp.Scherm, sp.Geheugen, sp.Processor]
+    .filter(v=>String(v||'').trim()).join(' · ');
+}
+/* Snel online zetten vanuit de lijst. Nog geen vraagprijs? Dan eerst de detailpagina
+   openen om die in te vullen, in plaats van een foutmelding. */
+function hwOnlineSnel(id, knop){
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  if(h.verkoop==null || h.verkoop===''){ toast('Vul eerst een vraagprijs in','let-op'); hwBewerk(id); return; }
+  hwShopify(id,'online',knop);
+}
 function renderHardware(){
   const vak=document.getElementById('hwLijst');
   if(!vak) return;
@@ -8701,7 +8715,7 @@ function renderHardware(){
       return `<tr>
         <td><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
         <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
-            ${h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:''}</td>
+            ${hwSpecsKort(h)?`<div class="muted klein">${esc(hwSpecsKort(h))}</div>`:(h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:'')}</td>
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
         <td>${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:'<span class="muted">—</span>'}</td>
         <td>${h.status==='onderweg'
@@ -8716,8 +8730,9 @@ function renderHardware(){
         <td>${hwKanalen(h)}</td>
         <td>${h.status==='verkocht'?'<span class="muted">verkocht</span>'
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
-        <td class="num hwact">${h.status==='verkocht'?''
-          :`<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
+        <td class="num hwact" style="white-space:nowrap">${h.status==='verkocht'?''
+          :`${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
+              ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button> `:''}<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   hwSelectieBalk();
@@ -8829,6 +8844,7 @@ function hwVenster(h){
   const titel = h ? (esc([h.merk,h.model].filter(Boolean).join(' '))||'Toestel') : 'Toestel toevoegen';
   const statusLabel = h ? ({voorraad:'Op voorraad', onderweg:'Onderweg', verkocht:'Verkocht'}[h.status]||h.status) : '';
   const marge = h ? hwMarge(h) : null;
+  const specrijen = h ? Object.entries(h.specs||{}).filter(([,w])=>String(w||'').trim()) : [];
   d.innerHTML=`
     <div class="pagehead">
       <div>
@@ -8868,6 +8884,11 @@ function hwVenster(h){
     </div>
 
     <div class="modules">
+    ${specrijen.length?`<div class="card breed">
+      <h2><svg class="i"><use href="#i-layers"/></svg>Wat erin zit</h2>
+      <div style="overflow-x:auto"><table><tbody>${specrijen.map(([sk,sw])=>
+        `<tr><td class="muted" style="width:40%">${esc(sk)}</td><td><b>${esc(sw)}</b></td></tr>`).join('')}</tbody></table></div>
+    </div>`:''}
     <div class="card breed">
       <h2><svg class="i"><use href="#i-laptop"/></svg>Gegevens</h2>
       <div class="grid">

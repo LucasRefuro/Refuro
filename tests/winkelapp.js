@@ -110,6 +110,13 @@ setTimeout(async()=>{
   ok('online toestel toont offline-knop', /Offline halen/.test(d.getElementById('hwDetail').innerHTML));
   w.eval("hwSluit()");
 
+  // ── specs uit de refurbish-opzet: regel in de lijst + 'Wat erin zit' op de detailpagina ──
+  w.eval("hwData.find(x=>x.id==='h1').specs={Processor:'Intel Core i5', Geheugen:'16 GB', Opslag:'512GB'}; hwFilterNu='voorraad'; renderHardware();");
+  ok('lijst toont een specs-regel onder het model', /512GB/.test(d.getElementById('hwLijst').innerHTML));
+  w.eval("hwBewerk('h1')");
+  ok('detail toont Wat erin zit met specs', /Wat erin zit/.test(d.getElementById('hwDetail').innerHTML) && /Intel Core i5/.test(d.getElementById('hwDetail').innerHTML));
+  w.eval("hwSluit()");
+
   // ── inscannen ──
   w.eval(`hwLocaties=[{id:'l1',naam:'Winkel',soort:'winkel'}];
     hwData.push({id:'h4', merk:'Acer', model:'Swift 3', code:'A0009', status:'onderweg',
