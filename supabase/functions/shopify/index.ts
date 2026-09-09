@@ -13,8 +13,44 @@
 
 import {
   admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
-  bouwProductMetafields, winkelvoorraadMetafield,
+  bouwProductMetafields, winkelvoorraadMetafield, staatCode,
 } from "../_gedeeld/shopify.ts";
+
+/* De categorie-collecties van het thema zijn HANDMATIG (geen slimme regels op
+   producttype), dus vullen ze zich niet vanzelf. Storvo zet een toestel daarom zelf
+   in de juiste collectie(s), anders staat het wel online maar in geen categorie en
+   vindt niemand het. Handles komen uit het thema: laptops + macbooks/windows-laptops,
+   telefoons, tablets, smartwatches. Desktop/Monitor/Overig hebben geen categorie in
+   het design. */
+function collectieHandles(h: any): string[] {
+  const c = String(h.categorie || "").toLowerCase();
+  const tekst = (String(h.merk || "") + " " + String(h.model || "")).toLowerCase();
+  if (c === "laptop") return ["laptops", /apple|macbook/.test(tekst) ? "macbooks" : "windows-laptops"];
+  if (c === "telefoon") return ["telefoons"];
+  if (c === "tablet") return ["tablets"];
+  if (c === "smartwatch" || c === "horloge") return ["smartwatches"];
+  return [];
+}
+async function inCollectiesZetten(k: any, productId: string, h: any): Promise<string[]> {
+  const gelukt: string[] = [];
+  for (const handle of collectieHandles(h)) {
+    try {
+      const cd = await graphql(k, `query($q: String!){ collections(first: 1, query: $q){ nodes { id } } }`,
+        { q: "handle:" + handle });
+      const cid = cd?.collections?.nodes?.[0]?.id;
+      if (!cid) continue;
+      const add = await graphql(k, `
+        mutation($id: ID!, $productIds: [ID!]!) {
+          collectionAddProductsV2(id: $id, productIds: $productIds) {
+            job { id } userErrors { field message }
+          }
+        }`, { id: cid, productIds: [productId] });
+      letOp(add?.collectionAddProductsV2, "Het toevoegen aan de collectie " + handle);
+      gelukt.push(handle);
+    } catch (e) { console.error("collectie", handle, e); }
+  }
+  return gelukt;
+}
 
 // De omschrijving die op de webshop komt te staan. Specificaties als lijstje,
 // want dat is wat een koper van tweedehands hardware wil zien.
@@ -162,7 +198,7 @@ Deno.serve(async (req) => {
         vendor: h.merk || "Storvo",
         productType: h.categorie || "Laptop",
         status: "ACTIVE",
-        tags: ["refurbished", h.staat ? "staat-" + h.staat : "", h.code || "", ...gebruikTags(h)].filter(Boolean),
+        tags: ["refurbished", (staatCode(h.staat) ? "staat-" + staatCode(h.staat).replace(/_/g, "-") : ""), h.code || "", ...gebruikTags(h)].filter(Boolean),
         metafields: bouwProductMetafields(h, controle, inWinkel),
         productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
         variants: [{
@@ -209,6 +245,11 @@ Deno.serve(async (req) => {
         zichtbaar = true;
       }
 
+      /* In de juiste categorie-collectie zetten, want die zijn handmatig en vullen
+         zich niet vanzelf. Zonder dit staat het toestel wel online maar in geen enkele
+         categorie. Niet fataal als het mislukt: het toestel is dan nog wel te vinden. */
+      const collecties = await inCollectiesZetten(k, p.id, h);
+
       const nummer = String(p.id).split("/").pop();
       kanalen.shopify = {
         id: p.id,
@@ -217,6 +258,7 @@ Deno.serve(async (req) => {
         url: p.onlineStoreUrl || (p.handle ? `https://${k.domein}/products/${p.handle}` : null),
         beheer: `https://${k.domein}/admin/products/${nummer}`,
         zichtbaar,
+        collecties,
         sinds: new Date().toISOString(),
       };
       await admin.from("hardware").update({
