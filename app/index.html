@@ -8693,7 +8693,7 @@ function renderHardware(){
       <th style="width:34px"><input type="checkbox" id="hwAlle" onclick="hwSelectAlle(this.checked)" title="Alles selecteren"></th>
       <th>Toestel</th><th>Nummer</th><th>Grade</th><th>Waar</th>
       <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
-      <th>Staat waar</th><th>Dagen</th><th></th>
+      <th>Te koop op</th><th>Dagen</th><th></th>
     </tr></thead>
     <tbody>${rijen.map(h=>{
       const m=hwMarge(h);
@@ -8797,7 +8797,9 @@ async function hwUitstalToggle(id, ev){
 function hwKanalen(h){
   const k=h.kanalen||{};
   const b=[];
-  if(k.winkel!==false) b.push('<span class="kan winkel">Winkel</span>');
+  /* "In de winkel te koop" is de standaard voor alles wat op voorraad ligt, dus die
+     tonen we niet als pil: dat leverde bij elk toestel een "Winkel" op, wat botst met
+     de kolom Waar (de fysieke plek). We tonen alleen de extra kanalen. */
   if(k.partner) b.push('<span class="kan portaal">Portaal</span>');
   if(k.shopify && k.shopify.id){
     b.push(k.shopify.url
@@ -8805,7 +8807,11 @@ function hwKanalen(h){
       : '<span class="kan shop">Webshop</span>');
   }
   if(k.marktplaats) b.push('<span class="kan mp">Marktplaats</span>');
-  return b.join(' ') || '<span class="muted">nergens</span>';
+  if(k.winkel===false){
+    b.push('<span class="muted klein">niet in de winkel</span>');
+    return b.join(' ');
+  }
+  return b.join(' ') || '<span class="muted klein">alleen in de winkel</span>';
 }
 
 /* ---------- toestel toevoegen of openen ---------- */
