@@ -2289,7 +2289,15 @@
       <div><label>Btw-nummer</label><input id="fb_btw" autocomplete="off"></div>
       <div><label>IBAN</label><input id="fb_iban" autocomplete="off"></div>
     </div>
-    <button class="btn" style="margin-top:14px" onclick="facBedrijfOpslaan()"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
+    <div class="hkkop" style="margin-top:18px">Opmaak van de factuur</div>
+    <p class="muted klein" style="margin:2px 0 10px">Je logo en kleuren komen uit je huisstijl. Hier stel je de accentkleur, betaaltermijn en een voettekst voor de factuur in.</p>
+    <div class="row" style="gap:14px; flex-wrap:wrap; align-items:flex-end">
+      <div><label>Accentkleur</label><input id="fb_kleur" type="color" style="width:56px; height:40px; padding:2px"></div>
+      <div style="min-width:150px"><label>Betaaltermijn (dagen)</label><input id="fb_termijn" type="number" min="0" step="1" placeholder="14"></div>
+      <div style="flex:1; min-width:200px"><label>Voettekst <span class="muted">(optioneel)</span></label><input id="fb_voet" placeholder="bijv. Bedankt voor je bezoek" autocomplete="off"></div>
+      <div><button class="btn ghost" onclick="facVoorbeeld()"><svg class="i s"><use href="#i-download"/></svg>Voorbeeld</button></div>
+    </div>
+    <button class="btn" style="margin-top:16px" onclick="facBedrijfOpslaan()"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
   </div>
   <div class="card breed" id="facLijstVak">
     <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:10px">
@@ -3449,7 +3457,8 @@ function renderRapport(){
        <div><div class="muted klein">Aantal verkopen</div><b class="groot">${c.stuks}</b></div>
        <div><div class="muted klein">Pin</div><b class="groot">${euro(c.pin)}</b></div>
        <div><div class="muted klein">Contant</div><b class="groot">${euro(c.cash)}</b></div>
-     </div>`;
+     </div>`+
+    `<div class="muted klein" style="margin-top:12px; border-top:1px solid var(--border); padding-top:10px">Btw-schatting bij 21%: omzet excl. btw ${euro(Math.round((c.omzet/1.21)*100)/100)}, waarvan btw ${euro(Math.round((c.omzet-c.omzet/1.21)*100)/100)}. Dit is een schatting; de exacte btw hangt af van het tarief per verkoop (21%, 9% of marge).</div>`;
 }
 
 /* ═══════════════ FACTUREN EN OFFERTES ═══════════════
@@ -3460,6 +3469,28 @@ function renderRapport(){
    gaat via een eigen, zelfstandige printpagina (opslaan als pdf of printen).
    Alleen eigenaar/beheerder. */
 let facConcept=null, facBewerkId=null;
+const FAC_STATUS={ factuur:['concept','verstuurd','betaald'], offerte:['concept','verstuurd','geaccepteerd'] };
+const FAC_STATUS_LABEL={ concept:'Concept', verstuurd:'Verstuurd', betaald:'Betaald', geaccepteerd:'Geaccepteerd' };
+function facStatus(id, val){
+  const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
+  f.status=val; save();
+  toast('Status: '+(FAC_STATUS_LABEL[val]||val), true);
+}
+function facMail(id){
+  const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
+  const kl=f.klant||{};
+  if(!kl.email){ toast('Geen e-mailadres bij deze klant','let-op'); return; }
+  const b=state.bedrijf||{}, h=huisstijl(), bn=b.naam||h.naam||'';
+  const t=facTotalen(f), soort=f.soort==='offerte'?'offerte':'factuur';
+  const geld=n=>'€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const regels=f.regels.map(r=>'- '+(r.omschrijving||'')+' ('+(Number(r.aantal)||0)+' x '+geld(r.stukprijs)+')').join('\n');
+  const body='Beste '+(kl.naam||'')+',\n\nHierbij '+soort+' '+(f.nummer||'')+'.\n\n'+regels+'\n\nTotaal: '+geld(t.totaal)+'\n'+
+    ((f.soort==='factuur'&&b.iban)?('\nGraag betalen op '+b.iban+' o.v.v. '+(f.nummer||'')+'.\n'):'')+
+    '\nMet vriendelijke groet,\n'+bn;
+  const onderwerp=(f.soort==='offerte'?'Offerte ':'Factuur ')+(f.nummer||'')+(bn?(' - '+bn):'');
+  toast('Je mailprogramma opent. Voeg zo nodig de pdf toe.', true);
+  window.location.href='mailto:'+encodeURIComponent(kl.email)+'?subject='+encodeURIComponent(onderwerp)+'&body='+encodeURIComponent(body);
+}
 function facTotalen(f){
   let subtotaal=0; const btwMap={};
   (f.regels||[]).forEach(r=>{
@@ -3478,33 +3509,40 @@ function facVolgnr(soort, jaar){
   const b=(state.facturen||[]).filter(f=>f.soort===soort && f.jaar===jaar).map(f=>Number(f.volgnr)||0);
   return (b.length?Math.max(...b):0)+1;
 }
-function facBedrijfOpslaan(){
+function facBedrijfLees(){
   const g=id=>((document.getElementById(id)||{}).value||'').trim();
   state.bedrijf={ naam:g('fb_naam'), email:g('fb_email'), tel:g('fb_tel'),
     adres:g('fb_adres'), pc:g('fb_pc'), plaats:g('fb_plaats'),
-    kvk:g('fb_kvk'), btw:g('fb_btw'), iban:g('fb_iban') };
-  save(); toast('Bedrijfsgegevens opgeslagen', true);
+    kvk:g('fb_kvk'), btw:g('fb_btw'), iban:g('fb_iban'),
+    kleur:g('fb_kleur'), termijn:g('fb_termijn'), voettekst:g('fb_voet') };
+  save();
 }
+function facBedrijfOpslaan(){ facBedrijfLees(); toast('Bedrijfsgegevens opgeslagen', true); }
 function renderFacturen(){
   const b=state.bedrijf||{}, h=huisstijl();
   const zet=(id,val)=>{ const el=document.getElementById(id); if(el && document.activeElement!==el) el.value=val||''; };
   zet('fb_naam', b.naam || h.naam || ''); zet('fb_email', b.email); zet('fb_tel', b.tel);
   zet('fb_adres', b.adres); zet('fb_pc', b.pc); zet('fb_plaats', b.plaats);
   zet('fb_kvk', b.kvk); zet('fb_btw', b.btw); zet('fb_iban', b.iban);
+  zet('fb_kleur', b.kleur || h.oranje || '#0B5B52');
+  zet('fb_termijn', (b.termijn!=null && b.termijn!=='') ? b.termijn : '14');
+  zet('fb_voet', b.voettekst);
   const ev=document.getElementById('facEditVak'); if(ev){ ev.hidden=true; ev.innerHTML=''; }
   const lv=document.getElementById('facLijstVak'); if(lv) lv.hidden=false;
   const lijst=(state.facturen||[]).slice().sort((a,b)=>(b.op||0)-(a.op||0));
   const el=document.getElementById('facLijst'); if(!el) return;
   el.innerHTML = lijst.length
-    ? '<div style="overflow-x:auto"><table><thead><tr><th>Nummer</th><th>Soort</th><th>Datum</th><th>Klant</th><th class="num">Totaal</th><th></th></tr></thead><tbody>'+
-      lijst.map(f=>{ const t=facTotalen(f); return `<tr>`+
+    ? '<div style="overflow-x:auto"><table><thead><tr><th>Nummer</th><th>Soort</th><th>Datum</th><th>Klant</th><th class="num">Totaal</th><th>Status</th><th></th></tr></thead><tbody>'+
+      lijst.map(f=>{ const t=facTotalen(f); const opties=FAC_STATUS[f.soort]||FAC_STATUS.factuur; return `<tr>`+
         `<td>${esc(f.nummer||'')}</td>`+
         `<td>${f.soort==='offerte'?'Offerte':'Factuur'}</td>`+
         `<td>${esc(f.datum||'')}</td>`+
         `<td>${esc((f.klant&&f.klant.naam)||'')}</td>`+
         `<td class="num">${euro(t.totaal)}</td>`+
+        `<td><select onchange="facStatus(${f.id}, this.value)">${opties.map(s=>`<option value="${s}"${(f.status||'concept')===s?' selected':''}>${FAC_STATUS_LABEL[s]}</option>`).join('')}</select></td>`+
         `<td class="num" style="white-space:nowrap">`+
           `<button class="btn small ghost icoknop" title="Bekijken en printen" onclick="facPrint(${f.id})"><svg class="i s"><use href="#i-download"/></svg></button> `+
+          `<button class="btn small ghost icoknop" title="Mailen naar de klant" onclick="facMail(${f.id})"><svg class="i s"><use href="#i-mail"/></svg></button> `+
           `<button class="btn small ghost icoknop" title="Bewerken" onclick="facOpen(${f.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
           `<button class="btn small danger icoknop" title="Verwijderen" onclick="facWeg(${f.id})"><svg class="i s"><use href="#i-trash"/></svg></button>`+
         `</td></tr>`; }).join('')+'</tbody></table></div>'
@@ -3604,6 +3642,7 @@ function facOpslaan(print){
     const jaar=new Date().getFullYear(), volgnr=facVolgnr(f.soort, jaar);
     f.id=uid(); f.jaar=jaar; f.volgnr=volgnr;
     f.nummer=(f.soort==='offerte'?'OFF-':'')+jaar+'-'+String(volgnr).padStart(4,'0');
+    if(!f.status) f.status='concept';
     f.op=Date.now();
     state.facturen.push(f);
     facBewerkId=f.id;
@@ -3618,44 +3657,72 @@ function facWeg(id){
   state.facturen=(state.facturen||[]).filter(x=>x.id!==id);
   save(); renderFacturen(); toast('Verwijderd');
 }
-function facPrint(id){
-  const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
-  const b=state.bedrijf||{}, h=huisstijl(), bn=b.naam||h.naam||'';
-  const t=facTotalen(f), kl=f.klant||{};
-  const soortLabel=f.soort==='offerte'?'Offerte':'Factuur';
+/* De opmaak van de factuur volgt de huisstijl van de winkel: het logo en de
+   accentkleur (oranje uit de huisstijl, tenzij op de Facturen-pagina een eigen
+   kleur is gezet). Zo ziet elke factuur er meteen uit als het merk van de winkel. */
+function facBranding(){
+  const b=state.bedrijf||{}, h=huisstijl();
+  const k=b.kleur||h.oranje||'#0B5B52';
+  return { accent:/^#[0-9a-fA-F]{3,8}$/.test(k)?k:'#0B5B52', logo:h.logo||'', naam:b.naam||h.naam||'',
+    termijn:(b.termijn!=null && b.termijn!=='')?Number(b.termijn)||0:14, voettekst:b.voettekst||'' };
+}
+function facDatumPlus(datum, dagen){
+  const d=datum?new Date(datum+'T00:00:00'):null;
+  if(!d || isNaN(d.getTime())) return '';
+  d.setDate(d.getDate()+(Number(dagen)||0));
+  return d.toISOString().slice(0,10);
+}
+function facPrint(id){ const f=(state.facturen||[]).find(x=>x.id===id); if(f) facPrintDoc(f); }
+function facVoorbeeld(){
+  facBedrijfLees();
+  facPrintDoc({ soort:'factuur', nummer:'2026-0001', datum:new Date().toISOString().slice(0,10),
+    klant:{naam:'Voorbeeldklant', adres:'Klantstraat 1', pc:'1234 AB', plaats:'Amsterdam', email:'klant@voorbeeld.nl'},
+    regels:[{omschrijving:'Schermreparatie iPhone 13', aantal:1, stukprijs:99.17, btw:21},
+            {omschrijving:'Screenprotector aanbrengen', aantal:1, stukprijs:12.36, btw:21}], notitie:'' });
+}
+function facPrintDoc(f){
+  const br=facBranding(), b=state.bedrijf||{};
+  const t=facTotalen(f), kl=f.klant||{}, accent=br.accent, isOff=f.soort==='offerte';
+  const soortLabel=isOff?'Offerte':'Factuur';
   const geld=n=>'€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const verval=isOff?facDatumPlus(f.datum,30):facDatumPlus(f.datum, br.termijn);
+  const vervalLabel=isOff?'Geldig tot':'Vervaldatum';
   const bedrijfRegels=[b.adres, [b.pc,b.plaats].filter(Boolean).join('  '), b.email, b.tel].filter(Boolean).join('\n');
   const klantRegels=[kl.adres, [kl.pc,kl.plaats].filter(Boolean).join('  '), kl.email, kl.btwnr?('Btw: '+kl.btwnr):''].filter(Boolean).join('\n');
-  const voet=[bn, b.kvk?('KVK '+b.kvk):'', b.btw?('Btw '+b.btw):'', b.iban?('IBAN '+b.iban):''].filter(Boolean).map(esc).join(' &middot; ');
+  const voet=[br.naam, b.kvk?('KVK '+b.kvk):'', b.btw?('Btw '+b.btw):'', b.iban?('IBAN '+b.iban):''].filter(Boolean).map(esc).join(' &middot; ');
+  const kop=br.logo
+    ? '<img src="'+br.logo+'" alt="" style="max-height:60px; max-width:220px; margin-bottom:8px; display:block">'+'<div style="font-size:16px; font-weight:800; color:'+accent+'">'+esc(br.naam)+'</div>'
+    : '<div style="font-size:20px; font-weight:800; color:'+accent+'">'+esc(br.naam)+'</div>';
   const regelHtml=f.regels.map(r=>{
     const bedrag=(Number(r.aantal)||0)*(Number(r.stukprijs)||0);
-    return `<tr><td style="padding:8px 6px; border-bottom:1px solid #eee">${esc(r.omschrijving||'')}</td>`+
-      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${Number(r.aantal)||0}</td>`+
-      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${geld(r.stukprijs)}</td>`+
-      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${Number(r.btw)||0}%</td>`+
-      `<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">${geld(bedrag)}</td></tr>`;
+    return '<tr><td style="padding:8px 6px; border-bottom:1px solid #eee">'+esc(r.omschrijving||'')+'</td>'+
+      '<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">'+(Number(r.aantal)||0)+'</td>'+
+      '<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">'+geld(r.stukprijs)+'</td>'+
+      '<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">'+(Number(r.btw)||0)+'%</td>'+
+      '<td style="padding:8px 6px; border-bottom:1px solid #eee; text-align:right">'+geld(bedrag)+'</td></tr>';
   }).join('');
   const btwRows=Object.keys(t.btwMap).sort((a,b)=>b-a)
-    .map(k=>`<tr><td style="text-align:right; padding:2px 6px; color:#555">Btw ${k}%</td><td style="text-align:right; padding:2px 6px; width:130px">${geld(t.btwMap[k])}</td></tr>`).join('');
+    .map(k=>'<tr><td style="text-align:right; padding:2px 6px; color:#555">Btw '+k+'%</td><td style="text-align:right; padding:2px 6px; width:130px">'+geld(t.btwMap[k])+'</td></tr>').join('');
   const doc='<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>'+soortLabel+' '+esc(f.nummer||'')+'</title></head>'+
     '<body style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#1a1a1a; max-width:720px; margin:24px auto; padding:0 24px; font-size:14px; line-height:1.5">'+
     '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px">'+
-      '<div><div style="font-size:20px; font-weight:800">'+esc(bn)+'</div>'+
-        '<div style="color:#555; white-space:pre-line">'+esc(bedrijfRegels)+'</div></div>'+
-      '<div style="text-align:right"><div style="font-size:22px; font-weight:800; text-transform:uppercase; letter-spacing:1px">'+soortLabel+'</div>'+
-        '<div style="color:#555">Nr. '+esc(f.nummer||'')+'</div><div style="color:#555">Datum: '+esc(f.datum||'')+'</div></div></div>'+
+      '<div>'+kop+'<div style="color:#555; white-space:pre-line">'+esc(bedrijfRegels)+'</div></div>'+
+      '<div style="text-align:right"><div style="font-size:22px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:'+accent+'">'+soortLabel+'</div>'+
+        '<div style="color:#555">Nr. '+esc(f.nummer||'')+'</div><div style="color:#555">Datum: '+esc(f.datum||'')+'</div>'+
+        (verval?'<div style="color:#555">'+vervalLabel+': '+esc(verval)+'</div>':'')+'</div></div>'+
     '<div style="margin-bottom:20px"><div style="color:#555; font-size:12px; text-transform:uppercase; letter-spacing:1px">Aan</div>'+
       '<div style="font-weight:700">'+esc(kl.naam||'')+'</div>'+
       '<div style="color:#555; white-space:pre-line">'+esc(klantRegels)+'</div></div>'+
-    '<table style="width:100%; border-collapse:collapse; margin-bottom:16px"><thead><tr style="border-bottom:2px solid #1a1a1a">'+
+    '<table style="width:100%; border-collapse:collapse; margin-bottom:16px"><thead><tr style="border-bottom:2px solid '+accent+'">'+
       '<th style="text-align:left; padding:6px">Omschrijving</th><th style="text-align:right; padding:6px">Aantal</th>'+
       '<th style="text-align:right; padding:6px">Stukprijs</th><th style="text-align:right; padding:6px">Btw</th>'+
       '<th style="text-align:right; padding:6px">Bedrag</th></tr></thead><tbody>'+regelHtml+'</tbody></table>'+
     '<table style="margin-left:auto; border-collapse:collapse; margin-bottom:24px">'+
       '<tr><td style="text-align:right; padding:2px 6px; color:#555">Subtotaal</td><td style="text-align:right; padding:2px 6px; width:130px">'+geld(t.subtotaal)+'</td></tr>'+
       btwRows+
-      '<tr style="font-weight:800; border-top:2px solid #1a1a1a"><td style="text-align:right; padding:6px">Totaal</td><td style="text-align:right; padding:6px">'+geld(t.totaal)+'</td></tr></table>'+
-    (f.notitie?'<div style="color:#555; margin-bottom:16px">'+esc(f.notitie)+'</div>':'')+
+      '<tr style="font-weight:800; border-top:2px solid '+accent+'"><td style="text-align:right; padding:6px">Totaal</td><td style="text-align:right; padding:6px">'+geld(t.totaal)+'</td></tr></table>'+
+    (f.notitie?'<div style="color:#555; margin-bottom:8px">'+esc(f.notitie)+'</div>':'')+
+    (br.voettekst?'<div style="color:#555; margin-bottom:16px">'+esc(br.voettekst)+'</div>':'')+
     '<div style="color:#555; border-top:1px solid #eee; padding-top:12px; font-size:12px">'+voet+'</div>'+
     '<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt></body></html>';
   const w=window.open('', '_blank');
