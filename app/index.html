@@ -6817,9 +6817,13 @@ function mag(tab){
   const r=gebruiker?gebruiker.rol:'eigenaar';
   if(r==='eigenaar') return true;   /* de eigenaar ziet altijd alles */
   /* Heeft dit account een eigen paginalijst (door de eigenaar ingesteld), dan wint
-     die boven de rol-standaard. Zo bepaal je per gebruiker wat hij ziet. */
+     die boven de rol-standaard. Maar die lijst geldt alleen voor pagina's die de
+     eigenaar echt per teamlid kan aan- of uitzetten: de picker in Team > Gebruikers
+     (PAGINAS_BEHEER). Een pagina die daar niet bij staat, zoals Verkoop en Uren, of
+     iets wat later is toegevoegd, volgt de rol. Anders zou een opgeslagen lijst die
+     ouder is dan de pagina hem stilletjes verbergen, en dat overkwam Verkoop en Uren. */
   const eigen = gebruiker && Array.isArray(gebruiker.tabs) ? gebruiker.tabs : null;
-  if(eigen) return eigen.includes(hoort);
+  if(eigen && PAGINAS_BEHEER.some(p=>p[0]===hoort)) return eigen.includes(hoort);
   const toegestaan=ROL_TABS[r];
   return !toegestaan || toegestaan.includes(tab);
 }
