@@ -3636,9 +3636,10 @@ async function naarVoorraad(a){
     merk:a.merk, model:a.model, categorie:a.categorie,
     serienummer:a.serienummer, specs:a.specs||{},
     staat:a.grade||'B', inkoop:Number(a.inkoop)||0,
-    verkoop:null, garantie:0,
+    verkoop:null, garantie:12,
     herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
     code:a.code,
+    aangemaakt_door:(account&&account.id)||null,
     /* Weet je waar hij ligt, dan ligt hij daar; dat is geen aanname maar iets
        wat iemand bij het toevoegen heeft ingevuld. Alleen als niemand een plek
        heeft gekozen en de winkel op inscannen staat, blijft hij 'onderweg'

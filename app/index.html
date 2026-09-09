@@ -357,6 +357,19 @@
   .uitstalknop:hover{border-color:var(--muted-l);}
   .uitstalknop.uit{background:var(--green-soft); color:var(--green-tekst); border-color:transparent;}
   .uitstalknop.achter{background:var(--amber-soft); color:var(--amber-tekst); border-color:transparent;}
+  /* Foto's bij een hardware-exemplaar. Eerste foto is de hoofdfoto (webshop). */
+  .hwfotos{display:flex; flex-wrap:wrap; gap:10px;}
+  .hwfoto{position:relative; width:120px; height:120px; border-radius:12px; overflow:hidden;
+    border:1px solid var(--border); background:var(--soft-2); flex:none;}
+  .hwfoto img{width:100%; height:100%; object-fit:cover; display:block;}
+  .hwfoto.hoofd{border-color:var(--actie); box-shadow:0 0 0 2px var(--actie);}
+  .hwfoto-badge{position:absolute; left:6px; bottom:6px; font-size:10px; font-weight:800;
+    padding:2px 7px; border-radius:var(--pil); background:var(--actie); color:#fff;}
+  .hwfoto-btn{position:absolute; left:6px; bottom:6px; font-size:10px; font-weight:700;
+    padding:2px 7px; border-radius:var(--pil); border:none; background:rgba(0,0,0,.6); color:#fff;
+    cursor:pointer; font-family:inherit;}
+  .hwfoto-x{position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%;
+    border:none; background:rgba(0,0,0,.6); color:#fff; cursor:pointer; font-size:15px; line-height:1;}
   /* Btw-keuze in het verkoopscherm: kort en duidelijk boven de betaalknoppen. */
   .btwkeuze{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:4px 0 14px;}
   .btwoptie{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;
@@ -8630,11 +8643,108 @@ async function hwLaad(stil){
   hwData=data||[];
   const {data:locs}=await sb.from('hardware_locaties').select('*').order('volgorde');
   hwLocaties=locs||[];
+  /* Teamlijst nodig om 'toegevoegd door' als naam te tonen; hertekenen zodra hij
+     binnen is als hij nog niet geladen was (bv. bij direct openen van Hardware). */
+  if(!teamLeden.length){ laadTeamLeden().then(()=>{ if(!document.getElementById('tab-hardware').hidden) renderHardware(); }); }
   hwLocFilters();
   renderHardware();
 }
 
 function hwDagen(h){ return Math.floor((Date.now()-new Date(h.aangemaakt_op).getTime())/86400000); }
+/* Wie heeft dit toestel toegevoegd. Naam komt uit de teamlijst (id -> naam);
+   staat die nog niet ingeladen, dan valt hij terug op de ingelogde gebruiker of
+   op niets. Zo weet je bij elke laptop met welk account hij erin is gezet. */
+function hwWie(h){
+  if(!h||!h.aangemaakt_door) return '';
+  const m=teamLeden.find(x=>x.id===h.aangemaakt_door);
+  if(m) return m.naam;
+  if(gebruiker&&gebruiker.id===h.aangemaakt_door) return gebruiker.naam;
+  return '';
+}
+/* Datum en tijd van toevoegen, kort en leesbaar. */
+function hwWanneer(h){
+  if(!h||!h.aangemaakt_op) return '';
+  return new Date(h.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+/* ─── Foto's bij een hardware-exemplaar ───
+   Voor een laptop die direct aan de balie is toegevoegd (dus niet via refurbish)
+   kun je hier foto's kwijt. Ze gaan naar dezelfde bucket als refurbish
+   ('refurbish-fotos', eerste map = team_id zodat de policy klopt) en worden als
+   publieke url's in hardware.fotos bewaard. De eerste in de rij is de hoofdfoto;
+   de webshoppush pakt die volgorde. Komt een toestel uit refurbish, dan blijft
+   refurbish de foto's beheren, maar bijwerken mag hier ook. */
+function hwFotoStripHtml(h){
+  const fs=(h&&Array.isArray(h.fotos))?h.fotos:[];
+  if(!fs.length) return '<p class="muted klein">Nog geen foto\'s. Voeg er minstens een toe voordat je hem online zet.</p>';
+  return fs.map((u,i)=>`<div class="hwfoto${i===0?' hoofd':''}">
+    <img src="${esc(u)}" loading="lazy" alt="">
+    ${i===0?'<span class="hwfoto-badge">Hoofdfoto</span>':`<button class="hwfoto-btn" title="Maak dit de hoofdfoto" onclick="hwFotoHoofd(${i})">Hoofdfoto</button>`}
+    <button class="hwfoto-x" title="Verwijderen" onclick="hwFotoVerwijder(${i})">&times;</button>
+  </div>`).join('');
+}
+/* Verklein voor uploaden: grote telefoonfoto's hoeven niet op ware grootte de
+   opslag in. Langste zijde 1600px, jpeg 85%. */
+function hwFotoVerklein(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{
+      let w=img.width, ho=img.height; const max=1600;
+      if(w>max||ho>max){ const s=Math.min(max/w,max/ho); w=Math.round(w*s); ho=Math.round(ho*s); }
+      const c=document.createElement('canvas'); c.width=w; c.height=ho;
+      c.getContext('2d').drawImage(img,0,0,w,ho);
+      URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res(b):rej(new Error('geen blob')),'image/jpeg',0.85);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('kon foto niet lezen')); };
+    img.src=url;
+  });
+}
+function hwFotoPad(url){
+  const d=String(url||'').split('/refurbish-fotos/');
+  return d.length>1?decodeURIComponent(d[1].split('?')[0]):null;
+}
+async function hwFotosOpslaan(urls){
+  if(!hwOpen) return;
+  const {error}=await sb.from('hardware').update({fotos:urls, bijgewerkt_op:new Date().toISOString()}).eq('id',hwOpen.id);
+  if(error){ console.error('foto\'s opslaan:',error); toast('Foto opslaan mislukt','fout'); return; }
+  hwOpen.fotos=urls;
+  const strip=document.getElementById('hwFotoStrip'); if(strip) strip.innerHTML=hwFotoStripHtml(hwOpen);
+  const rij=hwData.find(x=>x.id===hwOpen.id); if(rij) rij.fotos=urls;
+}
+async function hwFotoToevoegen(input){
+  const files=Array.prototype.slice.call(input.files||[]); input.value='';
+  if(!files.length||!hwOpen) return;
+  const bezig=document.getElementById('hwFotoBezig'); if(bezig) bezig.textContent='Bezig met uploaden…';
+  const urls=(Array.isArray(hwOpen.fotos)?hwOpen.fotos:[]).slice();
+  for(let i=0;i<files.length;i++){
+    try{
+      const blob=await hwFotoVerklein(files[i]);
+      const pad=`${account.team_id}/hardware/${hwOpen.id}/${Date.now()}-${i}.jpg`;
+      const {error}=await sb.storage.from('refurbish-fotos').upload(pad, blob, {contentType:'image/jpeg', upsert:false});
+      if(error){ console.error('foto upload:',error); continue; }
+      urls.push(sb.storage.from('refurbish-fotos').getPublicUrl(pad).data.publicUrl);
+    }catch(e){ console.error('foto verwerken:',e); }
+  }
+  await hwFotosOpslaan(urls);
+  if(bezig) bezig.textContent='';
+}
+async function hwFotoVerwijder(i){
+  if(!hwOpen||!Array.isArray(hwOpen.fotos)) return;
+  const url=hwOpen.fotos[i]; if(url===undefined) return;
+  if(!confirm('Deze foto verwijderen?')) return;
+  const pad=hwFotoPad(url);
+  if(pad){ try{ await sb.storage.from('refurbish-fotos').remove([pad]); }catch(e){ console.error('foto wissen:',e); } }
+  const urls=hwOpen.fotos.slice(); urls.splice(i,1);
+  await hwFotosOpslaan(urls);
+}
+async function hwFotoHoofd(i){
+  if(!hwOpen||!Array.isArray(hwOpen.fotos)) return;
+  const urls=hwOpen.fotos.slice(); const u=urls.splice(i,1)[0]; if(u===undefined) return;
+  urls.unshift(u);
+  await hwFotosOpslaan(urls);
+}
+
 function hwOnline(h){ return !!(h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id); }
 function hwMarge(h){
   if(h.verkoop==null) return null;
@@ -8715,7 +8825,8 @@ function renderHardware(){
       return `<tr>
         <td><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
         <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
-            ${hwSpecsKort(h)?`<div class="muted klein">${esc(hwSpecsKort(h))}</div>`:(h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:'')}</td>
+            ${hwSpecsKort(h)?`<div class="muted klein">${esc(hwSpecsKort(h))}</div>`:(h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:'')}
+            ${hwWie(h)?`<div class="muted klein">Door ${esc(hwWie(h))}</div>`:''}</td>
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
         <td>${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:'<span class="muted">—</span>'}</td>
         <td>${h.status==='onderweg'
@@ -8728,7 +8839,7 @@ function renderHardware(){
         <td class="num">${h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>'}</td>
         <td class="num">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
         <td>${hwKanalen(h)}</td>
-        <td>${h.status==='verkocht'?'<span class="muted">verkocht</span>'
+        <td title="Toegevoegd ${esc(hwWanneer(h))}${hwWie(h)?' door '+esc(hwWie(h)):''}">${h.status==='verkocht'?'<span class="muted">verkocht</span>'
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
         <td class="num hwact" style="white-space:nowrap">${h.status==='verkocht'?''
           :`${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
@@ -8850,7 +8961,7 @@ function hwVenster(h){
       <div>
         <button class="btn ghost small" onclick="hwSluit()"><svg class="i s"><use href="#i-left"/></svg>Terug naar Hardware</button>
         <h1 style="margin:10px 0 0">${titel}</h1>
-        ${h?`<p class="muted klein" style="margin-top:4px">Binnengekomen ${new Date(h.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}${h.herkomst?' · '+esc(h.herkomst):''}</p>`:''}
+        ${h?`<p class="muted klein" style="margin-top:4px">Toegevoegd ${hwWanneer(h)}${hwWie(h)?' door '+esc(hwWie(h)):''}${h.herkomst?' · '+esc(h.herkomst):''}</p>`:''}
       </div>
       ${h?`<div class="row" style="gap:8px; align-items:center">
         <span class="chip">${esc(statusLabel)}</span>
@@ -8918,6 +9029,17 @@ function hwVenster(h){
         </select></div>
       </div>
     </div>
+
+    ${h?`<div class="card breed">
+      <h2><svg class="i"><use href="#i-camera"/></svg>Foto's</h2>
+      <p class="muted klein" style="margin-top:-4px">De eerste foto is de hoofdfoto. Die staat bovenaan op de webshop.</p>
+      <div class="hwfotos" id="hwFotoStrip">${hwFotoStripHtml(h)}</div>
+      <div class="row" style="gap:8px; margin-top:12px; align-items:center">
+        <label class="btn ghost small" style="cursor:pointer">Foto toevoegen<input type="file" accept="image/*" multiple hidden onchange="hwFotoToevoegen(this)"></label>
+        <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Met camera<input type="file" accept="image/*" capture="environment" hidden onchange="hwFotoToevoegen(this)"></label>
+        <span class="muted klein" id="hwFotoBezig"></span>
+      </div>
+    </div>`:''}
 
     <div class="card breed">
       <h2><svg class="i"><use href="#i-globe"/></svg>Tekst voor online</h2>
@@ -9228,6 +9350,7 @@ async function hwOpslaan(knop){
     const {error}=await sb.from('hardware').update(rij).eq('id',hwOpen.id); fout=error;
   }else{
     rij.team_id=account.team_id;
+    rij.aangemaakt_door=(account&&account.id)||null;
     const {error}=await sb.from('hardware').insert(rij); fout=error;
   }
   if(knop){ knop.disabled=false; knop.textContent=oud; }
