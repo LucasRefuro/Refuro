@@ -99,6 +99,18 @@
   .kpi .v.oranje{color:var(--oranje);}
   .kpi .v.rood{color:var(--red);}
   .kpi.accent .v.groen,.kpi.accent .v.rood{color:#fff;}
+  .hubsectie:not(:first-child){margin-top:4px;}
+  .hubgroep{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:22px 0 10px;}
+  .hubgroep:first-child,.hubsectie:first-child .hubgroep{margin-top:0;}
+  .hubgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;}
+  .hubtegel{display:flex; align-items:center; gap:13px; padding:15px 16px; border:1.5px solid var(--border); border-radius:14px; background:var(--card); cursor:pointer; text-align:left; font:inherit; color:var(--text); position:relative; transition:border-color .12s, transform .12s, box-shadow .12s;}
+  .hubtegel:hover{border-color:var(--oranje); transform:translateY(-1px); box-shadow:var(--schaduw-l);}
+  .hubtegel:focus-visible{outline:none; border-color:var(--oranje); box-shadow:0 0 0 3px var(--mint);}
+  .hubtegel>.i{width:24px; height:24px; color:var(--oranje); flex:none;}
+  .hubtegel .tt{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .hubtegel .tt b{font-size:15px; font-weight:700;}
+  .hubtegel .tt span{font-size:12px; color:var(--muted); line-height:1.35;}
+  .hubtegel .badge{position:absolute; top:10px; right:12px;}
   .periodesel{display:flex; gap:6px;}
   .periodesel button{background:#fff; border:1.5px solid var(--border); padding:7px 14px; border-radius:20px; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); cursor:pointer;}
   .periodesel button.active{background:var(--navy); border-color:var(--navy); color:#fff;}
@@ -1550,23 +1562,12 @@
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
     <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Inscannen</button>
     <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
-    <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
     <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
-    <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
-    <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
-    <button data-tab="webshop" id="webshopLink" hidden><svg class="i"><use href="#i-cart"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
-    <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
-    <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
-    <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
-    <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellingen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
-    <button data-tab="uren"><svg class="i"><use href="#i-clock"/></svg> Uren</button>
-    <button data-tab="vastelasten"><svg class="i"><use href="#i-euro"/></svg> Vaste lasten</button>
-    <button data-tab="rapport"><svg class="i"><use href="#i-chart"/></svg> Rapport</button>
-    <button data-tab="facturen"><svg class="i"><use href="#i-card"/></svg> Facturen</button>
-    <button data-tab="team"><svg class="i"><use href="#i-users"/></svg> Team</button>
-    <button data-tab="partners"><svg class="i"><use href="#i-link"/></svg> Partners</button>
+    <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
+    <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
+    <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
   </nav>
   <div class="onderin">
     <nav>
@@ -1698,7 +1699,9 @@
 
 <!-- VERKOOP -->
 <section id="tab-verkoop"hidden>
-  <div class="pagehead"><h1>Verkoop</h1></div>
+  <div class="pagehead"><h1>Verkoop</h1>
+    <button class="btn ghost" id="vkFacturenKnop"hidden onclick="showTab('facturen')"><svg class="i s"><use href="#i-card"/></svg>Facturen &amp; offertes</button>
+  </div>
   <div class="modules">
   <div class="card breed">
     <input id="vkScan" class="scanbox" placeholder="Scan om te verkopen…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); vkScanVerwerk(this.value.trim()); this.value='';}">
@@ -2278,42 +2281,52 @@
 <section id="tab-facturen"hidden>
   <div class="pagehead"><h1>Facturen</h1></div>
   <div class="modules">
-  <div class="card breed">
-    <h2><svg class="i"><use href="#i-shop"/></svg>Bedrijfsgegevens</h2>
-    <p class="muted" style="margin-bottom:12px">Deze staan op elke factuur en offerte. Eén keer invullen.</p>
-    <div class="grid">
-      <div><label>Bedrijfsnaam</label><input id="fb_naam" autocomplete="off"></div>
-      <div><label>E-mail</label><input id="fb_email" type="email" autocomplete="off"></div>
-      <div><label>Telefoon</label><input id="fb_tel" autocomplete="off"></div>
-      <div><label>Adres</label><input id="fb_adres" autocomplete="off"></div>
-      <div><label>Postcode</label><input id="fb_pc" autocomplete="off"></div>
-      <div><label>Plaats</label><input id="fb_plaats" autocomplete="off"></div>
-      <div><label>KVK-nummer</label><input id="fb_kvk" autocomplete="off"></div>
-      <div><label>Btw-nummer</label><input id="fb_btw" autocomplete="off"></div>
-      <div><label>IBAN</label><input id="fb_iban" autocomplete="off"></div>
-    </div>
-    <div class="hkkop" style="margin-top:18px">Opmaak van de factuur</div>
-    <p class="muted klein" style="margin:2px 0 10px">Je logo en kleuren komen uit je huisstijl. Hier stel je de accentkleur, betaaltermijn en een voettekst voor de factuur in.</p>
-    <div class="row" style="gap:14px; flex-wrap:wrap; align-items:flex-end">
-      <div><label>Accentkleur</label><input id="fb_kleur" type="color" style="width:56px; height:40px; padding:2px"></div>
-      <div style="min-width:150px"><label>Betaaltermijn (dagen)</label><input id="fb_termijn" type="number" min="0" step="1" placeholder="14"></div>
-      <div style="flex:1; min-width:200px"><label>Voettekst <span class="muted">(optioneel)</span></label><input id="fb_voet" placeholder="bijv. Bedankt voor je bezoek" autocomplete="off"></div>
-      <div><button class="btn ghost" onclick="facVoorbeeld()"><svg class="i s"><use href="#i-download"/></svg>Voorbeeld</button></div>
-    </div>
-    <button class="btn" style="margin-top:16px" onclick="facBedrijfOpslaan()"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
-  </div>
   <div class="card breed" id="facLijstVak">
     <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:10px">
       <h2 style="margin-bottom:0">Facturen en offertes</h2>
       <div class="row" style="gap:8px">
         <button class="btn actie" onclick="facNieuw('factuur')"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe factuur</button>
         <button class="btn secondary" onclick="facNieuw('offerte')"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe offerte</button>
+        <button class="btn ghost" onclick="naarFactuurInstellingen()"><svg class="i s"><use href="#i-settings"/></svg>Gegevens en opmaak</button>
       </div>
     </div>
     <div id="facLijst"></div>
   </div>
   <div class="card breed" id="facEditVak"hidden></div>
   </div>
+</section>
+
+<!-- MEER (verzamelpagina) -->
+<section id="tab-meer"hidden>
+  <div class="pagehead"><h1>Meer</h1></div>
+  <div class="modules"><div class="card breed">
+    <div class="hubsectie">
+      <div class="hubgroep">Voorraad en toestellen</div>
+      <div class="hubgrid">
+        <button class="hubtegel" data-tab="voorraad" onclick="showTab('voorraad')"><svg class="i"><use href="#i-package"/></svg><span class="tt"><b>Voorraad</b><span>Bijvullen uit het magazijn en de nulmeting</span></span><span class="badge" id="vrdBadge" style="display:none">0</span></button>
+        <button class="hubtegel" data-tab="hardware" onclick="showTab('hardware')"><svg class="i"><use href="#i-laptop"/></svg><span class="tt"><b>Hardware</b><span>Losse toestellen met serienummer, zoals laptops</span></span></button>
+        <button class="hubtegel" data-tab="aanvragen" onclick="showTab('aanvragen')"><svg class="i"><use href="#i-clipboard"/></svg><span class="tt"><b>Aanvragen</b><span>Bestellingen op aanvraag voor klanten</span></span><span class="badge" id="aanvBadge" style="display:none">0</span></button>
+        <button class="hubtegel" data-tab="inruil" onclick="showTab('inruil')"><svg class="i"><use href="#i-recycle"/></svg><span class="tt"><b>Inruil</b><span>Inruilaanvragen van klanten</span></span><span class="badge" id="inrBadge" style="display:none">0</span></button>
+        <button class="hubtegel" data-tab="webshop" id="webshopLink"hidden onclick="showTab('webshop')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Webshop</b><span>Wat er online besteld is</span></span><span class="badge" id="bBestel" hidden>0</span></button>
+        <button class="hubtegel" data-tab="diensten" onclick="showTab('diensten')"><svg class="i"><use href="#i-tool"/></svg><span class="tt"><b>Diensten</b><span>Losse werkzaamheden zoals simkaart knippen</span></span></button>
+      </div>
+    </div>
+    <div class="hubsectie">
+      <div class="hubgroep">Administratie</div>
+      <div class="hubgrid">
+        <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Uren van het team en de loonkosten</span></span></button>
+        <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
+        <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
+      </div>
+    </div>
+    <div class="hubsectie">
+      <div class="hubgroep">Winkel</div>
+      <div class="hubgrid">
+        <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Gebruikers, rollen en toegang</span></span></button>
+        <button class="hubtegel" data-tab="partners" onclick="showTab('partners')"><svg class="i"><use href="#i-link"/></svg><span class="tt"><b>Partners</b><span>Toestellen die een partner voor je verkoopt</span></span></button>
+      </div>
+    </div>
+  </div></div>
 </section>
 
 <!-- TEAM / ADMIN -->
@@ -2462,6 +2475,7 @@
       <button data-s="kassa"><svg class="i"><use href="#i-cash"/></svg>Kassa</button>
       <button data-s="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
       <button data-s="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
+      <button data-s="factuur"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
       <button data-s="leveranciers"><svg class="i"><use href="#i-truck"/></svg>Leveranciers</button>
       <div class="instgroep">Klantcontact</div>
       <button data-s="bedrijf"><svg class="i"><use href="#i-shop"/></svg>Bedrijf</button>
@@ -2612,6 +2626,31 @@
     </div>
     <p class="muted" style="margin-top:8px">Deze gegevens worden gebruikt in de statusberichten naar klanten. Berichten openen in je eigen mail-/sms-app zodat jij ze verstuurt.</p>
     <button class="btn ghost" style="margin-top:12px" onclick="toonOnboarding()"><svg class="i s"><use href="#i-shop"/></svg>Rondleiding opnieuw bekijken</button>
+  </div>
+
+  <div class="card" id="inst-factuur"hidden>
+    <h2><svg class="i"><use href="#i-card"/></svg>Facturen <span class="muted">(gegevens en opmaak)</span></h2>
+    <p class="muted" style="margin-bottom:12px">Deze staan op elke factuur en offerte. Eén keer invullen. Facturen maak je op de Verkoop-pagina.</p>
+    <div class="grid">
+      <div><label>Bedrijfsnaam</label><input id="fb_naam" autocomplete="off"></div>
+      <div><label>E-mail</label><input id="fb_email" type="email" autocomplete="off"></div>
+      <div><label>Telefoon</label><input id="fb_tel" autocomplete="off"></div>
+      <div><label>Adres</label><input id="fb_adres" autocomplete="off"></div>
+      <div><label>Postcode</label><input id="fb_pc" autocomplete="off"></div>
+      <div><label>Plaats</label><input id="fb_plaats" autocomplete="off"></div>
+      <div><label>KVK-nummer</label><input id="fb_kvk" autocomplete="off"></div>
+      <div><label>Btw-nummer</label><input id="fb_btw" autocomplete="off"></div>
+      <div><label>IBAN</label><input id="fb_iban" autocomplete="off"></div>
+    </div>
+    <div class="hkkop" style="margin-top:18px">Opmaak van de factuur</div>
+    <p class="muted klein" style="margin:2px 0 10px">Je logo en kleuren komen uit je huisstijl. Hier stel je de accentkleur, betaaltermijn en een voettekst voor de factuur in.</p>
+    <div class="row" style="gap:14px; flex-wrap:wrap; align-items:flex-end">
+      <div><label>Accentkleur</label><input id="fb_kleur" type="color" style="width:56px; height:40px; padding:2px"></div>
+      <div style="min-width:150px"><label>Betaaltermijn (dagen)</label><input id="fb_termijn" type="number" min="0" step="1" placeholder="14"></div>
+      <div style="flex:1; min-width:200px"><label>Voettekst <span class="muted">(optioneel)</span></label><input id="fb_voet" placeholder="bijv. Bedankt voor je bezoek" autocomplete="off"></div>
+      <div><button class="btn ghost" onclick="facVoorbeeld()"><svg class="i s"><use href="#i-download"/></svg>Voorbeeld</button></div>
+    </div>
+    <button class="btn" style="margin-top:16px" onclick="facBedrijfOpslaan()"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
   </div>
 
   <div class="card" id="inst-klantpagina" hidden>
@@ -2956,7 +2995,13 @@ function showTab(t){
   if(typeof mag==='function' && !mag(t)) t = eersteTab();
   /* Nieuw product heeft geen eigen menuknop meer; hij hangt onder Producten.
      Daarom blijft die knop oplichten zolang je in het formulier zit.        */
-  const menu = (t==='nieuw'||t==='catalogus') ? 'producten' : t;
+  /* Sommige pagina's hebben geen eigen menuknop meer: nieuw hangt onder Producten,
+     Facturen onder Verkoop, en de verzamelde pagina's onder Meer. De juiste knop
+     blijft dan oplichten. */
+  let menu = t;
+  if(t==='nieuw'||t==='catalogus') menu='producten';
+  else if(t==='facturen') menu='verkoop';
+  else if(HUB_TABS.includes(t)) menu='meer';
   document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
   if(t!=='nieuw' && typeof npStop==='function') npStop();
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
@@ -2967,6 +3012,7 @@ function showTab(t){
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
+  if(t==='meer') renderMeer();
   if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
@@ -3529,7 +3575,8 @@ function facBedrijfLees(){
   save();
 }
 function facBedrijfOpslaan(){ facBedrijfLees(); toast('Bedrijfsgegevens opgeslagen', true); }
-function renderFacturen(){
+/* Vult de factuurgegevens-velden (staan bij Instellingen > Facturen) uit de opslag. */
+function facBedrijfVul(){
   const b=state.bedrijf||{}, h=huisstijl();
   const zet=(id,val)=>{ const el=document.getElementById(id); if(el && document.activeElement!==el) el.value=val||''; };
   zet('fb_naam', b.naam || h.naam || ''); zet('fb_email', b.email); zet('fb_tel', b.tel);
@@ -3538,6 +3585,12 @@ function renderFacturen(){
   zet('fb_kleur', b.kleur || h.oranje || '#0B5B52');
   zet('fb_termijn', (b.termijn!=null && b.termijn!=='') ? b.termijn : '14');
   zet('fb_voet', b.voettekst);
+}
+function naarFactuurInstellingen(){
+  showTab('instellingen');
+  const b=document.querySelector('#instTabs [data-s="factuur"]'); if(b) b.click();
+}
+function renderFacturen(){
   const ev=document.getElementById('facEditVak'); if(ev){ ev.hidden=true; ev.innerHTML=''; }
   const lv=document.getElementById('facLijstVak'); if(lv) lv.hidden=false;
   const lijst=(state.facturen||[]).slice().sort((a,b)=>(b.op||0)-(a.op||0));
@@ -3812,6 +3865,23 @@ function facVanHardware(id){
     regels:[{omschrijving:oms, aantal:1, stukprijs, btw: marge?0:21}],
     notitie: marge?'Margeregeling van toepassing.':'', bron:{type:'hardware', ref:h.id} };
   showTab('facturen'); facEditRender();
+}
+
+/* De verzamelpagina "Meer": toont alleen de tegels die deze gebruiker mag zien, werkt
+   de tel-bolletjes bij en verbergt een groep die daardoor leeg is. De webshop-tegel
+   laat webshopLink() zelf zien, alleen als er een webshop gekoppeld is. */
+function renderMeer(){
+  document.querySelectorAll('#tab-meer .hubtegel').forEach(t=>{
+    if(t.id==='webshopLink') return;
+    t.hidden = !mag(t.dataset.tab);
+  });
+  if(typeof updateBadge==='function') updateBadge();
+  if(typeof inrBadge==='function') inrBadge();
+  if(typeof bstBadge==='function') bstBadge();
+  if(typeof webshopLink==='function') webshopLink();
+  document.querySelectorAll('#tab-meer .hubsectie').forEach(sec=>{
+    sec.hidden = ![...sec.querySelectorAll('.hubtegel')].some(t=>!t.hidden);
+  });
 }
 
 function renderDashboard(){
@@ -6845,11 +6915,12 @@ document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('cli
 }));
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','leveranciers','abonnement','backup'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','leveranciers','abonnement','backup'].forEach(s=>{
     document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
   if(b.dataset.s==='webshop') shopStatus();
+  if(b.dataset.s==='factuur') facBedrijfVul();
 }));
 
 
@@ -7378,10 +7449,13 @@ async function shopLos(knop){
 }
 
 /* ---------- team / medewerkers ---------- */
+/* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
+   op zo'n pagina zit, licht de Meer-knop op. */
+const HUB_TABS=['voorraad','hardware','aanvragen','inruil','webshop','diensten','uren','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team'],
-  medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren']
+  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team','meer'],
+  medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','meer']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -7457,6 +7531,7 @@ function renderPaginas(){
 const MOB={
   dashboard:   {naam:'Dashboard',    ico:'i-chart'},
   scan:        {naam:'Scannen',      ico:'i-scan'},
+  verkoop:     {naam:'Verkoop',      ico:'i-receipt'},
   reparaties:  {naam:'Reparaties',   ico:'i-wrench'},
   producten:   {naam:'Producten',    ico:'i-box'},
   voorraad:    {naam:'Voorraad',     ico:'i-package'},
@@ -7466,9 +7541,10 @@ const MOB={
   bestellen:   {naam:'Bestellen',    ico:'i-cart'},
   diensten:    {naam:'Diensten',     ico:'i-tool'},
   team:        {naam:'Team',         ico:'i-users'},
+  meer:        {naam:'Meer',         ico:'i-layers'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','reparaties','aanvragen','producten','voorraad','hardware','kassa','bestellen','diensten','team','instellingen'];
+const MOB_VOLGORDE=['dashboard','scan','verkoop','reparaties','producten','bestellen','kassa','meer','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
@@ -7553,6 +7629,8 @@ function pasRechtenToe(){
   document.querySelectorAll('aside nav button').forEach(b=>{
     b.style.display = mag(b.dataset.tab)?'':'none';
   });
+  /* De knop naar Facturen staat op de Verkoop-pagina; alleen tonen wie facturen mag zien. */
+  const fk=document.getElementById('vkFacturenKnop'); if(fk) fk.hidden=!mag('facturen');
   /* Wie er is ingelogd staat alleen nog rechtsboven. Twee keer hetzelfde
      tonen leverde alleen maar ruis op onderin de zijbalk.                  */
   const top=document.getElementById('topUser');
