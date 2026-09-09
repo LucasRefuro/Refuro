@@ -2302,7 +2302,26 @@ function ctrGa(stap){
   ctrVeldBewaar();
   if(ctr.stap!==stap) (ctr.pad=ctr.pad||[]).push(ctr.stap);
   ctr.stap=stap;
+  if(stap==='specs') ctrSpecsUitOnderdelen();
   ctrTeken();
+}
+/* Wat je al uit je batch aan ram of ssd hebt toegekend (staat als extra onderdeel op
+   het toestel), vast invullen bij "wat er in zit". We halen de maat (bijv. 16 GB, 512 GB)
+   uit de omschrijving en zetten die in het juiste specveld, maar alleen als dat nog leeg
+   is; wat je zelf hebt ingevuld overschrijven we nooit. */
+function ctrSpecsUitOnderdelen(){
+  if(!ctr || !ctr.a) return;
+  ctr.specs=ctr.specs||{};
+  const velden=prof().specVelden||[];
+  const ramV=velden.find(v=>/geheugen|ram/i.test(v.sleutel));
+  const ssdV=velden.find(v=>/opslag|ssd/i.test(v.sleutel));
+  (ctr.a.extra_kosten||[]).forEach(k=>{
+    const m=String(k.omschrijving||'').match(/(\d+)\s*(gb|tb)/i);
+    if(!m) return;
+    const maat=m[1]+' '+m[2].toUpperCase();
+    if(k.soort==='ram' && ramV && !ctr.specs[ramV.sleutel]) ctr.specs[ramV.sleutel]=maat;
+    if(k.soort==='ssd' && ssdV && !ctr.specs[ssdV.sleutel]) ctr.specs[ssdV.sleutel]=maat+' SSD';
+  });
 }
 function ctrTerug(){
   ctrVeldBewaar();

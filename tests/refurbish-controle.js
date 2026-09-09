@@ -216,6 +216,17 @@ setTimeout(async()=>{
   ok('accu op het label', /Accu: 88%/.test(et2));
   ok('code onder de qr', /etqr[\s\S]*etcode/.test(et2));
 
+  // ── wat er in zit: ram/ssd uit de batch worden vast ingevuld ──
+  w.eval(`ctr={a:{categorie:'Laptop', extra_kosten:[
+      {soort:'ram', bedrag:20, omschrijving:'Crucial 16GB DDR4'},
+      {soort:'ssd', bedrag:30, omschrijving:'512GB SSD'}]},
+    stap:'specs', antwoord:{}, punten:{}, specs:{}, accu:'', notities:{}, opties:{}, pad:[]};
+    ctrSpecsUitOnderdelen();`);
+  ok('geheugen vast ingevuld uit de batch', w.eval("ctr.specs.Geheugen")==='16 GB', 'kreeg '+w.eval("ctr.specs.Geheugen"));
+  ok('opslag vast ingevuld uit de batch', w.eval("ctr.specs.Opslag")==='512 GB SSD', 'kreeg '+w.eval("ctr.specs.Opslag"));
+  w.eval("ctr.specs={Geheugen:'32 GB'}; ctrSpecsUitOnderdelen();");
+  ok('eigen invoer wordt niet overschreven', w.eval("ctr.specs.Geheugen")==='32 GB');
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);
 },450);
