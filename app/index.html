@@ -1627,11 +1627,7 @@
   </div>
   <nav>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
-    <div class="navgroep">
-      <div class="navkop">Verkopen</div>
-      <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
-      <button data-tab="diensten"><svg class="i"><use href="#i-tool"/></svg> Diensten</button>
-    </div>
+    <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
     <div class="navgroep">
       <div class="navkop">Voorraad</div>
       <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Inscannen</button>
@@ -1820,44 +1816,34 @@
     <div class="blokjes" id="vkBlokjes"></div>
   </div>
   <div class="card breed">
+    <h2><svg class="i"><use href="#i-tool"/></svg>Diensten en losse verkoop</h2>
+    <p class="muted" style="margin-bottom:12px">Tik een dienst aan of vul een losse verkoop in. Alles komt in 'Deze verkoop' hierboven, zodat het samen op één bon kan.</p>
+    <div id="dienstGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px"></div>
+    <div class="row" style="margin-top:14px; align-items:flex-end">
+      <div style="flex:2; min-width:180px"><label>Losse verkoop <span class="muted">(staat niet in het systeem)</span></label><input id="ld_naam" placeholder="bijv. simkaart knippen, kabel los"></div>
+      <div><label>Prijs (€)</label><input id="ld_prijs" type="number" step="0.01" min="0"></div>
+      <div><label>Kosten (€)</label><input id="ld_kosten" type="number" step="0.01" min="0" value="0"></div>
+      <div><button class="btn" onclick="verkoopLos()"><svg class="i s"><use href="#i-plus"/></svg>In de verkoop</button></div>
+    </div>
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer; font-weight:600; color:var(--muted)">Standaarddiensten beheren</summary>
+      <div style="overflow-x:auto; margin-top:12px">
+        <table>
+          <thead><tr><th>Naam</th><th class="num">Prijs</th><th class="num">Kosten</th><th></th></tr></thead>
+          <tbody id="dienstBody"></tbody>
+        </table>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <div style="flex:2; min-width:180px"><label>Nieuwe dienst</label><input id="d_naam" placeholder="bijv. Windows 11 Pro installatie"></div>
+        <div><label>Prijs (€)</label><input id="d_prijs" type="number" step="0.01" min="0"></div>
+        <div><label>Kosten (€)</label><input id="d_kosten" type="number" step="0.01" min="0" value="0"></div>
+        <div><button class="btn" onclick="voegDienstToe()">Toevoegen</button></div>
+      </div>
+    </details>
+  </div>
+  <div class="card breed">
     <h2>Laatste verkopen</h2>
     <div class="loglist" id="vkLog"></div>
-  </div>
-  </div>
-</section>
-
-<!-- DIENSTEN -->
-<section id="tab-diensten"hidden>
-  <div class="pagehead"><h1>Diensten</h1></div>
-  <div class="modules">
-  <div class="card breed">
-    <h2>Verkoop een dienst</h2>
-    <div id="dienstGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px"></div>
-    <p class="muted" style="margin-top:10px">Klik op een dienst en kies de betaalmethode. De verkoop telt direct mee in het dashboard onder de categorie Diensten.</p>
-  </div>
-  <div class="card breed">
-    <h2>Losse dienst of verkoop <span class="muted">(staat niet in het systeem)</span></h2>
-    <div class="row">
-      <div style="flex:2; min-width:200px"><label>Omschrijving</label><input id="ld_naam" placeholder="bijv. simkaart knippen, kabel los verkocht"></div>
-      <div><label>Prijs (€)</label><input id="ld_prijs" type="number" step="0.01" min="0"></div>
-      <div><label>Kosten (€, optioneel)</label><input id="ld_kosten" type="number" step="0.01" min="0" value="0"></div>
-      <div><button class="btn" onclick="verkoopLos()">Verkopen…</button></div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Standaarddiensten beheren</h2>
-    <div style="overflow-x:auto">
-    <table>
-      <thead><tr><th>Naam</th><th class="num">Prijs</th><th class="num">Kosten</th><th></th></tr></thead>
-      <tbody id="dienstBody"></tbody>
-    </table>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <div style="flex:2; min-width:200px"><label>Nieuwe dienst</label><input id="d_naam" placeholder="bijv. Windows 11 Pro installatie"></div>
-      <div><label>Prijs (€)</label><input id="d_prijs" type="number" step="0.01" min="0"></div>
-      <div><label>Kosten (€)</label><input id="d_kosten" type="number" step="0.01" min="0" value="0"></div>
-      <div><button class="btn" onclick="voegDienstToe()">Toevoegen</button></div>
-    </div>
   </div>
   </div>
 </section>
@@ -3095,7 +3081,6 @@ function showTab(t){
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
   if(t==='meer') renderMeer();
-  if(t==='diensten') renderDiensten();
   if(t==='reparaties') renderReparaties();
   if(t==='team') renderTeam();
   if(t==='partners') renderPartners();
@@ -3220,7 +3205,7 @@ function globaalZoeken(){
   (state.reparaties||[]).filter(r=>zoekPast(r.nr+' '+r.klant.naam+' '+(r.toestel||'')+' '+(r.type||''), g)||String(r.klant.tel||'').includes(q)).slice(0,5)
     .forEach(r=>treffers.push({t:`<svg class="i s"><use href="#i-wrench"/></svg> ${esc(r.nr)} <span class="muted">· ${esc(r.klant.naam)} · ${esc(r.toestel)} ${esc(r.type)}</span>`, fn:()=>{ showTab('reparaties'); repDetail(r.id); }}));
   state.diensten.filter(d=>zoekPast(d.naam, g)).slice(0,3)
-    .forEach(d=>treffers.push({t:`<svg class="i s"><use href="#i-tool"/></svg> ${esc(d.naam)} <span class="muted">· ${euro(d.prijs)}</span>`, fn:()=>{ showTab('diensten'); }}));
+    .forEach(d=>treffers.push({t:`<svg class="i s"><use href="#i-tool"/></svg> ${esc(d.naam)} <span class="muted">· ${euro(d.prijs)}</span>`, fn:()=>{ showTab('verkoop'); }}));
   if(!treffers.length) treffers.push({t:'<span class="muted">Niets gevonden</span>', fn:()=>{}});
   res=document.createElement('div');
   res.className='zoekres'; res.id='zoekRes';
@@ -4582,6 +4567,7 @@ function renderVerkoop(){
      en meenemen in de verkoop. Stil, en alleen als de gebruiker hardware mag zien. */
   if(typeof hwData!=='undefined' && !hwData.length && typeof mag==='function' && mag('hardware') && typeof hwLaad==='function') hwLaad(true);
   vulModellenLijst();
+  if(typeof renderDiensten==='function') renderDiensten();   /* de diensten-kaart staat nu op dit scherm */
   const fb=document.getElementById('vkFeedback'); if(fb){ fb.className=''; fb.textContent=''; }
   const blok=document.getElementById('vkBlokjes');
   if(blok){
@@ -7579,8 +7565,8 @@ async function shopLos(knop){
 const HUB_TABS=['uren','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','diensten','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team','meer'],
-  medewerker:['scan','verkoop','diensten','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','meer']
+  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team','meer'],
+  medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','meer']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
@@ -7591,7 +7577,6 @@ const ROL_TABS={
    meer, ook niet terug bij deze schakelaars.                               */
 const UITZETBAAR=[
   {tab:'scan',        naam:'Scannen',      uitleg:'In- en uitscannen van producten met de barcodescanner.'},
-  {tab:'diensten',    naam:'Diensten',     uitleg:'Losse werkzaamheden zoals simkaart knippen of data overzetten.'},
   {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
   {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
   {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en het tellen van de voorraad.'},
@@ -7623,7 +7608,7 @@ function mag(tab){
 }
 /* De eerste pagina die deze gebruiker mag zien, als landingsplek. */
 function eersteTab(){
-  const volgorde=['dashboard','scan','kassa','voorraad','hardware','reparaties','aanvragen','producten','diensten','webshop','inruil','bestellen','team','partners','instellingen'];
+  const volgorde=['dashboard','scan','kassa','voorraad','hardware','reparaties','aanvragen','producten','webshop','inruil','bestellen','team','partners','instellingen'];
   return volgorde.find(t=>mag(t)) || 'instellingen';
 }
 function paginaWissel(tab, aan){
@@ -7671,7 +7656,7 @@ const MOB={
   meer:        {naam:'Meer',         ico:'i-layers'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','verkoop','reparaties','diensten','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa','meer','instellingen'];
+const MOB_VOLGORDE=['dashboard','scan','verkoop','reparaties','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa','meer','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
@@ -7684,7 +7669,7 @@ function mobTabs(){ return MOB_VOLGORDE.filter(t=>mag(t)); }
 /* De vier vaste onderbalk-knoppen: de eerste vier uit deze voorkeurslijst die
    de rol mag zien. De rest zit achter Meer, zodat de balk rustig blijft en niet
    alle vijftien pagina's laat schuiven. */
-const MOB_CORE=['dashboard','verkoop','reparaties','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop','diensten','inruil'];
+const MOB_CORE=['dashboard','verkoop','reparaties','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop','inruil'];
 function mobCore(){ return MOB_CORE.filter(t=>mag(t)).slice(0,4); }
 
 function mobTel(t){
@@ -7703,7 +7688,7 @@ const MOB_MEERLABEL=Object.assign({}, MOB, {
   rapport:{naam:'Rapport',ico:'i-chart'},
   partners:{naam:'Partners',ico:'i-link'}
 });
-const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','diensten','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
+const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
 const MOB_ALLES_BEHEER=['uren','vastelasten','rapport','team','partners','instellingen'];
 
 function tekenOnderbalk(){
@@ -10305,7 +10290,7 @@ async function maakInviteAccount(token, knop){
 /* De pagina's die je per teamlid aan of uit kunt zetten (team en partners zijn
    eigenaar-only en staan er niet bij). */
 const PAGINAS_BEHEER=[
-  ['dashboard','Dashboard'],['scan','Inscannen'],['verkoop','Verkoop'],['diensten','Diensten'],['reparaties','Reparaties'],
+  ['dashboard','Dashboard'],['scan','Inscannen'],['verkoop','Verkoop'],['reparaties','Reparaties'],
   ['aanvragen','Aanvragen'],['producten','Producten'],['voorraad','Voorraad'],['hardware','Hardware'],
   ['webshop','Webshop'],['inruil','Inruil'],['kassa','Kassa'],['bestellen','Bijbestellen'],['uren','Uren'],['instellingen','Instellingen']
 ];
@@ -11067,9 +11052,10 @@ function vasteCat(naam){
 }
 function dienstCat(){ return vasteCat('Diensten'); }
 function renderDiensten(){
-  document.getElementById('dienstGrid').innerHTML=state.diensten.map(dn=>
-    `<button class="dienstKnop" onclick="dienstPopup(${dn.id})"><div class="dn">${esc(dn.naam)}</div><div class="dp">${euro(dn.prijs)}</div></button>`).join('')
-    || '<p class="muted">Nog geen diensten. Voeg er hieronder een toe.</p>';
+  const grid=document.getElementById('dienstGrid'); if(!grid) return;
+  grid.innerHTML=state.diensten.map(dn=>
+    `<button class="dienstKnop" onclick="dienstNaarMandje(${dn.id})"><div class="dn">${esc(dn.naam)}</div><div class="dp">${euro(dn.prijs)}</div></button>`).join('')
+    || '<p class="muted">Nog geen diensten. Voeg er onderaan een toe bij Standaarddiensten beheren.</p>';
   document.getElementById('dienstBody').innerHTML=state.diensten.map(dn=>`<tr>`+
     `<td><input value="${esc(dn.naam)}" onchange="updDienst(${dn.id},'naam',this.value)"></td>`+
     `<td><input class="num" type="number" step="0.01" value="${dn.prijs}" onchange="updDienst(${dn.id},'prijs',this.value)"></td>`+
@@ -11101,15 +11087,18 @@ function verwijderDienst(id){
   }
 }
 let dienstTx=null;
-function dienstPopup(id){
+/* Een dienst valt nu in het gewone verkoopmandje (categorie Diensten), zodat hij
+   samen met losse producten in één bon en één betaling gaat. */
+function dienstNaarMandje(id){
   const dn=state.diensten.find(d=>d.id===id); if(!dn) return;
-  betaalPopup(dn.naam, dn.prijs, dn.kosten||0, false);
+  mandjeToevoegen({naam:dn.naam, aantal:1, verkoopStuk:Number(dn.prijs)||0, inkoopStuk:Number(dn.kosten)||0, cat:(typeof dienstCat==='function'?dienstCat().id:null)});
 }
 function verkoopLos(){
-  const naam=document.getElementById('ld_naam').value.trim()||'Losse dienst';
+  const naam=document.getElementById('ld_naam').value.trim()||'Losse verkoop';
   const prijs=Number(document.getElementById('ld_prijs').value)||0;
   if(prijs<=0){ toast('Vul eerst een prijs in.'); return; }
-  betaalPopup(naam, prijs, Number(document.getElementById('ld_kosten').value)||0, true);
+  mandjeToevoegen({naam, aantal:1, verkoopStuk:prijs, inkoopStuk:Number(document.getElementById('ld_kosten').value)||0, cat:(typeof dienstCat==='function'?dienstCat().id:null)});
+  document.getElementById('ld_naam').value=''; document.getElementById('ld_prijs').value=''; document.getElementById('ld_kosten').value=0;
 }
 function betaalPopup(naam,prijs,kosten,los,repId){
   sluitPopup();
