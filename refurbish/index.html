@@ -1574,7 +1574,6 @@ async function labelsKlaar(knop, ids){
 /* Het klant-prijskaartje hoort naast het toestel in de winkel, niet op het
    toestel zelf. Daarom geen QR of interne code zoals op de werksticker, maar de
    prijs groot met de grade, de belangrijkste specs en de garantie. */
-const GRADE_UITLEG={A:'Als nieuw', B:'Nette staat', C:'Zichtbare sporen'};
 const GRADE_STAAT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
 function prijskaartHtml(bron){
   const a=bron.a;
@@ -2232,21 +2231,7 @@ function ctrKies(sleutel, antwoord){
   ctr.naVraag = nieuw ? {sleutel, uitleg:kleurVan(antwoord)!=='goed'} : null;
   ctrTeken();
   ctrDoorNaarVolgende();
-  ctrMisschienDoor();
   ctr.naVraag=null;
-}
-
-/* Is alles op deze stap ingevuld en staat de voorwaartse knop klaar, dan gaan we
-   vanzelf door. Alleen als er niets meer open staat en het laatste antwoord geen
-   toelichting nodig heeft; anders laten we de medewerker eerst typen. De stap
-   markeert zijn doorknop met auto:true, dus een afkeuren-knop of een zijpad telt
-   niet mee. */
-function ctrMisschienDoor(){
-  /* Bewust GEEN automatische sprong meer naar de volgende stap. De medewerker drukt
-     zelf op de voorwaartse knop (of Enter) als de stap af is; de checklist bleef
-     anders vanzelf doorschieten. Een eventueel oude timer ruimen we nog wel op. */
-  if(!ctr) return;
-  clearTimeout(ctr._doorTimer);
 }
 
 /* Met Enter loop je de controle door: in een invoerveld spring je naar het
@@ -2315,7 +2300,6 @@ function ctrVeldBewaar(){
   const not=document.getElementById('c_notitie');
   if(not) ctr.notitie=not.value;
 }
-const ctrBewaarVelden=ctrVeldBewaar;
 function ctrSpecsUitVelden(){
   const uit={};
   prof().specVelden.forEach(v=>{
@@ -2743,11 +2727,7 @@ const CATEGORIE_PROFIEL={
       {t:'Cameraglas', opties:[
         {l:'Gaaf', p:0}, {l:'Krasjes, beeld ok', p:1}, {l:'Kras in beeld of barst', p:4}]}
     ],
-    grades:[
-      {g:'A', tot:2,  uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},
-      {g:'B', tot:7,  uitleg:'Gebruikt, in nette staat'},
-      {g:'C', tot:99, uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}
-    ],
+    grades:GRADES,
     schermDefect:{vlak:'Voorglas / scherm', optie:'Barst of dode zone', vraag:'Barst of dode zone in het scherm'},
     specVelden:[
       {sleutel:'Opslag', id:'c_opslag', hint:'128 GB'},
@@ -2810,7 +2790,7 @@ const CATEGORIE_PROFIEL={
       {t:'Frame en randen', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Krassen of deukje', p:3},{l:'Deuken of buiging', p:6}]},
       {t:'Cameraglas', opties:[{l:'Gaaf', p:0},{l:'Krasjes, beeld ok', p:1},{l:'Kras in beeld of barst', p:4}]}
     ],
-    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    grades:GRADES,
     schermDefect:{vlak:'Voorglas / scherm', optie:'Barst of dode zone', vraag:'Barst of dode zone in het scherm'},
     specVelden:[
       {sleutel:'Opslag', id:'c_opslag', hint:'128 GB'},
@@ -2871,7 +2851,7 @@ const CATEGORIE_PROFIEL={
       {t:'Voorkant', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Schade', p:6}]},
       {t:'Binnenkant', opties:[{l:'Schoon', p:0},{l:'Wat stof', p:1},{l:'Vies of losse kabels', p:3}]}
     ],
-    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    grades:GRADES,
     specVelden:[
       {sleutel:'Processor',  id:'c_cpu',  hint:'Intel Core i5'},
       {sleutel:'Geheugen',   id:'c_ram',  hint:'16 GB'},
@@ -2919,7 +2899,7 @@ const CATEGORIE_PROFIEL={
       {t:'Bezel en behuizing', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Deuken of schade', p:6}]},
       {t:'Standaard en voet', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Beschadigd of ontbreekt', p:4}]}
     ],
-    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    grades:GRADES,
     schermDefect:{vlak:'Scherm / glas', optie:'Barst of lijn', vraag:'Barst of lijn in het scherm'},
     specVelden:[
       {sleutel:'Schermmaat',  id:'c_maat',   hint:'24 inch'},
@@ -2969,7 +2949,7 @@ const CATEGORIE_PROFIEL={
       {t:'Voorkant', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Schade', p:6}]},
       {t:'Achterkant en behuizing', opties:[{l:'Als nieuw', p:0},{l:'Lichte sporen', p:1},{l:'Duidelijke krassen', p:3},{l:'Schade', p:6}]}
     ],
-    grades:[{g:'A',tot:2,uitleg:'Als nieuw, nauwelijks te zien dat hij gebruikt is'},{g:'B',tot:7,uitleg:'Gebruikt, in nette staat'},{g:'C',tot:99,uitleg:'Zichtbare gebruikssporen, werkt naar behoren'}],
+    grades:GRADES,
     specVelden:[
       {sleutel:'Type',    id:'c_type',    hint:'Bijvoorbeeld smartwatch'},
       {sleutel:'Kenmerk', id:'c_kenmerk', hint:'Maat, kleur, model'}
@@ -4013,7 +3993,10 @@ function tekenOnline(){
 
         <div class="card">
           <h2><svg class="i"><use href="#i-globe"/></svg>Waar zet je hem</h2>
-          <div class="kanaallijst">${KANALEN.map(k=>`
+          <!-- 'In de winkel' laten we weg: een voorraadtoestel ligt er per definitie
+               al, dus dat vinkje maakte geen verschil. De winkel-vlag blijft in de
+               data gewoon op true staan (zie onlKanaalAan). -->
+          <div class="kanaallijst">${KANALEN.filter(k=>k.id!=='winkel').map(k=>`
             <label class="kanaalrij">
               <input type="checkbox" ${onlKanaalAan(k.id)?'checked':''}
                 onchange="onlKanaalVink('${k.id}', this.checked)">
