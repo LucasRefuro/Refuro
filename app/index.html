@@ -357,6 +357,11 @@
   .uitstalknop:hover{border-color:var(--muted-l);}
   .uitstalknop.uit{background:var(--green-soft); color:var(--green-tekst); border-color:transparent;}
   .uitstalknop.achter{background:var(--amber-soft); color:var(--amber-tekst); border-color:transparent;}
+  /* Kleine hoofdfoto in de hardwarelijst. */
+  .hwrij{display:flex; gap:11px; align-items:center; min-width:0;}
+  .hwthumb{width:46px; height:46px; border-radius:9px; object-fit:cover; background:var(--soft-2); flex:none;}
+  .hwthumb.leeg{display:flex; align-items:center; justify-content:center; color:var(--muted-l); border:1px dashed var(--border);}
+  .hwthumb.leeg .i{width:18px; height:18px;}
   /* Foto's bij een hardware-exemplaar. Eerste foto is de hoofdfoto (webshop). */
   .hwfotos{display:flex; flex-wrap:wrap; gap:10px;}
   .hwfoto{position:relative; width:120px; height:120px; border-radius:12px; overflow:hidden;
@@ -8775,6 +8780,13 @@ function hwWanneer(h){
   if(!h||!h.aangemaakt_op) return '';
   return new Date(h.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
+/* Kleine hoofdfoto in de lijst, zodat je aan de balie ziet of een toestel al een
+   foto heeft. Geen foto = een rustig grijs vlakje met een camera-icoon. */
+function hwThumbHtml(h){
+  const u=(h&&Array.isArray(h.fotos)&&h.fotos[0])?h.fotos[0]:'';
+  return u ? `<img class="hwthumb" src="${esc(u)}" loading="lazy" alt="">`
+           : `<div class="hwthumb leeg" title="Nog geen foto"><svg class="i s"><use href="#i-camera"/></svg></div>`;
+}
 
 /* ─── Foto's bij een hardware-exemplaar ───
    Voor een laptop die direct aan de balie is toegevoegd (dus niet via refurbish)
@@ -8933,9 +8945,10 @@ function renderHardware(){
       const d=hwDagen(h);
       return `<tr>
         <td><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
-        <td><b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
+        <td><div class="hwrij">${hwThumbHtml(h)}<div style="min-width:0">
+            <b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
             ${hwSpecsKort(h)?`<div class="muted klein">${esc(hwSpecsKort(h))}</div>`:(h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:'')}
-            ${hwWie(h)?`<div class="muted klein">Door ${esc(hwWie(h))}</div>`:''}</td>
+            ${hwWie(h)?`<div class="muted klein">Door ${esc(hwWie(h))}</div>`:''}</div></div></td>
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
         <td>${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:'<span class="muted">—</span>'}</td>
         <td>${h.status==='onderweg'
