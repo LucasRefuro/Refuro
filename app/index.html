@@ -1877,7 +1877,7 @@
     <div class="card">
       <h2><svg class="i"><use href="#i-user"/></svg>Klant</h2>
       <div class="grid">
-        <div><label>Naam *</label><input id="r_naam"></div>
+        <div class="zoekveld"><label>Naam *</label><input id="r_naam" autocomplete="off" oninput="repKlantTyp()" onfocus="repKlantTyp()" onblur="setTimeout(repKlantSluit,180)"><div class="zoeklijst" id="repKlantLijst" hidden></div></div>
         <div><label>Telefoonnummer *</label><input id="r_tel"></div>
         <div><label>E-mail (optioneel)</label><input id="r_email"></div>
         <div><label>Op de hoogte houden?</label><select id="r_notify"><option value="1">Ja, via mail of sms</option><option value="0">Nee</option></select></div>
@@ -11294,6 +11294,41 @@ function repTypeKies(naam){
   checkSeal(); updateZoekLinks(); prijsSuggestieDebounce();
 }
 function repTypeSluit(){ const l=document.getElementById('repTypeLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
+
+/* Terugkerende klanten herkennen: typ een naam en kies uit eerdere reparaties, dan
+   worden naam, telefoon en e-mail vanzelf ingevuld. Scheelt overtypen (fijn met
+   dyslexie) en je ziet meteen dat iemand al eens langs is geweest. */
+let repKlantSug=[];
+function repKlantLijst(){
+  const seen={}, uit=[];
+  (state.reparaties||[]).forEach(r=>{
+    const k=r.klant||{}; const sleutel=String(k.tel||k.naam||'').replace(/\s/g,'').toLowerCase();
+    if(!sleutel) return;
+    if(seen[sleutel]){ seen[sleutel].aantal++; return; }
+    const rec={naam:k.naam||'', tel:k.tel||'', email:k.email||'', aantal:1, t:r.t||0};
+    seen[sleutel]=rec; uit.push(rec);
+  });
+  return uit.sort((a,b)=>b.t-a.t);
+}
+function repKlantTyp(){
+  const veld=document.getElementById('r_naam'), lijst=document.getElementById('repKlantLijst');
+  if(!veld || !lijst) return;
+  const q=veld.value.trim().toLowerCase();
+  if(!q){ repKlantSluit(); return; }
+  repKlantSug=repKlantLijst().filter(k=>(k.naam+' '+k.tel).toLowerCase().includes(q)).slice(0,8);
+  if(!repKlantSug.length){ repKlantSluit(); return; }
+  lijst.hidden=false;
+  lijst.innerHTML=repKlantSug.map((k,i)=>`<button type="button" class="zoekrij" onmousedown="event.preventDefault(); repKlantKies(${i})"><span class="zrnaam" data-onvertaald>${esc(k.naam||k.tel)}</span> <span class="muted" style="font-size:12px">${esc(k.tel)}${k.aantal>1?' · '+k.aantal+' eerdere':''}</span></button>`).join('');
+}
+function repKlantKies(i){
+  const k=repKlantSug[i]; if(!k) return;
+  const zet=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v||''; };
+  zet('r_naam',k.naam); zet('r_tel',k.tel); zet('r_email',k.email);
+  repKlantSluit();
+  if(k.aantal>1) toast('Terugkerende klant: '+k.aantal+' eerdere reparaties.', true);
+  const t=document.getElementById('r_toestel'); if(t) t.focus();
+}
+function repKlantSluit(){ const l=document.getElementById('repKlantLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
 function repTypeToets(e){ zoekToets(e,'repTypeLijst',repTypeSluit); }
 /* gsm-world heeft per toestel een eigen pagina: gsm-world.nl/iphone-16,
    gsm-world.nl/galaxy-a53-5g. Zoeken op "iPhone 16 scherm" levert daar niets
