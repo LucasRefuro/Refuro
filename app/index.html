@@ -4154,6 +4154,7 @@ function repBinnenViaDash(id){
   const r=state.reparaties.find(r=>r.id===id);
   if(!r || r.status!=='besteld') return;
   r.status='binnen';
+  const tl=repLog(r); if(!tl.some(x=>x.status==='binnen')) tl.push({status:'binnen', t:Date.now()});
   save();
   piep(880);
   toast('Onderdelen binnen voor '+r.nr+' ('+r.klant.naam+'). Status is bijgewerkt.', true);
@@ -4711,6 +4712,7 @@ function repBoekMandje(m, vStuk, bet){
   kasVerkoop(vStuk, bet, m.naam);
   if(r){
     r.status='afgerond'; r.betaal=bet; r.afgerondOp=Date.now();
+    const tl=repLog(r); if(!tl.some(x=>x.status==='afgerond')) tl.push({status:'afgerond', t:Date.now()});
     if(r.garantieMaanden==null) r.garantieMaanden=repGarantieStandaard();
     if(typeof deelPrijspunt==='function') deelPrijspunt(r, vStuk, Number(m.inkoopStuk)||0);
   }
@@ -11166,6 +11168,7 @@ function boekDienst(bet){
     const r=state.reparaties.find(r=>r.id===tx.repId);
     if(r){
       r.status='afgerond'; r.betaal=bet; r.afgerondOp=Date.now();
+      const tl=repLog(r); if(!tl.some(x=>x.status==='afgerond')) tl.push({status:'afgerond', t:Date.now()});
       if(r.garantieMaanden==null) r.garantieMaanden=repGarantieStandaard();
       deelPrijspunt(r, tx.prijs, tx.kosten);
     }
