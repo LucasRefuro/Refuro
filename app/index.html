@@ -616,6 +616,12 @@
      onderbalk de navigatie. */
   .navgroep{display:flex; flex-direction:column; gap:2px; margin-top:9px;}
   .navkop{font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--menutekst); opacity:.55; padding:6px 16px 3px;}
+  /* De gedeelde voorraad-sub-balk (Producten, Tellen, Inscannen, Bijbestellen). */
+  .voorraadsub{display:inline-flex; flex-wrap:wrap; gap:2px; background:var(--soft-2); border-radius:var(--pil); padding:4px; margin-bottom:20px; max-width:100%;}
+  .voorraadsub button{background:none; border:none; padding:9px 16px; border-radius:var(--pil); font-family:inherit; font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;}
+  .voorraadsub button:hover{color:var(--text);}
+  .voorraadsub button.active{background:var(--card); color:var(--oranje); box-shadow:0 1px 3px rgba(23,32,30,.10);}
+  .voorraadsub .badge{background:var(--red-soft); color:var(--red-tekst); font-size:11px; font-weight:700; border-radius:var(--pil); padding:1px 7px; min-width:18px; text-align:center;}
   aside nav button{gap:11px; padding:11px 16px; border-radius:var(--pil); font-size:14px; font-weight:600;
     color:var(--menutekst); transition:.16s;}
   aside nav button:hover{background:var(--soft-2); color:var(--text);}
@@ -1628,14 +1634,8 @@
   <nav>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
     <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
-    <div class="navgroep">
-      <div class="navkop">Voorraad</div>
-      <button data-tab="scan"><svg class="i"><use href="#i-scan"/></svg> Inscannen</button>
-      <button data-tab="producten"><svg class="i"><use href="#i-box"/></svg> Producten</button>
-      <button data-tab="voorraad"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdBadge" style="display:none">0</span></button>
-      <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bijbestellen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
-      <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
-    </div>
+    <button data-tab="producten"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdNavBadge" style="display:none">0</span></button>
+    <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
     <div class="navgroep">
       <div class="navkop">Werk</div>
       <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
@@ -1674,6 +1674,16 @@
 </div>
 
 <div class="binnen">
+
+<!-- Voorraad-hub: een gedeelde sub-balk boven de vier voorraadschermen, zodat je er
+     via een ingang in het menu tussen wisselt. De badges wonen hier (een keer, geen
+     dubbele id's). Alleen zichtbaar op die vier schermen. -->
+<nav class="voorraadsub" id="voorraadSub" hidden aria-label="Voorraad">
+  <button data-vsub="producten" onclick="showTab('producten')">Producten</button>
+  <button data-vsub="voorraad" onclick="showTab('voorraad')">Tellen<span class="badge" id="vrdBadge" style="display:none">0</span></button>
+  <button data-vsub="scan" onclick="showTab('scan')">Inscannen</button>
+  <button data-vsub="bestellen" onclick="showTab('bestellen')">Bijbestellen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
+</nav>
 
 <!-- DASHBOARD -->
 <section id="tab-dashboard">
@@ -3069,8 +3079,16 @@ function showTab(t){
   let menu = t;
   if(t==='nieuw'||t==='catalogus') menu='producten';
   else if(t==='facturen') menu='verkoop';
+  else if(t==='scan'||t==='voorraad'||t==='bestellen') menu='producten';   /* de voorraad-hub */
   else if(HUB_TABS.includes(t)) menu='meer';
   document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
+  /* De gedeelde voorraad-sub-balk: tonen op de vier voorraadschermen, met de juiste
+     knop actief. */
+  const vSub=document.getElementById('voorraadSub');
+  if(vSub){
+    vSub.hidden = !['producten','voorraad','scan','bestellen'].includes(t);
+    vSub.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.vsub===t));
+  }
   if(t!=='nieuw' && typeof npStop==='function') npStop();
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   if(t==='dashboard') renderDashboard();
@@ -7015,6 +7033,10 @@ function updateBadge(){
     vb.textContent=bv; vb.style.display=bv?'':'none';
     vb.title=bv?bv+' product(en) moeten bijgehangen worden':'';
   }
+  /* De Voorraad-knop in het menu vat samen wat er in de hub aandacht vraagt:
+     bijhangen plus bijbestellen. */
+  const vnb=document.getElementById('vrdNavBadge');
+  if(vnb){ const tot=bv+n; vnb.textContent=tot>99?'99+':tot; vnb.style.display=tot?'':'none'; vnb.title=tot?'Voorraad vraagt aandacht':''; }
 }
 
 /* ---------- instellingen ---------- */
