@@ -1003,6 +1003,10 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 let account=null, abonnement=null;
+/* Heeft deze winkel een externe voorraadpartner (StockDeck)? Zo niet, dan is de
+   portaal-bediening op elke rij en het dashboard-vinkje alleen maar ruis; we
+   verbergen die dan. */
+let heeftPartner=false;
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
 let voorraaddelen=[];
@@ -1093,6 +1097,9 @@ async function start(){
   if(!acc){ slot('Geen winkel gevonden',
     'Er hangt nog geen winkel aan dit account. Neem contact op via info@storvo.nl.','Terug','/app/'); return; }
   account=acc;
+  /* Best-effort: heeft de winkel partners? Faalt de query, dan blijft de bediening
+     gewoon verborgen; dat is de veilige kant. */
+  try{ const {data:pn}=await sb.from('partners').select('id').neq('id', account.id).limit(1); heeftPartner=!!(pn&&pn.length); }catch(e){}
 
   const {data:abo}=await sb.rpc('abonnement_status');
   abonnement=(abo&&abo[0])||null;
@@ -2597,10 +2604,10 @@ const CTR_STAPPEN={
           <div class="muted klein">${esc((prof().grades.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
         </div>
       </div>
-      <label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
+      ${heeftPartner?`<label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
         <input type="checkbox" id="ctr_dashboard" ${ctr.naarDashboard?'checked':''} onchange="ctrDashboardToggle(this)">
         <span>Zichtbaar maken in partner-dashboard <span class="muted klein" style="font-weight:400">— zodra hij goedgekeurd is, staat hij bij Online zetten in je dashboard</span></span>
-      </label>` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
+      </label>`:''}` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
   }, knoppen:()=>ctrCompleet()
       ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
 
@@ -3726,7 +3733,7 @@ function tekenVoorraad(){
                    onclick="event.stopPropagation()"><span class="stip"></span>Staat online</a>`
               : '<span class="onlinepil"><span class="stip"></span>Staat online</span>')
             : '<span class="muted klein">nog niet</span>'}</td>
-          <td class="num hwact"><div class="vract">${h
+          <td class="num hwact"><div class="vract">${(h && heeftPartner)
             ? (h.kanalen&&h.kanalen.partner
               ? `<button class="btn portaalknop" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)" title="Weghalen van het partner-portaal">Uit portaal</button>`
               : `<button class="btn portaalknop" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)" title="Op het partner-portaal zetten">Naar portaal</button>`)
