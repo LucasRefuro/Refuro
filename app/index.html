@@ -1622,6 +1622,7 @@
   <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <symbol id="i-clipboard" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol>
   <symbol id="i-recycle" viewBox="0 0 24 24"><path d="M7 19H4.8a1.8 1.8 0 0 1-1.6-2.7L7.2 9.5"/><path d="M11 19h8.2a1.8 1.8 0 0 0 1.6-2.7l-1.2-2.1"/><path d="m14 16-3 3 3 3"/><path d="M8.3 13.6 7.2 9.5 3.1 10.6"/><path d="m9.3 5.8 1.1-1.9A1.8 1.8 0 0 1 13.5 3.9l3.9 6.8"/><path d="m13.4 9.6 4.1 1.1 1.1-4.1"/></symbol>
@@ -3048,7 +3049,7 @@ function schoneState(){
   const s=load();
   return s;
 }
-function betaalNaam(b){ return b==='pin'?'pin':(b==='cash'?'cash met bon':'cash zonder bon'); }
+function betaalNaam(b){ return b==='pin'?'pin':b==='cash'?'cash met bon':b==='cash_zb'?'cash zonder bon':'onbekend'; }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); }
 /* Alles opnieuw tekenen, bijvoorbeeld na binnenkomende wijzigingen van een collega. */
 function tekenAlles(){
@@ -7681,7 +7682,6 @@ const MOB={
   meer:        {naam:'Meer',         ico:'i-layers'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
 };
-const MOB_VOLGORDE=['dashboard','scan','verkoop','reparaties','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa','meer','instellingen'];
 
 function huidigeTab(){
   const s=document.querySelector('main section[id^="tab-"]:not([hidden])');
@@ -7689,7 +7689,6 @@ function huidigeTab(){
   const t=s.id.replace('tab-','');
   return t==='nieuw' ? 'producten' : t;
 }
-function mobTabs(){ return MOB_VOLGORDE.filter(t=>mag(t)); }
 
 /* De vier vaste onderbalk-knoppen: de eerste vier uit deze voorkeurslijst die
    de rol mag zien. De rest zit achter Meer, zodat de balk rustig blijft en niet
@@ -9187,7 +9186,7 @@ function hwVenster(h){
         ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
       <button class="btn" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
       ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
-        ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Toewijzen aan partner</button>`:''}
+        ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-right"/></svg>Toewijzen aan partner</button>`:''}
       ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
         ? (h.kanalen&&h.kanalen.partner
           ? `<button class="btn ghost" onclick="hwDashboard('${h.id}',false,this)">Uit partner-dashboard halen</button>`
@@ -9246,8 +9245,8 @@ function hwVenster(h){
     <div class="card breed">
       <h2><svg class="i"><use href="#i-globe"/></svg>Tekst voor online</h2>
       ${h?`<div class="row" style="gap:8px; margin-bottom:12px">
-        <button class="btn ghost small" onclick="hwSchrijf(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Laat AI dit schrijven</button>
-        <button class="btn ghost small" onclick="hwPrijsvoorstel(this)"><svg class="i s"><use href="#i-sparkles"/></svg>Prijs voorstellen</button>
+        <button class="btn ghost small" onclick="hwSchrijf(this)"><svg class="i s"><use href="#i-zap"/></svg>Laat AI dit schrijven</button>
+        <button class="btn ghost small" onclick="hwPrijsvoorstel(this)"><svg class="i s"><use href="#i-zap"/></svg>Prijs voorstellen</button>
         <span class="muted klein" id="hwPrijsBron"></span>
       </div>`:''}
       <div class="veldkop"><label>Titel voor online</label>
@@ -9257,7 +9256,7 @@ function hwVenster(h){
         ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_oms\', this)">Kopiëren</button>':''}</div>
       <textarea id="hw_oms" rows="5" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
       ${h?`<div class="row" style="gap:8px; margin-top:8px">
-        <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-copy"/></svg>Alles kopiëren voor Marktplaats</button>
+        <button class="btn ghost small" onclick="hwKopieer()"><svg class="i s"><use href="#i-clipboard"/></svg>Alles kopiëren voor Marktplaats</button>
       </div>`:''}
     </div>
 
@@ -10461,7 +10460,7 @@ async function maakUitnodiging(){
   const rol=document.getElementById('inv_rol').value;
   const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol}).select().single();
   const uit=document.getElementById('inviteResultaat');
-  if(error || !data){ uit.innerHTML='<p style="color:#c0392b">Kon geen uitnodiging aanmaken.</p>'; return; }
+  if(error || !data){ uit.innerHTML='<p style="color:var(--red-tekst)">Kon geen uitnodiging aanmaken.</p>'; return; }
   const link=location.origin+location.pathname+'?invite='+data.token;
   uit.innerHTML=`<div class="infobox">Deel deze link met je nieuwe collega (14 dagen geldig):<br>
     <input readonly value="${esc(link)}" style="margin-top:8px" onclick="this.select()">

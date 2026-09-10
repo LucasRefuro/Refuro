@@ -1093,7 +1093,9 @@ async function start(){
     'Log eerst in bij Storvo, dan kun je hier verder.',
     'Naar de inlog','/app/'); return; }
 
-  const {data:acc}=await sb.from('accounts').select('*').eq('id',session.user.id).maybeSingle();
+  const {data:acc, error:accFout}=await sb.from('accounts').select('*').eq('id',session.user.id).maybeSingle();
+  if(accFout){ slot('Kon je gegevens niet laden',
+    'Controleer je verbinding en probeer het opnieuw.','Opnieuw proberen','/refurbish/'); return; }
   if(!acc){ slot('Geen winkel gevonden',
     'Er hangt nog geen winkel aan dit account. Neem contact op via info@storvo.nl.','Terug','/app/'); return; }
   account=acc;
@@ -1101,7 +1103,9 @@ async function start(){
      gewoon verborgen; dat is de veilige kant. */
   try{ const {data:pn}=await sb.from('partners').select('id').neq('id', account.id).limit(1); heeftPartner=!!(pn&&pn.length); }catch(e){}
 
-  const {data:abo}=await sb.rpc('abonnement_status');
+  const {data:abo, error:aboFout}=await sb.rpc('abonnement_status');
+  if(aboFout){ slot('Kon je abonnement niet ophalen',
+    'Controleer je verbinding en herlaad de pagina.','Opnieuw proberen','/refurbish/'); return; }
   abonnement=(abo&&abo[0])||null;
 
   if(abonnement && abonnement.geblokkeerd){
@@ -1177,6 +1181,14 @@ async function allesLaden(){
     sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('refurbish_voorraad').select('*').order('naam')
   ]);
+  /* Faalt de belangrijkste query (netwerk, RLS, hapering), dan tekenen we NIET leeg
+     over wat er stond: dan lijkt een tijdelijke fout een lege werkbank en denkt de
+     winkelier dat zijn toestellen weg zijn. Melden en stoppen. */
+  if(a.error){
+    console.error('werkbank laden:', a.error);
+    toast('Kon de werkbank niet laden. Controleer je verbinding en probeer opnieuw.','fout');
+    return;
+  }
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
   hardwares=h.data||[]; batches=bt.data||[];
@@ -3814,8 +3826,16 @@ function onlineZetten(id){
 }
 
 async function fotosLaden(a){
+  /* De modelnaam gaat in een PostgREST .or()-filter; daar zijn komma's scheidingstekens
+     en haakjes groeperingstekens. Modelnamen als 'MacBook Pro (Retina, 15-inch, 2015)'
+     braken de query anders. Quoten leest de waarde letterlijk; zonder model laten we
+     de model-tak weg. */
+  const model=String(a.model||'').trim().replace(/"/g,'');
+  const orFilter=model
+    ? `apparaat_id.eq.${a.id},and(apparaat_id.is.null,model.ilike."${model}")`
+    : `apparaat_id.eq.${a.id}`;
   const {data}=await sb.from('refurbish_fotos').select('*')
-    .or(`apparaat_id.eq.${a.id},and(apparaat_id.is.null,model.ilike.${a.model})`)
+    .or(orFilter)
     .order('volgorde');
   onl.fotos=data||[];
   /* Is er nog geen hoofdfoto gekozen, dan is dat de foto van voren: daar zie
@@ -4511,11 +4531,18 @@ async function rechtKlaar(knop){
   await bezig(knop, async()=>{
     const beeld=rechtTrekken();
     const blob=await (await fetch(beeld)).blob();
-    const oud=recht.foto;
     const pad=`${account.team_id}/${onl.a.id}/scherm-${Date.now()}.jpg`;
     const {error}=await sb.storage.from('refurbish-fotos')
       .upload(pad, blob, {contentType:'image/jpeg'});
     if(error) throw new Error(error.message);
+    /* Eén rechtgezette schermfoto per toestel. Doe je het opnieuw, dan gaat de
+       vorige eerst weg, net als bij de achtergrond-foto. Anders krijgt de webshop
+       bij publiceren twee bijna identieke schermfoto's. De bronfoto 'open' blijft. */
+    const oudScherm=(onl.fotos||[]).filter(f=>f.aanzicht==='scherm');
+    for(const o of oudScherm){
+      await sb.storage.from('refurbish-fotos').remove([o.pad]);
+      await sb.from('refurbish_fotos').delete().eq('id',o.id);
+    }
     await sb.from('refurbish_fotos').insert({
       team_id:account.team_id, apparaat_id:onl.a.id,
       merk:onl.a.merk, model:onl.a.model, aanzicht:'scherm', pad, volgorde:98
@@ -6284,7 +6311,10 @@ function uitAdres(){
 
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') sluit(); });
 
-start().then(()=>{ setTimeout(uitAdres, 300); });
+start().then(()=>{ setTimeout(uitAdres, 300); }).catch(e=>{
+  console.error('opstarten refurbish:', e);
+  slot('Er ging iets mis bij het opstarten','Controleer je verbinding en probeer het opnieuw.','Opnieuw proberen','/refurbish/');
+});
 </script>
 </body>
 </html>

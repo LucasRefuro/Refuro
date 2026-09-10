@@ -47,7 +47,7 @@ setTimeout(async()=>{
 
   ok('hardwarepagina bestaat', !!d.getElementById('tab-hardware'));
   ok('hardware in het menu', !!d.querySelector('aside nav button[data-tab="hardware"]'));
-  ok('hardware in de onderbalk', w.eval("MOB_VOLGORDE.includes('hardware')"));
+  ok('hardware mobiel bereikbaar', w.eval("MOB_ALLES_DAG.includes('hardware')"));
   ok('refurbish-link staat uit zonder module', d.getElementById('refurbLink').hidden);
 
   w.eval("abonnement={modules:['refurbish']}; moduleLinks();");

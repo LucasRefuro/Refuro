@@ -80,6 +80,14 @@ for(const p of PAGINAS){
     }
   ok(p+': elke klasse heeft een stijl', !zonder.size, [...zonder].join(', '));
 
+  // ── een icoon dat naar een symbool wijst dat niet bestaat, rendert leeg (geen fout) ──
+  const iconGezet=new Set();
+  for(const m of html.matchAll(/<symbol\b[^>]*\bid="(i-[\w-]+)"/g)) iconGezet.add(m[1]);
+  const iconMist=new Set();
+  for(const m of html.matchAll(/<use\b[^>]*href="#(i-[\w-]+)"/g))
+    if(!iconGezet.has(m[1])) iconMist.add(m[1]);
+  ok(p+': elk icoon bestaat', !iconMist.size, [...iconMist].join(', '));
+
   // ── een nieuw tabblad zonder noopener laat de andere pagina aan onze tab ──
   const losseLinks=[...html.matchAll(/<a\b[^>]*target="_blank"[^>]*>/g)]
     .filter(m=>!/rel="[^"]*noopener/.test(m[0]));
