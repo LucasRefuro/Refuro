@@ -1666,8 +1666,9 @@
     </div>
   </div>
   <div class="kpis" id="kpiRow"></div>
-  <div class="kpis" id="kpiRow2"></div>
-  <div class="kpis" id="kpiRow3"></div>
+  <button class="btn ghost small" id="dashMeerKnop" onclick="dashMeerToggle()" style="margin:2px 0 16px"><svg class="i s"><use href="#i-chart"/></svg><span id="dashMeerLabel">Meer cijfers tonen</span></button>
+  <div class="kpis" id="kpiRow2" data-dashmeer hidden></div>
+  <div class="kpis" id="kpiRow3" data-dashmeer hidden></div>
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Taken en planning</h2>
@@ -3967,6 +3968,21 @@ function renderDashboard(){
   renderCatWinst(b,vb);
   renderRepDash();
   renderChart(); renderLeveringen(); renderVerkoopLog();
+  dashMeerSync();
+}
+/* Het dashboard opent rustig: alleen de eerste rij cijfers. De extra rijen (marge
+   en voorraad, en het resultaat met loon en vaste lasten) staan achter een knop.
+   Je keuze wordt onthouden, net als de laatst geopende pagina. */
+function dashMeerAan(){ try{ return localStorage.getItem('storvo_dash_meer')==='1'; }catch(e){ return false; } }
+function dashMeerSync(){
+  const aan=dashMeerAan();
+  document.querySelectorAll('[data-dashmeer]').forEach(e=>{ e.hidden=!aan; });
+  const l=document.getElementById('dashMeerLabel'); if(l) l.textContent=aan?'Minder cijfers':'Meer cijfers tonen';
+}
+function dashMeerToggle(){
+  const aan=!dashMeerAan();
+  try{ localStorage.setItem('storvo_dash_meer', aan?'1':'0'); }catch(e){}
+  dashMeerSync();
 }
 function repTeDoen(){
   return (state.reparaties||[]).filter(r=>r.status!=='afgerond');
