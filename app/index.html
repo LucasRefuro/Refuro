@@ -357,6 +357,13 @@
   .uitstalknop:hover{border-color:var(--muted-l);}
   .uitstalknop.uit{background:var(--green-soft); color:var(--green-tekst); border-color:transparent;}
   .uitstalknop.achter{background:var(--amber-soft); color:var(--amber-tekst); border-color:transparent;}
+  /* Garantie op een reparatie: de regel in het detail en de waarschuwing in het
+     nieuwe-reparatieformulier als het toestel nog garantie heeft. */
+  .repgar{display:flex; align-items:center; gap:9px; background:var(--soft-2); border-radius:10px; padding:11px 14px; margin-top:14px; font-size:14px;}
+  .repgar .i{flex:none; color:var(--muted);}
+  .repgar input{width:64px; margin:0 4px;}
+  .repwaarschuwing{display:flex; gap:10px; align-items:center; background:var(--amber-soft); color:var(--amber-tekst); border-radius:12px; padding:13px 16px; font-size:14px; line-height:1.5; margin-bottom:14px;}
+  .repwaarschuwing .i{flex:none; color:var(--amber-tekst);}
   /* Kleine hoofdfoto in de hardwarelijst. */
   .hwrij{display:flex; gap:11px; align-items:center; min-width:0;}
   .hwthumb{width:46px; height:46px; border-radius:9px; object-fit:cover; background:var(--soft-2); flex:none;}
@@ -1863,6 +1870,7 @@
   </div>
 
   <div id="rep-nieuw" class="modules"hidden>
+    <div class="repwaarschuwing" id="repGarWaarsch" hidden></div>
     <div class="card">
       <h2><svg class="i"><use href="#i-user"/></svg>Klant</h2>
       <div class="grid">
@@ -1878,7 +1886,7 @@
     <div class="card">
       <h2><svg class="i"><use href="#i-phone"/></svg>Toestel en reparatie</h2>
       <div class="grid" style="margin-bottom:12px">
-        <div class="zoekveld"><label>Toestel</label><input id="r_toestel" autocomplete="off" placeholder="bijv. iPhone 14" oninput="toestelTyp(); updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce()" onfocus="toestelTyp()" onblur="setTimeout(toestelSluit,180)" onkeydown="toestelToets(event)" onchange="toestelAanvullen()"><div class="zoeklijst" id="toestelLijst" hidden></div></div>
+        <div class="zoekveld"><label>Toestel</label><input id="r_toestel" autocomplete="off" placeholder="bijv. iPhone 14" oninput="toestelTyp(); updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce(); repGarantieCheck()" onfocus="toestelTyp()" onblur="setTimeout(toestelSluit,180)" onkeydown="toestelToets(event)" onchange="toestelAanvullen()"><div class="zoeklijst" id="toestelLijst" hidden></div></div>
         <div class="zoekveld"><label>Reparatie</label><input id="r_type" autocomplete="off" placeholder="bijv. scherm, batterij, laadpoort" oninput="repTypeTyp(); checkSeal(); updateZoekLinks(); prijsSuggestieDebounce()" onfocus="repTypeTyp()" onblur="setTimeout(repTypeSluit,180)" onkeydown="repTypeToets(event)"><div class="zoeklijst" id="repTypeLijst" hidden></div></div>
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
         <div><label>Klaar voor <span class="muted">(datum en tijd)</span></label><input id="r_klaar" type="datetime-local"></div>
@@ -11083,6 +11091,7 @@ function boekDienst(bet){
     const r=state.reparaties.find(r=>r.id===tx.repId);
     if(r){
       r.status='afgerond'; r.betaal=bet; r.afgerondOp=Date.now();
+      if(r.garantieMaanden==null) r.garantieMaanden=repGarantieStandaard();
       deelPrijspunt(r, tx.prijs, tx.kosten);
     }
   }
@@ -11910,6 +11919,44 @@ function maakReparatie(){
   renderReparaties(); updateBadge();
 }
 function repKosten(r){ return r.onderdelen.reduce((s,o)=>s+o.inkoop,0); }
+/* ─── Garantie op een reparatie ───
+   Standaard drie maanden, of wat je bij de reparatie-instellingen zet. Per
+   reparatie aan te passen op de detailpagina. Wordt vastgelegd bij het afronden,
+   samen met afgerondOp, zodat de einddatum vaststaat op het moment van betalen. */
+function repGarantieStandaard(){ const v=(state.instellingen||{}).repGarantie; return (v===0||v>0)?Number(v):3; }
+function repGarantieMnd(r){ return (r&&r.garantieMaanden!=null)?Number(r.garantieMaanden):null; }
+function repGarantieEinde(r){
+  if(!r||!r.afgerondOp) return null;
+  const m=repGarantieMnd(r); if(!(m>0)) return null;
+  const d=new Date(r.afgerondOp); d.setMonth(d.getMonth()+m); return d;
+}
+function repGarantieLoopt(r){ const e=repGarantieEinde(r); return !!(e && e.getTime()>=Date.now()); }
+function repGarantieDatum(r){ const e=repGarantieEinde(r); return e?e.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}):''; }
+/* Een eerdere afgeronde reparatie op hetzelfde toestel waarvan de garantie nog
+   loopt: dan komt de klant met dezelfde klacht terug en hoort het mogelijk gratis. */
+function repGarantieEerdere(toestel, negeerId){
+  const t=String(toestel||'').trim().toLowerCase();
+  if(!t) return null;
+  return (state.reparaties||[]).find(r=>r.id!==negeerId && r.status==='afgerond' &&
+    String(r.toestel||'').trim().toLowerCase()===t && repGarantieLoopt(r)) || null;
+}
+function repGarantieZet(id, val){
+  const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  r.garantieMaanden=Math.max(0, Math.round(Number(val)||0));
+  save();
+  repDetail(id);
+}
+/* Waarschuwing in het nieuwe-reparatieformulier zodra het toestel matcht met een
+   lopende garantie. */
+function repGarantieCheck(){
+  const box=document.getElementById('repGarWaarsch'); if(!box) return;
+  const toestel=(document.getElementById('r_toestel')||{}).value||'';
+  const e=repGarantieEerdere(toestel, null);
+  if(e){
+    box.innerHTML=`<svg class="i s"><use href="#i-clock"/></svg><span>Let op: <b>${esc(e.toestel)}</b> had reparatie <b>${esc(e.nr)}</b>, afgerond ${esc(new Date(e.afgerondOp).toLocaleDateString('nl-NL',{day:'numeric',month:'long'}))}. De garantie loopt nog tot <b>${esc(repGarantieDatum(e))}</b>.</span>`;
+    box.hidden=false;
+  }else{ box.hidden=true; box.innerHTML=''; }
+}
 const REP_VOLGORDE=['aangemeld','inleveren','besteld','binnen','bezig','klaar','afgerond'];
 /* De inleverstap telt alleen mee als de klant het toestel nog moet brengen. */
 function repStappen(r){ return REP_VOLGORDE.filter(s=>s!=='inleveren' || (r&&r.inleveren)); }
@@ -11947,6 +11994,11 @@ function repDetail(id){
     <div class="pv">${esc(r.klant.naam)} · ${esc(r.klant.tel)}${r.klant.email?' · '+esc(r.klant.email):''} · ${euro(r.prijs)} · winst ${euro(r.prijs-repKosten(r))}</div>
     <div class="prog ${heeftProbleem(r)?'rood':''}" style="margin-bottom:16px"><i style="width:${repProgressie(r)}%"></i></div>
     <div class="tl">${stappen}</div>
+    ${r.status==='afgerond'?`<div class="repgar">
+      <svg class="i s"><use href="#i-clock"/></svg>
+      <span>Garantie op deze reparatie:
+        <input type="number" min="0" value="${repGarantieMnd(r)!=null?repGarantieMnd(r):repGarantieStandaard()}" onchange="repGarantieZet(${r.id}, this.value)"> maanden${repGarantieDatum(r)?`, tot <b>${esc(repGarantieDatum(r))}</b>`:''}</span>
+    </div>`:''}
     <h2 style="margin-top:22px"><svg class="i"><use href="#i-message"/></svg>Opmerkingen</h2>
     <div style="max-height:180px; overflow:auto; margin-bottom:10px">${nots}</div>
     <input id="nt_tekst" placeholder="bijv. levering vertraagd tot vrijdag" style="margin-bottom:8px">

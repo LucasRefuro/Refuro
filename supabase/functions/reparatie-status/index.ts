@@ -73,6 +73,17 @@ Deno.serve(async (req) => {
     // dan valt het terug op de bedrijfsgegevens. Zo staat er nooit stil een
     // prive-adres op de klantpagina omdat het per ongeluk het afzenderadres pakt.
     const kpTel = (kp.telefoon as string) || "";
+
+    // Garantie-einddatum: alleen zichtbaar zodra de reparatie is afgerekend, en
+    // op het moment van afronden vastgeklikt (afgerondOp + het aantal maanden).
+    const garMnd = Number(rep.garantieMaanden);
+    let garantieTot: number | null = null;
+    if (rep.afgerondOp && garMnd > 0) {
+      const d = new Date(Number(rep.afgerondOp));
+      d.setMonth(d.getMonth() + garMnd);
+      garantieTot = d.getTime();
+    }
+
     const antwoord = {
       winkel: {
         naam: merk.naam,
@@ -94,6 +105,7 @@ Deno.serve(async (req) => {
         verwachteLevering: rep.besteldOp ?? null,
         moetInleveren: rep.inleveren === true,
         klantVoornaam: String(rep.klant && (rep.klant as Record<string, string>).naam || "").split(" ")[0],
+        garantieTot,
       },
       tijdlijn,
       notities,

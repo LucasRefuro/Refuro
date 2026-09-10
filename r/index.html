@@ -291,6 +291,7 @@ function teken(d){
       <div class="rij"><span>Reparatie</span><b>${esc(d.reparatie.type||'onbekend')}</b></div>
       <div class="rij"><span>Aangemeld</span><b>${esc(datum(d.reparatie.aangemeld))||'onbekend'}</b></div>
       <div class="rij"><span>Reparatienummer</span><b>${esc(d.reparatie.nr)}</b></div>
+      ${d.reparatie.status==='afgerond' && d.reparatie.garantieTot?`<div class="rij"><span>Garantie tot</span><b>${esc(datum(d.reparatie.garantieTot))}</b></div>`:''}
     </div>
 
     <div class="kaart">
