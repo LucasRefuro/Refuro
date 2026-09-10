@@ -371,6 +371,9 @@
   .hwthumb{width:46px; height:46px; border-radius:9px; object-fit:cover; background:var(--soft-2); flex:none;}
   .hwthumb.leeg{display:flex; align-items:center; justify-content:center; color:var(--muted-l); border:1px dashed var(--border);}
   .hwthumb.leeg .i{width:18px; height:18px;}
+  /* Een hele tabelrij die je kunt aantikken om het detail te openen. */
+  tr.klikrij{cursor:pointer;}
+  tr.klikrij:hover{background:var(--soft-2);}
   /* Foto's bij een hardware-exemplaar. Eerste foto is de hoofdfoto (webshop). */
   .hwfotos{display:flex; flex-wrap:wrap; gap:10px;}
   .hwfoto{position:relative; width:120px; height:120px; border-radius:12px; overflow:hidden;
@@ -8856,6 +8859,14 @@ function hwThumbHtml(h){
   return u ? `<img class="hwthumb" src="${esc(u)}" loading="lazy" alt="">`
            : `<div class="hwthumb leeg" title="Nog geen foto"><svg class="i s"><use href="#i-camera"/></svg></div>`;
 }
+/* Tik op de rij om het toestel te openen. Zo hoef je op een telefoon niet naar de
+   actieknop ver rechts te vegen. Kliks op een knop, vinkje of link laten we met
+   rust, die doen hun eigen ding. */
+function hwRijKlik(e, id){
+  if(e.target.closest('button,input,a,select,label')) return;
+  const h=(typeof hwData!=='undefined'?hwData:[]).find(x=>x.id===id);
+  if(h) hwVenster(h);
+}
 
 /* ─── Foto's bij een hardware-exemplaar ───
    Voor een laptop die direct aan de balie is toegevoegd (dus niet via refurbish)
@@ -9012,7 +9023,7 @@ function renderHardware(){
     <tbody>${rijen.map(h=>{
       const m=hwMarge(h);
       const d=hwDagen(h);
-      return `<tr>
+      return `<tr class="klikrij" onclick="hwRijKlik(event,'${h.id}')">
         <td><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
         <td><div class="hwrij">${hwThumbHtml(h)}<div style="min-width:0">
             <b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
@@ -12024,6 +12035,12 @@ function maakReparatie(){
   renderReparaties(); updateBadge();
 }
 function repKosten(r){ return r.onderdelen.reduce((s,o)=>s+o.inkoop,0); }
+/* Tik op een reparatierij om het detail te openen (waar alle acties staan); kliks op
+   een knop of link binnen de rij laten we met rust. */
+function repRijKlik(e, id){
+  if(e.target.closest('button,input,a,select,label')) return;
+  repDetail(id);
+}
 /* ─── Garantie op een reparatie ───
    Standaard drie maanden, of wat je bij de reparatie-instellingen zet. Per
    reparatie aan te passen op de detailpagina. Wordt vastgelegd bij het afronden,
@@ -12182,7 +12199,7 @@ function renderReparaties(){
     const extra = r.status==='besteld'&&r.besteldOp ? '<br><span class="muted" style="font-size:11px">'+repLeverTekst(r.besteldOp)+'</span>'
       : r.status==='bezig'&&r.ophaal ? '<br><span class="muted" style="font-size:11px">ophalen: '+esc(r.ophaal)+'</span>'
       : r.status==='geannuleerd'&&r.annuleerReden ? '<br><span class="muted" style="font-size:11px">'+esc(r.annuleerReden)+'</span>' : '';
-    return `<tr class="${!repLopend(r)?'done':''}"><td><b>${esc(r.nr)}</b>${nNots?'<br><span class="muted" style="font-size:11px"><svg class="i s"><use href="#i-message"/></svg> '+nNots+'</span>':''}</td>`+
+    return `<tr class="klikrij ${!repLopend(r)?'done':''}" onclick="repRijKlik(event,${r.id})"><td><b>${esc(r.nr)}</b>${nNots?'<br><span class="muted" style="font-size:11px"><svg class="i s"><use href="#i-message"/></svg> '+nNots+'</span>':''}</td>`+
       `<td>${esc(r.klant.naam)}<br><span class="muted" style="font-size:11px">${esc(r.klant.tel)}${r.door?' · aangenomen door '+esc(r.door):''}</span></td>`+
       `<td>${esc(r.toestel)}</td><td>${esc(r.type)}</td>`+
       `<td class="num">${euro(r.prijs)}</td><td class="num" style="color:${winst>=0?'var(--green)':'var(--red)'}"><b>${euro(winst)}</b></td>`+
