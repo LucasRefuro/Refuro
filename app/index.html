@@ -1223,7 +1223,7 @@
       mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 26px), transparent 100%);
       -webkit-mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 26px), transparent 100%);}
     .onderbalk::-webkit-scrollbar{display:none;}
-    .onderbalk button{flex:0 0 76px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    .onderbalk button{flex:1 1 0; min-width:60px; display:flex; flex-direction:column; align-items:center; gap:3px;
       background:none; border:none; padding:8px 4px 6px; font-family:inherit; font-size:10.5px;
       font-weight:600; color:var(--muted-l); cursor:pointer; position:relative;
       border-radius:14px; scroll-snap-align:center; transform:translateZ(0);}
@@ -1242,6 +1242,29 @@
   @media(prefers-reduced-motion:reduce){
     .topbar{transition:none;}
   }
+
+  /* Het Meer-vel: de vijfde onderbalk-knop haalt alle overige pagina's omhoog,
+     zodat de balk zelf maar vier vaste knoppen hoeft te tonen. Alleen op de
+     telefoon in beeld, want de knop die hem opent staat in de onderbalk. */
+  .mobmeer{position:fixed; inset:0; z-index:70; display:flex; align-items:flex-end;
+    background:rgba(18,63,57,.44); animation:fadein .18s ease;}
+  .mobmeer-vel{background:var(--card); width:100%; max-height:82vh; overflow-y:auto;
+    border-radius:22px 22px 0 0; padding:8px 16px calc(22px + env(safe-area-inset-bottom));
+    box-shadow:0 -12px 44px rgba(0,0,0,.28);}
+  .mobmeer-greep{width:42px; height:4px; border-radius:2px; background:var(--border); margin:8px auto 6px;}
+  .mobmeer-kop{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--muted); margin:16px 4px 9px;}
+  .mobmeer-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .mobmeer-tegel{display:flex; align-items:center; gap:11px; padding:15px 14px; border:1.5px solid var(--border);
+    border-radius:14px; background:var(--card); font-family:inherit; font-size:14px; font-weight:600;
+    color:var(--tekst); cursor:pointer; text-align:left; position:relative; min-width:0;}
+  .mobmeer-tegel:active{background:var(--soft-2);}
+  .mobmeer-tegel.actief{border-color:var(--oranje); color:var(--oranje);}
+  .mobmeer-tegel .i{width:21px; height:21px; flex:none; color:var(--muted-l);}
+  .mobmeer-tegel.actief .i{color:var(--oranje);}
+  .mobmeer-tegel span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .mobmeer-tegel .tel{margin-left:auto; flex:none; min-width:18px; height:18px; padding:0 5px; border-radius:9px;
+    background:var(--red); color:#fff; font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center;}
 
   @media(max-width:520px){
     .kpis{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
@@ -2844,6 +2867,7 @@
 <!-- Onderbalk voor de telefoon. Alle pagina's staan erin; je veegt er met je
      duim langs. De pagina waar je op zit schuift vanzelf in beeld. -->
 <nav class="onderbalk" id="onderBalk" hidden aria-label="Hoofdmenu"></nav>
+<div class="mobmeer" id="mobMeer" hidden onclick="mobMeerAchtergrond(event)" aria-label="Alle pagina's"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const KEY='refuro_stock_v2';
@@ -7580,25 +7604,83 @@ function huidigeTab(){
 }
 function mobTabs(){ return MOB_VOLGORDE.filter(t=>mag(t)); }
 
+/* De vier vaste onderbalk-knoppen: de eerste vier uit deze voorkeurslijst die
+   de rol mag zien. De rest zit achter Meer, zodat de balk rustig blijft en niet
+   alle vijftien pagina's laat schuiven. */
+const MOB_CORE=['dashboard','verkoop','reparaties','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop','diensten','inruil'];
+function mobCore(){ return MOB_CORE.filter(t=>mag(t)).slice(0,4); }
+
+function mobTel(t){
+  if(t==='reparaties') return (typeof repTeDoen==='function')?repTeDoen().length:0;
+  if(t==='aanvragen') return (typeof aanvLopend==='function')?aanvLopend().length:0;
+  if(t==='voorraad') return (typeof bijvulLijst==='function')?bijvulLijst().length:0;
+  if(t==='bestellen') return (typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0;
+  return 0;
+}
+
+/* Labels en iconen voor het Meer-vel. MOB dekt de dagelijkse pagina's; de
+   beheerpagina's staan niet in MOB en krijgen hier hun eigen icoon. */
+const MOB_MEERLABEL=Object.assign({}, MOB, {
+  uren:{naam:'Uren',ico:'i-clock'},
+  vastelasten:{naam:'Vaste lasten',ico:'i-euro'},
+  rapport:{naam:'Rapport',ico:'i-chart'},
+  partners:{naam:'Partners',ico:'i-link'}
+});
+const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','diensten','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
+const MOB_ALLES_BEHEER=['uren','vastelasten','rapport','team','partners','instellingen'];
+
 function tekenOnderbalk(){
   const balk=document.getElementById('onderBalk');
   if(!balk) return;
   const nu=huidigeTab();
-  const tel=(t)=>{
-    if(t==='reparaties'){ const n=(typeof repTeDoen==='function')?repTeDoen().length:0; return n||0; }
-    if(t==='aanvragen'){ const n=(typeof aanvLopend==='function')?aanvLopend().length:0; return n||0; }
-    if(t==='voorraad'){ const n=(typeof bijvulLijst==='function')?bijvulLijst().length:0; return n||0; }
-    if(t==='bestellen'){ const n=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0; return n||0; }
-    return 0;
-  };
-  balk.innerHTML = mobTabs().map(t=>{
-    const n=tel(t);
+  const core=mobCore();
+  const knop=(t)=>{
+    const n=mobTel(t);
     return `<button data-tab="${t}" class="${t===nu?'actief':''}" onclick="showTab('${t}')">
       <svg class="i"><use href="#${MOB[t].ico}"/></svg><span>${esc(MOB[t].naam)}</span>
       ${n?`<span class="tel">${n>99?'99+':n}</span>`:''}</button>`;
-  }).join('');
+  };
+  /* Alles wat niet in de vier knoppen zit, telt op de Meer-knop mee, zodat je
+     een openstaande reparatie of bestelling ook ziet als hij achter Meer zit. */
+  const restTel=MOB_ALLES_DAG.filter(t=>mag(t) && !core.includes(t)).reduce((s,t)=>s+mobTel(t),0);
+  const meerActief=!core.includes(nu);
+  balk.innerHTML = core.map(knop).join('') +
+    `<button class="${meerActief?'actief':''}" onclick="mobMeerOpen()" aria-label="Meer pagina's">
+      <svg class="i"><use href="#i-layers"/></svg><span>Meer</span>
+      ${restTel?`<span class="tel">${restTel>99?'99+':restTel}</span>`:''}</button>`;
   naarActief();
 }
+
+/* Het Meer-vel: alle pagina's die niet in de onderbalk staan, als grote tegels.
+   Zo blijft op de telefoon alles bereikbaar terwijl de balk maar vier knoppen
+   toont. */
+function mobMeerTegels(lijst, kop){
+  const core=mobCore();
+  const nu=huidigeTab();
+  const items=lijst.filter(t=>mag(t) && !core.includes(t));
+  if(!items.length) return '';
+  return `<div class="mobmeer-kop">${esc(kop)}</div><div class="mobmeer-grid">`+items.map(t=>{
+    const m=MOB_MEERLABEL[t]||{naam:t,ico:'i-layers'};
+    const n=mobTel(t);
+    return `<button class="mobmeer-tegel ${t===nu?'actief':''}" onclick="mobMeerKies('${t}')">
+      <svg class="i"><use href="#${m.ico}"/></svg><span>${esc(m.naam)}</span>
+      ${n?`<span class="tel">${n>99?'99+':n}</span>`:''}</button>`;
+  }).join('')+`</div>`;
+}
+function mobMeerOpen(){
+  const vel=document.getElementById('mobMeer'); if(!vel) return;
+  vel.innerHTML=`<div class="mobmeer-vel">
+    <div class="mobmeer-greep"></div>
+    ${mobMeerTegels(MOB_ALLES_DAG,"Pagina's")}
+    ${mobMeerTegels(MOB_ALLES_BEHEER,'Beheer')}
+  </div>`;
+  vel.hidden=false;
+}
+function mobMeerKies(t){ mobMeerSluit(); showTab(t); }
+function mobMeerSluit(){ const vel=document.getElementById('mobMeer'); if(vel){ vel.hidden=true; vel.innerHTML=''; } }
+/* Alleen sluiten als je op de donkere achtergrond tikt, niet op het vel zelf.
+   Een tegel heeft zijn eigen klik, dus die hoeft niets tegen te houden. */
+function mobMeerAchtergrond(e){ if(e.target && e.target.id==='mobMeer') mobMeerSluit(); }
 
 /* De pagina waar je op zit schuift vanzelf in beeld. Anders wissel je van
    pagina en staat de knop die net oplichtte ergens buiten beeld.           */
