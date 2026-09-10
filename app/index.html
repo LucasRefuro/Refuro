@@ -364,6 +364,8 @@
   .repgar input{width:64px; margin:0 4px;}
   .repwaarschuwing{display:flex; gap:10px; align-items:center; background:var(--amber-soft); color:var(--amber-tekst); border-radius:12px; padding:13px 16px; font-size:14px; line-height:1.5; margin-bottom:14px;}
   .repwaarschuwing .i{flex:none; color:var(--amber-tekst);}
+  .repannul{display:flex; align-items:center; gap:9px; background:var(--red-soft); color:var(--red-tekst); border-radius:10px; padding:11px 14px; margin-top:14px; font-size:14px;}
+  .repannul .i{flex:none;}
   /* Kleine hoofdfoto in de hardwarelijst. */
   .hwrij{display:flex; gap:11px; align-items:center; min-width:0;}
   .hwthumb{width:46px; height:46px; border-radius:9px; object-fit:cover; background:var(--soft-2); flex:none;}
@@ -732,6 +734,7 @@
   .chip.bezig{background:var(--amber-soft); color:var(--amber-tekst);}
   .chip.klaar{background:var(--green-soft); color:var(--green-tekst);}
   .chip.afgerond{background:var(--soft-2); color:var(--muted);}
+  .chip.geannuleerd{background:var(--soft-2); color:var(--muted); text-decoration:line-through;}
   .chip.urgent{background:var(--red-soft); color:var(--red-tekst);}
   .ondItem{padding:12px 15px; background:var(--soft-2); border-radius:14px;}
   .warnbox{background:var(--amber-soft); border:none; border-radius:var(--radius-s); padding:16px 18px; line-height:1.6; color:var(--amber-tekst);}
@@ -3305,7 +3308,7 @@ function hangHerinnering(){
 function taakRepOpties(){
   const sel=document.getElementById('taak_rep'); if(!sel) return;
   const bewaard=sel.value;
-  const open=(state.reparaties||[]).filter(r=>r.status!=='afgerond');
+  const open=(state.reparaties||[]).filter(repLopend);
   sel.innerHTML='<option value="">Niet koppelen</option>'+open.map(r=>`<option value="${r.id}">${esc(r.nr+' · '+(r.klant?r.klant.naam:''))}</option>`).join('');
   sel.value=bewaard;
 }
@@ -3349,7 +3352,7 @@ function renderPlanning(){
       `<div class="planacties"><button class="btn small ghost icoknop" title="Klaar" onclick="taakGedaan(${t.id})"><svg class="i s"><use href="#i-check"/></svg></button>`+
       `<button class="btn small ghost icoknop" title="Weghalen" onclick="taakWeg(${t.id})"><svg class="i s"><use href="#i-trash"/></svg></button></div></div>`});
   });
-  (state.reparaties||[]).filter(r=>r.klaarVoor && r.status!=='afgerond').forEach(r=>{
+  (state.reparaties||[]).filter(r=>r.klaarVoor && repLopend(r)).forEach(r=>{
     const w=planWanneer(r.klaarVoor);
     const voork = r.voorkeur ? ' · '+r.voorkeur : '';
     rijen.push({sort:w.sort, html:
@@ -3998,7 +4001,7 @@ function dashMeerToggle(){
   dashMeerSync();
 }
 function repTeDoen(){
-  return (state.reparaties||[]).filter(r=>r.status!=='afgerond');
+  return (state.reparaties||[]).filter(repLopend);
 }
 function repActie(r){
   if(heeftProbleem(r)) return {tekst:'Probleem, actie nodig', urgent:true};
@@ -11162,8 +11165,13 @@ const REP_STATUS={
   binnen:{label:'Onderdelen binnen', volgende:'bezig', knop:'Reparatie starten', ico:'i-play'},
   bezig:{label:'Bezig', volgende:'klaar', knop:'Klaar melden', ico:'i-check'},
   klaar:{label:'Klaar voor ophalen', volgende:'afgerond', knop:'Afrekenen', ico:'i-euro'},
-  afgerond:{label:'Afgerond', volgende:null, knop:null, ico:null}
+  afgerond:{label:'Afgerond', volgende:null, knop:null, ico:null},
+  geannuleerd:{label:'Geannuleerd', volgende:null, knop:null, ico:null}
 };
+/* Een reparatie is 'lopend' als hij nog aandacht vraagt: niet afgerekend en niet
+   geannuleerd. Beide eindstatussen blijven in de historie en de cijfers staan,
+   maar horen niet meer in de planning of de takenkoppeling. */
+function repLopend(r){ return r && r.status!=='afgerond' && r.status!=='geannuleerd'; }
 let repOnd=[];
 document.querySelectorAll('#repTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#repTabs button').forEach(x=>x.classList.toggle('active', x===b));
@@ -11999,6 +12007,10 @@ function repDetail(id){
       <span>Garantie op deze reparatie:
         <input type="number" min="0" value="${repGarantieMnd(r)!=null?repGarantieMnd(r):repGarantieStandaard()}" onchange="repGarantieZet(${r.id}, this.value)"> maanden${repGarantieDatum(r)?`, tot <b>${esc(repGarantieDatum(r))}</b>`:''}</span>
     </div>`:''}
+    ${r.status==='geannuleerd'?`<div class="repannul">
+      <svg class="i s"><use href="#i-trash"/></svg>
+      <span>Geannuleerd${r.annuleerOp?' op '+esc(new Date(r.annuleerOp).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})):''}${r.annuleerReden?': '+esc(r.annuleerReden):''}</span>
+    </div>`:''}
     <h2 style="margin-top:22px"><svg class="i"><use href="#i-message"/></svg>Opmerkingen</h2>
     <div style="max-height:180px; overflow:auto; margin-bottom:10px">${nots}</div>
     <input id="nt_tekst" placeholder="bijv. levering vertraagd tot vrijdag" style="margin-bottom:8px">
@@ -12019,6 +12031,7 @@ function repDetail(id){
       ${REP_STATUS[r.status].volgende?`<button class="btn" onclick="sluitPopup(); repVolgende(${r.id})"><svg class="i s"><use href="#${REP_STATUS[r.status].ico}"/></svg>${REP_STATUS[r.status].knop}</button>`:''}
       <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
       <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
+      ${repLopend(r)?`<button class="btn ghost" onclick="annuleerRep(${r.id})">Reparatie annuleren</button>`:''}
       ${mag('facturen')?`<button class="btn ghost" onclick="facVanReparatie(${r.id})"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
       <button class="btn ghost" onclick="sluitPopup()">Sluiten (Esc)</button>
     </div>
@@ -12063,18 +12076,20 @@ function renderReparaties(){
     const winst=r.prijs-repKosten(r);
     let actie=`<button class="btn small ghost" onclick="repDetail(${r.id})"><svg class="i s"><use href="#i-search"/></svg>Details</button> `;
     if(s.volgende) actie+=`<button class="btn small" onclick="repVolgende(${r.id})"><svg class="i s"><use href="#${s.ico}"/></svg>${s.knop}</button> `;
-    if(r.notify && r.status!=='afgerond') actie+=berichtKnoppen(r);
+    if(r.notify && repLopend(r)) actie+=berichtKnoppen(r);
+    if(repLopend(r)) actie+=` <button class="btn small ghost" onclick="annuleerRep(${r.id})" title="Reparatie annuleren">Annuleren</button>`;
     actie+=` <button class="btn small danger" onclick="verwijderRep(${r.id})" title="Verwijderen"><svg class="i s"><use href="#i-trash"/></svg></button>`;
     const prob=heeftProbleem(r);
     const nNots=repNotities(r).length;
     const extra = r.status==='besteld'&&r.besteldOp ? '<br><span class="muted" style="font-size:11px">'+repLeverTekst(r.besteldOp)+'</span>'
-      : r.status==='bezig'&&r.ophaal ? '<br><span class="muted" style="font-size:11px">ophalen: '+esc(r.ophaal)+'</span>' : '';
-    return `<tr class="${r.status==='afgerond'?'done':''}"><td><b>${esc(r.nr)}</b>${nNots?'<br><span class="muted" style="font-size:11px"><svg class="i s"><use href="#i-message"/></svg> '+nNots+'</span>':''}</td>`+
+      : r.status==='bezig'&&r.ophaal ? '<br><span class="muted" style="font-size:11px">ophalen: '+esc(r.ophaal)+'</span>'
+      : r.status==='geannuleerd'&&r.annuleerReden ? '<br><span class="muted" style="font-size:11px">'+esc(r.annuleerReden)+'</span>' : '';
+    return `<tr class="${!repLopend(r)?'done':''}"><td><b>${esc(r.nr)}</b>${nNots?'<br><span class="muted" style="font-size:11px"><svg class="i s"><use href="#i-message"/></svg> '+nNots+'</span>':''}</td>`+
       `<td>${esc(r.klant.naam)}<br><span class="muted" style="font-size:11px">${esc(r.klant.tel)}${r.door?' · aangenomen door '+esc(r.door):''}</span></td>`+
       `<td>${esc(r.toestel)}</td><td>${esc(r.type)}</td>`+
       `<td class="num">${euro(r.prijs)}</td><td class="num" style="color:${winst>=0?'var(--green)':'var(--red)'}"><b>${euro(winst)}</b></td>`+
       `<td>${prob?'<span class="chip" style="background:#fdeaea;color:var(--red)"> probleem</span><br>':''}<span class="chip ${r.status}">${s.label}</span>${extra}`+
-      `<div class="prog ${prob?'rood':''}" style="margin-top:6px"><i style="width:${repProgressie(r)}%"></i></div></td>`+
+      `${r.status==='geannuleerd'?'':`<div class="prog ${prob?'rood':''}" style="margin-top:6px"><i style="width:${repProgressie(r)}%"></i></div>`}</td>`+
       `<td class="num">${actie}</td></tr>`;
   }).join('') || '<tr><td colspan="8" class="muted">Nog geen reparaties. Maak er een aan via Nieuwe reparatie.</td></tr>';
   renderOnderdelen();
@@ -12151,6 +12166,26 @@ function berichtKnoppen(r){
   if(r.klant.email) k+=`<a class="btn small secondary icoknop" href="mailto:${encodeURIComponent(r.klant.email)}?subject=${encodeURIComponent('Reparatie '+r.nr+' status')}&body=${txt}" title="Mail de klant"><svg class="i s"><use href="#i-mail"/></svg></a> `;
   if(r.klant.tel) k+=`<a class="btn small secondary icoknop" href="sms:${encodeURIComponent(r.klant.tel)}?&body=${txt}" title="Sms de klant"><svg class="i s"><use href="#i-message"/></svg></a> `;
   return k;
+}
+/* Een reparatie die niet doorgaat: klant ziet ervan af, reparatie niet mogelijk,
+   of het toestel wordt niet opgehaald. Anders dan verwijderen blijft hij in de
+   historie en de cijfers staan, met een reden erbij. */
+function annuleerRep(id){
+  const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  if(r.status==='afgerond'){ toast('Een afgerekende reparatie kun je niet annuleren.','let-op'); return; }
+  if(r.status==='geannuleerd'){ toast('Deze reparatie is al geannuleerd.','let-op'); return; }
+  const reden=prompt('Waarom gaat reparatie '+r.nr+' ('+r.klant.naam+') niet door?\n(bijv. klant ziet ervan af, reparatie niet mogelijk, toestel niet opgehaald)');
+  if(reden===null) return;
+  /* Gereserveerde onderdelen terug in voorraad: ze zijn niet gebruikt. uitVoorraad
+     op false zetten zodat een latere verwijdering ze niet nog eens terugboekt. */
+  r.onderdelen.forEach(o=>{ if(o.uitVoorraad){ const vr=state.onderdelen.find(x=>x.naam.toLowerCase()===o.naam.toLowerCase()); if(vr){ vr.voorraad++; o.uitVoorraad=false; } } });
+  r.status='geannuleerd';
+  r.annuleerReden=String(reden||'').trim();
+  r.annuleerOp=Date.now();
+  const tl=repLog(r); if(!tl.some(x=>x.status==='geannuleerd')) tl.push({status:'geannuleerd', t:Date.now()});
+  save(); sluitPopup();
+  toast('Reparatie '+r.nr+' geannuleerd.', true);
+  renderReparaties(); updateBadge(); herteken();
 }
 function verwijderRep(id){
   const r=state.reparaties.find(r=>r.id===id);
