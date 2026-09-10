@@ -4601,13 +4601,13 @@ function mandjeFocus(){ const s=document.getElementById('vkScan'), t=document.ge
 function mandjeBewaar(){ try{ localStorage.setItem('storvo_mandje', JSON.stringify(mandje)); }catch(e){} }
 function mandjeHerstel(){ try{ const r=localStorage.getItem('storvo_mandje'); if(r){ const a=JSON.parse(r); if(Array.isArray(a)) mandje=a; } }catch(e){} }
 function mandjeToevoegen(item){
-  const zelfde=mandje.find(m=>!m.hwId && !item.hwId && (m.productId||null)===(item.productId||null) && m.naam===item.naam && m.verkoopStuk===item.verkoopStuk && m.inkoopStuk===item.inkoopStuk && (m.bijbestelCat||null)===(item.bijbestelCat||null));
+  const zelfde=mandje.find(m=>!m.hwId && !item.hwId && !m.repId && !item.repId && (m.productId||null)===(item.productId||null) && m.naam===item.naam && m.verkoopStuk===item.verkoopStuk && m.inkoopStuk===item.inkoopStuk && (m.bijbestelCat||null)===(item.bijbestelCat||null));
   if(zelfde){ zelfde.aantal+=item.aantal; }
   else { item.id=uid(); mandje.push(item); }
   mandjeBewaar(); renderMandje(); piep(660); mandjeFocus();
 }
 function mandjeAantal(id, delta){
-  const m=mandje.find(x=>x.id===id); if(!m || m.hwId) return;
+  const m=mandje.find(x=>x.id===id); if(!m || m.hwId || m.repId) return;
   m.aantal=Math.max(1, m.aantal+delta); mandjeBewaar(); renderMandje();
 }
 function mandjeWeg(id){ mandje=mandje.filter(x=>x.id!==id); mandjeBewaar(); renderMandje(); }
@@ -4620,8 +4620,8 @@ function renderMandje(){
   if(!el) return;
   if(!mandje.length){ el.innerHTML='<div class="muted">Nog niets. Scan iets, zoek een product, of tik een blokje aan.</div>'; if(voet) voet.hidden=true; const k=document.getElementById('vkKorting'); if(k) k.value=0; return; }
   el.innerHTML='<div style="overflow-x:auto"><table><tbody>'+mandje.map(m=>
-    `<tr><td><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk${m.hwId?' · los toestel':''}</span></td>`+
-    `<td class="num" style="white-space:nowrap">`+(m.hwId?'<b>1</b>':`<button class="btn small ghost icoknop" title="Minder" onclick="mandjeAantal(${m.id},-1)">−</button> <b>${m.aantal}</b> <button class="btn small ghost icoknop" title="Meer" onclick="mandjeAantal(${m.id},1)">+</button>`)+`</td>`+
+    `<tr><td><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk${m.hwId?' · los toestel':(m.repId?' · reparatie':'')}</span></td>`+
+    `<td class="num" style="white-space:nowrap">`+((m.hwId||m.repId)?'<b>1</b>':`<button class="btn small ghost icoknop" title="Minder" onclick="mandjeAantal(${m.id},-1)">−</button> <b>${m.aantal}</b> <button class="btn small ghost icoknop" title="Meer" onclick="mandjeAantal(${m.id},1)">+</button>`)+`</td>`+
     `<td class="num"><b>${euro(m.verkoopStuk*m.aantal)}</b></td>`+
     `<td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="mandjeWeg(${m.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`
   ).join('')+'</tbody></table></div>';
@@ -4646,6 +4646,7 @@ async function afrekenenDoen(bet, factor, tot){
   for(const m of items){
     const vStuk=Math.round((m.verkoopStuk*factor)*100)/100;
     if(m.hwId){ await hwBoekMandje(m, vStuk, bet); continue; }
+    if(m.repId){ repBoekMandje(m, vStuk, bet); continue; }
     const p = m.productId!=null ? state.producten.find(x=>x.id===m.productId) : null;
     boekHandmatig(p, m.naam, vStuk, m.inkoopStuk, m.aantal, bet, (m.cat!=null?m.cat:(p?p.cat:null)), !!m.bijbestelCat);
   }
@@ -4672,6 +4673,33 @@ async function hwBoekMandje(m, vStuk, bet){
     if(h && typeof hwOnline==='function' && hwOnline(h) && typeof hwShopify==='function') hwShopify(m.hwId,'offline');
   }catch(e){ console.error('hardware verkoop bij afrekenen', e); }
   if(typeof hwLaad==='function') hwLaad(true);
+}
+/* Een reparatie uit het mandje afrekenen: boekt de omzet onder Reparaties (winst =
+   prijs min onderdelenkosten), zet de reparatie op afgerond met garantie, en voedt
+   de prijssuggestie. Zo gaat een reparatie samen met losse producten in één bon. */
+function repBoekMandje(m, vStuk, bet){
+  const r=state.reparaties.find(x=>x.id===m.repId);
+  const vid=uid();
+  state.verkopen.unshift({id:vid, t:Date.now(), naam:m.naam, verkoop:vStuk, inkoop:Number(m.inkoopStuk)||0, aantal:1,
+    betaal:bet, cat:(typeof vasteCat==='function'?vasteCat('Reparaties').id:null), door:gebruiker?gebruiker.naam:null});
+  if(state.verkopen.length>5000) state.verkopen.length=5000;
+  kasVerkoop(vStuk, bet, m.naam);
+  if(r){
+    r.status='afgerond'; r.betaal=bet; r.afgerondOp=Date.now();
+    if(r.garantieMaanden==null) r.garantieMaanden=repGarantieStandaard();
+    if(typeof deelPrijspunt==='function') deelPrijspunt(r, vStuk, Number(m.inkoopStuk)||0);
+  }
+}
+/* Vanaf de reparatiedetail: leg een klaar-gemelde reparatie in het verkoopmandje in
+   plaats van hem los af te rekenen, zodat een hoesje of screenprotector op dezelfde
+   bon kan. */
+function repNaarMandje(id){
+  const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  if(!repLopend(r)){ toast('Deze reparatie is al afgehandeld.','let-op'); return; }
+  if(mandje.some(x=>x.repId===r.id)){ toast('Deze reparatie staat al in de verkoop.','let-op'); sluitPopup(); showTab('verkoop'); return; }
+  mandjeToevoegen({repId:r.id, naam:'Reparatie '+r.nr+' · '+r.toestel+' '+r.type, aantal:1, verkoopStuk:Number(r.prijs)||0, inkoopStuk:repKosten(r), cat:(typeof vasteCat==='function'?vasteCat('Reparaties').id:null)});
+  sluitPopup(); showTab('verkoop');
+  toast('Reparatie '+r.nr+' in de verkoop gelegd. Reken samen met de rest af.', true);
 }
 /* Wisselgeld bij contant: laat 'gekregen' invullen en toon 'terug'. */
 function wisselDialog(bet, tot, klaar){
@@ -12029,6 +12057,7 @@ function repDetail(id){
         <button class="btn danger" onclick="voegNotitie(${r.id},true,true)">Als probleem</button>
       </div>
       ${REP_STATUS[r.status].volgende?`<button class="btn" onclick="sluitPopup(); repVolgende(${r.id})"><svg class="i s"><use href="#${REP_STATUS[r.status].ico}"/></svg>${REP_STATUS[r.status].knop}</button>`:''}
+      ${r.status==='klaar'?`<button class="btn ghost" onclick="repNaarMandje(${r.id})"><svg class="i s"><use href="#i-cart"/></svg>Bij een verkoop optellen</button>`:''}
       <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
       <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
       ${repLopend(r)?`<button class="btn ghost" onclick="annuleerRep(${r.id})">Reparatie annuleren</button>`:''}
