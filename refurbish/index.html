@@ -4271,6 +4271,13 @@ async function onlPubliceren(knop){
     const p=document.getElementById('onl_prijs'); if(p) p.focus();
     return;
   }
+  /* Waterdicht: een toestel gaat nooit zonder foto's de webshop op. Een lege
+     productpagina verkoopt niet en ondermijnt het vertrouwen. Kun je even geen
+     foto's maken, zet de webshop dan uit en publiceer eerst op de andere kanalen. */
+  if(onlKanaalAan('webshop') && !(onl.fotos||[]).length){
+    toast('Nog geen foto\'s. Maak eerst foto\'s van dit toestel, dan komt het netjes op de webshop.','let-op');
+    return;
+  }
   await bezig(knop, async()=>{
     /* Het toestel staat al in de voorraad sinds de controle; hier komt er
        alleen de verkoopkant bij. Eerst zorgen dat de rij er is, want oude
