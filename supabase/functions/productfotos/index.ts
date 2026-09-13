@@ -29,8 +29,44 @@ function fout(bericht: string, code = 400) {
 
 // Icecat noemt zijn aanzichten anders dan wij. Dit is de vertaling, zodat de
 // foto's in dezelfde volgorde staan als bij een set die je zelf maakt.
+const AANZICHTEN = ["dicht", "open", "toetsenbord", "links", "rechts", "onderkant"];
 function aanzichtVan(nr: number) {
-  return ["dicht", "open", "toetsenbord", "links", "rechts", "onderkant"][nr] || "overig";
+  return AANZICHTEN[nr] || "overig";
+}
+
+// Een gevonden fabrieksfoto overnemen. De browser mag niet rechtstreeks bij de
+// Icecat-CDN (CORS blokkeert dat), dus halen we hem hier server-side op en zetten
+// hem in de eigen opslag — daarna is het net zo'n foto als een die je zelf maakt.
+async function overnemen(lijf: any, teamId: string) {
+  const url = String(lijf?.url || "");
+  const apparaatId = String(lijf?.apparaat_id || "");
+  const aanzicht = String(lijf?.aanzicht || "overig");
+  if (!apparaatId) return fout("Geen toestel meegegeven");
+
+  // Alleen Icecat-adressen ophalen; nooit een willekeurige URL (dan zou iemand de
+  // server naar een eigen adres kunnen laten fetchen).
+  let host = "";
+  try { host = new URL(url).hostname.toLowerCase(); } catch { return fout("Ongeldige foto-URL"); }
+  if (!/(^|\.)icecat\.biz$/.test(host)) return fout("Alleen Icecat-foto's kunnen worden overgenomen");
+
+  const res = await fetch(url);
+  if (!res.ok) return fout("De foto kon niet opgehaald worden bij Icecat", 502);
+  const type = res.headers.get("content-type") || "image/jpeg";
+  const bytes = new Uint8Array(await res.arrayBuffer());
+
+  const pad = `${teamId}/${apparaatId}/${aanzicht}-${Date.now()}.jpg`;
+  const { error: opslagFout } = await admin.storage.from("refurbish-fotos")
+    .upload(pad, bytes, { contentType: type });
+  if (opslagFout) return fout("De foto opslaan mislukte: " + opslagFout.message, 502);
+
+  const { error: rijFout } = await admin.from("refurbish_fotos").insert({
+    team_id: teamId, apparaat_id: apparaatId,
+    merk: lijf?.merk || null, model: lijf?.model || null,
+    aanzicht, pad, volgorde: AANZICHTEN.indexOf(aanzicht),
+  });
+  if (rijFout) return fout("De foto in de lijst zetten mislukte: " + rijFout.message, 502);
+
+  return new Response(JSON.stringify({ ok: true, pad }), { headers: cors });
 }
 
 Deno.serve(async (req) => {
@@ -60,19 +96,31 @@ Deno.serve(async (req) => {
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
 
+  // Een gevonden foto overnemen loopt via dezelfde functie, server-side.
+  if (lijf?.actie === "overnemen") return await overnemen(lijf, acc.team_id);
+
   const merk = String(lijf?.merk || "").trim();
   const model = String(lijf?.model || "").trim();
   if (!merk || !model) return fout("Vul merk en model in");
 
-  // Icecat matcht op de artikelcode van de fabrikant. Wij hebben alleen de
-  // modelnaam, dus we proberen een paar schrijfwijzen: zoals ingevoerd, zonder
-  // spaties, en in hoofdletters. Dat dekt het grootste deel.
-  const pogingen = [model, model.replace(/\s+/g, ""), model.toUpperCase()];
+  // Icecat matcht op de GTIN of de artikelcode van de fabrikant, niet op de
+  // modelnaam. Hebben we een EAN (vaak bij accessoires, zelden bij een gebruikte
+  // laptop), dan is dat veruit de beste kans, dus die eerst. Daarna een paar
+  // schrijfwijzen van de modelnaam: zoals ingevoerd, zonder spaties, met
+  // streepjes, en in hoofdletters. Dat dekt het grootste deel.
+  const ean = String(lijf?.ean || lijf?.gtin || "").replace(/\D/g, "");
+  const pogingen: { soort: "gtin" | "code"; waarde: string }[] = [];
+  if (ean) pogingen.push({ soort: "gtin", waarde: ean });
+  for (const c of [model, model.replace(/\s+/g, ""), model.replace(/\s+/g, "-"), model.toUpperCase()]) {
+    pogingen.push({ soort: "code", waarde: c });
+  }
 
-  for (const code of pogingen) {
+  for (const p of pogingen) {
+    const sleutel = p.soort === "gtin"
+      ? `&GTIN=${encodeURIComponent(p.waarde)}`
+      : `&Brand=${encodeURIComponent(merk)}&ProductCode=${encodeURIComponent(p.waarde)}`;
     const adres = `https://live.icecat.biz/api?UserName=${encodeURIComponent(gebruiker)}` +
-      `&Language=nl&Brand=${encodeURIComponent(merk)}&ProductCode=${encodeURIComponent(code)}` +
-      `&Content=Gallery,GeneralInfo`;
+      `&Language=nl${sleutel}&Content=Gallery,GeneralInfo`;
     try {
       const res = await fetch(adres, { headers: { "Accept": "application/json" } });
       if (!res.ok) continue;
@@ -92,12 +140,12 @@ Deno.serve(async (req) => {
       if (!fotos.length) continue;
 
       return new Response(JSON.stringify({
-        ok: true, bron: "icecat", gevonden: code,
+        ok: true, bron: "icecat", gevonden: p.waarde,
         titel: uit?.data?.GeneralInfo?.Title || null,
         fotos,
       }), { headers: cors });
     } catch (e) {
-      console.error("icecat", code, e);
+      console.error("icecat", p.waarde, e);
     }
   }
 

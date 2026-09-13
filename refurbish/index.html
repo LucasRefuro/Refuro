@@ -4131,18 +4131,19 @@ async function fotosZoeken(knop){
 async function fotoOvernemen(i){
   const f=(onl.gevonden||[])[i]; if(!f) return;
   try{
-    const res=await fetch(f.url);
-    if(!res.ok) throw new Error('De foto kon niet opgehaald worden');
-    const blob=await res.blob();
-    const pad=`${account.team_id}/${onl.a.id}/${f.aanzicht}-${Date.now()}.jpg`;
-    const {error}=await sb.storage.from('refurbish-fotos')
-      .upload(pad, blob, {contentType:blob.type||'image/jpeg'});
-    if(error) throw new Error(error.message);
-    await sb.from('refurbish_fotos').insert({
-      team_id:account.team_id, apparaat_id:onl.a.id,
-      merk:onl.a.merk, model:onl.a.model, aanzicht:f.aanzicht, pad,
-      volgorde:AANZICHTEN.findIndex(v=>v.id===f.aanzicht)
+    /* De foto server-side laten binnenhalen. De browser mag niet rechtstreeks bij
+       de Icecat-CDN (CORS blokkeert dat), dus doet de Edge Function het en zet hem
+       in je eigen opslag — daarna is het net zo'n foto als een die je zelf maakt. */
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'overnemen', apparaat_id:onl.a.id,
+        merk:onl.a.merk, model:onl.a.model, url:f.url, aanzicht:f.aanzicht})
     });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Overnemen mislukte');
     await fotosLaden(onl.a);
     toast('Overgenomen', true);
   }catch(e){ toast(e.message,'fout'); }
