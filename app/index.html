@@ -8273,13 +8273,26 @@ try{
 }catch(e){}
 
 async function ladAccountEnStart(session){
-  const {data:acc,error}=await sb.from('accounts').select('*').eq('id',session.user.id).maybeSingle();
-  if(error || !acc){
+  /* Ingelogd blijven: een tijdelijke fout bij het laden (een netwerkhik) mag je
+     niet uitloggen — dan raak je je sessie kwijt door een blip en moet je opnieuw
+     inloggen. Daarom een paar keer proberen, en alleen echt uitloggen als er geen
+     profiel bij je inlog hoort. */
+  let acc=null, error=null;
+  for(let poging=0; poging<3; poging++){
+    const r=await sb.from('accounts').select('*').eq('id',session.user.id).maybeSingle();
+    acc=r.data; error=r.error;
+    if(acc || !error) break;
+    await new Promise(res=>setTimeout(res, 500*(poging+1)));
+  }
+  if(error){
     console.error('profiel laden:', error);
+    toonAuthLaadfout();     // sessie blijft staan, geen uitlog
+    return;
+  }
+  if(!acc){
     try{ await sb.auth.signOut(); }catch(e){}
     toonAuthLogin();
-    authMelding(error ? 'Kon je gegevens niet laden. Probeer opnieuw in te loggen.'
-      : 'Je inlog bestaat, maar er hangt nog geen Storvo-profiel aan. Neem contact op via info@storvo.nl.');
+    authMelding('Je inlog bestaat, maar er hangt nog geen Storvo-profiel aan. Neem contact op via info@storvo.nl.');
     return;
   }
   account=acc;
@@ -10099,6 +10112,21 @@ function toonAuthLogin(fout){
   const w=document.getElementById('al_ww'); if(w) w.addEventListener('keydown', authEnter);
   if(fout) authMelding(fout);
   const f=document.getElementById('al_id'); if(f) f.focus();
+}
+
+/* Je bent nog ingelogd, maar de gegevens laadden even niet (verbinding). Niet
+   uitloggen: gewoon opnieuw kunnen proberen, zodat één hik je niet je sessie kost. */
+function toonAuthLaadfout(){
+  authWrap(`
+    <p class="muted" style="margin-bottom:14px">Je bent nog ingelogd, maar je gegevens konden even niet geladen worden. Meestal een verbindingshikje.</p>
+    <button class="btn actie" style="width:100%; margin-top:8px" onclick="opnieuwLaden(this)">Opnieuw proberen</button>
+  `);
+}
+async function opnieuwLaden(knop){
+  authBezig(knop, true);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ authBezig(knop,false); toonAuthLogin(); return; }
+  await ladAccountEnStart(session);
 }
 
 async function doeLogin(knop){
