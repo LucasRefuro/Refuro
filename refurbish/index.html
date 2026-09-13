@@ -3958,6 +3958,16 @@ function tekenOnline(){
               <svg class="i s"><use href="#i-search"/></svg>Fabrieksfoto's zoeken</button>
           </div>
 
+          <div class="row" style="margin-top:10px">
+            <label class="btn ghost small" style="cursor:pointer">
+              <svg class="i s"><use href="#i-print"/></svg>Fabrieksfoto uploaden
+              <input type="file" accept="image/*" multiple hidden onchange="fotoModelUpload(this)">
+            </label>
+            <input id="onl_fablink" placeholder="of plak een fabrikantslink (https://…)" style="flex:1; min-width:170px">
+            <button class="btn ghost small" onclick="fotoModelLink(this)">Ophalen</button>
+          </div>
+          <p class="muted klein" style="margin-top:8px">Fabrieksfoto's (Icecat, upload of link) gelden voor het <b>hele model</b>: één keer vullen, en elk volgend toestel van dit model krijgt ze vanzelf.</p>
+
           ${(onl.gevonden||[]).length?`<div style="margin-top:18px">
             <div class="hkkop">Gevonden bij de fabrikant</div>
             <p class="muted klein" style="margin-bottom:10px">Foto's van dit model, niet van dit exemplaar. Prima voor de webshop; op Marktplaats wil een koper ook het echte apparaat zien.</p>
@@ -4128,25 +4138,57 @@ async function fotosZoeken(knop){
   });
 }
 
+/* Fabrieksfoto's gelden voor het hele model: één keer vullen, daarna krijgt elk
+   volgend toestel van dit model ze vanzelf (fotosLaden haalt modelfoto's mee).
+   Alles gaat server-side via de Edge Function: die haalt een link op of neemt een
+   upload (base64) aan en zet hem in de opslag. De browser mag niet bij een externe
+   CDN, en zo hoeven we ook geen aparte insert-rechten in de browser. */
+async function fabriekOpslaan(payload){
+  const {data:{session}}=await sb.auth.getSession();
+  const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+             'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(Object.assign({actie:'overnemen', heelModel:true,
+      merk:onl.a.merk, model:onl.a.model}, payload))
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok) throw new Error(uit.error||'Opslaan mislukte');
+}
 async function fotoOvernemen(i){
   const f=(onl.gevonden||[])[i]; if(!f) return;
   try{
-    /* De foto server-side laten binnenhalen. De browser mag niet rechtstreeks bij
-       de Icecat-CDN (CORS blokkeert dat), dus doet de Edge Function het en zet hem
-       in je eigen opslag — daarna is het net zo'n foto als een die je zelf maakt. */
-    const {data:{session}}=await sb.auth.getSession();
-    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
-               'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({actie:'overnemen', apparaat_id:onl.a.id,
-        merk:onl.a.merk, model:onl.a.model, url:f.url, aanzicht:f.aanzicht})
-    });
-    const uit=await res.json().catch(()=>({}));
-    if(!res.ok||!uit.ok) throw new Error(uit.error||'Overnemen mislukte');
+    await fabriekOpslaan({url:f.url, aanzicht:f.aanzicht});
     await fotosLaden(onl.a);
-    toast('Overgenomen', true);
+    toast('Overgenomen · geldt voor het hele model', true);
   }catch(e){ toast(e.message,'fout'); }
+}
+async function fotoModelLink(knop){
+  const veld=document.getElementById('onl_fablink');
+  const url=(veld.value||'').trim();
+  if(!/^https?:\/\//.test(url)){ toast('Plak een adres dat begint met https://','let-op'); return; }
+  await bezig(knop, async()=>{
+    await fabriekOpslaan({url, aanzicht:'open'});
+    veld.value='';
+    await fotosLaden(onl.a);
+    toast('Opgehaald · geldt voor het hele model', true);
+  });
+}
+async function fotoModelUpload(invoer){
+  const bestanden=[...(invoer.files||[])];
+  invoer.value='';
+  if(!bestanden.length) return;
+  const vrij=AANZICHTEN.filter(v=>!(onl.fotos||[]).some(f=>f.aanzicht===v.id));
+  toast(bestanden.length+' fabrieksfoto'+(bestanden.length===1?'':'s')+' opslaan…');
+  for(let i=0;i<bestanden.length;i++){
+    const aanzicht=(vrij[i]||{id:'open'}).id;
+    try{
+      const klein=await fotoVerkleinen(bestanden[i]);
+      await fabriekOpslaan({data:klein, aanzicht});
+    }catch(e){ toast('Een foto lukte niet: '+e.message,'fout'); }
+  }
+  await fotosLaden(onl.a);
+  toast('Klaar · geldt voor het hele model', true);
 }
 
 async function onlSchrijf(knop){
