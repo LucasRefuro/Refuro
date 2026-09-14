@@ -2495,8 +2495,12 @@
   <div class="card breed">
     <h2 style="margin-bottom:4px">Resultaat <span class="muted" id="rapBereikTekst"></span></h2>
     <div id="rapResultaat"></div>
-    <p class="muted klein" style="margin-top:12px">Bedragen zijn inclusief btw; de btw-afdracht is hier nog niet apart berekend. De inkoop telt mee op het moment dat een product verkocht wordt.</p>
+    <p class="muted klein" style="margin-top:12px">De resultaatbedragen zijn inclusief btw. Hieronder de btw-afdracht, de belasting-indicatie, je buffers, de balans en een prognose. De inkoop telt mee op het moment dat een product verkocht wordt.</p>
   </div>
+  <div class="card breed"><div id="rapBelasting"></div></div>
+  <div class="card breed"><div id="rapBuffers"></div></div>
+  <div class="card breed"><div id="rapBalans"></div></div>
+  <div class="card breed"><div id="rapPrognose"></div></div>
   </div>
 </section>
 
@@ -3196,6 +3200,13 @@ function load(){
      gaat via het rapport al van de winst af); hier leg je vast dat en hoe je het hebt
      betaald (contant of bank), zodat je een compleet loonoverzicht en strookjes hebt. */
   if(!Array.isArray(s.uitbetalingen)) s.uitbetalingen=[];
+  /* Zelf in te stellen buffers: een naam plus een percentage van de winst dat je apart
+     wilt zetten (bijv. een spaarbuffer). Toe te voegen en te verwijderen op het rapport. */
+  if(!Array.isArray(s.reserveringen)) s.reserveringen=[];
+  /* Fiscale instellingen voor de indicaties: startsaldo (wat je tot nu toe hebt ingelegd
+     of rood staat, voor de balans) en of je aan het urencriterium voldoet (zelfstandigen-
+     aftrek). Bewust apart, want dit zijn keuzes van de ondernemer. */
+  if(!s.fiscaal || typeof s.fiscaal!=='object') s.fiscaal={startsaldo:0, urencriterium:true};
   /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
      als keuze-uitvoeringen klaar voor het verkoopblokje, tenzij je al iets hebt ingesteld. */
   if(!s.varSeed){
@@ -4131,6 +4142,133 @@ function renderRapport(){
        </div>
        <div class="muted klein" style="margin-top:6px">Per verkoop berekend: 21% op gewone verkopen, en 21% over de marge bij toestellen met margeregeling. Dit is de btw in je omzet; de voorbelasting op je inkoop trek je bij de aangifte er nog af.</div>
      </div>`;
+  renderRapportFiscaal();
+}
+
+/* ── Belasting, buffers, balans en prognose ──
+   Nadrukkelijk indicaties om op te reserveren, geen belastingaangifte of -advies.
+   Eenmanszaak/ZZP: inkomstenbelasting box 1 2026, met MKB-winstvrijstelling en (bij het
+   urencriterium) de zelfstandigenaftrek. */
+const IB_SCHIJVEN=[{tot:38883, tarief:0.357},{tot:79137, tarief:0.3756},{tot:Infinity, tarief:0.495}];
+const ZELFSTANDIGENAFTREK=1200, MKB_VRIJSTELLING=0.127;
+function inkomstenbelasting(jaarWinst){
+  const w=Math.max(0, jaarWinst||0);
+  const naAftrek=Math.max(0, w - ((state.fiscaal&&state.fiscaal.urencriterium!==false)?ZELFSTANDIGENAFTREK:0));
+  const belastbaar=naAftrek*(1-MKB_VRIJSTELLING);
+  let vorige=0, belasting=0;
+  for(const sch of IB_SCHIJVEN){
+    if(belastbaar<=vorige) break;
+    belasting += (Math.min(belastbaar, sch.tot)-vorige)*sch.tarief;
+    vorige=sch.tot;
+  }
+  return {belastbaar:Math.round(belastbaar), belasting:Math.round(belasting)};
+}
+function btwKwartaal(jaar, q){
+  const van=new Date(jaar, q*3, 1).getTime(), tot=new Date(jaar, q*3+3, 1).getTime();
+  let verschuldigd=0, cogs=0;
+  (state.verkopen||[]).forEach(v=>{ if(v.t>=van && v.t<tot){ verschuldigd+=vBtw(v); cogs+=Number(v.inkoop)||0; } });
+  const vb=cogs*21/121, r=n=>Math.round(n*100)/100;
+  return {verschuldigd:r(verschuldigd), voorbelasting:r(vb), afdragen:r(verschuldigd-vb), deadline:new Date(jaar, q*3+4, 0)};
+}
+function voorraadInvestering(){ return (state.producten||[]).reduce((x,p)=>x+(Number(p.voorraad)||0)*(Number(p.inkoop)||0),0); }
+function jaarResultaatYTD(){ const j=new Date().getFullYear(); return rapportCijfers({van:new Date(j,0,1).getTime(), tot:Date.now()+1}).resultaat; }
+function renderRapportFiscaal(){
+  const jaar=new Date().getFullYear();
+  const ytd=jaarResultaatYTD();
+  const bEl=document.getElementById('rapBelasting');
+  if(bEl){
+    const nu=Date.now(); let kw='';
+    for(let q=0;q<4;q++){
+      if(nu < new Date(jaar,q*3,1).getTime()) continue;
+      const k=btwKwartaal(jaar,q);
+      const dl=k.deadline.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+      kw+=`<tr><td>Q${q+1} ${jaar}</td><td class="num">${euro(k.verschuldigd)}</td><td class="num">${euro(k.voorbelasting)}</td><td class="num"><b>${euro(k.afdragen)}</b></td><td class="muted klein">${dl}</td></tr>`;
+    }
+    const ib=inkomstenbelasting(ytd);
+    const urencrit=(state.fiscaal&&state.fiscaal.urencriterium!==false);
+    bEl.innerHTML=`<h2><svg class="i"><use href="#i-euro"/></svg>Belasting <span class="muted klein">(indicatie)</span></h2>
+      <div class="muted klein" style="margin:2px 0 12px">Een schatting om op te reserveren, geen belastingaangifte. Je boekhouder blijft leidend.</div>
+      <div style="font-weight:700; margin-bottom:6px">Btw per kwartaal ${jaar}</div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Kwartaal</th><th class="num">Verschuldigd</th><th class="num">Voorbelasting*</th><th class="num">Af te dragen</th><th>Uiterlijk</th></tr></thead><tbody>${kw||'<tr><td colspan="5" class="muted">Nog geen verkopen dit jaar.</td></tr>'}</tbody></table></div>
+      <div class="muted klein" style="margin:6px 0 16px">*Voorbelasting is een schatting op de inkoopwaarde van de verkochte goederen; btw op andere kosten kan er nog af.</div>
+      <div style="font-weight:700; margin-bottom:6px">Inkomstenbelasting over de winst dit jaar</div>
+      <div class="row" style="gap:28px; flex-wrap:wrap">
+        <div><div class="muted klein">Winst dit jaar</div><b class="groot">${euro(ytd)}</b></div>
+        <div><div class="muted klein">Belastbaar (na MKB-vrijstelling${urencrit?' en zelfstandigenaftrek':''})</div><b class="groot">${euro(ib.belastbaar)}</b></div>
+        <div><div class="muted klein">Geschatte belasting</div><b class="groot">${euro(ib.belasting)}</b></div>
+      </div>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; font-weight:600; text-transform:none; letter-spacing:0; color:var(--tekst)"><input type="checkbox" style="width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none" ${urencrit?'checked':''} onchange="zetUrencriterium(this.checked)"> Ik voldoe aan het urencriterium (1.225 uur) &middot; zelfstandigenaftrek ${euro(ZELFSTANDIGENAFTREK)}</label>
+      <div class="muted klein" style="margin-top:8px">Vóór heffingskortingen (algemene heffingskorting en arbeidskorting), die je aanslag nog verlagen. Dus eerder te veel dan te weinig gereserveerd.</div>`;
+  }
+  const buEl=document.getElementById('rapBuffers');
+  if(buEl){
+    const winstBasis=Math.max(0, ytd);
+    const lijst=(state.reserveringen||[]).map(r=>{
+      const bedrag=winstBasis*(Number(r.percentage)||0)/100;
+      return `<div class="perslid" style="padding:12px 0"><div class="row" style="justify-content:space-between; align-items:center; gap:12px"><div><b>${esc(r.naam)}</b> <span class="muted klein">${Number(r.percentage)||0}% van de winst</span></div><div class="row" style="gap:10px; align-items:center; flex-wrap:nowrap"><b>${euro(bedrag)}</b><button class="btn ghost small" onclick="reserveringWeg('${r.id}')">Verwijderen</button></div></div></div>`;
+    }).join('');
+    const totBuffer=(state.reserveringen||[]).reduce((s,r)=>s+winstBasis*(Number(r.percentage)||0)/100,0);
+    buEl.innerHTML=`<h2><svg class="i"><use href="#i-save"/></svg>Buffers</h2>
+      <p class="muted klein" style="margin:2px 0 12px">Zet zelf potjes opzij als percentage van de winst dit jaar (${euro(winstBasis)}). Bijvoorbeeld een spaarbuffer of een extra reservering naast de belasting.</p>
+      ${lijst||'<p class="muted">Nog geen buffers. Voeg er hieronder een toe.</p>'}
+      ${lijst?`<div class="perslid" style="padding:12px 0"><div class="row" style="justify-content:space-between"><b>Samen opzij</b><b>${euro(totBuffer)}</b></div></div>`:''}
+      <div class="row" style="align-items:flex-end; gap:12px; margin-top:8px">
+        <div style="flex:2; min-width:150px"><label>Naam</label><input id="res_naam" placeholder="bijv. Spaarbuffer" autocomplete="off"></div>
+        <div style="min-width:110px"><label>% van winst</label><input id="res_pct" type="number" min="0" max="100" step="0.5" placeholder="0"></div>
+        <button class="btn" onclick="reserveringToevoegen()">Toevoegen</button>
+      </div>`;
+  }
+  const baEl=document.getElementById('rapBalans');
+  if(baEl){
+    const startsaldo=Number(state.fiscaal&&state.fiscaal.startsaldo)||0;
+    const voorraad=voorraadInvestering();
+    const resAlles=rapportCijfers({van:0, tot:Date.now()+1}).resultaat;
+    const stand=resAlles-startsaldo;
+    baEl.innerHTML=`<h2><svg class="i"><use href="#i-chart"/></svg>Investering &amp; balans</h2>
+      <div class="row" style="align-items:flex-end; gap:12px; margin-bottom:12px">
+        <div style="min-width:240px"><label>Startsaldo (ingelegd of rood, bij de start)</label><input id="bal_start" type="number" step="0.01" value="${startsaldo||''}" placeholder="0" onchange="zetStartsaldo(this.value)"></div>
+      </div>
+      <div style="overflow-x:auto"><table><tbody>
+        <tr><td>In voorraad vast (investering)</td><td class="num">${euro(voorraad)}</td></tr>
+        <tr><td>Opgebouwd resultaat (sinds de start)</td><td class="num">${euro(resAlles)}</td></tr>
+        <tr><td>Startsaldo</td><td class="num">− ${euro(startsaldo)}</td></tr>
+        <tr style="font-weight:800; border-top:2px solid var(--border)"><td>${stand<0?'Nog in de min':'Boven nul'}</td><td class="num" style="color:var(${stand<0?'--red':'--green'})">${euro(stand)}</td></tr>
+      </tbody></table></div>
+      <div class="muted klein" style="margin-top:8px">De voorraad is geld dat vastzit in onverkochte spullen (komt terug bij verkoop). "Nog in de min" is je opgebouwde resultaat min je startsaldo. Loopt vanaf nu, dus vanaf volgend jaar echt zuiver.</div>`;
+  }
+  const prEl=document.getElementById('rapPrognose');
+  if(prEl){
+    const start=new Date(jaar,0,1).getTime(), nu=Date.now();
+    const dagen=Math.max(1,(nu-start)/864e5), factor=365/dagen;
+    const jaarWinst=ytd*factor, ib=inkomstenbelasting(jaarWinst);
+    prEl.innerHTML=`<h2><svg class="i"><use href="#i-up"/></svg>Prognose ${jaar}</h2>
+      <p class="muted klein" style="margin:2px 0 12px">Op basis van de ${Math.round(dagen)} dagen tot nu toe, doorgerekend naar heel het jaar. Een ruwe schatting; de laatste maanden kunnen anders lopen.</p>
+      <div class="row" style="gap:28px; flex-wrap:wrap">
+        <div><div class="muted klein">Winst tot nu toe</div><b class="groot">${euro(ytd)}</b></div>
+        <div><div class="muted klein">Verwachte winst heel ${jaar}</div><b class="groot">${euro(jaarWinst)}</b></div>
+        <div><div class="muted klein">Verwachte belasting daarover</div><b class="groot">${euro(ib.belasting)}</b></div>
+      </div>`;
+  }
+}
+function reserveringToevoegen(){
+  const naam=(document.getElementById('res_naam').value||'').trim();
+  const pct=Math.max(0, Math.min(100, Number(document.getElementById('res_pct').value)||0));
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
+  if(!Array.isArray(state.reserveringen)) state.reserveringen=[];
+  state.reserveringen.push({id:uid(), naam, percentage:pct});
+  save(); renderRapportFiscaal(); toast('Buffer toegevoegd', true);
+}
+function reserveringWeg(id){
+  state.reserveringen=(state.reserveringen||[]).filter(r=>String(r.id)!==String(id));
+  save(); renderRapportFiscaal();
+}
+function zetStartsaldo(val){
+  if(!state.fiscaal||typeof state.fiscaal!=='object') state.fiscaal={};
+  state.fiscaal.startsaldo=Number(val)||0; save(); renderRapportFiscaal();
+}
+function zetUrencriterium(aan){
+  if(!state.fiscaal||typeof state.fiscaal!=='object') state.fiscaal={};
+  state.fiscaal.urencriterium=!!aan; save(); renderRapportFiscaal();
 }
 
 /* ═══════════════ FACTUREN EN OFFERTES ═══════════════
