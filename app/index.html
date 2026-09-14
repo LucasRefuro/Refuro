@@ -2980,6 +2980,22 @@ function load(){
   ];
   if(!s.reparaties) s.reparaties=[];
   if(!Array.isArray(s.postnl)) s.postnl=[];
+  // De standaard PostNL-producten die je aan de balie verkoopt, met het tarief
+  // dat de klant bij een PostNL-punt betaalt (PostNL heeft de tarieven op 12 juli
+  // 2026 verhoogd; controleer ze op postnl.nl/tarieven en pas ze hier zo nodig aan).
+  // Een eenmalige vlag, niet de lege-array-check hierboven: wie al ooit een lege
+  // lijst had opgeslagen zou anders nooit de standaardlijst krijgen.
+  if(!s.postnlGevuld){
+    s.postnlGevuld=true;
+    if(!s.postnl.length) s.postnl=[
+      {id:1, naam:'Brievenbuspakje', type:'pakket', prijs:5.85},
+      {id:2, naam:'Pakket tot 10 kg', type:'pakket', prijs:6.95},
+      {id:3, naam:'Postzegel Nederland (tot 20 g)', type:'brief', prijs:1.40},
+      {id:4, naam:'Postzegelcode (tot 50 g)', type:'brief', prijs:1.40},
+      {id:5, naam:'Grote brief (tot 350 g)', type:'brief', prijs:4.35},
+      {id:6, naam:'Internationale postzegel (tot 20 g)', type:'brief', prijs:1.90}
+    ];
+  }
   if(!s.onderdelen) s.onderdelen=[];
   if(!s.instellingen) s.instellingen={naam:'Storvo', email:'', tel:''};
   if(!s.repNr) s.repNr=0;
