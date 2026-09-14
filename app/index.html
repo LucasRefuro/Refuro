@@ -1902,8 +1902,11 @@
     </details>
   </div>
   <div class="card breed">
-    <h2>Laatste verkopen</h2>
-    <div class="loglist" id="vkLog"></div>
+    <div class="row" style="justify-content:space-between; align-items:center; gap:10px">
+      <h2 style="margin:0">Laatste verkopen</h2>
+      <button class="btn ghost small" onclick="showTab('verkopen')">Alle verkopen</button>
+    </div>
+    <div class="loglist" id="vkLog" style="margin-top:12px"></div>
   </div>
   </div>
 </section>
@@ -2397,6 +2400,27 @@
   </div>
 </section>
 
+<!-- VERKOPEN -->
+<section id="tab-verkopen"hidden>
+  <div class="pagehead"><h1>Verkopen</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px">
+      <div class="periodesel" id="verkopenPeriodeSel">
+        <button data-vp="dag" onclick="verkopenKiesPeriode('dag')">Vandaag</button>
+        <button data-vp="week" class="active" onclick="verkopenKiesPeriode('week')">Deze week</button>
+        <button data-vp="maand" onclick="verkopenKiesPeriode('maand')">Deze maand</button>
+        <button data-vp="alles" onclick="verkopenKiesPeriode('alles')">Alles</button>
+      </div>
+      <div class="zoekvak" style="max-width:280px"><span class="ic"><svg class="i s"><use href="#i-search"/></svg></span>
+        <input id="verkopenZoek" placeholder="Zoek op naam of bedrag" autocomplete="off" oninput="verkopenZoekNu()"></div>
+    </div>
+    <div id="verkopenTotaal" class="muted" style="margin-bottom:12px"></div>
+    <div class="loglist" id="verkopenLijst"></div>
+  </div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2476,6 +2500,7 @@
         <button class="hubtegel" data-tab="personeel" onclick="showTab('personeel')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Personeel</b><span>Loon per uur of percentage en kostenplaats</span></span></button>
         <button class="hubtegel" data-tab="rooster" onclick="showTab('rooster')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Rooster</b><span>Beschikbaarheid doorgeven en het team inplannen</span></span></button>
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
+        <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alle verkopen, per dag of week, zoeken op naam of bedrag</span></span></button>
         <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
       </div>
     </div>
@@ -3234,6 +3259,7 @@ function showTab(t){
   if(t==='uren') renderUren();
   if(t==='personeel') renderPersoneel();
   if(t==='rooster') renderRooster();
+  if(t==='verkopen') renderVerkopen();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -4478,6 +4504,48 @@ function renderVerkoopLog(){
     const bet='<span class="muted">'+esc(betaalNaam(v.betaal))+'</span>';
     return `<div>${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)} <b>${euro(v.verkoop)}</b> ${bet}${v.door?' <span class="muted">· '+esc(v.door)+'</span>':''} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
   }).join('') || '<div>Nog geen verkopen. Verkopen doe je op de Verkoop-pagina.</div>';
+}
+
+/* ── Verkopen-overzicht ──
+   Alle verkopen op een rij, te filteren per dag/week/maand en te doorzoeken op naam
+   of bedrag. Draait op state.verkopen (nieuwste eerst, met t = tijdstip). */
+let verkopenPeriode='week';
+function verkopenKiesPeriode(p){
+  verkopenPeriode=p;
+  const sel=document.getElementById('verkopenPeriodeSel');
+  if(sel) sel.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.vp===p));
+  renderVerkopen();
+}
+function verkopenZoekNu(){ renderVerkopen(); }
+function verkopenPeriodeStart(){
+  const d=new Date(); d.setHours(0,0,0,0);
+  if(verkopenPeriode==='dag') return d.getTime();
+  if(verkopenPeriode==='week'){ const dag=(d.getDay()+6)%7; d.setDate(d.getDate()-dag); return d.getTime(); }
+  if(verkopenPeriode==='maand'){ d.setDate(1); return d.getTime(); }
+  return 0;   /* alles */
+}
+function renderVerkopen(){
+  const lijst=document.getElementById('verkopenLijst'); if(!lijst) return;
+  const start=verkopenPeriodeStart();
+  const q=(((document.getElementById('verkopenZoek')||{}).value)||'').trim().toLowerCase();
+  const qn=q.replace(',','.');
+  const isBedrag = qn!=='' && !isNaN(parseFloat(qn));
+  const rijen=(state.verkopen||[]).filter(v=>{
+    if((v.t||0)<start) return false;
+    if(!q) return true;
+    const naamMatch=(v.naam||'').toLowerCase().includes(q);
+    const bedrag=Number(v.verkoop)||0;
+    const bedragMatch = isBedrag && (bedrag.toFixed(2).includes(qn) || String(bedrag).includes(qn));
+    return naamMatch || bedragMatch;
+  });
+  const tot=rijen.reduce((x,v)=>x+(Number(v.verkoop)||0),0);
+  const totEl=document.getElementById('verkopenTotaal');
+  if(totEl) totEl.textContent = rijen.length ? (rijen.length+' verkoop'+(rijen.length===1?'':'en')+' · totaal '+euro(tot)) : '';
+  lijst.innerHTML = rijen.length ? rijen.map(v=>{
+    const d=new Date(v.t);
+    const bet='<span class="muted">'+esc(betaalNaam(v.betaal))+'</span>';
+    return `<div>${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)} <b>${euro(v.verkoop)}</b> ${bet}${v.door?' <span class="muted">· '+esc(v.door)+'</span>':''} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+  }).join('') : ('<div class="muted">Geen verkopen gevonden'+(q?' voor "'+esc(q)+'"':' in deze periode')+'.</div>');
 }
 
 /* ---------- scannen ---------- */
@@ -7996,11 +8064,11 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','personeel','rooster','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','personeel','rooster','verkopen','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','vastelasten','rapport','facturen','instellingen','team','meer'],
-  medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','meer']
+  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','vastelasten','rapport','facturen','instellingen','team','meer'],
+  medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','meer']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
