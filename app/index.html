@@ -418,6 +418,17 @@
   .perslid:first-child{padding-top:6px;}
   .perslid:last-child{border-bottom:none; padding-bottom:0;}
   .perskop{margin-bottom:10px;}
+  .strooktabel{width:100%; border-collapse:collapse; margin-top:8px;}
+  .strooktabel td{padding:8px 4px; border-bottom:1px solid var(--border); font-size:13.5px;}
+  .strooktabel td.num{text-align:right; white-space:nowrap;}
+  .strooktabel .strooktot td{border-bottom:none; border-top:2px solid var(--border); padding-top:10px;}
+  @media print{
+    body > *{visibility:hidden;}
+    #strookOverlay, #strookOverlay *{visibility:visible;}
+    #strookOverlay{position:absolute; inset:0; background:#fff; padding:0;}
+    #strookDoc{box-shadow:none; max-width:100%; width:100%;}
+    #strookDoc .acts{display:none;}
+  }
   .roosterbalk{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; flex-wrap:wrap;}
   .roostergrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:12px;}
   .dagkaart{border:1px solid var(--border); border-radius:var(--radius-s); padding:12px; display:flex; flex-direction:column; gap:10px;}
@@ -2383,6 +2394,18 @@
     <p class="muted" style="margin-bottom:4px">Per persoon stel je in hoe het loon werkt: een vast bedrag per uur, of een percentage van de winst die tijdens de gewerkte uren is gedraaid, met een minimum en maximum per keer. En op welke kostenplaats het loon valt.</p>
     <div id="personeelLijst"></div>
   </div>
+  <div class="card breed">
+    <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:4px">
+      <h2 style="margin:0"><svg class="i"><use href="#i-euro"/></svg>Loon per maand</h2>
+      <div class="bkvarr">
+        <button type="button" class="bkvar" onclick="personeelMaandNav(-1)">Vorige</button>
+        <button type="button" class="bkvar" id="personeelMaandLabel" onclick="personeelMaandNav(0)">deze maand</button>
+        <button type="button" class="bkvar" onclick="personeelMaandNav(1)">Volgende</button>
+      </div>
+    </div>
+    <p class="muted klein" style="margin:0 0 12px">Wat elke persoon deze maand verdient. Uurloon = uren × tarief; percentage = het afgesproken deel van de winst tijdens de gewerkte uren, per dag begrensd. Dit loon telt als loonkost en gaat in het rapport van je resultaat af. Met "Uitbetalen" leg je vast dát en hoe je het betaald hebt (contant of bank) en maak je een loonstrook.</p>
+    <div id="personeelMaandLijst"></div>
+  </div>
   </div>
 </section>
 
@@ -3169,6 +3192,10 @@ function load(){
      en voor iedereen een kostenplaats (winkel of kantoor). Het uurtarief zelf blijft
      bewust in s.lonen staan, zodat de bestaande loonkosten ongewijzigd blijven. */
   if(!s.personeel || typeof s.personeel!=='object') s.personeel={};
+  /* Uitbetalingen per persoon per maand: het bedrag telt als loonkost (het loon zelf
+     gaat via het rapport al van de winst af); hier leg je vast dat en hoe je het hebt
+     betaald (contant of bank), zodat je een compleet loonoverzicht en strookjes hebt. */
+  if(!Array.isArray(s.uitbetalingen)) s.uitbetalingen=[];
   /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
      als keuze-uitvoeringen klaar voor het verkoopblokje, tenzij je al iets hebt ingesteld. */
   if(!s.varSeed){
@@ -3264,7 +3291,7 @@ function showTab(t){
   if(t==='scan') focusScan();
   if(t==='verkoop') renderVerkoop();
   if(t==='uren') renderUren();
-  if(t==='personeel') renderPersoneel();
+  if(t==='personeel'){ renderPersoneel(); renderPersoneelMaand(); }
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
   if(t==='vastelasten') renderVasteLasten();
@@ -3637,6 +3664,168 @@ function renderPersoneel(){
 function urenLoonInPeriode(van, tot){
   return (state.uren||[]).reduce((s,u)=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ s+=(Number(u.uren)||0)*loonTarief(u.medewerker); } return s; },0);
 }
+/* De winst van één kalenderdag (lokale dag), voor het percentage-loon. */
+function dagWinst(ymd){
+  const van=new Date(ymd+'T00:00:00').getTime();
+  return winstIn(van, van+86400000);
+}
+/* Het loon van één percentage-persoon op één dag: de dagwinst maal zijn aandeel in de
+   gewerkte uren die dag, maal het percentage, begrensd op het min- en maxbedrag per dag. */
+function pctDagloon(cfg, dagWinstBedrag, mijnUren, totUren){
+  const share = totUren>0 ? mijnUren/totUren : (mijnUren>0?1:0);
+  let dl = (Number(cfg.percentage)||0)/100 * dagWinstBedrag * share;
+  if(cfg.minBedrag>0) dl=Math.max(dl, cfg.minBedrag);
+  if(cfg.maxBedrag>0) dl=Math.min(dl, cfg.maxBedrag);
+  return Math.max(0, dl);
+}
+/* Het loon van één persoon over een hele maand. Voor uurloon: uren × tarief. Voor
+   percentage: per gewerkte dag de berekening hierboven, opgeteld. Geeft ook de losse
+   dagen terug voor de loonstrook. */
+function loonBerekenMaand(accountId, jaar, maand0){
+  const start=new Date(jaar, maand0, 1).getTime();
+  const eind=new Date(jaar, maand0+1, 1).getTime();
+  const cfg=pCfg(accountId);
+  const mijn=(state.uren||[]).filter(u=>u.medewerker===accountId && urenDatumTijd(u)>=start && urenDatumTijd(u)<eind);
+  const totUren=mijn.reduce((s,u)=>s+(Number(u.uren)||0),0);
+  if(cfg.vorm!=='percentage') return {uren:totUren, loon:totUren*loonTarief(accountId), vorm:'uur', dagen:[]};
+  const perDag={};
+  mijn.forEach(u=>{ const ymd=(u.datum||'').slice(0,10); if(ymd) perDag[ymd]=(perDag[ymd]||0)+(Number(u.uren)||0); });
+  let loon=0; const dagen=[];
+  Object.keys(perDag).sort().forEach(ymd=>{
+    const mijnH=perDag[ymd];
+    const totH=(state.uren||[]).filter(u=>(u.datum||'').slice(0,10)===ymd).reduce((s,u)=>s+(Number(u.uren)||0),0);
+    const dw=dagWinst(ymd);
+    const dl=pctDagloon(cfg, dw, mijnH, totH);
+    loon+=dl;
+    dagen.push({ymd, uren:mijnH, winst:dw, aandeel:(totH>0?mijnH/totH:1), dagloon:dl});
+  });
+  return {uren:totUren, loon, vorm:'percentage', dagen};
+}
+/* Het percentage-loon van iedereen samen over een willekeurige periode, per dag berekend.
+   Nodig zodat dit loon (net als het uurloon) in het rapport van de winst afgaat. */
+function percentageLoonInPeriode(van, tot){
+  const pctIds=Object.keys(state.personeel||{}).filter(id=>pCfg(id).vorm==='percentage');
+  if(!pctIds.length) return 0;
+  const dagen={};
+  (state.uren||[]).forEach(u=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ const ymd=(u.datum||'').slice(0,10); if(ymd) (dagen[ymd]=dagen[ymd]||[]).push(u); } });
+  let totaal=0;
+  Object.keys(dagen).forEach(ymd=>{
+    const rows=dagen[ymd];
+    const totH=rows.reduce((s,u)=>s+(Number(u.uren)||0),0);
+    const dw=dagWinst(ymd);
+    pctIds.forEach(id=>{
+      const mijnH=rows.filter(u=>u.medewerker===id).reduce((s,u)=>s+(Number(u.uren)||0),0);
+      if(mijnH>0) totaal+=pctDagloon(pCfg(id), dw, mijnH, totH);
+    });
+  });
+  return totaal;
+}
+
+/* ── Loon per maand: overzicht, loonstrook en uitbetaling ── */
+let personeelMaandDatum=null;
+function maandSleutel(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function personeelMaandNav(richting){
+  const basis = (richting===0 || !personeelMaandDatum) ? new Date() : personeelMaandDatum;
+  const d = richting===0 ? new Date() : new Date(basis.getFullYear(), basis.getMonth()+richting, 1);
+  personeelMaandDatum = new Date(d.getFullYear(), d.getMonth(), 1);
+  renderPersoneelMaand();
+}
+function renderPersoneelMaand(){
+  const box=document.getElementById('personeelMaandLijst'); if(!box) return;
+  if(!personeelMaandDatum){ const n=new Date(); personeelMaandDatum=new Date(n.getFullYear(), n.getMonth(), 1); }
+  if(!teamLeden.length && account){ laadTeamLeden().then(()=>{ const t=document.getElementById('tab-personeel'); if(t && !t.hidden) renderPersoneelMaand(); }); }
+  const jaar=personeelMaandDatum.getFullYear(), m0=personeelMaandDatum.getMonth();
+  const lbl=document.getElementById('personeelMaandLabel');
+  if(lbl) lbl.textContent=personeelMaandDatum.toLocaleDateString('nl-NL',{month:'long', year:'numeric'});
+  const leden = teamLeden.length ? teamLeden : (gebruiker?[{id:gebruiker.id, naam:gebruiker.naam, rol:gebruiker.rol}]:[]);
+  const mk=maandSleutel(personeelMaandDatum);
+  let totWinkel=0, totKantoor=0;
+  const rijen=leden.map(l=>{
+    const ber=loonBerekenMaand(l.id, jaar, m0);
+    if(ber.uren<=0 && ber.loon<=0) return '';
+    const cfg=pCfg(l.id);
+    const kp=cfg.kostenplaats==='kantoor'?'kantoor':'winkel';
+    if(kp==='kantoor') totKantoor+=ber.loon; else totWinkel+=ber.loon;
+    const betaald=(state.uitbetalingen||[]).find(x=>x.account_id===l.id && x.maand===mk);
+    const urenTekst=(ber.uren||0).toLocaleString('nl-NL')+' uur';
+    const vormTekst = ber.vorm==='uur' ? (urenTekst+' × '+euro(loonTarief(l.id))) : (cfg.percentage+'% van de winst · '+urenTekst);
+    return `<div class="perslid">
+      <div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px">
+        <div><b>${esc(l.naam)}</b> <span class="muted klein">${kp}</span><div class="muted klein">${vormTekst}</div></div>
+        <div style="text-align:right"><div style="font-weight:800; font-size:17px">${euro(ber.loon)}</div>${betaald?`<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">uitbetaald · ${betaald.betaalwijze==='bank'?'bank':'contant'}</span>`:''}</div>
+      </div>
+      <div class="acts2" style="margin-top:8px">
+        <button class="btn ghost small" onclick="loonstrook('${l.id}')">Loonstrook</button>
+        ${betaald?`<button class="btn ghost small" onclick="uitbetalingTerug('${l.id}')">Uitbetaling terugdraaien</button>`:`<button class="btn small" onclick="uitbetalenVraag('${l.id}')">Uitbetalen</button>`}
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+  const totHtml = rijen ? `<div class="perslid"><div class="row" style="justify-content:space-between; align-items:baseline"><b>Totaal loon deze maand</b><b style="font-size:17px">${euro(totWinkel+totKantoor)}</b></div><p class="muted klein" style="margin:4px 0 0">Winkel ${euro(totWinkel)} · Kantoor ${euro(totKantoor)}</p></div>` : '';
+  box.innerHTML = rijen ? (rijen+totHtml) : '<p class="muted">Nog geen uren of loon in deze maand.</p>';
+}
+function loonstrookNaam(id){ const m=teamLeden.find(x=>x.id===id); if(m) return m.naam; if(gebruiker&&gebruiker.id===id) return gebruiker.naam; return '?'; }
+function loonstrook(id){
+  const jaar=personeelMaandDatum.getFullYear(), m0=personeelMaandDatum.getMonth();
+  const ber=loonBerekenMaand(id, jaar, m0), cfg=pCfg(id);
+  const mk=maandSleutel(personeelMaandDatum);
+  const betaald=(state.uitbetalingen||[]).find(x=>x.account_id===id && x.maand===mk);
+  const maandNaam=personeelMaandDatum.toLocaleDateString('nl-NL',{month:'long', year:'numeric'});
+  let regels;
+  if(ber.vorm==='uur'){
+    regels=`<tr><td>${(ber.uren||0).toLocaleString('nl-NL')} uur × ${euro(loonTarief(id))} per uur</td><td class="num">${euro(ber.loon)}</td></tr>`;
+  }else{
+    regels=ber.dagen.map(d=>`<tr><td>${new Date(d.ymd+'T12:00:00').toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} · ${d.uren.toLocaleString('nl-NL')} u · ${cfg.percentage}% van ${euro(d.winst)} winst${d.aandeel<1?' (aandeel '+Math.round(d.aandeel*100)+'%)':''}</td><td class="num">${euro(d.dagloon)}</td></tr>`).join('') || '<tr><td class="muted">Geen gewerkte dagen deze maand.</td><td></td></tr>';
+  }
+  const bedrijf=(state.instellingen&&state.instellingen.naam)||'Storvo';
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='strookOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup groot" id="strookDoc">
+    <h3>Loonstrook</h3>
+    <p class="pv">${esc(bedrijf)} &middot; ${esc(loonstrookNaam(id))} &middot; ${esc(maandNaam)}</p>
+    <table class="strooktabel"><tbody>${regels}
+      <tr class="strooktot"><td><b>Totaal loon</b></td><td class="num"><b>${euro(ber.loon)}</b></td></tr>
+    </tbody></table>
+    <p class="muted klein" style="margin-top:10px">${betaald?('Uitbetaald op '+new Date(betaald.datum).toLocaleDateString('nl-NL')+' · '+(betaald.betaalwijze==='bank'?'via bank':'contant')):'Nog niet uitbetaald.'}</p>
+    <div class="acts" style="flex-direction:row; gap:8px; margin-top:14px">
+      <button class="btn" onclick="window.print()"><svg class="i s"><use href="#i-download"/></svg>Afdrukken</button>
+      <button class="btn ghost" onclick="document.getElementById('strookOverlay').remove()">Sluiten</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function uitbetalenVraag(id){
+  const jaar=personeelMaandDatum.getFullYear(), m0=personeelMaandDatum.getMonth();
+  const ber=loonBerekenMaand(id, jaar, m0);
+  const maandNaam=personeelMaandDatum.toLocaleDateString('nl-NL',{month:'long', year:'numeric'});
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='uitbOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup">
+    <h3>Uitbetalen</h3>
+    <p class="pv">${esc(loonstrookNaam(id))} &middot; ${esc(maandNaam)}<br><b style="font-size:18px">${euro(ber.loon)}</b><br>Dit loon telt al als loonkost in je rapport en gaat van je resultaat af. Kies hoe je het uitbetaalt; dat leggen we vast voor de loonstrook.</p>
+    <div class="acts">
+      <button class="btn" onclick="uitbetalenDoen('${id}', ${ber.loon.toFixed(2)}, 'contant')"><svg class="i s"><use href="#i-cash"/></svg>Contant uitbetaald</button>
+      <button class="btn" onclick="uitbetalenDoen('${id}', ${ber.loon.toFixed(2)}, 'bank')"><svg class="i s"><use href="#i-card"/></svg>Via bank uitbetaald</button>
+      <button class="btn ghost" onclick="document.getElementById('uitbOverlay').remove()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function uitbetalenDoen(id, bedrag, wijze){
+  if(!Array.isArray(state.uitbetalingen)) state.uitbetalingen=[];
+  const mk=maandSleutel(personeelMaandDatum);
+  state.uitbetalingen=state.uitbetalingen.filter(x=>!(x.account_id===id && x.maand===mk));
+  state.uitbetalingen.push({id:uid(), account_id:id, maand:mk, bedrag:Number(bedrag)||0, betaalwijze:wijze, kostenplaats:pCfg(id).kostenplaats||'winkel', datum:new Date().toISOString()});
+  save();
+  const o=document.getElementById('uitbOverlay'); if(o) o.remove();
+  toast('Uitbetaling vastgelegd ('+(wijze==='bank'?'bank':'contant')+')', true);
+  renderPersoneelMaand();
+}
+function uitbetalingTerug(id){
+  if(!confirm('Uitbetaling van deze maand terugdraaien?')) return;
+  const mk=maandSleutel(personeelMaandDatum);
+  state.uitbetalingen=(state.uitbetalingen||[]).filter(x=>!(x.account_id===id && x.maand===mk));
+  save(); toast('Uitbetaling teruggedraaid', true); renderPersoneelMaand();
+}
 /* ── Rooster: beschikbaarheid en inplannen ──
    Op echte tabellen (beschikbaarheid, rooster), niet de blob: meerdere teamleden
    schrijven tegelijk hun eigen beschikbaarheid, en de blob is last-write-wins. Ieder
@@ -3884,7 +4073,7 @@ function rapportBereik(){
 }
 function rapportCijfers(b){
   const s=stats(b);
-  const loon=urenLoonInPeriode(b.van,b.tot);
+  const loon=urenLoonInPeriode(b.van,b.tot)+percentageLoonInPeriode(b.van,b.tot);
   /* Vaste lasten gaan per tijd; bij een open begin (periode "alles", van=0) zou je
      ze vanaf 1970 optellen. Klem het begin dan op de eerste verkoop, zodat het de
      echte looptijd van de winkel volgt. */
