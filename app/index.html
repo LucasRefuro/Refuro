@@ -442,6 +442,11 @@
   .teamRij2 .kop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .teamRij2 .kop b{font-size:15px;}
   .teamRij2 .acts2{display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;}
+  .teamRij2 summary{cursor:pointer; list-style:none;}
+  .teamRij2 summary::-webkit-details-marker{display:none;}
+  .teamRij2 summary::after{content:'›'; margin-left:auto; color:var(--muted); font-size:20px; line-height:1; transform:rotate(90deg); transition:transform .15s;}
+  .teamRij2[open] summary::after{transform:rotate(-90deg);}
+  .wachtTag{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
   .verhuisrij{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0;}
   .verhuisrij .dt{color:var(--muted-l); min-width:120px;}
   .wachtlijst{margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);}
@@ -10784,24 +10789,35 @@ async function renderTeamAccounts(){
   if(error){ body.innerHTML='<p class="muted">Kon teamleden niet laden.</p>'; return; }
   /* Meteen de lichte kopie bijwerken die de Uren-pagina gebruikt. */
   teamLeden=(leden||[]).map(l=>({id:l.id, naam:l.naam, rol:l.rol}));
+  /* Openstaande uitnodigingen: iemand die de link heeft gekregen maar zich nog niet
+     heeft aangemeld. Tonen als "in afwachting", zodat je ziet dat je op hem wacht. */
+  let uitnodigingen=[];
+  try{
+    const {data:inv}=await sb.from('invites').select('id,rol,token,gebruikt,verloopt_op,created_at')
+      .eq('gebruikt',false).order('created_at',{ascending:true});
+    const nu=Date.now();
+    uitnodigingen=(inv||[]).filter(i=>!i.verloopt_op || new Date(i.verloopt_op).getTime()>nu);
+  }catch(e){}
   /* Uurtarief-veld (per account, bewaard in state.lonen). Zichtbaar bij ieder teamlid,
      zodat de loonkosten kloppen; leeg = telt niet mee. */
   const loonVeld=l=>`<div style="min-width:130px"><label>Uurtarief (€)</label><input type="number" step="0.01" min="0" style="width:110px" value="${state.lonen&&state.lonen[l.id]!=null?state.lonen[l.id]:''}" placeholder="0" onchange="zetLoon('${l.id}',this.value)"></div>`;
-  body.innerHTML=(leden||[]).map(l=>{
+  const ledenHtml=(leden||[]).map(l=>{
     const isJij=l.id===account.id;
+    const initiaal=esc((l.naam||'?').charAt(0).toUpperCase());
     if(l.rol==='eigenaar'){
-      return `<div class="teamRij2"><div class="kop"><div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
+      return `<div class="teamRij2"><div class="kop"><div class="av">${initiaal}</div>
         <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}<span class="rolTag">eigenaar</span>
         <span class="muted">${esc(l.gebruikersnaam||'')} · ${esc(l.email||'')}</span></div>
         <p class="muted klein">De eigenaar ziet altijd alle pagina's.</p>
         <div class="row" style="align-items:flex-end; gap:12px; margin-top:2px">${loonVeld(l)}</div></div>`;
     }
     const actief = Array.isArray(l.tabs) ? l.tabs : rolDefaultTabs(l.rol);
-    return `<div class="teamRij2">
-      <div class="kop"><div class="av">${esc((l.naam||'?').charAt(0).toUpperCase())}</div>
+    return `<details class="teamRij2">
+      <summary class="kop"><div class="av">${initiaal}</div>
         <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}
-        <span class="muted">${esc(l.gebruikersnaam||'')} · ${esc(l.email||'')}</span></div>
-      <div class="row" style="align-items:flex-end; gap:12px; margin-top:2px">
+        <span class="rolTag">${esc(l.rol)}</span>
+        <span class="muted">${esc(l.gebruikersnaam||'')}</span></summary>
+      <div class="row" style="align-items:flex-end; gap:12px; margin-top:10px">
         <div style="min-width:160px"><label>Rol</label><select id="rol_${l.id}">
           <option value="medewerker"${l.rol==='medewerker'?' selected':''}>Medewerker</option>
           <option value="beheerder"${l.rol==='beheerder'?' selected':''}>Beheerder</option></select></div>
@@ -10814,8 +10830,30 @@ async function renderTeamAccounts(){
         <button class="btn ghost small" onclick="gebruikerWachtwoord('${l.id}','${esc(l.naam)}')"><svg class="i s"><use href="#i-lock"/></svg>Wachtwoord</button>
         <button class="btn ghost small" onclick="gebruikerVerwijder('${l.id}','${esc(l.naam)}')">Verwijderen</button>
       </div>
-    </div>`;
-  }).join('') || '<p class="muted">Nog geen teamleden. Maak er hierboven een aan.</p>';
+    </details>`;
+  }).join('');
+  const inviteHtml=uitnodigingen.map(i=>`<div class="teamRij2">
+      <div class="kop"><div class="av">?</div><b>Uitgenodigd</b>
+        <span class="rolTag">${esc(i.rol)}</span><span class="wachtTag">in afwachting</span></div>
+      <p class="muted klein">Deze persoon heeft de link nog niet gebruikt. Zodra hij zijn account instelt, verschijnt hij hier als teamlid.</p>
+      <div class="acts2">
+        <button class="btn ghost small" onclick="inviteLinkKopieer('${i.token}', this)"><svg class="i s"><use href="#i-link"/></svg>Link kopiëren</button>
+        <button class="btn ghost small" onclick="inviteIntrekken('${i.id}', this)">Intrekken</button>
+      </div>
+    </div>`).join('');
+  body.innerHTML=(ledenHtml+inviteHtml) || '<p class="muted">Nog geen teamleden. Maak er hierboven een aan.</p>';
+}
+function inviteLinkKopieer(token, knop){
+  const link=location.origin+location.pathname+'?invite='+token;
+  try{ navigator.clipboard.writeText(link); toast('Uitnodigingslink gekopieerd', true); }
+  catch(e){ prompt('Kopieer de uitnodigingslink:', link); }
+}
+async function inviteIntrekken(id, knop){
+  if(!confirm('Deze uitnodiging intrekken? De link werkt daarna niet meer.')) return;
+  const {error}=await sb.from('invites').delete().eq('id', id);
+  if(error){ toast('Intrekken mislukte','fout'); return; }
+  toast('Uitnodiging ingetrokken', true);
+  renderTeamAccounts();
 }
 /* Uurtarief opslaan per teamlid. Staat in de blob (state.lonen), niet in de accounts-
    tabel: de loonkosten worden lokaal en synchroon berekend en horen bij de financiën. */
