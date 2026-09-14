@@ -747,6 +747,10 @@
     border-radius:var(--pil); vertical-align:3px;}
   .pct.up,.kpi.accent .pct.up{color:var(--green-tekst); background:var(--green-soft);}
   .pct.down,.kpi.accent .pct.down{color:var(--red-tekst); background:var(--red-soft);}
+  .kpi .bedrag{white-space:nowrap;}
+  .kpi .kpimeta{display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;}
+  .kpi .kpimeta .pct{margin-left:0; vertical-align:baseline;}
+  .kpi .btwhint{font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted-l);}
 
   .chart{height:210px; gap:8px; padding-top:12px;}
   .chart .bars{height:168px; gap:3px;}
@@ -4295,13 +4299,22 @@ function renderDashboard(){
   const s=stats(b), vs=vb?stats(vb):null;
   const marge=s.omzet>0?(s.winst/s.omzet*100):0;
   const P=k=>pctHtml(s[k], vs?vs[k]:null);
+  /* De dashboardbedragen zijn de echte bedragen die binnenkomen: incl. btw. (De
+     Rapport-pagina rekent de omzet juist naar excl. btw; daarom hier een klein
+     kaartje "incl. btw", zodat je de twee niet verwart.) */
+  const geldKpi=(label, val, k, opt)=>{
+    opt=opt||{};
+    return `<div class="kpi${opt.accent?' accent':''}"><div class="l">${label}</div>`+
+      `<div class="v${opt.groen?' groen':''}"><span class="bedrag">${euro(val)}</span></div>`+
+      `<div class="kpimeta"><span class="btwhint">incl. btw</span>${P(k)}</div></div>`;
+  };
   document.getElementById('kpiRow').innerHTML=
-    `<div class="kpi accent"><div class="l">Omzet</div><div class="v">${euro(s.omzet)}${P('omzet')}</div></div>`+
-    `<div class="kpi"><div class="l">Winst</div><div class="v groen">${euro(s.winst)}${P('winst')}</div></div>`+
-    `<div class="kpi"><div class="l">Kosten (inkoop)</div><div class="v">${euro(s.kosten)}${P('kosten')}</div></div>`+
-    `<div class="kpi"><div class="l">Pin en bank</div><div class="v">${euro(s.pin)}${P('pin')}</div></div>`+
-    `<div class="kpi"><div class="l">Cash met bon</div><div class="v">${euro(s.cash)}${P('cash')}</div></div>`+
-    `<div class="kpi"><div class="l">Cash zonder bon</div><div class="v">${euro(s.cashzb)}${P('cashzb')}</div></div>`;
+    geldKpi('Omzet', s.omzet, 'omzet', {accent:true})+
+    geldKpi('Winst', s.winst, 'winst', {groen:true})+
+    geldKpi('Kosten (inkoop)', s.kosten, 'kosten')+
+    geldKpi('Pin en bank', s.pin, 'pin')+
+    geldKpi('Cash met bon', s.cash, 'cash')+
+    geldKpi('Cash zonder bon', s.cashzb, 'cashzb');
   const tot=state.producten.reduce((x,p)=>x+p.voorraad,0);
   const waarde=state.producten.reduce((x,p)=>x+p.voorraad*p.inkoop,0);
   const laag=state.producten.filter(p=>moetBestellen(p)).length;
