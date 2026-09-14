@@ -2980,21 +2980,29 @@ function load(){
   ];
   if(!s.reparaties) s.reparaties=[];
   if(!Array.isArray(s.postnl)) s.postnl=[];
-  // De standaard PostNL-producten die je aan de balie verkoopt, met het tarief
-  // dat de klant bij een PostNL-punt betaalt (PostNL heeft de tarieven op 12 juli
-  // 2026 verhoogd; controleer ze op postnl.nl/tarieven en pas ze hier zo nodig aan).
-  // Een eenmalige vlag, niet de lege-array-check hierboven: wie al ooit een lege
-  // lijst had opgeslagen zou anders nooit de standaardlijst krijgen.
-  if(!s.postnlGevuld){
-    s.postnlGevuld=true;
-    if(!s.postnl.length) s.postnl=[
-      {id:1, naam:'Brievenbuspakje', type:'pakket', prijs:5.85},
-      {id:2, naam:'Pakket tot 10 kg', type:'pakket', prijs:6.95},
-      {id:3, naam:'Postzegel Nederland (tot 20 g)', type:'brief', prijs:1.40},
-      {id:4, naam:'Postzegelcode (tot 50 g)', type:'brief', prijs:1.40},
-      {id:5, naam:'Grote brief (tot 350 g)', type:'brief', prijs:4.35},
-      {id:6, naam:'Internationale postzegel (tot 20 g)', type:'brief', prijs:1.90}
+  // De standaardproducten voor het PostNL-blok op de verkooppagina, met het tarief
+  // dat de klant bij een PostNL-punt betaalt (de "Vind een PostNL-punt"-prijs, niet
+  // het goedkopere online-tarief). Controleer ze op postnl.nl/tarieven; PostNL past
+  // de tarieven een paar keer per jaar aan.
+  //
+  // Een versie i.p.v. een ja/nee-vlag: de eerste versie stond met geschatte prijzen
+  // live. Wie die nog ongewijzigd heeft staan krijgt hier de juiste punt-tarieven;
+  // heeft een winkel de lijst zelf aangepast, dan blijft die met rust.
+  if(!s.postnlVersie){
+    const oudeNamen=['Brievenbuspakje','Pakket tot 10 kg','Postzegel Nederland (tot 20 g)',
+      'Postzegelcode (tot 50 g)','Grote brief (tot 350 g)','Internationale postzegel (tot 20 g)'];
+    const nu=(s.postnl||[]).map(t=>t.naam).sort().join('|');
+    const ongewijzigd = !s.postnl.length || nu===oudeNamen.slice().sort().join('|');
+    if(ongewijzigd) s.postnl=[
+      {id:1, naam:'Groot pakket', type:'pakket', prijs:18.75},
+      {id:2, naam:'Groot pakket aangetekend (€ 500)', type:'pakket', prijs:22.55},
+      {id:3, naam:'Groot pakket verzekerd (€ 5.500)', type:'pakket', prijs:27.15},
+      {id:4, naam:'Gemiddeld pakket spoed 12 uur', type:'pakket', prijs:40.95},
+      {id:5, naam:'Gemiddeld pakket spoed 10 uur', type:'pakket', prijs:47.65},
+      {id:6, naam:'Postzegel Nederland (tot 20 g)', type:'brief', prijs:1.40},
+      {id:7, naam:'Internationale postzegel (tot 20 g)', type:'brief', prijs:1.90}
     ];
+    s.postnlVersie=2;
   }
   if(!s.onderdelen) s.onderdelen=[];
   if(!s.instellingen) s.instellingen={naam:'Storvo', email:'', tel:''};
