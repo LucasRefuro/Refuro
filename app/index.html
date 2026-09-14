@@ -781,6 +781,9 @@
   .loglist{max-height:280px;}
   .loglist div{padding:10px 2px; border-bottom:1px solid var(--soft-2);}
   .loglist div:last-child{border-bottom:none;}
+  /* Op een eigen pagina (Verkopen) mag de lijst de hele pagina gebruiken: geen intern
+     scrolvakje, maar de pagina zelf scrollt. */
+  .loglist.paginalijst{max-height:none; overflow:visible;}
   .undoBtn{border-radius:var(--pil); padding:3px 11px; transition:.15s;}
   .undoBtn:hover{border-color:var(--red); color:var(--red); background:var(--red-soft);}
   .betaalrow{gap:10px; flex-wrap:wrap;} .betaalrow .btn{flex:1; min-width:120px;}
@@ -2420,7 +2423,7 @@
         <input id="verkopenZoek" placeholder="Zoek op naam of bedrag" autocomplete="off" oninput="verkopenZoekNu()"></div>
     </div>
     <div id="verkopenTotaal" class="muted" style="margin-bottom:12px"></div>
-    <div class="loglist" id="verkopenLijst"></div>
+    <div class="loglist paginalijst" id="verkopenLijst"></div>
   </div>
   </div>
 </section>
