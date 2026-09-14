@@ -3954,19 +3954,20 @@ function tekenOnline(){
               <svg class="i s"><use href="#i-print"/></svg>Vanaf deze computer
               <input type="file" accept="image/*" multiple hidden onchange="fotoUpload(this)">
             </label>
-            <button class="btn ghost small" onclick="fotosZoeken(this)">
-              <svg class="i s"><use href="#i-search"/></svg>Fabrieksfoto's zoeken</button>
           </div>
 
-          <div class="row" style="margin-top:10px">
+          <div class="hkkop" style="margin-top:18px">Fabrieksfoto's voor het hele model</div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost small" onclick="fotoZoekOnline(this)">
+              <svg class="i s"><use href="#i-search"/></svg>Zoek foto's online</button>
             <label class="btn ghost small" style="cursor:pointer">
-              <svg class="i s"><use href="#i-print"/></svg>Fabrieksfoto uploaden
+              <svg class="i s"><use href="#i-print"/></svg>Foto uploaden
               <input type="file" accept="image/*" multiple hidden onchange="fotoModelUpload(this)">
             </label>
-            <input id="onl_fablink" placeholder="of plak een fabrikantslink (https://…)" style="flex:1; min-width:170px">
+            <input id="onl_fablink" placeholder="plak hier een link of een gekopieerde foto" onpaste="fotoPlak(event)" style="flex:1; min-width:170px">
             <button class="btn ghost small" onclick="fotoModelLink(this)">Ophalen</button>
           </div>
-          <p class="muted klein" style="margin-top:8px">Fabrieksfoto's (Icecat, upload of link) gelden voor het <b>hele model</b>: één keer vullen, en elk volgend toestel van dit model krijgt ze vanzelf.</p>
+          <p class="muted klein" style="margin-top:8px">Deze foto's gelden voor het <b>hele model</b>: één keer vullen, en elk volgend toestel van dit model krijgt ze vanzelf. Klik "Zoek foto's online", kopieer een strakke productfoto (rechtermuisknop, afbeelding kopiëren) en plak hem hierboven. Werkt voor elk merk, ook Apple.</p>
 
           ${(onl.gevonden||[]).length?`<div style="margin-top:18px">
             <div class="hkkop">Gevonden bij de fabrikant</div>
@@ -4189,6 +4190,37 @@ async function fotoModelUpload(invoer){
   }
   await fotosLaden(onl.a);
   toast('Klaar · geldt voor het hele model', true);
+}
+
+/* Een treffer op modelnaam bij een fotocatalogus is onbetrouwbaar (en Apple is er
+   vaak helemaal geblokkeerd). Betrouwbaarder is: open een afbeeldingzoekopdracht voor
+   dit merk en model, laat de winkelier zelf een strakke productfoto kiezen en die
+   plakken of de link ophalen. Werkt voor elk merk en model. */
+function fotoZoekOnline(){
+  const a=onl.a;
+  const q=[a.merk, a.model].filter(Boolean).join(' ').trim();
+  if(!q){ toast('Vul eerst merk en model in','let-op'); return; }
+  window.open('https://www.google.com/search?tbm=isch&q='+encodeURIComponent(q), '_blank', 'noopener');
+}
+/* Plak je een gekopieerde afbeelding (niet een adres) in het linkveld, dan uploaden we
+   die meteen als fabrieksfoto. Zit er geen afbeelding op het klembord, dan laten we de
+   gewone tekst-plak (een https-link) ongemoeid. */
+function fotoPlak(e){
+  const items=(e.clipboardData && e.clipboardData.items) || [];
+  let img=null;
+  for(const it of items){ if(it.kind==='file' && (it.type||'').startsWith('image/')){ img=it.getAsFile(); break; } }
+  if(!img) return;
+  e.preventDefault();
+  (async()=>{
+    try{
+      const vrij=AANZICHTEN.filter(v=>!(onl.fotos||[]).some(f=>f.aanzicht===v.id));
+      const aanzicht=(vrij[0]||{id:'open'}).id;
+      const klein=await fotoVerkleinen(img);
+      await fabriekOpslaan({data:klein, aanzicht});
+      await fotosLaden(onl.a);
+      toast('Foto geplakt · geldt voor het hele model', true);
+    }catch(err){ toast('Plakken lukte niet: '+err.message,'fout'); }
+  })();
 }
 
 async function onlSchrijf(knop){
