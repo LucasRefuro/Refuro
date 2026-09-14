@@ -4809,7 +4809,7 @@ let hvProductId=null, hvAssortResult=[], hvZoekTimer=null;
 function hvOpen(){
   hvSluit();
   hvProductId=null; hvAssortResult=[];
-  const catOpties=(state.categorieen||[]).filter(c=>!c.systeem).map(c=>'<option value="'+c.id+'">'+esc(c.naam)+'</option>').join('');
+  const catOpties='<option value="">Geen categorie (telt als Overig)</option>'+(state.categorieen||[]).filter(c=>!c.systeem).map(c=>'<option value="'+c.id+'">'+esc(c.naam)+'</option>').join('');
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='hvOverlay';
   ov.onclick=e=>{ if(e.target===ov) hvSluit(); };
@@ -4942,7 +4942,10 @@ function hvVerkopen(){
     state.producten.push(p); save();
     toast('Aangemaakt in het systeem: '+naam, true);
   }
-  mandjeToevoegen({naam, aantal, verkoopStuk:verkoopP, inkoopStuk:inkoopP, productId: p?p.id:null, cat: p?p.cat:null});
+  /* Ook een losse verkoop (geen eigen product) mag een categorie meekrijgen, zodat
+     hij in "Winst per categorie" onder de juiste categorie valt en niet in Overig. */
+  const catKeuze=Number((document.getElementById('hvCat')||{}).value)||null;
+  mandjeToevoegen({naam, aantal, verkoopStuk:verkoopP, inkoopStuk:inkoopP, productId: p?p.id:null, cat: p?p.cat:catKeuze});
   hvSluit();
 }
 
