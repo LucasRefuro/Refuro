@@ -414,6 +414,10 @@
   .paginakeuze label{display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:500;
     text-transform:none; letter-spacing:0; color:var(--tekst); cursor:pointer; margin:0;}
   .paginakeuze input{width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none; cursor:pointer;}
+  .perslid{padding:16px 0; border-bottom:1px solid var(--border);}
+  .perslid:first-child{padding-top:6px;}
+  .perslid:last-child{border-bottom:none; padding-bottom:0;}
+  .perskop{margin-bottom:10px;}
   .teamRij2{display:flex; flex-direction:column; gap:10px; padding:16px 0; border-top:1px solid var(--border);}
   .teamRij2 .kop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .teamRij2 .kop b{font-size:15px;}
@@ -2335,6 +2339,18 @@
   </div>
 </section>
 
+<!-- PERSONEEL -->
+<section id="tab-personeel"hidden>
+  <div class="pagehead"><h1>Personeel</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-users"/></svg>Wie werkt er voor je</h2>
+    <p class="muted" style="margin-bottom:4px">Per persoon stel je in hoe het loon werkt: een vast bedrag per uur, of een percentage van de winst die tijdens de gewerkte uren is gedraaid, met een minimum en maximum per keer. En op welke kostenplaats het loon valt.</p>
+    <div id="personeelLijst"></div>
+  </div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2411,6 +2427,7 @@
       <div class="hubgroep">Administratie</div>
       <div class="hubgrid">
         <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Uren van het team en de loonkosten</span></span></button>
+        <button class="hubtegel" data-tab="personeel" onclick="showTab('personeel')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Personeel</b><span>Loon per uur of percentage en kostenplaats</span></span></button>
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
         <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
       </div>
@@ -3061,6 +3078,11 @@ function load(){
      accounts-tabel, niet via de oude medewerkers-lijst). De loonkosten worden hieruit
      berekend, dus dit hoort bij de blob-financiën en niet in state.medewerkers. */
   if(!s.lonen || typeof s.lonen!=='object') s.lonen={};
+  /* De loonvorm per teamlid (naast het uurtarief in s.lonen): 'uur' of 'percentage'.
+     Bij percentage horen een percentage, een minimum- en een maximumbedrag per keer,
+     en voor iedereen een kostenplaats (winkel of kantoor). Het uurtarief zelf blijft
+     bewust in s.lonen staan, zodat de bestaande loonkosten ongewijzigd blijven. */
+  if(!s.personeel || typeof s.personeel!=='object') s.personeel={};
   /* Screenprotectors verkoop je meestal in Clear of Privacy; die zetten we één keer
      als keuze-uitvoeringen klaar voor het verkoopblokje, tenzij je al iets hebt ingesteld. */
   if(!s.varSeed){
@@ -3156,6 +3178,7 @@ function showTab(t){
   if(t==='scan') focusScan();
   if(t==='verkoop') renderVerkoop();
   if(t==='uren') renderUren();
+  if(t==='personeel') renderPersoneel();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -3473,6 +3496,56 @@ function urenVanaf(){
 }
 function urenDatumTijd(u){ return u.datum ? new Date(u.datum).getTime() : (u.op||0); }
 function loonTarief(id){ return Number((state.lonen||{})[id])||0; }
+
+/* ── Personeel: loonvorm per teamlid ──
+   Draait op teamLeden (kopie van accounts) plus state.lonen (uurtarief) en
+   state.personeel (loonvorm, percentage, min/max, kostenplaats). */
+function pCfg(id){
+  const c=(state.personeel||{})[id]||{};
+  return {vorm:c.vorm||'uur', percentage:Number(c.percentage)||0,
+    minBedrag:Number(c.minBedrag)||0, maxBedrag:Number(c.maxBedrag)||0,
+    kostenplaats:c.kostenplaats||'winkel'};
+}
+function zetPersoneel(id, veld, val){
+  if(!state.personeel || typeof state.personeel!=='object') state.personeel={};
+  if(veld==='percentage'||veld==='minBedrag'||veld==='maxBedrag') val=Math.max(0, Number(val)||0);
+  const c=Object.assign({}, state.personeel[id]);
+  c[veld]=val;
+  state.personeel[id]=c;
+  save();
+  renderPersoneel();
+}
+function renderPersoneel(){
+  const box=document.getElementById('personeelLijst'); if(!box) return;
+  if(!teamLeden.length && account){
+    laadTeamLeden().then(()=>{ if(!document.getElementById('tab-personeel').hidden) renderPersoneel(); });
+  }
+  const leden = teamLeden.length ? teamLeden : (gebruiker?[{id:gebruiker.id, naam:gebruiker.naam, rol:gebruiker.rol}]:[]);
+  if(!leden.length){ box.innerHTML='<p class="muted">Nog geen teamleden. Voeg ze toe bij Team.</p>'; return; }
+  box.innerHTML=leden.map(l=>{
+    const c=pCfg(l.id), uur=loonTarief(l.id);
+    const loonVeld = c.vorm==='uur'
+      ? `<div style="min-width:120px"><label>Uurtarief (€)</label><input type="number" step="0.01" min="0" value="${uur||''}" placeholder="0" onchange="zetLoon('${l.id}',this.value)"></div>`
+      : `<div style="min-width:110px"><label>Percentage (%)</label><input type="number" step="0.5" min="0" max="100" value="${c.percentage||''}" placeholder="0" onchange="zetPersoneel('${l.id}','percentage',this.value)"></div>
+         <div style="min-width:120px"><label>Minimum (€)</label><input type="number" step="0.01" min="0" value="${c.minBedrag||''}" placeholder="0" onchange="zetPersoneel('${l.id}','minBedrag',this.value)"></div>
+         <div style="min-width:120px"><label>Maximum (€)</label><input type="number" step="0.01" min="0" value="${c.maxBedrag||''}" placeholder="geen" onchange="zetPersoneel('${l.id}','maxBedrag',this.value)"></div>`;
+    return `<div class="perslid">
+      <div class="perskop"><b>${esc(l.naam||'?')}</b>${l.rol?` <span class="muted klein">${esc(l.rol)}</span>`:''}</div>
+      <div class="row" style="align-items:flex-end; flex-wrap:wrap; gap:12px">
+        <div><label>Loonvorm</label><div class="bkvarr">
+          <button type="button" class="bkvar${c.vorm==='uur'?' aan':''}" onclick="zetPersoneel('${l.id}','vorm','uur')">Per uur</button>
+          <button type="button" class="bkvar${c.vorm==='percentage'?' aan':''}" onclick="zetPersoneel('${l.id}','vorm','percentage')">Percentage</button>
+        </div></div>
+        ${loonVeld}
+        <div><label>Kostenplaats</label><div class="bkvarr">
+          <button type="button" class="bkvar${c.kostenplaats!=='kantoor'?' aan':''}" onclick="zetPersoneel('${l.id}','kostenplaats','winkel')">Winkel</button>
+          <button type="button" class="bkvar${c.kostenplaats==='kantoor'?' aan':''}" onclick="zetPersoneel('${l.id}','kostenplaats','kantoor')">Kantoor</button>
+        </div></div>
+      </div>
+      ${c.vorm==='percentage'?`<p class="muted klein" style="margin-top:8px">${c.percentage||0}% van de winst tijdens de gewerkte uren${c.minBedrag?`, minimaal ${euro(c.minBedrag)}`:''}${c.maxBedrag?`, maximaal ${euro(c.maxBedrag)}`:''} per keer.</p>`:''}
+    </div>`;
+  }).join('');
+}
 function urenLoonInPeriode(van, tot){
   return (state.uren||[]).reduce((s,u)=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ s+=(Number(u.uren)||0)*loonTarief(u.medewerker); } return s; },0);
 }
@@ -7735,7 +7808,7 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','personeel','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
   beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team','meer'],
