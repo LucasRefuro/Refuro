@@ -133,10 +133,13 @@ Deno.serve(async (req) => {
     const contact_id = await contactId(token, admin, leverancier || "Diverse leveranciers");
     if (!contact_id) return fout("Kon geen leverancier-contact vinden of aanmaken.", 502);
 
+    // Moneybird eist een referentie (het factuurnummer van de leverancier). Hebben we die
+    // niet, dan vullen we een leesbare eigen referentie zodat de factuur toch geboekt kan
+    // worden; die pas je in Moneybird zo aan.
+    const reference = (String(lijf?.reference || "").trim()) || `${wat} ${datum}`.slice(0, 120);
     const body = {
       purchase_invoice: {
-        contact_id, date: datum,
-        reference: lijf?.reference || undefined,
+        contact_id, date: datum, reference,
         prices_are_incl_tax: true,
         details_attributes: [{ description: wat, price: bedrag, amount: "1", tax_rate_id, ledger_account_id }],
       },
