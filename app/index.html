@@ -2474,6 +2474,10 @@
       <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
     </div>
     <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px">
+      <button class="btn ghost small" onclick="haalFacturenUitMail(this)"><svg class="i s"><use href="#i-download"/></svg>Haal facturen op uit e-mail</button>
+      <span class="muted klein" style="margin-left:8px">Storvo kijkt je mailbox na en zet nieuwe facturen als concept in "Te bevestigen". Dit gebeurt ook elke dag vanzelf.</span>
+    </div>
+    <div style="margin-top:10px">
       <button class="btn ghost small" onclick="moneybirdTest(this)"><svg class="i s"><use href="#i-link"/></svg>Test Moneybird-verbinding</button>
       <span class="muted klein" style="margin-left:8px">Verbonden? Dan staat er per inkoop een knop "Naar Moneybird" om hem als inkoopfactuur in je boekhouding te zetten.</span>
     </div>
@@ -3357,7 +3361,7 @@ function showTab(t){
   if(t==='personeel'){ renderPersoneel(); renderPersoneelMaand(); }
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
-  if(t==='inkopen') renderInkopen();
+  if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); }
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -5060,6 +5064,101 @@ function inkoopBevestig(id){
   const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
   v.concept=false; save(); renderInkopen(); toast('Inkoop bevestigd', true);
 }
+
+/* ═══ Facturen uit de mailbox ═══
+   Storvo kijkt de mailbox na (Edge Function inkoop-mail) en zet nieuwe facturen als concept
+   in de echte tabel inkoop_concepten. Die staan los van de blob: de functie draait op de
+   server (ook 's nachts via de cron) en kan niet in de blob schrijven. Hier laden we ze,
+   tonen ze in "Te bevestigen", en bij bevestigen maken we er een gewone inkoop van (in de
+   blob) en verwijderen we de conceptregel. */
+let mailConcepten=[];
+async function laadMailConcepten(){
+  try{
+    const {data,error}=await sb.from('inkoop_concepten').select('*').order('aangemaakt_op',{ascending:false});
+    if(error){ mailConcepten=[]; return; }
+    mailConcepten=(data||[]).map(r=>({...r, bedrag:Number(r.bedrag)||0, btw:Number(r.btw)||21, soort:r.soort||'voorraad'}));
+  }catch(e){ mailConcepten=[]; }
+  renderInkopen();
+}
+async function haalFacturenUitMail(knop){
+  if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Mailbox nakijken…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Niet ingelogd');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/inkoop-mail',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:'{}'});
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Mailbox nakijken mislukte');
+    await laadMailConcepten();
+    toast(uit.gevonden ? (uit.gevonden+' factuur'+(uit.gevonden===1?'':'en')+' gevonden — controleer en bevestig') : 'Geen nieuwe facturen in de mailbox', true);
+  }catch(e){ toast('Mail: '+e.message,'fout'); }
+  if(knop){ knop.disabled=false; if(knop.dataset.oud) knop.innerHTML=knop.dataset.oud; }
+}
+function mailConceptSoort(id, soort){
+  const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v) return;
+  v.soort = soort==='kosten' ? 'kosten' : 'voorraad'; renderInkopen();
+}
+async function mailConceptBevestig(id){
+  const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v) return;
+  const datum=/^\d{4}-\d{2}-\d{2}$/.test(String(v.datum||''))?v.datum:new Date().toISOString().slice(0,10);
+  if(v.bedrag && inkoopBestaatAl({factuurnummer:v.factuurnummer, leverancier:v.leverancier, bedrag:v.bedrag, datum})){
+    if(!confirm('Deze factuur lijkt al in je inkopen te staan. Toch toevoegen?')) return;
+  }
+  const isImg=/\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(v.factuur_pad||'');
+  const nieuw={id:uid(), t:new Date(datum+'T12:00:00').getTime(), datum, wat:v.wat||v.leverancier||'Inkoop', leverancier:v.leverancier||'', bedrag:v.bedrag, btw:[21,9,0].includes(Number(v.btw))?Number(v.btw):21, soort:v.soort==='kosten'?'kosten':'voorraad', factuurnummer:v.factuurnummer||'', bron:'mail'};
+  if(v.factuur_pad){ nieuw.factuur_pad=v.factuur_pad; nieuw.factuur_naam=(v.factuur_pad.split('/').pop()||'factuur'); nieuw.factuur_type=isImg?('image/'+((v.factuur_pad.split('.').pop()||'jpg').toLowerCase())):'application/pdf'; }
+  if(!Array.isArray(state.inkopen)) state.inkopen=[];
+  state.inkopen.unshift(nieuw);
+  /* De conceptregel weg uit de tabel; het factuurbestand laten we staan (de inkoop wijst er
+     nu naar). Lukt het verwijderen niet, dan halen we 'm lokaal weg zodat hij niet dubbel
+     verschijnt — bij de volgende keer laden komt hij niet terug want de inkoop is er al. */
+  try{ await sb.from('inkoop_concepten').delete().eq('id', v.id); }catch(e){}
+  mailConcepten=mailConcepten.filter(x=>String(x.id)!==String(id));
+  save(); renderInkopen(); toast('Inkoop bevestigd', true);
+}
+async function mailConceptWeg(id){
+  const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v) return;
+  if(!confirm('Deze factuur weggooien? Hij verdwijnt uit "Te bevestigen".')) return;
+  try{ if(v.factuur_pad) await sb.storage.from('inkoopfacturen').remove([v.factuur_pad]); }catch(e){}
+  try{ await sb.from('inkoop_concepten').delete().eq('id', v.id); }catch(e){}
+  mailConcepten=mailConcepten.filter(x=>String(x.id)!==String(id));
+  renderInkopen(); toast('Weggegooid', true);
+}
+async function mailConceptDetail(id){
+  const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v||!v.factuur_pad) return;
+  const isImg=/\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(v.factuur_pad||'');
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='inkDetailOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:92vh; overflow:auto">
+    <h3>Factuur uit e-mail</h3>
+    <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap">
+      <div style="flex:2; min-width:280px"><div id="mailPdf" class="muted">Factuur laden…</div></div>
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:24px; font-weight:800">${euro(v.bedrag)}</div>
+        <div class="muted klein" style="margin:2px 0 12px">incl. btw ${Number(v.btw)||0}%</div>
+        <table class="strooktabel"><tbody>
+          <tr><td>Wat</td><td class="num">${esc(v.wat||'')}</td></tr>
+          <tr><td>Leverancier</td><td class="num">${esc(v.leverancier||'—')}</td></tr>
+          <tr><td>Datum</td><td class="num">${esc(v.datum||'—')}</td></tr>
+          <tr><td>Factuurnummer</td><td class="num">${esc(v.factuurnummer||'—')}</td></tr>
+        </tbody></table>
+        <div class="acts2" style="margin-top:14px">
+          <button class="btn small" onclick="document.getElementById('inkDetailOverlay').remove(); mailConceptBevestig('${v.id}')">Bevestigen</button>
+          <button class="btn ghost small" onclick="document.getElementById('inkDetailOverlay').remove(); mailConceptWeg('${v.id}')">Weggooien</button>
+        </div>
+      </div>
+    </div>
+    <div class="acts" style="margin-top:16px"><button class="btn ghost" onclick="document.getElementById('inkDetailOverlay').remove()">Sluiten</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const pdfEl=document.getElementById('mailPdf');
+  try{
+    const {data,error}=await sb.storage.from('inkoopfacturen').createSignedUrl(v.factuur_pad, 300);
+    if(error||!data){ if(pdfEl) pdfEl.textContent='Kon de factuur niet laden.'; return; }
+    if(pdfEl) pdfEl.innerHTML = isImg
+      ? '<img src="'+data.signedUrl+'" style="width:100%; border:1px solid var(--border); border-radius:var(--radius-s)">'
+      : '<iframe src="'+data.signedUrl+'" style="width:100%; height:72vh; border:1px solid var(--border); border-radius:var(--radius-s)" title="factuur"></iframe>';
+  }catch(e){ if(pdfEl) pdfEl.textContent='Kon de factuur niet laden.'; }
+}
 /* Meerdere facturen tegelijk uitlezen en als concept klaarzetten. Elke factuur wordt door
    de AI gelezen, opgeslagen en gecheckt op dubbele; jij bevestigt ze daarna. */
 async function factuurenBatch(input){
@@ -5110,26 +5209,49 @@ function renderInkopen(){
   const dEl=document.getElementById('ink_datum'); if(dEl && !dEl.value) dEl.value=new Date().toISOString().slice(0,10);
   const lijst=document.getElementById('inkopenLijst'); if(!lijst) return;
   const start=inkopenPeriodeStart();
-  /* Concepten (automatisch uitgelezen, nog te bevestigen) staan apart en tellen niet mee. */
+  /* Concepten (automatisch uitgelezen, nog te bevestigen) staan apart en tellen niet mee.
+     Twee bronnen: uit de batch-upload (in de blob, v.concept===true) en uit de mailbox
+     (echte tabel inkoop_concepten, in mailConcepten). Ze staan door elkaar in één lijst;
+     de mail-concepten eerst want dat zijn de nieuwe die vanzelf binnenkwamen. */
   const concepten=(state.inkopen||[]).filter(v=>v.concept===true);
+  const totaalConcept=concepten.length+mailConcepten.length;
   const cKaart=document.getElementById('inkopenConceptKaart'), cVak=document.getElementById('inkopenConcepten'), cTel=document.getElementById('inkopenConceptTel');
-  if(cKaart) cKaart.hidden = !concepten.length;
-  if(cTel) cTel.textContent = concepten.length ? '('+concepten.length+')' : '';
-  if(cVak) cVak.innerHTML = concepten.map(v=>{
-    const d=new Date(v.t);
-    return `<div class="perslid"><div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px">
-      <div><b>${euro(v.bedrag)}</b> ${esc(v.wat||'')}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''}<div class="muted klein" style="margin-top:2px">btw ${Number(v.btw)||0}%${v.factuurnummer?' · '+esc(v.factuurnummer):''} · ${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</div>
-        <div class="bkvarr" style="margin-top:8px">
-          <button type="button" class="bkvar${v.soort!=='kosten'?' aan':''}" onclick="inkoopConceptSoort('${v.id}','voorraad')">Voorraad</button>
-          <button type="button" class="bkvar${v.soort==='kosten'?' aan':''}" onclick="inkoopConceptSoort('${v.id}','kosten')">Kosten</button>
-        </div></div>
-      <div class="acts2">
-        ${v.factuur_pad?'<button class="btn ghost small" onclick="inkoopDetail(\''+v.id+'\')">Bekijk</button>':''}
-        <button class="btn small" onclick="inkoopBevestig('${v.id}')">Bevestigen</button>
-        <button class="btn ghost small" onclick="inkoopWeg('${v.id}')">Weggooien</button>
-      </div>
-    </div></div>`;
-  }).join('');
+  if(cKaart) cKaart.hidden = !totaalConcept;
+  if(cTel) cTel.textContent = totaalConcept ? '('+totaalConcept+')' : '';
+  if(cVak){
+    const mailHtml=mailConcepten.map(v=>{
+      const d=v.datum?new Date(v.datum+'T12:00:00'):new Date();
+      const soort=v.soort==='kosten'?'kosten':'voorraad';
+      return `<div class="perslid"><div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px">
+        <div><span class="wachtTag" style="background:var(--lblauw); color:var(--navy)">uit e-mail</span> <b>${euro(v.bedrag)}</b> ${esc(v.wat||'')}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''}<div class="muted klein" style="margin-top:2px">btw ${Number(v.btw)||0}%${v.factuurnummer?' · '+esc(v.factuurnummer):''} · ${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</div>
+          <div class="bkvarr" style="margin-top:8px">
+            <button type="button" class="bkvar${soort!=='kosten'?' aan':''}" onclick="mailConceptSoort('${v.id}','voorraad')">Voorraad</button>
+            <button type="button" class="bkvar${soort==='kosten'?' aan':''}" onclick="mailConceptSoort('${v.id}','kosten')">Kosten</button>
+          </div></div>
+        <div class="acts2">
+          ${v.factuur_pad?'<button class="btn ghost small" onclick="mailConceptDetail(\''+v.id+'\')">Bekijk</button>':''}
+          <button class="btn small" onclick="mailConceptBevestig('${v.id}')">Bevestigen</button>
+          <button class="btn ghost small" onclick="mailConceptWeg('${v.id}')">Weggooien</button>
+        </div>
+      </div></div>`;
+    }).join('');
+    const blobHtml=concepten.map(v=>{
+      const d=new Date(v.t);
+      return `<div class="perslid"><div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px">
+        <div><b>${euro(v.bedrag)}</b> ${esc(v.wat||'')}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''}<div class="muted klein" style="margin-top:2px">btw ${Number(v.btw)||0}%${v.factuurnummer?' · '+esc(v.factuurnummer):''} · ${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</div>
+          <div class="bkvarr" style="margin-top:8px">
+            <button type="button" class="bkvar${v.soort!=='kosten'?' aan':''}" onclick="inkoopConceptSoort('${v.id}','voorraad')">Voorraad</button>
+            <button type="button" class="bkvar${v.soort==='kosten'?' aan':''}" onclick="inkoopConceptSoort('${v.id}','kosten')">Kosten</button>
+          </div></div>
+        <div class="acts2">
+          ${v.factuur_pad?'<button class="btn ghost small" onclick="inkoopDetail(\''+v.id+'\')">Bekijk</button>':''}
+          <button class="btn small" onclick="inkoopBevestig('${v.id}')">Bevestigen</button>
+          <button class="btn ghost small" onclick="inkoopWeg('${v.id}')">Weggooien</button>
+        </div>
+      </div></div>`;
+    }).join('');
+    cVak.innerHTML = mailHtml + blobHtml;
+  }
   const rijen=(state.inkopen||[]).filter(v=>v.concept!==true && (v.t||0)>=start);
   const tot=rijen.reduce((s,v)=>s+(Number(v.bedrag)||0),0);
   const totBtw=rijen.reduce((s,v)=>s+inkoopBtwBedrag(v),0);
