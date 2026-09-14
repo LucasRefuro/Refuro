@@ -37,11 +37,12 @@ async function mb(token: string, admin: string, pad: string, opties: RequestInit
     headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json", ...(opties.headers || {}) },
   });
 }
-async function administratie(token: string): Promise<string | null> {
+async function administratieInfo(token: string): Promise<{ id: string | null; status: number; body: string }> {
   const res = await fetch(`${MB}/administrations.json`, { headers: { "Authorization": "Bearer " + token } });
-  if (!res.ok) return null;
-  const lijst = await res.json();
-  return Array.isArray(lijst) && lijst.length ? String(lijst[0].id) : null;
+  const body = await res.text();
+  let id: string | null = null;
+  try { const l = JSON.parse(body); if (Array.isArray(l) && l.length) id = String(l[0].id); } catch (_e) { /* geen json */ }
+  return { id, status: res.status, body: body.slice(0, 200) };
 }
 async function json(res: Response): Promise<any> { try { return await res.json(); } catch { return null; } }
 
@@ -84,8 +85,12 @@ Deno.serve(async (req) => {
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
 
-  const admin = lijf?.administration_id || await administratie(token);
-  if (!admin) return fout("Geen Moneybird-administratie gevonden voor dit token.", 502);
+  let admin = lijf?.administration_id || null;
+  if (!admin) {
+    const info = await administratieInfo(token);
+    admin = info.id;
+    if (!admin) return fout(`Geen Moneybird-administratie gevonden (HTTP ${info.status}). Antwoord: ${info.body || "leeg"}`, 502);
+  }
 
   if (lijf?.actie === "status") {
     const [tr, la] = await Promise.all([
