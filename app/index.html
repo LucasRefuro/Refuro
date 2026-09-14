@@ -54,6 +54,9 @@
   .blokje:hover{border-color:var(--oranje);}
   .blokje svg{color:var(--oranje); width:26px; height:26px;}
   .blokje .bkprijs{font-weight:600; font-size:12px; color:var(--muted);}
+  .pnlvak{position:relative;}
+  .pnlvak .pnlweg{position:absolute; top:4px; right:4px; width:22px; height:22px; border:none; border-radius:50%; background:var(--card); color:var(--muted); cursor:pointer; font-size:15px; line-height:1; box-shadow:0 1px 5px rgba(0,0,0,.12);}
+  .pnlvak .pnlweg:hover{color:var(--red-tekst);}
   .planrij{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
   .planlinks{display:flex; align-items:center; gap:10px;}
   .planwanneer{font-size:12px; color:var(--muted);}
@@ -2976,6 +2979,7 @@ function load(){
     {id:3, naam:'Data-overdracht oude naar nieuwe telefoon', prijs:24.95, kosten:0}
   ];
   if(!s.reparaties) s.reparaties=[];
+  if(!Array.isArray(s.postnl)) s.postnl=[];
   if(!s.onderdelen) s.onderdelen=[];
   if(!s.instellingen) s.instellingen={naam:'Storvo', email:'', tel:''};
   if(!s.repNr) s.repNr=0;
@@ -4594,9 +4598,10 @@ function renderVerkoop(){
   const fb=document.getElementById('vkFeedback'); if(fb){ fb.className=''; fb.textContent=''; }
   const blok=document.getElementById('vkBlokjes');
   if(blok){
-    blok.innerHTML = state.categorieen.map(c=>
+    blok.innerHTML = (state.categorieen.map(c=>
       `<button type="button" class="blokje" onclick="blokOpen(${c.id})"><svg class="i"><use href="#${catIcoon(c.naam)}"/></svg><span data-onvertaald>${esc(c.naam)}</span><span class="bkprijs">${c.verkoop>0?euro(c.verkoop):'prijs zelf'}</span></button>`
-    ).join('') || '<span class="muted">Nog geen categorieën. Voeg ze toe bij Instellingen, Categorieën.</span>';
+    ).join('') || '<span class="muted">Nog geen categorieën. Voeg ze toe bij Instellingen, Categorieën.</span>')
+    + `<button type="button" class="blokje" onclick="postnlOpen()"><svg class="i"><use href="#i-truck"/></svg><span data-onvertaald>PostNL</span><span class="bkprijs">pakketten en brieven</span></button>`;
   }
   const log=document.getElementById('vkLog');
   if(log){
@@ -4831,6 +4836,76 @@ function blokVerkoop(){
   const bijbestel=document.getElementById('bk_bijbestel').checked;
   mandjeToevoegen({naam, aantal, verkoopStuk:perStuk, inkoopStuk, productId:null, bijbestelCat: bijbestel ? c.id : null});
   blokSluit();
+}
+
+/* ── PostNL-blok op de verkooppagina ──
+   Pakketten en brieven die je aan de balie verstuurt. Wat je hier per stuk
+   instelt is je eigen vergoeding: die telt volledig als marge (inkoop 0) mee in
+   de omzet. De soorten beheer je zelf in dit venster. */
+let postnlTypeKeuze='pakket';
+function postnlOpen(){
+  postnlSluit();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='postnlOverlay';
+  ov.onclick=e=>{ if(e.target===ov) postnlSluit(); };
+  document.body.appendChild(ov);
+  postnlTeken();
+}
+function postnlSluit(){ const o=document.getElementById('postnlOverlay'); if(o) o.remove(); }
+function postnlTeken(){
+  const ov=document.getElementById('postnlOverlay'); if(!ov) return;
+  const lijst=state.postnl||[];
+  ov.innerHTML=`<div class="popup" style="max-width:540px">
+    <h3>PostNL</h3>
+    <p class="muted" style="font-size:13px; margin-bottom:12px">Tik een pakket aan om het aan de verkoop toe te voegen. Het telt volledig als marge in je omzet.</p>
+    <div class="blokjes" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">
+      ${lijst.length ? lijst.map(t=>`
+        <div class="pnlvak">
+          <button type="button" class="blokje" onclick="postnlVerkoop('${t.id}')">
+            <svg class="i"><use href="#i-package"/></svg>
+            <span data-onvertaald>${esc(t.naam)}</span>
+            <span class="bkprijs">${t.type==='brief'?'Brief':'Pakket'} &middot; ${euro(t.prijs)}</span>
+          </button>
+          <button class="pnlweg" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
+        </div>`).join('') : '<span class="muted">Nog geen pakketten. Voeg er hieronder een toe.</span>'}
+    </div>
+    <div style="font-weight:700; margin:16px 0 8px">Nieuw pakkettype</div>
+    <div class="row" style="align-items:flex-end">
+      <div style="flex:2; min-width:150px"><label>Naam</label><input id="pnl_naam" placeholder="bijv. Pakket tot 10 kg" autocomplete="off"></div>
+      <div><label>Soort</label><div class="bkvarr">
+        <button type="button" class="bkvar${postnlTypeKeuze==='pakket'?' aan':''}" onclick="postnlTypeKies(this,'pakket')">Pakket</button>
+        <button type="button" class="bkvar${postnlTypeKeuze==='brief'?' aan':''}" onclick="postnlTypeKies(this,'brief')">Brief</button>
+      </div></div>
+      <div style="min-width:100px"><label>Prijs (€)</label><input id="pnl_prijs" type="number" min="0" step="0.01" autocomplete="off"></div>
+      <button class="btn" onclick="postnlNieuwType()">Toevoegen</button>
+    </div>
+    <div class="acts" style="margin-top:14px"><button class="btn ghost" onclick="postnlSluit()">Sluiten</button></div>
+  </div>`;
+}
+function postnlTypeKies(btn, soort){
+  postnlTypeKeuze=soort;
+  const wrap=btn.parentElement;
+  wrap.querySelectorAll('.bkvar').forEach(b=>b.classList.toggle('aan', b===btn));
+}
+function postnlVerkoop(id){
+  const t=(state.postnl||[]).find(x=>String(x.id)===String(id)); if(!t) return;
+  mandjeToevoegen({naam:'PostNL · '+t.naam, aantal:1, verkoopStuk:Number(t.prijs)||0, inkoopStuk:0, productId:null, bijbestelCat:null});
+  toast(t.naam+' toegevoegd aan de verkoop', true);
+}
+function postnlNieuwType(){
+  const naam=(document.getElementById('pnl_naam').value||'').trim();
+  const prijs=Math.max(0, Number(document.getElementById('pnl_prijs').value)||0);
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
+  state.postnl=state.postnl||[];
+  state.postnl.push({id:uid(), naam, type:postnlTypeKeuze, prijs});
+  save();
+  postnlTeken();
+  toast('Pakkettype toegevoegd: '+naam, true);
+}
+function postnlWeg(id){
+  state.postnl=(state.postnl||[]).filter(t=>String(t.id)!==String(id));
+  save();
+  postnlTeken();
 }
 function blokVarKies(btn){
   const wrap=btn.parentElement;
