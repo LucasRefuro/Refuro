@@ -405,12 +405,15 @@
   .btwkeuze{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:4px 0 14px;}
   .btwoptie{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;
     text-transform:none; letter-spacing:0; color:var(--tekst); margin:0;}
-  .btwoptie input{margin:0;}
+  /* De radio moet een radio blijven: de globale input-regel (width:100%, padding,
+     rand) maakt er anders een vol invoervak van, waardoor de twee opties over
+     elkaar vielen. Zelfde maat als de andere radio's in de app. */
+  .btwoptie input{width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none; cursor:pointer;}
   /* Per-account paginakeuze in het teambeheer */
   .paginakeuze{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:8px;}
   .paginakeuze label{display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:500;
     text-transform:none; letter-spacing:0; color:var(--tekst); cursor:pointer; margin:0;}
-  .paginakeuze input{margin:0;}
+  .paginakeuze input{width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none; cursor:pointer;}
   .teamRij2{display:flex; flex-direction:column; gap:10px; padding:16px 0; border-top:1px solid var(--border);}
   .teamRij2 .kop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .teamRij2 .kop b{font-size:15px;}
