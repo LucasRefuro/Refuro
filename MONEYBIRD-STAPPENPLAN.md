@@ -47,15 +47,25 @@ We bouwen nu de token-variant en zetten de architectuur zo dat OAuth er later bo
 
 ## Wat jij doet (eenmalig, ~5 minuten)
 
-1. Ga naar **moneybird.com** → rechtsboven je naam → **Instellingen** →
-   **API-tokens / Ontwikkelaars**, of direct `https://moneybird.com/user/applications/new`.
-2. Maak een **persoonlijk API-token** aan (naam bv. "Storvo"). Kies de rechten
-   (scopes): in elk geval **documents** (voor inkoopfacturen) en **contacts**.
-3. Kopieer het token. Je hoeft het administratie-id niet op te zoeken: Storvo haalt dat
+Let op: `moneybird.com/user/applications/new` opent tegenwoordig het **OAuth-applicatie**-
+formulier (met een Callback URL). Dat is de multi-administratie-route en willen we nu niet.
+Het **API-token voor één administratie** is verplaatst naar **Externe applicaties** bij de
+instellingen van je administratie. Daar is géén Callback URL nodig.
+
+1. Log in op **moneybird.com** en zorg dat je in de juiste **administratie** zit.
+2. Ga naar **Instellingen** (het tandwiel / je administratienaam) →
+   **Externe applicaties** (soms onder "Koppelingen" of "Ontwikkelaars").
+3. Kies **Nieuw token / API-token aanmaken voor deze administratie**.
+   - Naam: **Storvo**.
+   - Rechten (scopes): in elk geval **documents** (inkoopfacturen) en **contacts**;
+     staan er losse aan/uit-vinkjes, laat de rest gerust uit.
+   - Er is hier **geen Callback URL** (zie je die wel, dan zit je nog op het
+     OAuth-formulier → ga terug en kies de token-route).
+4. Kopieer het token. Het administratie-id hoef je niet op te zoeken; Storvo haalt dat
    zelf op met het token (`…/administrations.json`).
-4. Geef het token aan mij, dan zet ik het als geheim **`MONEYBIRD_TOKEN`** in Supabase
-   (Project Settings → Edge Functions → Secrets). Het komt nooit in de code of in een
-   chat te staan.
+5. Geef het token veilig aan mij, dan zet ik het als geheim **`MONEYBIRD_TOKEN`** in
+   Supabase (Project Settings → Edge Functions → Secrets). Of zet je het daar zelf neer.
+   Het komt nooit in de code of in een chat te staan.
 
 ---
 
