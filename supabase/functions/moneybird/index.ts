@@ -79,7 +79,9 @@ Deno.serve(async (req) => {
   const { data: wie } = await klant.auth.getUser();
   if (!wie?.user) return fout("Niet ingelogd", 401);
 
-  const token = Deno.env.get("MONEYBIRD_TOKEN");
+  // .trim() vangt een per ongeluk meegekopieerde spatie of enter in het geheim op; dat is
+  // de meest voorkomende oorzaak van "token is invalid".
+  const token = (Deno.env.get("MONEYBIRD_TOKEN") || "").trim();
   if (!token) return fout("De Moneybird-koppeling is nog niet ingesteld (MONEYBIRD_TOKEN ontbreekt).", 503);
 
   let lijf: any;
