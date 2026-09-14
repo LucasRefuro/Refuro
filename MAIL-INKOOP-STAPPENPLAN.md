@@ -76,3 +76,40 @@ zichzelf bruikbaar.
   wat je zelf al hebt ingevoerd of naar Moneybird stuurde telt niet nog een keer.
 - **Alles blijft een indicatie tot jij bevestigt.** Geen automatische boeking in je cijfers
   zonder jouw akkoord.
+
+---
+
+## Hoe het gebouwd is (Fase 3, live)
+
+De mailbox is **info@refuro.nl**, en die zit op **Zoho** (EU-datacenter: MX = mx.zoho.eu).
+Niet op Hostinger, dus het IMAP-adres is `imap.zoho.eu` (poort 993, TLS), niet
+imap.hostinger.com. Bij Zoho moet IMAP eerst **aangezet** worden (Instellingen → Mail
+Accounts → IMAP Access) en bij tweestapsverificatie is een **app-wachtwoord** nodig.
+
+- **Edge Function `inkoop-mail`** (`supabase/functions/inkoop-mail/index.ts`, verify_jwt
+  uit). Opent INBOX **alleen-lezen** met `imapflow`, dus de gelezen/ongelezen-status
+  verandert niet. Onthoudt per team de laatst verwerkte UID in tabel `inkoop_mail_stand`
+  (eerste keer: laatste 30 dagen, daarna alleen nieuwer; max 40 per keer). Elke PDF/foto
+  boven 4 kB gaat langs de AI met de vraag "is dit een factuur?"; zo ja, dan velden
+  uitlezen, dedup (`bestaatAl` op factuurnummer, of leverancier + bedrag + datum), factuur
+  in de privé-bucket `inkoopfacturen`, en een conceptregel in tabel `inkoop_concepten`.
+- **Toegang tot de functie:** cron-geheim (`X-Cron-Secret` == `MAIL_CRON_SECRET`) óf een
+  ingelogde gebruiker (de knop). Geen van beide → 401.
+- **In Storvo:** knop **"Haal facturen op uit e-mail"** op Inkopen (`haalFacturenUitMail`),
+  concepten uit `inkoop_concepten` in het blok **"Te bevestigen"** met label "uit e-mail"
+  (`laadMailConcepten`, `mailConceptBevestig` maakt er een blob-inkoop van en verwijdert de
+  conceptregel, `mailConceptWeg`, `mailConceptDetail`).
+- **Dagelijkse taak:** `pg_cron`-job `inkoop-mail-dagelijks`, elke dag 06:00 UTC (08:00 NL
+  zomer). Roept de functie aan via `pg_net`; het cron-geheim staat in **Vault**
+  (`mail_cron_secret`), niet in platte tekst in de cron-opdracht.
+
+### Geheimen (zet de gebruiker in Supabase → Project Settings → Edge Functions → Secrets)
+
+| Geheim | Waarde |
+|---|---|
+| `MAIL_INKOOP_HOST` | `imap.zoho.eu` |
+| `MAIL_INKOOP_USER` | `info@refuro.nl` |
+| `MAIL_INKOOP_PASS` | Zoho-wachtwoord of app-wachtwoord |
+| `MAIL_INKOOP_TEAM` | `ce975142-a7d9-4fb2-9cb5-9cc1fe1d7f65` (team Storvo) |
+| `MAIL_CRON_SECRET` | gedeeld met Vault; alleen voor de dagelijkse ronde |
+| `ANTHROPIC_API_KEY` | stond er al (factuurlezer) |
