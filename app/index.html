@@ -4983,7 +4983,7 @@ function renderInkopen(){
     const d=new Date(v.t);
     const mb = v.mb_id
       ? '<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">in Moneybird</span>'
-      : (verbonden ? '<button class="btn ghost small" onclick="inkoopNaarMoneybird(\''+v.id+'\', this)">Naar Moneybird</button>' : '');
+      : (verbonden ? '<button class="btn ghost small" onclick="inkoopMoneybirdDialoog(\''+v.id+'\')">Naar Moneybird</button>' : '');
     return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${mb}<span class="muted">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span><button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
   }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
 }
@@ -5017,16 +5017,49 @@ async function moneybirdTest(knop){
   }catch(e){ toast('Moneybird: '+e.message,'fout'); }
   finally{ if(knop){ knop.disabled=false; knop.textContent=oud||'Test Moneybird-verbinding'; } }
 }
+/* De factuur (PDF of foto) gaat als bijlage mee naar Moneybird, want zonder het document
+   kan de boekhouder de inkoop niet verwerken. We bewaren het bestand niet in Storvo; het
+   leeft in Moneybird. */
+let mbFactuurData=null;
+function inkoopMoneybirdDialoog(id){
+  const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  mbFactuurData=null;
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='mbOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup">
+    <h3>Naar Moneybird</h3>
+    <p class="pv">${esc(v.wat)} &middot; ${euro(v.bedrag)} &middot; btw ${Number(v.btw)||0}%<br>Voeg de factuur toe (PDF of foto), zodat je boekhouder de inkoop kan verwerken.</p>
+    <label class="btn ghost" style="cursor:pointer; width:100%; justify-content:center"><svg class="i s"><use href="#i-upload"/></svg>Factuur kiezen<input id="mb_factuur" type="file" accept="application/pdf,image/*" hidden onchange="mbFactuurGekozen(this)"></label>
+    <div id="mb_factuurNaam" class="muted klein" style="margin-top:8px"></div>
+    <div class="acts" style="margin-top:14px">
+      <button class="btn" onclick="inkoopNaarMoneybird('${id}', this)">Versturen</button>
+      <button class="btn ghost" onclick="document.getElementById('mbOverlay').remove()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function mbFactuurGekozen(input){
+  const f=(input.files||[])[0];
+  const naam=document.getElementById('mb_factuurNaam');
+  if(!f){ mbFactuurData=null; if(naam) naam.textContent=''; return; }
+  if(f.size>12*1024*1024){ toast('Bestand te groot (max 12 MB)','let-op'); input.value=''; mbFactuurData=null; if(naam) naam.textContent=''; return; }
+  const r=new FileReader();
+  r.onload=()=>{ mbFactuurData=r.result; if(naam) naam.textContent='Gekozen: '+f.name; };
+  r.readAsDataURL(f);
+}
 async function inkoopNaarMoneybird(id, knop){
   const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  const metFactuur=!!mbFactuurData;
   try{
     if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
-    const uit=await moneybirdAanroep({actie:'inkoop', datum:v.datum, wat:v.wat, leverancier:v.leverancier||'', bedrag:v.bedrag, btw:v.btw});
+    const uit=await moneybirdAanroep({actie:'inkoop', datum:v.datum, wat:v.wat, leverancier:v.leverancier||'', bedrag:v.bedrag, btw:v.btw, pdf: mbFactuurData||undefined});
     v.mb_id=uit.id||true; v.mb_url=uit.url||null;
     state.moneybird=state.moneybird||{}; state.moneybird.verbonden=true;
-    save(); renderInkopen();
-    toast('In Moneybird gezet als inkoopfactuur', true);
-  }catch(e){ toast('Moneybird: '+e.message,'fout'); if(knop){ knop.disabled=false; knop.textContent='Naar Moneybird'; } }
+    save(); mbFactuurData=null;
+    const o=document.getElementById('mbOverlay'); if(o) o.remove();
+    renderInkopen();
+    toast(metFactuur?'In Moneybird gezet, mét factuur':'In Moneybird gezet (nog zonder factuur)', true);
+  }catch(e){ toast('Moneybird: '+e.message,'fout'); if(knop){ knop.disabled=false; knop.textContent='Versturen'; } }
 }
 
 /* ---------- scannen ---------- */
