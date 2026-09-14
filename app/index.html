@@ -2466,6 +2466,10 @@
       <div style="min-width:100px"><label>Btw</label><select id="ink_btw"><option value="21">21%</option><option value="9">9%</option><option value="0">0%</option></select></div>
       <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
     </div>
+    <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px">
+      <button class="btn ghost small" onclick="moneybirdTest(this)"><svg class="i s"><use href="#i-link"/></svg>Test Moneybird-verbinding</button>
+      <span class="muted klein" style="margin-left:8px">Verbonden? Dan staat er per inkoop een knop "Naar Moneybird" om hem als inkoopfactuur in je boekhouding te zetten.</span>
+    </div>
   </div>
   <div class="card breed">
     <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px">
@@ -4974,13 +4978,55 @@ function renderInkopen(){
   const totBtw=rijen.reduce((s,v)=>s+inkoopBtwBedrag(v),0);
   const totEl=document.getElementById('inkopenTotaal');
   if(totEl) totEl.textContent = rijen.length ? (rijen.length+' inkoop'+(rijen.length===1?'':'en')+' · totaal '+euro(tot)+' · btw '+euro(totBtw)) : '';
+  const verbonden = state.moneybird && state.moneybird.verbonden;
   lijst.innerHTML = rijen.length ? rijen.map(v=>{
     const d=new Date(v.t);
-    return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}<button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
+    const mb = v.mb_id
+      ? '<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">in Moneybird</span>'
+      : (verbonden ? '<button class="btn ghost small" onclick="inkoopNaarMoneybird(\''+v.id+'\', this)">Naar Moneybird</button>' : '');
+    return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${mb}<span class="muted">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span><button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
   }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
 }
 function inkoopVoorbelastingInPeriode(van, tot){
   return (state.inkopen||[]).reduce((s,v)=>{ if((v.t||0)>=van && (v.t||0)<tot) s+=inkoopBtwBedrag(v); return s; },0);
+}
+/* Moneybird-koppeling: praat met de Edge Function 'moneybird', die namens de winkel een
+   inkoopfactuur in Moneybird zet. Het token staat als geheim in Supabase; de browser ziet
+   het nooit. */
+async function moneybirdAanroep(payload){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error('Niet ingelogd');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/moneybird',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(payload)
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok) throw new Error(uit.error||'Moneybird-verzoek mislukte');
+  return uit;
+}
+async function moneybirdTest(knop){
+  const oud=knop?knop.textContent:'';
+  try{
+    if(knop){ knop.disabled=true; knop.textContent='Verbinden…'; }
+    const uit=await moneybirdAanroep({actie:'status'});
+    state.moneybird={verbonden:true, admin:uit.administration_id||null};
+    save();
+    toast('Moneybird verbonden · '+((uit.tax_rates||[]).length)+' btw-tarieven, '+((uit.ledgers||[]).length)+' grootboekrekeningen', true);
+    renderInkopen();
+  }catch(e){ toast('Moneybird: '+e.message,'fout'); }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud||'Test Moneybird-verbinding'; } }
+}
+async function inkoopNaarMoneybird(id, knop){
+  const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  try{
+    if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
+    const uit=await moneybirdAanroep({actie:'inkoop', datum:v.datum, wat:v.wat, leverancier:v.leverancier||'', bedrag:v.bedrag, btw:v.btw});
+    v.mb_id=uit.id||true; v.mb_url=uit.url||null;
+    state.moneybird=state.moneybird||{}; state.moneybird.verbonden=true;
+    save(); renderInkopen();
+    toast('In Moneybird gezet als inkoopfactuur', true);
+  }catch(e){ toast('Moneybird: '+e.message,'fout'); if(knop){ knop.disabled=false; knop.textContent='Naar Moneybird'; } }
 }
 
 /* ---------- scannen ---------- */
