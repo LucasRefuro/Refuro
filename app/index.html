@@ -1843,7 +1843,7 @@
   <div class="card breed">
     <input id="vkScan" class="scanbox" placeholder="Scan om te verkopen…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); vkScanVerwerk(this.value.trim()); this.value='';}">
     <div id="vkFeedback"></div>
-    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Los product zoeken of iets buiten het systeem</button>
+    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Product zoeken of nieuw product aanmaken</button>
   </div>
   <div class="card breed" id="vkMandjeKaart">
     <h2><svg class="i"><use href="#i-cart"/></svg>Deze verkoop</h2>
@@ -3037,6 +3037,13 @@ function load(){
     {id:2, naam:'Screenprotectors', inkoop:1.50, verkoop:9.95, min:5, bestel:0},
     {id:3, naam:'Accessoires', inkoop:2.50, verkoop:9.95, min:3, bestel:0}
   ];
+  /* PostNL als eigen categorie, zodat de PostNL-omzet apart gegroepeerd staat.
+     systeem:true houdt hem uit de categorie-tegels op de verkooppagina (PostNL heeft
+     daar zijn eigen blok) en uit de keuzelijst bij een gewoon product. */
+  if(!(s.categorieen||[]).some(c=>/^\s*postnl\s*$/i.test(c.naam||''))){
+    const volgId=Math.max(0,...(s.categorieen||[]).map(c=>Number(c.id)||0))+1;
+    s.categorieen.push({id:volgId, naam:'PostNL', inkoop:0, verkoop:0, min:0, bestel:0, systeem:true});
+  }
   if(!s.types) s.types=[
     {id:1, naam:'Screenprotector Clear', cat:2, inkoop:1.50, verkoop:9.95, min:5, bestel:0},
     {id:2, naam:'Screenprotector Privacy', cat:2, inkoop:2.50, verkoop:14.95, min:5, bestel:0},
@@ -4729,6 +4736,7 @@ let hvProductId=null, hvAssortResult=[], hvZoekTimer=null;
 function hvOpen(){
   hvSluit();
   hvProductId=null; hvAssortResult=[];
+  const catOpties=(state.categorieen||[]).filter(c=>!c.systeem).map(c=>'<option value="'+c.id+'">'+esc(c.naam)+'</option>').join('');
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='hvOverlay';
   ov.onclick=e=>{ if(e.target===ov) hvSluit(); };
@@ -4738,12 +4746,18 @@ function hvOpen(){
     '<div class="zoekveld" style="margin-bottom:12px"><label>Naam</label>'+
       '<input id="hvNaam" placeholder="Typ of kies uit de lijst" autocomplete="off" oninput="hvZoek()" onkeydown="zoekToets(event,\'hvLijst\',hvSluitLijst)">'+
       '<div class="zoeklijst" id="hvLijst" hidden></div></div>'+
-    '<div id="hvVoorraad" class="pv" style="margin:-4px 0 12px"></div>'+
+    '<div id="hvVoorraadTekst" class="pv" style="margin:-4px 0 12px"></div>'+
     '<div class="row" style="gap:10px">'+
       '<div style="flex:1; min-width:90px"><label>Aantal</label><input id="hvAantal" type="number" min="1" step="1" value="1"></div>'+
       '<div style="flex:1; min-width:120px"><label>Verkoopprijs (€) p/st</label><input id="hvVerkoopP" type="number" min="0" step="0.01"></div>'+
       '<div style="flex:1; min-width:120px"><label>Inkoopprijs (€) p/st</label><input id="hvInkoopP" type="number" min="0" step="0.01"></div>'+
     '</div>'+
+    '<div id="hvNieuw" class="row" style="gap:10px; margin-top:4px">'+
+      '<div style="flex:1; min-width:130px"><label>Categorie</label><select id="hvCat">'+catOpties+'</select></div>'+
+      '<div style="flex:1; min-width:100px"><label>Beginvoorraad</label><input id="hvVoorraad" type="number" min="0" step="1" value="0"></div>'+
+      '<div style="flex:1; min-width:130px"><label>Leverancier</label><input id="hvLev" placeholder="optioneel" autocomplete="off"></div>'+
+    '</div>'+
+    '<label style="display:flex; align-items:center; gap:8px; margin:2px 0 14px; font-size:13px; font-weight:600; color:var(--tekst); text-transform:none; letter-spacing:0" id="hvSysteemLabel"><input type="checkbox" id="hvSysteem" style="width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none"> Ook aan het systeem toevoegen (met voorraad en categorie)</label>'+
     '<div class="acts" style="flex-direction:row; gap:8px">'+
       '<button class="btn" style="background:var(--green)" onclick="hvVerkopen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button>'+
       '<button class="btn ghost" onclick="hvSluit()">Annuleren</button>'+
@@ -4819,12 +4833,19 @@ function hvKiesCatalog(i){
   hvSluitLijst(); hvVoorraadInfo();
 }
 function hvVoorraadInfo(){
-  const el=document.getElementById('hvVoorraad'); if(!el) return;
-  if(hvProductId!=null){
+  const el=document.getElementById('hvVoorraad'); /* let op: dit is nu het beginvoorraad-veld, de melding staat in hvVoorraadTekst */
+  const tekst=document.getElementById('hvVoorraadTekst');
+  const bestaand = hvProductId!=null;
+  /* De "nieuw product"-velden en het systeem-vinkje horen alleen bij iets dat nog
+     niet in je voorraad staat; kies je een bestaand product, dan zijn ze overbodig. */
+  const nieuw=document.getElementById('hvNieuw'); if(nieuw) nieuw.hidden=bestaand;
+  const vink=document.getElementById('hvSysteemLabel'); if(vink) vink.hidden=bestaand;
+  if(!tekst) return;
+  if(bestaand){
     const p=state.producten.find(x=>x.id===hvProductId);
-    el.innerHTML = p ? 'In voorraad: <b>'+(p.voorraad||0)+'</b> (winkel '+inWinkel(p)+', achter '+overVoorraad(p)+'). De verkoop gaat van de voorraad af.' : '';
+    tekst.innerHTML = p ? 'In voorraad: <b>'+(p.voorraad||0)+'</b> (winkel '+inWinkel(p)+', achter '+overVoorraad(p)+'). De verkoop gaat van de voorraad af.' : '';
   }else{
-    el.innerHTML='<span style="color:var(--amber-tekst)">Niet in het systeem: losse verkoop, de voorraad verandert niet.</span>';
+    tekst.innerHTML='<span style="color:var(--amber-tekst)">Nog niet in je voorraad. Vink hieronder aan om het meteen aan te maken, anders verkoop je het los.</span>';
   }
 }
 function hvVerkopen(){
@@ -4833,8 +4854,22 @@ function hvVerkopen(){
   const verkoopP=Math.max(0, Number(document.getElementById('hvVerkoopP').value)||0);
   const inkoopP=Math.max(0, Number(document.getElementById('hvInkoopP').value)||0);
   if(!naam){ alert('Vul een naam in.'); return; }
-  const p = hvProductId!=null ? state.producten.find(x=>x.id===hvProductId) : null;
-  mandjeToevoegen({naam, aantal, verkoopStuk:verkoopP, inkoopStuk:inkoopP, productId: p?p.id:null});
+  let p = hvProductId!=null ? state.producten.find(x=>x.id===hvProductId) : null;
+  /* Staat het niet in het systeem en heb je "ook aan het systeem toevoegen" aangevinkt,
+     dan maken we het nu als echt product aan (met beginvoorraad, categorie en leverancier).
+     Zo wordt je voorraad met de tijd vanzelf completer. */
+  const systeemAan = !p && (document.getElementById('hvSysteem')||{}).checked;
+  if(systeemAan){
+    const cat=Number((document.getElementById('hvCat')||{}).value)||(((state.categorieen||[]).find(c=>!c.systeem)||{}).id||1);
+    const begin=Math.max(0, Math.floor(Number((document.getElementById('hvVoorraad')||{}).value)||0));
+    const lev=(((document.getElementById('hvLev')||{}).value)||'').trim();
+    p={id:uid(), barcode:'INT-'+uid(), naam, merk:'', sku:'', leverancier:lev, cat,
+       inkoop:inkoopP, verkoop:verkoopP, foto:'', winkel:begin, voorraad:begin,
+       schap:0, minOver:0, besteld:false, besteldOp:null};
+    state.producten.push(p); save();
+    toast('Aangemaakt in het systeem: '+naam, true);
+  }
+  mandjeToevoegen({naam, aantal, verkoopStuk:verkoopP, inkoopStuk:inkoopP, productId: p?p.id:null, cat: p?p.cat:null});
   hvSluit();
 }
 
@@ -4871,7 +4906,7 @@ function renderVerkoop(){
   const fb=document.getElementById('vkFeedback'); if(fb){ fb.className=''; fb.textContent=''; }
   const blok=document.getElementById('vkBlokjes');
   if(blok){
-    blok.innerHTML = (state.categorieen.map(c=>
+    blok.innerHTML = (state.categorieen.filter(c=>!c.systeem).map(c=>
       `<button type="button" class="blokje" onclick="blokOpen(${c.id})"><svg class="i"><use href="#${catIcoon(c.naam)}"/></svg><span data-onvertaald>${esc(c.naam)}</span><span class="bkprijs">${c.verkoop>0?euro(c.verkoop):'prijs zelf'}</span></button>`
     ).join('') || '<span class="muted">Nog geen categorieën. Voeg ze toe bij Instellingen, Categorieën.</span>')
     + `<button type="button" class="blokje" onclick="postnlOpen()"><svg class="i"><use href="#i-truck"/></svg><span data-onvertaald>PostNL</span><span class="bkprijs">pakketten en brieven</span></button>`;
@@ -5179,7 +5214,8 @@ function postnlTypeKies(btn, soort){
 }
 function postnlVerkoop(id){
   const t=(state.postnl||[]).find(x=>String(x.id)===String(id)); if(!t) return;
-  mandjeToevoegen({naam:'PostNL · '+t.naam, aantal:1, verkoopStuk:Number(t.prijs)||0, inkoopStuk:0, productId:null, bijbestelCat:null});
+  const cat=((state.categorieen||[]).find(c=>/^\s*postnl\s*$/i.test(c.naam||''))||{}).id||null;
+  mandjeToevoegen({naam:'PostNL · '+t.naam, aantal:1, verkoopStuk:Number(t.prijs)||0, inkoopStuk:0, productId:null, cat, bijbestelCat:null});
   toast(t.naam+' toegevoegd aan de verkoop', true);
 }
 function postnlNieuwType(){
