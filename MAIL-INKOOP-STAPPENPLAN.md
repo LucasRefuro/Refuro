@@ -82,9 +82,11 @@ zichzelf bruikbaar.
 ## Hoe het gebouwd is (Fase 3, live)
 
 De mailbox is **info@refuro.nl**, en die zit op **Zoho** (EU-datacenter: MX = mx.zoho.eu).
-Niet op Hostinger, dus het IMAP-adres is `imap.zoho.eu` (poort 993, TLS), niet
-imap.hostinger.com. Bij Zoho moet IMAP eerst **aangezet** worden (Instellingen → Mail
-Accounts → IMAP Access) en bij tweestapsverificatie is een **app-wachtwoord** nodig.
+Niet op Hostinger. Het is een **zakelijke** Zoho, dus de IMAP-server is `imappro.zoho.eu`
+(poort 993, SSL) — NIET imap.zoho.eu (dat is de gratis variant). De uitgaande server voor
+later versturen is `smtppro.zoho.eu` (465, SSL). Deze staan letterlijk in Zoho onder
+Instellingen → IMAP → Configuratie IMAP-server. Bij tweestapsverificatie is een
+**app-wachtwoord** nodig.
 
 - **Edge Function `inkoop-mail`** (`supabase/functions/inkoop-mail/index.ts`, verify_jwt
   uit). Opent INBOX **alleen-lezen** met `imapflow`, dus de gelezen/ongelezen-status
@@ -107,7 +109,7 @@ Accounts → IMAP Access) en bij tweestapsverificatie is een **app-wachtwoord** 
 
 | Geheim | Waarde |
 |---|---|
-| `MAIL_INKOOP_HOST` | `imap.zoho.eu` |
+| `MAIL_INKOOP_HOST` | `imappro.zoho.eu` |
 | `MAIL_INKOOP_USER` | `info@refuro.nl` |
 | `MAIL_INKOOP_PASS` | Zoho-wachtwoord of app-wachtwoord |
 | `MAIL_INKOOP_TEAM` | `ce975142-a7d9-4fb2-9cb5-9cc1fe1d7f65` (team Storvo) |
