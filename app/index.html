@@ -2462,6 +2462,7 @@
       <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-upload"/></svg>Factuur uitlezen (PDF of foto)<input type="file" accept="application/pdf,image/*" hidden onchange="factuurUitlezen(this)"></label>
       <span id="ink_factuurNaam" class="muted klein" style="margin-left:8px">Lees een factuur automatisch uit; Storvo vult het formulier hieronder in en bewaart de factuur bij de inkoop.</span>
     </div>
+    <div id="ink_factuurPreview" hidden style="margin-bottom:14px"></div>
     <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
       <div style="min-width:140px"><label>Datum</label><input id="ink_datum" type="date"></div>
       <div style="flex:2; min-width:160px"><label>Wat</label><input id="ink_wat" placeholder="bijv. 20× hoesjes" autocomplete="off"></div>
@@ -4978,6 +4979,7 @@ async function inkoopToevoegen(){
   save();
   document.getElementById('ink_wat').value=''; document.getElementById('ink_bedrag').value=''; document.getElementById('ink_lev').value='';
   const nm=document.getElementById('ink_factuurNaam'); if(nm) nm.innerHTML='Lees een factuur automatisch uit; Storvo vult het formulier hieronder in en bewaart de factuur bij de inkoop.';
+  const prev=document.getElementById('ink_factuurPreview'); if(prev){ if(prev.dataset.url){ try{ URL.revokeObjectURL(prev.dataset.url); }catch(e){} prev.dataset.url=''; } prev.innerHTML=''; prev.hidden=true; }
   renderInkopen();
   toast('Inkoop toegevoegd', true);
 }
@@ -5098,6 +5100,16 @@ async function factuurUitlezen(input){
   if(f.size>12*1024*1024){ toast('Bestand te groot (max 12 MB)','let-op'); input.value=''; return; }
   pendingFactuur=f;
   const nm=document.getElementById('ink_factuurNaam'); if(nm) nm.innerHTML='Factuur toegevoegd: <b>'+esc(f.name)+'</b> · wordt uitgelezen…';
+  /* De factuur meteen tonen (lokaal, geen upload nodig), zodat je kunt controleren of de
+     uitgelezen gegevens kloppen voordat je op Toevoegen klikt. */
+  const prev=document.getElementById('ink_factuurPreview');
+  if(prev){
+    if(prev.dataset.url){ try{ URL.revokeObjectURL(prev.dataset.url); }catch(e){} }
+    const url=URL.createObjectURL(f); prev.dataset.url=url; prev.hidden=false;
+    prev.innerHTML=(f.type||'').startsWith('image/')
+      ? '<img src="'+url+'" style="max-height:420px; max-width:100%; border:1px solid var(--border); border-radius:var(--radius-s)">'
+      : '<iframe src="'+url+'" style="width:100%; height:60vh; border:1px solid var(--border); border-radius:var(--radius-s)" title="factuur"></iframe>';
+  }
   toast('Factuur uitlezen…');
   const r=new FileReader();
   r.onload=async()=>{
