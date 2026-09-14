@@ -55,12 +55,19 @@
   .blokje svg{color:var(--oranje); width:26px; height:26px;}
   .blokje .bkprijs{font-weight:600; font-size:12px; color:var(--muted);}
   .pnlvak{position:relative;}
-  .pnlvak .pnlweg{position:absolute; top:4px; right:4px; width:22px; height:22px; border:none; border-radius:50%; background:var(--card); color:var(--muted); cursor:pointer; font-size:15px; line-height:1; box-shadow:0 1px 5px rgba(0,0,0,.12);}
-  .pnlvak .pnlweg:hover{color:var(--red-tekst);}
-  .popup.pnlpop{width:min(860px,96vw); max-height:92vh; overflow-y:auto;}
-  .pnlsectie{font-family:'Sora',sans-serif; font-weight:800; font-size:15px; margin:22px 0 10px; display:flex; align-items:center; gap:8px;}
-  .pnlsectie .telw{font-weight:600; font-size:12px; color:var(--muted);}
-  .pnlgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+  .pnlvak .pnlweg{position:absolute; top:7px; right:7px; width:22px; height:22px; border:none; border-radius:50%; background:var(--soft); color:var(--muted); cursor:pointer; font-size:14px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; opacity:.55; transition:opacity .12s, background .12s, color .12s;}
+  .pnlvak:hover .pnlweg, .pnlvak:focus-within .pnlweg{opacity:1;}
+  .pnlvak .pnlweg:hover{background:var(--red-soft); color:var(--red-tekst); opacity:1;}
+  .popup.pnlpop{width:min(880px,96vw); max-height:92vh; overflow-y:auto;}
+  .pnlsectie{font-family:'Sora',sans-serif; font-weight:800; font-size:15px; margin:24px 0 12px; display:flex; align-items:center; gap:10px; letter-spacing:-.01em;}
+  .pnlsectie .telw{font-weight:700; font-size:11px; color:var(--green-tekst); background:var(--green-soft); padding:3px 9px; border-radius:var(--pil);}
+  .pnlgrid{grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:10px;}
+  .pnlgrid .blokje{align-items:flex-start; justify-content:flex-start; text-align:left; gap:11px; padding:14px; font-weight:400; transition:border-color .12s, box-shadow .12s, transform .12s;}
+  .pnlgrid .blokje:hover{border-color:var(--green); box-shadow:var(--schaduw); transform:translateY(-1px);}
+  .pnlgrid .blokje .pnlico{display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:12px; background:var(--green-soft); flex:none;}
+  .pnlgrid .blokje .pnlico svg{width:20px; height:20px; color:var(--green-tekst);}
+  .pnlgrid .blokje .pnlnaam{font-weight:700; font-size:13.5px; line-height:1.32;}
+  .pnlgrid .blokje .pnlprijs{font-weight:800; font-size:16px; color:var(--green-tekst); margin-top:auto;}
   .planrij{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
   .planlinks{display:flex; align-items:center; gap:10px;}
   .planwanneer{font-size:12px; color:var(--muted);}
@@ -4895,15 +4902,26 @@ function postnlOpen(){
   postnlTeken();
 }
 function postnlSluit(){ const o=document.getElementById('postnlOverlay'); if(o) o.remove(); }
+/* Een passend icoon per product, zodat de tegels niet allemaal hetzelfde doosje
+   tonen: spoed een bliksem, buitenland een globe, aangetekend/verzekerd een slot,
+   een gewone brief een envelop en de rest een pakket. */
+function postnlIco(t){
+  const n=(t.naam||'').toLowerCase();
+  if(/spoed/.test(n)) return 'i-zap';
+  if(/internationa|buitenland/.test(n)) return 'i-globe';
+  if(/aangetekend|verzeker/.test(n)) return 'i-lock';
+  if((t.type||'pakket')==='brief') return 'i-mail';
+  return 'i-package';
+}
 function postnlTeken(){
   const ov=document.getElementById('postnlOverlay'); if(!ov) return;
   const lijst=state.postnl||[];
   const tegel=t=>`
     <div class="pnlvak">
       <button type="button" class="blokje" onclick="postnlVerkoop('${t.id}')">
-        <svg class="i"><use href="#i-package"/></svg>
-        <span data-onvertaald>${esc(t.naam)}</span>
-        <span class="bkprijs">${euro(t.prijs)}</span>
+        <span class="pnlico"><svg class="i"><use href="#${postnlIco(t)}"/></svg></span>
+        <span class="pnlnaam" data-onvertaald>${esc(t.naam)}</span>
+        <span class="pnlprijs">${euro(t.prijs)}</span>
       </button>
       <button class="pnlweg" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
     </div>`;
