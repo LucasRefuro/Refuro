@@ -57,6 +57,10 @@
   .pnlvak{position:relative;}
   .pnlvak .pnlweg{position:absolute; top:4px; right:4px; width:22px; height:22px; border:none; border-radius:50%; background:var(--card); color:var(--muted); cursor:pointer; font-size:15px; line-height:1; box-shadow:0 1px 5px rgba(0,0,0,.12);}
   .pnlvak .pnlweg:hover{color:var(--red-tekst);}
+  .popup.pnlpop{width:min(860px,96vw); max-height:92vh; overflow-y:auto;}
+  .pnlsectie{font-family:'Sora',sans-serif; font-weight:800; font-size:15px; margin:22px 0 10px; display:flex; align-items:center; gap:8px;}
+  .pnlsectie .telw{font-weight:600; font-size:12px; color:var(--muted);}
+  .pnlgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
   .planrij{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
   .planlinks{display:flex; align-items:center; gap:10px;}
   .planwanneer{font-size:12px; color:var(--muted);}
@@ -2980,29 +2984,44 @@ function load(){
   ];
   if(!s.reparaties) s.reparaties=[];
   if(!Array.isArray(s.postnl)) s.postnl=[];
-  // De standaardproducten voor het PostNL-blok op de verkooppagina, met het tarief
-  // dat de klant bij een PostNL-punt betaalt (de "Vind een PostNL-punt"-prijs, niet
-  // het goedkopere online-tarief). Controleer ze op postnl.nl/tarieven; PostNL past
-  // de tarieven een paar keer per jaar aan.
+  // De standaardproducten voor het PostNL-blok op de verkooppagina. De prijzen komen
+  // uit het PostNL-tarievenboekje van 12 juli 2026: voor pakketten het tarief
+  // "frankering bij PostNL-punt" (wat de klant aan de balie betaalt), voor brieven en
+  // postzegels het gewone tarief. Controleer ze op postnl.nl/tarieven; PostNL past de
+  // tarieven een paar keer per jaar aan.
   //
-  // Een versie i.p.v. een ja/nee-vlag: de eerste versie stond met geschatte prijzen
-  // live. Wie die nog ongewijzigd heeft staan krijgt hier de juiste punt-tarieven;
-  // heeft een winkel de lijst zelf aangepast, dan blijft die met rust.
-  if(!s.postnlVersie){
-    const oudeNamen=['Brievenbuspakje','Pakket tot 10 kg','Postzegel Nederland (tot 20 g)',
-      'Postzegelcode (tot 50 g)','Grote brief (tot 350 g)','Internationale postzegel (tot 20 g)'];
+  // Een versienummer i.p.v. een ja/nee-vlag: eerdere versies stonden met een kortere
+  // of geschatte lijst live. Zolang een winkel de lijst niet zelf heeft aangepast
+  // vervangen we hem door de nieuwe; heeft iemand hem wel aangepast, dan blijft die.
+  if(!s.postnlVersie || s.postnlVersie<3){
+    const oudeSeeds=[
+      ['Brievenbuspakje','Pakket tot 10 kg','Postzegel Nederland (tot 20 g)',
+       'Postzegelcode (tot 50 g)','Grote brief (tot 350 g)','Internationale postzegel (tot 20 g)'],
+      ['Groot pakket','Groot pakket aangetekend (€ 500)','Groot pakket verzekerd (€ 5.500)',
+       'Gemiddeld pakket spoed 12 uur','Gemiddeld pakket spoed 10 uur',
+       'Postzegel Nederland (tot 20 g)','Internationale postzegel (tot 20 g)']
+    ].map(a=>a.slice().sort().join('|'));
     const nu=(s.postnl||[]).map(t=>t.naam).sort().join('|');
-    const ongewijzigd = !s.postnl.length || nu===oudeNamen.slice().sort().join('|');
+    const ongewijzigd = !s.postnl.length || oudeSeeds.includes(nu);
     if(ongewijzigd) s.postnl=[
-      {id:1, naam:'Groot pakket', type:'pakket', prijs:18.75},
-      {id:2, naam:'Groot pakket aangetekend (€ 500)', type:'pakket', prijs:22.55},
-      {id:3, naam:'Groot pakket verzekerd (€ 5.500)', type:'pakket', prijs:27.15},
-      {id:4, naam:'Gemiddeld pakket spoed 12 uur', type:'pakket', prijs:40.95},
-      {id:5, naam:'Gemiddeld pakket spoed 10 uur', type:'pakket', prijs:47.65},
-      {id:6, naam:'Postzegel Nederland (tot 20 g)', type:'brief', prijs:1.40},
-      {id:7, naam:'Internationale postzegel (tot 20 g)', type:'brief', prijs:1.90}
+      {id:1,  naam:'Brievenbuspakje+ (t/m 2 kg)',        type:'pakket', prijs:5.85},
+      {id:2,  naam:'Pakket t/m 10 kg',                   type:'pakket', prijs:8.75},
+      {id:3,  naam:'Pakket t/m 23 kg',                   type:'pakket', prijs:18.75},
+      {id:4,  naam:'Aangetekend pakket t/m 10 kg',       type:'pakket', prijs:12.55},
+      {id:5,  naam:'Aangetekend pakket t/m 23 kg',       type:'pakket', prijs:22.55},
+      {id:6,  naam:'Verzekerd pakket t/m 10 kg',         type:'pakket', prijs:17.15},
+      {id:7,  naam:'Verzekerd pakket t/m 23 kg',         type:'pakket', prijs:27.15},
+      {id:8,  naam:'Spoedpakket 12 uur',                 type:'pakket', prijs:40.95},
+      {id:9,  naam:'Spoedpakket 10 uur',                 type:'pakket', prijs:47.65},
+      {id:10, naam:'Postzegel Nederland (t/m 20 g)',     type:'brief',  prijs:1.40},
+      {id:11, naam:'Brief t/m 50 g',                     type:'brief',  prijs:2.80},
+      {id:12, naam:'Grote brief (t/m 2 kg)',             type:'brief',  prijs:4.35},
+      {id:13, naam:'Priobrief',                          type:'brief',  prijs:3.95},
+      {id:14, naam:'Aangetekende brief',                 type:'brief',  prijs:12.30},
+      {id:15, naam:'Brief met verzekerservice',          type:'brief',  prijs:16.50},
+      {id:16, naam:'Internationale postzegel (t/m 20 g)',type:'brief',  prijs:2.11}
     ];
-    s.postnlVersie=2;
+    s.postnlVersie=3;
   }
   if(!s.onderdelen) s.onderdelen=[];
   if(!s.instellingen) s.instellingen={naam:'Storvo', email:'', tel:''};
@@ -4879,23 +4898,29 @@ function postnlSluit(){ const o=document.getElementById('postnlOverlay'); if(o) 
 function postnlTeken(){
   const ov=document.getElementById('postnlOverlay'); if(!ov) return;
   const lijst=state.postnl||[];
-  ov.innerHTML=`<div class="popup" style="max-width:540px">
+  const tegel=t=>`
+    <div class="pnlvak">
+      <button type="button" class="blokje" onclick="postnlVerkoop('${t.id}')">
+        <svg class="i"><use href="#i-package"/></svg>
+        <span data-onvertaald>${esc(t.naam)}</span>
+        <span class="bkprijs">${euro(t.prijs)}</span>
+      </button>
+      <button class="pnlweg" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
+    </div>`;
+  const sectie=(titel, soort)=>{
+    const items=lijst.filter(t=>(t.type||'pakket')===soort);
+    if(!items.length) return '';
+    return `<div class="pnlsectie">${titel}<span class="telw">${items.length}</span></div>
+      <div class="blokjes pnlgrid">${items.map(tegel).join('')}</div>`;
+  };
+  const secties = sectie('Pakketten','pakket') + sectie('Brieven en kaarten','brief');
+  ov.innerHTML=`<div class="popup pnlpop">
     <h3>PostNL</h3>
-    <p class="muted" style="font-size:13px; margin-bottom:12px">Tik een pakket aan om het aan de verkoop toe te voegen. Het telt volledig als marge in je omzet.</p>
-    <div class="blokjes" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">
-      ${lijst.length ? lijst.map(t=>`
-        <div class="pnlvak">
-          <button type="button" class="blokje" onclick="postnlVerkoop('${t.id}')">
-            <svg class="i"><use href="#i-package"/></svg>
-            <span data-onvertaald>${esc(t.naam)}</span>
-            <span class="bkprijs">${t.type==='brief'?'Brief':'Pakket'} &middot; ${euro(t.prijs)}</span>
-          </button>
-          <button class="pnlweg" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
-        </div>`).join('') : '<span class="muted">Nog geen pakketten. Voeg er hieronder een toe.</span>'}
-    </div>
-    <div style="font-weight:700; margin:16px 0 8px">Nieuw pakkettype</div>
+    <p class="pv">Tik een product aan om het aan de verkoop toe te voegen. Het telt volledig als marge in je omzet. De prijs is het tarief bij een PostNL-punt; pas hem aan als je een ander bedrag rekent.</p>
+    ${secties || '<span class="muted">Nog geen producten. Voeg er hieronder een toe.</span>'}
+    <div class="pnlsectie">Zelf een type toevoegen</div>
     <div class="row" style="align-items:flex-end">
-      <div style="flex:2; min-width:150px"><label>Naam</label><input id="pnl_naam" placeholder="bijv. Pakket tot 10 kg" autocomplete="off"></div>
+      <div style="flex:2; min-width:150px"><label>Naam</label><input id="pnl_naam" placeholder="bijv. Pakket naar buitenland" autocomplete="off"></div>
       <div><label>Soort</label><div class="bkvarr">
         <button type="button" class="bkvar${postnlTypeKeuze==='pakket'?' aan':''}" onclick="postnlTypeKies(this,'pakket')">Pakket</button>
         <button type="button" class="bkvar${postnlTypeKeuze==='brief'?' aan':''}" onclick="postnlTypeKies(this,'brief')">Brief</button>
@@ -4903,7 +4928,7 @@ function postnlTeken(){
       <div style="min-width:100px"><label>Prijs (€)</label><input id="pnl_prijs" type="number" min="0" step="0.01" autocomplete="off"></div>
       <button class="btn" onclick="postnlNieuwType()">Toevoegen</button>
     </div>
-    <div class="acts" style="margin-top:14px"><button class="btn ghost" onclick="postnlSluit()">Sluiten</button></div>
+    <div class="acts" style="margin-top:16px"><button class="btn ghost" onclick="postnlSluit()">Sluiten</button></div>
   </div>`;
 }
 function postnlTypeKies(btn, soort){
