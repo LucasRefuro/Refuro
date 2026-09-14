@@ -2460,7 +2460,8 @@
     <p class="muted" style="margin-bottom:12px">Leg vast wat je inkoopt. Kies <b>Voorraad</b> voor spullen die je doorverkoopt (hoesjes, onderdelen, partijen laptops): die verlagen je winst pas bij de verkoop, niet nu. Kies <b>Kosten</b> voor directe kosten (verpakking, gereedschap): die gaan meteen van je winst af. De btw-voorbelasting claim je bij beide meteen. Bedragen inclusief btw.</p>
     <div style="margin-bottom:12px">
       <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-upload"/></svg>Factuur uitlezen (PDF of foto)<input type="file" accept="application/pdf,image/*" hidden onchange="factuurUitlezen(this)"></label>
-      <span id="ink_factuurNaam" class="muted klein" style="margin-left:8px">Lees een factuur automatisch uit; Storvo vult het formulier hieronder in en bewaart de factuur bij de inkoop.</span>
+      <label class="btn ghost small" style="cursor:pointer; margin-left:8px"><svg class="i s"><use href="#i-upload"/></svg>Meerdere tegelijk<input type="file" accept="application/pdf,image/*" multiple hidden onchange="factuurenBatch(this)"></label>
+      <span id="ink_factuurNaam" class="muted klein" style="margin-left:8px">Lees een factuur uit; Storvo vult het formulier in en bewaart de factuur. "Meerdere tegelijk" zet ze als concept in "Te bevestigen".</span>
     </div>
     <div id="ink_factuurPreview" hidden style="margin-bottom:14px"></div>
     <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
@@ -2476,6 +2477,11 @@
       <button class="btn ghost small" onclick="moneybirdTest(this)"><svg class="i s"><use href="#i-link"/></svg>Test Moneybird-verbinding</button>
       <span class="muted klein" style="margin-left:8px">Verbonden? Dan staat er per inkoop een knop "Naar Moneybird" om hem als inkoopfactuur in je boekhouding te zetten.</span>
     </div>
+  </div>
+  <div class="card breed" id="inkopenConceptKaart" hidden>
+    <h2><svg class="i"><use href="#i-clipboard"/></svg>Te bevestigen <span class="muted klein" id="inkopenConceptTel"></span></h2>
+    <p class="muted klein" style="margin:2px 0 12px">Automatisch uitgelezen facturen. Ze tellen pas mee in je cijfers als je ze bevestigt. Controleer tegen de factuur, kies het soort, en bevestig of gooi weg.</p>
+    <div id="inkopenConcepten"></div>
   </div>
   <div class="card breed">
     <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px">
@@ -4220,7 +4226,7 @@ function btwKwartaal(jaar, q){
   (state.verkopen||[]).forEach(v=>{ if(v.t>=van && v.t<tot){ verschuldigd+=vBtw(v); cogs+=Number(v.inkoop)||0; } });
   /* Zijn er geregistreerde inkopen, dan is de voorbelasting exact (btw over die inkopen).
      Anders vallen we terug op een schatting op de inkoopwaarde van de verkochte goederen. */
-  const echt=(state.inkopen||[]).length>0;
+  const echt=(state.inkopen||[]).some(v=>v.concept!==true);
   const vb = echt ? inkoopVoorbelastingInPeriode(van,tot) : cogs*21/121;
   const r=n=>Math.round(n*100)/100;
   return {verschuldigd:r(verschuldigd), voorbelasting:r(vb), afdragen:r(verschuldigd-vb), deadline:new Date(jaar, q*3+4, 0), echt};
@@ -4245,7 +4251,7 @@ function renderRapportFiscaal(){
       <div class="muted klein" style="margin:2px 0 12px">Een schatting om op te reserveren, geen belastingaangifte. Je boekhouder blijft leidend.</div>
       <div style="font-weight:700; margin-bottom:6px">Btw per kwartaal ${jaar}</div>
       <div style="overflow-x:auto"><table><thead><tr><th>Kwartaal</th><th class="num">Verschuldigd</th><th class="num">Voorbelasting*</th><th class="num">Af te dragen</th><th>Uiterlijk</th></tr></thead><tbody>${kw||'<tr><td colspan="5" class="muted">Nog geen verkopen dit jaar.</td></tr>'}</tbody></table></div>
-      <div class="muted klein" style="margin:6px 0 16px">${(state.inkopen||[]).length?'*Voorbelasting = btw over je geregistreerde inkopen in dat kwartaal.':'*Voorbelasting is nu nog een schatting (btw over de inkoopwaarde van de verkochte goederen). Leg je inkopen vast op de Inkopen-pagina, dan wordt dit exact.'}</div>
+      <div class="muted klein" style="margin:6px 0 16px">${(state.inkopen||[]).some(v=>v.concept!==true)?'*Voorbelasting = btw over je geregistreerde inkopen in dat kwartaal.':'*Voorbelasting is nu nog een schatting (btw over de inkoopwaarde van de verkochte goederen). Leg je inkopen vast op de Inkopen-pagina, dan wordt dit exact.'}</div>
       <div style="font-weight:700; margin-bottom:6px">Inkomstenbelasting over de winst dit jaar</div>
       <div class="row" style="gap:28px; flex-wrap:wrap">
         <div><div class="muted klein">Winst dit jaar</div><b class="groot">${euro(ytd)}</b></div>
@@ -5046,6 +5052,48 @@ async function inkoopFactuurBase64(v){
     return await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>res(null); r.readAsDataURL(blob); });
   }catch(e){ return null; }
 }
+function inkoopConceptSoort(id, soort){
+  const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  v.soort = soort==='kosten' ? 'kosten' : 'voorraad'; save(); renderInkopen();
+}
+function inkoopBevestig(id){
+  const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  v.concept=false; save(); renderInkopen(); toast('Inkoop bevestigd', true);
+}
+/* Meerdere facturen tegelijk uitlezen en als concept klaarzetten. Elke factuur wordt door
+   de AI gelezen, opgeslagen en gecheckt op dubbele; jij bevestigt ze daarna. */
+async function factuurenBatch(input){
+  const files=[...(input.files||[])]; input.value='';
+  if(!files.length) return;
+  toast(files.length+' factuur'+(files.length===1?'':'en')+' uitlezen…');
+  let toegevoegd=0, dubbel=0;
+  for(const f of files){
+    if(f.size>12*1024*1024) continue;
+    try{
+      const b64=await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>res(null); r.readAsDataURL(f); });
+      let velden={};
+      try{
+        const {data:{session}}=await sb.auth.getSession();
+        const res=await fetch(SUPABASE_URL+'/functions/v1/factuur-lezen',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({bestand:b64})});
+        const uit=await res.json().catch(()=>({})); if(res.ok && uit.ok) velden=uit.velden||{};
+      }catch(e){}
+      const bedrag=Number(velden.bedrag)||0;
+      const datum=/^\d{4}-\d{2}-\d{2}$/.test(velden.datum||'')?velden.datum:new Date().toISOString().slice(0,10);
+      if(bedrag && inkoopBestaatAl({factuurnummer:velden.factuurnummer, leverancier:velden.leverancier, bedrag, datum})){ dubbel++; continue; }
+      const nieuw={id:uid(), t:new Date(datum+'T12:00:00').getTime(), datum, wat:velden.omschrijving||velden.leverancier||f.name||'Inkoop', leverancier:velden.leverancier||'', bedrag, btw:[21,9,0].includes(Number(velden.btw))?Number(velden.btw):21, soort:'voorraad', factuurnummer:velden.factuurnummer||'', concept:true, bron:'upload'};
+      try{
+        const ext=((f.name||'').split('.').pop()||'').toLowerCase().replace(/[^a-z0-9]/g,'')||(f.type==='application/pdf'?'pdf':'jpg');
+        const pad=`${account.team_id}/${nieuw.id}.${ext}`;
+        const {error}=await sb.storage.from('inkoopfacturen').upload(pad, f, {contentType:f.type||'application/pdf', upsert:true});
+        if(!error){ nieuw.factuur_pad=pad; nieuw.factuur_naam=f.name||'factuur'; nieuw.factuur_type=f.type||'application/pdf'; }
+      }catch(e){}
+      if(!Array.isArray(state.inkopen)) state.inkopen=[];
+      state.inkopen.unshift(nieuw); toegevoegd++;
+    }catch(e){}
+  }
+  save(); renderInkopen();
+  toast(toegevoegd+' als concept toegevoegd'+(dubbel?(' · '+dubbel+' dubbel overgeslagen'):'')+' — controleer en bevestig', true);
+}
 function inkopenKiesPeriode(p){
   inkopenPeriode=p;
   const sel=document.getElementById('inkopenPeriodeSel'); if(sel) sel.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.ip===p));
@@ -5062,7 +5110,27 @@ function renderInkopen(){
   const dEl=document.getElementById('ink_datum'); if(dEl && !dEl.value) dEl.value=new Date().toISOString().slice(0,10);
   const lijst=document.getElementById('inkopenLijst'); if(!lijst) return;
   const start=inkopenPeriodeStart();
-  const rijen=(state.inkopen||[]).filter(v=>(v.t||0)>=start);
+  /* Concepten (automatisch uitgelezen, nog te bevestigen) staan apart en tellen niet mee. */
+  const concepten=(state.inkopen||[]).filter(v=>v.concept===true);
+  const cKaart=document.getElementById('inkopenConceptKaart'), cVak=document.getElementById('inkopenConcepten'), cTel=document.getElementById('inkopenConceptTel');
+  if(cKaart) cKaart.hidden = !concepten.length;
+  if(cTel) cTel.textContent = concepten.length ? '('+concepten.length+')' : '';
+  if(cVak) cVak.innerHTML = concepten.map(v=>{
+    const d=new Date(v.t);
+    return `<div class="perslid"><div class="row" style="justify-content:space-between; align-items:flex-start; gap:12px">
+      <div><b>${euro(v.bedrag)}</b> ${esc(v.wat||'')}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''}<div class="muted klein" style="margin-top:2px">btw ${Number(v.btw)||0}%${v.factuurnummer?' · '+esc(v.factuurnummer):''} · ${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</div>
+        <div class="bkvarr" style="margin-top:8px">
+          <button type="button" class="bkvar${v.soort!=='kosten'?' aan':''}" onclick="inkoopConceptSoort('${v.id}','voorraad')">Voorraad</button>
+          <button type="button" class="bkvar${v.soort==='kosten'?' aan':''}" onclick="inkoopConceptSoort('${v.id}','kosten')">Kosten</button>
+        </div></div>
+      <div class="acts2">
+        ${v.factuur_pad?'<button class="btn ghost small" onclick="inkoopDetail(\''+v.id+'\')">Bekijk</button>':''}
+        <button class="btn small" onclick="inkoopBevestig('${v.id}')">Bevestigen</button>
+        <button class="btn ghost small" onclick="inkoopWeg('${v.id}')">Weggooien</button>
+      </div>
+    </div></div>`;
+  }).join('');
+  const rijen=(state.inkopen||[]).filter(v=>v.concept!==true && (v.t||0)>=start);
   const tot=rijen.reduce((s,v)=>s+(Number(v.bedrag)||0),0);
   const totBtw=rijen.reduce((s,v)=>s+inkoopBtwBedrag(v),0);
   const totEl=document.getElementById('inkopenTotaal');
@@ -5080,16 +5148,28 @@ function renderInkopen(){
   }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
 }
 function inkoopVoorbelastingInPeriode(van, tot){
-  return (state.inkopen||[]).reduce((s,v)=>{ if((v.t||0)>=van && (v.t||0)<tot) s+=inkoopBtwBedrag(v); return s; },0);
+  return (state.inkopen||[]).reduce((s,v)=>{ if(v.concept!==true && (v.t||0)>=van && (v.t||0)<tot) s+=inkoopBtwBedrag(v); return s; },0);
 }
 /* Alleen de kosten-inkopen zijn een directe kost die van de winst afgaat. Voorraad-inkopen
    (hoesjes, onderdelen, partijen laptops) tellen niet nu mee: die kost valt pas bij de
    verkoop, via de inkoopwaarde van het verkochte (dat rekent Storvo al zo). */
 function kostenInkopenInPeriode(van, tot){
-  return (state.inkopen||[]).reduce((s,v)=>{ if((v.soort==='kosten') && (v.t||0)>=van && (v.t||0)<tot) s+=(Number(v.bedrag)||0); return s; },0);
+  return (state.inkopen||[]).reduce((s,v)=>{ if(v.concept!==true && (v.soort==='kosten') && (v.t||0)>=van && (v.t||0)<tot) s+=(Number(v.bedrag)||0); return s; },0);
 }
 function voorraadInkopenInPeriode(van, tot){
-  return (state.inkopen||[]).reduce((s,v)=>{ if((v.soort!=='kosten') && (v.t||0)>=van && (v.t||0)<tot) s+=(Number(v.bedrag)||0); return s; },0);
+  return (state.inkopen||[]).reduce((s,v)=>{ if(v.concept!==true && (v.soort!=='kosten') && (v.t||0)>=van && (v.t||0)<tot) s+=(Number(v.bedrag)||0); return s; },0);
+}
+/* Een inkoop al bekend? Zo voorkomen we dubbele bij batch- of mail-import: zelfde
+   factuurnummer, of dezelfde leverancier + bedrag + datum. */
+function inkoopBestaatAl(k){
+  const fn=(k.factuurnummer||'').trim().toLowerCase();
+  return (state.inkopen||[]).some(v=>{
+    if(String(v.id)===String(k.id)) return false;
+    if(fn && (v.factuurnummer||'').trim().toLowerCase()===fn) return true;
+    return (v.leverancier||'').trim().toLowerCase()===(k.leverancier||'').trim().toLowerCase()
+      && Math.abs((Number(v.bedrag)||0)-(Number(k.bedrag)||0))<0.005
+      && (v.datum||'')===(k.datum||'');
+  });
 }
 /* Een geüploade factuur (PDF of foto) laten uitlezen door de AI-Edge-Function en het
    inkoop-formulier ermee invullen. Jij controleert en kiest het soort; niets telt mee tot
