@@ -418,6 +418,26 @@
   .perslid:first-child{padding-top:6px;}
   .perslid:last-child{border-bottom:none; padding-bottom:0;}
   .perskop{margin-bottom:10px;}
+  .roosterbalk{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; flex-wrap:wrap;}
+  .roostergrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:12px;}
+  .dagkaart{border:1px solid var(--border); border-radius:var(--radius-s); padding:12px; display:flex; flex-direction:column; gap:10px;}
+  .dagkaart.vandaag{border-color:var(--green);}
+  .dagkop{display:flex; align-items:baseline; gap:6px;}
+  .dagkop b{font-size:15px;}
+  .beschtoggle{width:100%; padding:9px; border:1.5px solid var(--border); border-radius:12px; background:var(--card); cursor:pointer; font-weight:600; font-size:13px; font-family:inherit; color:var(--muted);}
+  .beschtoggle.aan{background:var(--green-soft); border-color:var(--green); color:var(--green-tekst);}
+  .tijdrij{display:flex; align-items:center; gap:6px;}
+  .tijdrij input{padding:7px 8px; font-size:13px; text-align:center;}
+  .tijdrij span{color:var(--muted); font-size:13px;}
+  .roosterscheiding{border-top:1px dashed var(--border); padding-top:9px; margin-top:2px;}
+  .roosterlabel{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;}
+  .dagdienst{display:flex; align-items:center; justify-content:space-between; gap:6px; background:var(--soft); border-radius:10px; padding:6px 4px 6px 9px; font-size:13px; font-weight:600; margin-bottom:6px;}
+  .dagdienst .wegknop{border:none; background:none; color:var(--muted); cursor:pointer; font-size:16px; line-height:1; padding:0 6px;}
+  .dagdienst .wegknop:hover{color:var(--red-tekst);}
+  .inplanchip{display:inline-block; margin:3px 3px 0 0; padding:5px 10px; border:1px dashed var(--border); border-radius:var(--pil); background:var(--card); cursor:pointer; font-size:12px; font-weight:600; color:inherit;}
+  .inplanchip:hover{border-color:var(--green); color:var(--green-tekst);}
+  .inplanchip.op{opacity:.4;}
+  .beschhint{font-size:11.5px; color:var(--muted);}
   .teamRij2{display:flex; flex-direction:column; gap:10px; padding:16px 0; border-top:1px solid var(--border);}
   .teamRij2 .kop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .teamRij2 .kop b{font-size:15px;}
@@ -2351,6 +2371,27 @@
   </div>
 </section>
 
+<!-- ROOSTER -->
+<section id="tab-rooster"hidden>
+  <div class="pagehead"><h1>Rooster</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <div class="roosterbalk">
+      <div>
+        <h2 style="margin:0"><svg class="i"><use href="#i-clock"/></svg>Week van <span id="roosterWeekLabel"></span></h2>
+      </div>
+      <div class="bkvarr">
+        <button type="button" class="bkvar" onclick="roosterNav(-1)">Vorige</button>
+        <button type="button" class="bkvar" onclick="roosterNav(0)">Deze week</button>
+        <button type="button" class="bkvar" onclick="roosterNav(1)">Volgende</button>
+      </div>
+    </div>
+    <p class="muted" style="margin:0 0 14px" id="roosterUitleg">Geef per dag je beschikbaarheid door. De eigenaar plant het team in op basis daarvan.</p>
+    <div id="roosterInhoud"><p class="muted">Laden…</p></div>
+  </div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2428,6 +2469,7 @@
       <div class="hubgrid">
         <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Uren van het team en de loonkosten</span></span></button>
         <button class="hubtegel" data-tab="personeel" onclick="showTab('personeel')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Personeel</b><span>Loon per uur of percentage en kostenplaats</span></span></button>
+        <button class="hubtegel" data-tab="rooster" onclick="showTab('rooster')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Rooster</b><span>Beschikbaarheid doorgeven en het team inplannen</span></span></button>
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
         <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
       </div>
@@ -3179,6 +3221,7 @@ function showTab(t){
   if(t==='verkoop') renderVerkoop();
   if(t==='uren') renderUren();
   if(t==='personeel') renderPersoneel();
+  if(t==='rooster') renderRooster();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -3549,6 +3592,110 @@ function renderPersoneel(){
 function urenLoonInPeriode(van, tot){
   return (state.uren||[]).reduce((s,u)=>{ const dt=urenDatumTijd(u); if(dt>=van && dt<tot){ s+=(Number(u.uren)||0)*loonTarief(u.medewerker); } return s; },0);
 }
+/* ── Rooster: beschikbaarheid en inplannen ──
+   Op echte tabellen (beschikbaarheid, rooster), niet de blob: meerdere teamleden
+   schrijven tegelijk hun eigen beschikbaarheid, en de blob is last-write-wins. Ieder
+   schrijft alleen zijn eigen beschikbaarheid (RLS); alleen eigenaar/beheerder plant in. */
+let roosterMaandag=null;
+let roosterData={besch:[], diensten:[]};
+const DAG_KORT=['Ma','Di','Wo','Do','Vr','Za','Zo'];
+function roosterYmd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function roosterMaandagVan(d){ const x=new Date(d); const dag=(x.getDay()+6)%7; x.setDate(x.getDate()-dag); x.setHours(12,0,0,0); return x; }
+function roosterMagInplannen(){ return gebruiker && (gebruiker.rol==='eigenaar'||gebruiker.rol==='beheerder'); }
+function roosterDagen(){ const uit=[]; for(let i=0;i<7;i++){ const d=new Date(roosterMaandag); d.setDate(d.getDate()+i); uit.push(d);} return uit; }
+function roosterKort(d){ return d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'}); }
+function roosterNav(richting){
+  const basis = (richting===0 || !roosterMaandag) ? new Date() : new Date(roosterMaandag.getFullYear(),roosterMaandag.getMonth(),roosterMaandag.getDate()+richting*7);
+  roosterMaandag = roosterMaandagVan(basis);
+  laadRooster();
+}
+async function renderRooster(){
+  if(!roosterMaandag) roosterMaandag=roosterMaandagVan(new Date());
+  await laadRooster();
+}
+async function laadRooster(){
+  const inh=document.getElementById('roosterInhoud'); if(!inh) return;
+  const dagen=roosterDagen();
+  const van=roosterYmd(dagen[0]), tot=roosterYmd(dagen[6]);
+  const lbl=document.getElementById('roosterWeekLabel');
+  if(lbl) lbl.textContent = roosterKort(dagen[0])+' t/m '+roosterKort(dagen[6]);
+  if(!teamLeden.length && account){ try{ await laadTeamLeden(); }catch(e){} }
+  try{
+    const [b,r]=await Promise.all([
+      sb.from('beschikbaarheid').select('account_id,datum,beschikbaar,van,tot').gte('datum',van).lte('datum',tot),
+      sb.from('rooster').select('id,account_id,datum,van,tot,notitie').gte('datum',van).lte('datum',tot)
+    ]);
+    roosterData.besch = b.data||[];
+    roosterData.diensten = r.data||[];
+  }catch(e){ inh.innerHTML='<p class="muted">Het rooster kon niet geladen worden.</p>'; return; }
+  tekenRooster();
+}
+function roosterNaam(id){ const m=teamLeden.find(x=>x.id===id); if(m) return m.naam; if(gebruiker&&gebruiker.id===id) return gebruiker.naam; return '?'; }
+function tekenRooster(){
+  const inh=document.getElementById('roosterInhoud'); if(!inh) return;
+  const mag=roosterMagInplannen();
+  const uitleg=document.getElementById('roosterUitleg');
+  if(uitleg) uitleg.textContent = mag
+    ? 'Geef je eigen beschikbaarheid door en plan het team in. De stip staat bij wie zich voor die dag beschikbaar gaf; klik een naam om die in te plannen.'
+    : 'Geef per dag je beschikbaarheid door. De eigenaar plant het team in op basis daarvan.';
+  const vandaag=roosterYmd(new Date());
+  const mijnId = gebruiker && gebruiker.id;
+  inh.innerHTML=`<div class="roostergrid">${roosterDagen().map((d,i)=>{
+    const ymd=roosterYmd(d);
+    const mij=(roosterData.besch||[]).find(x=>x.account_id===mijnId&&x.datum===ymd);
+    const aan = mij ? mij.beschikbaar!==false : false;
+    const diensten=(roosterData.diensten||[]).filter(x=>x.datum===ymd);
+    const beschik=(roosterData.besch||[]).filter(x=>x.datum===ymd && x.beschikbaar!==false);
+    const ingepland=new Set(diensten.map(x=>x.account_id));
+    const tijdrij = aan
+      ? `<div class="tijdrij"><input type="time" value="${mij&&mij.van?mij.van:''}" onchange="zetBeschikbaar('${ymd}','van',this.value)"><span>tot</span><input type="time" value="${mij&&mij.tot?mij.tot:''}" onchange="zetBeschikbaar('${ymd}','tot',this.value)"></div>`
+      : '';
+    const dienstHtml = diensten.length
+      ? diensten.map(x=>{ const tijd=(x.van||x.tot)?(' · '+(x.van||'')+(x.tot?'–'+x.tot:'')):''; return `<div class="dagdienst"><span>${esc(roosterNaam(x.account_id))}${esc(tijd)}</span>${mag?`<button class="wegknop" title="Weghalen" onclick="roosterDienstWeg('${x.id}')">&times;</button>`:''}</div>`; }).join('')
+      : (mag ? '' : '<p class="beschhint">Nog niemand ingepland.</p>');
+    let inplan='';
+    if(mag){
+      const kandidaten = teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam}]:[]);
+      inplan = `<div>${kandidaten.map(m=>{
+        const op=ingepland.has(m.id);
+        const vrij=beschik.some(x=>x.account_id===m.id);
+        return `<span class="inplanchip${op?' op':''}"${op?'':` onclick="roosterInplan('${ymd}','${m.id}')"`} title="${vrij?'gaf beschikbaar op deze dag':'geen beschikbaarheid doorgegeven'}">${vrij?'● ':''}${esc(m.naam)}</span>`;
+      }).join('')}</div>`;
+    }
+    return `<div class="dagkaart${ymd===vandaag?' vandaag':''}">
+      <div class="dagkop"><b>${DAG_KORT[i]}</b> <span class="muted klein">${roosterKort(d)}</span></div>
+      <button type="button" class="beschtoggle${aan?' aan':''}" onclick="zetBeschikbaar('${ymd}','toggle')">${aan?'Ik ben beschikbaar':'Niet beschikbaar'}</button>
+      ${tijdrij}
+      <div class="roosterscheiding"><div class="roosterlabel">Ingepland</div>${dienstHtml}${inplan}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+async function zetBeschikbaar(ymd, veld, val){
+  if(!gebruiker) return;
+  const mij=(roosterData.besch||[]).find(x=>x.account_id===gebruiker.id&&x.datum===ymd) || {account_id:gebruiker.id, datum:ymd, beschikbaar:false, van:null, tot:null};
+  if(veld==='toggle') mij.beschikbaar = !(mij.beschikbaar!==false);
+  else if(veld==='van') mij.van = val||null;
+  else if(veld==='tot') mij.tot = val||null;
+  const rij={account_id:gebruiker.id, datum:ymd, beschikbaar:mij.beschikbaar!==false, van:mij.van||null, tot:mij.tot||null};
+  const {error}=await sb.from('beschikbaarheid').upsert(rij,{onConflict:'account_id,datum'});
+  if(error){ toast('Opslaan mislukte','fout'); return; }
+  const idx=(roosterData.besch||[]).findIndex(x=>x.account_id===gebruiker.id&&x.datum===ymd);
+  if(idx>=0) roosterData.besch[idx]=rij; else roosterData.besch.push(rij);
+  tekenRooster();
+}
+async function roosterInplan(ymd, accountId){
+  if(!roosterMagInplannen()) return;
+  const {error}=await sb.from('rooster').insert({account_id:accountId, datum:ymd});
+  if(error){ toast('Inplannen mislukte','fout'); return; }
+  await laadRooster();
+}
+async function roosterDienstWeg(id){
+  if(!roosterMagInplannen()) return;
+  const {error}=await sb.from('rooster').delete().eq('id',id);
+  if(error){ toast('Weghalen mislukte','fout'); return; }
+  await laadRooster();
+}
+
 function renderUren(){
   const alles=urenMagAlles();
   const wieVak=document.getElementById('urenWieVak'), wie=document.getElementById('uren_wie');
@@ -7808,11 +7955,11 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','personeel','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','personeel','rooster','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','vastelasten','rapport','facturen','instellingen','team','meer'],
-  medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','meer']
+  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','vastelasten','rapport','facturen','instellingen','team','meer'],
+  medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','meer']
 };
 /* ---------- pagina's aan of uit ----------
    Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
