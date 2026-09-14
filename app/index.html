@@ -2451,6 +2451,37 @@
   </div>
 </section>
 
+<!-- INKOPEN -->
+<section id="tab-inkopen"hidden>
+  <div class="pagehead"><h1>Inkopen</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-cart"/></svg>Inkoop toevoegen</h2>
+    <p class="muted" style="margin-bottom:12px">Leg vast wat je inkoopt (spullen, onderdelen). Hiermee wordt je btw-voorbelasting per kwartaal exact en klopt je investering. Bedragen inclusief btw.</p>
+    <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+      <div style="min-width:140px"><label>Datum</label><input id="ink_datum" type="date"></div>
+      <div style="flex:2; min-width:160px"><label>Wat</label><input id="ink_wat" placeholder="bijv. 20× hoesjes" autocomplete="off"></div>
+      <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="ink_lev" placeholder="bijv. Foneday" list="levsList" autocomplete="off"></div>
+      <div style="min-width:120px"><label>Bedrag (€) incl. btw</label><input id="ink_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
+      <div style="min-width:100px"><label>Btw</label><select id="ink_btw"><option value="21">21%</option><option value="9">9%</option><option value="0">0%</option></select></div>
+      <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
+    </div>
+  </div>
+  <div class="card breed">
+    <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px">
+      <div class="periodesel" id="inkopenPeriodeSel">
+        <button data-ip="maand" onclick="inkopenKiesPeriode('maand')">Deze maand</button>
+        <button data-ip="kwartaal" class="active" onclick="inkopenKiesPeriode('kwartaal')">Dit kwartaal</button>
+        <button data-ip="jaar" onclick="inkopenKiesPeriode('jaar')">Dit jaar</button>
+        <button data-ip="alles" onclick="inkopenKiesPeriode('alles')">Alles</button>
+      </div>
+      <div class="muted" id="inkopenTotaal"></div>
+    </div>
+    <div class="loglist paginalijst" id="inkopenLijst"></div>
+  </div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2535,6 +2566,7 @@
         <button class="hubtegel" data-tab="rooster" onclick="showTab('rooster')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Rooster</b><span>Beschikbaarheid doorgeven en het team inplannen</span></span></button>
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
         <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alle verkopen, per dag of week, zoeken op naam of bedrag</span></span></button>
+        <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Wat je inkoopt vastleggen, voor de btw-voorbelasting en investering</span></span></button>
         <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
       </div>
     </div>
@@ -3203,6 +3235,10 @@ function load(){
   /* Zelf in te stellen buffers: een naam plus een percentage van de winst dat je apart
      wilt zetten (bijv. een spaarbuffer). Toe te voegen en te verwijderen op het rapport. */
   if(!Array.isArray(s.reserveringen)) s.reserveringen=[];
+  /* Inkopen die je doet (spullen, onderdelen): datum, wat, leverancier, bedrag incl. btw
+     en het btw-tarief. Hiermee wordt de btw-voorbelasting per kwartaal exact en klopt de
+     investering. Dit is ook precies wat we later naar Moneybird kunnen sturen. */
+  if(!Array.isArray(s.inkopen)) s.inkopen=[];
   /* Fiscale instellingen voor de indicaties: startsaldo (wat je tot nu toe hebt ingelegd
      of rood staat, voor de balans) en of je aan het urencriterium voldoet (zelfstandigen-
      aftrek). Bewust apart, want dit zijn keuzes van de ondernemer. */
@@ -3305,6 +3341,7 @@ function showTab(t){
   if(t==='personeel'){ renderPersoneel(); renderPersoneelMaand(); }
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
+  if(t==='inkopen') renderInkopen();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -4167,8 +4204,12 @@ function btwKwartaal(jaar, q){
   const van=new Date(jaar, q*3, 1).getTime(), tot=new Date(jaar, q*3+3, 1).getTime();
   let verschuldigd=0, cogs=0;
   (state.verkopen||[]).forEach(v=>{ if(v.t>=van && v.t<tot){ verschuldigd+=vBtw(v); cogs+=Number(v.inkoop)||0; } });
-  const vb=cogs*21/121, r=n=>Math.round(n*100)/100;
-  return {verschuldigd:r(verschuldigd), voorbelasting:r(vb), afdragen:r(verschuldigd-vb), deadline:new Date(jaar, q*3+4, 0)};
+  /* Zijn er geregistreerde inkopen, dan is de voorbelasting exact (btw over die inkopen).
+     Anders vallen we terug op een schatting op de inkoopwaarde van de verkochte goederen. */
+  const echt=(state.inkopen||[]).length>0;
+  const vb = echt ? inkoopVoorbelastingInPeriode(van,tot) : cogs*21/121;
+  const r=n=>Math.round(n*100)/100;
+  return {verschuldigd:r(verschuldigd), voorbelasting:r(vb), afdragen:r(verschuldigd-vb), deadline:new Date(jaar, q*3+4, 0), echt};
 }
 function voorraadInvestering(){ return (state.producten||[]).reduce((x,p)=>x+(Number(p.voorraad)||0)*(Number(p.inkoop)||0),0); }
 function jaarResultaatYTD(){ const j=new Date().getFullYear(); return rapportCijfers({van:new Date(j,0,1).getTime(), tot:Date.now()+1}).resultaat; }
@@ -4190,7 +4231,7 @@ function renderRapportFiscaal(){
       <div class="muted klein" style="margin:2px 0 12px">Een schatting om op te reserveren, geen belastingaangifte. Je boekhouder blijft leidend.</div>
       <div style="font-weight:700; margin-bottom:6px">Btw per kwartaal ${jaar}</div>
       <div style="overflow-x:auto"><table><thead><tr><th>Kwartaal</th><th class="num">Verschuldigd</th><th class="num">Voorbelasting*</th><th class="num">Af te dragen</th><th>Uiterlijk</th></tr></thead><tbody>${kw||'<tr><td colspan="5" class="muted">Nog geen verkopen dit jaar.</td></tr>'}</tbody></table></div>
-      <div class="muted klein" style="margin:6px 0 16px">*Voorbelasting is een schatting op de inkoopwaarde van de verkochte goederen; btw op andere kosten kan er nog af.</div>
+      <div class="muted klein" style="margin:6px 0 16px">${(state.inkopen||[]).length?'*Voorbelasting = btw over je geregistreerde inkopen in dat kwartaal.':'*Voorbelasting is nu nog een schatting (btw over de inkoopwaarde van de verkochte goederen). Leg je inkopen vast op de Inkopen-pagina, dan wordt dit exact.'}</div>
       <div style="font-weight:700; margin-bottom:6px">Inkomstenbelasting over de winst dit jaar</div>
       <div class="row" style="gap:28px; flex-wrap:wrap">
         <div><div class="muted klein">Winst dit jaar</div><b class="groot">${euro(ytd)}</b></div>
@@ -4889,6 +4930,57 @@ function renderVerkopen(){
     const bet='<span class="muted">'+esc(betaalNaam(v.betaal))+'</span>';
     return `<div>${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)} <b>${euro(v.verkoop)}</b> ${bet}${v.door?' <span class="muted">· '+esc(v.door)+'</span>':''} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
   }).join('') : ('<div class="muted">Geen verkopen gevonden'+(q?' voor "'+esc(q)+'"':' in deze periode')+'.</div>');
+}
+
+/* ── Inkopen-registratie ──
+   Wat je inkoopt (spullen, onderdelen), zodat de btw-voorbelasting per kwartaal exact
+   wordt en je investering klopt. Bedragen incl. btw; de btw wordt eruit gerekend. */
+let inkopenPeriode='kwartaal';
+function inkoopBtwBedrag(ink){ const t=Number(ink.btw)||0, b=Number(ink.bedrag)||0; return b*t/(100+t); }
+function inkoopToevoegen(){
+  const datum=(document.getElementById('ink_datum').value||new Date().toISOString().slice(0,10));
+  const wat=(document.getElementById('ink_wat').value||'').trim();
+  const lev=(document.getElementById('ink_lev').value||'').trim();
+  const bedrag=Math.max(0, Number(document.getElementById('ink_bedrag').value)||0);
+  const btw=Number(document.getElementById('ink_btw').value)||0;
+  if(!wat){ toast('Vul in wat je hebt ingekocht','let-op'); return; }
+  if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
+  if(!Array.isArray(state.inkopen)) state.inkopen=[];
+  state.inkopen.unshift({id:uid(), t:new Date(datum+'T12:00:00').getTime(), datum, wat, leverancier:lev, bedrag, btw});
+  save();
+  document.getElementById('ink_wat').value=''; document.getElementById('ink_bedrag').value=''; document.getElementById('ink_lev').value='';
+  renderInkopen();
+  toast('Inkoop toegevoegd', true);
+}
+function inkoopWeg(id){ state.inkopen=(state.inkopen||[]).filter(x=>String(x.id)!==String(id)); save(); renderInkopen(); }
+function inkopenKiesPeriode(p){
+  inkopenPeriode=p;
+  const sel=document.getElementById('inkopenPeriodeSel'); if(sel) sel.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.ip===p));
+  renderInkopen();
+}
+function inkopenPeriodeStart(){
+  const d=new Date(); d.setHours(0,0,0,0);
+  if(inkopenPeriode==='maand'){ d.setDate(1); return d.getTime(); }
+  if(inkopenPeriode==='kwartaal'){ return new Date(d.getFullYear(), Math.floor(d.getMonth()/3)*3, 1).getTime(); }
+  if(inkopenPeriode==='jaar'){ return new Date(d.getFullYear(),0,1).getTime(); }
+  return 0;
+}
+function renderInkopen(){
+  const dEl=document.getElementById('ink_datum'); if(dEl && !dEl.value) dEl.value=new Date().toISOString().slice(0,10);
+  const lijst=document.getElementById('inkopenLijst'); if(!lijst) return;
+  const start=inkopenPeriodeStart();
+  const rijen=(state.inkopen||[]).filter(v=>(v.t||0)>=start);
+  const tot=rijen.reduce((s,v)=>s+(Number(v.bedrag)||0),0);
+  const totBtw=rijen.reduce((s,v)=>s+inkoopBtwBedrag(v),0);
+  const totEl=document.getElementById('inkopenTotaal');
+  if(totEl) totEl.textContent = rijen.length ? (rijen.length+' inkoop'+(rijen.length===1?'':'en')+' · totaal '+euro(tot)+' · btw '+euro(totBtw)) : '';
+  lijst.innerHTML = rijen.length ? rijen.map(v=>{
+    const d=new Date(v.t);
+    return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}<button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
+  }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
+}
+function inkoopVoorbelastingInPeriode(van, tot){
+  return (state.inkopen||[]).reduce((s,v)=>{ if((v.t||0)>=van && (v.t||0)<tot) s+=inkoopBtwBedrag(v); return s; },0);
 }
 
 /* ---------- scannen ---------- */
@@ -8410,10 +8502,10 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','personeel','rooster','verkopen','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','personeel','rooster','verkopen','inkopen','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','vastelasten','rapport','facturen','instellingen','team','meer'],
+  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','vastelasten','rapport','facturen','instellingen','team','meer'],
   medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','meer']
 };
 /* ---------- pagina's aan of uit ----------
