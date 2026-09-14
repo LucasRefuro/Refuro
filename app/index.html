@@ -2457,11 +2457,12 @@
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-cart"/></svg>Inkoop toevoegen</h2>
-    <p class="muted" style="margin-bottom:12px">Leg vast wat je inkoopt (spullen, onderdelen). Hiermee wordt je btw-voorbelasting per kwartaal exact en klopt je investering. Bedragen inclusief btw.</p>
+    <p class="muted" style="margin-bottom:12px">Leg vast wat je inkoopt. Kies <b>Voorraad</b> voor spullen die je doorverkoopt (hoesjes, onderdelen, partijen laptops): die verlagen je winst pas bij de verkoop, niet nu. Kies <b>Kosten</b> voor directe kosten (verpakking, gereedschap): die gaan meteen van je winst af. De btw-voorbelasting claim je bij beide meteen. Bedragen inclusief btw.</p>
     <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
       <div style="min-width:140px"><label>Datum</label><input id="ink_datum" type="date"></div>
       <div style="flex:2; min-width:160px"><label>Wat</label><input id="ink_wat" placeholder="bijv. 20× hoesjes" autocomplete="off"></div>
       <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="ink_lev" placeholder="bijv. Foneday" list="levsList" autocomplete="off"></div>
+      <div style="min-width:130px"><label>Soort</label><select id="ink_soort"><option value="voorraad">Voorraad</option><option value="kosten">Kosten</option></select></div>
       <div style="min-width:120px"><label>Bedrag (€) incl. btw</label><input id="ink_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
       <div style="min-width:100px"><label>Btw</label><select id="ink_btw"><option value="21">21%</option><option value="9">9%</option><option value="0">0%</option></select></div>
       <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
@@ -4132,8 +4133,11 @@ function rapportCijfers(b){
   let vlVan=b.van;
   if(vlVan<=0){ const e=(state.verkopen||[]).reduce((m,v)=>Math.min(m, v.t||Infinity), Infinity); vlVan=isFinite(e)?e:b.tot; }
   const vast=vasteLastenInPeriode(vlVan,b.tot);
-  return {omzet:s.omzet, inkoop:s.kosten, brutowinst:s.winst, loon, vast,
-          resultaat:s.winst-loon-vast, stuks:s.stuks, pin:s.pin, cash:s.cash, cashzb:s.cashzb,
+  /* Alleen kosten-inkopen zijn een directe kost; voorraad-inkopen vallen pas bij verkoop
+     (via de inkoopwaarde van het verkochte, die al in s.winst zit). */
+  const kostenInkoop=kostenInkopenInPeriode(b.van,b.tot);
+  return {omzet:s.omzet, inkoop:s.kosten, brutowinst:s.winst, loon, vast, kostenInkoop,
+          resultaat:s.winst-loon-vast-kostenInkoop, stuks:s.stuks, pin:s.pin, cash:s.cash, cashzb:s.cashzb,
           btw:s.btw, omzetExcl:Math.round((s.omzet-s.btw)*100)/100};
 }
 function rapBereikLabel(b){
@@ -4169,6 +4173,7 @@ function renderRapport(){
     rij('Brutowinst', c.brutowinst, {totaal:true})+
     rij('Loonkosten', c.loon, {min:true})+
     rij('Vaste lasten', c.vast, {min:true})+
+    (c.kostenInkoop>0?rij('Kosten-inkopen', c.kostenInkoop, {min:true}):'')+
     rij('Resultaat', c.resultaat, {totaal:true})+
     '</tbody></table></div>'+
     `<div class="row" style="gap:28px; flex-wrap:wrap; margin-top:14px">
@@ -4947,10 +4952,11 @@ function inkoopToevoegen(){
   const lev=(document.getElementById('ink_lev').value||'').trim();
   const bedrag=Math.max(0, Number(document.getElementById('ink_bedrag').value)||0);
   const btw=Number(document.getElementById('ink_btw').value)||0;
+  const soort=((document.getElementById('ink_soort')||{}).value==='kosten')?'kosten':'voorraad';
   if(!wat){ toast('Vul in wat je hebt ingekocht','let-op'); return; }
   if(!bedrag){ toast('Vul een bedrag in','let-op'); return; }
   if(!Array.isArray(state.inkopen)) state.inkopen=[];
-  state.inkopen.unshift({id:uid(), t:new Date(datum+'T12:00:00').getTime(), datum, wat, leverancier:lev, bedrag, btw});
+  state.inkopen.unshift({id:uid(), t:new Date(datum+'T12:00:00').getTime(), datum, wat, leverancier:lev, bedrag, btw, soort});
   save();
   document.getElementById('ink_wat').value=''; document.getElementById('ink_bedrag').value=''; document.getElementById('ink_lev').value='';
   renderInkopen();
@@ -4984,11 +4990,20 @@ function renderInkopen(){
     const mb = v.mb_id
       ? '<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">in Moneybird</span>'
       : (verbonden ? '<button class="btn ghost small" onclick="inkoopMoneybirdDialoog(\''+v.id+'\')">Naar Moneybird</button>' : '');
-    return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${mb}<span class="muted">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span><button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
+    return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· ${v.soort==='kosten'?'kosten':'voorraad'} · btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${mb}<span class="muted">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span><button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
   }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
 }
 function inkoopVoorbelastingInPeriode(van, tot){
   return (state.inkopen||[]).reduce((s,v)=>{ if((v.t||0)>=van && (v.t||0)<tot) s+=inkoopBtwBedrag(v); return s; },0);
+}
+/* Alleen de kosten-inkopen zijn een directe kost die van de winst afgaat. Voorraad-inkopen
+   (hoesjes, onderdelen, partijen laptops) tellen niet nu mee: die kost valt pas bij de
+   verkoop, via de inkoopwaarde van het verkochte (dat rekent Storvo al zo). */
+function kostenInkopenInPeriode(van, tot){
+  return (state.inkopen||[]).reduce((s,v)=>{ if((v.soort==='kosten') && (v.t||0)>=van && (v.t||0)<tot) s+=(Number(v.bedrag)||0); return s; },0);
+}
+function voorraadInkopenInPeriode(van, tot){
+  return (state.inkopen||[]).reduce((s,v)=>{ if((v.soort!=='kosten') && (v.t||0)>=van && (v.t||0)<tot) s+=(Number(v.bedrag)||0); return s; },0);
 }
 /* Moneybird-koppeling: praat met de Edge Function 'moneybird', die namens de winkel een
    inkoopfactuur in Moneybird zet. Het token staat als geheim in Supabase; de browser ziet
