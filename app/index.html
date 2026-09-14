@@ -4986,6 +4986,46 @@ function inkoopWeg(id){
   if(v && v.factuur_pad){ try{ sb.storage.from('inkoopfacturen').remove([v.factuur_pad]); }catch(e){} }
   state.inkopen=(state.inkopen||[]).filter(x=>String(x.id)!==String(id)); save(); renderInkopen();
 }
+/* Detailweergave van een inkoop met de factuur ingesloten (net als Moneybird): links de
+   PDF/foto, rechts de gegevens en acties. */
+async function inkoopDetail(id){
+  const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  const verbonden = state.moneybird && state.moneybird.verbonden;
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='inkDetailOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:92vh; overflow:auto">
+    <h3>Inkoop</h3>
+    <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap">
+      <div style="flex:2; min-width:280px"><div id="inkPdf" class="muted">Factuur laden…</div></div>
+      <div style="flex:1; min-width:200px">
+        <div style="font-size:24px; font-weight:800">${euro(v.bedrag)}</div>
+        <div class="muted klein" style="margin:2px 0 12px">incl. btw ${Number(v.btw)||0}%</div>
+        <table class="strooktabel"><tbody>
+          <tr><td>Wat</td><td class="num">${esc(v.wat||'')}</td></tr>
+          <tr><td>Leverancier</td><td class="num">${esc(v.leverancier||'—')}</td></tr>
+          <tr><td>Datum</td><td class="num">${new Date(v.t).toLocaleDateString('nl-NL')}</td></tr>
+          <tr><td>Soort</td><td class="num">${v.soort==='kosten'?'Kosten':'Voorraad'}</td></tr>
+        </tbody></table>
+        <div class="acts2" style="margin-top:14px">
+          ${v.mb_id?'<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">in Moneybird</span>':(verbonden?'<button class="btn small" onclick="document.getElementById(\'inkDetailOverlay\').remove(); inkoopMoneybirdDialoog(\''+v.id+'\')">Naar Moneybird</button>':'')}
+          ${v.factuur_pad?'<button class="btn ghost small" onclick="inkoopFactuurBekijk(\''+v.id+'\')">Nieuw tabblad</button>':''}
+        </div>
+      </div>
+    </div>
+    <div class="acts" style="margin-top:16px"><button class="btn ghost" onclick="document.getElementById('inkDetailOverlay').remove()">Sluiten</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const pdfEl=document.getElementById('inkPdf');
+  if(!v.factuur_pad){ if(pdfEl) pdfEl.innerHTML='<span class="muted">Geen factuur bij deze inkoop.</span>'; return; }
+  try{
+    const {data,error}=await sb.storage.from('inkoopfacturen').createSignedUrl(v.factuur_pad, 300);
+    if(error||!data){ if(pdfEl) pdfEl.textContent='Kon de factuur niet laden.'; return; }
+    const isImg=(v.factuur_type||'').startsWith('image/');
+    if(pdfEl) pdfEl.innerHTML = isImg
+      ? '<img src="'+data.signedUrl+'" style="width:100%; border:1px solid var(--border); border-radius:var(--radius-s)">'
+      : '<iframe src="'+data.signedUrl+'" style="width:100%; height:72vh; border:1px solid var(--border); border-radius:var(--radius-s)" title="factuur"></iframe>';
+  }catch(e){ if(pdfEl) pdfEl.textContent='Kon de factuur niet laden.'; }
+}
 /* De bewaarde factuur openen: een tijdelijke (getekende) link naar de privé-bucket. */
 async function inkoopFactuurBekijk(id){
   const v=(state.inkopen||[]).find(x=>String(x.id)===String(id)); if(!v||!v.factuur_pad) return;
@@ -5032,7 +5072,7 @@ function renderInkopen(){
       ? '<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">in Moneybird</span>'
       : (verbonden ? '<button class="btn ghost small" onclick="inkoopMoneybirdDialoog(\''+v.id+'\')">Naar Moneybird</button>' : '');
     const fac = v.factuur_pad
-      ? '<button class="btn ghost small" onclick="inkoopFactuurBekijk(\''+v.id+'\')"><svg class="i s"><use href="#i-clipboard"/></svg>Factuur</button>'
+      ? '<button class="btn ghost small" onclick="inkoopDetail(\''+v.id+'\')"><svg class="i s"><use href="#i-clipboard"/></svg>Bekijk factuur</button>'
       : '<span class="muted klein" title="Geen factuur bij deze inkoop">geen factuur</span>';
     return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· ${v.soort==='kosten'?'kosten':'voorraad'} · btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${fac}${mb}<span class="muted">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span><button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
   }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
