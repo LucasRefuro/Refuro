@@ -6618,6 +6618,28 @@ function uitAdres(){
 
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') sluit(); });
 
+/* Handscanner (2D barcode-scanner in keyboard-modus): die 'typt' de QR-inhoud razendsnel en
+   sluit af met Enter. We vangen dat globaal op — maar alleen als je NIET in een tekstveld staat,
+   en alleen voor onze eigen ?apparaat=-URL's. Zo opent een scan meteen het toestel (of de
+   aanvul-vorm bij een nog-toe-te-voegen label), en verandert gewoon typen niets. */
+let scanBuf='', scanTijd=0;
+document.addEventListener('keydown', e=>{
+  const el=document.activeElement;
+  if(el && /^(input|textarea|select)$/i.test(el.tagName)) return;   // in een veld: met rust laten
+  const nu=Date.now();
+  if(nu-scanTijd>120) scanBuf='';                                    // trage toetsaanslagen = een mens
+  scanTijd=nu;
+  if(e.key==='Enter'){
+    const t=scanBuf; scanBuf='';
+    if(t.length<8) return;
+    let id=null;
+    try{ const u=new URL(t); if(u.origin===location.origin) id=u.searchParams.get('apparaat'); }catch(_e){}
+    if(id){ const a=apparaten.find(x=>x.id===id); if(a){ e.preventDefault(); appPagina(id); } }
+    return;
+  }
+  if(e.key.length===1) scanBuf+=e.key;
+});
+
 start().then(()=>{ setTimeout(uitAdres, 300); }).catch(e=>{
   console.error('opstarten refurbish:', e);
   slot('Er ging iets mis bij het opstarten','Controleer je verbinding en probeer het opnieuw.','Opnieuw proberen','/refurbish/');
