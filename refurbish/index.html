@@ -1580,13 +1580,24 @@ function laadScript(src){
   });
 }
 function labelInstelling(){
-  return { printer: localStorage.getItem('storvoPrinter')||'', breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62 };
+  return { breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62,
+           tweekleuren: localStorage.getItem('storvoLabelTweekleur')!=='0' };
 }
-async function qzVerbind(){
-  await laadScript('/app/qz-tray.js');
-  if(typeof qz==='undefined') throw new Error('QZ Tray-bibliotheek niet geladen');
-  if(qz.websocket.isActive()) return;
-  try{ await qz.websocket.connect(); } catch(e){ throw new Error('Geen verbinding met QZ Tray. Draait het programma op deze Mac?'); }
+/* Print via het lokale hulpprogramma (~/.storvo-print), niet via de macOS-driver: die Brother-
+   driver crasht op Apple Silicon. Het hulpprogramma stuurt de QL-800 rechtstreeks via USB aan.
+   red=tweekleuren-modus, verplicht voor de zwart/rood-rol DK-22251. Instellingen deelt Storvo
+   met de winkelapp (zelfde domein, zelfde localStorage). Zie ook /app → Meer → Labelprinter. */
+function printHelperUrl(){ return localStorage.getItem('storvoPrintUrl')||'http://127.0.0.1:9909'; }
+async function printViaHelper(pngBase64, opts){
+  opts=opts||{};
+  const body=JSON.stringify({ png:pngBase64, label:String(opts.label||labelInstelling().breedte||62),
+    red:opts.red!==false, cut:opts.cut!==false, kopieen:opts.kopieen||1 });
+  let r;
+  try{ r=await fetch(printHelperUrl()+'/print',{method:'POST',headers:{'Content-Type':'application/json'},body}); }
+  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac, en gebruik je Chrome?'); }
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||'printen mislukt');
+  return j;
 }
 function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
   const woorden=String(tekst||'').split(/\s+/); let regel='', regels=0;
@@ -1637,14 +1648,11 @@ async function deviceLabelPng(a){
 async function qzPrintDeviceLabels(ids){
   const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
   if(!lijst.length){ toast('Geen apparaten om te printen','let-op'); return; }
-  const {printer, breedte}=labelInstelling();
-  if(!printer){ toast('Stel eerst je labelprinter in: Storvo → Meer → Labelprinter','let-op'); return; }
+  const {breedte, tweekleuren}=labelInstelling();
   try{
-    await qzVerbind();
     for(const a of lijst){
-      const {data, hoogte}=await deviceLabelPng(a);
-      const config=qz.configs.create(printer, {size:{width:breedte, height:hoogte}, units:'mm', scaleContent:true, margins:0, colorType:'grayscale'});
-      await qz.print(config, [{type:'pixel', format:'image', flavor:'base64', data}]);
+      const {data}=await deviceLabelPng(a);
+      await printViaHelper(data, {label:breedte, red:tweekleuren});
     }
     toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
   }catch(e){ toast('Printen: '+e.message,'fout'); }

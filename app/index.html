@@ -2573,18 +2573,18 @@
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-tag"/></svg>Labels printen</h2>
-    <p class="muted" style="margin-bottom:12px">Print prijs- en productstickers rechtstreeks op je Brother QL-800, zonder printvenster. Hiervoor draait <b>QZ Tray</b> op deze Mac en is de printer via USB aangesloten. Deze instellingen gelden voor dit apparaat.</p>
-    <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet verbonden. Klik op "Verbinden".</div>
+    <p class="muted" style="margin-bottom:12px">Print prijs- en productstickers rechtstreeks op je Brother QL-800, zonder printvenster. Hiervoor draait een klein hulpprogramma op deze Mac (dat start automatisch mee) en is de printer via USB aangesloten. Gebruik Chrome. Deze instellingen gelden voor dit apparaat.</p>
+    <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet getest. Klik op "Verbinding testen".</div>
     <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
-      <div style="min-width:220px"><label>Printer</label><select id="labelPrinter" onchange="labelBewaar()"><option value="">Nog geen printer geladen</option></select></div>
       <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
       <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
+      <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
     </div>
     <div class="acts2" style="margin-top:14px">
-      <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinden / printers laden</button>
+      <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinding testen</button>
       <button class="btn actie" onclick="labelTest(this)"><svg class="i s"><use href="#i-tag"/></svg>Test label printen</button>
     </div>
-    <p class="muted klein" style="margin-top:14px">Doorlopende rol (bijv. DK-2205, 62 mm): zet breedte 62 en hoogte bijvoorbeeld 30. Vast formaat (bijv. 29 × 90 mm): vul dat formaat in.</p>
+    <p class="muted klein" style="margin-top:14px">Doorlopende rol (bijv. DK-22251, 62 mm): zet breedte 62 en hoogte bijvoorbeeld 30. Heb je een zwart/rood-rol (DK-22251)? Laat "Zwart/rood-rol" aan staan, anders knippert de printer rood.</p>
   </div>
   </div>
 </section>
@@ -5366,12 +5366,16 @@ function mailPollStart(){
   }, 150000); // elke 2,5 minuut zolang de mailpagina open is
 }
 
-/* ═══ Labelprinter (QZ Tray) ═══
-   Print prijs-/productstickers stil op een lokale labelprinter (Brother QL-800) via QZ Tray,
-   zonder printvenster. QZ Tray draait als klein programma op de Mac; Storvo praat ermee via
-   een lokale verbinding. We laden de bibliotheken (qz-tray + JsBarcode) pas als je print,
-   zodat de rest van de app er niets van merkt. Instellingen staan per apparaat in localStorage
-   (de printer hangt immers aan díe Mac). Label = titel + prijs groot + scanbare barcode. */
+/* ═══ Labelprinter (Storvo-printhulp) ═══
+   Print prijs-/productstickers stil op de Brother QL-800, zonder printvenster. NIET via de
+   macOS-driver: die driver is van 2018 (alleen Intel) en crasht op Apple Silicon, dus elke
+   gewone print (en QZ Tray, dat door dezelfde driver gaat) doet niets. In plaats daarvan draait
+   er een klein hulpprogramma op de Mac (~/.storvo-print, start automatisch mee) dat de printer
+   RECHTSTREEKS via USB aanstuurt met brother_ql. Storvo stuurt het label als PNG naar
+   http://127.0.0.1:9909. Let op: de rol DK-22251 is zwart/rood; de QL-800 eist dan de
+   tweekleuren-modus (red=true), ook bij alleen zwart — anders knippert hij rood. Daarom staat
+   tweekleuren standaard aan. Instellingen staan per apparaat in localStorage (de printer hangt
+   aan díe Mac). Label = titel + prijs groot + scanbare barcode. */
 function laadScript(src){
   return new Promise((res,rej)=>{
     const bestaat=[...document.scripts].some(s=>s.src&&s.src.indexOf(src)!==-1);
@@ -5381,19 +5385,33 @@ function laadScript(src){
     document.head.appendChild(s);
   });
 }
-async function qzVerbind(){
-  await laadScript('/app/qz-tray.js');
-  if(typeof qz==='undefined') throw new Error('QZ Tray-bibliotheek niet geladen');
-  if(qz.websocket.isActive()) return;
-  try{ await qz.websocket.connect(); }
-  catch(e){ throw new Error('Geen verbinding met QZ Tray. Draait het programma op deze Mac?'); }
+function printHelperUrl(){ return localStorage.getItem('storvoPrintUrl')||'http://127.0.0.1:9909'; }
+/* Vraagt het hulpprogramma naar de printerstatus. Werkt de verbinding niet, dan gooit dit een
+   duidelijke fout (programma draait niet, of we zitten in Safari dat localhost blokkeert). */
+async function printHelperStatus(){
+  let r;
+  try{ r=await fetch(printHelperUrl()+'/status',{method:'GET'}); }
+  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac, en gebruik je Chrome?'); }
+  return await r.json();
 }
-async function qzPrinters(){ await qzVerbind(); return await qz.printers.find(); }
+/* Stuurt een PNG (base64) naar de printhulp, die hem rechtstreeks naar de QL-800 stuurt.
+   red=tweekleuren-modus (verplicht voor DK-22251). Gooit een fout als de printer een fout meldt. */
+async function printViaHelper(pngBase64, opts){
+  opts=opts||{};
+  const body=JSON.stringify({ png:pngBase64, label:String(opts.label||labelInstelling().breedte||62),
+    red:opts.red!==false, cut:opts.cut!==false, kopieen:opts.kopieen||1 });
+  let r;
+  try{ r=await fetch(printHelperUrl()+'/print',{method:'POST',headers:{'Content-Type':'application/json'},body}); }
+  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac, en gebruik je Chrome?'); }
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||'printen mislukt');
+  return j;
+}
 function labelInstelling(){
   return {
-    printer: localStorage.getItem('storvoPrinter')||'',
     breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62,
     hoogte: Number(localStorage.getItem('storvoLabelHoogte'))||30,
+    tweekleuren: localStorage.getItem('storvoLabelTweekleur')!=='0',
   };
 }
 /* Tekst netjes over maximaal een paar regels, laatste regel afgekapt met … */
@@ -5437,48 +5455,36 @@ async function labelPng(data){
   return c.toDataURL('image/png').split(',')[1];
 }
 async function qzPrintLabel(data){
-  const {printer, breedte, hoogte}=labelInstelling();
-  if(!printer){ toast('Kies eerst je labelprinter (Meer → Labelprinter)','let-op'); return false; }
-  await qzVerbind();
+  const {breedte, tweekleuren}=labelInstelling();
   const png=await labelPng(data);
-  const config=qz.configs.create(printer, {size:{width:breedte, height:hoogte}, units:'mm', scaleContent:true, margins:0, colorType:'grayscale'});
-  await qz.print(config, [{type:'pixel', format:'image', flavor:'base64', data:png}]);
+  await printViaHelper(png, {label:breedte, red:tweekleuren, kopieen:data.kopieen||1});
   return true;
 }
 function renderLabelprinter(){
   const inst=labelInstelling();
   const b=document.getElementById('labelBreedte'); if(b) b.value=inst.breedte;
   const h=document.getElementById('labelHoogte'); if(h) h.value=inst.hoogte;
-  const sel=document.getElementById('labelPrinter');
-  if(sel && inst.printer && !sel.querySelector('option[value="'+inst.printer.replace(/"/g,'')+'"]')){
-    sel.innerHTML=`<option value="${esc(inst.printer)}" selected>${esc(inst.printer)}</option>`;
-  }
+  const t=document.getElementById('labelTweekleur'); if(t) t.checked=inst.tweekleuren;
 }
 function labelBewaar(){
-  const p=(document.getElementById('labelPrinter')||{}).value; if(p) localStorage.setItem('storvoPrinter', p);
   localStorage.setItem('storvoLabelBreedte', String(Math.max(10, Math.min(120, Number((document.getElementById('labelBreedte')||{}).value)||62))));
   localStorage.setItem('storvoLabelHoogte', String(Math.max(10, Math.min(200, Number((document.getElementById('labelHoogte')||{}).value)||30))));
+  const t=document.getElementById('labelTweekleur'); if(t) localStorage.setItem('storvoLabelTweekleur', t.checked?'1':'0');
 }
 async function labelVerbind(knop){
-  if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Verbinden…'; }
+  if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Testen…'; }
   const st=document.getElementById('labelStatus');
   try{
-    const printers=await qzPrinters();
-    const huidig=labelInstelling().printer;
-    const sel=document.getElementById('labelPrinter');
-    if(printers.length){
-      let kies=huidig;
-      if(!kies){ const ql=printers.find(p=>/ql[- ]?800|brother|\bql\b/i.test(p)); kies=ql||printers[0]; }
-      sel.innerHTML=printers.map(p=>`<option value="${esc(p)}" ${p===kies?'selected':''}>${esc(p)}</option>`).join('');
-      labelBewaar();
-      if(st) st.textContent='Verbonden. '+printers.length+' printer(s) gevonden.';
-      toast('Verbonden met QZ Tray', true);
+    const s=await printHelperStatus();
+    if(s.ok){
+      const mt=s.type==='0xa'?'doorlopend':(s.type==='0xb'?'vast formaat':s.type);
+      if(st) st.textContent='Verbonden. Rol: '+s.breedte_mm+' mm, '+mt+'. Printer klaar.';
+      toast('Verbonden met de printer', true);
     }else{
-      sel.innerHTML='<option value="">Geen printer gevonden</option>';
-      if(st) st.textContent='Verbonden, maar geen printer gevonden. Is de QL-800 aangesloten en geïnstalleerd?';
-      toast('Geen printer gevonden','let-op');
+      if(st) st.textContent='Printhulp draait, maar de printer reageert niet: '+(s.error||'onbekend')+'. Staat de QL-800 aan?';
+      toast('Printer reageert niet','let-op');
     }
-  }catch(e){ if(st) st.textContent='Niet verbonden: '+e.message; toast('QZ: '+e.message,'fout'); }
+  }catch(e){ if(st) st.textContent='Niet verbonden: '+e.message; toast(e.message,'fout'); }
   if(knop){ knop.disabled=false; if(knop.dataset.oud) knop.innerHTML=knop.dataset.oud; }
 }
 async function labelTest(knop){
