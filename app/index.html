@@ -1695,7 +1695,9 @@
   .qrscan-dicht{position:absolute; top:calc(env(safe-area-inset-top) + 16px); right:18px;
     background:rgba(255,255,255,.16); color:#fff; border:none; cursor:pointer; font-family:inherit;
     font-weight:700; font-size:15px; padding:10px 18px; border-radius:var(--pil); z-index:2;}
-  .partnerpil{display:inline-flex; align-items:center; background:#E3F4EC; color:#177A51; font-weight:700; font-size:12.5px; padding:7px 12px; border-radius:var(--pil); white-space:nowrap;}
+  .partnerpil{display:inline-flex; align-items:center; justify-content:center; background:#E3F4EC; color:#177A51; font-weight:700; font-size:12.5px; padding:8px 13px; border-radius:var(--pil); white-space:nowrap;}
+  .hwact .hwacties{display:inline-flex; gap:10px; align-items:center; justify-content:flex-end; flex-wrap:nowrap;}
+  .hwact .hwacties .btn, .hwact .hwacties .partnerpil{justify-content:center; min-width:112px; white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -11110,12 +11112,12 @@ function renderHardware(){
         <td>${hwKanalen(h)}</td>
         <td title="Toegevoegd ${esc(hwWanneer(h))}${hwWie(h)?' door '+esc(hwWie(h)):''}">${h.status==='verkocht'?'<span class="muted">verkocht</span>'
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
-        <td class="num hwact" style="white-space:nowrap">${h.status==='verkocht'?''
-          : h.partner_id
-            ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span> <button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
-          :`${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg')
-              ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button> `:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
-              ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button> `:''}<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
+        <td class="num hwact">${h.status==='verkocht'?''
+          : `<div class="hwacties">${h.partner_id
+            ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span><button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
+            : `${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg')
+              ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button>`:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
+              ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="event.stopPropagation(); hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button>`:''}<button class="btn ghost small" onclick="event.stopPropagation(); hwBewerk('${h.id}')">Openen</button>`}</div>`}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   hwSelectieBalk();
