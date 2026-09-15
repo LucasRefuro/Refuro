@@ -168,6 +168,10 @@ tr.klikbaar{cursor:pointer;}
   .batpil-werkend{border-color:transparent; background:var(--green-soft); color:var(--green-tekst);}
   .batpil-ongetest{border-color:transparent; background:var(--amber-soft); color:var(--amber-tekst);}
   .batpil-compleet{border-color:transparent; background:var(--green-soft); color:var(--green-tekst);}
+  .slotgrid{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; max-height:280px; overflow:auto; padding:2px;}
+  .slotchip{min-width:44px; padding:7px 8px; border-radius:10px; border:1.5px solid var(--border); background:var(--card); font-family:inherit; font-weight:700; font-size:12.5px; color:var(--tekst); cursor:pointer;}
+  .slotchip.geprint{background:var(--lblauw); border-color:transparent; color:var(--groen);}
+  .slotchip.ingevuld{background:var(--green-soft); border-color:transparent; color:var(--green-tekst);}
   .batbon{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
     background:var(--green-soft); color:var(--green-tekst); white-space:nowrap;}
   .batbon-zb{background:var(--amber-soft); color:var(--amber-tekst);}
@@ -1674,16 +1678,9 @@ async function deviceLabelPng(a){
     ctx.font='800 '+Math.round(2.8*dpmm)+'px Arial';
     y=labelWrap(ctx, 'Grade '+grade+((typeof GRADE_STAAT!=='undefined'&&GRADE_STAAT[grade])?' · '+GRADE_STAAT[grade]:''), pad, y, breed(y), Math.round(3.3*dpmm), 1);
   }
-  // Bij "nog toevoegen" nog geen specs: toon de batch-info (conditie, leverancier). Anders de specs.
-  let regels;
-  if(a.status==='nog_toevoegen'){
-    const b=(typeof batches!=='undefined'?(batches.find(x=>x.id===a.batch_id)||{}):{});
-    const cond=(typeof verwachtTekst==='function')?verwachtTekst(b.verwacht):'';
-    regels=[cond?('Ingekocht: '+cond):null, b.leverancier||null, b.nummer?('Batch '+b.nummer):null].filter(Boolean);
-  }else{ regels=labelRegels(a); }
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
-  for(const r of regels){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  for(const r of labelRegels(a)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
   // prijs groot, direct onder de specs
   if(prijs!=null && prijs!==''){
     y+=Math.round(1.2*dpmm);
@@ -1866,7 +1863,6 @@ let opendApparaat=null;
 function appPagina(id){
   const a=apparaten.find(x=>x.id===id);
   if(!a){ toast('Dit apparaat bestaat niet meer','let-op'); return showTab('werkbank'); }
-  if(a.status==='nog_toevoegen') return batAanvullenOpen(a);
   opendApparaat=id;
   showTab('apparaat');
 }
@@ -2214,7 +2210,6 @@ let ctr=null;   /* alles van de lopende controle staat hierin */
 
 function appOpen(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
-  if(a.status==='nog_toevoegen') return batAanvullenOpen(a);
   if(a.status==='te_repareren') return repOpen(a);
   if(OP_VOORRAAD.includes(a.status)) return appPagina(a.id);
   if(a.status==='repurpose')    return sloopOpen(a);
@@ -6293,52 +6288,118 @@ function renderBatchDetail(){
 function batNieuw(){ batForm(null); }
 function batBewerk(id){ batForm(batches.find(b=>b.id===id)||null); }
 
-/* ── Vast labelen: een hele partij in één keer stickeren, nog vóór je de toestellen invult ──
-   Je maakt X "lege" toestellen (status nog_toevoegen) met alleen een nummer + QR, en de inkoop,
-   leverancier en conditie van de batch er alvast aan. Print de stickers, plak ze op de toestellen.
-   Later scan je een sticker en vul je pas merk/model in (batAanvullenOpen). Geen inkoopprijs en
-   geen model op de sticker. */
+/* ── Genummerde batch-labels (slots) ──
+   Een batch met capaciteit (b.aantal) krijgt genummerde labels 1..capaciteit. Het NUMMER staat
+   op de sticker (eigen telling per batch, los van de globale A00xx-code) met een QR die naar
+   ?batch=..&nr=.. wijst. Je print per stuk, per 50 of alles; b.gelabeld_tot onthoudt tot welk
+   nummer je bent. Een toestel bestaat pas als je een label scant en invult (batSlotInvullen);
+   dan pas krijgt het een A00xx-code. Geen inkoopprijs, geen model op de sticker. */
 function batLabels(id){
   const b=batches.find(x=>x.id===id); if(!b) return;
-  const bestaand=apparaten.filter(a=>a.batch_id===id).length;
-  const rest=Math.max(0,(Number(b.aantal)||0)-bestaand);
-  const voorstel=rest||Number(b.aantal)||1;
+  const cap=Number(b.aantal)||0;
+  if(!cap){
+    venster('Labels', `<p class="pv">Deze batch heeft nog geen aantal. Zet eerst het aantal in de partij (Bewerken), dan kun je genummerde labels printen.</p>`,
+      [{tekst:'Batch bewerken', klasse:'actie', doe:()=>batBewerk(id)}]);
+    return;
+  }
+  const tot=Math.max(0, Math.min(cap, Number(b.gelabeld_tot)||0));
+  const ingevuld=new Set(apparaten.filter(a=>a.batch_id===id && a.batch_nr).map(a=>a.batch_nr));
   const cond=verwachtTekst(b.verwacht)||'onbekend';
-  venster('Labels maken', `
-    <p class="pv">Maak alvast labels voor deze partij. Elk label krijgt een nummer en een QR, nog zonder model. Plak ze op de toestellen en scan er later een om hem echt toe te voegen.</p>
-    <div class="grid"><div><label>Hoeveel labels</label><input id="bl_aantal" type="number" min="1" max="100" value="${voorstel}"></div></div>
-    <p class="muted klein" style="margin-top:8px">We hangen er alvast aan: inkoop ${euro(batPerStuk(b))} per stuk${b.leverancier?', '+esc(b.leverancier):''}, binnengekomen als ${esc(cond)}. Op de sticker komt géén inkoopprijs.</p>
-  `, [{tekst:'Labels maken en printen', klasse:'actie', doe:(kn)=>batLabelsMaken(kn, id)}]);
+  const pad2=cap>99?3:2;
+  let chips='';
+  for(let n=1;n<=cap;n++){
+    const kl = ingevuld.has(n)?'ingevuld':(n<=tot?'geprint':'');
+    const tt = ingevuld.has(n)?'Ingevuld — open toestel':(n<=tot?'Opnieuw printen':'Printen');
+    chips += `<button class="slotchip ${kl}" onclick="batSlotKlik('${id}',${n})" title="${tt}">${String(n).padStart(pad2,'0')}</button>`;
+  }
+  venster('Labels · '+esc(b.nummer||'batch'), `
+    <p class="pv">Genummerde labels voor deze partij (${cap} stuks). Print ze per stuk, per 50 of allemaal, plak ze op de toestellen, en scan er later een om hem in te vullen. Geen inkoopprijs of model op de sticker.</p>
+    <p class="muted klein" style="margin-bottom:2px">Inkoop ${euro(batPerStuk(b))} per stuk${b.leverancier?' · '+esc(b.leverancier):''} · binnengekomen als ${esc(cond)}</p>
+    <p class="muted klein"><b>${tot}</b> van ${cap} geprint · <b>${ingevuld.size}</b> ingevuld</p>
+    <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:12px">
+      <button class="btn actie" ${tot>=cap?'disabled':''} onclick="batPrintVolgende(this,'${id}',1)">Print volgende (${Math.min(cap,tot+1)})</button>
+      <button class="btn ghost" ${tot>=cap?'disabled':''} onclick="batPrintVolgende(this,'${id}',50)">Print 50</button>
+      <button class="btn ghost" ${tot>=cap?'disabled':''} onclick="batPrintVolgende(this,'${id}',${cap})">Print alle resterende</button>
+    </div>
+    <div class="slotgrid">${chips}</div>
+    <p class="muted klein" style="margin-top:8px">Klik op een nummer om dat label opnieuw te printen. Groen = al ingevuld (klik opent het toestel).</p>
+  `, [], 'groot');
 }
-async function batLabelsMaken(knop, id){
+function batSlotKlik(id, n){
+  const dev=apparaten.find(a=>a.batch_id===id && a.batch_nr===n);
+  if(dev) return appPagina(dev.id);       // ingevuld → open het toestel
+  batHerprint(id, n);                       // anders: (opnieuw) printen
+}
+/* Print de nummers van..naar; per label een aparte sticker. */
+async function batPrintReeks(b, van, naar){
+  const {breedte, tweekleuren}=labelInstelling();
+  for(let n=van;n<=naar;n++){
+    const png=await slotLabelPng(b, n);
+    await printViaHelper(png, {label:breedte, red:tweekleuren});
+  }
+}
+async function batPrintVolgende(knop, id, hoeveel){
   const b=batches.find(x=>x.id===id); if(!b) return;
-  const n=Math.max(1, Math.min(100, Number(v('bl_aantal'))||1));
+  const cap=Number(b.aantal)||0;
+  const tot=Math.max(0, Math.min(cap, Number(b.gelabeld_tot)||0));
+  const van=tot+1, naar=Math.min(cap, tot+hoeveel);
+  if(van>naar){ toast('Alles is al geprint','let-op'); return; }
   await bezig(knop, async()=>{
-    const rijen=[];
-    for(let i=0;i<n;i++) rijen.push({
-      team_id:account.team_id, batch_id:id, code:volgendeCode(i),
-      inkoop:batPerStuk(b)||0, leverancier:b.leverancier||null,
-      marge:null, specs:{}, status:'nog_toevoegen'
-    });
-    const {data,error}=await sb.from('refurbish_apparaten').insert(rijen).select();
-    if(error) throw new Error('Labels maken mislukt');
-    await allesLaden();
-    sluit();
-    toast(n+' label'+(n===1?'':'s')+' aangemaakt', true);
-    labelsTonen((data||[]).map(r=>r.id));
+    await batPrintReeks(b, van, naar);
+    const nieuw=Math.max(tot, naar);
+    const {error}=await sb.from('refurbish_batches').update({gelabeld_tot:nieuw}).eq('id',id);
+    if(!error) b.gelabeld_tot=nieuw;
+    toast((naar-van+1)+' label'+((naar-van)?'s':'')+' geprint', true);
+    batLabels(id);   // ververs de pagina
   });
 }
-/* Een gescand "nog toevoegen"-label opent dit: alleen merk/model/soort invullen; de inkoop,
-   leverancier en conditie komen van de batch en staan al vast. Daarna rolt hij de normale
-   werkstroom in (Te controleren). */
-function batAanvullenOpen(a){
-  const b=batches.find(x=>x.id===a.batch_id)||{};
+async function batHerprint(id, n){
+  const b=batches.find(x=>x.id===id); if(!b) return;
+  try{ await batPrintReeks(b, n, n); toast('Label '+String(n).padStart(2,'0')+' opnieuw geprint', true); }
+  catch(e){ toast('Printen: '+e.message,'fout'); }
+}
+/* De genummerde sticker: het nummer groot, een QR naar ?batch=..&nr=.., en de conditie. */
+async function slotLabelPng(b, nr){
+  await laadScript('/app/qrcode.min.js');
+  const {breedte}=labelInstelling();
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm), Hmax=Math.round(130*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top'; ctx.fillStyle='#000';
+  const qrS=Math.round(16*dpmm);
+  const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?batch='+b.id+'&nr='+nr); qr.make();
+  const qrUrl=qr.createDataURL(6,0);
+  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, W-qrS-pad, pad, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
+  const qrOnder=pad+qrS, txtW=W-qrS-pad*2-Math.round(1.5*dpmm);
+  const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);
+  let y=pad;
+  ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
+  y=labelWrap(ctx, 'NOG TOEVOEGEN', pad, y, txtW, Math.round(2.8*dpmm), 1);
+  ctx.font='800 '+Math.round(7*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(nr).padStart((Number(b.aantal)||0)>99?3:2,'0'), pad, y, txtW, Math.round(7.6*dpmm), 1);
+  y+=Math.round(0.6*dpmm);
+  const cond=(typeof verwachtTekst==='function')?verwachtTekst(b.verwacht):'';
+  const regels=[b.nummer?('Batch '+b.nummer):null, cond?('Ingekocht: '+cond):null, b.leverancier||null].filter(Boolean);
+  ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
+  for(const r of regels){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c, 0,0,W,Hc, 0,0,W,Hc);
+  return out.toDataURL('image/png').split(',')[1];
+}
+/* Een gescand genummerd label opent dit: bestaat het toestel al (batch+nr), open het; anders
+   maak je het nu aan met alleen merk/model/soort. Inkoop, leverancier en conditie komen van de
+   batch. Daarna rolt hij de normale werkstroom in (Te controleren). */
+function batSlotInvullen(batchId, nr){
+  const b=batches.find(x=>x.id===batchId)||{};
+  const bestaand=apparaten.find(a=>a.batch_id===batchId && a.batch_nr===Number(nr));
+  if(bestaand) return appPagina(bestaand.id);
   const cats=['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'];
   const locOpts=['<option value="">Kies later</option>'].concat((locaties||[]).map(l=>`<option value="${esc(l.id)}">${esc(l.naam)}</option>`)).join('');
   const cond=verwachtTekst(b.verwacht)||'onbekend';
   venster('Toestel toevoegen', `
-    <div style="font-size:15px; font-weight:800; margin-bottom:4px">Toestel ${esc(a.code||'')}${b.nummer?' uit batch '+esc(b.nummer):''}</div>
-    <p class="muted klein" style="margin-bottom:14px">Inkoop ${euro(a.inkoop||0)} · ${b.leverancier?esc(b.leverancier)+' · ':''}binnengekomen als ${esc(cond)}. Vul nu alleen merk, model en soort in.</p>
+    <div style="font-size:15px; font-weight:800; margin-bottom:4px">Label ${String(nr).padStart(2,'0')}${b.nummer?' · batch '+esc(b.nummer):''}</div>
+    <p class="muted klein" style="margin-bottom:14px">Inkoop ${euro(batPerStuk(b))} · ${b.leverancier?esc(b.leverancier)+' · ':''}binnengekomen als ${esc(cond)}. Vul nu alleen merk, model en soort in.</p>
     <div class="zoekveld" style="margin-bottom:14px">
       <label>Merk en model *</label>
       <input id="av_model" autocomplete="off" placeholder="Typ bijvoorbeeld: HP ZBook 15">
@@ -6347,20 +6408,26 @@ function batAanvullenOpen(a){
       <div><label>Wat voor apparaat</label><select id="av_cat">${cats.map(c=>`<option value="${c}"${c==='Laptop'?' selected':''}>${c}</option>`).join('')}</select></div>
       <div><label>Waar leg je hem neer</label><select id="av_loc">${locOpts}</select></div>
     </div>
-  `, [{tekst:'Toevoegen', klasse:'actie', doe:(kn)=>batAanvullenOpslaan(kn, a.id)}]);
+  `, [{tekst:'Toevoegen', klasse:'actie', doe:(kn)=>batSlotOpslaan(kn, batchId, Number(nr))}]);
 }
-async function batAanvullenOpslaan(knop, id){
-  const a=apparaten.find(x=>x.id===id); if(!a) return;
+async function batSlotOpslaan(knop, batchId, nr){
+  const b=batches.find(x=>x.id===batchId)||{};
   const {merk, model}=splitsModel(v('av_model'));
   if(!model){ toast('Vul merk en model in','let-op'); return; }
   const cat=(document.getElementById('av_cat')||{}).value||'Laptop';
   const loc=(document.getElementById('av_loc')||{}).value||null;
   await bezig(knop, async()=>{
-    const patch={ merk:merk||null, model, categorie:cat, status:'te_controleren',
-      locatie_id:loc||a.locatie_id||null, bijgewerkt_op:new Date().toISOString() };
-    const {error}=await sb.from('refurbish_apparaten').update(patch).eq('id',id);
+    const dubbel=apparaten.find(a=>a.batch_id===batchId && a.batch_nr===nr);
+    if(dubbel){ sluit(); return appPagina(dubbel.id); }
+    const rij={
+      team_id:account.team_id, merk:merk||null, model, categorie:cat,
+      inkoop:batPerStuk(b)||0, leverancier:b.leverancier||null, batch_id:batchId,
+      batch_nr:nr, marge:null, specs:{}, locatie_id:loc||null,
+      code:volgendeCode(0), status:'te_controleren'
+    };
+    const {data,error}=await sb.from('refurbish_apparaten').insert(rij).select().single();
     if(error) throw new Error('Toevoegen mislukt');
-    if(loc) await verplaatsingLoggen({apparaat_id:id, naar:loc, reden:'binnengekomen'});
+    if(loc && data) await verplaatsingLoggen({apparaat_id:data.id, naar:loc, reden:'binnengekomen'});
     await sb.rpc('model_onthouden', {merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}});
     await allesLaden();
     sluit();
@@ -6606,10 +6673,13 @@ async function batKostWeg(i){
 
 /* Een gescand label opent meteen het juiste apparaat. */
 function uitAdres(){
-  const id=new URLSearchParams(location.search).get('apparaat');
+  const p=new URLSearchParams(location.search);
+  const batchId=p.get('batch'), nr=p.get('nr');
+  if(batchId && nr){ batSlotInvullen(batchId, Number(nr)); return; }   // genummerd batch-label
+  const id=p.get('apparaat');
   if(!id) return;
   const a=apparaten.find(x=>x.id===id);
-  if(a){ if(a.status==='nog_toevoegen') batAanvullenOpen(a); else appPagina(id); }
+  if(a){ appPagina(id); }
   else{
     const o=onderdelen.find(x=>x.id===id);
     if(o) toast('Onderdeel: '+o.naam, true);
@@ -6632,9 +6702,15 @@ document.addEventListener('keydown', e=>{
   if(e.key==='Enter'){
     const t=scanBuf; scanBuf='';
     if(t.length<8) return;
-    let id=null;
-    try{ const u=new URL(t); if(u.origin===location.origin) id=u.searchParams.get('apparaat'); }catch(_e){}
-    if(id){ const a=apparaten.find(x=>x.id===id); if(a){ e.preventDefault(); appPagina(id); } }
+    try{
+      const u=new URL(t);
+      if(u.origin===location.origin){
+        const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
+        if(bId && n){ e.preventDefault(); batSlotInvullen(bId, Number(n)); return; }
+        const id=u.searchParams.get('apparaat');
+        if(id && apparaten.find(x=>x.id===id)){ e.preventDefault(); appPagina(id); }
+      }
+    }catch(_e){}
     return;
   }
   if(e.key.length===1) scanBuf+=e.key;
