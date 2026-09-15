@@ -309,6 +309,29 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), { headers: cors });
   }
 
+  // ---- een toegewezen toestel terughalen van een partner ----
+  if (actie === "terughalen") {
+    if (!magBeheer) return fout("Alleen de winkel mag dit", 403);
+    const hardwareId = String(lijf.hardware_id || "");
+    if (!hardwareId) return fout("Toestel is nodig");
+    const { data: h } = await admin.from("hardware")
+      .select("id, partner_id").eq("id", hardwareId).eq("team_id", acc.team_id).maybeSingle();
+    if (!h) return fout("Dit toestel is niet gevonden", 404);
+    if (h.partner_id) {
+      const { data: partner } = await admin.from("partners").select("id, data").eq("id", h.partner_id).maybeSingle();
+      if (partner) {
+        const data = (partner.data && typeof partner.data === "object") ? partner.data : {};
+        const producten = (Array.isArray(data.products) ? data.products : []).filter((p: any) => p.hardware_id !== h.id);
+        await admin.from("partners")
+          .update({ data: { products: producten, settings: data.settings || {} }, bijgewerkt_op: new Date().toISOString() })
+          .eq("id", h.partner_id);
+      }
+    }
+    await admin.from("hardware")
+      .update({ partner_id: null, status: null, bijgewerkt_op: new Date().toISOString() }).eq("id", hardwareId);
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  }
+
   // ---- een partner verwijderen ----
   if (actie === "partner_verwijder") {
     if (!magBeheer) return fout("Alleen de winkel mag dit", 403);

@@ -10692,7 +10692,7 @@ function toonKortingAanbod(){
    het gedeelde winkelblok. Er schrijven namelijk drie kanten in: de winkelapp,
    de refurbish-app en straks Shopify als daar iets verkocht wordt.          */
 
-let hwData=[], hwFilterNu='voorraad', hwBezig=false;
+let hwData=[], hwFilterNu='voorraad', hwBezig=false, hwPartners=[];
 
 /* De link naar de refurbish-app staat er alleen als de winkel die module
    heeft. Wie hem niet heeft ziet niets; dat is rustiger dan een knop die
@@ -10893,6 +10893,8 @@ async function hwLaad(stil){
   hwData=data||[];
   const {data:locs}=await sb.from('hardware_locaties').select('*').order('volgorde');
   hwLocaties=locs||[];
+  // Partners (id -> naam) om op de rij te tonen aan wie een toestel is toegewezen.
+  try{ const {data:pn}=await sb.from('partners').select('id,naam').neq('id', (gebruiker&&gebruiker.id)||'').order('naam'); hwPartners=pn||[]; }catch(e){}
   /* Teamlijst nodig om 'toegevoegd door' als naam te tonen; hertekenen zodra hij
      binnen is als hij nog niet geladen was (bv. bij direct openen van Hardware). */
   if(!teamLeden.length){ laadTeamLeden().then(()=>{ if(!document.getElementById('tab-hardware').hidden) renderHardware(); }); }
@@ -11108,7 +11110,10 @@ function renderHardware(){
         <td title="Toegevoegd ${esc(hwWanneer(h))}${hwWie(h)?' door '+esc(hwWie(h)):''}">${h.status==='verkocht'?'<span class="muted">verkocht</span>'
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
         <td class="num hwact" style="white-space:nowrap">${h.status==='verkocht'?''
-          :`${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
+          : h.partner_id
+            ? `<span class="btn small" style="background:#E3F4EC; color:#177A51; cursor:default">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span> <button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
+          :`${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg')
+              ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button> `:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
               ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button> `:''}<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -11409,8 +11414,23 @@ async function hwWijsToeDoen(id, knop){
     });
     const uit=await res.json().catch(()=>({}));
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Toewijzen mislukt');
-    hwSluit(); await hwLaad(true); toast('Toegewezen aan de partner', true);
+    hwSluit(); await hwLaad(true); renderHardware(); toast('Toegewezen aan de partner', true);
   }catch(e){ knop.disabled=false; knop.textContent=oud; toast(e.message,'fout'); }
+}
+/* Een toegewezen toestel terughalen van de partner: het komt terug in de winkelvoorraad. */
+async function hwTerughalen(id){
+  if(!confirm('Dit toestel terughalen van de partner? Het komt terug in je voorraad.')) return;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); return; }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'terughalen', hardware_id:id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Terughalen mislukt');
+    await hwLaad(true); renderHardware(); toast('Teruggehaald in de voorraad', true);
+  }catch(e){ toast(e.message,'fout'); }
 }
 /* Een toestel zichtbaar maken op de pagina "Online zetten" van je eigen
    partner-dashboard, of het er weer af halen. Geen winstverdeling: het toestel

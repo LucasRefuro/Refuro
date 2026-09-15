@@ -1069,7 +1069,7 @@ let account=null, abonnement=null;
 /* Heeft deze winkel een externe voorraadpartner (StockDeck)? Zo niet, dan is de
    portaal-bediening op elke rij en het dashboard-vinkje alleen maar ruis; we
    verbergen die dan. */
-let heeftPartner=false;
+let heeftPartner=false, partnersData=[];
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
 let voorraaddelen=[];
@@ -1168,7 +1168,7 @@ async function start(){
   if(['eigenaar','beheerder'].includes(account.rol)){ const n=document.getElementById('navPartners'); if(n) n.hidden=false; }
   /* Best-effort: heeft de winkel partners? Faalt de query, dan blijft de bediening
      gewoon verborgen; dat is de veilige kant. */
-  try{ const {data:pn}=await sb.from('partners').select('id').neq('id', account.id).limit(1); heeftPartner=!!(pn&&pn.length); }catch(e){}
+  try{ const {data:pn}=await sb.from('partners').select('id,naam').neq('id', account.id).order('naam'); partnersData=pn||[]; heeftPartner=partnersData.length>0; }catch(e){}
 
   const {data:abo, error:aboFout}=await sb.rpc('abonnement_status');
   if(aboFout){ slot('Kon je abonnement niet ophalen',
@@ -1243,7 +1243,7 @@ async function allesLaden(){
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
     sb.from('refurbish_instellingen').select('*').maybeSingle(),
-    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,inkoop,marge')
+    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,inkoop,marge,partner_id')
       .order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('refurbish_voorraad').select('*').order('naam')
@@ -4026,13 +4026,14 @@ function tekenVoorraad(){
                    onclick="event.stopPropagation()"><span class="stip"></span>Staat online</a>`
               : '<span class="onlinepil"><span class="stip"></span>Staat online</span>')
             : '<span class="muted klein">nog niet</span>'}</td>
-          <td class="num hwact"><div class="vract">${(h && heeftPartner)
-            ? (h.kanalen&&h.kanalen.partner
-              ? `<button class="btn portaalknop aan" onclick="event.stopPropagation(); vrDashboard('${a.id}',false,this)" title="Staat in het partner-portaal — klik om weg te halen">In portaal</button>`
-              : `<button class="btn portaalknop" onclick="event.stopPropagation(); vrDashboard('${a.id}',true,this)" title="Op het partner-portaal zetten">Naar portaal</button>`)
-            : ''}${staatOnline(a)
-            ? `<button class="btn ghost small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">Aanpassen</button>`
-            : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}</div></td>
+          <td class="num hwact"><div class="vract">${(h && h.partner_id)
+            ? `<span class="btn portaalknop aan" style="cursor:default" title="Toegewezen aan deze partner">Bij ${esc((partnersData.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span>`
+              + `<button class="btn ghost small" onclick="event.stopPropagation(); vrTerughalen('${a.id}',this)">Terughalen</button>`
+            : `${(h && heeftPartner)
+              ? `<button class="btn portaalknop" onclick="event.stopPropagation(); vrNaarPartner('${a.id}')" title="Toewijzen aan een partner (alleen die partner ziet het)">Naar partner</button>`
+              : ''}${staatOnline(a)
+              ? `<button class="btn ghost small" onclick="event.stopPropagation(); onlineZetten('${a.id}')">Aanpassen</button>`
+              : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}`}</div></td>
         </tr>`;}).join('')}</tbody></table></div>`
     : leeg('i-shop', vrFilterNu==='alles'?'Nog niets op voorraad':'Niets in deze lijst',
         'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.');
@@ -4057,6 +4058,51 @@ async function vrDashboard(apparaatId, aan, knop){
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Mislukt');
     await allesLaden(); tekenVoorraad();
     toast(aan?'Staat nu bij Online zetten in het partner-dashboard':'Uit het partner-dashboard gehaald', true);
+  }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
+}
+
+/* Een toestel toewijzen aan een specifieke partner: alleen die partner ziet het in zijn dashboard,
+   met een winstverdeling. Loopt via de partner-beheer edge (de winkel mag niet in partner-data
+   schrijven). Terughalen zet het toestel weer terug in de voorraad. */
+function vrNaarPartner(id){
+  const a=apparaten.find(x=>x.id===id); const h=hardwareVan(a); if(!a||!h){ toast('Dit toestel staat nog niet in de winkelvoorraad','let-op'); return; }
+  if(!partnersData.length){ toast('Nog geen partners. Maak er eerst een aan bij Partners.','let-op'); return; }
+  venster('Toewijzen aan partner', `
+    <p class="pv">Wijs <b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b> toe aan een partner. Alleen die partner ziet het in zijn dashboard.</p>
+    <div class="grid">
+      <div><label>Partner</label><select id="tp_partner">${partnersData.map(p=>`<option value="${esc(p.id)}">${esc(p.naam||'Partner')}</option>`).join('')}</select></div>
+      <div><label>Winst voor de partner (%)</label><input id="tp_deel" type="number" min="0" max="100" value="50"></div>
+    </div>
+  `, [{tekst:'Toewijzen', klasse:'actie', doe:(k)=>vrToewijzen(k, h.id)}]);
+}
+async function vrToewijzen(knop, hardwareId){
+  const partnerId=(document.getElementById('tp_partner')||{}).value;
+  const deel=Math.max(0,Math.min(100,Number((document.getElementById('tp_deel')||{}).value)||50));
+  if(!partnerId){ toast('Kies een partner','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd','fout'); throw new Error('Geen sessie'); }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'toewijzen', hardware_id:hardwareId, partner_id:partnerId, deel_type:'pct', deel_waarde:deel})
+    });
+    const j=await res.json().catch(()=>({})); if(!res.ok||!j.ok) throw new Error(j.error||'Toewijzen mislukt');
+    sluit(); await allesLaden(); toast('Toegewezen aan de partner', true);
+  });
+}
+async function vrTerughalen(id, knop){
+  const a=apparaten.find(x=>x.id===id); const h=hardwareVan(a); if(!h) return;
+  if(!confirm('Dit toestel terughalen van de partner? Het komt terug in je voorraad.')) return;
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd','fout'); throw new Error('Geen sessie'); }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'terughalen', hardware_id:h.id})
+    });
+    const j=await res.json().catch(()=>({})); if(!res.ok||!j.ok) throw new Error(j.error||'Terughalen mislukt');
+    await allesLaden(); toast('Teruggehaald in de voorraad', true);
   }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
 }
 
