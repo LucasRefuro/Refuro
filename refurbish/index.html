@@ -1635,50 +1635,57 @@ function labelRegels(a){
 async function deviceLabelPng(a){
   await laadScript('/app/qrcode.min.js');
   const {breedte}=labelInstelling();
-  const hoogte=54, dpmm=11.81;
-  const W=Math.round(breedte*dpmm), H=Math.round(hoogte*dpmm), pad=Math.round(2*dpmm);
-  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm);
+  // We tekenen op een ruime hoogte en snijden daarna af tot precies de inhoud. Zo is het label
+  // nooit hoger dan nodig: geen witruimte, minder rolverbruik (het is een doorlopende rol).
+  const Hmax=Math.round(130*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
   const ctx=c.getContext('2d');
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.textBaseline='top';
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top';
   const hw=(typeof hardwareVan==='function'?hardwareVan(a):null)||{};
   const grade=hw.staat||a.grade;
   const prijs=hw.verkoop!=null?hw.verkoop:(a.verkoop!=null?a.verkoop:null);
-  // QR rechtsboven i.p.v. onderin: zo houdt de tekst links de volle hoogte en blijft er geen
-  // groot leeg gat over. De prijs staat groot onderaan. Alles in zwart (de rol blijft wel in
+  // QR rechtsboven, tekst links: geen leeg gat. Alles in zwart (de rol blijft wel in
   // tweekleuren-modus, want DK-22251 eist dat, maar we printen geen rood).
   const qrS=Math.round(16*dpmm);
   const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?apparaat='+a.id); qr.make();
   const qrUrl=qr.createDataURL(6,0);
   await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, W-qrS-pad, pad, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
-  const txtW=W-qrS-pad*2-Math.round(1.5*dpmm);      // tekstbreedte links van de QR
-  const onderQR=pad+qrS;                             // vanaf hier mag tekst de volle breedte
-  const breed=(yy)=> yy<onderQR ? txtW : (W-2*pad);
+  const qrOnder=pad+qrS;                             // onderkant van de QR
+  const txtW=W-qrS-pad*2-Math.round(1.5*dpmm);       // tekstbreedte links van de QR
+  const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);  // onder de QR mag tekst de volle breedte
   ctx.fillStyle='#000';
   let y=pad;
-  ctx.font='700 '+Math.round(2.2*dpmm)+'px Arial';
-  y=labelWrap(ctx, String(STATUS_KORT[a.status]||a.status||''), pad, y, txtW, Math.round(2.7*dpmm), 1);
-  ctx.font='800 '+Math.round(3.0*dpmm)+'px Arial';
-  y=labelWrap(ctx, String(a.code||''), pad, y, txtW, Math.round(3.5*dpmm), 1);
+  ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(STATUS_KORT[a.status]||a.status||''), pad, y, txtW, Math.round(2.8*dpmm), 1);
+  ctx.font='800 '+Math.round(3.1*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(a.code||''), pad, y, txtW, Math.round(3.6*dpmm), 1);
   y+=Math.round(0.6*dpmm);
-  ctx.font='800 '+Math.round(3.4*dpmm)+'px Arial';
-  y=labelWrap(ctx, [a.merk,a.model].filter(Boolean).join(' '), pad, y, txtW, Math.round(3.9*dpmm), 2);
+  ctx.font='800 '+Math.round(3.5*dpmm)+'px Arial';
+  y=labelWrap(ctx, [a.merk,a.model].filter(Boolean).join(' '), pad, y, txtW, Math.round(4.0*dpmm), 2);
   if(grade && a.status!=='repurpose'){
     y+=Math.round(0.4*dpmm);
-    ctx.font='800 '+Math.round(2.7*dpmm)+'px Arial';
-    y=labelWrap(ctx, 'Grade '+grade+((typeof GRADE_STAAT!=='undefined'&&GRADE_STAAT[grade])?' · '+GRADE_STAAT[grade]:''), pad, y, breed(y), Math.round(3.2*dpmm), 1);
+    ctx.font='800 '+Math.round(2.8*dpmm)+'px Arial';
+    y=labelWrap(ctx, 'Grade '+grade+((typeof GRADE_STAAT!=='undefined'&&GRADE_STAAT[grade])?' · '+GRADE_STAAT[grade]:''), pad, y, breed(y), Math.round(3.3*dpmm), 1);
   }
-  y+=Math.round(0.5*dpmm);
-  ctx.font='400 '+Math.round(2.2*dpmm)+'px Arial';
-  const prijsRuimte = (prijs!=null&&prijs!=='') ? Math.round(7*dpmm) : 0;
-  for(const r of labelRegels(a)){
-    if(y > H-pad-prijsRuimte-Math.round(2.8*dpmm)) break;   // niet over de prijs heen lopen
-    y=labelWrap(ctx, r, pad, y, breed(y), Math.round(2.8*dpmm), 1);
-  }
+  // specs iets groter dan eerst
+  y+=Math.round(0.8*dpmm);
+  ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
+  for(const r of labelRegels(a)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  // prijs groot, direct onder de specs
   if(prijs!=null && prijs!==''){
-    ctx.font='800 '+Math.round(6*dpmm)+'px Arial';
-    ctx.fillText(euro(prijs), pad, H-pad-Math.round(6.2*dpmm));
+    y+=Math.round(1.2*dpmm);
+    ctx.font='800 '+Math.round(5.6*dpmm)+'px Arial';
+    ctx.fillText(euro(prijs), pad, y);
+    y+=Math.round(5.9*dpmm);
   }
-  return { data:c.toDataURL('image/png').split(',')[1], hoogte };
+  // afsnijden tot precies de inhoud (of tot onder de QR, wat lager ligt) + randje
+  const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc);
+  octx.drawImage(c, 0,0,W,Hc, 0,0,W,Hc);
+  return { data:out.toDataURL('image/png').split(',')[1], hoogte:Math.round(Hc/dpmm) };
 }
 async function qzPrintDeviceLabels(ids){
   const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
