@@ -1644,7 +1644,8 @@ async function deviceLabelPng(a){
   const grade=hw.staat||a.grade;
   const prijs=hw.verkoop!=null?hw.verkoop:(a.verkoop!=null?a.verkoop:null);
   // QR rechtsboven i.p.v. onderin: zo houdt de tekst links de volle hoogte en blijft er geen
-  // groot leeg gat over. De prijs staat groot onderaan, de grade valt op in rood (zwart/rood-rol).
+  // groot leeg gat over. De prijs staat groot onderaan. Alles in zwart (de rol blijft wel in
+  // tweekleuren-modus, want DK-22251 eist dat, maar we printen geen rood).
   const qrS=Math.round(16*dpmm);
   const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?apparaat='+a.id); qr.make();
   const qrUrl=qr.createDataURL(6,0);
@@ -1663,10 +1664,8 @@ async function deviceLabelPng(a){
   y=labelWrap(ctx, [a.merk,a.model].filter(Boolean).join(' '), pad, y, txtW, Math.round(3.9*dpmm), 2);
   if(grade && a.status!=='repurpose'){
     y+=Math.round(0.4*dpmm);
-    ctx.fillStyle='#e2001a';   // grade in rood (DK-22251 is zwart/rood)
     ctx.font='800 '+Math.round(2.7*dpmm)+'px Arial';
     y=labelWrap(ctx, 'Grade '+grade+((typeof GRADE_STAAT!=='undefined'&&GRADE_STAAT[grade])?' · '+GRADE_STAAT[grade]:''), pad, y, breed(y), Math.round(3.2*dpmm), 1);
-    ctx.fillStyle='#000';
   }
   y+=Math.round(0.5*dpmm);
   ctx.font='400 '+Math.round(2.2*dpmm)+'px Arial';
@@ -1676,7 +1675,6 @@ async function deviceLabelPng(a){
     y=labelWrap(ctx, r, pad, y, breed(y), Math.round(2.8*dpmm), 1);
   }
   if(prijs!=null && prijs!==''){
-    ctx.fillStyle='#e2001a';   // prijs groot in rood
     ctx.font='800 '+Math.round(6*dpmm)+'px Arial';
     ctx.fillText(euro(prijs), pad, H-pad-Math.round(6.2*dpmm));
   }
