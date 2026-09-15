@@ -2567,6 +2567,28 @@
   </div>
 </section>
 
+<!-- LABELPRINTER -->
+<section id="tab-labelprinter"hidden>
+  <div class="pagehead"><h1>Labelprinter</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-tag"/></svg>Labels printen</h2>
+    <p class="muted" style="margin-bottom:12px">Print prijs- en productstickers rechtstreeks op je Brother QL-800, zonder printvenster. Hiervoor draait <b>QZ Tray</b> op deze Mac en is de printer via USB aangesloten. Deze instellingen gelden voor dit apparaat.</p>
+    <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet verbonden. Klik op "Verbinden".</div>
+    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
+      <div style="min-width:220px"><label>Printer</label><select id="labelPrinter" onchange="labelBewaar()"><option value="">Nog geen printer geladen</option></select></div>
+      <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
+      <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
+    </div>
+    <div class="acts2" style="margin-top:14px">
+      <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinden / printers laden</button>
+      <button class="btn actie" onclick="labelTest(this)"><svg class="i s"><use href="#i-tag"/></svg>Test label printen</button>
+    </div>
+    <p class="muted klein" style="margin-top:14px">Doorlopende rol (bijv. DK-2205, 62 mm): zet breedte 62 en hoogte bijvoorbeeld 30. Vast formaat (bijv. 29 × 90 mm): vul dat formaat in.</p>
+  </div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2659,6 +2681,7 @@
       <div class="hubgroep">Winkel</div>
       <div class="hubgrid">
         <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak met AI-sortering, antwoorden en opstellen</span></span></button>
+        <button class="hubtegel" data-tab="labelprinter" onclick="showTab('labelprinter')"><svg class="i"><use href="#i-tag"/></svg><span class="tt"><b>Labelprinter</b><span>Prijs- en productstickers direct printen, zonder printvenster</span></span></button>
         <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Gebruikers, rollen en toegang</span></span></button>
         <button class="hubtegel" data-tab="partners" onclick="showTab('partners')"><svg class="i"><use href="#i-link"/></svg><span class="tt"><b>Partners</b><span>Toestellen die een partner voor je verkoopt</span></span></button>
       </div>
@@ -3429,6 +3452,7 @@ function showTab(t){
   if(t==='verkopen') renderVerkopen();
   if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); }
   if(t==='mail') renderMail();
+  if(t==='labelprinter') renderLabelprinter();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -5340,6 +5364,128 @@ function mailPollStart(){
     if(!t || t.hidden){ clearInterval(mailPollTimer); mailPollTimer=null; return; }
     mailAutoSync();
   }, 150000); // elke 2,5 minuut zolang de mailpagina open is
+}
+
+/* ═══ Labelprinter (QZ Tray) ═══
+   Print prijs-/productstickers stil op een lokale labelprinter (Brother QL-800) via QZ Tray,
+   zonder printvenster. QZ Tray draait als klein programma op de Mac; Storvo praat ermee via
+   een lokale verbinding. We laden de bibliotheken (qz-tray + JsBarcode) pas als je print,
+   zodat de rest van de app er niets van merkt. Instellingen staan per apparaat in localStorage
+   (de printer hangt immers aan díe Mac). Label = titel + prijs groot + scanbare barcode. */
+function laadScript(src){
+  return new Promise((res,rej)=>{
+    const bestaat=[...document.scripts].some(s=>s.src&&s.src.indexOf(src)!==-1);
+    if(bestaat){ res(); return; }
+    const s=document.createElement('script'); s.src=src;
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('kon '+src+' niet laden'));
+    document.head.appendChild(s);
+  });
+}
+async function qzVerbind(){
+  await laadScript('/app/qz-tray.js');
+  if(typeof qz==='undefined') throw new Error('QZ Tray-bibliotheek niet geladen');
+  if(qz.websocket.isActive()) return;
+  try{ await qz.websocket.connect(); }
+  catch(e){ throw new Error('Geen verbinding met QZ Tray. Draait het programma op deze Mac?'); }
+}
+async function qzPrinters(){ await qzVerbind(); return await qz.printers.find(); }
+function labelInstelling(){
+  return {
+    printer: localStorage.getItem('storvoPrinter')||'',
+    breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62,
+    hoogte: Number(localStorage.getItem('storvoLabelHoogte'))||30,
+  };
+}
+/* Tekst netjes over maximaal een paar regels, laatste regel afgekapt met … */
+function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
+  const woorden=String(tekst||'').split(/\s+/); let regel='', regels=0;
+  for(let i=0;i<woorden.length;i++){
+    const test=regel?regel+' '+woorden[i]:woorden[i];
+    if(ctx.measureText(test).width>maxW && regel){
+      regels++;
+      if(regels>=maxRegels){ let rest=regel; while(ctx.measureText(rest+'…').width>maxW && rest.length>1) rest=rest.slice(0,-1); ctx.fillText(rest+'…', x, y); return y+regelH; }
+      ctx.fillText(regel, x, y); y+=regelH; regel=woorden[i];
+    } else regel=test;
+  }
+  if(regel) ctx.fillText(regel, x, y);
+  return y+regelH;
+}
+async function labelPng(data){
+  await laadScript('/app/jsbarcode.min.js');
+  const {breedte, hoogte}=labelInstelling();
+  const dpmm=11.81; // 300 dpi
+  const W=Math.round(breedte*dpmm), H=Math.round(hoogte*dpmm), pad=Math.round(2*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#000'; ctx.textBaseline='top';
+  let y=pad;
+  if(data.titel){ ctx.font='700 '+Math.round(3.2*dpmm)+'px Arial'; y=labelWrap(ctx, data.titel, pad, y, W-2*pad, Math.round(3.9*dpmm), 2); }
+  if(data.prijs!=null && data.prijs!==''){
+    ctx.font='800 '+Math.round(6.2*dpmm)+'px Arial';
+    ctx.fillText('€ '+Number(data.prijs).toFixed(2).replace('.',','), pad, y+Math.round(0.5*dpmm));
+    y+=Math.round(7.5*dpmm);
+  }
+  if(data.code && typeof JsBarcode!=='undefined'){
+    try{
+      const bc=document.createElement('canvas');
+      JsBarcode(bc, String(data.code), {format:'CODE128', width:2, height:Math.round(5*dpmm), displayValue:true, fontSize:Math.round(2.6*dpmm), margin:0});
+      const bx=Math.max(pad, Math.round((W-bc.width)/2)), by=Math.min(H-bc.height-Math.round(dpmm), Math.max(y, H-bc.height-pad));
+      ctx.drawImage(bc, bx, by);
+    }catch(e){}
+  }
+  return c.toDataURL('image/png').split(',')[1];
+}
+async function qzPrintLabel(data){
+  const {printer, breedte, hoogte}=labelInstelling();
+  if(!printer){ toast('Kies eerst je labelprinter (Meer → Labelprinter)','let-op'); return false; }
+  await qzVerbind();
+  const png=await labelPng(data);
+  const config=qz.configs.create(printer, {size:{width:breedte, height:hoogte}, units:'mm', scaleContent:true, margins:0, colorType:'grayscale'});
+  await qz.print(config, [{type:'pixel', format:'image', flavor:'base64', data:png}]);
+  return true;
+}
+function renderLabelprinter(){
+  const inst=labelInstelling();
+  const b=document.getElementById('labelBreedte'); if(b) b.value=inst.breedte;
+  const h=document.getElementById('labelHoogte'); if(h) h.value=inst.hoogte;
+  const sel=document.getElementById('labelPrinter');
+  if(sel && inst.printer && !sel.querySelector('option[value="'+inst.printer.replace(/"/g,'')+'"]')){
+    sel.innerHTML=`<option value="${esc(inst.printer)}" selected>${esc(inst.printer)}</option>`;
+  }
+}
+function labelBewaar(){
+  const p=(document.getElementById('labelPrinter')||{}).value; if(p) localStorage.setItem('storvoPrinter', p);
+  localStorage.setItem('storvoLabelBreedte', String(Math.max(10, Math.min(120, Number((document.getElementById('labelBreedte')||{}).value)||62))));
+  localStorage.setItem('storvoLabelHoogte', String(Math.max(10, Math.min(200, Number((document.getElementById('labelHoogte')||{}).value)||30))));
+}
+async function labelVerbind(knop){
+  if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Verbinden…'; }
+  const st=document.getElementById('labelStatus');
+  try{
+    const printers=await qzPrinters();
+    const huidig=labelInstelling().printer;
+    const sel=document.getElementById('labelPrinter');
+    if(printers.length){
+      let kies=huidig;
+      if(!kies){ const ql=printers.find(p=>/ql[- ]?800|brother|\bql\b/i.test(p)); kies=ql||printers[0]; }
+      sel.innerHTML=printers.map(p=>`<option value="${esc(p)}" ${p===kies?'selected':''}>${esc(p)}</option>`).join('');
+      labelBewaar();
+      if(st) st.textContent='Verbonden. '+printers.length+' printer(s) gevonden.';
+      toast('Verbonden met QZ Tray', true);
+    }else{
+      sel.innerHTML='<option value="">Geen printer gevonden</option>';
+      if(st) st.textContent='Verbonden, maar geen printer gevonden. Is de QL-800 aangesloten en geïnstalleerd?';
+      toast('Geen printer gevonden','let-op');
+    }
+  }catch(e){ if(st) st.textContent='Niet verbonden: '+e.message; toast('QZ: '+e.message,'fout'); }
+  if(knop){ knop.disabled=false; if(knop.dataset.oud) knop.innerHTML=knop.dataset.oud; }
+}
+async function labelTest(knop){
+  if(knop){ knop.disabled=true; }
+  try{ const ok=await qzPrintLabel({titel:'Testlabel Storvo', prijs:12.50, code:'STORVO-TEST-123'}); if(ok) toast('Testlabel geprint', true); }
+  catch(e){ toast('Printen: '+e.message,'fout'); }
+  if(knop){ knop.disabled=false; }
 }
 /* De gekleurde categorie-mapjes als horizontale balk boven de inbox: "Alle mail" + per
    categorie een gekleurd bolletje, naam en aantal ongelezen. De actieve is opgevuld met de
