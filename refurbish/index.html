@@ -1543,7 +1543,18 @@ const STATUS_KORT={
   overgedragen:'OP VOORRAAD'
 };
 /* De inkoop-conditie van een batch: hoe je de partij inkocht. */
-function verwachtTekst(v){ return v==='ongetest'?'ongetest':(v==='compleet'?'compleet werkend':(v==='werkend'?'werkend':'')); }
+function verwachtTekst(v){
+  return ({werkend:'werkend', compleet:'compleet werkend', poweron:'power on tested', ongetest:'ongetest'})[v]||'';
+}
+/* Betaalwijze van de inkoop, kort. */
+function betaalTekst(v){ return ({factuur:'op factuur', contant:'contant', bank:'per bank'})[v]||''; }
+/* Het eigen batch-nummer (B0004). Nieuwe batches krijgen automatisch het volgende nummer. */
+function batCode(){
+  const nrs=(batches||[]).map(b=>Number(String(b.code||'').replace(/\D/g,''))||0);
+  return 'B'+String((nrs.length?Math.max(...nrs):0)+1).padStart(4,'0');
+}
+/* Hoe een batch heet in de app: het B-nummer, met de naam erachter als je die invulde. */
+function batLabel(b){ if(!b) return 'batch'; return b.code ? (b.code+(b.nummer?' · '+b.nummer:'')) : (b.nummer||'batch'); }
 
 function labelHtml(a){
   const specs=a.specs||{};
@@ -1948,7 +1959,7 @@ function tekenApparaat(){
           <p class="muted klein" style="margin-bottom:10px">Koppel dit toestel aan een ingekochte partij, of haal het eruit. Het telt dan mee in de cijfers van die batch.</p>
           <select onchange="apparaatBatchZetten('${a.id}', this.value)">
             <option value="">Geen batch</option>
-            ${batches.map(b=>`<option value="${b.id}"${a.batch_id===b.id?' selected':''}>${esc(b.nummer||'Naamloos')}</option>`).join('')}
+            ${batches.map(b=>`<option value="${b.id}"${a.batch_id===b.id?' selected':''}>${esc(batLabel(b))}</option>`).join('')}
           </select>
         </div>
 
@@ -6137,7 +6148,7 @@ function batVulToevoegKeuze(){
   const sel=document.getElementById('t_batch'); if(!sel) return;
   const nu=sel.value;
   sel.innerHTML='<option value="">Geen batch</option>'+
-    batches.map(b=>`<option value="${b.id}">${esc(b.nummer||'Naamloos')}</option>`).join('');
+    batches.map(b=>`<option value="${b.id}">${esc(batLabel(b))}</option>`).join('');
   if(nu && batches.some(b=>b.id===nu)) sel.value=nu;
 }
 
@@ -6163,7 +6174,7 @@ function tekenBatches(){
     <tbody>${batches.map(b=>{
       const c=batCijfers(b.id);
       return `<tr class="batrij" onclick="batOpen('${b.id}')">
-        <td><b>${esc(b.nummer||'Naamloos')}</b> <span class="batpil">${b.marge?'marge':'btw 21%'}</span>${b.verwacht?`<span class="batpil batpil-${b.verwacht}">${esc(verwachtTekst(b.verwacht))}</span>`:''}</td>
+        <td><b>${esc(batLabel(b))}</b> <span class="batpil">${b.marge?'marge':'btw 21%'}</span>${b.verwacht?`<span class="batpil batpil-${b.verwacht}">${esc(verwachtTekst(b.verwacht))}</span>`:''}</td>
         <td>${b.leverancier?esc(b.leverancier):'<span class="muted">geen</span>'}</td>
         <td class="num">${c.verkocht}/${c.aantal}</td>
         <td class="num">${euro(c.investering)}</td>
@@ -6231,8 +6242,8 @@ function renderBatchDetail(){
     </div>
 
     <div class="card">
-      <h2 style="margin-bottom:2px">${esc(b.nummer||'Naamloos')}</h2>
-      <p class="muted klein">${b.leverancier?esc(b.leverancier)+' · ':''}${b.marge?'Margeregeling':'Normale btw (21%)'}${b.verwacht?' · binnengekomen als '+verwachtTekst(b.verwacht):''}${(Number(b.aantal)||0)?' · partij van '+b.aantal+' à '+euro(batPerStuk(b))+' per stuk':''}</p>
+      <h2 style="margin-bottom:2px">${esc(batLabel(b))}</h2>
+      <p class="muted klein">${b.leverancier?esc(b.leverancier)+' · ':''}${b.marge?'Margeregeling':'Normale btw (21%)'}${b.verwacht?' · binnengekomen als '+verwachtTekst(b.verwacht):''}${b.betaalwijze?' · '+betaalTekst(b.betaalwijze):''}${(Number(b.aantal)||0)?' · partij van '+b.aantal+' à '+euro(batPerStuk(b))+' per stuk':''}</p>
       ${b.notitie?`<p class="muted klein" style="margin-top:4px">${esc(b.notitie)}</p>`:''}
       <div class="kpis" style="margin-top:18px">
         <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div>
@@ -6312,7 +6323,7 @@ function batLabels(id){
     const tt = ingevuld.has(n)?'Ingevuld — open toestel':(n<=tot?'Opnieuw printen':'Printen');
     chips += `<button class="slotchip ${kl}" onclick="batSlotKlik('${id}',${n})" title="${tt}">${String(n).padStart(pad2,'0')}</button>`;
   }
-  venster('Labels · '+esc(b.nummer||'batch'), `
+  venster('Labels · '+esc(batLabel(b)), `
     <p class="pv">Genummerde labels voor deze partij (${cap} stuks). Print ze per stuk, per 50 of allemaal, plak ze op de toestellen, en scan er later een om hem in te vullen. Geen inkoopprijs of model op de sticker.</p>
     <p class="muted klein" style="margin-bottom:2px">Inkoop ${euro(batPerStuk(b))} per stuk${b.leverancier?' · '+esc(b.leverancier):''} · binnengekomen als ${esc(cond)}</p>
     <p class="muted klein"><b>${tot}</b> van ${cap} geprint · <b>${ingevuld.size}</b> ingevuld</p>
@@ -6375,11 +6386,13 @@ async function slotLabelPng(b, nr){
   let y=pad;
   ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
   y=labelWrap(ctx, 'NOG TOEVOEGEN', pad, y, txtW, Math.round(2.8*dpmm), 1);
+  const cap=Number(b.aantal)||0, pad2=cap>99?3:2;
   ctx.font='800 '+Math.round(7*dpmm)+'px Arial';
-  y=labelWrap(ctx, String(nr).padStart((Number(b.aantal)||0)>99?3:2,'0'), pad, y, txtW, Math.round(7.6*dpmm), 1);
+  y=labelWrap(ctx, String(nr).padStart(pad2,'0')+(cap?' / '+cap:''), pad, y, W-2*pad, Math.round(7.6*dpmm), 1);
   y+=Math.round(0.6*dpmm);
   const cond=(typeof verwachtTekst==='function')?verwachtTekst(b.verwacht):'';
-  const regels=[b.nummer?('Batch '+b.nummer):null, cond?('Ingekocht: '+cond):null, b.leverancier||null].filter(Boolean);
+  const btch=b.code?('Batch '+b.code):(b.nummer?('Batch '+b.nummer):null);
+  const regels=[btch, cond?('Ingekocht: '+cond):null, b.leverancier||null].filter(Boolean);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
   for(const r of regels){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
   const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
@@ -6398,7 +6411,7 @@ function batSlotInvullen(batchId, nr){
   const locOpts=['<option value="">Kies later</option>'].concat((locaties||[]).map(l=>`<option value="${esc(l.id)}">${esc(l.naam)}</option>`)).join('');
   const cond=verwachtTekst(b.verwacht)||'onbekend';
   venster('Toestel toevoegen', `
-    <div style="font-size:15px; font-weight:800; margin-bottom:4px">Label ${String(nr).padStart(2,'0')}${b.nummer?' · batch '+esc(b.nummer):''}</div>
+    <div style="font-size:15px; font-weight:800; margin-bottom:4px">Label ${String(nr).padStart(2,'0')}${(b.code||b.nummer)?' · batch '+esc(b.code||b.nummer):''}</div>
     <p class="muted klein" style="margin-bottom:14px">Inkoop ${euro(batPerStuk(b))} · ${b.leverancier?esc(b.leverancier)+' · ':''}binnengekomen als ${esc(cond)}. Vul nu alleen merk, model en soort in.</p>
     <div class="zoekveld" style="margin-bottom:14px">
       <label>Merk en model *</label>
@@ -6530,7 +6543,7 @@ function batExportDoen(id){
   const blob=new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download='batch-'+String(b.nummer||'partij').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.csv';
+  a.href=url; a.download='batch-'+String(b.code||b.nummer||'partij').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   sluit(); toast('Batch geexporteerd', true);
@@ -6538,8 +6551,10 @@ function batExportDoen(id){
 
 function batForm(b){
   const vw=b?b.verwacht||'':'';
+  const bw=b?b.betaalwijze||'':'';
   const inhoud=`<div class="grid">
-      <div style="grid-column:1/-1"><label>Naam of nummer</label><input id="bf_naam" value="${b?esc(b.nummer||''):''}" placeholder="bijv. Dell pallet januari"></div>
+      <div><label>Batchnummer</label><input value="${b?esc(b.code||''):esc(batCode())}" disabled></div>
+      <div><label>Naam (optioneel)</label><input id="bf_naam" value="${b?esc(b.nummer||''):''}" placeholder="bijv. Dell pallet januari"></div>
       <div><label>Leverancier</label><input id="bf_lev" value="${b?esc(b.leverancier||''):''}" placeholder="waar komt het vandaan"></div>
       <div><label>Btw</label><select id="bf_marge">
         <option value="ja"${!b||b.marge?' selected':''}>Margeregeling</option>
@@ -6549,7 +6564,14 @@ function batForm(b){
         <option value=""${vw===''?' selected':''}>Onbekend</option>
         <option value="werkend"${vw==='werkend'?' selected':''}>Werkend</option>
         <option value="compleet"${vw==='compleet'?' selected':''}>Compleet werkend</option>
+        <option value="poweron"${vw==='poweron'?' selected':''}>Power on tested</option>
         <option value="ongetest"${vw==='ongetest'?' selected':''}>Ongetest</option>
+      </select></div>
+      <div><label>Betaald</label><select id="bf_betaal">
+        <option value=""${bw===''?' selected':''}>Onbekend</option>
+        <option value="factuur"${bw==='factuur'?' selected':''}>Op factuur</option>
+        <option value="contant"${bw==='contant'?' selected':''}>Contant</option>
+        <option value="bank"${bw==='bank'?' selected':''}>Per bank</option>
       </select></div>
     </div>
     <div class="veldkop"><label>Aankoop</label></div>
@@ -6567,15 +6589,14 @@ function batForm(b){
 }
 
 async function batBewaar(knop, id){
-  const naam=(document.getElementById('bf_naam').value||'').trim();
-  if(!naam){ toast('Geef de batch een naam','let-op'); return; }
   const rij={
-    nummer:naam,
+    nummer:(document.getElementById('bf_naam').value||'').trim()||null,   // naam is optioneel
     leverancier:(document.getElementById('bf_lev').value||'').trim()||null,
     inkoopprijs:Math.round((Number(document.getElementById('bf_ink').value)||0)*100)/100,
     aantal:Math.round(Number(document.getElementById('bf_aantal').value)||0)||null,
     marge:document.getElementById('bf_marge').value==='ja',
     verwacht:document.getElementById('bf_verwacht').value||null,
+    betaalwijze:document.getElementById('bf_betaal').value||null,
     notitie:(document.getElementById('bf_notitie').value||'').trim()||null
   };
   await bezig(knop, async()=>{
@@ -6585,6 +6606,7 @@ async function batBewaar(knop, id){
       const b=batches.find(x=>x.id===id); if(b) Object.assign(b, rij);
     }else{
       rij.team_id=account.team_id;
+      rij.code=batCode();          // eigen B-nummer, automatisch
       const {data,error}=await sb.from('refurbish_batches').insert(rij).select().single();
       if(error) throw error;
       if(data){ batches.unshift(data); batHuidig=data.id; }
