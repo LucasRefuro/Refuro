@@ -6449,7 +6449,9 @@ function batSlotInvullen(batchId, nr){
   const bestaand=apparaten.find(a=>a.batch_id===batchId && a.batch_nr===Number(nr));
   if(bestaand) return appPagina(bestaand.id);
   const cats=['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'];
-  const locOpts=['<option value="">Kies later</option>'].concat((locaties||[]).map(l=>`<option value="${esc(l.id)}">${esc(l.naam)}</option>`)).join('');
+  // Een nog-toe-te-voegen toestel ligt standaard op kantoor tot het nagekeken wordt.
+  const kantoor=(locaties||[]).find(l=>/kantoor/i.test(l.naam||''));
+  const locOpts=['<option value="">Kies later</option>'].concat((locaties||[]).map(l=>`<option value="${esc(l.id)}"${(kantoor&&l.id===kantoor.id)?' selected':''}>${esc(l.naam)}</option>`)).join('');
   const cond=verwachtTekst(b.verwacht)||'onbekend';
   venster('Toestel toevoegen', `
     <div style="font-size:15px; font-weight:800; margin-bottom:4px">Label ${String(nr).padStart(2,'0')}${(b.code||b.nummer)?' · batch '+esc(b.code||b.nummer):''}</div>
