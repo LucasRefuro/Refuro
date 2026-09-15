@@ -1505,10 +1505,17 @@ async function toevoegen(knop){
       merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}
     });
 
+    // Meteen naar de labelprinter, geen tussenscherm. Lukt printen niet (geen printhulp), dan
+    // meldt qzPrintDeviceLabels dat zelf. Gelukte labels markeren we als gelabeld.
+    const ids=(data||[]).map(r=>r.id);
+    let geprint=false;
+    try{ geprint=await qzPrintDeviceLabels(ids, true); }catch(_e){}
+    if(geprint){
+      try{ await sb.from('refurbish_apparaten').update({gelabeld:true}).in('id',ids); }catch(_e){}
+    }
     await allesLaden();
     const waar=locNaam(locKeuze);
-    toast((aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd')+(waar?' · '+waar:''), true);
-    labelsTonen((data||[]).map(r=>r.id));
+    toast((aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd')+(waar?' · '+waar:'')+(geprint?' · label geprint':''), true);
   });
 }
 
@@ -1739,17 +1746,18 @@ async function deviceLabelPng(a){
   octx.drawImage(c, 0,0,W,Hc, 0,0,W,Hc);
   return { data:out.toDataURL('image/png').split(',')[1], hoogte:Math.round(Hc/dpmm) };
 }
-async function qzPrintDeviceLabels(ids){
+async function qzPrintDeviceLabels(ids, stil){
   const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
-  if(!lijst.length){ toast('Geen apparaten om te printen','let-op'); return; }
+  if(!lijst.length){ if(!stil) toast('Geen apparaten om te printen','let-op'); return false; }
   const {breedte, tweekleuren}=labelInstelling();
   try{
     for(const a of lijst){
       const {data}=await deviceLabelPng(a);
       await printViaHelper(data, {label:breedte, red:tweekleuren});
     }
-    toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
-  }catch(e){ toast('Printen: '+e.message,'fout'); }
+    if(!stil) toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
+    return true;
+  }catch(e){ toast('Printen: '+e.message,'fout'); return false; }
 }
 function labelsTonen(ids){
   const lijst=(Array.isArray(ids)?ids:[ids])
