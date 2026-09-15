@@ -1589,14 +1589,14 @@ function labelInstelling(){
    driver crasht op Apple Silicon. Het hulpprogramma stuurt de QL-800 rechtstreeks via USB aan.
    red=tweekleuren-modus, verplicht voor de zwart/rood-rol DK-22251. Instellingen deelt Storvo
    met de winkelapp (zelfde domein, zelfde localStorage). Zie ook /app → Meer → Labelprinter. */
-function printHelperUrl(){ return localStorage.getItem('storvoPrintUrl')||'http://127.0.0.1:9909'; }
+function printHelperUrl(){ return localStorage.getItem('storvoPrintUrl')||'https://127.0.0.1:9909'; }
 async function printViaHelper(pngBase64, opts){
   opts=opts||{};
   const body=JSON.stringify({ png:pngBase64, label:String(opts.label||labelInstelling().breedte||62),
     red:opts.red!==false, cut:opts.cut!==false, kopieen:opts.kopieen||1 });
   let r;
   try{ r=await fetch(printHelperUrl()+'/print',{method:'POST',headers:{'Content-Type':'application/json'},body}); }
-  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac, en gebruik je Chrome?'); }
+  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac? (Staat de QL-800 aan?)'); }
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'printen mislukt');
   return j;

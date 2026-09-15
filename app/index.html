@@ -2573,7 +2573,7 @@
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-tag"/></svg>Labels printen</h2>
-    <p class="muted" style="margin-bottom:12px">Print prijs- en productstickers rechtstreeks op je Brother QL-800, zonder printvenster. Hiervoor draait een klein hulpprogramma op deze Mac (dat start automatisch mee) en is de printer via USB aangesloten. Gebruik Chrome. Deze instellingen gelden voor dit apparaat.</p>
+    <p class="muted" style="margin-bottom:12px">Print prijs- en productstickers rechtstreeks op je Brother QL-800, zonder printvenster. Hiervoor draait een klein hulpprogramma op deze Mac (dat start automatisch mee) en is de printer via USB aangesloten. Werkt in Safari en Chrome. Deze instellingen gelden voor dit apparaat.</p>
     <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet getest. Klik op "Verbinding testen".</div>
     <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
       <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
@@ -5371,8 +5371,8 @@ function mailPollStart(){
    macOS-driver: die driver is van 2018 (alleen Intel) en crasht op Apple Silicon, dus elke
    gewone print (en QZ Tray, dat door dezelfde driver gaat) doet niets. In plaats daarvan draait
    er een klein hulpprogramma op de Mac (~/.storvo-print, start automatisch mee) dat de printer
-   RECHTSTREEKS via USB aanstuurt met brother_ql. Storvo stuurt het label als PNG naar
-   http://127.0.0.1:9909. Let op: de rol DK-22251 is zwart/rood; de QL-800 eist dan de
+   RECHTSTREEKS via USB aanstuurt met brother_ql. Storvo stuurt het label als PNG (over https) naar
+   https://127.0.0.1:9909. Let op: de rol DK-22251 is zwart/rood; de QL-800 eist dan de
    tweekleuren-modus (red=true), ook bij alleen zwart — anders knippert hij rood. Daarom staat
    tweekleuren standaard aan. Instellingen staan per apparaat in localStorage (de printer hangt
    aan díe Mac). Label = titel + prijs groot + scanbare barcode. */
@@ -5385,13 +5385,13 @@ function laadScript(src){
     document.head.appendChild(s);
   });
 }
-function printHelperUrl(){ return localStorage.getItem('storvoPrintUrl')||'http://127.0.0.1:9909'; }
+function printHelperUrl(){ return localStorage.getItem('storvoPrintUrl')||'https://127.0.0.1:9909'; }
 /* Vraagt het hulpprogramma naar de printerstatus. Werkt de verbinding niet, dan gooit dit een
    duidelijke fout (programma draait niet, of we zitten in Safari dat localhost blokkeert). */
 async function printHelperStatus(){
   let r;
   try{ r=await fetch(printHelperUrl()+'/status',{method:'GET'}); }
-  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac, en gebruik je Chrome?'); }
+  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac? (Staat de QL-800 aan?)'); }
   return await r.json();
 }
 /* Stuurt een PNG (base64) naar de printhulp, die hem rechtstreeks naar de QL-800 stuurt.
@@ -5402,7 +5402,7 @@ async function printViaHelper(pngBase64, opts){
     red:opts.red!==false, cut:opts.cut!==false, kopieen:opts.kopieen||1 });
   let r;
   try{ r=await fetch(printHelperUrl()+'/print',{method:'POST',headers:{'Content-Type':'application/json'},body}); }
-  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac, en gebruik je Chrome?'); }
+  catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac? (Staat de QL-800 aan?)'); }
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'printen mislukt');
   return j;
