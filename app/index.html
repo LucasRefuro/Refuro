@@ -1695,6 +1695,7 @@
   .qrscan-dicht{position:absolute; top:calc(env(safe-area-inset-top) + 16px); right:18px;
     background:rgba(255,255,255,.16); color:#fff; border:none; cursor:pointer; font-family:inherit;
     font-weight:700; font-size:15px; padding:10px 18px; border-radius:var(--pil); z-index:2;}
+  .partnerpil{display:inline-flex; align-items:center; background:#E3F4EC; color:#177A51; font-weight:700; font-size:12.5px; padding:7px 12px; border-radius:var(--pil); white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -11111,7 +11112,7 @@ function renderHardware(){
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
         <td class="num hwact" style="white-space:nowrap">${h.status==='verkocht'?''
           : h.partner_id
-            ? `<span class="btn small" style="background:#E3F4EC; color:#177A51; cursor:default">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span> <button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
+            ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span> <button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
           :`${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg')
               ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button> `:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
               ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button> `:''}<button class="btn ghost small" onclick="hwBewerk('${h.id}')">Openen</button>`}</td>
@@ -11386,13 +11387,9 @@ async function hwWijsToe(id){
   ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
   ov.innerHTML=`<div class="popup">
     <h3>Toewijzen aan partner</h3>
-    <div class="pv">${esc([h.merk,h.model].filter(Boolean).join(' '))} gaat naar de partner. Hij verkoopt het in zijn eigen dashboard; jij krijgt jouw deel van de winst.</div>
+    <div class="pv">${esc([h.merk,h.model].filter(Boolean).join(' '))} gaat naar de partner. Hij verkoopt het in zijn eigen dashboard. De winstverdeling stel je later in.</div>
     <label>Partner</label>
     <select id="wt_partner">${partners.map(p=>`<option value="${esc(p.id)}">${esc(p.naam||'Partner')}</option>`).join('')}</select>
-    <div class="grid" style="margin-top:12px">
-      <div><label>Deel voor de partner</label><input id="wt_deel" type="number" min="0" value="50"></div>
-      <div><label>Soort</label><select id="wt_type"><option value="pct">Procent (%)</option><option value="eur">Vast bedrag (euro)</option></select></div>
-    </div>
     <div class="acts" style="margin-top:16px">
       <button class="btn actie" onclick="hwWijsToeDoen('${h.id}', this)">Toewijzen</button>
       <button class="btn ghost" onclick="hwSluit()">Annuleren</button>
@@ -11402,15 +11399,13 @@ async function hwWijsToe(id){
 }
 async function hwWijsToeDoen(id, knop){
   const partnerId=(document.getElementById('wt_partner')||{}).value;
-  const deel=Number((document.getElementById('wt_deel')||{}).value)||0;
-  const type=(document.getElementById('wt_type')||{}).value;
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); throw new Error('Geen sessie'); }
     const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
       method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({actie:'toewijzen', hardware_id:id, partner_id:partnerId, deel_type:type, deel_waarde:deel})
+      body:JSON.stringify({actie:'toewijzen', hardware_id:id, partner_id:partnerId})
     });
     const uit=await res.json().catch(()=>({}));
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Toewijzen mislukt');
