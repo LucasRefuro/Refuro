@@ -1298,8 +1298,9 @@ function tabel(rijen){
     <tbody>${rijen.map(a=>{
       /* De hele regel is de knop. Je zoekt niet eerst een klein knopje op
          als je met handschoenen aan achter een tafel vol laptops staat. */
+      const bat=batches.find(x=>x.id===a.batch_id);
       return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
-        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${bat?` <span class="batpil">${esc(bat.code||bat.nummer||'batch')}</span>`:''}
             <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}</div></td>
         <td class="mono">${esc(a.code||'—')}</td>
         <td class="mono">${esc(a.serienummer||'—')}</td>
@@ -1716,9 +1717,14 @@ async function deviceLabelPng(a){
     ctx.font='800 '+Math.round(2.8*dpmm)+'px Arial';
     y=labelWrap(ctx, 'Grade '+grade+((typeof GRADE_STAAT!=='undefined'&&GRADE_STAAT[grade])?' · '+GRADE_STAAT[grade]:''), pad, y, breed(y), Math.round(3.3*dpmm), 1);
   }
+  // Batch + hoe ingekocht bovenaan de regels, zodat je aan de werkbank meteen ziet uit welke
+  // partij dit toestel komt en hoe het binnenkwam.
+  const bat=batches.find(x=>x.id===a.batch_id);
+  const cond=bat?verwachtTekst(bat.verwacht):'';
+  const extra=[bat?('Batch '+(bat.code||bat.nummer||'')):null, cond?('Ingekocht: '+cond):null].filter(Boolean);
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
-  for(const r of labelRegels(a)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  for(const r of extra.concat(labelRegels(a))){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
   // prijs groot, direct onder de specs
   if(prijs!=null && prijs!==''){
     y+=Math.round(1.2*dpmm);
@@ -6306,7 +6312,7 @@ function renderBatchDetail(){
       <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px">
         <h2 style="margin:0"><svg class="i"><use href="#i-laptop"/></svg>Toestellen in deze batch <span class="muted">(${devs.length})</span></h2>
         <div class="row" style="gap:8px">
-          <button class="btn actie small" onclick="batLabels('${b.id}')"><svg class="i s"><use href="#i-tag"/></svg>Labels maken</button>
+          <button class="btn actie small" onclick="batSticker('${b.id}')"><svg class="i s"><use href="#i-tag"/></svg>Batch-sticker printen</button>
           <button class="btn ghost small" onclick="batKoppelOpen()"><svg class="i s"><use href="#i-plus"/></svg>Toestellen koppelen</button>
         </div>
       </div>
@@ -6346,6 +6352,51 @@ function batBewerk(id){ batForm(batches.find(b=>b.id===id)||null); }
    ?batch=..&nr=.. wijst. Je print per stuk, per 50 of alles; b.gelabeld_tot onthoudt tot welk
    nummer je bent. Een toestel bestaat pas als je een label scant en invult (batSlotInvullen);
    dan pas krijgt het een A00xx-code. Geen inkoopprijs, geen model op de sticker. */
+/* Eén grote algemene sticker voor de hele partij, voor op de doos/pallet: het B-nummer groot,
+   een QR die de batch opent, en de kerninfo (naam, leverancier, conditie, aantal, datum). */
+async function batStickerPng(b){
+  await laadScript('/app/qrcode.min.js');
+  const {breedte}=labelInstelling();
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm), Hmax=Math.round(130*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top'; ctx.fillStyle='#000';
+  const qrS=Math.round(16*dpmm);
+  const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?batch='+b.id); qr.make();
+  const qrUrl=qr.createDataURL(6,0);
+  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, W-qrS-pad, pad, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
+  const qrOnder=pad+qrS, txtW=W-qrS-pad*2-Math.round(1.5*dpmm);
+  const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);
+  let y=pad;
+  ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
+  y=labelWrap(ctx, 'BATCH', pad, y, txtW, Math.round(2.8*dpmm), 1);
+  ctx.font='800 '+Math.round(7*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(b.code||b.nummer||''), pad, y, W-2*pad, Math.round(7.6*dpmm), 1);
+  y+=Math.round(0.8*dpmm);
+  const cond=verwachtTekst(b.verwacht), cap=Number(b.aantal)||0;
+  const regels=[
+    (b.code&&b.nummer)?b.nummer:null,
+    b.leverancier||null,
+    cond?('Ingekocht: '+cond):null,
+    cap?(cap+' toestellen'):null,
+    'Binnen: '+new Date(b.aangemaakt_op||Date.now()).toLocaleDateString('nl-NL')
+  ].filter(Boolean);
+  ctx.font='500 '+Math.round(2.6*dpmm)+'px Arial';
+  for(const r of regels){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.3*dpmm), 1); }
+  const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c, 0,0,W,Hc, 0,0,W,Hc);
+  return out.toDataURL('image/png').split(',')[1];
+}
+async function batSticker(id){
+  const b=batches.find(x=>x.id===id); if(!b) return;
+  try{
+    const {breedte, tweekleuren}=labelInstelling();
+    const png=await batStickerPng(b);
+    await printViaHelper(png, {label:breedte, red:tweekleuren});
+    toast('Batch-sticker geprint', true);
+  }catch(e){ toast('Printen: '+e.message,'fout'); }
+}
 function batLabels(id){
   const b=batches.find(x=>x.id===id); if(!b) return;
   const cap=Number(b.aantal)||0;
@@ -6866,6 +6917,7 @@ function uitAdres(){
   const p=new URLSearchParams(location.search);
   const batchId=p.get('batch'), nr=p.get('nr');
   if(batchId && nr){ batSlotInvullen(batchId, Number(nr)); return; }   // genummerd batch-label
+  if(batchId && batches.find(x=>x.id===batchId)){ showTab('batches'); batOpen(batchId); return; }  // batch-sticker
   const id=p.get('apparaat');
   if(!id) return;
   const a=apparaten.find(x=>x.id===id);
@@ -6924,6 +6976,7 @@ function qrScanGevonden(tekst){
     if(u.origin===location.origin){
       const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
       if(bId && n){ batSlotInvullen(bId, Number(n)); return; }
+      if(bId && batches.find(x=>x.id===bId)){ showTab('batches'); batOpen(bId); return; }
       const id=u.searchParams.get('apparaat');
       if(id && apparaten.find(x=>x.id===id)){ appPagina(id); return; }
     }
@@ -6952,6 +7005,7 @@ document.addEventListener('keydown', e=>{
       if(u.origin===location.origin){
         const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
         if(bId && n){ e.preventDefault(); batSlotInvullen(bId, Number(n)); return; }
+        if(bId && batches.find(x=>x.id===bId)){ e.preventDefault(); showTab('batches'); batOpen(bId); return; }
         const id=u.searchParams.get('apparaat');
         if(id && apparaten.find(x=>x.id===id)){ e.preventDefault(); appPagina(id); }
       }
