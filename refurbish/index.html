@@ -1714,9 +1714,14 @@ async function deviceLabelPng(a){
   const txtW=W-qrS-pad*2-Math.round(1.5*dpmm);       // tekstbreedte links van de QR
   const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);  // onder de QR mag tekst de volle breedte
   ctx.fillStyle='#000';
+  // Onderdelen die voor dit toestel besteld/te bestellen zijn (voor de reparatie-sticker).
+  const wachtDelen=(typeof onderdelen!=='undefined')
+    ? onderdelen.filter(o=>o.voor_apparaat===a.id && (o.status==='te_bestellen'||o.status==='besteld')) : [];
+  const statusTekst = (a.status==='te_repareren' && wachtDelen.length) ? 'WACHT OP ONDERDEEL'
+    : String(STATUS_KORT[a.status]||a.status||'');
   let y=pad;
   ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
-  y=labelWrap(ctx, String(STATUS_KORT[a.status]||a.status||''), pad, y, txtW, Math.round(2.8*dpmm), 1);
+  y=labelWrap(ctx, statusTekst, pad, y, txtW, Math.round(2.8*dpmm), 1);
   ctx.font='800 '+Math.round(3.1*dpmm)+'px Arial';
   y=labelWrap(ctx, String(a.code||''), pad, y, txtW, Math.round(3.6*dpmm), 1);
   y+=Math.round(0.6*dpmm);
@@ -1727,11 +1732,19 @@ async function deviceLabelPng(a){
     ctx.font='800 '+Math.round(2.8*dpmm)+'px Arial';
     y=labelWrap(ctx, 'Grade '+grade+((typeof GRADE_STAAT!=='undefined'&&GRADE_STAAT[grade])?' · '+GRADE_STAAT[grade]:''), pad, y, breed(y), Math.round(3.3*dpmm), 1);
   }
-  // Batch + hoe ingekocht bovenaan de regels, zodat je aan de werkbank meteen ziet uit welke
-  // partij dit toestel komt en hoe het binnenkwam.
+  // Reparatie-info op de sticker: bij 'te repareren' het defect (en of er een onderdeel besteld
+  // is), en bij een gerepareerd/voorraad-toestel dat het hersteld is.
+  const rep=[];
+  if(a.status==='te_repareren'){
+    if(wachtDelen.length) rep.push('Onderdeel besteld: '+wachtDelen.map(o=>o.naam).join(', '));
+    if((a.defecten||[]).length) rep.push('Defect: '+a.defecten.join(', '));
+  }else if(OP_VOORRAAD.includes(a.status) && (a.defecten||[]).length){
+    rep.push('Hersteld: '+a.defecten.join(', '));
+  }
+  // Batch + hoe ingekocht, zodat je aan de werkbank ziet uit welke partij het toestel komt.
   const bat=batches.find(x=>x.id===a.batch_id);
   const cond=bat?verwachtTekst(bat.verwacht):'';
-  const extra=[bat?('Batch '+(bat.code||bat.nummer||'')):null, cond?('Ingekocht: '+cond):null].filter(Boolean);
+  const extra=rep.concat([bat?('Batch '+(bat.code||bat.nummer||'')):null, cond?('Ingekocht: '+cond):null]).filter(Boolean);
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
   for(const r of extra.concat(labelRegels(a))){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
@@ -3738,7 +3751,9 @@ async function ctrAfronden(knop){
       : (status==='klaar'
         ? 'Goedgekeurd, grade '+grade+(locNaam(a.locatie_id)?' · ligt in '+locNaam(a.locatie_id):'')
         : defecten.length+' ding'+(defecten.length===1?'':'en')+' te repareren'), true);
-    if(bij) labelsTonen(bij.id);
+    // Meteen de juiste sticker printen (defect bij te repareren, onderdelen bij slopen, of de
+    // voorraad-sticker). Geen printer? Dan gebeurt er niets ergs; print 'm anders via de knop.
+    if(bij){ try{ await qzPrintDeviceLabels(bij.id, true); }catch(_e){} }
   });
 }
 
@@ -3765,7 +3780,9 @@ async function ctrSlopen(knop){
     ctr=null; await allesLaden(); showTab('donoren');
     toast(goed.length?goed.length+' onderdelen naar de plank':'Apparaat afgeschreven', true);
     const bij=apparaten.find(x=>x.id===a.id);
-    if(bij) labelsTonen(bij.id);
+    // Meteen de juiste sticker printen (defect bij te repareren, onderdelen bij slopen, of de
+    // voorraad-sticker). Geen printer? Dan gebeurt er niets ergs; print 'm anders via de knop.
+    if(bij){ try{ await qzPrintDeviceLabels(bij.id, true); }catch(_e){} }
   });
 }
 
@@ -3849,6 +3866,7 @@ async function deelBestellen(apparaatId){
   });
   if(error){ toast('Opslaan mislukt','fout'); return; }
   await allesLaden(); sluit();
+  try{ await qzPrintDeviceLabels(apparaatId, true); }catch(_e){}   // sticker "onderdeel besteld"
   const a=apparaten.find(x=>x.id===apparaatId); if(a) repOpen(a);
   toast('Op de bestellijst gezet', true);
 }
@@ -3859,7 +3877,9 @@ async function repKlaar(knop, id){
       .update({status:'klaar', bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw new Error('Bijwerken mislukt');
     if(a) await naarVoorraad(a);
-    sluit(); await allesLaden(); toast('Gerepareerd en op voorraad', true);
+    sluit(); await allesLaden();
+    try{ await qzPrintDeviceLabels(id, true); }catch(_e){}   // sticker "hersteld / op voorraad"
+    toast('Gerepareerd en op voorraad', true);
   });
 }
 
