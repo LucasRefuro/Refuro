@@ -2535,6 +2535,7 @@
     <div class="row" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px">
       <h2 style="margin:0" id="mailLijstTitel">Categorie</h2>
       <div class="acts2">
+        <button class="btn ghost small" onclick="mailAllesGelezen()"><svg class="i s"><use href="#i-check"/></svg>Alles gelezen</button>
         <button class="btn ghost small" onclick="mailCatWijzig()"><svg class="i s"><use href="#i-edit"/></svg>Naam</button>
         <button class="btn ghost small" onclick="mailTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug</button>
       </div>
@@ -5322,7 +5323,9 @@ async function mailOpen(id){
     <div class="muted klein" style="margin-bottom:10px">${esc(d)}${bijl.length?(' · '+bijl.length+' bijlage'+(bijl.length===1?'':'n')):''}</div>
     <div class="row" style="gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap">
       <button class="btn small" onclick="mailAntwoord('${b.id}')"><svg class="i s"><use href="#i-mail"/></svg>Antwoorden</button>
+      <button class="btn ghost small" onclick="mailDoorsturen('${b.id}')">Doorsturen</button>
       <label class="muted klein">Categorie <select onchange="mailZetCategorie('${b.id}', this.value)">${catOpties}</select></label>
+      <button class="btn ghost small" onclick="document.getElementById('mailLeesOverlay').remove(); mailZetGelezen('${b.id}', false)">Ongelezen</button>
       <button class="btn ghost small" onclick="mailVerwijder(['${b.id}'], true)"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
       ${b.html?`<button class="btn ghost small" id="mailOpmaakKnop" onclick="mailToonOpmaak('${b.id}')">Toon opmaak</button>`:''}
     </div>
@@ -5379,10 +5382,32 @@ function mailAntwoord(id){
   const ov=document.getElementById('mailLeesOverlay'); if(ov) ov.remove();
   const datum=b.datum?new Date(b.datum).toLocaleString('nl-NL'):'';
   const citaat='\n\n\n--- Op '+datum+' schreef '+(b.van_naam||b.van_adres||'')+': ---\n'+(b.tekst||b.fragment||'').split('\n').map(r=>'> '+r).join('\n');
-  mailOpstellen({aan:b.van_adres||'', onderwerp:(/^re:/i.test(b.onderwerp||'')?b.onderwerp:('Re: '+(b.onderwerp||''))), tekst:citaat, in_reply_to:b.message_id||'', bericht_id:b.id});
+  mailOpstellen({aan:b.van_adres||'', onderwerp:(/^re:/i.test(b.onderwerp||'')?b.onderwerp:('Re: '+(b.onderwerp||''))), tekst:citaat, in_reply_to:b.message_id||'', bericht_id:b.id, origineel:{van:(b.van_naam||b.van_adres||''), onderwerp:(b.onderwerp||''), tekst:(b.tekst||b.fragment||'')}});
 }
+function mailDoorsturen(id){
+  const b=mailBerichten.find(x=>String(x.id)===String(id)); if(!b) return;
+  const ov=document.getElementById('mailLeesOverlay'); if(ov) ov.remove();
+  const datum=b.datum?new Date(b.datum).toLocaleString('nl-NL'):'';
+  const kop='\n\n\n--- Doorgestuurd bericht ---\nVan: '+(b.van_naam||'')+' <'+(b.van_adres||'')+'>\nDatum: '+datum+'\nOnderwerp: '+(b.onderwerp||'')+'\n\n'+(b.tekst||b.fragment||'');
+  mailOpstellen({aan:'', onderwerp:(/^fwd:/i.test(b.onderwerp||'')?b.onderwerp:('Fwd: '+(b.onderwerp||''))), tekst:kop});
+}
+async function mailZetGelezen(id, gelezen){
+  const b=mailBerichten.find(x=>String(x.id)===String(id)); if(!b) return;
+  b.gelezen=gelezen;
+  try{ await sb.from('mail_berichten').update({gelezen}).eq('id',id); }catch(e){}
+  tekenMailTegels(); if(mailHuidigeCat) tekenMailLijst();
+}
+async function mailAllesGelezen(){
+  const c=mailCat(mailHuidigeCat); if(!c) return;
+  const ids=mailBerichten.filter(b=>String(b.categorie_id)===String(c.id) && !b.gelezen).map(b=>b.id);
+  if(!ids.length){ toast('Alles is al gelezen'); return; }
+  ids.forEach(id=>{ const b=mailBerichten.find(x=>String(x.id)===String(id)); if(b) b.gelezen=true; });
+  try{ await sb.from('mail_berichten').update({gelezen:true}).in('id',ids); }catch(e){}
+  tekenMailTegels(); tekenMailLijst(); toast(ids.length+' als gelezen gemarkeerd', true);
+}
+let mailOpstelCtx=null;
 function mailOpstellen(vooraf){
-  vooraf=vooraf||{};
+  vooraf=vooraf||{}; mailOpstelCtx=vooraf;
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='mailOpstelOverlay';
   ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   ov.innerHTML=`<div class="popup" style="width:min(760px,96vw); max-height:92vh; overflow:auto">
@@ -5390,13 +5415,31 @@ function mailOpstellen(vooraf){
     <div style="margin-bottom:10px"><label>Aan</label><input id="opstelAan" type="email" placeholder="naam@voorbeeld.nl" value="${esc(vooraf.aan||'')}"></div>
     <div style="margin-bottom:10px"><label>Onderwerp</label><input id="opstelOnder" value="${esc(vooraf.onderwerp||'')}"></div>
     <div style="margin-bottom:12px"><label>Bericht</label><textarea id="opstelTekst" rows="12" style="width:100%; resize:vertical; font-family:inherit">${esc(vooraf.tekst||'')}</textarea></div>
-    <div class="acts">
+    <div class="acts" style="flex-wrap:wrap; gap:8px">
+      ${vooraf.origineel?`<button class="btn secondary" onclick="mailAiVoorstel(this)"><svg class="i s"><use href="#i-mail"/></svg>AI stelt antwoord voor</button>`:''}
       <button class="btn ghost" onclick="document.getElementById('mailOpstelOverlay').remove()">Annuleren</button>
       <button class="btn actie" id="opstelVerstuur" onclick="mailVerstuur(this, ${vooraf.bericht_id?("'"+vooraf.bericht_id+"'"):'null'}, ${vooraf.in_reply_to?("'"+vooraf.in_reply_to+"'"):'null'})"><svg class="i s"><use href="#i-mail"/></svg>Versturen</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
   const a=document.getElementById('opstelAan'); if(a && !a.value) a.focus();
+}
+/* De AI een concept-antwoord laten schrijven op de mail waarop je reageert. Het komt boven je
+   bericht te staan; je past het aan en verstuurt zelf. */
+async function mailAiVoorstel(knop){
+  const o=mailOpstelCtx && mailOpstelCtx.origineel; if(!o) return;
+  const ta=document.getElementById('opstelTekst');
+  const instructie=(ta && !/^\s*$|^\s*---/.test(ta.value))? ta.value.split('\n---')[0].trim() : '';
+  if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='AI schrijft…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/mail-antwoord-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({onderwerp:o.onderwerp, van:o.van, tekst:o.tekst, instructie})});
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'AI-voorstel mislukte');
+    if(ta){ const rest=ta.value.includes('---')?('\n\n'+ta.value.slice(ta.value.indexOf('\n\n---')+1)) : ''; ta.value=(uit.concept||'')+rest; }
+    toast('Voorstel klaar — pas aan en verstuur', true);
+  }catch(e){ toast('AI: '+e.message,'fout'); }
+  if(knop){ knop.disabled=false; if(knop.dataset.oud) knop.innerHTML=knop.dataset.oud; }
 }
 async function mailVerstuur(knop, berichtId, inReplyTo){
   const aan=(document.getElementById('opstelAan').value||'').trim();

@@ -44,12 +44,17 @@ async function sluit(c: any) {
 
 // De AI laat een reeks mails in één keer indelen bij de ingestelde categorieën. Eén aanroep
 // voor de hele batch houdt het snel en goedkoop.
-async function categoriseer(key: string, cats: { naam: string; ai_hint: string }[], mails: { i: number; van: string; onderwerp: string; fragment: string }[]) {
+async function categoriseer(key: string, cats: { naam: string; ai_hint: string }[], mails: { i: number; van: string; onderwerp: string; fragment: string }[], voorbeelden: { van: string; onderwerp: string; categorie: string }[]) {
   const lijst = cats.map((c) => `- ${c.naam}: ${c.ai_hint || ""}`).join("\n");
   const items = mails.map((m) => `#${m.i} | van: ${m.van} | onderwerp: ${m.onderwerp} | tekst: ${(m.fragment || "").slice(0, 200)}`).join("\n");
+  // Een paar eerder ingedeelde mails als voorbeeld: zo volgt de AI de keuzes die de winkelier
+  // zelf heeft gemaakt (die correcties overschrijven de categorie, dus dit "leert" mee).
+  const vb = voorbeelden.length
+    ? "\n\nZo zijn eerdere mails ingedeeld (volg deze stijl):\n" + voorbeelden.map((v) => `- van ${v.van} | ${v.onderwerp} -> ${v.categorie}`).join("\n")
+    : "";
   const prompt =
     "Je sorteert e-mails van een reparatiewinkel. Kies voor elke mail de best passende " +
-    "categorie uit deze lijst (gebruik exact de naam):\n" + lijst + "\n\nDe mails:\n" + items +
+    "categorie uit deze lijst (gebruik exact de naam):\n" + lijst + vb + "\n\nDe mails:\n" + items +
     '\n\nGeef ALLEEN JSON terug: {"0":"<categorienaam>","1":"<categorienaam>", ...} voor elk #nummer.';
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -167,7 +172,17 @@ Deno.serve(async (req) => {
   // Stap 3: de nieuwe mails in één AI-aanroep laten indelen.
   let indeling: any = {};
   if (nieuw.length && catLijst.length) {
-    indeling = await categoriseer(aiKey, catLijst as any, nieuw.map((m, i) => ({ i, van: m.van_naam || m.van_adres, onderwerp: m.onderwerp, fragment: m.fragment })));
+    // Recente, al ingedeelde mails als leer-voorbeelden (weerspiegelt correcties van de winkelier).
+    const catNaamOpId = new Map(catLijst.map((c: any) => [String(c.id), c.naam]));
+    const { data: eerder } = await admin.from("mail_berichten")
+      .select("van_naam,van_adres,onderwerp,categorie_id")
+      .eq("team_id", team).not("categorie_id", "is", null)
+      .order("aangemaakt_op", { ascending: false }).limit(12);
+    const voorbeelden = (eerder || []).map((r: any) => ({
+      van: (r.van_naam || r.van_adres || "").slice(0, 60), onderwerp: (r.onderwerp || "").slice(0, 80),
+      categorie: catNaamOpId.get(String(r.categorie_id)) || "",
+    })).filter((v: any) => v.categorie);
+    indeling = await categoriseer(aiKey, catLijst as any, nieuw.map((m, i) => ({ i, van: m.van_naam || m.van_adres, onderwerp: m.onderwerp, fragment: m.fragment })), voorbeelden);
   }
 
   // Stap 4: opslaan (service-role; upsert op team+map+uid zodat dubbel niks doet).
