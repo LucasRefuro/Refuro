@@ -125,6 +125,16 @@
   .hubtegel .tt b{font-size:15px; font-weight:700;}
   .hubtegel .tt span{font-size:12px; color:var(--muted); line-height:1.35;}
   .hubtegel .badge{position:absolute; top:10px; right:12px;}
+  /* Mailomgeving: rijen in een categorie */
+  .mailrij{display:flex; align-items:center; gap:10px; padding:9px 6px; border-bottom:1px solid var(--border);}
+  .mailrij.ongelezen .mailvan{font-weight:800;}
+  .mailrij.ongelezen{background:var(--lblauw);}
+  .mailvink{width:18px; height:18px; accent-color:var(--oranje); flex:none;}
+  .mailopen{flex:1; min-width:0; display:grid; grid-template-columns:1fr; gap:1px; background:none; border:none; text-align:left; font:inherit; color:var(--text); cursor:pointer; padding:0;}
+  .mailvan{font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mailonder{font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mailfrag{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .maildag{flex:none; white-space:nowrap;}
   .periodesel{display:flex; gap:6px;}
   .periodesel button{background:#fff; border:1.5px solid var(--border); padding:7px 14px; border-radius:20px; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--muted); cursor:pointer;}
   .periodesel button.active{background:var(--navy); border-color:var(--navy); color:#fff;}
@@ -2502,6 +2512,46 @@
   </div>
 </section>
 
+<!-- MAIL -->
+<section id="tab-mail"hidden>
+  <div class="pagehead"><h1>Mail</h1></div>
+  <div class="modules">
+  <div class="card breed">
+    <div class="row" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+      <div class="muted klein" id="mailStatus">Je postvak, automatisch gesorteerd door de AI. Je gewone mailbox blijft ongemoeid.</div>
+      <div class="acts2">
+        <button class="btn ghost small" onclick="haalNieuweMail(this)"><svg class="i s"><use href="#i-download"/></svg>Nieuwe mail ophalen</button>
+        <button class="btn small" onclick="mailOpstellen()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe mail</button>
+      </div>
+    </div>
+  </div>
+  <div class="card breed" id="mailTegelsKaart">
+    <h2><svg class="i"><use href="#i-tag"/></svg>Categorieën</h2>
+    <p class="muted klein" style="margin:2px 0 12px">Klik op een categorie om de mails te zien. Je kunt zelf categorieën toevoegen of aanpassen.</p>
+    <div id="mailTegels" class="hubgrid"></div>
+    <div style="margin-top:12px"><button class="btn ghost small" onclick="mailCatNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Categorie toevoegen</button></div>
+  </div>
+  <div class="card breed" id="mailLijstKaart" hidden>
+    <div class="row" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px">
+      <h2 style="margin:0" id="mailLijstTitel">Categorie</h2>
+      <div class="acts2">
+        <button class="btn ghost small" onclick="mailCatWijzig()"><svg class="i s"><use href="#i-edit"/></svg>Naam</button>
+        <button class="btn ghost small" onclick="mailTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug</button>
+      </div>
+    </div>
+    <div class="row" style="gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap">
+      <input id="mailZoek" placeholder="Zoeken op afzender of onderwerp" autocomplete="off" oninput="tekenMailLijst()" style="flex:1; min-width:180px">
+      <div class="acts2" id="mailBulkActs" hidden>
+        <span class="muted klein" id="mailBulkTel"></span>
+        <select id="mailBulkCat" onchange="mailBulkCategorie(this.value)"></select>
+        <button class="btn ghost small" onclick="mailBulkVerwijder()"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+      </div>
+    </div>
+    <div id="mailLijst" class="loglist"></div>
+  </div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2593,6 +2643,7 @@
     <div class="hubsectie">
       <div class="hubgroep">Winkel</div>
       <div class="hubgrid">
+        <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak met AI-sortering, antwoorden en opstellen</span></span></button>
         <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Gebruikers, rollen en toegang</span></span></button>
         <button class="hubtegel" data-tab="partners" onclick="showTab('partners')"><svg class="i"><use href="#i-link"/></svg><span class="tt"><b>Partners</b><span>Toestellen die een partner voor je verkoopt</span></span></button>
       </div>
@@ -3362,6 +3413,7 @@ function showTab(t){
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
   if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); }
+  if(t==='mail') renderMail();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
@@ -5173,6 +5225,246 @@ async function mailConceptDetail(id){
       : '<iframe src="'+data.signedUrl+'" style="width:100%; height:72vh; border:1px solid var(--border); border-radius:var(--radius-s)" title="factuur"></iframe>';
   }catch(e){ if(pdfEl) pdfEl.textContent='Kon de factuur niet laden.'; }
 }
+
+/* ═══ Mailomgeving ═══
+   Postvak in Storvo met AI-sortering. De functie mail-sync leest de mailbox en zet elke mail
+   met een categorie in de tabel mail_berichten; hier tonen we ze per categorie, met lezen,
+   antwoorden (mail-verstuur), opstellen, verwijderen (mail-actie, naar prullenbak) en bulk.
+   Lezen/categorie-wijzigen doet de client zelf via de tabel (RLS staat dat toe). */
+let mailCats=[], mailBerichten=[], mailHuidigeCat=null;
+const mailSelectie=new Set();
+const MAIL_KLEUREN={blauw:'var(--navy)', groen:'var(--green-tekst)', grijs:'var(--muted)', neutraal:'var(--oranje)', oranje:'var(--oranje)'};
+function mailKleur(k){ return MAIL_KLEUREN[k]||'var(--oranje)'; }
+function mailCat(id){ return mailCats.find(c=>String(c.id)===String(id)); }
+
+async function laadMailCats(){
+  try{ const {data}=await sb.from('mail_categorieen').select('*').order('volgorde'); mailCats=data||[]; }catch(e){ mailCats=[]; }
+}
+async function laadMailBerichten(){
+  try{ const {data}=await sb.from('mail_berichten').select('*').eq('verwijderd',false).order('datum',{ascending:false}).limit(600); mailBerichten=data||[]; }catch(e){ mailBerichten=[]; }
+}
+async function renderMail(){
+  await laadMailCats(); await laadMailBerichten();
+  tekenMailTegels();
+  const sel=document.getElementById('mailBulkCat');
+  if(sel) sel.innerHTML='<option value="">Verplaats naar…</option>'+mailCats.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
+  if(mailHuidigeCat && mailCat(mailHuidigeCat)) tekenMailLijst(); else mailTerug();
+}
+function tekenMailTegels(){
+  const el=document.getElementById('mailTegels'); if(!el) return;
+  el.innerHTML=mailCats.map(c=>{
+    const n=mailBerichten.filter(b=>String(b.categorie_id)===String(c.id)).length;
+    const ong=mailBerichten.filter(b=>String(b.categorie_id)===String(c.id) && !b.gelezen).length;
+    return `<button class="hubtegel" onclick="mailOpenCat('${c.id}')" style="border-left:4px solid ${mailKleur(c.kleur)}">
+      <svg class="i"><use href="#i-mail"/></svg>
+      <span class="tt"><b>${esc(c.naam)}</b><span>${n} mail${n===1?'':'s'}${ong?(' · '+ong+' ongelezen'):''}</span></span>
+    </button>`;
+  }).join('') || '<div class="muted">Nog geen categorieën. Voeg er hieronder een toe.</div>';
+}
+function mailOpenCat(id){
+  mailHuidigeCat=id; mailSelectie.clear();
+  const zoek=document.getElementById('mailZoek'); if(zoek) zoek.value='';
+  document.getElementById('mailTegelsKaart').hidden=true;
+  document.getElementById('mailLijstKaart').hidden=false;
+  tekenMailLijst();
+}
+function mailTerug(){
+  mailHuidigeCat=null; mailSelectie.clear();
+  document.getElementById('mailLijstKaart').hidden=true;
+  document.getElementById('mailTegelsKaart').hidden=false;
+  tekenMailTegels();
+}
+function tekenMailLijst(){
+  const c=mailCat(mailHuidigeCat); if(!c){ mailTerug(); return; }
+  const tEl=document.getElementById('mailLijstTitel'); if(tEl) tEl.textContent=c.naam;
+  const zoek=(document.getElementById('mailZoek').value||'').trim().toLowerCase();
+  let rijen=mailBerichten.filter(b=>String(b.categorie_id)===String(c.id));
+  if(zoek) rijen=rijen.filter(b=>((b.van_naam||'')+' '+(b.van_adres||'')+' '+(b.onderwerp||'')).toLowerCase().includes(zoek));
+  const lijst=document.getElementById('mailLijst');
+  lijst.innerHTML=rijen.length ? rijen.map(b=>{
+    const d=b.datum?new Date(b.datum):null;
+    const dag=d?d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'}):'';
+    const gekozen=mailSelectie.has(b.id);
+    const bijl=(Array.isArray(b.bijlagen)?b.bijlagen.length:0);
+    return `<div class="mailrij${b.gelezen?'':' ongelezen'}">
+      <input type="checkbox" class="mailvink" ${gekozen?'checked':''} onclick="event.stopPropagation(); mailSelecteer('${b.id}', this.checked)">
+      <button class="mailopen" onclick="mailOpen('${b.id}')">
+        <span class="mailvan">${esc(b.van_naam||b.van_adres||'Onbekend')}</span>
+        <span class="mailonder">${esc(b.onderwerp||'(geen onderwerp)')}${bijl?' <svg class="i s"><use href="#i-tag"/></svg>':''}</span>
+        <span class="mailfrag muted klein">${esc((b.fragment||'').slice(0,90))}</span>
+      </button>
+      <span class="maildag muted klein">${dag}</span>
+    </div>`;
+  }).join('') : '<div class="muted">Geen mails in deze categorie.</div>';
+  mailBulkBalk();
+}
+function mailSelecteer(id, aan){ if(aan) mailSelectie.add(id); else mailSelectie.delete(id); mailBulkBalk(); }
+function mailBulkBalk(){
+  const acts=document.getElementById('mailBulkActs'), tel=document.getElementById('mailBulkTel');
+  if(!acts) return;
+  acts.hidden = mailSelectie.size===0;
+  if(tel) tel.textContent=mailSelectie.size?(mailSelectie.size+' geselecteerd'):'';
+}
+async function mailOpen(id){
+  const b=mailBerichten.find(x=>String(x.id)===String(id)); if(!b) return;
+  if(!b.gelezen){ b.gelezen=true; try{ await sb.from('mail_berichten').update({gelezen:true}).eq('id',b.id); }catch(e){} tekenMailLijst(); }
+  const d=b.datum?new Date(b.datum).toLocaleString('nl-NL'):'';
+  const bijl=(Array.isArray(b.bijlagen)?b.bijlagen:[]);
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='mailLeesOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const catOpties=mailCats.map(c=>`<option value="${c.id}" ${String(c.id)===String(b.categorie_id)?'selected':''}>${esc(c.naam)}</option>`).join('');
+  ov.innerHTML=`<div class="popup" style="width:min(820px,96vw); max-height:92vh; overflow:auto">
+    <div class="row" style="justify-content:space-between; align-items:flex-start; gap:10px">
+      <h3 style="margin:0">${esc(b.onderwerp||'(geen onderwerp)')}</h3>
+      <button class="btn ghost small icoknop" onclick="document.getElementById('mailLeesOverlay').remove()"><svg class="i s"><use href="#i-left"/></svg></button>
+    </div>
+    <div class="muted klein" style="margin:6px 0 2px"><b>${esc(b.van_naam||'')}</b> ${esc(b.van_adres?('<'+b.van_adres+'>'):'')}</div>
+    <div class="muted klein" style="margin-bottom:10px">${esc(d)}${bijl.length?(' · '+bijl.length+' bijlage'+(bijl.length===1?'':'n')):''}</div>
+    <div class="row" style="gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap">
+      <button class="btn small" onclick="mailAntwoord('${b.id}')"><svg class="i s"><use href="#i-mail"/></svg>Antwoorden</button>
+      <label class="muted klein">Categorie <select onchange="mailZetCategorie('${b.id}', this.value)">${catOpties}</select></label>
+      <button class="btn ghost small" onclick="mailVerwijder(['${b.id}'], true)"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+      ${b.html?`<button class="btn ghost small" id="mailOpmaakKnop" onclick="mailToonOpmaak('${b.id}')">Toon opmaak</button>`:''}
+    </div>
+    ${bijl.length?('<div class="muted klein" style="margin-bottom:8px">Bijlagen: '+bijl.map(a=>esc(a.naam||'bijlage')).join(', ')+'</div>'):''}
+    <div id="mailBodyWrap" style="border-top:1px solid var(--border); padding-top:12px; white-space:pre-wrap; font-size:13.5px; line-height:1.5">${esc(b.tekst||b.fragment||'(geen tekst)')}</div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function mailToonOpmaak(id){
+  const b=mailBerichten.find(x=>String(x.id)===String(id)); if(!b||!b.html) return;
+  const wrap=document.getElementById('mailBodyWrap'); if(!wrap) return;
+  wrap.style.whiteSpace='normal';
+  const f=document.createElement('iframe');
+  f.setAttribute('sandbox','');
+  f.style.cssText='width:100%; height:60vh; border:1px solid var(--border); border-radius:var(--radius-s)';
+  f.title='mailopmaak';
+  wrap.innerHTML=''; wrap.appendChild(f);
+  try{ f.srcdoc=b.html; }catch(e){ wrap.textContent=b.tekst||''; }
+  const kn=document.getElementById('mailOpmaakKnop'); if(kn) kn.remove();
+}
+async function mailZetCategorie(id, catId){
+  const b=mailBerichten.find(x=>String(x.id)===String(id)); if(!b) return;
+  b.categorie_id=catId;
+  try{ await sb.from('mail_berichten').update({categorie_id:catId}).eq('id',id); }catch(e){ toast('Verplaatsen mislukte','fout'); }
+  tekenMailTegels(); if(mailHuidigeCat) tekenMailLijst();
+}
+async function mailBulkCategorie(catId){
+  if(!catId || !mailSelectie.size) return;
+  const ids=[...mailSelectie];
+  ids.forEach(id=>{ const b=mailBerichten.find(x=>String(x.id)===String(id)); if(b) b.categorie_id=catId; });
+  try{ await sb.from('mail_berichten').update({categorie_id:catId}).in('id',ids); }catch(e){ toast('Verplaatsen mislukte','fout'); }
+  mailSelectie.clear(); document.getElementById('mailBulkCat').value='';
+  tekenMailTegels(); tekenMailLijst();
+  toast(ids.length+' verplaatst', true);
+}
+async function mailVerwijder(ids, sluitOverlay){
+  if(!ids || !ids.length) return;
+  if(!confirm(ids.length===1?'Deze mail naar de prullenbak?':(ids.length+' mails naar de prullenbak?'))) return;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/mail-actie',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({ids})});
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Verwijderen mislukte');
+    mailBerichten=mailBerichten.filter(b=>!ids.includes(b.id));
+    ids.forEach(id=>mailSelectie.delete(id));
+    if(sluitOverlay){ const ov=document.getElementById('mailLeesOverlay'); if(ov) ov.remove(); }
+    tekenMailTegels(); if(mailHuidigeCat) tekenMailLijst();
+    toast((uit.verwijderd||ids.length)+' naar prullenbak', true);
+  }catch(e){ toast('Mail: '+e.message,'fout'); }
+}
+function mailBulkVerwijder(){ if(mailSelectie.size) mailVerwijder([...mailSelectie], false); }
+function mailAntwoord(id){
+  const b=mailBerichten.find(x=>String(x.id)===String(id)); if(!b) return;
+  const ov=document.getElementById('mailLeesOverlay'); if(ov) ov.remove();
+  const datum=b.datum?new Date(b.datum).toLocaleString('nl-NL'):'';
+  const citaat='\n\n\n--- Op '+datum+' schreef '+(b.van_naam||b.van_adres||'')+': ---\n'+(b.tekst||b.fragment||'').split('\n').map(r=>'> '+r).join('\n');
+  mailOpstellen({aan:b.van_adres||'', onderwerp:(/^re:/i.test(b.onderwerp||'')?b.onderwerp:('Re: '+(b.onderwerp||''))), tekst:citaat, in_reply_to:b.message_id||'', bericht_id:b.id});
+}
+function mailOpstellen(vooraf){
+  vooraf=vooraf||{};
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='mailOpstelOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup" style="width:min(760px,96vw); max-height:92vh; overflow:auto">
+    <h3>${vooraf.bericht_id?'Antwoorden':'Nieuwe mail'}</h3>
+    <div style="margin-bottom:10px"><label>Aan</label><input id="opstelAan" type="email" placeholder="naam@voorbeeld.nl" value="${esc(vooraf.aan||'')}"></div>
+    <div style="margin-bottom:10px"><label>Onderwerp</label><input id="opstelOnder" value="${esc(vooraf.onderwerp||'')}"></div>
+    <div style="margin-bottom:12px"><label>Bericht</label><textarea id="opstelTekst" rows="12" style="width:100%; resize:vertical; font-family:inherit">${esc(vooraf.tekst||'')}</textarea></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="document.getElementById('mailOpstelOverlay').remove()">Annuleren</button>
+      <button class="btn actie" id="opstelVerstuur" onclick="mailVerstuur(this, ${vooraf.bericht_id?("'"+vooraf.bericht_id+"'"):'null'}, ${vooraf.in_reply_to?("'"+vooraf.in_reply_to+"'"):'null'})"><svg class="i s"><use href="#i-mail"/></svg>Versturen</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const a=document.getElementById('opstelAan'); if(a && !a.value) a.focus();
+}
+async function mailVerstuur(knop, berichtId, inReplyTo){
+  const aan=(document.getElementById('opstelAan').value||'').trim();
+  const onderwerp=(document.getElementById('opstelOnder').value||'').trim();
+  const tekst=document.getElementById('opstelTekst').value||'';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(aan)){ toast('Vul een geldig e-mailadres in','let-op'); return; }
+  if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const body={aan, onderwerp, tekst}; if(berichtId) body.bericht_id=berichtId; if(inReplyTo) body.in_reply_to=inReplyTo;
+    const res=await fetch(SUPABASE_URL+'/functions/v1/mail-verstuur',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(body)});
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Versturen mislukte');
+    if(berichtId){ const b=mailBerichten.find(x=>String(x.id)===String(berichtId)); if(b) b.beantwoord=true; }
+    const ov=document.getElementById('mailOpstelOverlay'); if(ov) ov.remove();
+    toast('Mail verstuurd', true);
+  }catch(e){ toast('Mail: '+e.message,'fout'); if(knop){ knop.disabled=false; knop.innerHTML='<svg class="i s"><use href="#i-mail"/></svg>Versturen'; } }
+}
+async function mailCatNieuw(){
+  const naam=(prompt('Naam van de nieuwe categorie:')||'').trim(); if(!naam) return;
+  const volgorde=(mailCats.reduce((m,c)=>Math.max(m,c.volgorde||0),0))+1;
+  try{
+    const {data,error}=await sb.from('mail_categorieen').insert({team_id:account.team_id, naam, kleur:'neutraal', volgorde}).select().single();
+    if(error) throw error;
+    mailCats.push(data); tekenMailTegels();
+    const sel=document.getElementById('mailBulkCat'); if(sel) sel.innerHTML='<option value="">Verplaats naar…</option>'+mailCats.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
+    toast('Categorie toegevoegd', true);
+  }catch(e){ toast('Toevoegen mislukte','fout'); }
+}
+async function mailCatWijzig(){
+  const c=mailCat(mailHuidigeCat); if(!c) return;
+  const keuze=prompt('Nieuwe naam (of typ "verwijder" om de categorie weg te halen):', c.naam);
+  if(keuze===null) return;
+  if(keuze.trim().toLowerCase()==='verwijder'){
+    if(!confirm('Categorie verwijderen? De mails erin blijven bestaan en gaan naar geen categorie.')) return;
+    try{ await sb.from('mail_categorieen').delete().eq('id',c.id); mailCats=mailCats.filter(x=>x.id!==c.id); mailTerug(); await laadMailBerichten(); tekenMailTegels(); toast('Categorie verwijderd', true); }
+    catch(e){ toast('Verwijderen mislukte','fout'); }
+    return;
+  }
+  const naam=keuze.trim(); if(!naam) return;
+  try{ await sb.from('mail_categorieen').update({naam}).eq('id',c.id); c.naam=naam; document.getElementById('mailLijstTitel').textContent=naam; tekenMailTegels(); }
+  catch(e){ toast('Wijzigen mislukte','fout'); }
+}
+/* De mailbox nakijken en de nieuwe mail ophalen + sorteren. Net als bij de facturen doet de
+   server per ronde een handvol mails en zegt met 'meer' of er nog meer klaarstaat. */
+async function haalNieuweMail(knop){
+  if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Mailbox nakijken…'; }
+  let nieuw=0, rondes=0, fout=null;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Niet ingelogd');
+    toast('Mailbox nakijken, dit kan even duren…');
+    let meer=true;
+    while(meer && rondes<15){
+      rondes++;
+      const res=await fetch(SUPABASE_URL+'/functions/v1/mail-sync',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:'{}'});
+      const uit=await res.json().catch(()=>({}));
+      if(!res.ok||!uit.ok) throw new Error(uit.error||'Mailbox nakijken mislukte');
+      nieuw+=Number(uit.nieuw)||0; meer=!!uit.meer;
+      await laadMailBerichten(); tekenMailTegels(); if(mailHuidigeCat) tekenMailLijst();
+      if(meer) toast('Bezig… '+nieuw+' nieuwe mail'+(nieuw===1?'':'s')+' tot nu toe');
+    }
+  }catch(e){ fout=e.message; }
+  if(knop){ knop.disabled=false; if(knop.dataset.oud) knop.innerHTML=knop.dataset.oud; }
+  if(fout) toast('Mail: '+fout,'fout');
+  else toast(nieuw?(nieuw+' nieuwe mail'+(nieuw===1?'':'s')+' opgehaald en gesorteerd'):'Geen nieuwe mail', true);
+}
+
 /* Meerdere facturen tegelijk uitlezen en als concept klaarzetten. Elke factuur wordt door
    de AI gelezen, opgeslagen en gecheckt op dubbele; jij bevestigt ze daarna. */
 async function factuurenBatch(input){
