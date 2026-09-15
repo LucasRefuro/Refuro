@@ -1505,15 +1505,15 @@ async function toevoegen(knop){
       merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}
     });
 
+    await allesLaden();   // eerst laden zodat de nieuwe toestellen in de lijst staan
     // Meteen naar de labelprinter, geen tussenscherm. Lukt printen niet (geen printhulp), dan
     // meldt qzPrintDeviceLabels dat zelf. Gelukte labels markeren we als gelabeld.
     const ids=(data||[]).map(r=>r.id);
     let geprint=false;
     try{ geprint=await qzPrintDeviceLabels(ids, true); }catch(_e){}
     if(geprint){
-      try{ await sb.from('refurbish_apparaten').update({gelabeld:true}).in('id',ids); }catch(_e){}
+      try{ await sb.from('refurbish_apparaten').update({gelabeld:true}).in('id',ids); (apparaten||[]).forEach(a=>{ if(ids.includes(a.id)) a.gelabeld=true; }); }catch(_e){}
     }
-    await allesLaden();
     const waar=locNaam(locKeuze);
     toast((aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd')+(waar?' · '+waar:'')+(geprint?' · label geprint':''), true);
   });
