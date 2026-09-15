@@ -5080,18 +5080,32 @@ async function laadMailConcepten(){
   }catch(e){ mailConcepten=[]; }
   renderInkopen();
 }
+/* De mailbox nakijken. De server doet per ronde een handvol mails (dat houdt hem snel en
+   betrouwbaar) en zegt met 'meer' of er nog meer klaarstaat. We roepen dan vanzelf door tot
+   alles binnen is, met een ruime bovengrens zodat het nooit eindeloos doorloopt. Een ronde
+   kan tot een halve minuut duren; daarom tonen we tussendoor de voortgang. */
 async function haalFacturenUitMail(knop){
   if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Mailbox nakijken…'; }
+  let totaal=0, rondes=0, fout=null;
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session) throw new Error('Niet ingelogd');
-    const res=await fetch(SUPABASE_URL+'/functions/v1/inkoop-mail',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:'{}'});
-    const uit=await res.json().catch(()=>({}));
-    if(!res.ok||!uit.ok) throw new Error(uit.error||'Mailbox nakijken mislukte');
-    await laadMailConcepten();
-    toast(uit.gevonden ? (uit.gevonden+' factuur'+(uit.gevonden===1?'':'en')+' gevonden — controleer en bevestig') : 'Geen nieuwe facturen in de mailbox', true);
-  }catch(e){ toast('Mail: '+e.message,'fout'); }
+    toast('Mailbox nakijken, dit kan even duren…');
+    let meer=true;
+    while(meer && rondes<15){
+      rondes++;
+      const res=await fetch(SUPABASE_URL+'/functions/v1/inkoop-mail',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:'{}'});
+      const uit=await res.json().catch(()=>({}));
+      if(!res.ok||!uit.ok) throw new Error(uit.error||'Mailbox nakijken mislukte');
+      totaal+=Number(uit.gevonden)||0;
+      meer=!!uit.meer;
+      await laadMailConcepten();
+      if(meer) toast('Bezig… '+totaal+' factuur'+(totaal===1?'':'en')+' tot nu toe');
+    }
+  }catch(e){ fout=e.message; }
   if(knop){ knop.disabled=false; if(knop.dataset.oud) knop.innerHTML=knop.dataset.oud; }
+  if(fout) toast('Mail: '+fout+(totaal?(' ('+totaal+' al gevonden)'):''),'fout');
+  else toast(totaal ? (totaal+' factuur'+(totaal===1?'':'en')+' gevonden — controleer en bevestig') : 'Geen nieuwe facturen in de mailbox', true);
 }
 function mailConceptSoort(id, soort){
   const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v) return;
