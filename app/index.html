@@ -2461,6 +2461,7 @@
     </div>
     <p class="muted" style="margin:0 0 14px" id="roosterUitleg">Geef per dag je beschikbaarheid door. De eigenaar plant het team in op basis daarvan.</p>
     <div id="roosterInhoud"><p class="muted">Laden…</p></div>
+    <div id="roosterHerinnering" hidden style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px"></div>
   </div>
   </div>
 </section>
@@ -3997,6 +3998,36 @@ async function laadRooster(){
     roosterData.diensten = r.data||[];
   }catch(e){ inh.innerHTML='<p class="muted">Het rooster kon niet geladen worden.</p>'; return; }
   tekenRooster();
+  tekenRoosterHerinnering();
+}
+/* Fase 4: de eigenaar kan personeel per e-mail laten herinneren om hun beschikbaarheid voor
+   de komende week in te vullen, X dagen vooraf. De Edge Function rooster-herinnering doet het
+   verzenden (dagelijkse cron); hier alleen de instelling. Alleen zichtbaar voor wie mag
+   inplannen. */
+async function tekenRoosterHerinnering(){
+  const el=document.getElementById('roosterHerinnering'); if(!el) return;
+  if(!roosterMagInplannen() || !account){ el.hidden=true; el.innerHTML=''; return; }
+  let inst={aan:false, herinner_dagen:3};
+  try{ const {data}=await sb.from('rooster_instelling').select('*').eq('team_id', account.team_id).maybeSingle(); if(data) inst=data; }catch(e){}
+  el.hidden=false;
+  el.innerHTML=`<div class="roosterlabel" style="margin-bottom:8px">Herinneringen</div>
+    <label style="display:flex; align-items:center; gap:9px; margin:0 0 10px; cursor:pointer; font-size:13.5px; font-weight:500">
+      <input type="checkbox" id="rhAan" ${inst.aan?'checked':''} onchange="roosterHerinneringOpslaan()"> Herinner personeel per e-mail om hun beschikbaarheid door te geven
+    </label>
+    <div class="row" style="align-items:center; gap:8px; flex-wrap:wrap">
+      <span class="muted klein">Stuur</span>
+      <input type="number" id="rhDagen" min="1" max="14" value="${Number(inst.herinner_dagen)||3}" style="width:64px" onchange="roosterHerinneringOpslaan()">
+      <span class="muted klein">dagen voor de nieuwe week, aan iedereen die nog niets invulde. Verstuurd vanaf je eigen mailadres.</span>
+    </div>`;
+}
+async function roosterHerinneringOpslaan(){
+  if(!account) return;
+  const aan=document.getElementById('rhAan').checked;
+  const dagen=Math.max(1, Math.min(14, Number(document.getElementById('rhDagen').value)||3));
+  try{
+    await sb.from('rooster_instelling').upsert({team_id:account.team_id, aan, herinner_dagen:dagen, bijgewerkt_op:new Date().toISOString()}, {onConflict:'team_id'});
+    toast(aan?('Herinnering aan · '+dagen+' dagen vooraf'):'Herinnering uit', true);
+  }catch(e){ toast('Opslaan mislukte','fout'); }
 }
 function roosterNaam(id){ const m=teamLeden.find(x=>x.id===id); if(m) return m.naam; if(gebruiker&&gebruiker.id===id) return gebruiker.naam; return '?'; }
 function tekenRooster(){
