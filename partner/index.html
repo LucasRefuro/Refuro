@@ -1098,8 +1098,20 @@ function rOnlineEdit(p){
     '<div class="checkrow"><input type="checkbox" id="o_fb"'+(p.fb?' checked':'')+'> <span>Staat op <b>Facebook</b></span></div>' +
     '<div class="checkrow"><input type="checkbox" id="o_mp"'+(p.mp?' checked':'')+'> <span>Staat op <b>Marktplaats</b></span></div>' +
   '</div>' +
-  '<div class="savebar"><button class="btn green" onclick="saveOnline(\''+p.id+'\')">Klaar</button></div>';
+  '<div class="savebar"><button class="btn green" onclick="saveOnline(\''+p.id+'\')">Klaar</button> ' +
+    '<button class="btn gray" style="color:#c0392b" onclick="delProduct(\''+p.id+'\')">Verwijderen</button></div>';
   return html;
+}
+/* Een product uit het dashboard halen (afwijzen/verwijderen). Verkochte stuks blijven staan voor
+   de administratie, dus die kun je niet zomaar weggooien. */
+function delProduct(pid){
+  const p = S.products.find(x=>x.id===pid); if (!p) return;
+  if (soldUnits(p).length){ toast('Kan niet: er zijn al stuks verkocht. Die blijven voor de administratie.'); return; }
+  if (!confirm('"'+(p.model||'dit product')+'" uit je dashboard verwijderen? Dit kan niet ongedaan gemaakt worden.')) return;
+  S.products = S.products.filter(x=>x.id!==pid);
+  save();
+  toast('Product verwijderd');
+  nav('voorraad');
 }
 function saveOnline(pid, silent){
   const p = S.products.find(x=>x.id===pid);
@@ -1199,7 +1211,8 @@ function rProduct(id){
     html += '</table></div></div>';
   }
   html += '<div class="savebar"><button class="btn green" onclick="saveProduct(\''+p.id+'\')"> Opslaan</button> ' +
-    (vu.length ? '<button class="btn gray" onclick="saveProduct(\''+p.id+'\',true);printLabels(\''+p.id+'\')"> Labels printen ('+vu.length+')</button>' : '') + '</div>';
+    (vu.length ? '<button class="btn gray" onclick="saveProduct(\''+p.id+'\',true);printLabels(\''+p.id+'\')"> Labels printen ('+vu.length+')</button> ' : '') +
+    '<button class="btn gray" style="color:#c0392b" onclick="delProduct(\''+p.id+'\')">Verwijderen</button></div>';
   return html;
 }
 function replaats(pid, k){
