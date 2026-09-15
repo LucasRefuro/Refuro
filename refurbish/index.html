@@ -1568,11 +1568,13 @@ function labelHtml(a){
   </div>`;
 }
 
-/* ═══ Stil printen op de labelprinter (QZ Tray) ═══
-   Print de device-stickers rechtstreeks op de Brother QL-800 via QZ Tray, zonder printvenster.
-   Zelfde aanpak en instellingen als in de winkelapp (Meer → Labelprinter); de printer en het
-   labelformaat staan in localStorage van hetzelfde domein, dus je stelt het maar één keer in.
-   De QR maken we lokaal (geen externe service), zodat het canvas niet "tainted" raakt. */
+/* ═══ Stil printen op de labelprinter (Storvo-printhulp) ═══
+   Print de device-stickers rechtstreeks op de Brother QL-800 via het lokale hulpprogramma
+   (~/.storvo-print), zonder printvenster. NIET via de macOS-driver: die is van 2018 (alleen
+   Intel) en crasht op Apple Silicon. Zelfde aanpak en instellingen als in de winkelapp
+   (Meer → Labelprinter); labelformaat + roltype staan in localStorage van hetzelfde domein,
+   dus je stelt het maar één keer in. De QR maken we lokaal (geen externe service), zodat het
+   canvas niet "tainted" raakt. */
 function laadScript(src){
   return new Promise((res,rej)=>{
     if([...document.scripts].some(s=>s.src&&s.src.indexOf(src)!==-1)){ res(); return; }
