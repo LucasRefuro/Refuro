@@ -139,9 +139,10 @@
   .mailcat:hover .pen{opacity:.7;}
   .mailcatadd{margin-top:6px;}
   /* Rijen in de inbox: gekleurd streepje + label per categorie */
-  .mailrij{display:flex; align-items:center; gap:10px; padding:9px 8px; border-bottom:1px solid var(--border); border-left:3px solid transparent;}
+  .mailrij{display:flex; align-items:center; gap:10px; padding:8px 8px; border-bottom:1px solid var(--border); border-left:3px solid transparent;}
   .mailrij.ongelezen .mailvan{font-weight:800;}
-  .mailrij.ongelezen{background:var(--lblauw);}
+  .mailrij.ongelezen .mailonder{font-weight:600;}
+  .ongelezendot{width:8px; height:8px; border-radius:50%; background:var(--oranje); flex:none;}
   .mailvink{width:18px; height:18px; accent-color:var(--oranje); flex:none;}
   .mailopen{flex:1; min-width:0; display:grid; grid-template-columns:1fr; gap:1px; background:none; border:none; text-align:left; font:inherit; color:var(--text); cursor:pointer; padding:0;}
   .mailkop{display:flex; align-items:center; gap:8px; min-width:0;}
@@ -5267,6 +5268,8 @@ const MAIL_PALET={
 const MAIL_KLEURVOLGORDE=['blauw','groen','oranje','rood','paars','turquoise','geel','grijs'];
 function mailKleurInfo(k){ return MAIL_PALET[k] || MAIL_PALET.grijs; }
 function mailCat(id){ return mailCats.find(c=>String(c.id)===String(id)); }
+/* Voorbeeldregel opschonen: links, [blokjes] en losse tekens eruit, spaties samenvouwen. */
+function mailSchoon(t){ return String(t||'').replace(/https?:\/\/\S+/g,'').replace(/\[[^\]]*\]/g,'').replace(/[<>|]/g,' ').replace(/\s+/g,' ').trim(); }
 
 async function laadMailCats(){
   try{ const {data}=await sb.from('mail_categorieen').select('*').order('volgorde'); mailCats=data||[]; }catch(e){ mailCats=[]; }
@@ -5320,9 +5323,9 @@ function tekenMailLijst(){
     return `<div class="mailrij${b.gelezen?'':' ongelezen'}" style="border-left-color:${c?info.hex:'transparent'}">
       <input type="checkbox" class="mailvink" ${gekozen?'checked':''} onclick="event.stopPropagation(); mailSelecteer('${b.id}', this.checked)">
       <button class="mailopen" onclick="mailOpen('${b.id}')">
-        <span class="mailkop"><span class="mailvan">${esc(b.van_naam||b.van_adres||'Onbekend')}</span>${pil}</span>
+        <span class="mailkop">${b.gelezen?'':'<span class="ongelezendot"></span>'}<span class="mailvan">${esc(b.van_naam||b.van_adres||'Onbekend')}</span>${pil}</span>
         <span class="mailonder">${esc(b.onderwerp||'(geen onderwerp)')}${bijl?' <svg class="i s"><use href="#i-tag"/></svg>':''}</span>
-        <span class="mailfrag muted klein">${esc((b.fragment||'').slice(0,90))}</span>
+        <span class="mailfrag muted klein">${esc(mailSchoon(b.fragment).slice(0,100))}</span>
       </button>
       <span class="maildag muted klein">${dag}</span>
     </div>`;
