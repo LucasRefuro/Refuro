@@ -6356,36 +6356,38 @@ function batBewerk(id){ batForm(batches.find(b=>b.id===id)||null); }
    een QR die de batch opent, en de kerninfo (naam, leverancier, conditie, aantal, datum). */
 async function batStickerPng(b){
   await laadScript('/app/qrcode.min.js');
-  const {breedte}=labelInstelling();
   const dpmm=11.81;
-  const W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm), Hmax=Math.round(130*dpmm);
-  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
-  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top'; ctx.fillStyle='#000';
-  const qrS=Math.round(16*dpmm);
+  // Liggende (horizontale) sticker met een HEEL groot B-nummer, voor op de doos. We tekenen hem
+  // liggend (hoogte = 62mm) en draaien hem 90° naar het rol-formaat (62mm breed × lang). Geen
+  // leverancier. Rechts groot het nummer, links de QR die de batch opent.
+  const LH=Math.round(62*dpmm);          // 62mm = de hoogte in liggende stand
+  const m=Math.round(4*dpmm);
+  const qrS=Math.round(32*dpmm);
   const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?batch='+b.id); qr.make();
-  const qrUrl=qr.createDataURL(6,0);
-  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, W-qrS-pad, pad, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
-  const qrOnder=pad+qrS, txtW=W-qrS-pad*2-Math.round(1.5*dpmm);
-  const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);
-  let y=pad;
-  ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
-  y=labelWrap(ctx, 'BATCH', pad, y, txtW, Math.round(2.8*dpmm), 1);
-  ctx.font='800 '+Math.round(7*dpmm)+'px Arial';
-  y=labelWrap(ctx, String(b.code||b.nummer||''), pad, y, W-2*pad, Math.round(7.6*dpmm), 1);
-  y+=Math.round(0.8*dpmm);
+  const qrUrl=qr.createDataURL(8,0);
+  const nummer=String(b.code||b.nummer||'');
   const cond=verwachtTekst(b.verwacht), cap=Number(b.aantal)||0;
-  const regels=[
-    (b.code&&b.nummer)?b.nummer:null,
-    b.leverancier||null,
-    cond?('Ingekocht: '+cond):null,
-    cap?(cap+' toestellen'):null,
-    'Binnen: '+new Date(b.aangemaakt_op||Date.now()).toLocaleDateString('nl-NL')
-  ].filter(Boolean);
-  ctx.font='500 '+Math.round(2.6*dpmm)+'px Arial';
-  for(const r of regels){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.3*dpmm), 1); }
-  const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
-  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
-  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c, 0,0,W,Hc, 0,0,W,Hc);
+  const info1=[cap?(cap+' toestellen'):null, cond].filter(Boolean).join('   ·   ');
+  const info2='Binnen: '+new Date(b.aangemaakt_op||Date.now()).toLocaleDateString('nl-NL');
+  const nrFont='800 '+Math.round(26*dpmm)+'px Arial';
+  const infoFont='600 '+Math.round(3.4*dpmm)+'px Arial';
+  const meet=document.createElement('canvas').getContext('2d');
+  meet.font=nrFont; const nrW=meet.measureText(nummer).width;
+  meet.font=infoFont; const iW=Math.max(meet.measureText(info1).width, meet.measureText(info2).width, meet.measureText('BATCH').width);
+  const tekstX=m+qrS+Math.round(5*dpmm);
+  const LW=Math.round(tekstX+Math.max(nrW, iW)+m);      // lengte van de sticker
+  const land=document.createElement('canvas'); land.width=LW; land.height=LH;
+  const x=land.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,LW,LH); x.fillStyle='#000'; x.textBaseline='top';
+  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ x.drawImage(img, m, Math.round((LH-qrS)/2), qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
+  x.font='700 '+Math.round(4*dpmm)+'px Arial'; x.fillText('BATCH', tekstX, Math.round(6*dpmm));
+  x.font=nrFont; x.fillText(nummer, tekstX, Math.round(13*dpmm));
+  x.font=infoFont;
+  if(info1) x.fillText(info1, tekstX, Math.round(46*dpmm));
+  x.fillText(info2, tekstX, Math.round(52*dpmm));
+  // 90° draaien naar het 62mm-brede rol-formaat
+  const out=document.createElement('canvas'); out.width=LH; out.height=LW;
+  const o=out.getContext('2d'); o.fillStyle='#fff'; o.fillRect(0,0,out.width,out.height);
+  o.translate(out.width,0); o.rotate(Math.PI/2); o.drawImage(land,0,0);
   return out.toDataURL('image/png').split(',')[1];
 }
 async function batSticker(id){
