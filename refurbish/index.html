@@ -691,6 +691,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen<span class="badge" id="bVrd" hidden>0</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
     <button data-tab="donoren"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
+    <button data-tab="partners" id="navPartners" hidden><svg class="i"><use href="#i-globe"/></svg> Partners</button>
     <button data-tab="checklists"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
   </nav>
   <div class="onderin">
@@ -899,6 +900,31 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       <div class="card">
         <h2><svg class="i"><use href="#i-box"/></svg>Lopende inkooporders</h2>
         <div id="orderLijst"></div>
+      </div>
+    </section>
+
+    <!-- ── partners (dezelfde beheerpagina als in de winkelapp) ── -->
+    <section id="tab-partners" hidden>
+      <div class="pagehead"><h1>Partners</h1></div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-globe"/></svg>Hoe het werkt</h2>
+        <p class="muted" style="max-width:80ch; margin-bottom:18px">Een partner is een bevriende doorverkoper met een eigen dashboard. Jij nodigt hem hieronder uit met een eigen login. Daarna wijs je laptops aan hem toe vanuit de voorraad. Hij ziet alleen zijn eigen toestellen, niets van jouw winkel, en per laptop verdelen jullie de winst.</p>
+        <a class="btn ghost" href="/partner/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-globe"/></svg>Open het partner-dashboard</a>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-plus"/></svg>Nieuwe partner uitnodigen</h2>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Je kiest een begin-wachtwoord dat je aan je partner doorgeeft. Hij logt daarmee in en kan het later zelf wijzigen.</p>
+        <div class="grid">
+          <div><label>Naam</label><input id="pt_naam" placeholder="Naam van je partner"></div>
+          <div><label>E-mail (wordt zijn login)</label><input id="pt_email" type="email" placeholder="partner@email.nl"></div>
+          <div><label>Begin-wachtwoord</label><input id="pt_ww" type="text" placeholder="minstens 8 tekens"></div>
+        </div>
+        <button class="btn actie" style="margin-top:16px" onclick="partnerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Partner aanmaken</button>
+        <div id="pt_uit" class="muted klein" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2><svg class="i"><use href="#i-globe"/></svg>Je partners</h2>
+        <div id="partnerLijst">Laden…</div>
       </div>
     </section>
 
@@ -1138,6 +1164,8 @@ async function start(){
   if(!acc){ slot('Geen winkel gevonden',
     'Er hangt nog geen winkel aan dit account. Neem contact op via info@storvo.nl.','Terug','/app/'); return; }
   account=acc;
+  // De partner-beheerpagina alleen voor eigenaar/beheerder tonen.
+  if(['eigenaar','beheerder'].includes(account.rol)){ const n=document.getElementById('navPartners'); if(n) n.hidden=false; }
   /* Best-effort: heeft de winkel partners? Faalt de query, dan blijft de bediening
      gewoon verborgen; dat is de veilige kant. */
   try{ const {data:pn}=await sb.from('partners').select('id').neq('id', account.id).limit(1); heeftPartner=!!(pn&&pn.length); }catch(e){}
@@ -1270,6 +1298,7 @@ function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenVoorraad(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
   tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches(); tekenVoorraaddelen();
+  if(tab==='partners') renderPartners();
 }
 function tekenBadges(){
   const zet=(id,n)=>{ const e=document.getElementById(id); if(!e) return;
@@ -7052,6 +7081,84 @@ function qrScanGevonden(tekst){
     }
   }catch(_e){}
   toast('QR niet herkend als Storvo-label','let-op');
+}
+
+/* ── Partners beheren (dezelfde pagina als in de winkelapp; loopt via de partner-beheer edge) ── */
+async function renderPartners(){
+  const box=document.getElementById('partnerLijst'); if(!box) return;
+  box.innerHTML='<p class="muted">Laden…</p>';
+  const {data:partners,error}=await sb.from('partners').select('id,naam,bijgewerkt_op').neq('id', account.id).order('naam');
+  if(error){ box.innerHTML='<p class="muted">Kon de partners niet laden.</p>'; return; }
+  if(!partners||!partners.length){ box.innerHTML='<p class="muted">Nog geen partners. Nodig er hierboven een uit.</p>'; return; }
+  const {data:hw}=await sb.from('hardware').select('partner_id').not('partner_id','is',null);
+  const telling={}; (hw||[]).forEach(r=>{ if(r.partner_id) telling[r.partner_id]=(telling[r.partner_id]||0)+1; });
+  box.innerHTML=`<div class="tabelrol"><table><thead><tr><th>Partner</th><th class="num">Toegewezen laptops</th><th></th></tr></thead><tbody>${
+    partners.map(p=>`<tr><td><b>${esc(p.naam||'Partner')}</b></td><td class="num">${telling[p.id]||0}</td>`+
+      `<td class="num"><span style="display:inline-flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">`+
+        `<button class="btn ghost small" onclick="partnerOpen('${p.id}')"><svg class="i s"><use href="#i-globe"/></svg>Openen</button>`+
+        `<button class="btn ghost small" onclick="partnerNaamWijzig('${p.id}')">Naam</button>`+
+        `<button class="btn ghost small" onclick="partnerNieuwWw('${p.id}')">Nieuw wachtwoord</button>`+
+        `<button class="btn ghost small" style="color:var(--red)" onclick="partnerVerwijder('${p.id}')">Verwijderen</button>`+
+      `</span></td></tr>`).join('')
+  }</tbody></table></div>`;
+}
+async function partnerActie(body, okMsg){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in.','fout'); return null; }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify(body)
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok){ toast(j.error||'Mislukt','fout'); return null; }
+    renderPartners();
+    if(okMsg) toast(okMsg, true);
+    return j;
+  }catch(e){ toast(e.message,'fout'); return null; }
+}
+async function partnerNaamWijzig(id){
+  const naam=window.prompt('Nieuwe naam voor deze partner:');
+  if(naam===null) return;
+  if(!naam.trim()){ toast('Vul een naam in','let-op'); return; }
+  await partnerActie({actie:'partner_bijwerken', partner_id:id, naam:naam.trim()}, 'Naam bijgewerkt');
+}
+async function partnerNieuwWw(id){
+  const ww=window.prompt('Nieuw begin-wachtwoord (minstens 8 tekens):');
+  if(ww===null) return;
+  if(ww.length<8){ toast('Minstens 8 tekens','let-op'); return; }
+  const mailen=window.confirm('Het nieuwe wachtwoord per e-mail naar de partner sturen?');
+  const j=await partnerActie({actie:'partner_wachtwoord', partner_id:id, wachtwoord:ww, mailen}, null);
+  if(j) toast(mailen ? (j.gemaild ? 'Wachtwoord gewijzigd en gemaild' : 'Wachtwoord gewijzigd. Mail niet gelukt, geef het zelf door.') : 'Wachtwoord gewijzigd', true);
+}
+function partnerOpen(id){ window.open('/partner/?bekijk='+encodeURIComponent(id), '_blank', 'noopener'); }
+async function partnerVerwijder(id){
+  if(!confirm('Deze partner verwijderen? Dit kan niet ongedaan gemaakt worden. Het kan alleen als er geen laptops meer aan hem toegewezen zijn.')) return;
+  await partnerActie({actie:'partner_verwijder', partner_id:id}, 'Partner verwijderd');
+}
+async function partnerAanmaken(knop){
+  const naam=(document.getElementById('pt_naam').value||'').trim();
+  const email=(document.getElementById('pt_email').value||'').trim().toLowerCase();
+  const ww=document.getElementById('pt_ww').value||'';
+  const uit=document.getElementById('pt_uit');
+  if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ toast('Je bent uitgelogd. Log opnieuw in.','fout'); throw new Error('Geen sessie'); }
+    const res=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'uitnodigen', naam, email, wachtwoord:ww})
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Uitnodigen mislukt');
+    uit.textContent = j.gemaild
+      ? ('Partner aangemaakt en een e-mail met de inloggegevens is verstuurd naar '+email+'.')
+      : ('Partner aangemaakt. De e-mail kon niet verstuurd worden; geef de gegevens zelf door: '+email+' met het gekozen wachtwoord.');
+    document.getElementById('pt_naam').value=''; document.getElementById('pt_email').value=''; document.getElementById('pt_ww').value='';
+    renderPartners(); toast('Partner aangemaakt', true);
+  }catch(e){ uit.textContent=e.message; toast(e.message,'fout'); }
+  finally{ knop.disabled=false; knop.textContent=oud; }
 }
 
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') sluit(); });
