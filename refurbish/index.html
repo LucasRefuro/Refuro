@@ -1066,7 +1066,8 @@ let account=null, abonnement=null;
 /* Heeft deze winkel een externe voorraadpartner (StockDeck)? Zo niet, dan is de
    portaal-bediening op elke rij en het dashboard-vinkje alleen maar ruis; we
    verbergen die dan. */
-let heeftPartner=false, partnersData=[];
+let heeftPartner=false, partnersData=[], teamLeden=[];
+function ledNaam(id){ if(!id) return ''; const m=teamLeden.find(x=>x.id===id); return m?(m.naam||'iemand'):''; }
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
 let voorraaddelen=[];
@@ -1166,6 +1167,8 @@ async function start(){
   /* Best-effort: heeft de winkel partners? Faalt de query, dan blijft de bediening
      gewoon verborgen; dat is de veilige kant. */
   try{ const {data:pn}=await sb.from('partners').select('id,naam').neq('id', account.id).order('naam'); partnersData=pn||[]; heeftPartner=partnersData.length>0; }catch(e){}
+  // Teamleden (id -> naam) om te tonen wie een toestel toevoegde.
+  try{ const {data:ld}=await sb.from('accounts').select('id,naam').eq('team_id', account.team_id); teamLeden=ld||[]; }catch(e){}
 
   const {data:abo, error:aboFout}=await sb.rpc('abonnement_status');
   if(aboFout){ slot('Kon je abonnement niet ophalen',
@@ -1519,6 +1522,7 @@ async function toevoegen(knop){
            dropdown, dan pas staat vast wat er echt in zit. */
         specs: {},
         locatie_id: locKeuze||null,
+        aangemaakt_door: account.id,
         status:'te_controleren'
       });
     }
@@ -2040,7 +2044,8 @@ function tekenApparaat(){
       ${feit('Ligt in', locNaam(plekVan(a))||'nog niet bepaald')}
       ${feit('Plek', a.plek||'—')}
       ${feit('Leverancier', a.leverancier||'—')}
-      ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}))}
+      ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}))}
+      ${feit('Toegevoegd door', ledNaam(a.aangemaakt_door)||'—')}
       ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
     </div>
 
@@ -6670,7 +6675,7 @@ async function batSlotOpslaan(knop, batchId, nr){
       team_id:account.team_id, merk:merk||null, model, categorie:cat,
       inkoop:batPerStuk(b)||0, leverancier:b.leverancier||null, batch_id:batchId,
       batch_nr:nr, marge:null, specs:{}, locatie_id:loc||null,
-      code:volgendeCode(0), status:'te_controleren'
+      code:volgendeCode(0), aangemaakt_door:account.id, status:'te_controleren'
     };
     const {data,error}=await sb.from('refurbish_apparaten').insert(rij).select().single();
     if(error) throw new Error('Toevoegen mislukt');
