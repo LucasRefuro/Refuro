@@ -5256,7 +5256,7 @@ const MAIL_KLEURVOLGORDE=['blauw','groen','oranje','rood','paars','turquoise','g
 function mailKleurInfo(k){ return MAIL_PALET[k] || MAIL_PALET.grijs; }
 function mailCat(id){ return mailCats.find(c=>String(c.id)===String(id)); }
 /* Voorbeeldregel opschonen: links, [blokjes] en losse tekens eruit, spaties samenvouwen. */
-function mailSchoon(t){ return String(t||'').replace(/https?:\/\/\S+/g,'').replace(/\[[^\]]*\]/g,'').replace(/[<>|]/g,' ').replace(/\s+/g,' ').trim(); }
+function mailSchoon(t){ return String(t||'').replace(/https?:\/\/\S+/g,'').replace(/\[[^\]]*\]/g,'').replace(/[<>|[\]]/g,' ').replace(/\s+/g,' ').trim(); }
 
 async function laadMailCats(){
   try{ const {data}=await sb.from('mail_categorieen').select('*').order('volgorde'); mailCats=data||[]; }catch(e){ mailCats=[]; }
