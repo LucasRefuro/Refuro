@@ -1896,6 +1896,35 @@ async function appVerplaatsDoen(knop, a){
   });
 }
 
+/* De naam (merk + model) en het soort van een toestel achteraf aanpassen, bijv. als je bij het
+   toevoegen het verkeerde model typte. Het label en de lijsten volgen meteen. */
+function appNaamWijzig(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const cats=['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'];
+  venster('Naam wijzigen', `
+    <div class="zoekveld" style="margin-bottom:14px">
+      <label>Merk en model *</label>
+      <input id="nw_model" autocomplete="off" value="${esc([a.merk,a.model].filter(Boolean).join(' '))}" placeholder="bijv. HP ZBook 15">
+    </div>
+    <div><label>Wat voor apparaat</label><select id="nw_cat">${cats.map(c=>`<option value="${c}"${c===(a.categorie||'Laptop')?' selected':''}>${c}</option>`).join('')}</select></div>
+  `, [{tekst:'Opslaan', klasse:'actie', doe:(k)=>appNaamOpslaan(k, id)}]);
+}
+async function appNaamOpslaan(knop, id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const {merk, model}=splitsModel(v('nw_model'));
+  if(!model){ toast('Vul merk en model in','let-op'); return; }
+  const cat=(document.getElementById('nw_cat')||{}).value||a.categorie||'Laptop';
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten')
+      .update({merk:merk||null, model, categorie:cat, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw new Error('Opslaan mislukt');
+    a.merk=merk||null; a.model=model; a.categorie=cat;
+    try{ await sb.rpc('model_onthouden', {merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}}); }catch(_e){}
+    sluit(); tekenApparaat();
+    toast('Naam bijgewerkt', true);
+  });
+}
+
 /* ═══════════════ controle ═══════════════ */
 
 function tekenControle(){
@@ -1980,6 +2009,7 @@ function tekenApparaat(){
         ? `<button class="btn ghost" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Advertentie aanpassen</button>`
         : `<button class="btn oranje" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`):''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
+      <button class="btn ghost" onclick="appNaamWijzig('${a.id}')"><svg class="i s"><use href="#i-note"/></svg>Naam wijzigen</button>
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="prijskaartVoor('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>`:''}
       <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
