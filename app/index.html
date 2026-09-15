@@ -2536,7 +2536,7 @@
   <div class="modules">
   <div class="card breed">
     <div class="row" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
-      <div class="muted klein" id="mailStatus">Je postvak, automatisch gesorteerd door de AI. Je gewone mailbox blijft ongemoeid.</div>
+      <div class="muted klein" id="mailStatus">Nieuwe mail komt automatisch binnen en wordt door de AI gesorteerd. Je gewone mailbox blijft ongemoeid.</div>
       <div class="acts2">
         <button class="btn ghost small" onclick="haalNieuweMail(this)"><svg class="i s"><use href="#i-download"/></svg>Nieuwe mail ophalen</button>
         <button class="btn small" onclick="mailOpstellen()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe mail</button>
@@ -5270,6 +5270,38 @@ async function renderMail(){
   const sel=document.getElementById('mailBulkCat');
   if(sel) sel.innerHTML='<option value="">Verplaats naar…</option>'+mailCats.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
   tekenMailZij(); tekenMailLijst();
+  mailAutoSync();      // meteen nieuwe mail binnenhalen bij het openen
+  mailPollStart();     // en zolang je hier bent elke paar minuten opnieuw
+}
+/* Nieuwe mail op de achtergrond binnenhalen, zonder knop of meldingen. Ververst de lijst
+   terwijl het loopt. Draait niet dubbel tegelijk. */
+let mailAutoBezig=false, mailPollTimer=null;
+async function mailAutoSync(){
+  if(mailAutoBezig) return; mailAutoBezig=true;
+  try{
+    const {data:{session}}=await sb.auth.getSession(); if(!session) return;
+    let meer=true, rondes=0;
+    while(meer && rondes<10){
+      rondes++;
+      const res=await fetch(SUPABASE_URL+'/functions/v1/mail-sync',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:'{}'});
+      const uit=await res.json().catch(()=>({})); if(!res.ok||!uit.ok) break;
+      meer=!!uit.meer;
+      if(Number(uit.nieuw)>0){
+        await laadMailBerichten();
+        const t=document.getElementById('tab-mail');
+        if(t && !t.hidden){ tekenMailZij(); tekenMailLijst(); }
+      }
+    }
+  }catch(e){}
+  mailAutoBezig=false;
+}
+function mailPollStart(){
+  if(mailPollTimer) return;
+  mailPollTimer=setInterval(()=>{
+    const t=document.getElementById('tab-mail');
+    if(!t || t.hidden){ clearInterval(mailPollTimer); mailPollTimer=null; return; }
+    mailAutoSync();
+  }, 150000); // elke 2,5 minuut zolang de mailpagina open is
 }
 /* De gekleurde categorie-mapjes als horizontale balk boven de inbox: "Alle mail" + per
    categorie een gekleurd bolletje, naam en aantal ongelezen. De actieve is opgevuld met de
