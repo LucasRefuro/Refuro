@@ -172,6 +172,8 @@ tr.klikbaar{cursor:pointer;}
   .slotchip{min-width:44px; padding:7px 8px; border-radius:10px; border:1.5px solid var(--border); background:var(--card); font-family:inherit; font-weight:700; font-size:12.5px; color:var(--tekst); cursor:pointer;}
   .slotchip.geprint{background:var(--lblauw); border-color:transparent; color:var(--groen);}
   .slotchip.ingevuld{background:var(--green-soft); border-color:transparent; color:var(--green-tekst);}
+  .vklwrap{border:1.5px dashed var(--border); border-radius:12px; background:var(--soft); margin-top:4px;}
+  .vklpad{display:block; width:100%; height:180px; touch-action:none; cursor:crosshair;}
   .batbon{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:var(--pil);
     background:var(--green-soft); color:var(--green-tekst); white-space:nowrap;}
   .batbon-zb{background:var(--amber-soft); color:var(--amber-tekst);}
@@ -6262,6 +6264,20 @@ function renderBatchDetail(){
     </div>
 
     <div class="card">
+      <h2><svg class="i"><use href="#i-note"/></svg>Inkoop-documenten</h2>
+      <p class="muted klein" style="margin-bottom:10px">Bewaar de factuur of bon, en maak bij een contante inkoop bij een particulier een ondertekende inkoopverklaring. Privé, alleen voor jouw team.</p>
+      <div class="row" style="gap:10px; flex-wrap:wrap">
+        ${b.factuur_url
+          ? `<button class="btn ghost small" onclick="batFactuurBekijk('${b.id}')">Factuur bekijken</button><label class="btn ghost small" style="cursor:pointer">Vervangen<input type="file" accept="application/pdf,image/*" hidden onchange="batFactuurUpload('${b.id}', this)"></label><button class="btn ghost small" onclick="batFactuurWeg('${b.id}')">Verwijderen</button>`
+          : `<label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-note"/></svg>Factuur toevoegen<input type="file" accept="application/pdf,image/*" hidden onchange="batFactuurUpload('${b.id}', this)"></label>`}
+        ${b.handtekening_url
+          ? `<button class="btn ghost small" onclick="batVerklaringBekijk('${b.id}')">Inkoopverklaring bekijken</button><button class="btn ghost small" onclick="batVerklaringOpen('${b.id}')">Opnieuw ondertekenen</button>`
+          : `<button class="btn actie small" onclick="batVerklaringOpen('${b.id}')"><svg class="i s"><use href="#i-note"/></svg>Inkoopverklaring + handtekening</button>`}
+      </div>
+      ${b.verklaring_op?`<p class="muted klein" style="margin-top:8px">Ondertekend op ${new Date(b.verklaring_op).toLocaleDateString('nl-NL')}${b.verkoper_naam?' door '+esc(b.verkoper_naam):''}.</p>`:''}
+    </div>
+
+    <div class="card">
       <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px">
         <h2 style="margin:0"><svg class="i"><use href="#i-laptop"/></svg>Toestellen in deze batch <span class="muted">(${devs.length})</span></h2>
         <div class="row" style="gap:8px">
@@ -6614,6 +6630,128 @@ async function batBewaar(knop, id){
     sluit(); tekenBatches();
     toast(id?'Batch bijgewerkt':'Batch aangemaakt', true);
   });
+}
+
+/* ── Inkoop-documenten: factuur + inkoopverklaring ──
+   Bestanden gaan naar de privé-bucket 'inkoopfacturen' onder <team>/batch/<id>/ (team-RLS), dus
+   alleen jouw team kan erbij. Bekijken via een tijdelijke (signed) link. */
+function batDocPad(batchId, soort, ext){ return account.team_id+'/batch/'+batchId+'/'+soort+'-'+Date.now()+'.'+ext; }
+async function batFactuurUpload(id, invoer){
+  const bestand=(invoer.files||[])[0]; if(invoer) invoer.value='';
+  if(!bestand) return;
+  if(bestand.size>15*1024*1024){ toast('Bestand te groot (max 15 MB)','let-op'); return; }
+  const b=batches.find(x=>x.id===id); if(!b) return;
+  toast('Factuur uploaden…');
+  const ext=((bestand.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,''))||'pdf';
+  const pad=batDocPad(id,'factuur',ext);
+  const {error}=await sb.storage.from('inkoopfacturen').upload(pad, bestand, {contentType:bestand.type||'application/octet-stream'});
+  if(error){ toast('Uploaden mislukt','fout'); return; }
+  const oud=b.factuur_url;
+  const {error:e2}=await sb.from('refurbish_batches').update({factuur_url:pad}).eq('id',id);
+  if(e2){ toast('Opslaan mislukt','fout'); return; }
+  b.factuur_url=pad;
+  if(oud) try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
+  toast('Factuur toegevoegd', true);
+  renderBatchDetail();
+}
+async function batBekijkDoc(pad){
+  const {data,error}=await sb.storage.from('inkoopfacturen').createSignedUrl(pad, 300);
+  if(error||!data){ toast('Kon het document niet openen','fout'); return; }
+  window.open(data.signedUrl, '_blank');
+}
+function batFactuurBekijk(id){ const b=batches.find(x=>x.id===id); if(b&&b.factuur_url) batBekijkDoc(b.factuur_url); }
+function batVerklaringBekijk(id){ const b=batches.find(x=>x.id===id); if(b&&b.handtekening_url) batBekijkDoc(b.handtekening_url); }
+async function batFactuurWeg(id){
+  const b=batches.find(x=>x.id===id); if(!b||!b.factuur_url) return;
+  if(!confirm('De factuur verwijderen?')) return;
+  const oud=b.factuur_url;
+  await sb.from('refurbish_batches').update({factuur_url:null}).eq('id',id);
+  b.factuur_url=null;
+  try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
+  toast('Factuur verwijderd', true); renderBatchDetail();
+}
+
+/* De inkoopverklaring: vul de verkopergegevens in en laat de verkoper tekenen. We bewaren het als
+   nette afbeelding in de privé-bucket. Hulpmiddel voor je eigen administratie; geen belastingadvies. */
+let vklCtx=null, vklTekent=false, vklLeeg=true;
+function batVerklaringOpen(id){
+  const b=batches.find(x=>x.id===id); if(!b) return;
+  const cap=Number(b.aantal)||0;
+  venster('Inkoopverklaring', `
+    <p class="muted klein" style="margin-bottom:12px">Voor een contante inkoop bij een particulier: vul de gegevens in en laat de verkoper hieronder tekenen. Je bewaart het als bewijs voor je eigen inkoopadministratie.</p>
+    <div class="grid">
+      <div style="grid-column:1/-1"><label>Naam verkoper *</label><input id="vkl_naam" value="${esc(b.verkoper_naam||'')}" placeholder="voor- en achternaam"></div>
+      <div style="grid-column:1/-1"><label>Adres verkoper</label><input id="vkl_adres" value="${esc(b.verkoper_adres||'')}" placeholder="straat, postcode, plaats"></div>
+      <div><label>Aantal toestellen</label><input id="vkl_aantal" type="number" min="0" value="${cap||''}" placeholder="0"></div>
+      <div><label>Totaalbedrag (€)</label><input id="vkl_bedrag" type="number" step="0.01" min="0" value="${b.inkoopprijs!=null?b.inkoopprijs:''}" placeholder="0,00"></div>
+    </div>
+    <div class="veldkop"><label>Handtekening verkoper *</label></div>
+    <div class="vklwrap"><canvas id="vklCanvas" class="vklpad"></canvas></div>
+    <div class="row" style="justify-content:flex-end; margin-top:6px"><button class="btn ghost small" onclick="vklWis()">Wissen</button></div>
+  `, [{tekst:'Onderteken en bewaar', klasse:'actie', doe:(kn)=>batVerklaringOpslaan(kn, id)}], 'groot');
+  setTimeout(vklInit, 60);
+}
+function vklInit(){
+  const c=document.getElementById('vklCanvas'); if(!c) return;
+  const rect=c.getBoundingClientRect();
+  c.width=Math.max(300,Math.round(rect.width))*2; c.height=Math.round(rect.height||180)*2;
+  vklCtx=c.getContext('2d'); vklCtx.scale(2,2); vklCtx.lineWidth=2.2; vklCtx.lineCap='round'; vklCtx.lineJoin='round'; vklCtx.strokeStyle='#17201E';
+  vklLeeg=true;
+  const pos=e=>{ const r=c.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; };
+  c.onpointerdown=e=>{ e.preventDefault(); vklTekent=true; try{c.setPointerCapture(e.pointerId);}catch(_e){} const p=pos(e); vklCtx.beginPath(); vklCtx.moveTo(p.x,p.y); };
+  c.onpointermove=e=>{ if(!vklTekent) return; e.preventDefault(); const p=pos(e); vklCtx.lineTo(p.x,p.y); vklCtx.stroke(); vklLeeg=false; };
+  c.onpointerup=c.onpointercancel=()=>{ vklTekent=false; };
+}
+function vklWis(){ const c=document.getElementById('vklCanvas'); if(c&&vklCtx){ vklCtx.clearRect(0,0,c.width,c.height); vklLeeg=true; } }
+async function batVerklaringOpslaan(knop, id){
+  const b=batches.find(x=>x.id===id); if(!b) return;
+  const naam=v('vkl_naam'); if(!naam){ toast('Vul de naam van de verkoper in','let-op'); return; }
+  if(vklLeeg){ toast('Laat de verkoper eerst tekenen','let-op'); return; }
+  const adres=v('vkl_adres');
+  const aantal=Math.round(Number(v('vkl_aantal'))||0);
+  const bedrag=Math.round((Number(v('vkl_bedrag'))||0)*100)/100;
+  const handtekening=document.getElementById('vklCanvas').toDataURL('image/png');
+  await bezig(knop, async()=>{
+    const png=await verklaringPng(b, {naam, adres, aantal, bedrag, handtekening});
+    const blob=await (await fetch(png)).blob();
+    const pad=batDocPad(id,'inkoopverklaring','png');
+    const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
+    if(error) throw new Error('Opslaan mislukt');
+    const oud=b.handtekening_url;
+    const patch={ verkoper_naam:naam, verkoper_adres:adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
+    const {error:e2}=await sb.from('refurbish_batches').update(patch).eq('id',id);
+    if(e2) throw new Error('Opslaan mislukt');
+    Object.assign(b, patch);
+    if(oud) try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
+    sluit(); renderBatchDetail();
+    toast('Inkoopverklaring opgeslagen', true);
+  });
+}
+/* De verklaring als nette staande afbeelding: kop, koper, batch, verkoper, goederen, bedrag,
+   een korte verklaringstekst en de handtekening. */
+async function verklaringPng(b, d){
+  const W=1000, H=1400, m=64;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H); x.fillStyle='#17201E'; x.textBaseline='top';
+  let y=m;
+  x.font='800 46px Arial'; x.fillText('Inkoopverklaring', m, y); y+=64;
+  const koper=(instel&&(instel.bedrijfsnaam||instel.bedrijf||instel.naam||instel.scherm_naam))||'';
+  x.font='400 22px Arial'; x.fillStyle='#5B6663';
+  x.fillText('Batch '+(b.code||b.nummer||'')+(koper?'  ·  Koper: '+koper:''), m, y); y+=30;
+  x.fillText('Datum: '+new Date().toLocaleDateString('nl-NL'), m, y); y+=46;
+  x.strokeStyle='#ECEAE4'; x.lineWidth=2; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=34;
+  const regel=(kop,val)=>{ x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText(kop, m, y); x.font='400 24px Arial'; x.fillStyle='#17201E'; x.fillText(val||'-', m, y+26); y+=76; };
+  regel('Verkoper', d.naam);
+  if(d.adres) regel('Adres', d.adres);
+  regel('Goederen', (d.aantal||0)+' toestel'+((d.aantal===1)?'':'len')+(b.verwacht?' ('+verwachtTekst(b.verwacht)+')':''));
+  regel('Bedrag', euro(d.bedrag)+(b.betaalwijze?'  ·  '+betaalTekst(b.betaalwijze):'  ·  contant'));
+  y+=6; x.strokeStyle='#ECEAE4'; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=28;
+  x.font='400 21px Arial'; x.fillStyle='#17201E';
+  const verkl='De verkoper verklaart de bovengenoemde goederen te verkopen aan de koper, hier rechtmatig eigenaar van te zijn, en het bovengenoemde bedrag te hebben ontvangen.';
+  y=labelWrap(x, verkl, m, y, W-2*m, 30, 4)+18;
+  x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Handtekening verkoper', m, y); y+=30;
+  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ const w=Math.min(W-2*m, 420), h=w*(img.height/img.width||0.4); x.drawImage(img, m, y, w, h); res(); }; img.onerror=()=>res(); img.src=d.handtekening; });
+  return c.toDataURL('image/png');
 }
 
 async function batVerwijder(id){
