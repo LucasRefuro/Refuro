@@ -1097,6 +1097,7 @@ function sessieBewaar(){
       s.ctr={ id:ctr.a.id, bijgewerkt_op:ctr.a.bijgewerkt_op, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
         accu:ctr.accu, accuVoor:ctr._accuVoor, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
+        accuNotitie:ctr.accuNotitie,
         notitie:ctr.notitie, opties:ctr.opties, varianten:ctr.varianten, specsBron:ctr.specsBron,
         testcode:ctr.testcode, testqr:ctr.testqr };
     }
@@ -1111,6 +1112,7 @@ function ctrHerstel(snap, a){
     specs:snap.specs||Object.assign({}, a.specs||{}),
     accu:snap.accu!=null?snap.accu:(a.accu!=null?String(a.accu):''),
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
+    accuNotitie:snap.accuNotitie!=null?snap.accuNotitie:(a.accu_notitie||''),
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
     opties:snap.opties||{}, varianten:snap.varianten||[], specsBron:snap.specsBron||'', _accuVoor:snap.accuVoor,
     testcode:snap.testcode||null, testqr:snap.testqr||null,
@@ -1606,7 +1608,7 @@ function labelHtml(a){
     const p=CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop;
     regels = [ a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie ]
       .concat((p.specVelden||[]).map(v=>specs[v.sleutel]?v.sleutel+': '+specs[v.sleutel]:null))
-      .concat([ a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Accu: '+a.accu+'%' : null) ])
+      .concat([ (()=>{ let x=a.nieuwe_accu?'Accu: nieuw (100%)':(a.accu?'Accu: '+a.accu+'%':null); if(a.accu_notitie) x=(x?x+' · ':'Accu: ')+a.accu_notitie; return x; })() ])
       .filter(Boolean);
     const hw=(typeof hardwareVan==='function'?hardwareVan(a):null)||{};
     const prijs=hw.verkoop!=null?hw.verkoop:(a.verkoop!=null?a.verkoop:null);
@@ -1681,7 +1683,8 @@ function labelRegels(a){
   // zodat het label goed gevuld is maar niet overvol.
   const regels=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien/i.test(v.sleutel))
     .map(v=>v.sleutel+': '+specs[v.sleutel]);
-  const accu = a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Accu: '+a.accu+'%' : null);
+  let accu = a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Accu: '+a.accu+'%' : null);
+  if(a.accu_notitie) accu = (accu?accu+' · ':'Accu: ')+a.accu_notitie;
   if(accu) regels.push(accu);
   const os = specs.Windows || specs.Besturingssysteem || specs.OS;
   if(os && !regels.some(r=>r.includes(String(os)))) regels.push(String(os));
@@ -2306,7 +2309,7 @@ function appOpen(id){
     antwoord:{}, punten:{}, delen:{}, notities:{},
     specs:Object.assign({}, a.specs||{}),
     accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
-    nieuweAccu:!!a.nieuwe_accu,
+    nieuweAccu:!!a.nieuwe_accu, accuNotitie:a.accu_notitie||'',
     notitie:a.notitie||'', opties:{},
     /* Het pad tot hier uit het profiel halen, niet de vaste laptoplijst: een
        desktop heeft er een blokkers-stap voor, die anders uit de tijdlijn en de
@@ -3303,7 +3306,9 @@ function ctrAccublok(){
       <input type="checkbox" id="c_nieuwe_accu" ${ctr.nieuweAccu?'checked':''} onchange="ctrNieuweAccu(this.checked)">
       <span>Nieuwe accu geplaatst</span>
     </label>
-    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Vul je hem in, dan komt hij op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%.</p>
+    <label style="margin-top:12px">Notitie bij de accu</label>
+    <input id="c_accu_notitie" value="${esc(ctr.accuNotitie||'')}" maxlength="60" placeholder="bijv. accu in slechte staat" oninput="ctrAccuNotitie(this.value)" style="width:100%">
+    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Het percentage en de notitie komen op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%.</p>
   </div>`;
 }
 /* Het advies onder het accuveld staat apart, zodat het live kan meelopen zonder
@@ -3345,6 +3350,7 @@ function ctrAccu(waarde){
   sessieBewaar();
 }
 function ctrAccuVervangen(aan){ ctr.accuVervangen=!!aan; sessieBewaar(); }
+function ctrAccuNotitie(v){ ctr.accuNotitie=String(v||'').slice(0,60); sessieBewaar(); }
 
 /* ---------- testen met de telefoon ----------
    Het toestel-in-de-hand loopt de functies langs via /refurbish/test (touch,
@@ -3464,7 +3470,7 @@ async function ctrInstalleren(knop, later){
     const {error}=await sb.from('refurbish_apparaten').update({
       status:'installeren', stap: later ? 'wachten' : 'installeren',
       checklist:ctrChecklist(), specs:ctrSchoneSpecs(),
-      accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, notitie:ctr.notitie||null,
+      accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, accu_notitie:ctr.accuNotitie||null, notitie:ctr.notitie||null,
       /* De staat komt nu pas na de specs, dus bij het weggelegde toestel is er
          nog geen grade. Niet voortijdig een A neerzetten; dat komt bij afronden. */
       grade: ctrCompleet()?gradeVan(ctrPunten()):null,
@@ -3693,7 +3699,7 @@ async function ctrAfronden(knop){
     const {error}=await sb.from('refurbish_apparaten').update({
       status, checklist:ctrChecklist(), specs, grade, punten,
       defecten:defecten.map(d=>d.vraag),
-      accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, notitie:ctr.notitie||null,
+      accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, accu_notitie:ctr.accuNotitie||null, notitie:ctr.notitie||null,
       stap:'af', bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
