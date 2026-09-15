@@ -6408,7 +6408,7 @@ async function slotLabelPng(b, nr){
   y+=Math.round(0.6*dpmm);
   const cond=(typeof verwachtTekst==='function')?verwachtTekst(b.verwacht):'';
   const btch=b.code?('Batch '+b.code):(b.nummer?('Batch '+b.nummer):null);
-  const regels=[btch, cond?('Ingekocht: '+cond):null, b.leverancier||null].filter(Boolean);
+  const regels=[btch, cond?('Ingekocht: '+cond):null].filter(Boolean);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
   for(const r of regels){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
   const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
