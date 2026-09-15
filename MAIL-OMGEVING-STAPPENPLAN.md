@@ -10,8 +10,34 @@ mailbox **info@refuro.nl** op **Zoho EU**. Lezen via IMAP (`imappro.zoho.eu:993`
 versturen via SMTP (`smtppro.zoho.eu:465`, TLS). **Start pas als de mailbox verbonden is** (de
 secrets uit het inkoop-stappenplan staan er dan al; voor versturen is dezelfde login genoeg).
 
-De gebruiker koos: **alles in één keer** (fase 1 + 2 + 3). We bouwen het toch in deze
-volgorde op, zodat elk stuk apart te testen is tegen de echte mailbox.
+De gebruiker koos: **alles in één keer** (fase 1 + 2 + 3).
+
+## Stand: GEBOUWD (lezen, sorteren, antwoorden, opstellen, verwijderen, bulk)
+
+Live sinds de nacht van 14 op 15 sep 2026. Wat er staat:
+- **Pagina Mail** (onder Meer): categorieën als blokjes (klik = mails zien), zelf toevoegen en
+  hernoemen/verwijderen. Per categorie: lijst met afzender/onderwerp/fragment, zoeken, mail
+  openen en lezen (tekst, met "Toon opmaak" in een sandbox-iframe), antwoorden, categorie
+  wijzigen, verwijderen, en bulk (selecteren → verplaatsen of verwijderen). Knop "Nieuwe mail
+  ophalen" (loopt door tot alles binnen is) en "Nieuwe mail" (opstellen).
+- **Tabellen:** `mail_categorieen` (RLS team), `mail_berichten` (RLS team; insert alleen
+  service-role), `mail_sync_stand` (service-role). Standaard 4 categorieën geseed: Klantvraag,
+  Bestelling/partner, Spam, Overig.
+- **Edge Functions:** `mail-sync` (leest INBOX, AI kiest per mail een categorie in één
+  batch-aanroep, slaat op — zelfde betrouwbare verbindingsaanpak als inkoop-mail, zie de
+  notitie valkuil-imapflow-zoho-edge), `mail-verstuur` (Zoho SMTP `smtppro.zoho.eu:465` via
+  `npm:nodemailer`; alleen ingelogde gebruiker; markeert beantwoord), `mail-actie` (verwijderen
+  = naar Trash verplaatsen, omkeerbaar). Lezen/categorie-wijzigen doet de client zelf via de
+  tabel (RLS).
+- **Cron:** `mail-sync-2uur` (elke 2 uur), zelfde Vault-geheim.
+- **Geen extra secret nodig:** versturen gebruikt dezelfde login; `MAIL_SMTP_HOST` valt terug
+  op `smtppro.zoho.eu`.
+
+Nog open / mogelijke verbeteringen: AI-antwoordvoorstel, bijlagen in de app kunnen openen
+(nu alleen de namen), van een bestelling-mail meteen een inkoop maken (fase 3-koppeling),
+correcties van categorieën als voorbeeld aan de AI meegeven zodat het meeleert.
+
+## Oorspronkelijk plan (ter referentie)
 
 ---
 
