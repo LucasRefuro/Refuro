@@ -1568,15 +1568,97 @@ function labelHtml(a){
   </div>`;
 }
 
+/* ═══ Stil printen op de labelprinter (QZ Tray) ═══
+   Print de device-stickers rechtstreeks op de Brother QL-800 via QZ Tray, zonder printvenster.
+   Zelfde aanpak en instellingen als in de winkelapp (Meer → Labelprinter); de printer en het
+   labelformaat staan in localStorage van hetzelfde domein, dus je stelt het maar één keer in.
+   De QR maken we lokaal (geen externe service), zodat het canvas niet "tainted" raakt. */
+function laadScript(src){
+  return new Promise((res,rej)=>{
+    if([...document.scripts].some(s=>s.src&&s.src.indexOf(src)!==-1)){ res(); return; }
+    const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('kon '+src+' niet laden')); document.head.appendChild(s);
+  });
+}
+function labelInstelling(){
+  return { printer: localStorage.getItem('storvoPrinter')||'', breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62 };
+}
+async function qzVerbind(){
+  await laadScript('/app/qz-tray.js');
+  if(typeof qz==='undefined') throw new Error('QZ Tray-bibliotheek niet geladen');
+  if(qz.websocket.isActive()) return;
+  try{ await qz.websocket.connect(); } catch(e){ throw new Error('Geen verbinding met QZ Tray. Draait het programma op deze Mac?'); }
+}
+function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
+  const woorden=String(tekst||'').split(/\s+/); let regel='', regels=0;
+  for(let i=0;i<woorden.length;i++){
+    const test=regel?regel+' '+woorden[i]:woorden[i];
+    if(ctx.measureText(test).width>maxW && regel){
+      regels++;
+      if(regels>=maxRegels){ let rest=regel; while(ctx.measureText(rest+'…').width>maxW && rest.length>1) rest=rest.slice(0,-1); ctx.fillText(rest+'…', x, y); return y+regelH; }
+      ctx.fillText(regel, x, y); y+=regelH; regel=woorden[i];
+    } else regel=test;
+  }
+  if(regel) ctx.fillText(regel, x, y);
+  return y+regelH;
+}
+function labelRegels(a){
+  const specs=a.specs||{};
+  if(a.status==='repurpose'){ const g=a.goede_delen||[]; return g.length?['Nog goed: '+g.join(', ')]:['Niets meer bruikbaar']; }
+  const p=(typeof CATEGORIE_PROFIEL!=='undefined'&&(CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop))||{specVelden:[]};
+  return [ a.merk?(a.merk+(a.categorie?' / '+a.categorie:'')):a.categorie ]
+    .concat((p.specVelden||[]).map(v=>specs[v.sleutel]?v.sleutel+': '+specs[v.sleutel]:null))
+    .concat([ a.nieuwe_accu?'Accu: nieuw (100%)':(a.accu?'Accu: '+a.accu+'%':null) ])
+    .filter(Boolean).slice(0,4);
+}
+async function deviceLabelPng(a){
+  await laadScript('/app/qrcode.min.js');
+  const {breedte}=labelInstelling();
+  const hoogte=54, dpmm=11.81;
+  const W=Math.round(breedte*dpmm), H=Math.round(hoogte*dpmm), pad=Math.round(2*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#000'; ctx.textBaseline='top';
+  let y=pad;
+  ctx.font='700 '+Math.round(2.5*dpmm)+'px Arial';
+  ctx.fillText(String(STATUS_KORT[a.status]||a.status||''), pad, y);
+  const code=String(a.code||'');
+  ctx.font='800 '+Math.round(3.6*dpmm)+'px Arial';
+  const cw=ctx.measureText(code).width; ctx.fillText(code, W-pad-cw, y-Math.round(0.4*dpmm));
+  y+=Math.round(4.4*dpmm);
+  ctx.font='800 '+Math.round(3.6*dpmm)+'px Arial';
+  y=labelWrap(ctx, [a.merk,a.model].filter(Boolean).join(' '), pad, y, W-2*pad, Math.round(4.2*dpmm), 2);
+  y+=Math.round(1*dpmm);
+  ctx.font='400 '+Math.round(2.3*dpmm)+'px Arial';
+  for(const r of labelRegels(a)){ y=labelWrap(ctx, r, pad, y, W-2*pad, Math.round(3*dpmm), 1); }
+  const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?apparaat='+a.id); qr.make();
+  const qrUrl=qr.createDataURL(6,0);
+  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ const s=Math.round(20*dpmm); ctx.drawImage(img, pad, H-s-pad, s, s); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
+  return { data:c.toDataURL('image/png').split(',')[1], hoogte };
+}
+async function qzPrintDeviceLabels(ids){
+  const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
+  if(!lijst.length){ toast('Geen apparaten om te printen','let-op'); return; }
+  const {printer, breedte}=labelInstelling();
+  if(!printer){ toast('Stel eerst je labelprinter in: Storvo → Meer → Labelprinter','let-op'); return; }
+  try{
+    await qzVerbind();
+    for(const a of lijst){
+      const {data, hoogte}=await deviceLabelPng(a);
+      const config=qz.configs.create(printer, {size:{width:breedte, height:hoogte}, units:'mm', scaleContent:true, margins:0, colorType:'grayscale'});
+      await qz.print(config, [{type:'pixel', format:'image', flavor:'base64', data}]);
+    }
+    toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
+  }catch(e){ toast('Printen: '+e.message,'fout'); }
+}
 function labelsTonen(ids){
   const lijst=(Array.isArray(ids)?ids:[ids])
     .map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
   if(!lijst.length){ toast('Geen apparaten om een label van te maken','let-op'); return; }
   venster('Labels ('+lijst.length+')', `
-    <p class="pv">Print dit vel en plak een label op elk apparaat. Scan je hem later, dan opent meteen het juiste apparaat. Na de controle kun je opnieuw afdrukken; dan staan de specificaties er ook op.</p>
+    <p class="pv">Print op je labelprinter (stil, geen printvenster) en plak een label op elk apparaat. Scan je hem later, dan opent meteen het juiste apparaat. Geen labelprinter? Kies "Op A4-vel".</p>
     <div class="labelvel" id="labelVel">${lijst.map(labelHtml).join('')}</div>
   `, [
-    {tekst:'Printen', klasse:'actie', doe:()=>window.print()},
+    {tekst:'Op labelprinter', klasse:'actie', doe:()=>qzPrintDeviceLabels(lijst.map(a=>a.id))},
+    {tekst:'Op A4-vel', klasse:'', doe:()=>window.print()},
     {tekst:'Labels zitten erop', klasse:'', doe:(k)=>labelsKlaar(k, lijst.map(a=>a.id))}
   ], 'groot');
 }
