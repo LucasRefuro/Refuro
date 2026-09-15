@@ -741,10 +741,10 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <div class="soortkiezer" id="t_cat_kiezer"></div>
 
         <div class="grid" style="margin-top:18px">
+          <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
           <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
           <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
-          <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
         </div>
 
         <!-- Waar de doos heen gaat. Vul je dit hier in, dan hoeft niemand later
@@ -6485,13 +6485,16 @@ function batPerStuk(b){
   const n=Number(b&&b.aantal)||0;
   return n>0 ? Math.round((Number(b.inkoopprijs)||0)/n*100)/100 : 0;
 }
-/* Bij Toevoegen: kies je een batch, dan vullen we de inkoop met de prijs per
-   stuk van die partij. */
+/* Bij Toevoegen: kies je een batch, dan vullen we de inkoopprijs per stuk én de
+   leverancier automatisch in vanuit die partij. */
 function batVulInkoop(){
   const sel=document.getElementById('t_batch'); if(!sel) return;
   const b=batches.find(x=>x.id===sel.value);
+  if(!b) return;
   const inp=document.getElementById('t_inkoop');
-  if(b && inp){ const ps=batPerStuk(b); if(ps) inp.value=ps; }
+  if(inp){ const ps=batPerStuk(b); if(ps) inp.value=ps; }
+  const lev=document.getElementById('t_lev');
+  if(lev && b.leverancier) lev.value=b.leverancier;
 }
 
 /* De hele partij als tabel eruit voor de boekhouding: elk toestel met inkoop en
