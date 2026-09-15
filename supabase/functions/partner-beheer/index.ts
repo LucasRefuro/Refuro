@@ -309,5 +309,21 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), { headers: cors });
   }
 
+  // ---- een partner verwijderen ----
+  if (actie === "partner_verwijder") {
+    if (!magBeheer) return fout("Alleen de winkel mag dit", 403);
+    const partnerId = String(lijf.partner_id || "");
+    if (!partnerId) return fout("Partner is nodig");
+    const { data: p } = await admin.from("partners").select("id").eq("id", partnerId).eq("team_id", acc.team_id).maybeSingle();
+    if (!p) return fout("Deze partner is niet gevonden", 404);
+    // Niet verwijderen als er nog laptops aan toegewezen zijn: die moeten eerst terug naar de winkel.
+    const { count } = await admin.from("hardware").select("id", { count: "exact", head: true }).eq("partner_id", partnerId);
+    if ((count || 0) > 0) return fout("Deze partner heeft nog toegewezen laptops. Haal die er eerst af.", 400);
+    await admin.from("partners").delete().eq("id", partnerId);
+    await admin.from("accounts").delete().eq("id", partnerId);
+    try { await admin.auth.admin.deleteUser(partnerId); } catch (_e) { /* auth-gebruiker was er misschien al niet meer */ }
+    return new Response(JSON.stringify({ ok: true }), { headers: cors });
+  }
+
   return fout("Onbekende actie");
 });

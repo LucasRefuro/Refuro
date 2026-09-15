@@ -11461,9 +11461,11 @@ async function renderPartners(){
   const telling={}; (hw||[]).forEach(r=>{ if(r.partner_id) telling[r.partner_id]=(telling[r.partner_id]||0)+1; });
   box.innerHTML=`<table><thead><tr><th>Partner</th><th class="num">Toegewezen laptops</th><th></th></tr></thead><tbody>${
     partners.map(p=>`<tr><td><b>${esc(p.naam||'Partner')}</b></td><td class="num">${telling[p.id]||0}</td>`+
-      `<td class="num"><span style="display:inline-flex;gap:8px;justify-content:flex-end">`+
+      `<td class="num"><span style="display:inline-flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">`+
+        `<button class="btn ghost small" onclick="partnerOpen('${p.id}')"><svg class="i s"><use href="#i-globe"/></svg>Openen</button>`+
         `<button class="btn ghost small" onclick="partnerNaamWijzig('${p.id}')">Naam</button>`+
         `<button class="btn ghost small" onclick="partnerNieuwWw('${p.id}')">Nieuw wachtwoord</button>`+
+        `<button class="btn ghost small" style="color:var(--red)" onclick="partnerVerwijder('${p.id}')">Verwijderen</button>`+
       `</span></td></tr>`).join('')
   }</tbody></table>`;
 }
@@ -11498,6 +11500,13 @@ async function partnerNieuwWw(id){
   const mailen=window.confirm('Het nieuwe wachtwoord per e-mail naar de partner sturen?');
   const j=await partnerActie({actie:'partner_wachtwoord', partner_id:id, wachtwoord:ww, mailen}, null);
   if(j) toast(mailen ? (j.gemaild ? 'Wachtwoord gewijzigd en gemaild' : 'Wachtwoord gewijzigd. Mail niet gelukt, geef het zelf door.') : 'Wachtwoord gewijzigd', true);
+}
+/* Het dashboard van een partner openen vanuit je eigen account: alleen-lezen. De partner-pagina
+   herkent ?bekijk=<id> en toont die partner (de RLS staat de eigenaar toe zijn rij te lezen). */
+function partnerOpen(id){ window.open('/partner/?bekijk='+encodeURIComponent(id), '_blank', 'noopener'); }
+async function partnerVerwijder(id){
+  if(!confirm('Deze partner verwijderen? Dit kan niet ongedaan gemaakt worden. Het kan alleen als er geen laptops meer aan hem toegewezen zijn.')) return;
+  await partnerActie({actie:'partner_verwijder', partner_id:id}, 'Partner verwijderd');
 }
 async function partnerAanmaken(knop){
   const naam=(document.getElementById('pt_naam').value||'').trim();

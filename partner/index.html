@@ -279,6 +279,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
    zonder opnieuw in te loggen. */
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let PARTNER_ID = null, ACCOUNT = null;
+/* Bekijk-modus: de eigenaar opent het dashboard van een partner vanuit de winkelapp met
+   ?bekijk=<partner_id>. Dan tonen we die partner ALLEEN-LEZEN (de RLS staat de eigenaar toe
+   zijn rij te lezen; schrijven blokkeert de RLS toch, en save()/pushRemote doen niets). */
+let BEKIJK = null, ALLEENLEZEN = false;
+try { BEKIJK = new URLSearchParams(location.search).get('bekijk') || null; } catch(e){}
 let uitdraaiLijst = [];   // eerdere afrekenrondes uit partner_uitdraaien
 let bekekenBatch = null;  // welke oude batch je nu terugkijkt op de Marge-pagina
 let uitbetaaldeVerkopen = new Map();  // verkoopId -> batch-id, opgebouwd uit de historie (leidend)
@@ -318,11 +323,21 @@ function load(){
   return migrate(s);
 }
 function save(){
+  if (ALLEENLEZEN) return;   // bekijk-modus: niets bewaren, alleen inzien
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch(e){ toast(' Opslag vol! Verwijder een paar foto\'s.'); }
   pendingLocalChange = true;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(pushRemote, 700);
+}
+/* De alleen-lezen balk bovenaan bij bekijk-modus. */
+function toonBekijkBalk(){
+  if (document.getElementById('bekijkbalk')) return;
+  const b = document.createElement('div');
+  b.id = 'bekijkbalk';
+  b.style.cssText = 'position:sticky;top:0;z-index:40;background:#123F39;color:#fff;padding:9px 16px;font-size:13.5px;font-weight:600;text-align:center';
+  b.textContent = 'Je bekijkt het dashboard van je partner — alleen-lezen. Wijzigingen worden niet bewaard.';
+  const app = f('app'); if (app) app.prepend(b);
 }
 function setSync(state){
   const b = f('syncbadge'); if (!b) return;
@@ -331,6 +346,7 @@ function setSync(state){
   b.style.color = m[1]; b.title = m[2]; b.textContent = m[0];
 }
 async function pushRemote(){
+  if (ALLEENLEZEN) return false;   // bekijk-modus schrijft nooit
   if (!PARTNER_ID) return false;
   setSync('syncing');
   try {
@@ -515,14 +531,23 @@ async function naLogin(session){
     try { await sb.auth.signOut(); } catch(e){}
     return;
   }
-  ACCOUNT = acc; PARTNER_ID = acc.id; USER = acc.naam || 'Partner';
-  /* Zorg dat er een werkruimte is. Een echte partner heeft die al; de eigenaar of
-     een teamlid die zelf dit dashboard gebruikt, krijgt hem hier aangemaakt. De RLS
-     staat alleen een eigen rij toe (id = auth.uid()). */
-  try {
-    const { data: bestaat } = await sb.from('partners').select('id').eq('id', acc.id).maybeSingle();
-    if (!bestaat) await sb.from('partners').insert({ id: acc.id, team_id: acc.team_id || null, naam: acc.naam || 'Partner', data: {} });
-  } catch(e){}
+  ACCOUNT = acc;
+  if (BEKIJK && BEKIJK !== acc.id && acc.team_id && ['eigenaar','beheerder'].includes(acc.rol)) {
+    // Eigenaar/beheerder bekijkt het dashboard van een partner: alleen-lezen.
+    PARTNER_ID = BEKIJK; ALLEENLEZEN = true;
+    try { const { data: pnr } = await sb.from('partners').select('naam').eq('id', BEKIJK).maybeSingle(); USER = (pnr && pnr.naam) || 'Partner'; }
+    catch(e){ USER = 'Partner'; }
+    toonBekijkBalk();
+  } else {
+    PARTNER_ID = acc.id; USER = acc.naam || 'Partner';
+    /* Zorg dat er een werkruimte is. Een echte partner heeft die al; de eigenaar of
+       een teamlid die zelf dit dashboard gebruikt, krijgt hem hier aangemaakt. De RLS
+       staat alleen een eigen rij toe (id = auth.uid()). */
+    try {
+      const { data: bestaat } = await sb.from('partners').select('id').eq('id', acc.id).maybeSingle();
+      if (!bestaat) await sb.from('partners').insert({ id: acc.id, team_id: acc.team_id || null, naam: acc.naam || 'Partner', data: {} });
+    } catch(e){}
+  }
   f('loginerr').style.display='none'; f('loginpin').value='';
   f('loginwrap').style.display='none'; f('app').style.display='flex';
   await pullRemote(false);
