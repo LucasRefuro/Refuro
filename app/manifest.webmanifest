@@ -1,0 +1,17 @@
+{
+  "name": "Storvo",
+  "short_name": "Storvo",
+  "description": "Alles-in-een software voor je reparatiewinkel: kassa, voorraad, reparaties, mail en cijfers.",
+  "start_url": "/app",
+  "scope": "/app",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "nl",
+  "background_color": "#0B5B52",
+  "theme_color": "#0B5B52",
+  "icons": [
+    { "src": "/merk/app-icoon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/merk/app-icoon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/merk/app-icoon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
