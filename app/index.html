@@ -1677,6 +1677,24 @@
     body.metabobalk{padding-top:0;}
     body.metabobalk .topbar{top:0;}
   }
+
+  /* Scan-knop in de kopbalk + de camera-scanner. iPhone-Safari kan zelf geen QR lezen,
+     daarom jsQR. Eigen id (scanOverlay bestaat al voor de koppel-scanner). */
+  .topscan{display:inline-flex; align-items:center; gap:7px; flex:none; border:none; cursor:pointer;
+    background:var(--oranje); color:var(--actieftekst); font-family:inherit; font-weight:700;
+    font-size:13.5px; padding:9px 14px; border-radius:var(--pil);}
+  .topscan svg{width:18px; height:18px;}
+  @media(max-width:560px){ .topscan span{display:none;} .topscan{padding:9px 11px;} }
+  .qrscan{position:fixed; inset:0; z-index:200; background:#0C0F0E; display:flex;
+    flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:24px;}
+  .qrscan-vid{width:min(86vw,460px); aspect-ratio:1/1; object-fit:cover; border-radius:22px; background:#000;}
+  .qrscan-raam{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(64vw,320px); aspect-ratio:1/1; border:3px solid rgba(255,255,255,.92);
+    border-radius:20px; box-shadow:0 0 0 100vmax rgba(0,0,0,.35); pointer-events:none;}
+  .qrscan-hint{color:#fff; font-size:15px; font-weight:600; text-align:center; max-width:420px; z-index:1;}
+  .qrscan-dicht{position:absolute; top:calc(env(safe-area-inset-top) + 16px); right:18px;
+    background:rgba(255,255,255,.16); color:#fff; border:none; cursor:pointer; font-family:inherit;
+    font-weight:700; font-size:15px; padding:10px 18px; border-radius:var(--pil); z-index:2;}
 </style>
 </head>
 <body>
@@ -1771,6 +1789,7 @@
       <span class="ic"><svg class="i s"><use href="#i-search"/></svg></span>
       <input id="globaalZoek" placeholder="Zoek product, reparatie of klant" autocomplete="off" oninput="globaalZoeken()" onblur="setTimeout(()=>{const r=document.getElementById('zoekRes'); if(r) r.remove();},180)">
     </div>
+    <button class="topscan" onclick="qrScanOpen()" aria-label="Scannen"><svg class="i"><use href="#i-scan"/></svg><span>Scan</span></button>
     <div class="syncstatus" id="syncStatus" style="display:none"></div>
     <div class="topuser" id="topUser" onclick="uitloggen()"></div>
   </div>
@@ -2680,6 +2699,7 @@
     <div class="hubsectie">
       <div class="hubgroep">Winkel</div>
       <div class="hubgrid">
+        <button class="hubtegel" onclick="qrScanOpen()"><svg class="i"><use href="#i-scan"/></svg><span class="tt"><b>Scannen</b><span>Scan een label met je telefoon en open meteen dat toestel of product</span></span></button>
         <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak met AI-sortering, antwoorden en opstellen</span></span></button>
         <button class="hubtegel" data-tab="labelprinter" onclick="showTab('labelprinter')"><svg class="i"><use href="#i-tag"/></svg><span class="tt"><b>Labelprinter</b><span>Prijs- en productstickers direct printen, zonder printvenster</span></span></button>
         <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Gebruikers, rollen en toegang</span></span></button>
@@ -3182,6 +3202,15 @@
 <!-- Onderbalk voor de telefoon. Alle pagina's staan erin; je veegt er met je
      duim langs. De pagina waar je op zit schuift vanzelf in beeld. -->
 <nav class="onderbalk" id="onderBalk" hidden aria-label="Hoofdmenu"></nav>
+
+<!-- Camera-scanner: scan een Storvo-label (QR) en open meteen dat toestel/product. Eigen id,
+     want scanOverlay is al de koppel-scanner. -->
+<div class="qrscan" id="qrScan" hidden>
+  <video class="qrscan-vid" id="qrScanVid" playsinline muted autoplay></video>
+  <div class="qrscan-raam"></div>
+  <div class="qrscan-hint" id="qrScanHint">Richt je camera op de QR-code op het label</div>
+  <button class="qrscan-dicht" onclick="qrScanDicht()">Sluiten</button>
+</div>
 <div class="mobmeer" id="mobMeer" hidden onclick="mobMeerAchtergrond(event)" aria-label="Alle pagina's"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -5492,6 +5521,58 @@ async function labelTest(knop){
   try{ const ok=await qzPrintLabel({titel:'Testlabel Storvo', prijs:12.50, code:'STORVO-TEST-123'}); if(ok) toast('Testlabel geprint', true); }
   catch(e){ toast('Printen: '+e.message,'fout'); }
   if(knop){ knop.disabled=false; }
+}
+/* ═══ Scannen (camera-QR) ═══
+   Scan een Storvo-label met je telefoon en open meteen dat toestel of product. iPhone-Safari
+   heeft geen ingebouwde QR-lezer (BarcodeDetector ontbreekt), daarom jsQR (self-hosted, pas
+   geladen bij het scannen). Veiligheid: we openen alleen URL's van ons eigen domein (de
+   toestel-labels wijzen naar /refurbish/?apparaat=..); een vreemde QR openen we niet, die zetten
+   we in de zoekbalk. Eigen id qrScan (scanOverlay is al de koppel-scanner). */
+let qrScanStroom=null, qrScanActief=false;
+async function qrScanOpen(){
+  const ov=document.getElementById('qrScan'); if(!ov) return;
+  const hint=document.getElementById('qrScanHint'), vid=document.getElementById('qrScanVid');
+  ov.hidden=false; if(hint) hint.textContent='Camera starten…';
+  try{
+    await laadScript('/app/jsqr.min.js');
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('geen camera');
+    qrScanStroom=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    vid.srcObject=qrScanStroom; await vid.play();
+    qrScanActief=true; if(hint) hint.textContent='Richt je camera op de QR-code op het label';
+    qrScanLus(vid);
+  }catch(e){
+    if(hint) hint.textContent='Geen toegang tot de camera. Sta camera toe in je browser (of open Storvo in Safari).';
+  }
+}
+function qrScanDicht(){
+  qrScanActief=false;
+  if(qrScanStroom){ qrScanStroom.getTracks().forEach(t=>t.stop()); qrScanStroom=null; }
+  const v=document.getElementById('qrScanVid'); if(v) v.srcObject=null;
+  const ov=document.getElementById('qrScan'); if(ov) ov.hidden=true;
+}
+function qrScanLus(vid){
+  const cv=document.createElement('canvas'); const cx=cv.getContext('2d',{willReadFrequently:true});
+  const stap=()=>{
+    if(!qrScanActief) return;
+    if(vid.readyState>=vid.HAVE_ENOUGH_DATA && vid.videoWidth){
+      cv.width=vid.videoWidth; cv.height=vid.videoHeight;
+      cx.drawImage(vid,0,0,cv.width,cv.height);
+      let res=null;
+      try{ const b=cx.getImageData(0,0,cv.width,cv.height); res=(typeof jsQR!=='undefined')?jsQR(b.data,b.width,b.height):null; }catch(_e){}
+      if(res && res.data){ qrScanGevonden(res.data.trim()); return; }
+    }
+    requestAnimationFrame(stap);
+  };
+  requestAnimationFrame(stap);
+}
+function qrScanGevonden(tekst){
+  qrScanDicht();
+  // Alleen onze eigen domein-URL's openen we automatisch (de toestel-labels).
+  try{ const u=new URL(tekst); if(u.origin===location.origin){ location.href=tekst; return; } }catch(_e){}
+  // Geen eigen URL: als code behandelen en in de zoekbalk zetten.
+  const zoek=document.getElementById('globaalZoek');
+  if(zoek){ showTab('dashboard'); zoek.value=tekst; if(typeof globaalZoeken==='function') globaalZoeken(); zoek.focus(); }
+  else toast('Gescand: '+tekst, true);
 }
 /* De gekleurde categorie-mapjes als horizontale balk boven de inbox: "Alle mail" + per
    categorie een gekleurd bolletje, naam en aantal ongelezen. De actieve is opgevuld met de

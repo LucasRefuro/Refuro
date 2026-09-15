@@ -6,7 +6,7 @@
 //    lukt het netwerk niet, dan tonen we de opgeslagen versie.
 //  - Eigen statische bestanden (iconen e.d.) cache-eerst.
 // Verhoog CACHE als je de cache wilt verversen.
-const CACHE = "storvo-v2";
+const CACHE = "storvo-v3";
 
 self.addEventListener("install", () => { self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
