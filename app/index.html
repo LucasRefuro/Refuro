@@ -528,9 +528,11 @@
   .segknop{border:none; background:none; padding:8px 18px; border-radius:9px; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;}
   .segknop.aan{background:var(--card); color:var(--oranje); box-shadow:0 1px 3px rgba(18,63,57,.12);}
   .omglijst{display:flex; flex-direction:column; gap:10px;}
-  .omgrij{display:flex; align-items:center; gap:14px; border:1px solid var(--border); border-radius:14px; padding:12px 16px; cursor:pointer;}
+  .omgrij{display:flex; align-items:center; gap:14px; border:1px solid var(--border); border-radius:14px; padding:12px 16px; cursor:pointer; text-transform:none; letter-spacing:normal; font-weight:400; color:var(--text); margin-bottom:0;}
   .omgico{width:38px; height:38px; flex:none; border-radius:10px; background:var(--soft-2); display:flex; align-items:center; justify-content:center; color:var(--oranje);}
-  .omgtxt{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+  .omgtxt{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+  .omgtxt b{font-size:14.5px; font-weight:700; color:var(--text);}
+  .omgtxt .muted{font-size:12.5px; font-weight:400;}
   .omgswitch{appearance:none; -webkit-appearance:none; width:0; height:0; margin:0; opacity:0;}
   .omgknop{flex:none; width:46px; height:27px; border-radius:14px; background:var(--soft-2); position:relative; transition:background .16s;}
   .omgknop::after{content:''; position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:#fff; transition:transform .16s; box-shadow:0 1px 3px rgba(0,0,0,.2);}
@@ -539,9 +541,9 @@
   .omgrij:has(.omgswitch:checked){border-color:var(--oranje); background:var(--lblauw);}
   .omgrij:has(.omgswitch:checked) .omgico{background:#fff;}
   .pagchips{display:flex; flex-wrap:wrap; gap:8px;}
-  .pagchip{cursor:pointer; margin:0;}
+  .pagchip{cursor:pointer; margin:0; text-transform:none; letter-spacing:normal; font-weight:600;}
   .pagchip input{position:absolute; opacity:0; width:0; height:0;}
-  .pagchip span{display:inline-block; padding:8px 14px; border:1.5px solid var(--border); border-radius:var(--pil); font-size:13px; font-weight:600; color:var(--muted); transition:.14s;}
+  .pagchip span{display:inline-block; padding:8px 14px; border:1.5px solid var(--border); border-radius:var(--pil); font-size:13px; font-weight:600; color:var(--muted); transition:.14s; text-transform:none; letter-spacing:normal;}
   .pagchip input:checked + span{background:var(--green-soft); border-color:var(--green-tekst); color:var(--green-tekst);}
   .detailacts{display:flex; gap:10px; flex-wrap:wrap; margin-top:24px;}
   .gevaarzone{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:20px; padding:16px; border:1px solid #E7C9C9; border-radius:14px; background:var(--red-soft);}
