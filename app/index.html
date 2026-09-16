@@ -460,6 +460,9 @@
   .perslid:last-child{border-bottom:none; padding-bottom:0;}
   .perskop{margin-bottom:10px;}
   .loonblok{margin-top:2px;}
+  .setupstappen{margin:0 0 14px; padding-left:20px; color:var(--muted); font-size:14px; line-height:1.7;}
+  .cmdrij{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--soft-2); border-radius:12px; padding:12px 14px;}
+  .cmdrij code{flex:1; min-width:200px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; word-break:break-all; color:var(--text);}
   .strooktabel{width:100%; border-collapse:collapse; margin-top:8px;}
   .strooktabel td{padding:8px 4px; border-bottom:1px solid var(--border); font-size:13.5px;}
   .strooktabel td.num{text-align:right; white-space:nowrap;}
@@ -2667,6 +2670,19 @@
       <button class="btn actie" onclick="labelTest(this)"><svg class="i s"><use href="#i-tag"/></svg>Test label printen</button>
     </div>
     <p class="muted klein" style="margin-top:14px">Doorlopende rol (bijv. DK-22251, 62 mm): zet breedte 62 en hoogte bijvoorbeeld 30. Heb je een zwart/rood-rol (DK-22251)? Laat "Zwart/rood-rol" aan staan, anders knippert de printer rood.</p>
+  </div>
+  <div class="card breed">
+    <h2><svg class="i"><use href="#i-laptop"/></svg>Printer op een andere Mac instellen</h2>
+    <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando. Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
+    <ol class="setupstappen">
+      <li>Open op die Mac <b>Terminal</b> (Cmd+spatie, typ "Terminal", Enter).</li>
+      <li>Plak dit commando en druk op Enter. Voer je Mac-wachtwoord in als erom gevraagd wordt; verder hoef je niets te typen.</li>
+    </ol>
+    <div class="cmdrij">
+      <code id="printSetupCmd">curl -fsSL https://storvo.app/printhulp/installeer.sh -o /tmp/storvo-printhulp.sh &amp;&amp; bash /tmp/storvo-printhulp.sh</code>
+      <button class="btn ghost small" onclick="kopieerPrintSetup(this)"><svg class="i s"><use href="#i-clipboard"/></svg>Kopieer</button>
+    </div>
+    <div class="infobox" style="margin-top:16px"><b>Daarna nog bij de printer:</b> zet <b>Editor Lite uit</b> (houd de Editor-Lite-knop op de printer ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat, anders ziet de Mac hem als USB-stick), zorg dat de zwart/rode DK-22251-rol erin zit, en print daarna gewoon vanuit storvo.app. Staat Homebrew nog niet op die Mac? Dan zegt het script precies wat je eerst moet doen.</div>
   </div>
   </div>
 </section>
@@ -5595,6 +5611,16 @@ function mailPollStart(){
    tweekleuren-modus (red=true), ook bij alleen zwart — anders knippert hij rood. Daarom staat
    tweekleuren standaard aan. Instellingen staan per apparaat in localStorage (de printer hangt
    aan díe Mac). Label = titel + prijs groot + scanbare barcode. */
+/* Het installatiecommando voor de printhulp op een andere Mac kopiëren. Het script
+   zelf staat op storvo.app/printhulp/installeer.sh; de gebruiker plakt de regel in
+   Terminal op die Mac. */
+function kopieerPrintSetup(knop){
+  const cmd=(document.getElementById('printSetupCmd')||{}).textContent||'';
+  const orig=knop.innerHTML;
+  const klaar=()=>{ knop.textContent='Gekopieerd'; setTimeout(()=>{ knop.innerHTML=orig; }, 1600); };
+  try{ navigator.clipboard.writeText(cmd).then(klaar, ()=>window.prompt('Kopieer het commando:', cmd)); }
+  catch(e){ window.prompt('Kopieer het commando:', cmd); }
+}
 function laadScript(src){
   return new Promise((res,rej)=>{
     const bestaat=[...document.scripts].some(s=>s.src&&s.src.indexOf(src)!==-1);
