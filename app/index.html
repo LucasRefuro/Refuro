@@ -2665,6 +2665,7 @@
       <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
       <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
       <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
+      <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
     </div>
     <div class="acts2" style="margin-top:14px">
       <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinding testen</button>
@@ -5658,6 +5659,7 @@ function labelInstelling(){
     breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62,
     hoogte: Number(localStorage.getItem('storvoLabelHoogte'))||30,
     tweekleuren: localStorage.getItem('storvoLabelTweekleur')!=='0',
+    vouw: localStorage.getItem('storvoLabelVouw')==='1',
   };
 }
 /* Tekst netjes over maximaal een paar regels, laatste regel afgekapt met … */
@@ -5676,8 +5678,9 @@ function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
 }
 async function labelPng(data){
   await laadScript('/app/jsbarcode.min.js');
-  const {breedte, hoogte}=labelInstelling();
+  const {breedte, hoogte, vouw}=labelInstelling();
   const dpmm=11.81; // 300 dpi
+  if(vouw) return labelPngVouw(data, breedte, dpmm);
   const W=Math.round(breedte*dpmm), H=Math.round(hoogte*dpmm), pad=Math.round(2*dpmm);
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const ctx=c.getContext('2d');
@@ -5698,6 +5701,60 @@ async function labelPng(data){
       ctx.drawImage(bc, bx, by);
     }catch(e){}
   }
+  return c.toDataURL('image/png').split(',')[1];
+}
+/* Vouwlabel: alles verticaal op de rechterhelft van de 62mm, de linkerhelft blijft leeg
+   zodat je die erachter vouwt. Zo hangt het label netjes bij producten aan een haakje.
+   We bouwen de inhoud eerst horizontaal (leesframe) en draaien die 90° naar de rechterhelft. */
+function labelPngVouw(data, breedteMm, dpmm){
+  const W=Math.round(breedteMm*dpmm);        // volle rolbreedte (62mm)
+  const RB=Math.round(W/2);                   // inhoud-strook = halve breedte (31mm)
+  const pad=Math.round(2*dpmm);
+  // Barcode vooraf renderen (we hebben de breedte nodig voor de lengte van het label).
+  let bc=null;
+  if(data.code && typeof JsBarcode!=='undefined'){
+    try{ bc=document.createElement('canvas');
+      JsBarcode(bc, String(data.code), {format:'CODE128', width:2, height:Math.round(13*dpmm), displayValue:true, fontSize:Math.round(2.5*dpmm), margin:0});
+    }catch(e){ bc=null; }
+  }
+  const naamKol=Math.round(40*dpmm), prijsKol=Math.round(22*dpmm);
+  const RL = pad + naamKol + prijsKol + (bc? bc.width+pad : 0) + pad;  // leeslengte = labelhoogte
+  // Leesframe bouwen (RL breed x RB hoog), links->rechts: naam, prijs, barcode.
+  const rf=document.createElement('canvas'); rf.width=RL; rf.height=RB;
+  const r=rf.getContext('2d');
+  r.fillStyle='#fff'; r.fillRect(0,0,RL,RB); r.fillStyle='#000'; r.textBaseline='top';
+  let cx=pad;
+  // Naam: tot 3 regels, verticaal gecentreerd in de strook.
+  if(data.titel){
+    const fs=Math.round(3.0*dpmm), lh=Math.round(3.6*dpmm);
+    r.font='700 '+fs+'px Arial';
+    const woorden=String(data.titel).split(/\s+/); const regels=[]; let lijn='';
+    for(const w of woorden){ const t=lijn?lijn+' '+w:w; if(r.measureText(t).width>naamKol-pad && lijn){ regels.push(lijn); lijn=w; if(regels.length>=3) break; } else lijn=t; }
+    if(lijn && regels.length<3) regels.push(lijn);
+    let ny=Math.round((RB-regels.length*lh)/2);
+    regels.forEach(l=>{ r.fillText(l, cx, ny); ny+=lh; });
+  }
+  cx+=naamKol;
+  // Prijs: groot, verticaal gecentreerd.
+  if(data.prijs!=null && data.prijs!==''){
+    const pf=Math.round(6.2*dpmm); r.font='800 '+pf+'px Arial';
+    r.fillText('€ '+Number(data.prijs).toFixed(2).replace('.',','), cx, Math.round(RB/2 - pf*0.62));
+  }
+  cx+=prijsKol;
+  // Barcode: verticaal gecentreerd.
+  if(bc){ r.drawImage(bc, cx, Math.max(0, Math.round((RB-bc.height)/2))); }
+  // Nu het leesframe 90° draaien op de RECHTERhelft; de linkerhelft blijft wit (vouwkant).
+  const H=RL;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W, 0);
+  ctx.rotate(Math.PI/2);        // 90° met de klok mee -> inhoud komt op x = half..W
+  ctx.drawImage(rf, 0, 0);
+  ctx.restore();
+  // Dunne vouwlijn in het midden, als hulp bij het vouwen.
+  ctx.strokeStyle='#bbb'; ctx.setLineDash([Math.round(1.2*dpmm), Math.round(1.2*dpmm)]);
+  ctx.beginPath(); ctx.moveTo(Math.round(W/2), 0); ctx.lineTo(Math.round(W/2), H); ctx.stroke();
   return c.toDataURL('image/png').split(',')[1];
 }
 async function qzPrintLabel(data){
@@ -5739,11 +5796,13 @@ function renderLabelprinter(){
   const b=document.getElementById('labelBreedte'); if(b) b.value=inst.breedte;
   const h=document.getElementById('labelHoogte'); if(h) h.value=inst.hoogte;
   const t=document.getElementById('labelTweekleur'); if(t) t.checked=inst.tweekleuren;
+  const v=document.getElementById('labelVouw'); if(v) v.checked=inst.vouw;
 }
 function labelBewaar(){
   localStorage.setItem('storvoLabelBreedte', String(Math.max(10, Math.min(120, Number((document.getElementById('labelBreedte')||{}).value)||62))));
   localStorage.setItem('storvoLabelHoogte', String(Math.max(10, Math.min(200, Number((document.getElementById('labelHoogte')||{}).value)||30))));
   const t=document.getElementById('labelTweekleur'); if(t) localStorage.setItem('storvoLabelTweekleur', t.checked?'1':'0');
+  const v=document.getElementById('labelVouw'); if(v) localStorage.setItem('storvoLabelVouw', v.checked?'1':'0');
 }
 async function labelVerbind(knop){
   if(knop){ knop.disabled=true; knop.dataset.oud=knop.innerHTML; knop.textContent='Testen…'; }
