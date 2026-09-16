@@ -2673,16 +2673,16 @@
   </div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-laptop"/></svg>Printer op een andere Mac instellen</h2>
-    <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando. Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
+    <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando, óók op een compleet kale Mac waar nog niets op staat. Het installeert zelf alles wat nodig is (Apple-tools, Homebrew en de rest). Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
     <ol class="setupstappen">
       <li>Open op die Mac <b>Terminal</b> (Cmd+spatie, typ "Terminal", Enter).</li>
-      <li>Plak dit commando en druk op Enter. Voer je Mac-wachtwoord in als erom gevraagd wordt; verder hoef je niets te typen.</li>
+      <li>Plak dit commando en druk op Enter. Voer je Mac-wachtwoord in als erom gevraagd wordt, en klik één keer op "Installeer" als het venster voor de Apple-tools verschijnt. Verder gaat alles vanzelf (reken op 10 tot 20 minuten de eerste keer).</li>
     </ol>
     <div class="cmdrij">
       <code id="printSetupCmd">curl -fsSL https://storvo.app/printhulp/installeer.sh -o /tmp/storvo-printhulp.sh &amp;&amp; bash /tmp/storvo-printhulp.sh</code>
       <button class="btn ghost small" onclick="kopieerPrintSetup(this)"><svg class="i s"><use href="#i-clipboard"/></svg>Kopieer</button>
     </div>
-    <div class="infobox" style="margin-top:16px"><b>Daarna nog bij de printer:</b> zet <b>Editor Lite uit</b> (houd de Editor-Lite-knop op de printer ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat, anders ziet de Mac hem als USB-stick), zorg dat de zwart/rode DK-22251-rol erin zit, en print daarna gewoon vanuit storvo.app. Staat Homebrew nog niet op die Mac? Dan zegt het script precies wat je eerst moet doen.</div>
+    <div class="infobox" style="margin-top:16px"><b>Daarna nog bij de printer:</b> zet <b>Editor Lite uit</b> (houd de Editor-Lite-knop op de printer ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat, anders ziet de Mac hem als USB-stick), zorg dat de zwart/rode DK-22251-rol erin zit, en print daarna gewoon vanuit storvo.app.</div>
   </div>
   </div>
 </section>

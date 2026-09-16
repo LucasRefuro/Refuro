@@ -1,60 +1,92 @@
 #!/bin/bash
-# Storvo labelprinter-hulp installeren op deze Mac.
-# Dubbelklik dit bestand. Het installeert alles wat nodig is om de Brother QL-800
-# stil te laten printen vanuit storvo.app, precies zoals op de eerste iMac.
+# Storvo labelprinter — complete installatie, ook op een KALE Mac (niks vooraf nodig).
 #
-# Je hoeft niets te typen, behalve je Mac-wachtwoord als erom gevraagd wordt
-# (voor Homebrew en om het lokale certificaat te vertrouwen).
+# Wat het doet, in volgorde:
+#   1. Apple Command Line Tools (als ze ontbreken)   -> nodig voor Homebrew
+#   2. Homebrew (als het ontbreekt)
+#   3. libusb, mkcert, python via Homebrew
+#   4. lokaal certificaat vertrouwen (mkcert)
+#   5. de Python-printhulp + venv
+#   6. het https-certificaat
+#   7. automatisch starten (LaunchAgent) + test
+#
+# Je hoeft alleen je Mac-wachtwoord in te voeren als erom gevraagd wordt, en op een
+# heel kale Mac één keer op "Installeer" te klikken als het venster voor de Apple-tools
+# verschijnt. Verder draait alles vanzelf. Reken op 10 tot 20 minuten de eerste keer.
 
 set -u
 cd "$HOME"
-echo "════════════════════════════════════════════"
-echo "  Storvo printhulp installeren"
-echo "════════════════════════════════════════════"
+
+echo "═══════════════════════════════════════════════════"
+echo "   Storvo printhulp — complete installatie"
+echo "═══════════════════════════════════════════════════"
+echo
+echo "Dit zet alles klaar om labels stil te printen. Op een kale Mac duurt dit"
+echo "10 tot 20 minuten. Voer je Mac-wachtwoord in als erom gevraagd wordt."
 echo
 
-# ── 1. Homebrew ──────────────────────────────────────────────────────────────
-if ! command -v brew >/dev/null 2>&1; then
-  # brew kan op twee plekken staan (Apple Silicon of Intel); probeer ze te vinden
+laad_brew(){
   for p in /opt/homebrew/bin/brew /usr/local/bin/brew; do
-    [ -x "$p" ] && eval "$($p shellenv)" && break
+    [ -x "$p" ] && eval "$("$p" shellenv)" && return 0
   done
+  command -v brew >/dev/null 2>&1
+}
+
+# ── 1. Apple Command Line Tools ──────────────────────────────────────────────
+if ! xcode-select -p >/dev/null 2>&1; then
+  echo "→ Stap 1/7: Apple-ontwikkeltools installeren."
+  echo "  Er verschijnt zo een venster van macOS. Klik daarin op 'Installeer' en"
+  echo "  wacht tot het klaar is (dit kan tien minuten duren)."
+  xcode-select --install >/dev/null 2>&1 || true
+  # Wachten tot ze er zijn.
+  while ! xcode-select -p >/dev/null 2>&1; do sleep 10; done
+  echo "  ✓ Ontwikkeltools klaar."
+else
+  echo "→ Stap 1/7: Apple-ontwikkeltools staan er al."
+fi
+
+# ── 2. Homebrew ──────────────────────────────────────────────────────────────
+if ! laad_brew; then
+  echo
+  echo "→ Stap 2/7: Homebrew installeren…"
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || {
+    echo "  ✗ Homebrew installeren is mislukt. Controleer je internet en draai het script opnieuw."
+    read -r -p "Druk op Enter om te sluiten."; exit 1; }
+  laad_brew
+else
+  echo "→ Stap 2/7: Homebrew staat er al."
 fi
 if ! command -v brew >/dev/null 2>&1; then
-  echo "✗ Homebrew is niet gevonden."
-  echo "  Installeer eerst Homebrew: open Terminal en plak deze regel, daarna dit script opnieuw:"
-  echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-  echo
-  read -r -p "Druk op Enter om te sluiten."
-  exit 1
+  echo "  ✗ Homebrew niet gevonden na installatie."; read -r -p "Druk op Enter om te sluiten."; exit 1
+fi
+BREWBIN="$(command -v brew)"
+# brew ook voor volgende keren in de shell zetten
+if ! grep -q 'brew shellenv' "$HOME/.zprofile" 2>/dev/null; then
+  echo "eval \"\$($BREWBIN shellenv)\"" >> "$HOME/.zprofile"
 fi
 BREW="$(brew --prefix)"
-echo "✓ Homebrew gevonden op $BREW"
+echo "  ✓ Homebrew klaar ($BREW)."
 
-# ── 2. libusb, mkcert, python ────────────────────────────────────────────────
+# ── 3. libusb, mkcert, python ────────────────────────────────────────────────
 echo
-echo "→ libusb, mkcert en python installeren (kan een paar minuten duren)…"
-brew install libusb mkcert nss python 2>/dev/null || brew install libusb mkcert nss python
+echo "→ Stap 3/7: libusb, mkcert en python installeren…"
+brew install libusb mkcert nss python
 
-# ── 3. Lokale CA vertrouwen (voor https in Safari en Chrome) ──────────────────
+# ── 4. Lokaal certificaat vertrouwen ─────────────────────────────────────────
 echo
-echo "→ Het lokale certificaat vertrouwen. Voer je Mac-wachtwoord in als erom gevraagd wordt."
+echo "→ Stap 4/7: het lokale certificaat vertrouwen (wachtwoord kan gevraagd worden)…"
 mkcert -install
 
-# ── 4. Map en Python-omgeving ────────────────────────────────────────────────
+# ── 5. Python-omgeving + printhulp ───────────────────────────────────────────
 DIR="$HOME/.storvo-print"
 mkdir -p "$DIR"
 PY="$BREW/bin/python3"; [ -x "$PY" ] || PY="$(command -v python3)"
 echo
-echo "→ Python-omgeving klaarzetten…"
+echo "→ Stap 5/7: de printhulp klaarzetten…"
 "$PY" -m venv "$DIR/venv"
 "$DIR/venv/bin/pip" install --upgrade pip >/dev/null 2>&1
-echo "→ brother-ql, pyusb en pillow installeren…"
 "$DIR/venv/bin/pip" install brother-ql pyusb pillow
 
-# ── 5. De printhulp zelf schrijven ───────────────────────────────────────────
-echo
-echo "→ Printhulp installeren…"
 cat > "$DIR/helper.py" <<'PY'
 #!/usr/bin/env python3
 # Storvo labelprinter-hulpprogramma.
@@ -230,12 +262,14 @@ if __name__=="__main__":
     main()
 PY
 
-# ── 6. Certificaat maken (zodat https://127.0.0.1:9909 vertrouwd is) ──────────
+# ── 6. Certificaat maken ─────────────────────────────────────────────────────
 echo
-echo "→ Certificaat maken…"
+echo "→ Stap 6/7: het https-certificaat maken…"
 ( cd "$DIR" && mkcert -cert-file cert.pem -key-file key.pem 127.0.0.1 localhost )
 
-# ── 7. Automatisch starten (LaunchAgent) ─────────────────────────────────────
+# ── 7. Automatisch starten + test ────────────────────────────────────────────
+echo
+echo "→ Stap 7/7: automatisch starten…"
 PLIST="$HOME/Library/LaunchAgents/app.storvo.printhelper.plist"
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$PLIST" <<PLIST
@@ -267,33 +301,26 @@ cat > "$PLIST" <<PLIST
 </plist>
 PLIST
 
-# ── 8. Starten ───────────────────────────────────────────────────────────────
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
-sleep 2
+sleep 3
 
-# ── 9. Testen ────────────────────────────────────────────────────────────────
 echo
-echo "→ Testen of de printhulp draait…"
 if curl -sk https://127.0.0.1:9909/ping | grep -q storvo-printhelper; then
+  echo "═══════════════════════════════════════════════════"
+  echo "   ✓ KLAAR. De printhulp draait."
+  echo "═══════════════════════════════════════════════════"
   echo
-  echo "════════════════════════════════════════════"
-  echo "  ✓ KLAAR. De printhulp draait."
-  echo "════════════════════════════════════════════"
-  echo
-  echo "Nog even doen aan de printer:"
+  echo "Nog even bij de printer:"
   echo "  1. Sluit de Brother QL-800 met de USB-kabel op deze Mac aan."
   echo "  2. Zet Editor Lite UIT: houd de Editor-Lite-knop op de printer ~2 sec"
-  echo "     ingedrukt tot het groene lampje ernaast UITgaat. (Anders ziet de Mac"
-  echo "     hem als USB-stick en kan er niet geprint worden.)"
+  echo "     ingedrukt tot het groene lampje ernaast UITgaat."
   echo "  3. Zorg dat de zwart/rode DK-22251-rol erin zit."
   echo
-  echo "Dan: open storvo.app in Chrome of Safari, ga naar een label en print."
-  echo "Test de verbinding via Meer → Labelprinter → Verbinding testen."
+  echo "Open dan storvo.app en print. Test via Meer -> Labelprinter -> Verbinding testen."
 else
-  echo
-  echo "✗ De printhulp reageert nog niet. Kijk in het logbestand:"
-  echo "  $DIR/helper.err"
+  echo "✗ De printhulp reageert nog niet. Sluit de printer aan (Editor Lite uit) en"
+  echo "  kijk zo nodig in het logbestand: $DIR/helper.err"
 fi
 echo
 read -r -p "Druk op Enter om dit venster te sluiten."
