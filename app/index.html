@@ -206,7 +206,7 @@
   .pct.down{color:var(--red);}
   .kpi.accent .pct.up{color:#7ef0ae;}
   .kpi.accent .pct.down{color:#ffa08e;}
-  .chart .bar.vorig{background:#f2f7fc;}
+  .chart .bar.vorig{background:var(--soft-2);}
   .legend .lv::before{background:#f2f7fc; border:1px solid #e7edf6;}
 
   /* dag-navigatie */
@@ -855,7 +855,9 @@
   .kpi .l{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l);
     display:flex; align-items:center; gap:0; line-height:1.4;}
   .kpi .l::before{display:none;}
-  .kpi .v{font-family:'Sora',sans-serif; font-size:30px; font-weight:800; margin-top:8px; letter-spacing:-.02em;
+  /* Op een smal scherm liep een bedrag met zes cijfers (voorraadwaarde, maandomzet)
+     over de rand van de kaart. clamp laat het cijfer op de telefoon meekrimpen. */
+  .kpi .v{font-family:'Sora',sans-serif; font-size:clamp(22px,6.4vw,30px); font-weight:800; margin-top:8px; letter-spacing:-.02em;
     color:var(--text); line-height:1.15;}
   .kpi .v.groen{color:var(--green);} .kpi .v.oranje{color:var(--oranje);}
   .kpi.accent{background:var(--card);} .kpi.accent .l{color:var(--muted-l);} .kpi.accent .v{color:var(--oranje);}
@@ -3603,7 +3605,7 @@ function tekenAlles(){
     pasHuisstijlToe();
   }catch(e){ console.error('opnieuw tekenen:', e); }
 }
-function euro(n){ return '€ '+Number(n).toFixed(2).replace('.',','); }
+function euro(n){ return '€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function catNaam(id){ const c=state.categorieen.find(c=>c.id===id); return c?c.naam:'Overig'; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
