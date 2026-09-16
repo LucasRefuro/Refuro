@@ -333,9 +333,10 @@
   /* Link naar de refurbish-app. Ziet eruit als een menuknop, maar is een link
      naar een andere pagina; daarom een streepje erboven als scheiding. */
   .refurblink{display:flex; align-items:center; gap:11px; width:100%; padding:11px 16px;
-    margin-top:6px; border-radius:var(--pil); color:var(--muted); font-size:14px;
-    font-weight:600; text-decoration:none; transition:.16s;}
-  .refurblink:hover{background:var(--soft-2); color:var(--tekst);}
+    margin-bottom:8px; border-radius:var(--pil); color:var(--oranje); font-size:14px;
+    font-weight:700; text-decoration:none; transition:.16s; background:var(--lblauw);
+    border:1.5px solid transparent;}
+  .refurblink:hover{border-color:var(--oranje);}
 
   .wijzer{display:flex; align-items:center; gap:10px; background:var(--lblauw);
     color:var(--groen,#0B5B52); border-radius:14px; padding:12px 16px; margin-bottom:18px;
@@ -1777,10 +1778,10 @@
       <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
       <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     </div>
-    <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
   </nav>
   <div class="onderin">
+    <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <nav>
       <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
     </nav>
@@ -1952,8 +1953,11 @@
     </div>
   </div>
   <div class="card breed">
-    <h2>Snel verkopen</h2>
-    <p class="muted" style="margin-bottom:12px">Kies een soort. Je vult het model en de uitvoering in, en Storvo rekent de categorieprijs. Alles komt in 'Deze verkoop'; daarna reken je in één keer af.</p>
+    <div class="row" style="justify-content:space-between; align-items:center; gap:10px">
+      <h2 style="margin:0">Snel verkopen</h2>
+      <button class="btn ghost small" id="vkSoortenBeheer" hidden onclick="naarCategorieInstellingen()"><svg class="i s"><use href="#i-settings"/></svg>Soorten beheren</button>
+    </div>
+    <p class="muted" style="margin:10px 0 12px">Kies een soort. Je vult het model en de uitvoering in, en Storvo rekent de categorieprijs. Alles komt in 'Deze verkoop'; daarna reken je in één keer af.</p>
     <div class="blokjes" id="vkBlokjes"></div>
   </div>
   <div class="card breed">
@@ -4607,6 +4611,13 @@ function naarFactuurInstellingen(){
   showTab('instellingen');
   const b=document.querySelector('#instTabs [data-s="factuur"]'); if(b) b.click();
 }
+/* Vanaf de Verkoop-pagina snel naar de plek waar je de soorten (categorieën) van
+   'Snel verkopen' toevoegt of aanpast. Voorheen moest je zelf naar Instellingen →
+   Categorieën zoeken; deze knop maakt dat direct. */
+function naarCategorieInstellingen(){
+  showTab('instellingen');
+  const b=document.querySelector('#instTabs [data-s="cats"]'); if(b) b.click();
+}
 function renderFacturen(){
   const ev=document.getElementById('facEditVak'); if(ev){ ev.hidden=true; ev.innerHTML=''; }
   const lv=document.getElementById('facLijstVak'); if(lv) lv.hidden=false;
@@ -6617,6 +6628,7 @@ function renderVerkoop(){
   vulModellenLijst();
   if(typeof renderDiensten==='function') renderDiensten();   /* de diensten-kaart staat nu op dit scherm */
   const fb=document.getElementById('vkFeedback'); if(fb){ fb.className=''; fb.textContent=''; }
+  const soortKnop=document.getElementById('vkSoortenBeheer'); if(soortKnop) soortKnop.hidden = !mag('instellingen');
   const blok=document.getElementById('vkBlokjes');
   if(blok){
     blok.innerHTML = (state.categorieen.filter(c=>!c.systeem).map(c=>
