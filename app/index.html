@@ -483,7 +483,13 @@
   .inplanchip{display:inline-block; margin:3px 3px 0 0; padding:5px 10px; border:1px dashed var(--border); border-radius:var(--pil); background:var(--card); cursor:pointer; font-size:12px; font-weight:600; color:inherit;}
   .inplanchip:hover{border-color:var(--green); color:var(--green-tekst);}
   .inplanchip.op{opacity:.4;}
+  .inplanchip.geen{opacity:.55; border-style:dotted;}
   .beschhint{font-size:11.5px; color:var(--muted);}
+  .openrij{font-size:12.5px; font-weight:700; color:var(--green-tekst); background:var(--green-soft); border-radius:10px; padding:5px 9px; text-align:center;}
+  .openrij.dicht{color:var(--muted); background:var(--soft); font-weight:600;}
+  .dagkaart.gesloten{opacity:.72;}
+  .beschrij{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; font-weight:600; padding:4px 2px;}
+  .inplanrij{margin-top:4px;}
   .teamRij2{display:flex; flex-direction:column; gap:10px; padding:16px 0; border-top:1px solid var(--border);}
   .teamRij2 .kop{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
   .teamRij2 .kop b{font-size:15px;}
@@ -4024,6 +4030,26 @@ function uitbetalingTerug(id){
 let roosterMaandag=null;
 let roosterData={besch:[], diensten:[]};
 const DAG_KORT=['Ma','Di','Wo','Do','Vr','Za','Zo'];
+/* Vaste openingstijden van de winkel, per weekdag (index 0=maandag .. 6=zondag).
+   null = gesloten. Zo zie je in het rooster meteen de hele dag met de tijden die
+   ertoe doen. Wijzig je de openingstijden, dan pas je ze hier aan. */
+const OPENINGSTIJDEN=[
+  {van:'12:00', tot:'17:30'}, // maandag
+  {van:'10:00', tot:'17:30'}, // dinsdag
+  {van:'10:00', tot:'17:30'}, // woensdag
+  {van:'10:00', tot:'17:30'}, // donderdag
+  {van:'10:00', tot:'17:30'}, // vrijdag
+  {van:'10:00', tot:'17:00'}, // zaterdag
+  null                        // zondag gesloten
+];
+/* Hoe iemands beschikbaarheid in één regel te lezen is. Een paar uurtjes is even
+   belangrijk als de hele dag, dus tonen we de tijden als ze er zijn. */
+function beschikTekst(x){
+  if(x && x.van && x.tot) return x.van+'–'+x.tot;
+  if(x && x.van) return 'vanaf '+x.van;
+  if(x && x.tot) return 'tot '+x.tot;
+  return 'hele dag';
+}
 function roosterYmd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function roosterMaandagVan(d){ const x=new Date(d); const dag=(x.getDay()+6)%7; x.setDate(x.getDate()-dag); x.setHours(12,0,0,0); return x; }
 function roosterMagInplannen(){ return gebruiker && (gebruiker.rol==='eigenaar'||gebruiker.rol==='beheerder'); }
@@ -4091,37 +4117,64 @@ function tekenRooster(){
   const mag=roosterMagInplannen();
   const uitleg=document.getElementById('roosterUitleg');
   if(uitleg) uitleg.textContent = mag
-    ? 'Geef je eigen beschikbaarheid door en plan het team in. De stip staat bij wie zich voor die dag beschikbaar gaf; klik een naam om die in te plannen.'
-    : 'Geef per dag je beschikbaarheid door. De eigenaar plant het team in op basis daarvan.';
+    ? 'Je ziet de hele week met de openingstijden. Iedereen geeft zijn eigen beschikbaarheid door; klik een naam om die in te plannen. Alleen jij en de andere beheerders kunnen inplannen.'
+    : 'Geef per dag je beschikbaarheid door, ook een paar uurtjes. Een beheerder plant het team in. Je ziet zelf wie er al staat.';
   const vandaag=roosterYmd(new Date());
   const mijnId = gebruiker && gebruiker.id;
+  /* De eigenaar (Lucas) staat standaard niet in de inplanlijst: hij springt hooguit
+     bij, maar hoeft niet elke dag als keuze te verschijnen. Beheerders/medewerkers wel. */
+  const kandidaten = (teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam,rol:gebruiker.rol}]:[]))
+    .filter(m=>m.rol!=='eigenaar');
   inh.innerHTML=`<div class="roostergrid">${roosterDagen().map((d,i)=>{
     const ymd=roosterYmd(d);
+    const open=OPENINGSTIJDEN[i];
     const mij=(roosterData.besch||[]).find(x=>x.account_id===mijnId&&x.datum===ymd);
     const aan = mij ? mij.beschikbaar!==false : false;
     const diensten=(roosterData.diensten||[]).filter(x=>x.datum===ymd);
     const beschik=(roosterData.besch||[]).filter(x=>x.datum===ymd && x.beschikbaar!==false);
     const ingepland=new Set(diensten.map(x=>x.account_id));
+
+    const openrij = open
+      ? `<div class="openrij">Open ${open.van}–${open.tot}</div>`
+      : `<div class="openrij dicht">Gesloten</div>`;
+
+    // Ingepland: iedereen ziet wie er staat, met tijden. Beheerder kan weghalen.
+    const dienstHtml = diensten.length
+      ? diensten.map(x=>{ const tijd=(x.van||x.tot)?(' · '+(x.van||'')+(x.tot?'–'+x.tot:'')):''; return `<div class="dagdienst"><span>${esc(roosterNaam(x.account_id))}${esc(tijd)}</span>${mag?`<button class="wegknop" title="Weghalen" onclick="roosterDienstWeg('${x.id}')">&times;</button>`:''}</div>`; }).join('')
+      : '<p class="beschhint">Nog niemand ingepland.</p>';
+
+    // Beschikbaar: iedereen ziet wie zich meldde, met de uren (ook een paar uurtjes).
+    const beschHtml = beschik.length
+      ? beschik.map(x=>`<div class="beschrij"><span>${esc(roosterNaam(x.account_id))}</span><span class="muted klein">${esc(beschikTekst(x))}</span></div>`).join('')
+      : '<p class="beschhint">Niemand doorgegeven.</p>';
+
+    // Inplannen: alleen beheerders. Beschikbare mensen bovenaan (met stip), rest gedimd.
+    let inplan='';
+    if(mag){
+      inplan = `<div class="inplanrij">${kandidaten.map(m=>{
+        const op=ingepland.has(m.id);
+        if(op) return '';
+        const vrij=beschik.find(x=>x.account_id===m.id);
+        return `<span class="inplanchip${vrij?'':' geen'}" onclick="roosterInplan('${ymd}','${m.id}')" title="${vrij?'gaf beschikbaar op deze dag':'geen beschikbaarheid doorgegeven'}">${vrij?'● ':''}${esc(m.naam)}</span>`;
+      }).join('')}</div>`;
+    }
+
+    // Eigen beschikbaarheid doorgeven mag iedereen (zelfbediening); inplannen niet.
     const tijdrij = aan
       ? `<div class="tijdrij"><input type="time" value="${mij&&mij.van?mij.van:''}" onchange="zetBeschikbaar('${ymd}','van',this.value)"><span>tot</span><input type="time" value="${mij&&mij.tot?mij.tot:''}" onchange="zetBeschikbaar('${ymd}','tot',this.value)"></div>`
       : '';
-    const dienstHtml = diensten.length
-      ? diensten.map(x=>{ const tijd=(x.van||x.tot)?(' · '+(x.van||'')+(x.tot?'–'+x.tot:'')):''; return `<div class="dagdienst"><span>${esc(roosterNaam(x.account_id))}${esc(tijd)}</span>${mag?`<button class="wegknop" title="Weghalen" onclick="roosterDienstWeg('${x.id}')">&times;</button>`:''}</div>`; }).join('')
-      : (mag ? '' : '<p class="beschhint">Nog niemand ingepland.</p>');
-    let inplan='';
-    if(mag){
-      const kandidaten = teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam}]:[]);
-      inplan = `<div>${kandidaten.map(m=>{
-        const op=ingepland.has(m.id);
-        const vrij=beschik.some(x=>x.account_id===m.id);
-        return `<span class="inplanchip${op?' op':''}"${op?'':` onclick="roosterInplan('${ymd}','${m.id}')"`} title="${vrij?'gaf beschikbaar op deze dag':'geen beschikbaarheid doorgegeven'}">${vrij?'● ':''}${esc(m.naam)}</span>`;
-      }).join('')}</div>`;
-    }
-    return `<div class="dagkaart${ymd===vandaag?' vandaag':''}">
+    const zelfblok = open ? `
+      <div class="roosterscheiding"><div class="roosterlabel">Mijn beschikbaarheid</div>
+        <button type="button" class="beschtoggle${aan?' aan':''}" onclick="zetBeschikbaar('${ymd}','toggle')">${aan?'Ik ben beschikbaar':'Niet beschikbaar'}</button>
+        ${tijdrij}
+      </div>` : '';
+
+    return `<div class="dagkaart${ymd===vandaag?' vandaag':''}${open?'':' gesloten'}">
       <div class="dagkop"><b>${DAG_KORT[i]}</b> <span class="muted klein">${roosterKort(d)}</span></div>
-      <button type="button" class="beschtoggle${aan?' aan':''}" onclick="zetBeschikbaar('${ymd}','toggle')">${aan?'Ik ben beschikbaar':'Niet beschikbaar'}</button>
-      ${tijdrij}
-      <div class="roosterscheiding"><div class="roosterlabel">Ingepland</div>${dienstHtml}${inplan}</div>
+      ${openrij}
+      ${open ? `<div class="roosterscheiding"><div class="roosterlabel">Ingepland</div>${dienstHtml}${inplan}</div>
+      <div class="roosterscheiding"><div class="roosterlabel">Beschikbaar</div>${beschHtml}</div>` : ''}
+      ${zelfblok}
     </div>`;
   }).join('')}</div>`;
 }
@@ -4140,7 +4193,15 @@ async function zetBeschikbaar(ymd, veld, val){
 }
 async function roosterInplan(ymd, accountId){
   if(!roosterMagInplannen()) return;
-  const {error}=await sb.from('rooster').insert({account_id:accountId, datum:ymd});
+  /* De dienst krijgt meteen zinnige tijden: de doorgegeven beschikbaarheid van die
+     persoon als die er is, anders de openingstijden van die weekdag. Zo staat er niet
+     kaal een naam zonder uren, en kan de beheerder het achteraf nog bijstellen. */
+  const b=(roosterData.besch||[]).find(x=>x.account_id===accountId&&x.datum===ymd&&x.beschikbaar!==false);
+  const wd=(new Date(ymd+'T12:00:00').getDay()+6)%7;
+  const open=OPENINGSTIJDEN[wd];
+  const van=(b&&b.van)||(open&&open.van)||null;
+  const tot=(b&&b.tot)||(open&&open.tot)||null;
+  const {error}=await sb.from('rooster').insert({account_id:accountId, datum:ymd, van, tot});
   if(error){ toast('Inplannen mislukte','fout'); return; }
   await laadRooster();
 }
