@@ -15255,7 +15255,7 @@ async function renderWhatsapp(){
         ${mag?`<button class="btn" onclick="waStartKoppelen()">${ico('i-message')}Opnieuw koppelen</button>`
              :'<span class="muted klein">Vraag de eigenaar om opnieuw te koppelen.</span>'}
       </div>`;
-  } else {
+  } else if(inst && inst.platform){
     inhoud=`<div class="wakop">
         <span class="wabadge">${ico('i-check')}</span>
         <div class="watitel">
@@ -15278,6 +15278,24 @@ async function renderWhatsapp(){
             ? `<button class="btn ghost" id="wa_knop" onclick="waStartKoppelen()">${ico('i-message')}Mijn eigen nummer koppelen</button>
                <span class="muted klein">Duurt ongeveer twee minuten. Houd je telefoon bij de hand.</span>`
             : '<span class="muted klein">Alleen de eigenaar kan een eigen nummer koppelen.</span>'}
+      </div>`;
+  } else {
+    /* Er is nog helemaal geen WhatsApp-nummer (geen eigen koppeling en het platform-
+       nummer is niet ingesteld). Eerlijk melden i.p.v. doen alsof het werkt. */
+    inhoud=`<div class="wakop">
+        <span class="wabadge">${ico('i-bell')}</span>
+        <div class="watitel">
+          <b>WhatsApp is nog niet ingesteld</b>
+          <span class="muted">Er is nog geen WhatsApp-nummer gekoppeld, dus berichten naar klanten gaan nu alleen per e-mail. Koppel een zakelijk WhatsApp-nummer om ze ook via WhatsApp te sturen.</span>
+        </div>
+      </div>
+      <div class="wavoet">
+        ${!mag
+          ? '<span class="muted klein">Vraag de eigenaar om WhatsApp in te stellen.</span>'
+          : (inst && inst.beschikbaar
+              ? `<button class="btn" onclick="waStartKoppelen()">${ico('i-message')}Mijn nummer koppelen</button>
+                 <span class="muted klein">Duurt ongeveer twee minuten. Houd je telefoon bij de hand.</span>`
+              : '<span class="muted klein">Koppelen kan zodra WhatsApp is aangezet. Zie het WhatsApp-stappenplan, of vraag ernaar via info@storvo.nl.</span>')}
       </div>`;
   }
   vak.className='wakaart'+(gekoppeld?' aan':'');
