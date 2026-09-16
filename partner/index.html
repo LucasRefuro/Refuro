@@ -1141,7 +1141,7 @@ function rOnlineEdit(p){
     '<div class="checkrow"><input type="checkbox" id="o_mp"'+(p.mp?' checked':'')+'> <span>Staat op <b>Marktplaats</b></span></div>' +
   '</div>' +
   '<div class="savebar"><button class="btn green" onclick="saveOnline(\''+p.id+'\')">Klaar</button> ' +
-    '<button class="btn gray" style="color:#c0392b" onclick="delProduct(\''+p.id+'\')">Verwijderen</button></div>';
+    '<button class="btn gray" style="color:var(--red)" onclick="delProduct(\''+p.id+'\')">Verwijderen</button></div>';
   return html;
 }
 /* Een product uit het dashboard halen (afwijzen/verwijderen). Verkochte stuks blijven staan voor
@@ -1248,13 +1248,13 @@ function rProduct(id){
         : betaalLabel(u);
       html += '<tr><td>'+esc(u.datum||'')+'</td><td class="right">'+eur(u.prijs)+'</td><td class="right">'+eur(w.winst)+'</td>' +
         (u.deelGezet ? '<td class="right">'+eur(w.winkel)+'</td><td class="right">'+eur(w.deel)+'</td>' : '<td colspan="2" class="right"><span class="badge b-purple">verdeling → marge</span></td>') +
-        '<td>'+betaalCell+'</td><td>'+levBadge(u)+'</td><td><button class="btn gray sm" onclick="openSell(\''+p.id+'\',\''+u.id+'\')"></button></td></tr>';
+        '<td>'+betaalCell+'</td><td>'+levBadge(u)+'</td><td><button class="btn gray sm" onclick="openSell(\''+p.id+'\',\''+u.id+'\')">Wijzigen</button></td></tr>';
     });
     html += '</table></div></div>';
   }
   html += '<div class="savebar"><button class="btn green" onclick="saveProduct(\''+p.id+'\')"> Opslaan</button> ' +
     (vu.length ? '<button class="btn gray" onclick="saveProduct(\''+p.id+'\',true);printLabels(\''+p.id+'\')"> Labels printen ('+vu.length+')</button> ' : '') +
-    '<button class="btn gray" style="color:#c0392b" onclick="delProduct(\''+p.id+'\')">Verwijderen</button></div>';
+    '<button class="btn gray" style="color:var(--red)" onclick="delProduct(\''+p.id+'\')">Verwijderen</button></div>';
   return html;
 }
 function replaats(pid, k){
