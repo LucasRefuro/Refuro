@@ -2166,6 +2166,7 @@
     </div>
     <div id="prodBulk" hidden style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--lblauw); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:12px">
       <span id="prodBulkAantal" style="font-weight:700"></span>
+      <button class="btn small ghost" onclick="printBulkStickers(this)"><svg class="i s"><use href="#i-tag"/></svg>Stickers printen</button>
       <button class="btn small danger" onclick="verwijderBulk()"><svg class="i s"><use href="#i-trash"/></svg>Verwijder geselecteerde</button>
       <button class="btn small ghost" onclick="prodSelectieWissen()">Selectie wissen</button>
     </div>
@@ -5705,6 +5706,28 @@ async function qzPrintLabel(data){
   await printViaHelper(png, {label:breedte, red:tweekleuren, kopieen:data.kopieen||1});
   return true;
 }
+/* Barcode-sticker voor een product printen (naam + prijs + scanbare barcode). Voor
+   producten zonder barcode, zoals van MondiParts, kennen we hier een interne barcode toe
+   (INT-…); die staat op de sticker en de kassa herkent hem bij het scannen. */
+async function printProductSticker(id, stil, kopieen){
+  const p=state.producten.find(p=>String(p.id)===String(id)); if(!p) return false;
+  if(!p.barcode){ p.barcode='INT-'+uid(); save(); if(!stil) renderProducten(); }
+  try{
+    const ok=await qzPrintLabel({titel:p.naam, prijs:p.verkoop, code:p.barcode, kopieen:kopieen||1});
+    if(ok && !stil) toast('Sticker geprint', true);
+    return ok;
+  }catch(e){ if(!stil) toast('Printen mislukte. Staat de printhulp aan? Test via Meer, Labelprinter.','fout'); return false; }
+}
+async function printBulkStickers(knop){
+  const ids=[...prodGeselecteerd];
+  if(!ids.length){ toast('Selecteer eerst producten','let-op'); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  let n=0;
+  for(const id of ids){ if(await printProductSticker(id, true)) n++; }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+  renderProducten();
+  toast(n+' van '+ids.length+' stickers geprint', n===ids.length);
+}
 function renderLabelprinter(){
   const inst=labelInstelling();
   const b=document.getElementById('labelBreedte'); if(b) b.value=inst.breedte;
@@ -7688,7 +7711,8 @@ function renderProducten(){
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
       `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
       `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
-      `<td class="num"><button class="btn small ghost icoknop" title="Loopt uit / vervangen" onclick="uitloopOpen(${p.id})"><svg class="i s"><use href="#i-recycle"/></svg></button> `+
+      `<td class="num"><button class="btn small ghost icoknop" title="Barcode-sticker printen" onclick="printProductSticker(${p.id})"><svg class="i s"><use href="#i-tag"/></svg></button> `+
+      `<button class="btn small ghost icoknop" title="Loopt uit / vervangen" onclick="uitloopOpen(${p.id})"><svg class="i s"><use href="#i-recycle"/></svg></button> `+
       `<button class="btn small ghost icoknop" title="Bewerken" onclick="bewerk(${p.id})"><svg class="i s"><use href="#i-edit"/></svg></button> `+
       `<button class="btn small danger icoknop" title="Verwijderen" onclick="verwijder(${p.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
   document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="12" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
