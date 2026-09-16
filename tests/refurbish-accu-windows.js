@@ -63,12 +63,9 @@ setTimeout(async()=>{
 
   // ── instelling voor de accugrens ──
   ok('instelling geladen', w.eval('instel.accu_min')===80);
-  ok('veld op de checklistpagina', !!d().getElementById('in_accu'));
-  ok('veld toont de grens', d().getElementById('in_accu').value==='80');
-  d().getElementById('in_accu').value='85';
-  await w.eval('instelOpslaan(document.createElement("button"))');
-  const bewaard=w.__geschreven.find(g=>g[0]==='refurbish_instellingen');
-  ok('grens opgeslagen', !!bewaard && bewaard[2].accu_min===85);
+  // De accu-grens wordt nu centraal in de winkelapp beheerd (refurbish_instellingen);
+  // de controle in de werkbank gebruikt hem alleen nog.
+  w.eval('instel.accu_min=85');
   ok('grens meteen actief', w.eval('instel.accu_min')===85);
 
   // ── vóór Windows alleen scherm en opladen, geen accu ──

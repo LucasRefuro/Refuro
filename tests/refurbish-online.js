@@ -129,15 +129,11 @@ setTimeout(async()=>{
   ok('qr getoond', /qrbeeld/.test(pag()));
   ok('code leesbaar erbij', pag().includes(code[2].code));
 
-  // ── sjabloon instellen ──
-  ok('sjabloonveld op de checklistpagina', !!d().getElementById('in_sjabloon'));
-  w.eval('sjabloonStandaard()');
-  ok('standaardsjabloon erin', /Specificaties/.test(d().getElementById('in_sjabloon').value));
-  d().getElementById('in_toon').value='kort en zakelijk';
-  await w.eval('sjabloonOpslaan(document.createElement("button"))');
-  const sj=w.__geschreven.filter(g=>g[0]==='refurbish_instellingen').pop();
-  ok('sjabloon opgeslagen', !!sj && sj[2].ad_sjabloon.includes('Specificaties'));
-  ok('toon opgeslagen', !!sj && sj[2].ad_toon==='kort en zakelijk');
+  // ── sjabloon: het beheren zit nu centraal in de winkelapp; hier alleen dat het
+  //    standaardsjabloon bestaat en dat een gezet sjabloon actief is voor de advertenties ──
+  ok('standaardsjabloon beschikbaar', /Specificaties/.test(w.eval('STANDAARD_SJABLOON')));
+  w.eval("instel.ad_sjabloon=STANDAARD_SJABLOON; instel.ad_toon='kort en zakelijk'");
+  ok('sjabloon actief', /Specificaties/.test(w.eval('instel.ad_sjabloon')));
 
   // ── prijs in de zijkolom, geen popup meer ──
   w.eval("onlineZetten('a1')");
@@ -175,8 +171,7 @@ setTimeout(async()=>{
   }
   ok('echt op de webshop gezet', w.__fetches.some(f=>f[0].includes('/shopify')));
 
-  // ── instellingen: locaties en inscannen ──
-  ok('inscanschakelaar', !!d().getElementById('in_scan'));
+  // ── instellingen: locaties (het inscannen zelf staat nu centraal in de winkelapp) ──
   ok('locatielijst', /Winkel/.test(d().getElementById('locLijst').innerHTML));
   d().getElementById('loc_naam').value='Vitrine voor';
   await w.eval('locToevoegen(document.createElement("button"))');

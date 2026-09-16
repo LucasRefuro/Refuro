@@ -946,28 +946,14 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <a class="btn actie" href="/app/?tab=team" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-users"/></svg>Gebruikers beheren</a>
       </div>
 
+      <!-- Het sjabloon, het inscannen en de accu-grens zijn verhuisd naar de centrale
+           instellingen in Storvo (Instellingen → Refurbishen), zodat alle instellingen
+           op één plek staan. De velden hieronder (locaties, checklists, beeldscherm-
+           achtergrond) zijn visuele werkbank-schermen en blijven hier. -->
       <div class="card">
-        <h2><svg class="i"><use href="#i-sparkles"/></svg>Sjabloon voor je advertenties</h2>
-        <p class="muted" style="margin-bottom:14px; max-width:80ch">De opbouw staat hierin vast; de AI vult alleen in wat tussen accolades staat. Zo lijken al je advertenties op elkaar en herkent een koper na drie keer jouw manier van doen. Laat je het leeg, dan gebruiken we een standaardsjabloon.</p>
-        <textarea id="in_sjabloon" rows="12" placeholder="Laat leeg voor het standaardsjabloon"></textarea>
-        <div class="row" style="margin-top:12px">
-          <input id="in_toon" placeholder="Toon, bijvoorbeeld: zakelijk en eerlijk" style="flex:1; min-width:220px">
-          <button class="btn ghost small" onclick="sjabloonOpslaan(this)">Opslaan</button>
-          <button class="btn ghost small" onclick="sjabloonStandaard()">Standaard erin zetten</button>
-        </div>
-      </div>
-
-      <!-- Publiceren en in de winkel leggen zijn twee verschillende dingen.
-           Daartussen zit een busrit en een doos. -->
-      <div class="card">
-        <h2><svg class="i"><use href="#i-qr"/></svg>Inscannen als hij binnenkomt</h2>
-        <label class="schakelrij">
-          <input type="checkbox" id="in_scan" onchange="scanInstelling(this.checked)">
-          <div>
-            <div class="knaam">Een toestel telt pas mee als het is ingescand</div>
-            <div class="kuit">Na het publiceren staat hij op <b>onderweg</b>. Pas als iemand hem scant en een locatie kiest, staat hij echt in de voorraad. Zonder dit staat er van alles in je systeem dat nog in een doos zit.</div>
-          </div>
-        </label>
+        <h2><svg class="i"><use href="#i-settings"/></svg>Algemene instellingen staan in Storvo</h2>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Het advertentie-sjabloon, het inscannen en de accu-grens beheer je nu centraal in Storvo, onder <b>Instellingen → Refurbishen</b>. Zo staat alles op één plek. De locaties, checklists en beeldscherm-achtergrond hieronder horen bij de werkbank en blijven hier.</p>
+        <a class="btn actie" href="/app/?tab=instellingen" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-settings"/></svg>Open de instellingen in Storvo</a>
       </div>
 
       <div class="card">
@@ -1042,16 +1028,8 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       </div>
 
       <div class="card">
-        <h2><svg class="i"><use href="#i-check"/></svg>Wanneer is een accu nog goed</h2>
-        <p class="muted" style="margin-bottom:14px; max-width:80ch">Onder deze grens krijgt de medewerker bij de controle het advies om de accu te vervangen, met een knop om hem meteen op de reparatielijst te zetten.</p>
-        <div class="row">
-          <input id="in_accu" type="number" min="0" max="100" style="max-width:130px">
-          <span class="muted">procent van nieuw</span>
-          <button class="btn ghost small" onclick="instelOpslaan(this)">Opslaan</button>
-        </div>
-      </div>
-      <div class="card">
-        <p class="muted" style="margin-bottom:16px; max-width:80ch">Een checklist hangt aan een categorie, en eventueel aan één model. Laat je het model leeg, dan geldt hij voor alles in die categorie. Bij een controle worden beide lijsten achter elkaar gezet.</p>
+        <h2><svg class="i"><use href="#i-check"/></svg>Checklists</h2>
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Een checklist hangt aan een categorie, en eventueel aan één model. Laat je het model leeg, dan geldt hij voor alles in die categorie. Bij een controle worden beide lijsten achter elkaar gezet. De accu-grens zelf staat bij de centrale instellingen in Storvo.</p>
         <div id="clLijst"></div>
       </div>
     </section>

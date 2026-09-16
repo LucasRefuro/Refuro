@@ -2909,6 +2909,8 @@
       <button data-s="bedrijf"><svg class="i"><use href="#i-shop"/></svg>Bedrijf</button>
       <button data-s="klantpagina"><svg class="i"><use href="#i-globe"/></svg>Klantpagina</button>
       <button data-s="berichten"><svg class="i"><use href="#i-message"/></svg>Berichten</button>
+      <div class="instgroep">Werkbank</div>
+      <button data-s="refurbish"><svg class="i"><use href="#i-recycle"/></svg>Refurbishen</button>
       <div class="instgroep">Uiterlijk</div>
       <button data-s="huisstijl"><svg class="i"><use href="#i-palette"/></svg>Huisstijl</button>
       <button data-s="paginas"><svg class="i"><use href="#i-edit"/></svg>Pagina's</button>
@@ -2919,6 +2921,11 @@
     </nav>
 
     <div class="instpaneel">
+  <div class="card" id="inst-refurbish" hidden>
+    <h2><svg class="i"><use href="#i-recycle"/></svg>Refurbishen</h2>
+    <p class="muted" style="margin-bottom:16px">De instellingen van de werkbank, hier centraal. Wat je aanpast geldt meteen in de Refurbishen-omgeving.</p>
+    <div id="refurbInstVak"><p class="muted">Laden…</p></div>
+  </div>
   <div class="card" id="inst-snel">
     <h2><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</h2>
     <p class="muted" style="margin-bottom:14px">Voor accessoires die je in meerdere modellen hebt en die niet uit een leveranciersfeed komen, zoals van MondiParts of NovaNL. Leg de serie een keer vast en scan dan per model het doosje. Zit een product wel in je OneStopMobile-catalogus? Neem dan Los product toevoegen; daar vult het zich vanzelf.</p>
@@ -4664,6 +4671,67 @@ function naarFactuurInstellingen(){
 function naarCategorieInstellingen(){
   showTab('instellingen');
   const b=document.querySelector('#instTabs [data-s="cats"]'); if(b) b.click();
+}
+/* De werkbank-instellingen (Refurbishen) staan centraal in deze instellingen. Ze wonen
+   in de tabel refurbish_instellingen (team-RLS), dezelfde die de refurbish-app leest, dus
+   wat je hier zet geldt daar meteen. We raken alleen de algemene velden aan; de scherm-
+   achtergrond, locaties en checklists blijven visuele werkbank-schermen. */
+let refurbInst=null;
+async function renderRefurbishInst(){
+  const vak=document.getElementById('refurbInstVak'); if(!vak||!account) return;
+  if(!refurbInst){
+    try{ const {data}=await sb.from('refurbish_instellingen').select('ad_sjabloon,ad_toon,inscannen,accu_min').eq('team_id',account.team_id).maybeSingle(); refurbInst=data||{}; }
+    catch(e){ vak.innerHTML='<p class="muted">Kon de werkbank-instellingen niet laden.</p>'; return; }
+  }
+  const r=refurbInst;
+  vak.innerHTML=`
+    <div style="margin-bottom:26px">
+      <h3 style="font-family:'Sora',system-ui,sans-serif; font-size:16px; margin:0 0 6px">Sjabloon voor je advertenties</h3>
+      <p class="muted klein" style="margin-bottom:10px">De opbouw staat vast; de AI vult alleen in wat tussen accolades staat. Laat leeg voor het standaardsjabloon.</p>
+      <textarea id="rb_sjabloon" rows="9" style="width:100%" placeholder="Laat leeg voor het standaardsjabloon">${esc(r.ad_sjabloon||'')}</textarea>
+      <div class="row" style="margin-top:10px; align-items:flex-end">
+        <div style="flex:1; min-width:200px"><label>Toon</label><input id="rb_toon" value="${esc(r.ad_toon||'')}" placeholder="bijv. zakelijk en eerlijk"></div>
+        <button class="btn" onclick="refurbSjabloonOpslaan(this)">Sjabloon opslaan</button>
+      </div>
+    </div>
+    <div style="margin-bottom:26px; padding-top:20px; border-top:1px solid var(--border)">
+      <h3 style="font-family:'Sora',system-ui,sans-serif; font-size:16px; margin:0 0 8px">Inscannen als hij binnenkomt</h3>
+      <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; text-transform:none; letter-spacing:normal; font-weight:500; color:var(--text); font-size:14px">
+        <input type="checkbox" id="rb_scan" ${r.inscannen?'checked':''} onchange="refurbInstVeld('inscannen',this.checked)" style="width:18px; height:18px; margin-top:2px; accent-color:var(--oranje)">
+        <span>Een toestel telt pas mee als het is ingescand. Na publiceren staat hij op <b>onderweg</b>; pas na het scannen en een locatie kiezen staat hij echt in de voorraad.</span>
+      </label>
+    </div>
+    <div style="margin-bottom:8px; padding-top:20px; border-top:1px solid var(--border)">
+      <h3 style="font-family:'Sora',system-ui,sans-serif; font-size:16px; margin:0 0 8px">Wanneer is een accu nog goed</h3>
+      <div class="row" style="align-items:center; gap:10px">
+        <input type="number" id="rb_accu" min="0" max="100" style="max-width:120px" value="${r.accu_min!=null?r.accu_min:85}" onchange="refurbInstVeld('accu_min',this.value)">
+        <span class="muted">procent of hoger telt als goed. Daaronder krijg je in de controle het advies om de accu te vervangen.</span>
+      </div>
+    </div>
+    <div class="infobox" style="margin-top:22px">De <b>locaties</b>, de <b>checklists</b> en de <b>beeldscherm-achtergrond</b> stel je in de werkbank zelf in, want dat zijn visuele schermen.
+      <a class="btn ghost small" style="margin-top:10px; display:inline-flex" href="/refurbish/" target="_blank" rel="noopener"><svg class="i s"><use href="#i-recycle"/></svg>Open de werkbank</a></div>`;
+}
+function refurbInstVeld(veld, val){
+  if(!refurbInst) refurbInst={};
+  if(veld==='accu_min') val=Math.max(0, Math.min(100, Number(val)||85));
+  refurbInst[veld]=(veld==='inscannen')?!!val:val;
+  refurbInstBewaar();
+}
+async function refurbSjabloonOpslaan(knop){
+  if(!refurbInst) refurbInst={};
+  refurbInst.ad_sjabloon=(document.getElementById('rb_sjabloon').value||'').trim()||null;
+  refurbInst.ad_toon=(document.getElementById('rb_toon').value||'').trim()||'zakelijk en eerlijk';
+  await refurbInstBewaar(knop);
+}
+async function refurbInstBewaar(knop){
+  if(!account) return;
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  const rij={team_id:account.team_id, ad_sjabloon:refurbInst.ad_sjabloon||null, ad_toon:refurbInst.ad_toon||null,
+    inscannen:!!refurbInst.inscannen, accu_min:Number(refurbInst.accu_min)||85, bijgewerkt_op:new Date().toISOString()};
+  const {error}=await sb.from('refurbish_instellingen').upsert(rij,{onConflict:'team_id'});
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+  if(error){ toast('Opslaan mislukte','fout'); return; }
+  toast('Werkbank-instelling opgeslagen', true);
 }
 function renderFacturen(){
   const ev=document.getElementById('facEditVak'); if(ev){ ev.hidden=true; ev.innerHTML=''; }
@@ -9227,12 +9295,13 @@ document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('cli
 }));
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','leveranciers','abonnement','backup'].forEach(s=>{
-    document.getElementById('inst-'+s).hidden = s!==b.dataset.s;
+  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
+    const el=document.getElementById('inst-'+s); if(el) el.hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
   if(b.dataset.s==='webshop') shopStatus();
   if(b.dataset.s==='factuur') facBedrijfVul();
+  if(b.dataset.s==='refurbish') renderRefurbishInst();
 }));
 
 
