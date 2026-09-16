@@ -5748,8 +5748,8 @@ function labelPngVouw(data, breedteMm, dpmm){
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
   ctx.save();
-  ctx.translate(W, 0);
-  ctx.rotate(Math.PI/2);        // 90° met de klok mee -> inhoud komt op x = half..W
+  ctx.translate(0, H);
+  ctx.rotate(-Math.PI/2);       // kwart slag naar links (tegen de klok in) -> inhoud op de linkerhelft (x = 0..half)
   ctx.drawImage(rf, 0, 0);
   ctx.restore();
   // Dunne vouwlijn in het midden, als hulp bij het vouwen.
