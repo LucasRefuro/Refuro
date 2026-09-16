@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Accu meten · Storvo</title>
+<link rel="icon" href="/merk/app-icoon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* Accu van een laptop meten en het percentage terugsturen naar Storvo.
+   Belangrijk: een browser kan de accugezondheid niet uitlezen, en via een USB-kabel
+   kan de winkel-Mac de accu van een andere laptop ook niet lezen. Daarom draait de
+   meting op de laptop zelf: je plakt één regel in PowerShell (of Terminal), die het
+   percentage berekent en naar dezelfde edge function stuurt die de telefoontest ook
+   gebruikt. Geen inlog nodig; de code van een half uur is het enige toegangsbewijs. */
+:root{
+  --groen:#0B5B52; --oranje:#E88A1D; --bg:#F7F6F3; --card:#fff; --border:#ECEAE4;
+  --tekst:#17201E; --muted:#5B6663; --muted-l:#8A938F; --lblauw:#E7F1EE;
+  --green-soft:#E3F4EC; --green-tekst:#177A51; --red-soft:#FAE4E4; --red-tekst:#A33333;
+  --pil:100px;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+[hidden]{display:none !important;}
+body{font-family:'Instrument Sans',system-ui,sans-serif; background:var(--bg); color:var(--tekst);
+  font-size:16px; line-height:1.55; padding:22px 18px calc(22px + env(safe-area-inset-bottom));
+  max-width:640px; margin:0 auto;}
+h1{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.02em;}
+.kop{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+.kop .mark{width:34px; height:34px; flex:none;}
+.muted{color:var(--muted);} .klein{font-size:13.5px;}
+.kaart{background:var(--card); border-radius:20px; padding:20px; margin-top:16px;
+  box-shadow:0 6px 24px rgba(23,32,30,.07);}
+.apparaatpil{display:inline-flex; align-items:center; gap:8px; background:var(--lblauw);
+  color:var(--groen); font-weight:700; border-radius:var(--pil); padding:7px 14px; font-size:14px; margin-top:4px;}
+.ostabs{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+.ostab{flex:1; min-width:96px; padding:11px 8px; border:1.5px solid var(--border); background:var(--card);
+  border-radius:14px; font-family:inherit; font-size:14.5px; font-weight:700; color:var(--muted); cursor:pointer;}
+.ostab.aan{border-color:var(--groen); background:var(--green-soft); color:var(--green-tekst);}
+.stap{display:flex; gap:12px; margin-bottom:14px;}
+.stapnr{flex:none; width:26px; height:26px; border-radius:50%; background:var(--groen); color:#fff;
+  font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center;}
+.stap b{font-weight:700;}
+pre{background:#12211E; color:#EAF3F0; border-radius:14px; padding:14px; overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; line-height:1.5; white-space:pre; margin:6px 0 0;}
+.btn{display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+  padding:15px 20px; border:none; border-radius:var(--pil); font-family:inherit;
+  font-size:16px; font-weight:700; cursor:pointer; background:var(--groen); color:#fff; margin-top:14px;}
+.btn.actie{background:var(--oranje);} .btn:disabled{opacity:.5;}
+.status{margin-top:16px; padding:16px; border-radius:16px; text-align:center; font-weight:700;}
+.status.wacht{background:var(--lblauw); color:var(--groen);}
+.status.klaar{background:var(--green-soft); color:var(--green-tekst); font-size:20px; font-family:'Sora',sans-serif;}
+.status.fout{background:var(--red-soft); color:var(--red-tekst);}
+.spin{display:inline-block; width:15px; height:15px; border:2.5px solid var(--groen); border-top-color:transparent;
+  border-radius:50%; animation:draai .8s linear infinite; vertical-align:-2px; margin-right:8px;}
+@keyframes draai{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+  <div class="kop">
+    <span class="mark"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <div><h1>Accu meten</h1><div class="muted klein">Doe dit op de laptop die je test</div></div>
+  </div>
+
+  <div id="apparaatVak"></div>
+
+  <div class="kaart" id="hoofdkaart" hidden>
+    <p class="muted" style="margin-bottom:14px">Kies het besturingssysteem van de laptop en plak het commando. Het leest de accugezondheid uit en stuurt het percentage vanzelf naar Storvo.</p>
+    <div class="ostabs" id="osTabs">
+      <button class="ostab" data-os="win" onclick="kiesOs('win')">Windows</button>
+      <button class="ostab" data-os="mac" onclick="kiesOs('mac')">Mac</button>
+      <button class="ostab" data-os="linux" onclick="kiesOs('linux')">Linux</button>
+    </div>
+    <div id="stappen"></div>
+    <button class="btn actie" id="kopieerKnop" onclick="kopieer(this)">Kopieer het commando</button>
+    <div class="status wacht" id="status"><span class="spin"></span>Wachten op de meting van de laptop…</div>
+  </div>
+
+  <div class="kaart" id="foutKaart" hidden>
+    <div class="status fout" id="foutTekst"></div>
+  </div>
+
+<script>
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+const CODE=(new URLSearchParams(location.search).get('c')||'').trim().toUpperCase();
+const FUNC=SUPABASE_URL+'/functions/v1/refurbish-test';
+
+async function praat(body){
+  const res=await fetch(FUNC,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},body:JSON.stringify(Object.assign({code:CODE},body))});
+  return res.json().catch(()=>({}));
+}
+
+/* De commando's per besturingssysteem. De code en de (publieke) anon-sleutel zitten
+   erin gebakken, zodat het één keer plakken is. Windows leest de Smart Battery via
+   WMI (ontwerp- en volledige capaciteit) en deelt die; Mac leest "Maximum Capacity"
+   uit system_profiler met ioreg als terugval; Linux gebruikt upower met sysfs als
+   terugval. Overal sturen we één geheel getal 0-100 als accu. */
+function cmdWin(){
+  return `$u='${FUNC}'
+$d=(Get-CimInstance -Namespace ROOT\\WMI -ClassName BatteryStaticData -ErrorAction SilentlyContinue | Select-Object -First 1).DesignedCapacity
+$f=(Get-CimInstance -Namespace ROOT\\WMI -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue | Select-Object -First 1).FullChargedCapacity
+if(-not $d -or -not $f){ Write-Host 'Kon de accu niet automatisch lezen. Lees het percentage af in de instellingen en vul het met de hand in Storvo in.'; return }
+$p=[int][math]::Round(($f/$d)*100)
+Invoke-RestMethod -Method Post -Uri $u -Headers @{ apikey='${SUPABASE_ANON_KEY}'; 'Content-Type'='application/json' } -Body (@{ code='${CODE}'; resultaat=@{ accu=$p } } | ConvertTo-Json) | Out-Null
+Write-Host "Accu $p% verstuurd naar Storvo. Je kunt dit venster sluiten."`;
+}
+function cmdMac(){
+  return `P=$(system_profiler SPPowerDataType 2>/dev/null | awk -F': ' '/Maximum Capacity/{gsub(/[^0-9]/,"",$2); print $2; exit}')
+[ -z "$P" ] && P=$(ioreg -r -c AppleSmartBattery | awk '/"AppleRawMaxCapacity"/{m=$NF} /"DesignCapacity"/{d=$NF} END{if(d>0) printf "%.0f", m/d*100}')
+[ -z "$P" ] && { echo "Kon de accu niet lezen. Lees Maximum Capacity af en vul het met de hand in Storvo in."; } || curl -s -X POST '${FUNC}' -H 'apikey: ${SUPABASE_ANON_KEY}' -H 'Content-Type: application/json' -d "{\\"code\\":\\"${CODE}\\",\\"resultaat\\":{\\"accu\\":$P}}" >/dev/null && echo "Accu $P% verstuurd naar Storvo. Je kunt dit venster sluiten."`;
+}
+function cmdLinux(){
+  return `P=$(upower -i $(upower -e | grep -m1 BAT) 2>/dev/null | awk -F: '/capacity/{gsub(/[^0-9.]/,"",$2); printf "%.0f",$2; exit}')
+if [ -z "$P" ]; then d=$(cat /sys/class/power_supply/BAT*/charge_full_design 2>/dev/null | head -1); f=$(cat /sys/class/power_supply/BAT*/charge_full 2>/dev/null | head -1); [ -n "$d" ] && [ "$d" -gt 0 ] && P=$(( f*100/d )); fi
+[ -z "$P" ] && echo "Kon de accu niet lezen. Vul het met de hand in Storvo in." || curl -s -X POST '${FUNC}' -H 'apikey: ${SUPABASE_ANON_KEY}' -H 'Content-Type: application/json' -d "{\\"code\\":\\"${CODE}\\",\\"resultaat\\":{\\"accu\\":$P}}" >/dev/null && echo "Accu $P% verstuurd naar Storvo."`;
+}
+const STAPPEN={
+  win:{opener:'Open <b>PowerShell</b> (klik op Start, typ "PowerShell", Enter).', cmd:cmdWin},
+  mac:{opener:'Open <b>Terminal</b> (Spotlight met Cmd+spatie, typ "Terminal", Enter).', cmd:cmdMac},
+  linux:{opener:'Open een <b>Terminal</b>.', cmd:cmdLinux},
+};
+let huidigeOs='win';
+
+function kiesOs(os){
+  huidigeOs=os;
+  document.querySelectorAll('.ostab').forEach(b=>b.classList.toggle('aan', b.dataset.os===os));
+  const s=STAPPEN[os];
+  document.getElementById('stappen').innerHTML=`
+    <div class="stap"><div class="stapnr">1</div><div>${s.opener}</div></div>
+    <div class="stap"><div class="stapnr">2</div><div><b>Plak</b> dit en druk op Enter:<pre id="cmdBox">${escapeHtml(s.cmd())}</pre></div></div>`;
+}
+function escapeHtml(t){ return t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function kopieer(knop){
+  const tekst=STAPPEN[huidigeOs].cmd();
+  try{ await navigator.clipboard.writeText(tekst); knop.textContent='Gekopieerd — nu plakken en Enter'; }
+  catch(e){ const r=document.createRange(); r.selectNodeContents(document.getElementById('cmdBox')); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); knop.textContent='Selecteer alles en kopieer (Cmd/Ctrl+C)'; }
+  setTimeout(()=>{ knop.textContent='Kopieer het commando'; }, 3500);
+}
+
+function detecteerOs(){
+  const p=(navigator.platform||'')+' '+(navigator.userAgent||'');
+  if(/Mac/i.test(p)) return 'mac';
+  if(/Linux|X11/i.test(p) && !/Android/i.test(p)) return 'linux';
+  return 'win';
+}
+
+function toonFout(t){
+  document.getElementById('hoofdkaart').hidden=true;
+  document.getElementById('foutKaart').hidden=false;
+  document.getElementById('foutTekst').textContent=t;
+}
+
+/* De laptop post het percentage rechtstreeks naar de function. De bevestiging halen
+   we hier op met actie:'status': die geeft de uitslag van de code terug (geen inlog
+   nodig, de code is het toegangsbewijs). Zodra er een accu binnen is, tonen we die. */
+let klaar=false;
+async function haalStatus(){
+  if(klaar) return;
+  try{
+    const j=await praat({actie:'status'});
+    if(j && j.ok && j.resultaat && typeof j.resultaat.accu==='number'){
+      klaar=true;
+      const st=document.getElementById('status');
+      st.className='status klaar';
+      st.textContent='Accu ontvangen: '+j.resultaat.accu+'%';
+    }
+  }catch(e){}
+}
+
+async function start(){
+  if(!CODE){ toonFout('Geen code in de link. Maak in Storvo opnieuw een accumeting aan en scan de QR.'); return; }
+  // Welk apparaat is dit?
+  try{
+    const j=await praat({actie:'kijken'});
+    if(j && j.ok && j.apparaat){
+      const a=j.apparaat;
+      const naam=[a.merk,a.model].filter(Boolean).join(' ')||('Toestel '+(a.code||''));
+      document.getElementById('apparaatVak').innerHTML=`<div class="apparaatpil">${(a.code?a.code+' · ':'')}${naam.replace(/[<>]/g,'')}</div>`;
+    } else if(j && j.error){
+      toonFout(j.error); return;
+    }
+  }catch(e){ toonFout('Geen verbinding. Zorg dat de laptop internet heeft en probeer opnieuw.'); return; }
+  document.getElementById('hoofdkaart').hidden=false;
+  kiesOs(detecteerOs());
+  haalStatus();
+  setInterval(haalStatus, 3000);
+}
+start();
+</script>
+</body>
+</html>

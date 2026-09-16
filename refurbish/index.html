@@ -3357,7 +3357,61 @@ function ctrAccublok(){
     <label style="margin-top:12px">Notitie bij de accu</label>
     <input id="c_accu_notitie" value="${esc(ctr.accuNotitie||'')}" maxlength="60" placeholder="bijv. accu in slechte staat" oninput="ctrAccuNotitie(this.value)" style="width:100%">
     <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Het percentage en de notitie komen op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%.</p>
+    ${!prof().hardware.some(q=>q.test) ? accuTestBlok() : ''}
   </div>`;
+}
+/* Accu automatisch meten op de laptop zelf. Een browser kan de accugezondheid niet
+   lezen, en de winkel-Mac kan het via een kabel ook niet van een andere laptop lezen:
+   de meting hoort op de laptop te draaien. We hergebruiken de telefoontest-plumbing
+   (dezelfde code-rij en edge function): op de laptop open je /refurbish/accu met de
+   code, plakt daar één regel, en die stuurt het percentage terug. Hier haal je het op. */
+function accuTestBlok(){
+  if(ctr.accutestcode && ctr.accutestqr){
+    return `<div class="testapp" style="margin-top:14px">
+      <div class="clkop">Accu automatisch meten</div>
+      <p class="muted klein" style="margin-bottom:12px">Open dit op de <b>laptop die je test</b>: scan de QR of ga naar <b>${esc(location.host)}/refurbish/accu</b> en vul code <b>${esc(ctr.accutestcode)}</b> in. Plak daar het commando; het accupercentage komt hier vanzelf binnen.</p>
+      <img class="qrbeeld" src="${esc(ctr.accutestqr)}" alt="">
+      <button class="btn actie small" style="width:100%; margin-top:10px" onclick="accuTestOphalen(this)">Haal het accupercentage op</button>
+    </div>`;
+  }
+  return `<div class="testapp" style="margin-top:14px">
+    <div class="clkop">Accu automatisch meten</div>
+    <p class="muted klein" style="margin-bottom:12px">Moeilijk af te lezen? Laat de laptop het zelf meten en terugsturen, met één regel plakken. Geen kabel of installatie nodig.</p>
+    <button class="btn actie small" onclick="accuTestStart(this)"><svg class="i s"><use href="#i-qr"/></svg>Meet de accu op de laptop</button>
+  </div>`;
+}
+async function accuTestStart(knop){
+  await bezig(knop, async()=>{
+    const code=Math.random().toString(36).slice(2,8).toUpperCase();
+    const {error}=await sb.from('refurbish_testcodes').insert({
+      code, team_id:account.team_id, apparaat_id:ctr.a.id,
+      vervalt:new Date(Date.now()+30*60000).toISOString()
+    });
+    if(error) throw new Error('De code kon niet aangemaakt worden');
+    const doel=location.origin+'/refurbish/accu?c='+code;
+    ctr.accutestcode=code;
+    ctr.accutestqr='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
+    ctrTeken();
+  });
+}
+async function accuTestOphalen(knop){
+  if(!ctr.accutestcode){ toast('Start eerst een meting','let-op'); return; }
+  await bezig(knop, async()=>{
+    const {data}=await sb.from('refurbish_testcodes').select('resultaat').eq('code', ctr.accutestcode).maybeSingle();
+    const uit=data&&data.resultaat;
+    if(!uit || typeof uit.accu!=='number'){ toast('Nog geen meting. Plak het commando op de laptop.','let-op'); return; }
+    /* Alleen invullen als er nog geen getal staat, zodat een met de hand ingevoerde
+       meting niet stil wordt overschreven (net als bij de telefoontest). */
+    if(!ctr.accu){
+      ctrAccu(String(uit.accu));
+      const inp=document.getElementById('c_accu'); if(inp) inp.value=String(uit.accu);
+      toast('Accu gemeten: '+uit.accu+'%', true);
+    } else if(String(ctr.accu)!==String(uit.accu)){
+      toast('Je had al '+ctr.accu+'% ingevuld; de meting ('+uit.accu+'%) is niet overschreven.','let-op');
+    } else {
+      toast('Accu bevestigd: '+uit.accu+'%', true);
+    }
+  });
 }
 /* Het advies onder het accuveld staat apart, zodat het live kan meelopen zonder
    het hele scherm opnieuw te tekenen. Deed het dat wel, dan was je bij een

@@ -60,6 +60,16 @@ Deno.serve(async (req) => {
     }), { headers: cors });
   }
 
+  // De uitslag opvragen: de laptop-accupagina post het percentage rechtstreeks en
+  // pollt daarna met deze actie om te tonen dat het aankwam. Geen inlog: de geldige,
+  // niet-verlopen code is het toegangsbewijs, net als bij het schrijven.
+  if (lijf?.actie === "status") {
+    return new Response(JSON.stringify({
+      ok: true,
+      resultaat: sleutel.resultaat || null,
+    }), { headers: cors });
+  }
+
   // De uitslag: een object met testsleutel -> 'ok' | 'fout'. Alleen bekende
   // sleutels en geldige waarden bewaren we, zodat er niets vreemds op de rij komt.
   const binnen = (lijf?.resultaat && typeof lijf.resultaat === "object") ? lijf.resultaat : null;
