@@ -337,6 +337,11 @@
     font-weight:700; text-decoration:none; transition:.16s; background:var(--lblauw);
     border:1.5px solid transparent;}
   .refurblink:hover{border-color:var(--oranje);}
+  /* Scan is een actie, geen pagina: een accentkleur zodat hij opvalt en niet
+     wegvalt. Bovenaan het menu, in plaats van los in de topbalk. */
+  aside nav button.navscan{background:var(--green-soft); color:var(--green-tekst); font-weight:700; margin-bottom:6px;}
+  aside nav button.navscan:hover{background:var(--oranje); color:#fff;}
+  aside nav button.navscan .i{color:inherit;}
 
   .wijzer{display:flex; align-items:center; gap:10px; background:var(--lblauw);
     color:var(--groen,#0B5B52); border-radius:14px; padding:12px 16px; margin-bottom:18px;
@@ -1764,6 +1769,7 @@
     <div><div class="name" id="logoNaam">storvo</div><div class="sub" id="logoSub">Alles geregeld</div></div>
   </div>
   <nav>
+    <button class="navscan" onclick="qrScanOpen()"><svg class="i"><use href="#i-scan"/></svg> Scan een label</button>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
     <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
     <button data-tab="producten"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdNavBadge" style="display:none">0</span></button>
@@ -1800,7 +1806,6 @@
       <span class="ic"><svg class="i s"><use href="#i-search"/></svg></span>
       <input id="globaalZoek" placeholder="Zoek product, reparatie of klant" autocomplete="off" oninput="globaalZoeken()" onblur="setTimeout(()=>{const r=document.getElementById('zoekRes'); if(r) r.remove();},180)">
     </div>
-    <button class="topscan" onclick="qrScanOpen()" aria-label="Scannen"><svg class="i"><use href="#i-scan"/></svg><span>Scan</span></button>
     <div class="syncstatus" id="syncStatus" style="display:none"></div>
     <div class="topuser" id="topUser" onclick="uitloggen()"></div>
   </div>
@@ -3461,7 +3466,9 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
 
 /* ---------- navigatie ---------- */
-document.querySelectorAll('aside nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+/* Alleen echte tab-knoppen wisselen van pagina. De Scan-knop is een actie (opent de
+   camera) met een eigen onclick en heeft geen data-tab; die slaan we hier over. */
+document.querySelectorAll('aside nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 function showTab(t){
   /* Een pagina die uitstaat of die deze rol niet mag zien, gaat ook niet open
      via een link of een snelkoppeling. */
