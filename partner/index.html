@@ -279,6 +279,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
    zonder opnieuw in te loggen. */
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let PARTNER_ID = null, ACCOUNT = null;
+/* Toegang tot een omgeving, per gebruiker ingesteld in de winkelapp (accounts.tabs:
+   'env_set' + 'env_refurbish'/'env_partner'). Alleen voor interne teamleden; externe
+   partners (rol 'partner') vallen hier niet onder. Zelfde helper als in de winkelapp. */
+function heeftOmgeving(u, key){
+  if(!u) return false;
+  if(u.rol==='eigenaar') return true;
+  const t=Array.isArray(u.tabs)?u.tabs:[];
+  if(t.includes('env_set')) return t.includes('env_'+key);
+  return key==='refurbish';
+}
 /* Bekijk-modus: de eigenaar opent het dashboard van een partner vanuit de winkelapp met
    ?bekijk=<partner_id>. Dan tonen we die partner ALLEEN-LEZEN (de RLS staat de eigenaar toe
    zijn rij te lezen; schrijven blokkeert de RLS toch, en save()/pushRemote doen niets). */
@@ -524,7 +534,7 @@ try { sb.auth.onAuthStateChange((event)=>{ if (event === 'PASSWORD_RECOVERY') to
    eigenaar of een teamlid kan hier inloggen (gedeelde sessie met de winkelapp). */
 async function naLogin(session){
   if (!session) return;
-  const { data: acc } = await sb.from('accounts').select('id,naam,rol,team_id').eq('id', session.user.id).maybeSingle();
+  const { data: acc } = await sb.from('accounts').select('id,naam,rol,team_id,tabs').eq('id', session.user.id).maybeSingle();
   if (!acc){
     f('loginerr').textContent = 'Je account is niet gevonden.';
     f('loginerr').style.display='block';
@@ -539,6 +549,13 @@ async function naLogin(session){
     catch(e){ USER = 'Partner'; }
     toonBekijkBalk();
   } else {
+    /* Interne teamleden (winkel) mogen hier alleen als de eigenaar dat gaf bij Team →
+       Gebruikers. Externe partners (rol 'partner') hebben altijd hun eigen dashboard. */
+    const intern = ['eigenaar','beheerder','medewerker'].includes(acc.rol);
+    if (intern && !heeftOmgeving(acc, 'partner')) {
+      document.body.innerHTML = '<div style="max-width:460px;margin:80px auto;padding:28px;font-family:system-ui,sans-serif;text-align:center"><div style="width:48px;height:48px;margin:0 auto 16px"><svg viewBox="0 0 400 400"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2 style="font-family:sans-serif;margin:0 0 8px">Geen toegang tot het partner-dashboard</h2><p style="color:#5B6663;line-height:1.6">De eigenaar heeft je hier nog geen toegang toe gegeven. Vraag hem om je toegang te geven bij Team, Gebruikers.</p><a href="/app/" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#0B5B52;color:#fff;border-radius:100px;text-decoration:none;font-weight:700">Naar de winkel</a></div>';
+      return;
+    }
     PARTNER_ID = acc.id; USER = acc.naam || 'Partner';
     /* Zorg dat er een werkruimte is. Een echte partner heeft die al; de eigenaar of
        een teamlid die zelf dit dashboard gebruikt, krijgt hem hier aangemaakt. De RLS

@@ -1077,6 +1077,16 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 let account=null, abonnement=null;
+/* Toegang tot een omgeving, per gebruiker ingesteld in de winkelapp (accounts.tabs:
+   'env_set' + 'env_refurbish'/'env_partner'). Bestaande accounts zonder env_set houden
+   de standaard: de werkbank aan. Zelfde helper als in de winkelapp. */
+function heeftOmgeving(u, key){
+  if(!u) return false;
+  if(u.rol==='eigenaar') return true;
+  const t=Array.isArray(u.tabs)?u.tabs:[];
+  if(t.includes('env_set')) return t.includes('env_'+key);
+  return key==='refurbish';
+}
 /* Heeft deze winkel een externe voorraadpartner (StockDeck)? Zo niet, dan is de
    portaal-bediening op elke rij en het dashboard-vinkje alleen maar ruis; we
    verbergen die dan. */
@@ -1196,6 +1206,13 @@ async function start(){
   if(!abonnement || !Array.isArray(abonnement.modules) || !abonnement.modules.includes('refurbish')){
     slot('Refurbishen zit niet in je pakket',
       'Deze module koop je erbij. Vraag hem aan via info@storvo.nl, dan zetten we hem voor je aan.',
+      'Terug naar de winkel','/app/'); return;
+  }
+  /* Toegang per gebruiker: de eigenaar zet bij Team → Gebruikers per teamlid aan of
+     hij bij de werkbank mag. Bestaande accounts (zonder env_set) mogen standaard wel. */
+  if(!heeftOmgeving(account,'refurbish')){
+    slot('Geen toegang tot Refurbishen',
+      'De eigenaar heeft je (nog) geen toegang tot de werkbank gegeven. Vraag hem om je toegang te geven bij Team, Gebruikers.',
       'Terug naar de winkel','/app/'); return;
   }
 
