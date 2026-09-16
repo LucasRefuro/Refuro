@@ -506,6 +506,48 @@
   .teamRij2 summary::after{content:'›'; margin-left:auto; color:var(--muted); font-size:20px; line-height:1; transform:rotate(90deg); transition:transform .15s;}
   .teamRij2[open] summary::after{transform:rotate(-90deg);}
   .wachtTag{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
+  /* ─ Gebruikersbeheer: lijst met kaarten en een detailpagina per gebruiker ─ */
+  .usercard{display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:13px 16px; margin-bottom:10px; cursor:pointer; font-family:inherit; transition:border-color .14s, box-shadow .14s;}
+  .usercard:hover{border-color:var(--oranje); box-shadow:0 4px 16px rgba(11,91,82,.08);}
+  .usercard.wacht{cursor:default;}
+  .usercard.wacht:hover{border-color:var(--border); box-shadow:none;}
+  .uav{width:44px; height:44px; flex:none; border-radius:50%; background:var(--lblauw); color:var(--oranje); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;}
+  .uav.groot{width:60px; height:60px; font-size:24px;}
+  .ucinfo{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+  .ucinfo b{font-size:15px; display:flex; align-items:center;}
+  .ucacts{display:flex; gap:6px; flex:none;}
+  .ucchev{width:20px; height:20px; color:var(--muted); flex:none;}
+  .jijtag{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:var(--lblauw); color:var(--oranje); border-radius:var(--pil); padding:2px 8px; margin-left:8px;}
+  .terugknop{display:inline-flex; align-items:center; gap:8px; background:none; border:none; color:var(--muted); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; padding:2px 0; margin-bottom:12px;}
+  .terugknop:hover{color:var(--oranje);}
+  .detailkop{display:flex; align-items:center; gap:16px;}
+  .detailnaam{font-family:'Sora',system-ui,sans-serif; font-size:20px; font-weight:800; display:flex; align-items:center;}
+  .detailsectie{margin-top:22px;}
+  .sectielabel{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+  .segment{display:inline-flex; background:var(--soft-2); border-radius:12px; padding:3px; gap:2px;}
+  .segknop{border:none; background:none; padding:8px 18px; border-radius:9px; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer;}
+  .segknop.aan{background:var(--card); color:var(--oranje); box-shadow:0 1px 3px rgba(18,63,57,.12);}
+  .omglijst{display:flex; flex-direction:column; gap:10px;}
+  .omgrij{display:flex; align-items:center; gap:14px; border:1px solid var(--border); border-radius:14px; padding:12px 16px; cursor:pointer;}
+  .omgico{width:38px; height:38px; flex:none; border-radius:10px; background:var(--soft-2); display:flex; align-items:center; justify-content:center; color:var(--oranje);}
+  .omgtxt{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+  .omgswitch{appearance:none; -webkit-appearance:none; width:0; height:0; margin:0; opacity:0;}
+  .omgknop{flex:none; width:46px; height:27px; border-radius:14px; background:var(--soft-2); position:relative; transition:background .16s;}
+  .omgknop::after{content:''; position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:#fff; transition:transform .16s; box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .omgswitch:checked ~ .omgknop{background:var(--oranje);}
+  .omgswitch:checked ~ .omgknop::after{transform:translateX(19px);}
+  .omgrij:has(.omgswitch:checked){border-color:var(--oranje); background:var(--lblauw);}
+  .omgrij:has(.omgswitch:checked) .omgico{background:#fff;}
+  .pagchips{display:flex; flex-wrap:wrap; gap:8px;}
+  .pagchip{cursor:pointer; margin:0;}
+  .pagchip input{position:absolute; opacity:0; width:0; height:0;}
+  .pagchip span{display:inline-block; padding:8px 14px; border:1.5px solid var(--border); border-radius:var(--pil); font-size:13px; font-weight:600; color:var(--muted); transition:.14s;}
+  .pagchip input:checked + span{background:var(--green-soft); border-color:var(--green-tekst); color:var(--green-tekst);}
+  .detailacts{display:flex; gap:10px; flex-wrap:wrap; margin-top:24px;}
+  .gevaarzone{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:20px; padding:16px; border:1px solid #E7C9C9; border-radius:14px; background:var(--red-soft);}
+  .gevaarzone b{color:var(--red-tekst);}
+  .gevaarzone .muted{display:block; margin-top:2px;}
+  .btn.gevaar{background:var(--red-tekst); color:#fff;}
   .verhuisrij{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0;}
   .verhuisrij .dt{color:var(--muted-l); min-width:120px;}
   .wachtlijst{margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);}
@@ -2801,36 +2843,19 @@
   </div>
 
   <div id="team-accounts">
-    <div class="card breed">
-      <h2><svg class="i"><use href="#i-lock"/></svg>Nieuwe gebruiker</h2>
-      <p class="muted" style="margin-bottom:14px">Maak een teamlid aan met een eigen e-mail en wachtwoord. Vink aan welke pagina's hij mag zien. Je geeft het begin-wachtwoord door; hij kan het later zelf wijzigen.</p>
-      <div class="grid">
-        <div><label>Naam</label><input id="nw_naam" placeholder="Naam"></div>
-        <div><label>Gebruikersnaam</label><input id="nw_gebruikersnaam" placeholder="voor het inloggen"></div>
-        <div><label>E-mail</label><input id="nw_email" type="email" placeholder="collega@email.nl"></div>
-        <div><label>Begin-wachtwoord</label><input id="nw_ww" type="text" placeholder="minstens 8 tekens"></div>
-        <div><label>Rol</label><select id="nw_rol" onchange="nwRolVerandert()"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
-      </div>
-      <label style="margin-top:14px; display:block">Welke pagina's mag hij zien</label>
-      <div id="nw_paginas" class="paginakeuze"></div>
-      <button class="btn actie" style="margin-top:16px" onclick="gebruikerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Gebruiker aanmaken</button>
-      <div id="nw_uit" class="muted klein" style="margin-top:10px"></div>
-      <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border)">
-        <p class="muted klein" style="margin-bottom:8px">Of stuur een uitnodiging per e-mail: je collega zet dan zelf zijn wachtwoord en verschijnt daarna vanzelf in je team.</p>
-        <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
-          <div style="flex:2; min-width:200px"><label>E-mail van je collega</label><input id="inv_email" type="email" placeholder="collega@email.nl" autocomplete="off"></div>
-          <div style="min-width:150px"><label>Rol</label><select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
-          <div><button class="btn actie" onclick="mailUitnodiging(this)"><svg class="i s"><use href="#i-mail"/></svg>Uitnodiging e-mailen</button></div>
+    <!-- Lijst van gebruikers. Klik er een om alles op een eigen pagina in te stellen. -->
+    <div id="teamLijstView" class="modules">
+      <div class="card breed">
+        <div class="row" style="justify-content:space-between; align-items:center; gap:12px">
+          <h2 style="margin:0"><svg class="i"><use href="#i-users"/></svg>Gebruikers</h2>
+          <button class="btn actie" onclick="teamNieuwOpen()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe gebruiker</button>
         </div>
-        <div style="margin-top:8px"><button class="btn ghost small" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Of maak alleen een link om zelf te delen</button></div>
-        <div id="inviteResultaat" style="margin-top:12px"></div>
+        <p class="muted" style="margin:10px 0 18px">Klik op een gebruiker om alles in te stellen: de rol, tot welke omgevingen hij toegang heeft, welke pagina's hij ziet en het loon.</p>
+        <div id="teamAccBody">Bezig met laden…</div>
       </div>
     </div>
-    <div class="card breed">
-      <h2><svg class="i"><use href="#i-users"/></svg>Teamleden</h2>
-      <p class="muted" style="margin-bottom:14px">Per teamlid stel je hier alles in: de rol, welke pagina's hij ziet, en het loon (per uur of percentage) met de kostenplaats. Sla je een eigen paginakeuze op, dan wint die boven de rol. De eigenaar ziet altijd alles.</p>
-      <div id="teamAccBody">Bezig met laden…</div>
-    </div>
+    <!-- Detail- of aanmaakscherm van één gebruiker (in JS gevuld). -->
+    <div id="teamDetailView" class="modules" hidden></div>
   </div>
 </section>
 
@@ -10795,7 +10820,11 @@ let hwData=[], hwFilterNu='voorraad', hwBezig=false, hwPartners=[];
    vervolgens zegt dat je hem moet kopen. */
 function moduleLinks(){
   const l=document.getElementById('refurbLink');
-  if(l) l.hidden = !moduleAan('refurbish');
+  /* Zichtbaar als de winkel de module heeft én deze gebruiker er toegang toe heeft
+     (per gebruiker in te stellen bij Team → Gebruikers). Zolang de gebruiker nog niet
+     geladen is, gaan we niet op toegang filteren (alleen op de module). */
+  const envOk = (typeof gebruiker==='undefined' || !gebruiker) ? true : heeftOmgeving(gebruiker,'refurbish');
+  if(l) l.hidden = !(moduleAan('refurbish') && envOk);
   webshopLink();
   inrLaad(true);
 }
@@ -12541,19 +12570,42 @@ function nwRolVerandert(){
   const rol=(document.getElementById('nw_rol')||{}).value||'medewerker';
   const vak=document.getElementById('nw_paginas'); if(vak) vak.innerHTML=teamPaginaVinkjes('nw', rolDefaultTabs(rol));
 }
+/* Toegang tot de omgevingen naast de winkel-pagina's. Bewaard in accounts.tabs, naast
+   de pagina-sleutels: 'env_set' betekent dat het bewust is ingesteld, met
+   'env_refurbish'/'env_partner' voor de aan-omgevingen. Bestaande accounts (zonder
+   env_set) blijven op de standaard: de werkbank aan, het partner-dashboard uit. */
+const OMGEVINGEN=[
+  ['refurbish','Refurbishen','De werkbank: toevoegen, controleren, repareren en online zetten.','i-recycle'],
+  ['partner','Partner-dashboard','Het dashboard voor doorverkopers en toegewezen toestellen.','i-link']
+];
+function heeftOmgeving(u, key){
+  if(!u) return false;
+  if(u.rol==='eigenaar') return true;
+  const t=Array.isArray(u.tabs)?u.tabs:[];
+  if(t.includes('env_set')) return t.includes('env_'+key);
+  return key==='refurbish';
+}
+function teamToegangTekst(l){
+  if(l.rol==='eigenaar') return 'Alle omgevingen';
+  const omg=OMGEVINGEN.filter(([k])=>heeftOmgeving(l,k)).map(([,t])=>t);
+  return ['Winkel'].concat(omg).join(', ');
+}
+function loonSamenvatting(id){
+  const c=pCfg(id);
+  if(c.vorm==='percentage') return (c.percentage||0)+'% van de winst';
+  const uur=loonTarief(id);
+  return uur?('€'+uur+' per uur'):'';
+}
+let teamLedenVol=[];
 async function renderTeamAccounts(){
   const body=document.getElementById('teamAccBody');
-  if(!account){ body.innerHTML='<p class="muted">Laden…</p>'; return; }
-  const nwvak=document.getElementById('nw_paginas');
-  if(nwvak && !nwvak.innerHTML.trim()){
-    nwvak.innerHTML=teamPaginaVinkjes('nw', rolDefaultTabs((document.getElementById('nw_rol')||{}).value||'medewerker'));
-  }
+  if(!account){ if(body) body.innerHTML='<p class="muted">Laden…</p>'; return; }
   const {data:leden,error}=await sb.from('accounts').select('*').order('created_at',{ascending:true});
-  if(error){ body.innerHTML='<p class="muted">Kon teamleden niet laden.</p>'; return; }
-  /* Meteen de lichte kopie bijwerken die de Uren-pagina gebruikt. */
-  teamLeden=(leden||[]).map(l=>({id:l.id, naam:l.naam, rol:l.rol}));
-  /* Openstaande uitnodigingen: iemand die de link heeft gekregen maar zich nog niet
-     heeft aangemeld. Tonen als "in afwachting", zodat je ziet dat je op hem wacht. */
+  if(error){ if(body) body.innerHTML='<p class="muted">Kon gebruikers niet laden.</p>'; return; }
+  teamLedenVol=leden||[];
+  /* Meteen de lichte kopie bijwerken die o.a. de Uren-pagina gebruikt. */
+  teamLeden=teamLedenVol.map(l=>({id:l.id, naam:l.naam, rol:l.rol}));
+  /* Openstaande uitnodigingen: iemand die de link kreeg maar zich nog niet aanmeldde. */
   let uitnodigingen=[];
   try{
     const {data:inv}=await sb.from('invites').select('id,rol,token,gebruikt,verloopt_op,created_at')
@@ -12561,51 +12613,157 @@ async function renderTeamAccounts(){
     const nu=Date.now();
     uitnodigingen=(inv||[]).filter(i=>!i.verloopt_op || new Date(i.verloopt_op).getTime()>nu);
   }catch(e){}
-  /* Het loon per teamlid staat nu als volledig blok bij ieder lid (loonvorm, tarief of
-     percentage, kostenplaats), gedeeld met de Personeel-pagina. Zo is dit hét centrale
-     scherm: aanmaken, rol, pagina's én loon op één plek. */
-  const loonSectie=l=>`<label style="display:block; margin-top:12px">Loon</label><div class="loonblok" data-lid="${l.id}">${loonControlsHtml(l.id)}</div>`;
-  const ledenHtml=(leden||[]).map(l=>{
-    const isJij=l.id===account.id;
-    const initiaal=esc((l.naam||'?').charAt(0).toUpperCase());
-    if(l.rol==='eigenaar'){
-      return `<div class="teamRij2"><div class="kop"><div class="av">${initiaal}</div>
-        <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}<span class="rolTag">eigenaar</span>
-        <span class="muted">${esc(l.gebruikersnaam||'')} · ${esc(l.email||'')}</span></div>
-        <p class="muted klein">De eigenaar ziet altijd alle pagina's.</p>
-        ${loonSectie(l)}</div>`;
-    }
-    const actief = Array.isArray(l.tabs) ? l.tabs : rolDefaultTabs(l.rol);
-    return `<details class="teamRij2">
-      <summary class="kop"><div class="av">${initiaal}</div>
-        <b>${esc(l.naam)}</b>${isJij?' <span class="muted">(jij)</span>':''}
-        <span class="rolTag">${esc(l.rol)}</span>
-        <span class="muted">${esc(l.gebruikersnaam||'')}</span></summary>
-      <div class="row" style="align-items:flex-end; gap:12px; margin-top:10px">
-        <div style="min-width:160px"><label>Rol</label><select id="rol_${l.id}">
-          <option value="medewerker"${l.rol==='medewerker'?' selected':''}>Medewerker</option>
-          <option value="beheerder"${l.rol==='beheerder'?' selected':''}>Beheerder</option></select></div>
-      </div>
-      ${loonSectie(l)}
-      <label style="display:block; margin-top:12px">Pagina's</label>
-      <div class="paginakeuze">${teamPaginaVinkjes('acc'+l.id, actief)}</div>
-      <div class="acts2">
-        <button class="btn small" onclick="gebruikerOpslaan('${l.id}', this)">Opslaan</button>
-        <button class="btn ghost small" onclick="gebruikerWachtwoord('${l.id}','${esc(l.naam)}')"><svg class="i s"><use href="#i-lock"/></svg>Wachtwoord</button>
-        <button class="btn ghost small" onclick="gebruikerVerwijder('${l.id}','${esc(l.naam)}')">Verwijderen</button>
-      </div>
-    </details>`;
-  }).join('');
-  const inviteHtml=uitnodigingen.map(i=>`<div class="teamRij2">
-      <div class="kop"><div class="av">?</div><b>Uitgenodigd</b>
-        <span class="rolTag">${esc(i.rol)}</span><span class="wachtTag">in afwachting</span></div>
-      <p class="muted klein">Deze persoon heeft de link nog niet gebruikt. Zodra hij zijn account instelt, verschijnt hij hier als teamlid.</p>
-      <div class="acts2">
-        <button class="btn ghost small" onclick="inviteLinkKopieer('${i.token}', this)"><svg class="i s"><use href="#i-link"/></svg>Link kopiëren</button>
-        <button class="btn ghost small" onclick="inviteIntrekken('${i.id}', this)">Intrekken</button>
-      </div>
+  if(!body) return;
+  const kaarten=teamLedenVol.map(l=>teamKaart(l)).join('');
+  const inviteHtml=uitnodigingen.map(i=>`<div class="usercard wacht">
+      <div class="uav">?</div>
+      <div class="ucinfo"><b>Uitgenodigd</b><span class="muted klein">Wacht tot deze ${esc(i.rol)} zich aanmeldt</span></div>
+      <span class="ucacts"><button class="btn ghost small" onclick="inviteLinkKopieer('${i.token}', this)">Link</button><button class="btn ghost small" onclick="inviteIntrekken('${i.id}', this)">Intrekken</button></span>
     </div>`).join('');
-  body.innerHTML=(ledenHtml+inviteHtml) || '<p class="muted">Nog geen teamleden. Maak er hierboven een aan.</p>';
+  body.innerHTML=(kaarten+inviteHtml) || '<p class="muted">Nog geen gebruikers. Maak er een aan.</p>';
+}
+function teamKaart(l){
+  const isJij=l.id===account.id;
+  const initiaal=esc((l.naam||'?').charAt(0).toUpperCase());
+  const rolLabel={eigenaar:'Eigenaar',beheerder:'Beheerder',medewerker:'Medewerker',partner:'Partner'}[l.rol]||esc(l.rol||'');
+  const loon=loonSamenvatting(l.id);
+  const sub=[rolLabel, loon, teamToegangTekst(l)].filter(Boolean).join('  ·  ');
+  return `<button type="button" class="usercard" onclick="teamGebruikerOpen('${l.id}')">
+    <div class="uav">${initiaal}</div>
+    <div class="ucinfo"><b>${esc(l.naam||'?')}${isJij?' <span class="jijtag">jij</span>':''}</b>
+      <span class="muted klein">${esc(sub)}</span></div>
+    <svg class="i ucchev"><use href="#i-right"/></svg>
+  </button>`;
+}
+/* Toggle-rijen voor de omgevingen (switch-look). prefix onderscheidt aanmaak ('nw')
+   van bewerken ('det<id>'). */
+function omgToggleHtml(prefix, u){
+  return OMGEVINGEN.map(([key,titel,uit,icoon])=>{
+    const aan = u ? heeftOmgeving(u,key) : (key==='refurbish');
+    return `<label class="omgrij">
+      <span class="omgico"><svg class="i"><use href="#${icoon}"/></svg></span>
+      <span class="omgtxt"><b>${titel}</b><span class="muted klein">${uit}</span></span>
+      <input type="checkbox" class="omgswitch" id="${prefix}_env_${key}" ${aan?'checked':''}>
+      <span class="omgknop"></span>
+    </label>`;
+  }).join('');
+}
+function omgUit(prefix){
+  const uit=['env_set'];
+  OMGEVINGEN.forEach(([key])=>{ const el=document.getElementById(prefix+'_env_'+key); if(el&&el.checked) uit.push('env_'+key); });
+  return uit;
+}
+/* De pagina-toegang als vriendelijke toggle-pillen (i.p.v. kleine vinkjes). De
+   verborgen checkboxes houden dezelfde id's, zodat paginasUit ongewijzigd werkt. */
+function pagChipsHtml(prefix, actief){
+  return `<div class="pagchips">`+PAGINAS_BEHEER.map(([id,label])=>
+    `<label class="pagchip"><input type="checkbox" id="${prefix}_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
+  ).join('')+`</div>`;
+}
+function teamTerug(){
+  const d=document.getElementById('teamDetailView'); if(d){ d.hidden=true; d.innerHTML=''; }
+  const l=document.getElementById('teamLijstView'); if(l) l.hidden=false;
+  renderTeamAccounts();
+}
+function teamGebruikerOpen(id){
+  const u=teamLedenVol.find(x=>x.id===id); if(!u) return;
+  const detail=document.getElementById('teamDetailView'); if(!detail) return;
+  const isJij=u.id===account.id, isEig=u.rol==='eigenaar';
+  const actief=Array.isArray(u.tabs)?u.tabs:rolDefaultTabs(u.rol);
+  const initiaal=esc((u.naam||'?').charAt(0).toUpperCase());
+  const beheerBlok = isEig ? `<p class="muted" style="margin-top:14px">De eigenaar heeft altijd toegang tot alles. Hieronder stel je het loon in.</p>` : `
+      <div class="detailsectie"><div class="sectielabel">Rol</div>
+        <div class="segment">
+          <button type="button" class="segknop${u.rol==='medewerker'?' aan':''}" onclick="teamRolKies('${u.id}','medewerker',this)">Medewerker</button>
+          <button type="button" class="segknop${u.rol==='beheerder'?' aan':''}" onclick="teamRolKies('${u.id}','beheerder',this)">Beheerder</button>
+        </div>
+        <input type="hidden" id="detrol_${u.id}" value="${esc(u.rol)}">
+        <p class="muted klein" style="margin-top:8px">Beheerder ziet en doet bijna alles. Medewerker verkoopt, repareert en scant.</p>
+      </div>
+      <div class="detailsectie"><div class="sectielabel">Toegang tot omgevingen</div>
+        <div class="omglijst">${omgToggleHtml('det'+u.id, u)}</div>
+        <p class="muted klein" style="margin-top:8px">Winkel heeft iedereen. Vink aan of hij ook bij de werkbank of het partner-dashboard mag.</p>
+      </div>
+      <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>${pagChipsHtml('acc'+u.id, actief)}</div>`;
+  detail.innerHTML=`
+    <button class="terugknop" onclick="teamTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug naar gebruikers</button>
+    <div class="card breed">
+      <div class="detailkop">
+        <div class="uav groot">${initiaal}</div>
+        <div style="flex:1; min-width:0"><div class="detailnaam">${esc(u.naam||'?')}${isJij?' <span class="jijtag">jij</span>':''}</div>
+          <div class="muted">${esc(u.gebruikersnaam||'')}${u.email?' · '+esc(u.email):''}</div></div>
+        <span class="rolTag">${esc(u.rol)}</span>
+      </div>
+      ${beheerBlok}
+      <div class="detailsectie"><div class="sectielabel">Loon</div>
+        <div class="loonblok" data-lid="${u.id}">${loonControlsHtml(u.id)}</div></div>
+      ${isEig ? '' : `<div class="detailacts">
+        <button class="btn actie" onclick="teamGebruikerOpslaan('${u.id}', this)"><svg class="i s"><use href="#i-check"/></svg>Opslaan</button>
+        <button class="btn ghost" onclick="gebruikerWachtwoord('${u.id}','${esc(u.naam)}')"><svg class="i s"><use href="#i-lock"/></svg>Wachtwoord wijzigen</button>
+      </div>
+      <div class="gevaarzone"><div><b>Gebruiker verwijderen</b><span class="muted klein">Het account wordt definitief verwijderd. Dit kan niet ongedaan gemaakt worden.</span></div>
+        <button class="btn gevaar" onclick="gebruikerVerwijder('${u.id}','${esc(u.naam)}')">Verwijderen</button></div>`}
+    </div>`;
+  document.getElementById('teamLijstView').hidden=true;
+  detail.hidden=false;
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+function teamRolKies(id, rol, btn){
+  const hid=document.getElementById('detrol_'+id); if(hid) hid.value=rol;
+  btn.parentElement.querySelectorAll('.segknop').forEach(b=>b.classList.toggle('aan', b===btn));
+}
+async function teamGebruikerOpslaan(id, knop){
+  const rol=(document.getElementById('detrol_'+id)||{}).value||'medewerker';
+  const tabs=paginasUit('acc'+id).concat(omgUit('det'+id));
+  await teamActie('bijwerken', {account_id:id, rol, tabs}, knop, null, ()=>{ toast('Opgeslagen', true); teamTerug(); });
+}
+function teamNieuwOpen(){
+  const detail=document.getElementById('teamDetailView'); if(!detail) return;
+  const rol='medewerker';
+  detail.innerHTML=`
+    <button class="terugknop" onclick="teamTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug naar gebruikers</button>
+    <div class="card breed">
+      <h2 style="margin:0 0 4px"><svg class="i"><use href="#i-plus"/></svg>Nieuwe gebruiker</h2>
+      <p class="muted" style="margin:0 0 16px">Maak een teamlid aan met een eigen e-mail en wachtwoord, of stuur onderaan een uitnodiging.</p>
+      <div class="grid">
+        <div><label>Naam</label><input id="nw_naam" placeholder="Naam"></div>
+        <div><label>Gebruikersnaam</label><input id="nw_gebruikersnaam" placeholder="voor het inloggen"></div>
+        <div><label>E-mail</label><input id="nw_email" type="email" placeholder="collega@email.nl"></div>
+        <div><label>Begin-wachtwoord</label><input id="nw_ww" type="text" placeholder="minstens 8 tekens"></div>
+      </div>
+      <div class="detailsectie"><div class="sectielabel">Rol</div>
+        <div class="segment">
+          <button type="button" class="segknop aan" onclick="teamNwRol('medewerker',this)">Medewerker</button>
+          <button type="button" class="segknop" onclick="teamNwRol('beheerder',this)">Beheerder</button>
+        </div>
+        <input type="hidden" id="nw_rol" value="medewerker">
+      </div>
+      <div class="detailsectie"><div class="sectielabel">Toegang tot omgevingen</div>
+        <div class="omglijst">${omgToggleHtml('nw', null)}</div></div>
+      <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>
+        <div id="nw_pagwrap">${pagChipsHtml('nw', rolDefaultTabs(rol))}</div></div>
+      <div class="detailacts"><button class="btn actie" onclick="gebruikerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Gebruiker aanmaken</button></div>
+      <div id="nw_uit" class="muted klein" style="margin-top:10px"></div>
+      <div class="detailsectie" style="border-top:1px solid var(--border); padding-top:18px">
+        <div class="sectielabel">Of nodig uit per e-mail</div>
+        <p class="muted klein" style="margin:0 0 10px">Je collega zet zelf zijn wachtwoord en verschijnt daarna vanzelf in je team.</p>
+        <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+          <div style="flex:2; min-width:200px"><label>E-mail van je collega</label><input id="inv_email" type="email" placeholder="collega@email.nl" autocomplete="off"></div>
+          <div style="min-width:150px"><label>Rol</label><select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
+          <div><button class="btn actie" onclick="mailUitnodiging(this)"><svg class="i s"><use href="#i-mail"/></svg>Uitnodiging e-mailen</button></div>
+        </div>
+        <div style="margin-top:8px"><button class="btn ghost small" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Of maak alleen een link om zelf te delen</button></div>
+        <div id="inviteResultaat" style="margin-top:12px"></div>
+      </div>
+    </div>`;
+  document.getElementById('teamLijstView').hidden=true;
+  detail.hidden=false;
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+function teamNwRol(rol, btn){
+  const hid=document.getElementById('nw_rol'); if(hid) hid.value=rol;
+  btn.parentElement.querySelectorAll('.segknop').forEach(b=>b.classList.toggle('aan', b===btn));
+  const w=document.getElementById('nw_pagwrap'); if(w) w.innerHTML=pagChipsHtml('nw', rolDefaultTabs(rol));
 }
 function inviteLinkKopieer(token, knop){
   const link=location.origin+location.pathname+'?invite='+token;
@@ -12652,10 +12810,10 @@ async function gebruikerAanmaken(knop){
   const rol=document.getElementById('nw_rol').value;
   const uit=document.getElementById('nw_uit');
   if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
-  await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs:paginasUit('nw')}, knop, uit, ()=>{
-    ['nw_naam','nw_gebruikersnaam','nw_email','nw_ww'].forEach(i=>{ const e=document.getElementById(i); if(e) e.value=''; });
-    uit.textContent='Gebruiker aangemaakt. Laat hem inloggen met '+email+'.';
-    toast('Gebruiker aangemaakt', true); renderTeamAccounts();
+  const tabs=paginasUit('nw').concat(omgUit('nw'));
+  await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs}, knop, uit, ()=>{
+    toast('Gebruiker aangemaakt. Laat hem inloggen met '+email, true);
+    teamTerug();
   });
 }
 async function gebruikerOpslaan(id, knop){
