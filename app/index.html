@@ -5711,7 +5711,13 @@ async function qzPrintLabel(data){
    (INT-…); die staat op de sticker en de kassa herkent hem bij het scannen. */
 async function printProductSticker(id, stil, kopieen){
   const p=state.producten.find(p=>String(p.id)===String(id)); if(!p) return false;
-  if(!p.barcode){ p.barcode='INT-'+uid(); save(); if(!stil) renderProducten(); }
+  /* Geen echte barcode? Geef een korte, nette interne code (INT-…) die op de sticker
+     past en scanbaar is. De lange auto-code (INT-<tijdstempel>) korten we hier ook in;
+     die is nooit eerder geprint, dus dat is veilig. Een echte EAN laten we met rust. */
+  if(!p.barcode || /^INT-\d{8,}$/.test(String(p.barcode))){
+    p.barcode='INT-'+Math.random().toString(36).slice(2,8).toUpperCase();
+    save(); if(!stil) renderProducten();
+  }
   try{
     const ok=await qzPrintLabel({titel:p.naam, prijs:p.verkoop, code:p.barcode, kopieen:kopieen||1});
     if(ok && !stil) toast('Sticker geprint', true);
