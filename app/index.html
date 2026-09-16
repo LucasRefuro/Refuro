@@ -12993,6 +12993,9 @@ function renderTeam(){
     `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderTeam(${t.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
   document.getElementById('lockToggle').checked=!!state.vergrendeld;
   renderPrestaties();
+  /* Bij het openen van Team altijd de lijst tonen, niet een oud detailscherm. */
+  const dv=document.getElementById('teamDetailView'); if(dv){ dv.hidden=true; dv.innerHTML=''; }
+  const lv=document.getElementById('teamLijstView'); if(lv) lv.hidden=false;
   renderTeamAccounts();
 }
 function updMw(id,veld,val){
