@@ -60,6 +60,10 @@ aside nav button{display:flex; align-items:center; gap:11px; width:100%; text-al
   font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:.16s;}
 aside nav button:hover{background:var(--soft-2); color:var(--tekst);}
 aside nav button.active{background:var(--lblauw); color:var(--groen);}
+/* De Scan-knop is een actie, geen pagina: een accentkleur zodat hij aan de werkbank
+   opvalt en niet wegvalt tussen de tabs. */
+aside nav button.navscan{background:var(--green-soft); color:var(--green-tekst); font-weight:700; margin-bottom:6px;}
+aside nav button.navscan:hover{background:var(--groen); color:#fff;}
 aside nav .badge{margin-left:auto; background:var(--oranje); color:#fff; font-size:11px;
   font-weight:800; padding:2px 8px; border-radius:var(--pil);}
 .onderin{margin-top:auto; padding-top:16px; border-top:1.5px solid var(--border);}
@@ -655,6 +659,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="4" rx="2"/><path d="M7 20h10M12 16v4"/></symbol>
   <symbol id="i-cash" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
   <symbol id="i-qr" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></symbol>
   <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.5 10 4.5v7H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7v7L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></symbol>
@@ -679,6 +684,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <div><div class="name">Refurbishen</div><div class="sub">Storvo</div></div>
   </div>
   <nav>
+    <button class="navscan" onclick="qrScanOpen()"><svg class="i"><use href="#i-camera"/></svg> Scan een label</button>
     <button data-tab="werkbank" class="active"><svg class="i"><use href="#i-laptop"/></svg> Werkbank</button>
     <button data-tab="toevoegen"><svg class="i"><use href="#i-plus"/></svg> Toevoegen</button>
     <button data-tab="controle"><svg class="i"><use href="#i-check"/></svg> Te controleren<span class="badge" id="bControle" hidden>0</span></button>
@@ -932,6 +938,15 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <button class="btn actie" onclick="clNieuw()"><svg class="i"><use href="#i-plus"/></svg>Checklist maken</button>
       </div>
 
+      <!-- Eén centrale plek voor gebruikers, rechten en uurloon: die woont in Storvo
+           en is vanuit elke omgeving bereikbaar. We tonen hier geen tweede beheerscherm
+           (dat zou gaan afwijken), maar een directe ingang naar dat ene scherm. -->
+      <div class="card" id="navGebruikersKaart" hidden>
+        <h2><svg class="i"><use href="#i-users"/></svg>Gebruikers, rechten en uurloon</h2>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Nieuwe mensen aanmaken, hun rol en welke pagina's ze zien wijzigen, en het uurtarief invullen doe je op één centrale plek in Storvo. Wat je daar instelt geldt meteen voor alle omgevingen, ook hier.</p>
+        <a class="btn actie" href="/app/?tab=team" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-users"/></svg>Gebruikers beheren</a>
+      </div>
+
       <div class="card">
         <h2><svg class="i"><use href="#i-sparkles"/></svg>Sjabloon voor je advertenties</h2>
         <p class="muted" style="margin-bottom:14px; max-width:80ch">De opbouw staat hierin vast; de AI vult alleen in wat tussen accolades staat. Zo lijken al je advertenties op elkaar en herkent een koper na drie keer jouw manier van doen. Laat je het leeg, dan gebruiken we een standaardsjabloon.</p>
@@ -1163,7 +1178,7 @@ async function start(){
     'Er hangt nog geen winkel aan dit account. Neem contact op via info@storvo.nl.','Terug','/app/'); return; }
   account=acc;
   // De partner-beheerpagina alleen voor eigenaar/beheerder tonen.
-  if(['eigenaar','beheerder'].includes(account.rol)){ const n=document.getElementById('navPartners'); if(n) n.hidden=false; }
+  if(['eigenaar','beheerder'].includes(account.rol)){ const n=document.getElementById('navPartners'); if(n) n.hidden=false; const g=document.getElementById('navGebruikersKaart'); if(g) g.hidden=false; }
   /* Best-effort: heeft de winkel partners? Faalt de query, dan blijft de bediening
      gewoon verborgen; dat is de veilige kant. */
   try{ const {data:pn}=await sb.from('partners').select('id,naam').neq('id', account.id).order('naam'); partnersData=pn||[]; heeftPartner=partnersData.length>0; }catch(e){}
@@ -1285,7 +1300,10 @@ function showTab(t){
   if(actief&&actief.scrollIntoView) actief.scrollIntoView({inline:'center', block:'nearest'});
   sessieBewaar();
 }
-document.querySelectorAll('aside nav button').forEach(b=>
+/* Alleen echte tab-knoppen wisselen van pagina. De Scan-knop is een actie (opent de
+   camera) en heeft geen data-tab; die slaan we hier over, anders zou showTab(undefined)
+   het scherm leegmaken. */
+document.querySelectorAll('aside nav button[data-tab]').forEach(b=>
   b.addEventListener('click',()=>showTab(b.dataset.tab)));
 
 function zoekterm(){ const e=document.getElementById('zoek'); return (e?e.value:'').trim().toLowerCase(); }
