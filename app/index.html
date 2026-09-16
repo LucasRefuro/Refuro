@@ -5659,7 +5659,7 @@ function labelInstelling(){
     breedte: Number(localStorage.getItem('storvoLabelBreedte'))||62,
     hoogte: Number(localStorage.getItem('storvoLabelHoogte'))||30,
     tweekleuren: localStorage.getItem('storvoLabelTweekleur')!=='0',
-    vouw: localStorage.getItem('storvoLabelVouw')==='1',
+    vouw: localStorage.getItem('storvoLabelVouw')!=='0',  // standaard aan (vouwlabel)
   };
 }
 /* Tekst netjes over maximaal een paar regels, laatste regel afgekapt met … */
