@@ -75,6 +75,18 @@ h1{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; letter-spacin
 #vol .vollabel{position:fixed; left:0; right:0; top:calc(14px + env(safe-area-inset-top)); text-align:center;
   z-index:2; color:#fff; font-weight:700; font-size:15px; text-shadow:0 1px 3px rgba(0,0,0,.5); pointer-events:none;}
 
+/* laptop: toetsenbord en touchpad in de fullscreen-laag */
+#vol .kbtel{position:fixed; left:0; right:0; top:calc(46px + env(safe-area-inset-top)); text-align:center; z-index:2; color:#fff; font-weight:700; font-size:15px;}
+#vol .kbd{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:100%; max-width:900px; display:flex; flex-direction:column; gap:6px; padding:0 12px;}
+.kbrow{display:flex; gap:6px;}
+.kbkey{flex:1 1 0; min-width:0; background:rgba(255,255,255,.13); color:#fff; border-radius:8px; padding:14px 4px; text-align:center; font-size:13px; font-weight:600; border:1px solid rgba(255,255,255,.18); user-select:none; overflow:hidden; white-space:nowrap;}
+.kbkey.in{background:var(--green-tekst); border-color:var(--green-tekst); color:#fff;}
+#vol .tpwrap{position:absolute; left:12px; right:12px; top:66px; bottom:96px; display:flex; flex-direction:column; gap:14px;}
+#vol .tpwrap canvas{position:static; inset:auto; flex:1; width:100%; height:auto; background:rgba(255,255,255,.92); border-radius:14px; touch-action:none;}
+.tpind{display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+.tpbtn{padding:9px 16px; border-radius:var(--pil); background:rgba(255,255,255,.14); color:#fff; font-weight:700; font-size:13px; border:1px solid rgba(255,255,255,.2);}
+.tpbtn.in{background:var(--green-tekst); border-color:var(--green-tekst);}
+
 #toasts{position:fixed; left:16px; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:200;}
 .toast{background:var(--tekst); color:#fff; padding:13px 18px; border-radius:14px; font-size:14.5px;}
 .toast.ok{background:var(--green-tekst);} .toast.fout{background:var(--red-tekst);}
@@ -193,7 +205,14 @@ const ALLE_TESTS=[
   {id:'camera_voor', naam:'Camera voor', uit:'Kijk of de selfiecamera goed beeld geeft.', soorten:['Telefoon','Tablet'], start:()=>startCamera('user')},
   {id:'trilfunctie', naam:'Trilfunctie', uit:'Het toestel trilt kort. Voel je het?', soorten:['Telefoon'], start:startTril},
   {id:'sensoren', naam:'Sensoren', uit:'Kantel het toestel rustig. De stip volgt vloeiend mee.', soorten:['Telefoon','Tablet'], vol:true, start:startSensoren},
-  {id:'accu', naam:'Accu-conditie', uit:'Lees de maximale capaciteit af in de instellingen en vul hem in. Een browser kan dit zelf niet uitlezen.', soorten:['Telefoon','Tablet'], geenOordeel:true, start:startAccu}
+  {id:'accu', naam:'Accu-conditie', uit:'Lees de maximale capaciteit af in de instellingen en vul hem in. Een browser kan dit zelf niet uitlezen.', soorten:['Telefoon','Tablet'], geenOordeel:true, start:startAccu},
+  /* ── Laptop: op de laptop zelf. Toetsenbord is de ster: elke toets indrukken en
+     groen zien worden, zonder dat er iets gebeurt (preventDefault). ── */
+  {id:'toetsenbord', naam:'Toetsenbord', uit:'Druk elke toets één keer in. Hij wordt groen. Zo zie je meteen of alle toetsen werken.', soorten:['Laptop'], vol:true, start:startToetsenbord},
+  {id:'touchpad', naam:'Touchpad', uit:'Beweeg de cursor en teken met het touchpad. Test ook de linker- en rechterknop en scrollen.', soorten:['Laptop'], vol:true, start:startTouchpad},
+  {id:'scherm', naam:'Beeldscherm', uit:'Het scherm loopt door de kleuren. Zoek dode pixels, vlekken of strepen.', soorten:['Laptop'], vol:true, start:startScherm},
+  {id:'luidspreker', naam:'Luidsprekers', uit:'Zet het volume omhoog en druk op de knop. Hoor je hem helder, links en rechts, zonder kraken?', soorten:['Laptop'], start:startLuidspreker},
+  {id:'camera', naam:'Webcam', uit:'Kijk of de webcam goed en scherp beeld geeft.', soorten:['Laptop'], start:()=>startCamera('user')}
 ];
 let TESTS=ALLE_TESTS.slice();
 let nu=0;
@@ -307,6 +326,53 @@ function startTouch(){
   c.addEventListener('touchstart',neer,{passive:false}); c.addEventListener('touchmove',beweeg,{passive:false});
   c.addEventListener('touchend',op); c.addEventListener('mousedown',neer); c.addEventListener('mousemove',beweeg); c.addEventListener('mouseup',op);
   opruimer=()=>{};
+}
+
+/* ---- toetsenbord: elke toets indrukken, hij wordt groen ----
+   We werken op event.code (de fysieke toets), zodat de layout er niet toe doet.
+   preventDefault op elke toets zodat er niets gebeurt: geen scrollen, geen F5, geen
+   focus die wegspringt. Een paar toetsen (F11, F12) vangt het OS af; de rest niet. */
+function startToetsenbord(){
+  const rows=[
+    [['Escape','esc',1.4],['F1','F1'],['F2','F2'],['F3','F3'],['F4','F4'],['F5','F5'],['F6','F6'],['F7','F7'],['F8','F8'],['F9','F9'],['F10','F10'],['F11','F11'],['F12','F12']],
+    [['Backquote','`'],['Digit1','1'],['Digit2','2'],['Digit3','3'],['Digit4','4'],['Digit5','5'],['Digit6','6'],['Digit7','7'],['Digit8','8'],['Digit9','9'],['Digit0','0'],['Minus','-'],['Equal','='],['Backspace','⌫',2]],
+    [['Tab','Tab',1.5],['KeyQ','Q'],['KeyW','W'],['KeyE','E'],['KeyR','R'],['KeyT','T'],['KeyY','Y'],['KeyU','U'],['KeyI','I'],['KeyO','O'],['KeyP','P'],['BracketLeft','['],['BracketRight',']'],['Enter','⏎',1.6]],
+    [['CapsLock','Caps',1.9],['KeyA','A'],['KeyS','S'],['KeyD','D'],['KeyF','F'],['KeyG','G'],['KeyH','H'],['KeyJ','J'],['KeyK','K'],['KeyL','L'],['Semicolon',';'],['Quote','&#39;'],['Backslash','\\']],
+    [['ShiftLeft','⇧',2.4],['KeyZ','Z'],['KeyX','X'],['KeyC','C'],['KeyV','V'],['KeyB','B'],['KeyN','N'],['KeyM','M'],['Comma',','],['Period','.'],['Slash','/'],['ShiftRight','⇧',2.4]],
+    [['ControlLeft','Ctrl',1.4],['MetaLeft','⌘',1.2],['AltLeft','Alt',1.2],['Space','spatie',6],['AltRight','Alt',1.2],['ArrowLeft','←'],['ArrowUp','↑'],['ArrowDown','↓'],['ArrowRight','→']]
+  ];
+  const codes=[];
+  const kb=rows.map(r=>'<div class="kbrow">'+r.map(function(k){ codes.push(k[0]); return '<div class="kbkey" data-code="'+k[0]+'" style="flex:'+(k[2]||1)+'">'+k[1]+'</div>'; }).join('')+'</div>').join('');
+  volOpen('<div class="kbtel" id="kbtel"></div><div class="kbd">'+kb+'</div>', 'Druk elke toets in');
+  const vol=document.getElementById('vol'); vol.style.background='#12211E';
+  const gedaan=new Set(), totaal=codes.length;
+  const tel=()=>{ const el=document.getElementById('kbtel'); if(el) el.textContent=gedaan.size+' / '+totaal+' toetsen'; };
+  tel();
+  const onDown=(e)=>{
+    e.preventDefault();
+    const el=document.querySelector('.kbkey[data-code="'+e.code+'"]');
+    if(el && !el.classList.contains('in')){ el.classList.add('in'); gedaan.add(e.code); tel(); }
+  };
+  window.addEventListener('keydown', onDown, true);
+  opruimer=()=>{ window.removeEventListener('keydown', onDown, true); vol.style.background=''; };
+}
+
+/* ---- touchpad: bewegen + tekenen, en linker-/rechterklik en scrollen aftikken ---- */
+function startTouchpad(){
+  volOpen('<div class="tpwrap"><canvas id="tpdoek"></canvas><div class="tpind"><span id="tpL" class="tpbtn">Linkerklik</span><span id="tpR" class="tpbtn">Rechterklik</span><span id="tpS" class="tpbtn">Scrollen</span></div></div>', 'Beweeg, klik en scroll');
+  const vol=document.getElementById('vol'); vol.style.background='#12211E';
+  const c=document.getElementById('tpdoek'); const dpr=window.devicePixelRatio||1;
+  const zetMaat=()=>{ c.width=Math.round(c.clientWidth*dpr); c.height=Math.round(c.clientHeight*dpr); };
+  requestAnimationFrame(()=>{ zetMaat(); const x=c.getContext('2d'); x.scale(dpr,dpr); x.lineWidth=3; x.lineCap='round'; x.strokeStyle='#E88A1D';
+    let teken=false, lx=0, ly=0;
+    const p=e=>{ const r=c.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+    c.addEventListener('mousedown', e=>{ if(e.button===0){ teken=true; [lx,ly]=p(e); document.getElementById('tpL').classList.add('in'); } });
+    c.addEventListener('mousemove', e=>{ const [nx,ny]=p(e); if(teken){ x.beginPath(); x.moveTo(lx,ly); x.lineTo(nx,ny); x.stroke(); } [lx,ly]=[nx,ny]; });
+    window.addEventListener('mouseup', ()=>{ teken=false; });
+    c.addEventListener('contextmenu', e=>{ e.preventDefault(); document.getElementById('tpR').classList.add('in'); });
+    c.addEventListener('wheel', ()=>{ document.getElementById('tpS').classList.add('in'); }, {passive:true});
+  });
+  opruimer=()=>{ vol.style.background=''; };
 }
 
 /* ---- scherm: fullscreen kleuren die vanzelf doorlopen ---- */
