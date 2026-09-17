@@ -1134,7 +1134,20 @@
     cursor:pointer; transition:.15s;}
   .aanvrij:hover{background:var(--lblauw); transform:translateX(2px);}
   .avnr b{font-family:'Sora',sans-serif; font-weight:700;}
-  .avwat{font-size:14px; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  .avwat{font-size:14px; min-width:0; line-height:1.4;}
+  .avprog{display:flex; align-items:center; gap:8px; margin-top:5px;}
+  .avprog .prog{flex:1; max-width:130px;}
+  .avregels{display:flex; flex-direction:column; gap:8px;}
+  .avregel{display:flex; align-items:center; gap:12px; background:var(--soft-2); border-radius:12px; padding:10px 14px;}
+  .avregnaam{flex:1; min-width:0; font-size:13.5px;}
+  .avregprijs{font-family:'Sora',sans-serif; font-weight:700; font-size:14px; white-space:nowrap;}
+  .avchecklist{display:flex; flex-direction:column; gap:8px;}
+  .avcheck{display:flex; align-items:center; gap:12px; background:var(--soft-2); border-radius:12px; padding:11px 14px; cursor:pointer; text-transform:none; letter-spacing:normal; margin:0; font-weight:400; color:var(--text);}
+  .avcheck input{flex:none; cursor:pointer;}
+  .avcheck.aan{background:var(--green-soft);}
+  .avcheckwat{flex:1; min-width:0; font-size:14px;}
+  .avcheck.aan .avcheckwat{color:var(--green-tekst);}
+  .avcheckprijs{font-family:'Sora',sans-serif; font-weight:700; font-size:14px; white-space:nowrap;}
   .avgeld{text-align:right;}
   .avgeld b{font-family:'Sora',sans-serif; font-size:16px; font-weight:700;}
   .aanvreken{margin-top:18px; background:var(--soft-2); border-radius:var(--radius-s); padding:18px 20px;}
@@ -2368,6 +2381,10 @@
   </div>
 
   <div id="aanv-overzicht">
+    <div class="card breed" id="aanvTotaalKaart" hidden>
+      <h2><svg class="i"><use href="#i-cart"/></svg>Nog te halen <span class="muted">(alles wat nog moet komen, over alle aanvragen)</span></h2>
+      <div id="aanvTotaalLijst"></div>
+    </div>
     <div class="card breed">
       <h2><svg class="i"><use href="#i-clipboard"/></svg>Lopende aanvragen <span class="muted" id="aanvTelling"></span></h2>
       <div id="aanvLijst"></div>
@@ -2391,32 +2408,37 @@
       <div id="aanvBerUitleg"></div>
     </div>
 
-    <div class="card">
+    <div class="card breed">
       <h2><svg class="i"><use href="#i-package"/></svg>Wat wil de klant?</h2>
+      <p class="muted" style="margin-bottom:14px">Voeg één of meer producten toe. Klik na elk product op "Product toevoegen".</p>
       <div class="zoekveld" id="aanvZoekveld">
-        <label>Product *</label>
+        <label>Product</label>
         <input id="a_wat" autocomplete="off" placeholder="Typ of kies uit je eigen producten"
           oninput="aanvTyp()" onfocus="aanvTyp()" onblur="setTimeout(aanvSluitLijst,180)" onkeydown="aanvToets(event)">
         <div class="zoeklijst" id="aanvLijstje" hidden></div>
       </div>
       <div id="aanvKoppel"></div>
-      <div style="margin-top:14px"><label>Categorie <span class="muted">(waar hoort dit bij)</span></label><select id="a_cat"></select></div>
-
-      <div class="grid" style="margin-top:14px">
+      <div class="grid" style="margin-top:12px">
+        <div><label>Categorie <span class="muted">(wat is het)</span></label><select id="a_cat"></select></div>
         <div><label>Aantal</label><input id="a_aantal" type="number" step="1" min="1" value="1" oninput="aanvReken()"></div>
         <div><label>Verkoopprijs (€) <span class="muted">per stuk</span></label><input id="a_verkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+        <div><label>Inkoop (€) <span class="muted">per stuk, optioneel</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn secondary" onclick="aanvRegelToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Product toevoegen</button>
+      </div>
+      <div id="aanvRegelLijst" style="margin-top:14px"></div>
+
+      <hr style="border:none; border-top:1px solid var(--border); margin:18px 0">
+      <div class="veldrij">
         <div><label>Aanbetaling (%)</label><input id="a_pct" type="number" step="1" min="0" max="100" oninput="aanvReken('pct')"></div>
         <div><label>Aanbetaling (€)</label><input id="a_aanbet" type="number" step="0.01" min="0" oninput="aanvReken('bedrag')"></div>
-      </div>
-
-      <div class="veldrij" style="margin-top:14px">
         <div><label>Betaalt de aanbetaling met</label>
           <select id="a_betaal">
             <option value="pin">Pin</option>
             <option value="cash">Cash met bon</option>
             <option value="cash_zb">Cash zonder bon</option>
           </select></div>
-        <div><label>Inkoop (€) <span class="muted">per stuk, optioneel</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
       </div>
 
       <div class="aanvreken" id="aanvReken"></div>
@@ -9029,6 +9051,54 @@ function aanvUitleg(){
    browser ziet er op elk systeem anders uit en je kunt er niets aan sturen;
    deze past bij de rest en toont per product meteen de prijs en de voorraad. */
 let aanvKeus=-1;
+/* De producten die je aan de nieuwe aanvraag hebt toegevoegd (meerdere regels). */
+let aanvNieuwRegels=[];
+/* De regels van een aanvraag. Nieuwe aanvragen hebben een echte regels-lijst; oude
+   aanvragen (één product) maken we hier om naar één regel, zodat alles hetzelfde
+   werkt zonder de oude data aan te raken. */
+function aanvRegels(a){
+  if(Array.isArray(a.regels) && a.regels.length) return a.regels;
+  const n=a.aantal||1;
+  return [{id:'oud', wat:a.wat, aantal:n, prijsStuk:(a.prijsStuk!=null?a.prijsStuk:(Number(a.verkoop)||0)/n), inkoopStuk:(Number(a.inkoop)||0)/n, cat:(a.cat!=null?a.cat:null), binnen:(a.status==='binnen'||a.status==='opgehaald')}];
+}
+function aanvVoortgang(a){
+  const r=aanvRegels(a); const binnen=r.filter(x=>x.binnen).length;
+  return {binnen, totaal:r.length, pct: r.length? Math.round(binnen/r.length*100):0};
+}
+/* De huidige regel-in-de-maak uit de invoervelden (nog niet toegevoegd). */
+function aanvHuidigeRegel(){
+  const wat=(document.getElementById('a_wat').value||'').trim();
+  const prijs=Math.max(0, Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100);
+  if(!wat || prijs<=0) return null;
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('a_aantal').value)||1));
+  const inkoop=Math.max(0, Math.round((Number(document.getElementById('a_inkoop').value)||0)*100)/100);
+  return {wat, aantal, prijsStuk:prijs, inkoopStuk:inkoop, cat:aanvCatKies(wat)};
+}
+function aanvLeegRegelInputs(){
+  ['a_wat','a_verkoop','a_inkoop'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('a_aantal').value=1;
+  const c=document.getElementById('a_cat'); if(c) c.value='';
+  const k=document.getElementById('aanvKoppel'); if(k) k.innerHTML='';
+}
+function aanvRegelToevoegen(){
+  const h=aanvHuidigeRegel();
+  if(!h){ toast('Vul een product en een prijs per stuk in.', 'let-op'); document.getElementById('a_wat').focus(); return; }
+  aanvNieuwRegels.push(Object.assign({id:uid(), binnen:false}, h));
+  aanvLeegRegelInputs();
+  renderAanvRegels(); aanvReken();
+  document.getElementById('a_wat').focus();
+  toast(h.aantal+'× '+h.wat+' toegevoegd', true);
+}
+function aanvRegelWeg(i){ aanvNieuwRegels.splice(i,1); renderAanvRegels(); aanvReken(); }
+function renderAanvRegels(){
+  const el=document.getElementById('aanvRegelLijst'); if(!el) return;
+  if(!aanvNieuwRegels.length){ el.innerHTML='<p class="muted">Nog geen producten toegevoegd.</p>'; return; }
+  el.innerHTML='<div class="avregels">'+aanvNieuwRegels.map((r,i)=>
+    `<div class="avregel"><div class="avregnaam"><b>${r.aantal}×</b> ${esc(r.wat)}${r.cat!=null?' <span class="muted">· '+esc(catNaam(r.cat))+'</span>':''}</div>`+
+    `<div class="avregprijs">${euro(r.prijsStuk*r.aantal)}</div>`+
+    `<button type="button" class="btn small ghost icoknop" title="Weghalen" onclick="aanvRegelWeg(${i})"><svg class="i s"><use href="#i-trash"/></svg></button></div>`
+  ).join('')+'</div>';
+}
 /* Hardware-soorten voor een aanvraag (telefoons, laptops, enz.). Ze staan los van de
    accessoire-categorieën en worden pas als (systeem)categorie aangemaakt zodra je er
    echt een aanvraag voor maakt, zodat je categorielijst niet volloopt. */
@@ -9160,9 +9230,13 @@ function aanvBijScan(p){
    bedrag eruit, en andersom. Wie het handiger vindt om gewoon "honderd euro
    aanbetaling" te zeggen kan dat dus ook.                                   */
 function aanvReken(bron){
-  const aantal=Math.max(1, Math.floor(Number(document.getElementById('a_aantal').value)||1));
-  const perStuk=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
-  const totaal=Math.round(perStuk*aantal*100)/100;
+  /* Het totaal is alles wat al toegevoegd is, plus de regel die je nu aan het typen
+     bent (zodat het meteen meetelt, ook voor je één product op "toevoegen" klikt). */
+  let regels=aanvNieuwRegels.slice();
+  const h=aanvHuidigeRegel(); if(h) regels=regels.concat([h]);
+  const totaal=Math.round(regels.reduce((s,r)=>s+r.prijsStuk*r.aantal,0)*100)/100;
+  const inkoopTot=Math.round(regels.reduce((s,r)=>s+r.inkoopStuk*r.aantal,0)*100)/100;
+  const stuks=regels.reduce((s,r)=>s+r.aantal,0);
   const pctEl=document.getElementById('a_pct'), bedEl=document.getElementById('a_aanbet');
   let pct=Number(pctEl.value); if(isNaN(pct)) pct=stdMarge();
   let aanbet=Number(bedEl.value)||0;
@@ -9176,15 +9250,14 @@ function aanvReken(bron){
     bedEl.value=aanbet ? aanbet.toFixed(2) : '';
   }
   const rest=Math.round((totaal-aanbet)*100)/100;
-  const inkoopStuk=Number(document.getElementById('a_inkoop').value)||0;
-  const winst=inkoopStuk>0 ? Math.round((totaal-inkoopStuk*aantal)*100)/100 : null;
+  const winst=inkoopTot>0 ? Math.round((totaal-inkoopTot)*100)/100 : null;
 
   const el=document.getElementById('aanvReken');
   if(!el) return;
   el.innerHTML=`
     <div class="arrij nu"><span>Klant betaalt nu</span><b class="groot">${euro(aanbet)}</b></div>
     <div class="arrij rest"><span>Bij het ophalen nog</span><b>${euro(rest)}</b></div>
-    <div class="arrij"><span>Totaalprijs${aantal>1?' ('+aantal+'× '+euro(perStuk)+')':''}</span><b>${euro(totaal)}</b></div>
+    <div class="arrij"><span>Totaalprijs${regels.length>1?' ('+stuks+' stuks)':''}</span><b>${euro(totaal)}</b></div>
     ${winst!=null?`<div class="arrij"><span>Jouw winst</span><b>${euro(winst)}</b></div>`:''}`;
 }
 function resetAanvraag(){
@@ -9194,6 +9267,8 @@ function resetAanvraag(){
   document.getElementById('a_betaal').value='pin';
   document.getElementById('a_notify').value='1';
   const c=document.getElementById('a_cat'); if(c) c.value='';
+  aanvNieuwRegels=[];
+  renderAanvRegels();
   aanvVulProducten();
   const k=document.getElementById('aanvKoppel'); if(k) k.innerHTML='';
   aanvUitleg();
@@ -9202,27 +9277,31 @@ function resetAanvraag(){
 function maakAanvraag(){
   const naam=document.getElementById('a_naam').value.trim();
   const tel=document.getElementById('a_tel').value.trim();
-  const wat=document.getElementById('a_wat').value.trim();
-  const aantal=Math.max(1, Math.floor(Number(document.getElementById('a_aantal').value)||1));
-  const perStuk=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
-  const verkoop=Math.round(perStuk*aantal*100)/100;
+  if(!naam || !tel){ toast('Naam en telefoonnummer zijn verplicht.', 'let-op'); document.getElementById(!naam?'a_naam':'a_tel').focus(); return; }
+  /* Staat er nog een ingevuld product in de velden dat je niet hebt toegevoegd? Neem
+     het dan alsnog mee, zodat je voor één product niet apart hoeft te klikken. */
+  const h=aanvHuidigeRegel();
+  if(h){ aanvNieuwRegels.push(Object.assign({id:uid(), binnen:false}, h)); aanvLeegRegelInputs(); renderAanvRegels(); }
+  if(!aanvNieuwRegels.length){ toast('Voeg minstens één product toe.', 'let-op'); document.getElementById('a_wat').focus(); return; }
+  const verkoop=Math.round(aanvNieuwRegels.reduce((s,r)=>s+r.prijsStuk*r.aantal,0)*100)/100;
+  const inkoop=Math.round(aanvNieuwRegels.reduce((s,r)=>s+r.inkoopStuk*r.aantal,0)*100)/100;
+  const stuks=aanvNieuwRegels.reduce((s,r)=>s+r.aantal,0);
   const aanbet=Math.round((Number(document.getElementById('a_aanbet').value)||0)*100)/100;
   const bet=document.getElementById('a_betaal').value;
-  if(!naam || !tel){ alert('Naam en telefoonnummer zijn verplicht.'); return; }
-  if(!wat){ alert('Vul in welk product de klant wil hebben.'); return; }
-  if(verkoop<=0){ alert('Vul de verkoopprijs in, anders weet Storvo niet wat de klant betaalt.'); return; }
-  if(aanbet>verkoop){ alert('De aanbetaling kan niet hoger zijn dan de verkoopprijs.'); return; }
+  if(aanbet>verkoop){ toast('De aanbetaling kan niet hoger zijn dan het totaal.', 'let-op'); return; }
 
   state.aanvNr=(state.aanvNr||0)+1;
   const nr='A'+new Date().getFullYear().toString().slice(2)+'-'+String(state.aanvNr).padStart(3,'0');
+  const regels=aanvNieuwRegels.map(r=>({id:r.id, wat:r.wat, aantal:r.aantal, prijsStuk:r.prijsStuk, inkoopStuk:r.inkoopStuk, cat:(r.cat!=null?r.cat:null), binnen:false}));
+  /* wat = een korte samenvatting voor de lijst en oude weergaven; regels is de bron. */
+  const wat=regels.map(r=>(r.aantal>1?r.aantal+'× ':'')+r.wat).join(', ');
   const a={
     id:uid(), nr, t:Date.now(),
     klant:{naam, tel, email:document.getElementById('a_email').value.trim()},
     notify:document.getElementById('a_notify').value==='1',
-    wat, aantal, prijsStuk:perStuk, verkoop,
-    inkoop:Math.round((Number(document.getElementById('a_inkoop').value)||0)*aantal*100)/100,
-    productId:(aanvZoekProduct(wat)||{}).id || null,
-    cat: aanvCatKies(wat),
+    regels, wat, aantal:stuks, verkoop, inkoop,
+    productId:(regels.length===1?(aanvZoekProduct(regels[0].wat)||{}).id:null) || null,
+    cat: (regels.length===1?regels[0].cat:null),
     aanbetPct:Number(document.getElementById('a_pct').value)||0,
     aanbetaling:aanbet, aanbetBetaal:bet,
     status:'aangevraagd', door:gebruiker?gebruiker.naam:null,
@@ -9287,18 +9366,18 @@ function aanvBoek(id, bet){
   const a=aanvragen().find(a=>a.id===id);
   if(!a) return;
   const rest=aanvRestant(a);
-  const totaal=aanvTotaal(a);
-  const vid=uid();
-  /* Omzet is de hele prijs; kosten zijn wat het toestel jou kostte. */
-  /* De categorie die je bij de aanvraag koos (of die van het gekoppelde product);
-     anders valt hij terug op Diensten. Zo telt de aanvraag mee bij de juiste soort
-     in "winst per categorie". */
-  const aCat = (a.cat!=null) ? a.cat : ((state.producten.find(p=>p.id===a.productId)||{}).cat);
-  state.verkopen.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr+' · '+(a.aantal>1?a.aantal+'× ':'')+a.wat,
-    verkoop:totaal, inkoop:a.inkoop||0, aantal:a.aantal||1, betaal:bet,
-    cat:(aCat!=null?aCat:dienstCat().id), door:gebruiker?gebruiker.naam:null});
+  /* Elke productregel wordt apart als verkoop geboekt, met zijn eigen categorie en
+     aantal, zodat "winst per categorie" per soort klopt. Zonder categorie valt hij
+     terug op Diensten. */
+  aanvRegels(a).forEach(r=>{
+    const vid=uid();
+    const cat = (r.cat!=null) ? r.cat : dienstCat().id;
+    state.verkopen.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr+' · '+(r.aantal>1?r.aantal+'× ':'')+r.wat,
+      verkoop:Math.round(r.prijsStuk*r.aantal*100)/100, inkoop:Math.round(r.inkoopStuk*r.aantal*100)/100,
+      aantal:r.aantal, betaal:bet, cat, door:gebruiker?gebruiker.naam:null});
+  });
   if(state.verkopen.length>5000) state.verkopen.length=5000;
-  state.log.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr, m:'uit', v:null, aantal:1, pid:null});
+  state.log.unshift({id:uid(), t:Date.now(), naam:'Aanvraag '+a.nr, m:'uit', v:null, aantal:1, pid:null});
   state.log=state.log.slice(0,50);
   /* Alleen het restant komt nu de lade in; de aanbetaling zat er al. */
   kasVerkoop(rest, bet, 'Aanvraag '+a.nr);
@@ -9318,12 +9397,56 @@ function aanvAnnuleer(id){
   toast(a.nr+' geannuleerd','let-op');
 }
 
+/* Een product van een aanvraag aan- of afvinken (binnengekomen). Zijn alle regels
+   binnen, dan gaat de aanvraag automatisch op "Binnen" (en krijgt de klant bericht);
+   vink je er weer één uit, dan zakt hij terug naar "Besteld". */
+function aanvRegelBinnen(aanvId, regelId){
+  const a=aanvragen().find(a=>a.id===aanvId); if(!a) return;
+  if(a.status==='opgehaald' || a.status==='geannuleerd') return;
+  if(!Array.isArray(a.regels) || !a.regels.length) a.regels=aanvRegels(a).map(r=>Object.assign({}, r));
+  const r=a.regels.find(x=>String(x.id)===String(regelId)); if(!r) return;
+  r.binnen=!r.binnen;
+  const vg=aanvVoortgang(a);
+  if(vg.binnen===vg.totaal){
+    if(a.status!=='binnen'){ a.status='binnen'; a.tijdlijn.push({status:'binnen', t:Date.now(), door:gebruiker?gebruiker.naam:null});
+      if(AANV_STATUS.binnen.bericht) verstuurKlantbericht({nr:a.nr, klant:a.klant, toestel:a.wat, notify:a.notify}, AANV_STATUS.binnen.bericht); }
+  } else if(a.status==='binnen'){
+    a.status='besteld';
+  }
+  save(); renderAanvragen(); updateBadge();
+  if(document.getElementById('aanvDetail')) toonAanvraag(aanvId);
+}
+/* De totale lijst: alles wat over alle lopende aanvragen nog moet komen (niet
+   afgevinkt), samengeteld per product. Zo weet je in één blik wat je nog moet halen. */
+function renderAanvTotaalLijst(){
+  const kaart=document.getElementById('aanvTotaalKaart'), el=document.getElementById('aanvTotaalLijst');
+  if(!el) return;
+  const map={};
+  aanvLopend().forEach(a=>{
+    aanvRegels(a).forEach(r=>{
+      if(r.binnen) return;
+      const key=(r.wat||'').toLowerCase();
+      const m=map[key]||(map[key]={wat:r.wat, aantal:0, bij:[]});
+      m.aantal+=r.aantal; m.bij.push({nr:a.nr, klant:a.klant.naam, aantal:r.aantal});
+    });
+  });
+  const rijen=Object.values(map).sort((x,z)=>x.wat.localeCompare(z.wat));
+  if(!rijen.length){ if(kaart) kaart.hidden=true; el.innerHTML=''; return; }
+  if(kaart) kaart.hidden=false;
+  el.innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>Product</th><th class="num">Nog te halen</th><th>Voor wie</th></tr></thead><tbody>'+
+    rijen.map(m=>`<tr><td><b>${esc(m.wat)}</b></td><td class="num"><b>${m.aantal}×</b></td>`+
+      `<td class="muted">${m.bij.map(b=>esc(b.klant)+' ('+b.aantal+'×, '+esc(b.nr)+')').join(', ')}</td></tr>`).join('')+
+    '</tbody></table></div>';
+}
 function aanvRij(a){
   const s=AANV_STATUS[a.status];
   const rest=aanvRestant(a);
+  const vg=aanvVoortgang(a);
+  const prog = (a.status!=='opgehaald' && a.status!=='geannuleerd' && vg.totaal>1)
+    ? `<div class="avprog"><div class="prog"><i style="width:${vg.pct}%"></i></div><span class="muted klein">${vg.binnen}/${vg.totaal} binnen</span></div>` : '';
   return `<div class="aanvrij" onclick="toonAanvraag(${a.id})">
     <div class="avnr"><b>${esc(a.nr)}</b><div class="muted" style="font-size:12px">${esc(a.klant.naam)}</div></div>
-    <div class="avwat">${a.aantal>1?'<b>'+a.aantal+'× </b>':''}${esc(a.wat)}</div>
+    <div class="avwat">${esc(a.wat)}${prog}</div>
     <div><span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span></div>
     <div class="avgeld"><b>${euro(aanvTotaal(a))}</b>
       ${a.status!=='opgehaald' && rest>0 ? `<div class="muted" style="font-size:12px">nog ${euro(rest)}</div>`:''}</div>
@@ -9331,6 +9454,7 @@ function aanvRij(a){
 }
 function renderAanvragen(){
   aanvVulProducten();
+  renderAanvTotaalLijst();
   const lopend=aanvLopend();
   const t=document.getElementById('aanvTelling');
   if(t) t.textContent = lopend.length ? '('+lopend.length+')' : '';
@@ -9357,17 +9481,29 @@ function toonAanvraag(id){
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='aanvDetail';
   ov.onclick=e=>{ if(e.target===ov) sluitAanvraag(); };
+  const regels=aanvRegels(a);
+  const vg=aanvVoortgang(a);
+  const kanVinken = a.status!=='opgehaald' && a.status!=='geannuleerd';
+  const regelsHtml=regels.map(r=>`<label class="avcheck${r.binnen?' aan':''}">`+
+    `<input type="checkbox" ${r.binnen?'checked':''} ${kanVinken?'':'disabled'} onchange="aanvRegelBinnen(${a.id},'${r.id}')">`+
+    `<span class="avcheckwat"><b>${r.aantal}×</b> ${esc(r.wat)}${r.cat!=null?' <span class="muted">· '+esc(catNaam(r.cat))+'</span>':''}</span>`+
+    `<span class="avcheckprijs">${euro(r.prijsStuk*r.aantal)}</span></label>`).join('');
   ov.innerHTML=`<div class="popup groot">
     <div class="hangkop">
-      <div><h3>${esc(a.nr)} · ${a.aantal>1?a.aantal+'× ':''}${esc(a.wat)}</h3>
+      <div><h3>${esc(a.nr)}</h3>
         <div class="pv">${esc(a.klant.naam)} · ${esc(a.klant.tel)}${a.klant.email?' · '+esc(a.klant.email):''}</div></div>
       <span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span>
     </div>
 
-    ${a.status==='binnen' ? `<div class="npmelding goed" style="font-size:15px">
+    <div class="sectielabel" style="margin-top:6px">Producten ${vg.totaal>1?'· '+vg.binnen+' van '+vg.totaal+' binnen':''}</div>
+    ${vg.totaal>1?`<div class="prog" style="margin-bottom:12px"><i style="width:${vg.pct}%"></i></div>`:''}
+    <div class="avchecklist">${regelsHtml}</div>
+    ${kanVinken?'<p class="muted klein" style="margin:8px 0 0">Vink een product af zodra het binnen is. Zijn ze allemaal binnen, dan krijgt de klant automatisch bericht.</p>':''}
+
+    ${a.status==='binnen' ? `<div class="npmelding goed" style="font-size:15px; margin-top:14px">
       <b>Ligt klaar.</b> De klant betaalt bij het ophalen nog ${euro(rest)}${a.aanbetaling>0?', want '+euro(a.aanbetaling)+' is al aanbetaald':''}.</div>` : ''}
 
-    <div class="avdetail">
+    <div class="avdetail" style="margin-top:16px">
       <div class="arrij"><span>Totaalprijs</span><b>${euro(totaal)}</b></div>
       ${a.aanbetaling>0?`<div class="arrij"><span>Aanbetaald${a.aanbetPct?' ('+a.aanbetPct+'%)':''}</span><b>${euro(a.aanbetaling)} · ${betaalNaam(a.aanbetBetaal||'pin')}</b></div>`:''}
       <div class="arrij ${a.status==='opgehaald'?'':'rest'}"><span>${a.status==='opgehaald'?'Afgerekend':'Nog te betalen bij ophalen'}</span><b class="groot">${euro(rest)}</b></div>
@@ -9390,7 +9526,7 @@ function toonAanvraag(id){
     }).join('')}</div>
 
     <div class="row" style="margin-top:18px">
-      ${s.volgende?`<button class="btn actie" onclick="aanvStap(${a.id})"><svg class="i s"><use href="#${AANV_STATUS[s.volgende].ico}"/></svg>${esc(s.knop)}</button>`:''}
+      ${(s.volgende && s.volgende!=='binnen')?`<button class="btn actie" onclick="aanvStap(${a.id})"><svg class="i s"><use href="#${AANV_STATUS[s.volgende].ico}"/></svg>${esc(s.knop)}</button>`:''}
       ${a.status!=='opgehaald'&&a.status!=='geannuleerd'?`<button class="btn ghost" onclick="aanvAnnuleer(${a.id})">Annuleren</button>`:''}
       <button class="btn ghost" onclick="sluitAanvraag()">Sluiten</button>
     </div>
