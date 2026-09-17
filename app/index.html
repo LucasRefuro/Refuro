@@ -1021,6 +1021,14 @@
   .barcodehint{margin-top:7px; font-size:12.5px; line-height:1.5; color:var(--muted);}
   .barcodehint.bots{color:var(--amber-tekst); background:var(--amber-soft); padding:9px 12px; border-radius:10px;}
   .linkknop{background:none; border:none; padding:0; font:inherit; color:var(--oranje); font-weight:600; cursor:pointer; text-decoration:underline;}
+  /* Openingstijden per dag: een rij per dag met van/tot en een "gesloten"-vinkje. */
+  .tijdeneditor{display:flex; flex-direction:column; gap:6px; margin-top:2px;}
+  .tijdenrij{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .tijdendag{width:96px; font-size:13px; font-weight:600; color:var(--text); flex:none;}
+  .tijdentijd{width:120px; flex:none;}
+  .tijdenscheid{font-size:12.5px; color:var(--muted);}
+  .tijdengesloten{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); text-transform:none; letter-spacing:normal; margin:0; cursor:pointer;}
+  .tijdengesloten input{width:auto;}
   /* de volgende-stap balk boven in het reparatiedetail: status links, hoofdactie rechts */
   .repnu{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--soft-2); border-radius:var(--radius-s); padding:12px 15px; margin-top:16px;}
   .repnu-l{display:flex; align-items:center; gap:8px;}
@@ -3349,7 +3357,9 @@
       <div><label>WhatsApp-nummer</label><input id="kp_whatsapp" placeholder="06 12345678" onchange="slaKlantpaginaOp()"></div>
     </div>
     <div style="margin-bottom:14px"><label>Adres</label><input id="kp_adres" placeholder="Hoofdstraat 7a, 5121 JA, Rijen" onchange="slaKlantpaginaOp()"></div>
-    <div><label>Openingstijden</label><textarea id="kp_tijden" rows="2" placeholder="Ma t/m za 10:00 tot 18:00" onchange="slaKlantpaginaOp()"></textarea></div>
+    <div><label>Openingstijden <span class="muted">(per dag)</span></label>
+      <div id="kp_tijdenEditor" class="tijdeneditor"></div>
+      <input type="hidden" id="kp_tijden"></div>
     <p class="muted" style="margin-top:8px; font-size:12.5px">Laat e-mail of telefoon leeg om je bedrijfsgegevens te gebruiken. Laat WhatsApp leeg om je telefoonnummer te gebruiken.</p>
 
     <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-message"/></svg>Teksten op de pagina</h2>
@@ -15956,7 +15966,7 @@ function renderKlantpagina(){
   zet('kp_telefoon', kp.telefoon||'');
   zet('kp_whatsapp', kp.whatsapp||'');
   zet('kp_adres', kp.adres||'');
-  zet('kp_tijden', kp.openingstijden||'');
+  tijdenLaad();
   zet('kp_t_inleveren', kp.teksten.inleveren);
   zet('kp_t_ophalen', kp.teksten.ophalen);
   zet('kp_t_vragen', kp.teksten.vragen);
@@ -16019,6 +16029,71 @@ function slaKlantpaginaOp(){
     vragen:lees('kp_t_vragen')||KP_STANDAARDTEKSTEN.vragen
   };
   save();
+}
+/* ── Openingstijden per dag ──
+   Een rij per dag (van/tot of gesloten). De winkelier stelt het per dag in; wij
+   maken er een nette, ingekorte tekst van ("Ma t/m vr 10:00 - 18:00, Za ..., Zo
+   gesloten") die op de klantpagina komt. De gestructureerde dagen bewaren we in
+   kp.tijdenDagen; de tekst in kp.openingstijden (zoals voorheen), zodat de
+   reparatiepagina en de edge-functie niets hoeven te weten van de nieuwe editor. */
+const TIJDEN_DAGEN=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+const TIJDEN_KORT=['Ma','Di','Wo','Do','Vr','Za','Zo'];
+function tijdenStandaard(){
+  return TIJDEN_DAGEN.map((d,i)=>({van:'10:00', tot:(i===5?'17:00':'18:00'), dicht:(i===6)}));
+}
+function tijdenGelijk(a,b){ return a.dicht===b.dicht && (a.dicht || (a.van===b.van && a.tot===b.tot)); }
+function tijdenString(dagen){
+  const regels=[]; let i=0;
+  while(i<7){
+    let j=i; while(j+1<7 && tijdenGelijk(dagen[j+1],dagen[i])) j++;
+    const d=dagen[i];
+    const tijd = d.dicht ? 'gesloten' : (d.van+' - '+d.tot);
+    const label = i===j ? TIJDEN_KORT[i] : (TIJDEN_KORT[i]+' t/m '+TIJDEN_KORT[j]);
+    regels.push(label+' '+tijd);
+    i=j+1;
+  }
+  return regels.join('\n');
+}
+function tijdenLaad(){
+  const el=document.getElementById('kp_tijdenEditor'); if(!el) return;
+  const kp=klantpagina();
+  const dagen = (Array.isArray(kp.tijdenDagen) && kp.tijdenDagen.length===7) ? kp.tijdenDagen : tijdenStandaard();
+  el.innerHTML = TIJDEN_DAGEN.map((naam,i)=>{
+    const d=dagen[i]||{van:'10:00',tot:'18:00',dicht:false};
+    return `<div class="tijdenrij">
+      <span class="tijdendag">${naam}</span>
+      <input type="time" class="tijdentijd" data-i="${i}" data-veld="van" value="${d.dicht?'':(d.van||'10:00')}" ${d.dicht?'disabled':''} oninput="tijdenWijzig()">
+      <span class="tijdenscheid">tot</span>
+      <input type="time" class="tijdentijd" data-i="${i}" data-veld="tot" value="${d.dicht?'':(d.tot||'18:00')}" ${d.dicht?'disabled':''} oninput="tijdenWijzig()">
+      <label class="tijdengesloten"><input type="checkbox" data-i="${i}" ${d.dicht?'checked':''} onchange="tijdenWijzig()">Gesloten</label>
+    </div>`;
+  }).join('');
+  const verborgen=document.getElementById('kp_tijden');
+  if(verborgen) verborgen.value = (Array.isArray(kp.tijdenDagen) && kp.tijdenDagen.length===7)
+    ? tijdenString(dagen) : (kp.openingstijden || tijdenString(dagen));
+}
+function tijdenLees(){
+  const el=document.getElementById('kp_tijdenEditor');
+  const rijen=el.querySelectorAll('.tijdenrij');
+  const dagen=[];
+  for(let i=0;i<7;i++){
+    const rij=rijen[i]; if(!rij){ dagen.push({van:'10:00',tot:'18:00',dicht:false}); continue; }
+    const dicht=rij.querySelector('input[type=checkbox]').checked;
+    const van=(rij.querySelector('input[data-veld="van"]').value)||'10:00';
+    const tot=(rij.querySelector('input[data-veld="tot"]').value)||'18:00';
+    dagen.push({van,tot,dicht});
+  }
+  return dagen;
+}
+function tijdenWijzig(){
+  const dagen=tijdenLees();
+  const el=document.getElementById('kp_tijdenEditor');
+  el.querySelectorAll('.tijdenrij').forEach((rij,i)=>{
+    rij.querySelectorAll('.tijdentijd').forEach(v=>{ v.disabled=!!dagen[i].dicht; });
+  });
+  klantpagina().tijdenDagen=dagen;
+  const verborgen=document.getElementById('kp_tijden'); if(verborgen) verborgen.value=tijdenString(dagen);
+  slaKlantpaginaOp();
 }
 function kpVoorbeeld(){
   const laatste=(state.reparaties||[])[0];

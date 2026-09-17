@@ -81,9 +81,12 @@
   /* De actieve stap is gewoon een gevuld bolletje in de accentkleur: even groot als
      de rest en precies op de lijn. Geen grote pulserende ring meer (die maakte hem
      te groot en oogde scheef). Een subtiele zachte gloed is genoeg. */
-  /* De actieve stap: gewoon een gevuld bolletje in de accentkleur, exact even groot
-     als de rest en op de lijn. Geen ring eromheen (die maakte hem groter en scheef). */
-  .stap.nu::before{background:var(--accent); border-color:var(--accent);}
+  /* De actieve stap: even groot als de rest en op de lijn, met een zacht, klein
+     pulserend ringetje in de accentkleur. Licht, niet de grote halo van eerder. */
+  .stap.nu::before{background:var(--accent); border-color:var(--accent); animation:pols 2.2s ease-in-out infinite;}
+  @keyframes pols{0%,100%{box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);}
+                  50%{box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 7%, transparent);}}
+  @media(prefers-reduced-motion:reduce){ .stap.nu::before{animation:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);} }
   .stap .tt{font-weight:600; font-size:15.5px;}
   .stap.todo .tt{color:var(--muted-l); font-weight:500;}
   .stap .tm{font-size:13px; color:var(--muted-l); margin-top:2px;}
@@ -319,7 +322,7 @@ function teken(d){
           <span class="ic"><svg class="i"><use href="#i-mail"/></svg></span>
           <span>E-mail<small>${esc(d.winkel.email)}</small></span></a>`:''}
       </div>
-      ${d.winkel.openingstijden?`<div class="notitie" style="margin-top:16px"><b>Openingstijden</b><br>${esc(d.winkel.openingstijden)}</div>`:''}
+      ${d.winkel.openingstijden?`<div class="notitie" style="margin-top:16px"><b>Openingstijden</b><br>${esc(d.winkel.openingstijden).replace(/\n/g,'<br>')}</div>`:''}
       ${d.winkel.adres?`<div class="notitie" style="margin-top:10px"><b>Adres</b><br>${esc(d.winkel.adres)}</div>`:''}
     </div>
 
