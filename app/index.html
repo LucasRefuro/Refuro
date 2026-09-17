@@ -5945,12 +5945,13 @@ async function repLabelPng(data){
         if(qr.isDark(row,col)) ctx.fillRect(Math.floor(qrX+col*cell), Math.floor(qrY+row*cell), Math.ceil(cell), Math.ceil(cell));
     }
   }catch(e){}
-  // Tekst links: nummer groot, dan klant, dan toestel + reparatie
+  // Tekst links: nummer groot, dan klant, telefoonnummer, dan toestel + reparatie
   const txtW=qrX-pad-Math.round(1.5*dpmm);
   let y=pad;
   ctx.font='800 '+Math.round(5.2*dpmm)+'px Arial'; ctx.fillText(String(data.nr||''), pad, y); y+=Math.round(6.4*dpmm);
   if(data.klant){ ctx.font='700 '+Math.round(3.1*dpmm)+'px Arial'; y=labelWrap(ctx, data.klant, pad, y, txtW, Math.round(3.7*dpmm), 1); }
-  if(data.toestel){ ctx.font='400 '+Math.round(2.9*dpmm)+'px Arial'; y=labelWrap(ctx, data.toestel, pad, y+Math.round(0.6*dpmm), txtW, Math.round(3.4*dpmm), 3); }
+  if(data.tel){ ctx.font='400 '+Math.round(2.7*dpmm)+'px Arial'; ctx.fillText(String(data.tel), pad, y); y+=Math.round(3.4*dpmm); }
+  if(data.toestel){ ctx.font='400 '+Math.round(2.9*dpmm)+'px Arial'; y=labelWrap(ctx, data.toestel, pad, y+Math.round(0.4*dpmm), txtW, Math.round(3.4*dpmm), data.tel?2:3); }
   return c.toDataURL('image/png').split(',')[1];
 }
 async function printRepLabel(id){
@@ -5960,7 +5961,7 @@ async function printRepLabel(id){
        nummer, zodat de Storvo-scanner de reparatie in elk geval herkent. */
     const qr=kpLinkVoor(r.nr)||String(r.nr);
     const toestel=(r.toestel||'')+(r.type?' · '+r.type:'');
-    const png=await repLabelPng({nr:r.nr, klant:r.klant.naam, toestel, qr});
+    const png=await repLabelPng({nr:r.nr, klant:r.klant.naam, tel:r.klant.tel, toestel, qr});
     const tweekleuren=localStorage.getItem('storvoLabelTweekleur')!=='0';
     const breedte=Number(localStorage.getItem('storvoLabelBreedte'))||62;
     await printViaHelper(png, {label:breedte, red:tweekleuren, kopieen:1});
