@@ -75,7 +75,12 @@ Deno.serve(async (req) => {
   if (!bestellingId) return klaar();
 
   /* De bestelling zelf ophalen. Dit is meteen de controle: bestaat hij niet,
-     dan was de melding niet echt en gebeurt er niets. */
+     dan was de melding niet echt en gebeurt er niets.
+     LET OP: geen customer/email opvragen. Die velden eisen de scope read_customers
+     (Shopify: "Access denied for customer field"); hebben we die niet, dan faalt de
+     HELE query met 500 en synct de verkoop nooit. De naam/adres van de koper zie je
+     via beheer_url (de Shopify-orderlink). Wil je klantnaam in Storvo: voeg
+     read_customers toe aan de app-scopes en koppel opnieuw, dan kan dit veld terug. */
   let order: any = null;
   try {
     const token = await ontsleutel(kop.token_versleuteld);
@@ -83,8 +88,6 @@ Deno.serve(async (req) => {
       query($id: ID!) {
         order(id: $id) {
           id name createdAt cancelledAt displayFinancialStatus displayFulfillmentStatus
-          customer { displayName email }
-          email
           totalPriceSet { shopMoney { amount currencyCode } }
           lineItems(first: 100) {
             nodes {
