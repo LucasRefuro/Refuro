@@ -1017,6 +1017,10 @@
   .rijmenu-item.danger{color:var(--red-tekst);}
   .rijmenu-item.danger:hover{background:var(--red-soft);}
   .rijmenu-item.danger .i{color:var(--red-tekst);}
+  /* Barcode-hint onder het barcodeveld: rustige tip, of amber bij een botsing. */
+  .barcodehint{margin-top:7px; font-size:12.5px; line-height:1.5; color:var(--muted);}
+  .barcodehint.bots{color:var(--amber-tekst); background:var(--amber-soft); padding:9px 12px; border-radius:10px;}
+  .linkknop{background:none; border:none; padding:0; font:inherit; color:var(--oranje); font-weight:600; cursor:pointer; text-decoration:underline;}
   /* de volgende-stap balk boven in het reparatiedetail: status links, hoofdactie rechts */
   .repnu{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--soft-2); border-radius:var(--radius-s); padding:12px 15px; margin-top:16px;}
   .repnu-l{display:flex; align-items:center; gap:8px;}
@@ -1327,7 +1331,12 @@
   .loginbox .mk img{width:100%; height:100%; object-fit:cover;}
   .loginbox h2{font-family:'Sora',sans-serif; font-size:24px; font-weight:800; letter-spacing:-.04em; margin-bottom:4px; display:block;}
   .loginbox .muted{font-size:14.5px; line-height:1.55;}
-  .loginbox label{margin-top:2px;}
+  /* Op een inlogscherm lezen kleine hoofdletter-labels als "formulier". Hier
+     dus gewone zinsletters, iets groter en donkerder: rustiger en vriendelijker. */
+  .loginsub{color:var(--muted); font-size:14.5px; line-height:1.55; margin:0 0 20px;}
+  .loginform{display:block;}
+  .loginbox label{margin-top:2px; text-transform:none; letter-spacing:normal; font-size:13px; font-weight:600; color:var(--text);}
+  .loginbox input{font-size:15px; padding:13px 14px; border-radius:12px; margin-bottom:0;}
   .mwKnop{background:var(--card); border:1.5px solid var(--border); border-radius:14px; padding:16px 10px; transition:.16s;}
   .mwKnop:hover{border-color:var(--oranje); background:var(--lblauw); transform:translateY(-2px);}
   .pinvak{letter-spacing:12px; padding:14px; text-align:center;}
@@ -1843,6 +1852,31 @@
   body.metabobalk aside{top:var(--abohoogte);}
   body.metabobalk .topbar{top:var(--abohoogte);}
 
+  /* De bestelbalk: dezelfde plek en maat als de abobalk, maar hij herinnert je
+     aan wat vandaag nog besteld moet worden (voor 16:30 = morgen binnen). Staat
+     er ook een abobalk, dan zakt hij er netjes onder. */
+  .bestelbalk{position:fixed; left:0; right:0; top:0; z-index:899; width:100%;
+    min-height:var(--abohoogte); display:flex; align-items:center;
+    padding:0 22px; font-size:13px; line-height:1.3;
+    background:var(--amber-soft); color:var(--amber-tekst); border-bottom:1.5px solid #F0D9A8;}
+  .bestelbinnen{max-width:1640px; margin:0 auto; width:100%;
+    display:flex; align-items:center; gap:12px;}
+  .bestelbalk .i{flex:none; width:15px; height:15px; color:var(--amber-tekst);}
+  .bestelbalk span{flex:1; min-width:0;}
+  .bestelbalk b{font-weight:700;}
+  .bestelbalk button{border:none; border-radius:var(--pil); padding:5px 14px; font-family:inherit;
+    font-size:12.5px; font-weight:700; line-height:1.35; cursor:pointer; background:var(--actie); color:#fff; flex:none;
+    white-space:nowrap; box-shadow:0 1px 5px rgba(23,32,30,.10); transition:.15s;}
+  .bestelbalk button:hover{box-shadow:0 3px 10px rgba(23,32,30,.16);}
+  body.metbestelbalk{padding-top:var(--abohoogte);}
+  body.metbestelbalk aside{top:var(--abohoogte);}
+  body.metbestelbalk .topbar{top:var(--abohoogte);}
+  /* Allebei de balken tegelijk: samen twee balken hoog, bestelbalk onder de abobalk. */
+  body.metbestelbalk.metabobalk{padding-top:calc(var(--abohoogte)*2);}
+  body.metbestelbalk.metabobalk aside{top:calc(var(--abohoogte)*2);}
+  body.metbestelbalk.metabobalk .topbar{top:calc(var(--abohoogte)*2);}
+  body.metbestelbalk.metabobalk .bestelbalk{top:var(--abohoogte);}
+
   /* Op een smal scherm staat de zijbalk toch al boven de inhoud. Dan hoeft de
      balk niet vast te staan: hij is gewoon het eerste blok van de pagina. */
   @media(max-width:860px){
@@ -1852,6 +1886,12 @@
     .abobalk button{width:100%; padding:8px 14px;}
     body.metabobalk{padding-top:0;}
     body.metabobalk .topbar{top:0;}
+    .bestelbalk{position:static; padding:8px 16px;}
+    .bestelbinnen{flex-wrap:wrap; gap:8px;}
+    .bestelbalk span{flex:1 1 100%;}
+    .bestelbalk button{width:100%; padding:8px 14px;}
+    body.metbestelbalk, body.metbestelbalk.metabobalk{padding-top:0;}
+    body.metbestelbalk .topbar, body.metbestelbalk.metabobalk .topbar{top:0;}
   }
 
   /* Scan-knop in de kopbalk + de camera-scanner. iPhone-Safari kan zelf geen QR lezen,
@@ -2347,7 +2387,7 @@
   <div class="card">
     <div id="npHerkomst"></div>
     <div class="grid" style="margin-bottom:12px">
-      <div><label>Barcode <span class="muted">(optioneel)</span></label><div style="display:flex; gap:6px"><input id="f_barcode" style="flex:1; min-width:0" placeholder="Scan, typ, of laat leeg" autocomplete="off" oninput="barcodeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}"><button type="button" class="btn ghost small" onclick="wisBarcode()" title="Barcode leegmaken"><svg class="i s"><use href="#i-trash"/></svg></button></div><input type="hidden" id="f_foto"></div>
+      <div><label>Barcode <span class="muted">(optioneel)</span></label><div style="display:flex; gap:6px"><input id="f_barcode" style="flex:1; min-width:0" placeholder="Scan, typ, of laat leeg" autocomplete="off" oninput="barcodeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}"><button type="button" class="btn ghost small" onclick="eigenBarcodeInForm()" title="Eigen barcode aanmaken"><svg class="i s"><use href="#i-plus"/></svg>Eigen code</button><button type="button" class="btn ghost small" onclick="wisBarcode()" title="Barcode leegmaken"><svg class="i s"><use href="#i-trash"/></svg></button></div><div id="barcodeHint" class="barcodehint" hidden></div><input type="hidden" id="f_foto"></div>
       <div class="zoekveld"><label>Naam</label><input id="f_naam" placeholder="Typ of scan; kies uit de catalogus" autocomplete="off" oninput="naamZoek()" onfocus="naamZoek()" onblur="setTimeout(naamSluit,180)" onkeydown="naamToets(event)"><div class="zoeklijst" id="naamLijst" hidden></div></div>
       <div><label>Merk</label><input id="f_merk" placeholder="bijv. Apple, Samsung" list="merkenList"><datalist id="merkenList"></datalist></div>
       <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
@@ -3736,6 +3776,8 @@ function showTab(t){
     if(k){ k.hidden=!!editId; if(!editId) npTeken(); }
   }
   if(typeof mobielBijwerken==='function') mobielBijwerken();
+  /* De bestelbalk hoort op elke pagina, dus bij elke paginawissel opnieuw kijken. */
+  if(typeof toonBestelBalk==='function') toonBestelBalk();
   /* Bij het wisselen van pagina weer bovenaan beginnen, met de kop in beeld. */
   const bar=document.querySelector('.topbar');
   if(bar) bar.classList.remove('weg');
@@ -5261,7 +5303,7 @@ function renderDashboard(){
       `<div class="kpimeta"><span class="btwhint">incl. btw</span>${P(k)}</div></div>`;
   };
   document.getElementById('kpiRow').innerHTML=
-    geldKpi('Omzet', s.omzet, 'omzet', {accent:true})+
+    geldKpi('Totale omzet', s.omzet, 'omzet', {accent:true})+
     geldKpi('Winst', s.winst, 'winst', {groen:true})+
     geldKpi('Kosten (inkoop)', s.kosten, 'kosten')+
     geldKpi('Pin en bank', s.pin, 'pin')+
@@ -6035,7 +6077,7 @@ async function printProductSticker(id, stil, kopieen){
      past en scanbaar is. De lange auto-code (INT-<tijdstempel>) korten we hier ook in;
      die is nooit eerder geprint, dus dat is veilig. Een echte EAN laten we met rust. */
   if(!p.barcode || /^INT-\d{8,}$/.test(String(p.barcode))){
-    p.barcode='INT-'+Math.random().toString(36).slice(2,8).toUpperCase();
+    p.barcode=nieuweInterneBarcode();
     save(); if(!stil) renderProducten();
   }
   try{
@@ -6053,6 +6095,18 @@ async function printBulkStickers(knop){
   if(knop){ knop.disabled=false; knop.textContent=oud; }
   renderProducten();
   toast(n+' van '+ids.length+' stickers geprint', n===ids.length);
+}
+/* Een product een verse eigen barcode geven en die meteen printen. Voor als de code
+   op het doosje fout is of dubbel: je overschrijft hem met een eigen INT-code. Een
+   echte streepjescode overschrijven we niet zonder te vragen. */
+async function nieuweBarcodePrint(id){
+  const p=state.producten.find(p=>String(p.id)===String(id)); if(!p) return;
+  const oud=String(p.barcode||'');
+  const echt = oud && !oud.startsWith('INT-');
+  if(echt && !confirm('Dit product heeft barcode '+oud+'.\n\nVervangen door een eigen interne code en die printen?')) return;
+  p.barcode=nieuweInterneBarcode();
+  save(); renderProducten();
+  await printProductSticker(id);
 }
 function renderLabelprinter(){
   const inst=labelInstelling();
@@ -7699,7 +7753,43 @@ let assortResultaten=[], assortZoekTimer=null;
    meteen vanzelf op; typ je met de hand, dan gebeurt er niets tot je op Enter
    drukt, zodat een half ingetypte code niet voortijdig wordt gepakt. */
 let bcLaatste=0, bcTraag=false, bcTimer=null, bcVorige='', bcVorigeT=0;
+/* ── Eigen barcode ──
+   Soms staat er geen streepjescode op het doosje (losse onderdelen), of een code
+   die niet leest, of erger: een code die een ander product óók heeft. Dan kun je er
+   niet blind op scannen. In al die gevallen verzin je hier zelf een korte interne
+   code (INT-…) die je op een sticker uitprint; de kassa herkent hem bij het scannen. */
+function nieuweInterneBarcode(){
+  let code, n=0;
+  do{ code='INT-'+Math.random().toString(36).slice(2,8).toUpperCase(); }
+  while(state.producten.some(p=>String(p.barcode)===code) && ++n<50);
+  return code;
+}
+function barcodeConflict(code, behalveId){
+  code=String(code||'').trim(); if(!code) return null;
+  return state.producten.find(p=>String(p.barcode)===code && p.id!==behalveId)||null;
+}
+function eigenBarcodeInForm(){
+  const b=document.getElementById('f_barcode'); if(!b) return;
+  b.value=nieuweInterneBarcode();
+  barcodeHintUpdate();
+}
+/* De tip onder het veld verandert mee met wat er staat: botst de code, dan een
+   waarschuwing met een knop om er een eigen van te maken; is het een eigen code,
+   dan de mogelijkheid om te printen; is het veld leeg, een rustige tip. */
+function barcodeHintUpdate(){
+  const el=document.getElementById('barcodeHint'); if(!el) return;
+  const veld=(document.getElementById('f_barcode').value||'').trim();
+  const huidig=editId ? ((state.producten.find(p=>p.id===editId)||{}).barcode||'') : '';
+  const toon=(cls,html)=>{ el.hidden=false; el.className='barcodehint'+(cls?' '+cls:''); el.innerHTML=html; };
+  const bots=veld ? barcodeConflict(veld, editId) : null;
+  if(bots){ toon('bots','Deze code is al van <b>'+esc(bots.naam)+'</b>. Scan je hierop, dan pak je het verkeerde product. <button type="button" class="linkknop" onclick="eigenBarcodeInForm()">Maak een eigen code</button>'); return; }
+  if(veld && /^INT-/.test(veld)){ toon('','Eigen barcode <b>'+esc(veld)+'</b>. Sla het product op, dan kun je de sticker printen.'); return; }
+  if(!veld && editId && /^INT-/.test(huidig)){ toon('','Dit product heeft een eigen barcode <b>'+esc(huidig)+'</b>. <button type="button" class="linkknop" onclick="printProductSticker('+editId+')">Barcode printen</button>'); return; }
+  if(!veld){ toon('','Geen streepjescode, of eentje die niet leest? <button type="button" class="linkknop" onclick="eigenBarcodeInForm()">Maak een eigen barcode</button> en print hem zelf.'); return; }
+  el.hidden=true; el.innerHTML='';
+}
 function barcodeInput(){
+  barcodeHintUpdate();
   const veld=document.getElementById('f_barcode');
   const now=performance.now();
   const gap=now-bcLaatste; bcLaatste=now;
@@ -7778,6 +7868,7 @@ function vulUitAssortiment(a){
     (a.inkoop!=null?' ('+euro(a.inkoop)+' ex, '+euro(inclInkoop)+' incl)':'')+
     '. Verkoop is '+verkoopUit+'. Pas gerust aan.</div>';
   naamSluit();
+  barcodeHintUpdate();
   if(typeof piep==='function') piep(880);
   toast('Gevonden in catalogus: '+a.naam, true);
   /* Kwam de code uit de catalogus (je typte de naam)? Zet de cursor dan in het
@@ -7912,7 +8003,7 @@ function catTeken(rows, reset){
     </div>`;
   }).join(''));
 }
-function wisBarcode(){ const b=document.getElementById('f_barcode'); if(b){ b.value=''; b.focus(); } }
+function wisBarcode(){ const b=document.getElementById('f_barcode'); if(b){ b.value=''; b.focus(); } barcodeHintUpdate(); }
 function catKies(ean){
   if(!ean) return;
   showTab('nieuw'); resetForm();
@@ -8164,6 +8255,7 @@ function prodMenu(ev, id){
   sluitRijMenu();
   const items=[
     {ico:'i-tag', label:'Barcode-sticker printen', fn:function(){ printProductSticker(id); }},
+    {ico:'i-plus', label:'Nieuwe eigen barcode + printen', fn:function(){ nieuweBarcodePrint(id); }},
     {ico:'i-recycle', label:'Loopt uit / vervangen', fn:function(){ uitloopOpen(id); }},
     {ico:'i-edit', label:'Bewerken', fn:function(){ bewerk(id); }},
     {ico:'i-trash', label:'Verwijderen', danger:true, fn:function(){ verwijder(id); }}
@@ -8221,6 +8313,7 @@ function bewerk(id){
   document.getElementById('f_schap').value=schapNorm(p);
   document.getElementById('f_min').value=overVoorraad(p);
   document.getElementById('f_bestel').value=minOverNorm(p);
+  barcodeHintUpdate();
 }
 function verwijder(id){
   const p=state.producten.find(p=>p.id===id);
@@ -8284,6 +8377,7 @@ function resetForm(){
   vulMerkenLijst();
   vulLevsLijst();
   vulStandaard();
+  barcodeHintUpdate();
 }
 /* De merk-suggesties in het toevoegformulier: de merken die je al gebruikt, zodat
    je consistent blijft schrijven (Apple, niet apple/Aple) als je meerdere merken hebt. */
@@ -8691,8 +8785,14 @@ function opslaanProduct(){
      streepjescode, dan zet je die er via Bewerken overheen. */
   if(!barcode) barcode='INT-'+uid();
   if(document.getElementById('f_cat').value==='__nieuw'){ alert('Kies eerst een categorie.'); return; }
-  const dubbel=state.producten.find(p=>p.barcode===barcode && p.id!==editId);
-  if(dubbel){ alert('Barcode bestaat al bij: '+dubbel.naam); return; }
+  const dubbel=state.producten.find(p=>String(p.barcode)===String(barcode) && p.id!==editId);
+  if(dubbel){
+    /* Geen doodlopende melding meer: een botsende code kun je meteen vervangen door
+       een eigen interne code, die je daarna op een sticker uitprint. */
+    if(confirm('Deze barcode is al van "'+dubbel.naam+'".\n\nWil je dit product een eigen interne barcode geven? Die kun je daarna zelf uitprinten.')){
+      barcode=nieuweInterneBarcode();
+    } else { return; }
+  }
   /* De twee actuele tellingen komen uit het formulier; het totaal is hun som.
      f_voorraad = winkel (hangt nu), f_min = over (ligt achter). */
   const winkelNu=Math.max(0, Math.floor(Number(document.getElementById('f_voorraad').value)||0));
@@ -9421,21 +9521,34 @@ function aanvRegelBinnen(aanvId, regelId){
 function renderAanvTotaalLijst(){
   const kaart=document.getElementById('aanvTotaalKaart'), el=document.getElementById('aanvTotaalLijst');
   if(!el) return;
+  /* Twee dingen apart houden: wat je zelf nog moet BESTELLEN (aanvraag staat op
+     'aangevraagd') en wat al onderweg is (status 'besteld'). Anders weet je niet
+     wat er vandaag nog de deur uit moet. */
   const map={};
   aanvLopend().forEach(a=>{
+    const nog = a.status==='aangevraagd';   /* nog niet besteld */
     aanvRegels(a).forEach(r=>{
       if(r.binnen) return;
       const key=(r.wat||'').toLowerCase();
-      const m=map[key]||(map[key]={wat:r.wat, aantal:0, bij:[]});
-      m.aantal+=r.aantal; m.bij.push({nr:a.nr, klant:a.klant.naam, aantal:r.aantal});
+      const m=map[key]||(map[key]={wat:r.wat, teBestellen:0, onderweg:0, bij:[]});
+      if(nog) m.teBestellen+=r.aantal; else m.onderweg+=r.aantal;
+      m.bij.push({klant:a.klant.naam, nr:a.nr, aantal:r.aantal, nog});
     });
   });
   const rijen=Object.values(map).sort((x,z)=>x.wat.localeCompare(z.wat));
   if(!rijen.length){ if(kaart) kaart.hidden=true; el.innerHTML=''; return; }
   if(kaart) kaart.hidden=false;
-  el.innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>Product</th><th class="num">Nog te halen</th><th>Voor wie</th></tr></thead><tbody>'+
-    rijen.map(m=>`<tr><td><b>${esc(m.wat)}</b></td><td class="num"><b>${m.aantal}×</b></td>`+
-      `<td class="muted">${m.bij.map(b=>esc(b.klant)+' ('+b.aantal+'×, '+esc(b.nr)+')').join(', ')}</td></tr>`).join('')+
+  const totBestellen=rijen.reduce((x,m)=>x+m.teBestellen,0);
+  const cel=(n,soort)=> n>0 ? `<span class="chip ${soort}">${n}×</span>` : '<span class="muted">—</span>';
+  el.innerHTML =
+    (totBestellen>0
+      ? `<div class="repbestelbanner"><svg class="i s"><use href="#i-cart"/></svg>Nog ${totBestellen}× te bestellen. De rest is al onderweg.</div>`
+      : `<div class="repwaarschuwing" style="color:var(--green-tekst); background:var(--green-soft)"><svg class="i s"><use href="#i-check"/></svg>Alles is besteld. Niets meer vandaag te doen.</div>`)+
+    '<div style="overflow-x:auto"><table><thead><tr><th>Product</th><th class="num">Nog bestellen</th><th class="num">Al besteld</th><th>Voor wie</th></tr></thead><tbody>'+
+    rijen.map(m=>`<tr><td><b>${esc(m.wat)}</b></td>`+
+      `<td class="num">${cel(m.teBestellen,'aangemeld')}</td>`+
+      `<td class="num">${cel(m.onderweg,'besteld')}</td>`+
+      `<td class="muted">${m.bij.map(b=>esc(b.klant)+' ('+b.aantal+'×'+(b.nog?', nog bestellen':'')+')').join(', ')}</td></tr>`).join('')+
     '</tbody></table></div>';
 }
 function aanvRij(a){
@@ -9453,6 +9566,7 @@ function aanvRij(a){
   </div>`;
 }
 function renderAanvragen(){
+  if(typeof toonBestelBalk==='function') toonBestelBalk();
   aanvVulProducten();
   renderAanvTotaalLijst();
   const lopend=aanvLopend();
@@ -9733,6 +9847,7 @@ function tekenNulVak(){
     </div>
     <div class="row" style="margin-top:12px">
       <button class="btn actie" onclick="nulOpslaan()"><svg class="i s"><use href="#i-check"/></svg>Opslaan en volgende</button>
+      <button class="btn ghost" onclick="printProductSticker(${p.id})"><svg class="i s"><use href="#i-tag"/></svg>Barcode printen</button>
       <button class="btn ghost" onclick="nulStop()">Overslaan</button>
     </div>
   </div>`;
@@ -11247,6 +11362,7 @@ async function ladAccountEnStart(session){
   showTab(tabUitAdres() || laatsteTab() || (mag('dashboard')?'dashboard':'scan'));
   renderInstellingen();
   toonAboBalk();
+  toonBestelBalk();
   moduleLinks();
   hwLaad(true);
   proefNudge();
@@ -13037,15 +13153,67 @@ function toonAboBalk(){
   document.body.classList.add('metabobalk');
 }
 
+/* ═══ Bestelbalk: wat moet vandaag nog besteld worden ═══
+   Bij de meeste groothandels geldt: voor 16:30 besteld is morgen binnen. Wat
+   nog besteld moet worden mag je dus niet vergeten, en niet alleen op de
+   reparatie- of aanvragenpagina zien. Daarom staat dit bovenin op elke pagina,
+   zolang er iets openstaat. Twee bronnen: reparaties waarvan de onderdelen nog
+   besteld moeten worden (status 'aangemeld') en hardware-aanvragen die nog niet
+   besteld zijn (status 'aangevraagd'). */
+function vandaagBestellen(){
+  const reps=(state.reparaties||[]).filter(r=>r.status==='aangemeld').length;
+  const aanvr=aanvragen().filter(a=>a.status==='aangevraagd').length;
+  return {reps, aanvr, totaal:reps+aanvr};
+}
+function toonBestelBalk(){
+  let balk=document.getElementById('bestelBalk');
+  const u=vandaagBestellen();
+  if(u.totaal<=0){
+    if(balk) balk.remove();
+    document.body.classList.remove('metbestelbalk');
+    return;
+  }
+  if(!balk){
+    balk=document.createElement('div'); balk.id='bestelBalk';
+    /* Vooraan, net als de abobalk. Staan ze er allebei, dan regelt de CSS dat
+       deze onder de abobalk zakt. */
+    document.body.insertBefore(balk, document.body.firstChild);
+  }
+  const delen=[];
+  if(u.reps) delen.push(u.reps+' reparatie'+(u.reps>1?'s':'')+' (onderdelen)');
+  if(u.aanvr) delen.push(u.aanvr+' aanvra'+(u.aanvr>1?'gen':'ag'));
+  /* Na 16:30 heeft "vandaag voor 16:30" geen zin meer; dan gewoon "nog te bestellen". */
+  const nu=new Date(), voor1630 = nu.getHours()<16 || (nu.getHours()===16 && nu.getMinutes()<30);
+  const kop = voor1630 ? 'Vandaag vóór 16:30 bestellen' : 'Nog te bestellen';
+  const staart = voor1630 ? ', dan is het morgen binnen' : '';
+  balk.className='bestelbalk';
+  balk.innerHTML=`<div class="bestelbinnen">
+    <svg class="i s"><use href="#i-cart"/></svg>
+    <span><b>${kop}:</b> ${esc(delen.join(' en '))}${staart}.</span>
+    <button onclick="bestelBalkGa()">Bekijken</button>
+  </div>`;
+  document.body.classList.add('metbestelbalk');
+}
+function bestelBalkGa(){
+  const u=vandaagBestellen();
+  showTab(u.reps ? 'reparaties' : 'aanvragen');
+}
+
 function toonAuthLogin(fout){
+  /* Een echt <form> met username- en current-password-velden. Zo herkent iOS/
+     Safari dit als een inlogscherm en biedt hij het opgeslagen wachtwoord aan
+     (Face ID / vingerafdruk vult het dan in). Enter in een veld logt meteen in. */
   authWrap(`
-    <p class="muted" style="margin-bottom:14px">Log in met je gebruikersnaam of e-mailadres</p>
-    <label>Gebruikersnaam of e-mail</label><input id="al_id" autocomplete="username" onkeydown="authEnter(event)">
-    <div style="margin-top:10px"><label>Wachtwoord</label>${wwVeld('al_ww','','current-password')}</div>
-    <button class="btn actie" style="width:100%; margin-top:16px" onclick="doeLogin(this)">Inloggen</button>
-    <button class="btn ghost" style="width:100%; margin-top:8px" onclick="toonWachtwoordVergeten()">Wachtwoord vergeten?</button>
+    <p class="loginsub">Fijn dat je er weer bent. Log in om verder te gaan.</p>
+    <form class="loginform" onsubmit="doeLogin(document.getElementById('loginKnop')); return false;">
+      <label for="al_id">Gebruikersnaam of e-mail</label>
+      <input id="al_id" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <label for="al_ww" style="margin-top:14px">Wachtwoord</label>
+      ${wwVeld('al_ww','','current-password')}
+      <button type="submit" id="loginKnop" class="btn actie" style="width:100%; margin-top:18px">Inloggen</button>
+    </form>
+    <button type="button" class="btn ghost" style="width:100%; margin-top:8px" onclick="toonWachtwoordVergeten()">Wachtwoord vergeten?</button>
   `);
-  const w=document.getElementById('al_ww'); if(w) w.addEventListener('keydown', authEnter);
   if(fout) authMelding(fout);
   const f=document.getElementById('al_id'); if(f) f.focus();
 }
@@ -15476,6 +15644,7 @@ function repHistRijHtml(r){
     `<td class="repacties"><button class="btn small ghost" onclick="repDetail(${r.id})">Details</button> <button class="btn small danger" onclick="verwijderRep(${r.id})" title="Verwijderen"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`;
 }
 function renderReparaties(){
+  if(typeof toonBestelBalk==='function') toonBestelBalk();
   vulRepDatalists();
   const q=((document.getElementById('repZoek')||{}).value||'').trim().toLowerCase();
   const match=r=> !q || [r.nr, r.klant&&r.klant.naam, r.toestel, r.type].some(x=>String(x||'').toLowerCase().includes(q));
