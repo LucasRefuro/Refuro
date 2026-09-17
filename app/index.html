@@ -5405,11 +5405,12 @@ function levBinnen(id){
   const p=state.producten.find(p=>p.id===id);
   if(!p || !p.besteld) return;
   const n=Math.max(1, teBestellen(p));
+  piep(880);
   boekIn(p,n);
   p.besteld=false; p.besteldOp=null;
   save();
-  piep(880);
-  toast('Levering binnen: +'+n+'× '+p.naam+' · voorraad: '+p.voorraad, true);
+  const achter=achterLiggen(p), tekort=bijTeVullen(p);
+  toast('Levering binnen: +'+n+'× '+p.naam+' · in de overvoorraad ('+achter+' achter)'+(tekort>0?' · nog '+tekort+' bijhangen':''), true);
   const row=document.getElementById('lev'+id);
   if(row){
     row.querySelectorAll('td').forEach(td=>td.style.opacity=0);
@@ -6688,8 +6689,19 @@ function verwerkScan(code){
   piep(mode==='in'?880:440);
   if(mode==='in') boekIn(p,1); else boekUit(p,1);
   fb.className='ok';
-  fb.textContent=(mode==='in'?'+1 ':'-1 ')+p.naam+' · voorraad: '+p.voorraad+(mode==='in'&&moetBestellen(p)?' · nog bestellen':'');
-  toast((mode==='in'?'+1 ':'-1 ')+p.naam+' · voorraad '+p.voorraad, true);
+  if(mode==='in'){
+    /* Een levering komt binnen als OVERVOORRAAD: het totaal gaat omhoog, maar wat er
+       in de winkel hangt blijft gelijk. Zeg dat er duidelijk bij, zodat je ziet dat
+       het nieuwe stuk achterin ligt en niet vanzelf op het schap staat. Ligt het schap
+       onder zijn minimum, dan hoort het bijgevuld te worden en zeggen we dat erbij. */
+    const achter=achterLiggen(p), tekort=bijTeVullen(p);
+    fb.innerHTML='+1 '+esc(p.naam)+' · <b>'+inWinkel(p)+'</b> in de winkel, <b>'+achter+'</b> in de overvoorraad'+
+      (tekort>0?' · <span style="color:var(--oranje-d); font-weight:700">hang er '+tekort+' bij (schap wil '+schapNorm(p)+')</span>':'');
+    toast('+1 '+p.naam+' · ligt in de overvoorraad ('+achter+' achter)'+(tekort>0?' · nog '+tekort+' bijhangen':''), true);
+  }else{
+    fb.textContent='-1 '+p.naam+' · voorraad: '+p.voorraad;
+    toast('-1 '+p.naam+' · voorraad '+p.voorraad, true);
+  }
 }
 /* Uitscannen op de Inscannen-pagina: voorraad eraf zonder verkoop (kapot, retour,
    correctie). Haalt van winkel/over af en logt het, maar boekt geen omzet. */
