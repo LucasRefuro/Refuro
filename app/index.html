@@ -2861,6 +2861,21 @@
     <p class="muted klein" style="margin-top:14px">Doorlopende rol (bijv. DK-22251, 62 mm): zet breedte 62 en hoogte bijvoorbeeld 30. Heb je een zwart/rood-rol (DK-22251)? Laat "Zwart/rood-rol" aan staan, anders knippert de printer rood.</p>
   </div>
   <div class="card breed">
+    <h2><svg class="i"><use href="#i-tag"/></svg>Losse sticker</h2>
+    <p class="muted" style="margin-bottom:14px">Print snel een sticker voor iets wat niet in je voorraad staat. Vul een naam in, en eventueel een prijs en een barcode. Er wordt niets aan je producten toegevoegd.</p>
+    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
+      <div style="flex:1; min-width:200px"><label>Naam op de sticker</label><input id="ls_naam" placeholder="bijv. Gebruikte oplader" onkeydown="if(event.key==='Enter'){event.preventDefault(); losseStickerPrint(this);}"></div>
+      <div style="min-width:120px"><label>Prijs <span class="muted">(mag leeg)</span></label><input id="ls_prijs" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      <div style="min-width:90px"><label>Aantal</label><input id="ls_aantal" type="number" min="1" step="1" value="1"></div>
+    </div>
+    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px">
+      <div style="flex:1; min-width:200px"><label>Barcode <span class="muted">(mag leeg)</span></label><div style="display:flex; gap:6px"><input id="ls_barcode" style="flex:1; min-width:0" placeholder="Leeg = geen barcode op de sticker"><button type="button" class="btn ghost small" onclick="losseStickerEigenCode()" title="Eigen barcode aanmaken"><svg class="i s"><use href="#i-plus"/></svg>Eigen code</button></div></div>
+    </div>
+    <div class="acts2" style="margin-top:14px">
+      <button class="btn actie" onclick="losseStickerPrint(this)"><svg class="i s"><use href="#i-tag"/></svg>Sticker printen</button>
+    </div>
+  </div>
+  <div class="card breed">
     <h2><svg class="i"><use href="#i-laptop"/></svg>Printer op een andere Mac instellen</h2>
     <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando, óók op een compleet kale Mac waar nog niets op staat. Het installeert zelf alles wat nodig is (Apple-tools, Homebrew en de rest). Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
     <ol class="setupstappen">
@@ -6142,6 +6157,28 @@ async function labelTest(knop){
   try{ const ok=await qzPrintLabel({titel:'Testlabel Storvo', prijs:12.50, code:'STORVO-TEST-123'}); if(ok) toast('Testlabel geprint', true); }
   catch(e){ toast('Printen: '+e.message,'fout'); }
   if(knop){ knop.disabled=false; }
+}
+/* Losse sticker: een label voor iets wat niet in je voorraad staat (een gebruikte
+   oplader, een eenmalig ding). Alleen naam is verplicht; prijs en barcode mogen leeg.
+   Er wordt geen product aangemaakt; we sturen de tekst rechtstreeks naar de printer. */
+function losseStickerEigenCode(){
+  const b=document.getElementById('ls_barcode'); if(b) b.value=nieuweInterneBarcode();
+}
+async function losseStickerPrint(knop){
+  const naam=(document.getElementById('ls_naam').value||'').trim();
+  if(!naam){ toast('Vul eerst een naam in voor de sticker.','let-op'); const n=document.getElementById('ls_naam'); if(n) n.focus(); return; }
+  const prijsRaw=(document.getElementById('ls_prijs').value||'').trim();
+  const prijs = prijsRaw==='' ? null : Math.max(0, Number(prijsRaw)||0);
+  const code=(document.getElementById('ls_barcode').value||'').trim();
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('ls_aantal').value)||1));
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Printen…'; }
+  try{
+    await qzPrintLabel({titel:naam, prijs:prijs, code:code||null, kopieen:aantal});
+    toast(aantal>1 ? aantal+' stickers geprint' : 'Sticker geprint', true);
+  }catch(e){
+    toast('Printen mislukte. Staat de printhulp aan? Test bovenaan met "Verbinding testen".','fout');
+  }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
 }
 /* ═══ Scannen (camera-QR) ═══
    Scan een Storvo-label met je telefoon en open meteen dat toestel of product. iPhone-Safari
