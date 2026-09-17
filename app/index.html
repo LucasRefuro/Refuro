@@ -963,6 +963,8 @@
   .repkaart.prob{border-color:var(--red); box-shadow:0 0 0 1px var(--red);}
   .rknr{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); margin-bottom:5px;}
   .rknr b{font-family:'Sora',sans-serif; color:var(--text); font-size:13px;}
+  .rklabel{margin-left:auto; display:flex; align-items:center; justify-content:center; background:none; border:none; color:var(--muted); cursor:pointer; padding:3px; border-radius:7px; flex:none;}
+  .rklabel:hover{color:var(--oranje); background:var(--soft-2);}
   .rkdot{width:8px; height:8px; border-radius:50%; flex:none; background:var(--muted);}
   .rkdot.aangemeld{background:var(--amber-tekst);}
   .rkdot.inleveren{background:var(--oranje);}
@@ -5856,6 +5858,68 @@ async function qzPrintLabel(data){
   await printViaHelper(png, {label:breedte, red:tweekleuren, kopieen:data.kopieen||1});
   return true;
 }
+/* ── Reparatielabel met QR ──
+   Komt een toestel binnen of ligt het op de werkbank, dan plak je er een label op
+   met het reparatienummer, de klant, het toestel en een QR-code. Scan je die met een
+   telefoon, dan opent de statuspagina van de klant; scan je hem met de Storvo-scanner
+   in de winkel, dan opent meteen de reparatie. Zo pak je zonder zoeken het juiste
+   toestel erbij. Een plat landschapslabel (QR rechts, tekst links), los van de
+   vouwlabel-instelling voor productstickers. */
+async function repLabelPng(data){
+  await laadScript('/app/qrcode.min.js');
+  const dpmm=11.81; // 300 dpi
+  const breedte=Number(localStorage.getItem('storvoLabelBreedte'))||62;
+  const lengte=Math.max(Number(localStorage.getItem('storvoLabelHoogte'))||30, 29);
+  const W=Math.round(breedte*dpmm), H=Math.round(lengte*dpmm), pad=Math.round(2*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#000'; ctx.textBaseline='top';
+  // QR rechts, vierkant, zo groot als de labelhoogte toelaat
+  const qrSize=H-2*pad, qrX=W-qrSize-pad, qrY=pad;
+  try{
+    if(data.qr && typeof qrcode!=='undefined'){
+      const qr=qrcode(0,'M'); qr.addData(String(data.qr)); qr.make();
+      const n=qr.getModuleCount(), cell=qrSize/n;
+      for(let row=0;row<n;row++) for(let col=0;col<n;col++)
+        if(qr.isDark(row,col)) ctx.fillRect(Math.floor(qrX+col*cell), Math.floor(qrY+row*cell), Math.ceil(cell), Math.ceil(cell));
+    }
+  }catch(e){}
+  // Tekst links: nummer groot, dan klant, dan toestel + reparatie
+  const txtW=qrX-pad-Math.round(1.5*dpmm);
+  let y=pad;
+  ctx.font='800 '+Math.round(5.2*dpmm)+'px Arial'; ctx.fillText(String(data.nr||''), pad, y); y+=Math.round(6.4*dpmm);
+  if(data.klant){ ctx.font='700 '+Math.round(3.1*dpmm)+'px Arial'; y=labelWrap(ctx, data.klant, pad, y, txtW, Math.round(3.7*dpmm), 1); }
+  if(data.toestel){ ctx.font='400 '+Math.round(2.9*dpmm)+'px Arial'; y=labelWrap(ctx, data.toestel, pad, y+Math.round(0.6*dpmm), txtW, Math.round(3.4*dpmm), 3); }
+  return c.toDataURL('image/png').split(',')[1];
+}
+async function printRepLabel(id){
+  const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  try{
+    /* De QR wijst naar de klant-statuspagina als die klaar is; anders het kale
+       nummer, zodat de Storvo-scanner de reparatie in elk geval herkent. */
+    const qr=kpLinkVoor(r.nr)||String(r.nr);
+    const toestel=(r.toestel||'')+(r.type?' · '+r.type:'');
+    const png=await repLabelPng({nr:r.nr, klant:r.klant.naam, toestel, qr});
+    const tweekleuren=localStorage.getItem('storvoLabelTweekleur')!=='0';
+    const breedte=Number(localStorage.getItem('storvoLabelBreedte'))||62;
+    await printViaHelper(png, {label:breedte, red:tweekleuren, kopieen:1});
+    toast('Label geprint voor '+r.nr, true);
+  }catch(e){
+    toast('Kon het label niet printen. Staat de labelprinter aan?', 'let-op');
+  }
+}
+/* Herkent een gescande reparatie: het kale nummer, of een gescande klantpagina-link
+   waar het nummer in verstopt zit (letters/cijfers los van streepjes). */
+function repVanScan(code){
+  const raw=String(code||'').trim(); if(!raw) return null;
+  const platScan=raw.replace(/[^0-9a-zA-Z]/g,'').toUpperCase();
+  return (state.reparaties||[]).find(r=>{
+    if(!r.nr) return false;
+    const nr=String(r.nr).toUpperCase(), plat=nr.replace(/[^0-9a-zA-Z]/g,'');
+    return raw.toUpperCase()===nr || (plat.length>=4 && (platScan===plat || platScan.endsWith(plat)));
+  }) || null;
+}
 /* Barcode-sticker voor een product printen (naam + prijs + scanbare barcode). Voor
    producten zonder barcode, zoals van MondiParts, kennen we hier een interne barcode toe
    (INT-…); die staat op de sticker en de kassa herkent hem bij het scannen. */
@@ -6538,6 +6602,16 @@ scanInput.addEventListener('keydown',e=>{
 });
 function verwerkScan(code){
   if(!code) return;
+  /* Een reparatielabel gescand? Dan meteen die reparatie openen in plaats van een
+     product te zoeken. */
+  const rep=repVanScan(code);
+  if(rep){
+    const rfb=document.getElementById('scanFeedback');
+    if(rfb){ rfb.className='ok'; rfb.innerHTML='Reparatie <b>'+esc(rep.nr)+'</b> — '+esc(rep.klant.naam); }
+    piep(880);
+    showTab('reparaties'); repDetail(rep.id);
+    return;
+  }
   const p=state.producten.find(p=>p.barcode===code);
   const fb=document.getElementById('scanFeedback');
   if(!p){
@@ -14873,6 +14947,7 @@ function repDetail(id){
         <button class="btn danger" onclick="voegNotitie(${r.id},true,true)">Als probleem</button>
       </div>
       ${r.status==='klaar'?`<button class="btn ghost" onclick="repNaarMandje(${r.id})"><svg class="i s"><use href="#i-cart"/></svg>Bij een verkoop optellen</button>`:''}
+      <button class="btn ghost" onclick="printRepLabel(${r.id})"><svg class="i s"><use href="#i-tag"/></svg>Label printen</button>
       <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
       <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
       ${repLopend(r)?`<button class="btn ghost" onclick="annuleerRep(${r.id})">Reparatie annuleren</button>`:''}
@@ -14928,7 +15003,7 @@ function repKaartHtml(r){
   const knop = s.volgende
     ? `<button type="button" class="btn small" onclick="repVolgende(${r.id})"><svg class="i s"><use href="#${s.ico}"/></svg>${s.knop}</button>` : '';
   return `<div class="repkaart ${prob?'prob':''}" onclick="repRijKlik(event,${r.id})">`+
-    `<div class="rknr"><span class="rkdot ${r.status}"></span><b>${esc(r.nr)}</b>${r.door?' · '+esc(r.door):''}</div>`+
+    `<div class="rknr"><span class="rkdot ${r.status}"></span><b>${esc(r.nr)}</b>${r.door?' · '+esc(r.door):''}<button type="button" class="rklabel" title="Label met QR printen" onclick="printRepLabel(${r.id})"><svg class="i s"><use href="#i-tag"/></svg></button></div>`+
     `<div class="rktoestel">${esc(r.toestel||'—')} <span class="rktype">${esc(r.type||'')}</span></div>`+
     `<div class="rkklant">${esc(r.klant.naam)} · ${esc(r.klant.tel)}</div>`+
     `${prob?'<div class="rkprob"><svg class="i s"><use href="#i-bell"/></svg>Actie nodig</div>':''}`+
