@@ -43,6 +43,12 @@
   header .mk.storvo svg{width:100%; height:100%;}
   header h1{font-size:21px; font-weight:800;}
   header .sub{font-size:14px; opacity:.8; margin-top:2px;}
+  /* Heeft de winkel een eigen logo, dan geen donker vlak en geen naam ernaast:
+     alleen het logo, netjes gecentreerd bovenaan. Het reparatienummer staat toch
+     al in "Je toestel", dus dat hoeft hier niet nog eens. */
+  header.metlogo{background:transparent; justify-content:center; padding:14px 0 4px; margin-bottom:16px;}
+  header.metlogo .mk{background:transparent; width:auto; height:56px; min-width:0; padding:0; border-radius:0; overflow:visible;}
+  header.metlogo .mk img{width:auto; height:100%; object-fit:contain;}
 
   .kaart{background:var(--card); border-radius:var(--radius); padding:26px 28px; margin-bottom:18px; box-shadow:var(--schaduw);}
   .kaart h2{font-size:17px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:10px;}
@@ -69,10 +75,11 @@
   .stap.gedaan::before{background:var(--accent); border-color:var(--accent);}
   .stap.gedaan::after{content:''; position:absolute; left:-23px; top:9px; width:11px; height:6px;
     border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg); z-index:2;}
+  /* De actieve stap is gewoon een gevuld bolletje in de accentkleur: even groot als
+     de rest en precies op de lijn. Geen grote pulserende ring meer (die maakte hem
+     te groot en oogde scheef). Een subtiele zachte gloed is genoeg. */
   .stap.nu::before{background:var(--accent); border-color:var(--accent);
-    box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 16%, transparent); animation:pols 2s ease-in-out infinite;}
-  @keyframes pols{0%,100%{box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 16%, transparent);}
-                  50%{box-shadow:0 0 0 11px color-mix(in srgb, var(--accent) 6%, transparent);}}
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);}
   .stap .tt{font-weight:600; font-size:15.5px;}
   .stap.todo .tt{color:var(--muted-l); font-weight:500;}
   .stap .tm{font-size:13px; color:var(--muted-l); margin-top:2px;}
@@ -238,15 +245,15 @@ function teken(d){
   const klaar = d.reparatie.status==='klaar' || d.reparatie.status==='afgerond';
 
   document.getElementById('inhoud').innerHTML=`
-    <header>
+    <header class="${d.merk.logo?'metlogo':''}">
       <div class="mk${!d.merk.logo&&(d.merk.naam||'').trim().toLowerCase()==='storvo'?' storvo':''}">${
-        d.merk.logo ? `<img src="${esc(d.merk.logo)}" alt="">`
+        d.merk.logo ? `<img src="${esc(d.merk.logo)}" alt="${esc(d.merk.naam)}">`
         : (d.merk.naam||'').trim().toLowerCase()==='storvo' ? MERK
         : esc((d.merk.naam||'?').charAt(0).toUpperCase())}</div>
-      <div>
+      ${d.merk.logo ? '' : `<div>
         <h1>${esc(d.merk.naam)}</h1>
         <div class="sub">Reparatie ${esc(d.reparatie.nr)}</div>
-      </div>
+      </div>`}
     </header>
 
     <div class="kaart">
