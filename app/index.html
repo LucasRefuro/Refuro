@@ -816,6 +816,13 @@
   input:hover,select:hover{border-color:#DCD8D0;}
   input:focus,select:focus{outline:none; border-color:var(--oranje); box-shadow:0 0 0 4px rgba(11,91,82,.10);}
   input[type=checkbox]{accent-color:var(--oranje);}
+  /* Datum- en tijdvelden overal iets groter en in de huisstijl. De rand en afronding
+     erven ze al van hierboven; we maken de tekst wat groter, geven het veld wat meer
+     hoogte, en kleuren het kalender-/klok-icoontje mee in de accentkleur. */
+  input[type=date], input[type=time]{font-size:15px; min-height:48px; color:var(--text); accent-color:var(--oranje);}
+  input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-calendar-picker-indicator{cursor:pointer; padding:4px; margin-left:4px; border-radius:8px; opacity:.55; transition:.15s;}
+  input[type=date]:hover::-webkit-calendar-picker-indicator, input[type=time]:hover::-webkit-calendar-picker-indicator{opacity:1; background:var(--lblauw);}
+  input[type=date]:focus, input[type=time]:focus{border-color:var(--oranje);}
   /* De ingebouwde op/neer-pijltjes van een getalveld ogen rommelig en verschillen
      per browser; weg ermee voor een rustig, egaal veld. Je typt gewoon het getal. */
   input[type=number]{-moz-appearance:textfield;}
@@ -1029,6 +1036,18 @@
   .tijdenscheid{font-size:12.5px; color:var(--muted);}
   .tijdengesloten{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); text-transform:none; letter-spacing:normal; margin:0; cursor:pointer;}
   .tijdengesloten input{width:auto;}
+  /* Pakketdiensten-dashboard: per dienst de tarieven, een invoerblok en de historie. */
+  .pdkop{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+  .pdkop h2{margin:0;}
+  .pdtarieven{display:flex; flex-direction:column; gap:6px; margin-bottom:16px;}
+  .pdtarief{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 13px; background:var(--soft-2); border-radius:10px; font-size:13.5px;}
+  .pdtariefrij{display:flex; align-items:center; gap:8px;}
+  .pdtariefrij input{flex:1; min-width:0;}
+  .pdtariefacties{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+  .pdinvoer{background:var(--soft-2); border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:10px;}
+  .pdinvoerrij{display:flex; align-items:center; gap:12px; justify-content:space-between;}
+  .pdinvoerrij label{margin:0; flex:1; font-size:13px; text-transform:none; letter-spacing:normal; font-weight:600; color:var(--text);}
+  .pdinvoerrij input{width:120px; flex:none;}
   /* de volgende-stap balk boven in het reparatiedetail: status links, hoofdactie rechts */
   .repnu{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--soft-2); border-radius:var(--radius-s); padding:12px 15px; margin-top:16px;}
   .repnu-l{display:flex; align-items:center; gap:8px;}
@@ -2899,6 +2918,19 @@
   </div>
 </section>
 
+<!-- PAKKETDIENSTEN -->
+<section id="tab-pakketten"hidden>
+  <div class="pagehead"><h1>Pakketdiensten</h1></div>
+  <div class="modules">
+    <div class="card breed">
+      <h2><svg class="i"><use href="#i-truck"/></svg>Verdiensten deze maand</h2>
+      <p class="muted" style="margin:-4px 0 14px; max-width:80ch">Je verdient per pakket dat je aanneemt (afzender brengt weg) en uitgeeft (ontvanger haalt op). Dit is geen verkoop; je int voor de vervoerder en krijgt een vergoeding per handeling. Voer je aantallen per datum in van de terminal of de app; de tarieven pas je zelf aan. Bedragen zijn exclusief btw.</p>
+      <div id="pakketKpi" class="kpis"></div>
+    </div>
+    <div id="pakketDiensten"></div>
+  </div>
+</section>
+
 <!-- VASTE LASTEN -->
 <section id="tab-vastelasten"hidden>
   <div class="pagehead"><h1>Vaste lasten</h1></div>
@@ -2989,6 +3021,7 @@
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
         <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alle verkopen, per dag of week, zoeken op naam of bedrag</span></span></button>
         <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Wat je inkoopt vastleggen, voor de btw-voorbelasting en investering</span></span></button>
+        <button class="hubtegel" data-tab="pakketten" onclick="showTab('pakketten')"><svg class="i"><use href="#i-truck"/></svg><span class="tt"><b>Pakketdiensten</b><span>Wat je verdient aan PostNL, Vinted en DHL: aannemen en uitgeven</span></span></button>
         <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
       </div>
     </div>
@@ -3776,6 +3809,7 @@ function showTab(t){
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
   if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); }
+  if(t==='pakketten') renderPakketten();
   if(t==='mail') renderMail();
   if(t==='labelprinter') renderLabelprinter();
   if(t==='vastelasten') renderVasteLasten();
@@ -10661,10 +10695,10 @@ async function shopLos(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','personeel','rooster','verkopen','inkopen','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','personeel','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','vastelasten','rapport','facturen','instellingen','team','meer'],
+  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
   medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','meer']
 };
 /* ---------- pagina's aan of uit ----------
@@ -10782,11 +10816,12 @@ function mobTel(t){
 const MOB_MEERLABEL=Object.assign({}, MOB, {
   uren:{naam:'Uren',ico:'i-clock'},
   vastelasten:{naam:'Vaste lasten',ico:'i-euro'},
+  pakketten:{naam:'Pakketdiensten',ico:'i-truck'},
   rapport:{naam:'Rapport',ico:'i-chart'},
   partners:{naam:'Partners',ico:'i-link'}
 });
 const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
-const MOB_ALLES_BEHEER=['uren','vastelasten','rapport','team','partners','instellingen'];
+const MOB_ALLES_BEHEER=['uren','vastelasten','pakketten','rapport','team','partners','instellingen'];
 
 function tekenOnderbalk(){
   const balk=document.getElementById('onderBalk');
@@ -13215,7 +13250,10 @@ function vandaagBestellen(){
 function toonBestelBalk(){
   let balk=document.getElementById('bestelBalk');
   const u=vandaagBestellen();
-  if(u.totaal<=0){
+  /* De maand-herinnering voor de pakketdienst-stats heeft op die ene dag voorrang:
+     hij komt maar één keer per maand langs en is zo weg als je hem doorgeeft. */
+  const pakketMeld = (typeof pakketHerinneringNodig==='function') && pakketHerinneringNodig();
+  if(u.totaal<=0 && !pakketMeld){
     if(balk) balk.remove();
     document.body.classList.remove('metbestelbalk');
     return;
@@ -13226,19 +13264,27 @@ function toonBestelBalk(){
        deze onder de abobalk zakt. */
     document.body.insertBefore(balk, document.body.firstChild);
   }
-  const delen=[];
-  if(u.reps) delen.push(u.reps+' reparatie'+(u.reps>1?'s':'')+' (onderdelen)');
-  if(u.aanvr) delen.push(u.aanvr+' aanvra'+(u.aanvr>1?'gen':'ag'));
-  /* Na 16:30 heeft "vandaag voor 16:30" geen zin meer; dan gewoon "nog te bestellen". */
-  const nu=new Date(), voor1630 = nu.getHours()<16 || (nu.getHours()===16 && nu.getMinutes()<30);
-  const kop = voor1630 ? 'Vandaag vóór 16:30 bestellen' : 'Nog te bestellen';
-  const staart = voor1630 ? ', dan is het morgen binnen' : '';
   balk.className='bestelbalk';
-  balk.innerHTML=`<div class="bestelbinnen">
-    <svg class="i s"><use href="#i-cart"/></svg>
-    <span><b>${kop}:</b> ${esc(delen.join(' en '))}${staart}.</span>
-    <button onclick="bestelBalkGa()">Bekijken</button>
-  </div>`;
+  if(pakketMeld){
+    balk.innerHTML=`<div class="bestelbinnen">
+      <svg class="i s"><use href="#i-truck"/></svg>
+      <span><b>Laatste dag van de maand:</b> geef je pakketdienst-stats door (PostNL, Vinted, DHL).</span>
+      <button onclick="showTab('pakketten')">Doorgeven</button>
+    </div>`;
+  } else {
+    const delen=[];
+    if(u.reps) delen.push(u.reps+' reparatie'+(u.reps>1?'s':'')+' (onderdelen)');
+    if(u.aanvr) delen.push(u.aanvr+' aanvra'+(u.aanvr>1?'gen':'ag'));
+    /* Na 16:30 heeft "vandaag voor 16:30" geen zin meer; dan gewoon "nog te bestellen". */
+    const nu=new Date(), voor1630 = nu.getHours()<16 || (nu.getHours()===16 && nu.getMinutes()<30);
+    const kop = voor1630 ? 'Vandaag vóór 16:30 bestellen' : 'Nog te bestellen';
+    const staart = voor1630 ? ', dan is het morgen binnen' : '';
+    balk.innerHTML=`<div class="bestelbinnen">
+      <svg class="i s"><use href="#i-cart"/></svg>
+      <span><b>${kop}:</b> ${esc(delen.join(' en '))}${staart}.</span>
+      <button onclick="bestelBalkGa()">Bekijken</button>
+    </div>`;
+  }
   document.body.classList.add('metbestelbalk');
 }
 function bestelBalkGa(){
@@ -16094,6 +16140,136 @@ function tijdenWijzig(){
   klantpagina().tijdenDagen=dagen;
   const verborgen=document.getElementById('kp_tijden'); if(verborgen) verborgen.value=tijdenString(dagen);
   slaKlantpaginaOp();
+}
+
+/* ═══════════════ PAKKETDIENSTEN ═══════════════
+   PostNL, Vinted Go, DHL Express: je verdient per pakket dat je AANNEEMT (afzender
+   brengt weg) en UITGEEFT (ontvanger haalt op). Geen verkoop, puur handelings-
+   vergoeding. Je voert je aantallen per datum in (van de terminal/app); de tarieven
+   pas je zelf aan. Zo zie je per dienst en totaal wat je eraan verdient. Op de
+   laatste niet-zondag van de maand een herinnering bovenin om de stats door te geven. */
+function pakketData(){
+  if(!state.pakketdiensten || typeof state.pakketdiensten!=='object') state.pakketdiensten={};
+  const p=state.pakketdiensten;
+  if(!Array.isArray(p.diensten) || !p.diensten.length) p.diensten=pakketStandaardDiensten();
+  if(!Array.isArray(p.registraties)) p.registraties=[];
+  return p;
+}
+function pakketStandaardDiensten(){
+  return [
+    {key:'vinted', naam:'Vinted Go', tarieven:[
+      {label:'Aangenomen van afzender', prijs:0.20},
+      {label:'Opgehaald door ontvanger', prijs:0.30},
+      {label:'E-commerce retour', prijs:0.40}
+    ]},
+    {key:'postnl', naam:'PostNL', tarieven:[
+      {label:'Aangenomen (afzender)', prijs:0.24},
+      {label:'Uitgereikt (ontvanger)', prijs:0.38}
+    ]},
+    {key:'dhl', naam:'DHL Express', tarieven:[
+      {label:'Aangenomen (afzender)', prijs:0},
+      {label:'Uitgereikt (ontvanger)', prijs:0}
+    ]}
+  ];
+}
+function pakketDienst(key){ return pakketData().diensten.find(d=>d.key===key); }
+function pakketOpbrengst(reg){ return (reg.regels||[]).reduce((s,r)=>s+(Number(r.aantal)||0)*(Number(r.prijs)||0),0); }
+function pakketMaandKey(d){ d=new Date(d); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function pakketVandaagISO(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+function pakketDatumKort(d){ try{ return new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short'}); }catch(e){ return String(d); } }
+
+/* De laatste dag van de maand die niet op een zondag valt. Daarop herinneren we
+   aan het doorgeven van de stats, want daarna sluit de maand. */
+function pakketLaatsteWerkdag(jaar, maandIdx){
+  const d=new Date(jaar, maandIdx+1, 0);          /* laatste dag van de maand */
+  while(d.getDay()===0) d.setDate(d.getDate()-1); /* zondag=0: stap terug */
+  return d;
+}
+function pakketHerinneringDag(){
+  const nu=new Date();
+  return nu.getDate()===pakketLaatsteWerkdag(nu.getFullYear(), nu.getMonth()).getDate();
+}
+function pakketVandaagIngevoerd(){
+  const vandaag=pakketVandaagISO();
+  return pakketData().registraties.some(r=>r.datum===vandaag);
+}
+function pakketHerinneringNodig(){
+  return pakketHerinneringDag() && !pakketVandaagIngevoerd();
+}
+
+let pakketBewerkTarief=null;   /* de dienst-key waarvan we de tarieven aan het bewerken zijn */
+function renderPakketten(){
+  const p=pakketData();
+  const maand=pakketMaandKey(new Date());
+  const regsMaand=p.registraties.filter(r=>pakketMaandKey(r.datum)===maand);
+  const totMaand=regsMaand.reduce((s,r)=>s+pakketOpbrengst(r),0);
+  const kpi=document.getElementById('pakketKpi');
+  if(kpi){
+    kpi.innerHTML =
+      `<div class="kpi accent"><div class="l">Deze maand totaal</div><div class="v"><span class="bedrag">${euro(totMaand)}</span></div><div class="kpimeta"><span class="btwhint">excl. btw</span></div></div>`+
+      p.diensten.map(d=>{
+        const t=regsMaand.filter(r=>r.dienst===d.key).reduce((s,r)=>s+pakketOpbrengst(r),0);
+        return `<div class="kpi"><div class="l">${esc(d.naam)}</div><div class="v">${euro(t)}</div></div>`;
+      }).join('');
+  }
+  const el=document.getElementById('pakketDiensten');
+  if(el) el.innerHTML=p.diensten.map(d=>pakketDienstKaart(d)).join('');
+}
+function pakketDienstKaart(d){
+  const p=pakketData();
+  const regs=p.registraties.filter(r=>r.dienst===d.key).sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
+  const bewerk = pakketBewerkTarief===d.key;
+  const tarievenHtml = bewerk
+    ? d.tarieven.map((t,i)=>`<div class="pdtariefrij"><input value="${esc(t.label)}" data-key="${d.key}" data-i="${i}" data-veld="label"><input type="number" step="0.01" min="0" value="${t.prijs}" data-key="${d.key}" data-i="${i}" data-veld="prijs" style="width:96px"><button type="button" class="btn ghost small" onclick="pakketTariefWeg('${d.key}',${i})" title="Verwijderen"><svg class="i s"><use href="#i-trash"/></svg></button></div>`).join('')
+      +`<div class="pdtariefacties"><button type="button" class="btn ghost small" onclick="pakketTariefErbij('${d.key}')"><svg class="i s"><use href="#i-plus"/></svg>Tarief erbij</button><button type="button" class="btn actie small" onclick="pakketTariefOpslaan('${d.key}')">Tarieven opslaan</button></div>`
+    : (d.tarieven.length ? d.tarieven.map(t=>`<div class="pdtarief"><span>${esc(t.label)}</span><b>${euro(t.prijs)} <span class="muted klein">/stuk</span></b></div>`).join('') : '<div class="muted">Nog geen tarieven ingesteld.</div>');
+  const invoer = `<div class="pdinvoer">
+      <div class="pdinvoerrij"><label>Datum</label><input type="date" id="pd_datum_${d.key}" value="${pakketVandaagISO()}"></div>
+      ${d.tarieven.map((t,i)=>`<div class="pdinvoerrij"><label>${esc(t.label)}</label><input type="number" min="0" step="1" id="pd_aantal_${d.key}_${i}" placeholder="0" inputmode="numeric"></div>`).join('')}
+      <button type="button" class="btn actie small" onclick="pakketOpslaan('${d.key}')"><svg class="i s"><use href="#i-check"/></svg>Aantallen opslaan</button>
+    </div>`;
+  const lijst = regs.length
+    ? '<div style="overflow-x:auto"><table><thead><tr><th>Datum</th><th>Aantallen</th><th class="num">Verdiend</th><th></th></tr></thead><tbody>'+
+      regs.slice(0,24).map(r=>`<tr><td>${pakketDatumKort(r.datum)}</td><td class="muted">${(r.regels||[]).filter(x=>Number(x.aantal)>0).map(x=>esc(x.label)+': '+x.aantal).join(', ')||'-'}</td><td class="num"><b>${euro(pakketOpbrengst(r))}</b></td><td class="num"><button type="button" class="btn small danger icoknop" title="Verwijderen" onclick="pakketRegWeg('${r.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('')+
+      '</tbody></table></div>'
+    : '<div class="muted">Nog niets ingevoerd voor deze dienst.</div>';
+  return `<div class="card breed">
+    <div class="pdkop"><h2><svg class="i"><use href="#i-truck"/></svg>${esc(d.naam)}</h2>
+      <button type="button" class="btn ghost small" onclick="pakketTariefBewerk('${d.key}')">${bewerk?'Klaar':'Tarieven aanpassen'}</button></div>
+    <div class="pdtarieven">${tarievenHtml}</div>
+    ${invoer}
+    <h3 style="font-size:14px; margin:18px 0 8px"><svg class="i s"><use href="#i-clock"/></svg> Ingevoerd</h3>
+    ${lijst}
+  </div>`;
+}
+function pakketTariefBewerk(key){ pakketBewerkTarief = (pakketBewerkTarief===key ? null : key); renderPakketten(); }
+function pakketTariefLees(key){
+  const d=pakketDienst(key); if(!d) return;
+  const rijen={};
+  document.querySelectorAll('#pakketDiensten [data-veld][data-key="'+key+'"]').forEach(inp=>{
+    const i=inp.dataset.i, v=inp.dataset.veld;
+    rijen[i]=rijen[i]||{};
+    rijen[i][v] = (v==='prijs') ? Math.max(0, Math.round((Number(inp.value)||0)*1000)/1000) : inp.value;
+  });
+  d.tarieven=Object.keys(rijen).sort((a,b)=>Number(a)-Number(b)).map(i=>({label:(rijen[i].label||'').trim()||'Onbenoemd', prijs:rijen[i].prijs||0}));
+}
+function pakketTariefErbij(key){ pakketTariefLees(key); const d=pakketDienst(key); if(d){ d.tarieven.push({label:'', prijs:0}); renderPakketten(); } }
+function pakketTariefWeg(key,i){ pakketTariefLees(key); const d=pakketDienst(key); if(d){ d.tarieven.splice(i,1); renderPakketten(); } }
+function pakketTariefOpslaan(key){ pakketTariefLees(key); save(); pakketBewerkTarief=null; renderPakketten(); toast('Tarieven opgeslagen', true); }
+function pakketOpslaan(key){
+  const d=pakketDienst(key); if(!d) return;
+  const datum=(document.getElementById('pd_datum_'+key)||{}).value || pakketVandaagISO();
+  const regels=d.tarieven.map((t,i)=>({label:t.label, prijs:t.prijs, aantal:Math.max(0, Math.floor(Number((document.getElementById('pd_aantal_'+key+'_'+i)||{}).value)||0))}));
+  if(!regels.some(r=>r.aantal>0)){ toast('Vul minstens één aantal in.','let-op'); return; }
+  pakketData().registraties.push({id:uid(), datum, dienst:key, regels});
+  save(); renderPakketten();
+  if(typeof toonBestelBalk==='function') toonBestelBalk();
+  toast('Aantallen opgeslagen voor '+d.naam+' ('+pakketDatumKort(datum)+')', true);
+}
+function pakketRegWeg(id){
+  const p=pakketData();
+  p.registraties=p.registraties.filter(r=>String(r.id)!==String(id));
+  save(); renderPakketten();
 }
 function kpVoorbeeld(){
   const laatste=(state.reparaties||[])[0];
