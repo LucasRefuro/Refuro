@@ -23,6 +23,8 @@
   ],
   "rewrites": [
     { "source": "/r/:winkel/:code", "destination": "/r" },
-    { "source": "/r/:winkel", "destination": "/r" }
+    { "source": "/r/:winkel", "destination": "/r" },
+    { "source": "/", "has": [{ "type": "host", "value": "refuro.storvo.app" }], "destination": "/r" },
+    { "source": "/:code", "has": [{ "type": "host", "value": "refuro.storvo.app" }], "destination": "/r" }
   ]
 }
