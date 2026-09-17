@@ -33,10 +33,11 @@
   /* kop met het merk van de winkel */
   header{background:var(--donker); border-radius:var(--radius); padding:28px 30px; margin-bottom:20px;
     display:flex; align-items:center; gap:16px; color:#fff;}
-  header .mk{width:54px; height:54px; border-radius:15px; background:#fff; display:flex; align-items:center;
-    justify-content:center; flex:none; overflow:hidden; font-family:'Sora',sans-serif; font-weight:800;
+  header .mk{width:62px; height:62px; border-radius:16px; background:#fff; display:flex; align-items:center;
+    justify-content:center; flex:none; overflow:hidden; padding:8px; font-family:'Sora',sans-serif; font-weight:800;
     font-size:24px; color:var(--accent);}
-  header .mk img{width:100%; height:100%; object-fit:cover;}
+  /* Contain in plaats van cover: het hele logo blijft zichtbaar, niet bijgesneden. */
+  header .mk img{width:100%; height:100%; object-fit:contain;}
   /* Storvo's eigen merk brengt zijn kleuren zelf mee, dus geen wit vlak. */
   header .mk.storvo{background:transparent;}
   header .mk.storvo svg{width:100%; height:100%;}
@@ -49,7 +50,7 @@
 
   /* de kern: waar staat het nu */
   .nu{display:flex; align-items:flex-start; gap:16px; margin-bottom:6px;}
-  .nu .ring{width:52px; height:52px; border-radius:50%; background:var(--groen-zacht); color:var(--groen-tekst);
+  .nu .ring{width:52px; height:52px; border-radius:50%; background:var(--donker); color:#fff;
     display:flex; align-items:center; justify-content:center; flex:none;}
   .nu .ring .i{width:26px; height:26px; stroke-width:2.4;}
   .nu h2{font-family:'Sora',sans-serif; font-size:22px; font-weight:800; margin:0 0 4px; display:block;}
@@ -60,7 +61,7 @@
 
   /* tijdlijn */
   .tl{position:relative; padding-left:34px; margin-top:6px;}
-  .tl::before{content:''; position:absolute; left:11px; top:10px; bottom:14px; width:2px; background:var(--zacht);}
+  .tl::before{content:''; position:absolute; left:16px; top:10px; bottom:14px; width:2px; background:var(--zacht);}
   .stap{position:relative; padding-bottom:26px;}
   .stap:last-child{padding-bottom:0;}
   .stap::before{content:''; position:absolute; left:-29px; top:2px; width:24px; height:24px; border-radius:50%;
@@ -102,9 +103,8 @@
      een telefoon, dus dat mag niet. */
   .knop span{min-width:0;}
   .knop small{display:block; font-weight:400; font-size:13px; color:var(--muted-l); margin-top:1px; overflow-wrap:anywhere; word-break:break-word;}
-  .knop.wa .ic{background:#25D366;}
-  .knop.bel .ic{background:var(--accent);}
-  .knop.mail .ic{background:var(--donker);}
+  /* Alle contact-icoontjes in de donkere huisstijl, niet de felle merkkleuren. */
+  .knop.wa .ic,.knop.bel .ic,.knop.mail .ic{background:var(--donker);}
 
   footer{text-align:center; color:var(--muted-l); font-size:12.5px; margin-top:26px; line-height:1.7;}
   footer a{color:var(--muted-l);}
