@@ -8981,14 +8981,34 @@ function aanvUitleg(){
    browser ziet er op elk systeem anders uit en je kunt er niets aan sturen;
    deze past bij de rest en toont per product meteen de prijs en de voorraad. */
 let aanvKeus=-1;
+/* Hardware-soorten voor een aanvraag (telefoons, laptops, enz.). Ze staan los van de
+   accessoire-categorieën en worden pas als (systeem)categorie aangemaakt zodra je er
+   echt een aanvraag voor maakt, zodat je categorielijst niet volloopt. */
+const AANV_HW=['Telefoon','Laptop','Tablet','Desktop','Monitor','Smartwatch','Overige hardware'];
+function catSysteem(naam){
+  let c=state.categorieen.find(c=>c.naam===naam);
+  if(!c){ c={id:uid(), naam, inkoop:0, verkoop:0, min:0, bestel:0, systeem:true}; state.categorieen.push(c); save(); }
+  return c;
+}
 function aanvVulProducten(){
   /* De productlijst rolt live; hier vullen we alleen de categorie-keuzelijst, zodat
-     je ook bij een product dat je nog niet hebt kunt zeggen waar het bij hoort. */
+     je ook bij een toestel of product dat je nog niet hebt kunt zeggen wat het is. */
   const sel=document.getElementById('a_cat'); if(!sel) return;
   const huidig=sel.value;
   const cats=(state.categorieen||[]).filter(c=>!c.systeem);
-  sel.innerHTML='<option value="">Kies categorie…</option>'+cats.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
+  sel.innerHTML='<option value="">Kies wat het is…</option>'+
+    '<optgroup label="Hardware">'+AANV_HW.map(n=>`<option value="hw:${esc(n)}">${esc(n)}</option>`).join('')+'</optgroup>'+
+    (cats.length?'<optgroup label="Accessoires en producten">'+cats.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('')+'</optgroup>':'');
   if(huidig) sel.value=huidig;
+}
+/* Zet de gekozen categorie om naar een categorie-id: "hw:Telefoon" wordt (zo nodig
+   aangemaakt) de systeemcategorie Telefoon; een getal is een gewone categorie; leeg
+   valt terug op de categorie van het gekoppelde product. */
+function aanvCatKies(wat){
+  const raw=((document.getElementById('a_cat')||{}).value)||'';
+  if(raw.indexOf('hw:')===0) return catSysteem(raw.slice(3)).id;
+  if(raw!=='') return Number(raw);
+  const p=aanvZoekProduct(wat); return p? p.cat : null;
 }
 
 function aanvTyp(){
@@ -9149,7 +9169,7 @@ function maakAanvraag(){
     wat, verkoop,
     inkoop:Math.round((Number(document.getElementById('a_inkoop').value)||0)*100)/100,
     productId:(aanvZoekProduct(wat)||{}).id || null,
-    cat: (document.getElementById('a_cat').value!=='' ? Number(document.getElementById('a_cat').value) : ((aanvZoekProduct(wat)||{}).cat ?? null)),
+    cat: aanvCatKies(wat),
     aanbetPct:Number(document.getElementById('a_pct').value)||0,
     aanbetaling:aanbet, aanbetBetaal:bet,
     status:'aangevraagd', door:gebruiker?gebruiker.naam:null,
