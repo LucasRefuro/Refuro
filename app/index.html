@@ -81,6 +81,8 @@
   .pnlbwrij{display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;}
   .pnlbwrij > input{flex:2; min-width:150px;}
   .pnlbwveld{min-width:92px;}
+  .pnlwinstmodus{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin:14px 0 4px;}
+  .pnllab{font-size:13px; font-weight:600; color:var(--muted); padding-bottom:9px;}
   .planrij{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
   .planlinks{display:flex; align-items:center; gap:10px;}
   .planwanneer{font-size:12px; color:var(--muted);}
@@ -423,6 +425,9 @@
   .repgar{display:flex; align-items:center; gap:9px; background:var(--soft-2); border-radius:10px; padding:11px 14px; margin-top:14px; font-size:14px;}
   .repgar .i{flex:none; color:var(--muted);}
   .repgar input{width:64px; margin:0 4px;}
+  .repbewerkbanner{display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:var(--lblauw); color:var(--oranje); border-radius:12px; padding:12px 16px; font-size:14px; line-height:1.5; margin-bottom:14px;}
+  .repbewerkbanner .i{flex:none;}
+  .repbewerkbanner span{flex:1; min-width:200px;}
   .repwaarschuwing{display:flex; gap:10px; align-items:center; background:var(--amber-soft); color:var(--amber-tekst); border-radius:12px; padding:13px 16px; font-size:14px; line-height:1.5; margin-bottom:14px;}
   .repwaarschuwing .i{flex:none; color:var(--amber-tekst);}
   .repannul{display:flex; align-items:center; gap:9px; background:var(--red-soft); color:var(--red-tekst); border-radius:10px; padding:11px 14px; margin-top:14px; font-size:14px;}
@@ -984,6 +989,9 @@
   .rktype{font-weight:600; color:var(--muted); font-size:13px;}
   .rkbericht{display:flex; gap:5px;}
   .repacties{text-align:right; white-space:nowrap;}
+  /* aandeel-balkje in het rapport "winst per categorie" */
+  .catbar{height:7px; background:var(--soft-2); border-radius:4px; overflow:hidden; margin-bottom:3px;}
+  .catbar i{display:block; height:100%; background:var(--oranje); border-radius:4px;}
   /* de volgende-stap balk boven in het reparatiedetail: status links, hoofdactie rechts */
   .repnu{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--soft-2); border-radius:var(--radius-s); padding:12px 15px; margin-top:16px;}
   .repnu-l{display:flex; align-items:center; gap:8px;}
@@ -2163,6 +2171,7 @@
   </div>
 
   <div id="rep-nieuw" class="modules"hidden>
+    <div class="repbewerkbanner" id="repBewerkBanner" hidden></div>
     <div class="repwaarschuwing" id="repGarWaarsch" hidden></div>
     <div class="card">
       <h2><svg class="i"><use href="#i-user"/></svg>Klant</h2>
@@ -2213,7 +2222,7 @@
       <div style="margin-top:14px; font-size:15px">Kosten onderdelen: <b id="wKosten">€ 0,00</b> &nbsp;·&nbsp; Winst: <b id="wWinst" style="color:var(--green)">€ 0,00</b></div>
     </div>
     <div class="row breed" style="margin-bottom:20px">
-      <button class="btn actie" onclick="maakReparatie()"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie aanmaken</button>
+      <button class="btn actie" id="repSubmitBtn" onclick="maakReparatie()"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie aanmaken</button>
       <button class="btn ghost" onclick="resetRepForm()">Leegmaken</button>
     </div>
   </div>
@@ -2679,7 +2688,7 @@
       <div style="min-width:140px"><label>Datum</label><input id="ink_datum" type="date"></div>
       <div style="flex:2; min-width:160px"><label>Wat</label><input id="ink_wat" placeholder="bijv. 20× hoesjes" autocomplete="off"></div>
       <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="ink_lev" placeholder="bijv. Foneday" list="levsList" autocomplete="off"></div>
-      <div style="min-width:130px"><label>Soort</label><select id="ink_soort"><option value="voorraad">Voorraad</option><option value="kosten">Kosten</option></select></div>
+      <div style="min-width:200px"><label>Soort</label><select id="ink_soort"><option value="voorraad">Voorraad (verrekend bij verkoop)</option><option value="kosten">Kosten (direct van de winst)</option></select></div>
       <div style="min-width:120px"><label>Bedrag (€) incl. btw</label><input id="ink_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
       <div style="min-width:100px"><label>Btw</label><select id="ink_btw"><option value="21">21%</option><option value="9">9%</option><option value="0">0%</option></select></div>
       <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
@@ -2823,6 +2832,11 @@
     <h2 style="margin-bottom:4px">Resultaat <span class="muted" id="rapBereikTekst"></span></h2>
     <div id="rapResultaat"></div>
     <p class="muted klein" style="margin-top:12px">De resultaatbedragen zijn inclusief btw. Hieronder de btw-afdracht, de belasting-indicatie, je buffers, de balans en een prognose. De inkoop telt mee op het moment dat een product verkocht wordt.</p>
+  </div>
+  <div class="card breed">
+    <h2 style="margin-bottom:4px"><svg class="i"><use href="#i-chart"/></svg>Winst per categorie <span class="muted" id="rapCatBereikTekst"></span></h2>
+    <div id="rapCategorie"></div>
+    <p class="muted klein" style="margin-top:10px">Alles wat je verkoopt telt mee: producten, reparaties, hardware, diensten en PostNL. Winst is de verkoopprijs min de inkoop (allebei inclusief btw).</p>
   </div>
   <div class="card breed"><div id="rapBelasting"></div></div>
   <div class="card breed"><div id="rapBuffers"></div></div>
@@ -4588,7 +4602,45 @@ function renderRapport(){
        </div>
        <div class="muted klein" style="margin-top:6px">Per verkoop berekend: 21% op gewone verkopen, en 21% over de marge bij toestellen met margeregeling. Dit is de btw in je omzet; de voorbelasting op je inkoop trek je bij de aangifte er nog af.</div>
      </div>`;
+  renderRapportCategorie(b);
   renderRapportFiscaal();
+}
+/* Winst per categorie over de gekozen periode. Alles wat verkocht wordt (producten,
+   reparaties, hardware, diensten, PostNL) staat in state.verkopen met een categorie;
+   winst per regel = verkoop − inkoop. Een balkje toont het aandeel in de totale winst. */
+function renderRapportCategorie(b){
+  const el=document.getElementById('rapCategorie'); if(!el) return;
+  const lbl=document.getElementById('rapCatBereikTekst'), src=document.getElementById('rapBereikTekst');
+  if(lbl && src) lbl.textContent=src.textContent;
+  const map={};
+  (state.verkopen||[]).forEach(v=>{
+    if(v.t<b.van || v.t>=b.tot) return;
+    const naam=v.cat!=null?catNaam(v.cat):'Overig';
+    const m=map[naam]||(map[naam]={naam, omzet:0, inkoop:0, winst:0, stuks:0});
+    const omzet=Number(v.verkoop)||0, inkoop=Number(v.inkoop)||0;
+    m.omzet+=omzet; m.inkoop+=inkoop; m.winst+=omzet-inkoop; m.stuks+=(v.aantal||1);
+  });
+  const rijen=Object.values(map).filter(m=>m.omzet||m.stuks).sort((a,z)=>z.winst-a.winst);
+  if(!rijen.length){ el.innerHTML='<p class="muted">Nog geen verkopen in deze periode.</p>'; return; }
+  const totOmzet=rijen.reduce((s,m)=>s+m.omzet,0), totInkoop=rijen.reduce((s,m)=>s+m.inkoop,0),
+        totWinst=rijen.reduce((s,m)=>s+m.winst,0), totStuks=rijen.reduce((s,m)=>s+m.stuks,0);
+  const maxWinst=Math.max(1, ...rijen.map(m=>Math.abs(m.winst)));
+  el.innerHTML='<div style="overflow-x:auto"><table><thead><tr>'+
+    '<th>Categorie</th><th class="num">Stuks</th><th class="num">Omzet</th><th class="num">Inkoop</th><th class="num">Winst</th><th class="num">Marge</th><th style="min-width:130px">Aandeel</th></tr></thead><tbody>'+
+    rijen.map(m=>{
+      const marge=m.omzet>0?Math.round(m.winst/m.omzet*100):0;
+      const aandeel=totWinst>0?Math.round(m.winst/totWinst*100):0;
+      const barW=Math.round(Math.max(0,m.winst)/maxWinst*100);
+      return `<tr><td><span class="tag">${esc(m.naam)}</span></td>`+
+        `<td class="num">${m.stuks}</td>`+
+        `<td class="num">${euro(m.omzet)}</td>`+
+        `<td class="num">${euro(m.inkoop)}</td>`+
+        `<td class="num" style="color:${m.winst>=0?'var(--green)':'var(--red)'}"><b>${euro(m.winst)}</b></td>`+
+        `<td class="num">${marge}%</td>`+
+        `<td><div class="catbar"><i style="width:${barW}%"></i></div><span class="muted klein">${aandeel}% van de winst</span></td></tr>`;
+    }).join('')+
+    `<tr style="font-weight:800; border-top:2px solid var(--border)"><td>Totaal</td><td class="num">${totStuks}</td><td class="num">${euro(totOmzet)}</td><td class="num">${euro(totInkoop)}</td><td class="num">${euro(totWinst)}</td><td class="num">${totOmzet>0?Math.round(totWinst/totOmzet*100):0}%</td><td></td></tr>`+
+    '</tbody></table></div>';
 }
 
 /* ── Belasting, buffers, balans en prognose ──
@@ -7300,10 +7352,12 @@ function postnlTeken(){
   const ov=document.getElementById('postnlOverlay'); if(!ov) return;
   const lijst=state.postnl||[];
   const inEdit=postnlBewerk;
+  const pctAan = state.postnlPct!=null && state.postnlPct!=='' && !isNaN(Number(state.postnlPct));
+  const pctVal = pctAan ? Number(state.postnlPct) : '';
   /* Verkooptegel: aantikken telt hem bij de verkoop op. De winst (prijs minus
-     inkoop) staat er klein onder, zodat je ziet dat het meestal je vergoeding is. */
+     inkoop, of het vaste percentage) staat er klein onder. */
   const tegel=t=>{
-    const w=(Number(t.prijs)||0)-(Number(t.inkoop)||0);
+    const w=(Number(t.prijs)||0)-postnlInkoop(t);
     return `<div class="pnlvak">
       <button type="button" class="blokje" onclick="postnlVerkoop('${t.id}')">
         <span class="pnlico"><svg class="i"><use href="#${postnlIco(t)}"/></svg></span>
@@ -7314,13 +7368,19 @@ function postnlTeken(){
       <button class="pnlweg" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
     </div>`;
   };
-  /* Bewerkregel: naam, prijs voor de klant en de inkoop (afdracht aan PostNL). */
-  const bewrij=t=>`<div class="pnlbwrij">
-    <input value="${esc(t.naam)}" onchange="postnlZet('${t.id}','naam',this.value)">
-    <div class="pnlbwveld"><label>Klant (€)</label><input type="number" min="0" step="0.01" value="${t.prijs}" onchange="postnlZet('${t.id}','prijs',this.value)"></div>
-    <div class="pnlbwveld"><label>Inkoop (€)</label><input type="number" min="0" step="0.01" value="${t.inkoop!=null?t.inkoop:t.prijs}" onchange="postnlZet('${t.id}','inkoop',this.value)"></div>
-    <button class="btn small danger icoknop" title="Verwijderen" onclick="postnlWeg('${t.id}')"><svg class="i s"><use href="#i-trash"/></svg></button>
-  </div>`;
+  /* Bewerkregel: naam, prijs voor de klant en de inkoop. Bij een vast percentage
+     is de inkoop afgeleid van de prijs, dus die staat dan alleen ter info. */
+  const bewrij=t=>{
+    const inkVeld = pctAan
+      ? `<div class="pnlbwveld"><label>Inkoop (${pctVal}%)</label><input type="number" value="${postnlInkoop(t).toFixed(2)}" disabled></div>`
+      : `<div class="pnlbwveld"><label>Inkoop (€)</label><input type="number" min="0" step="0.01" value="${t.inkoop!=null?t.inkoop:t.prijs}" onchange="postnlZet('${t.id}','inkoop',this.value)"></div>`;
+    return `<div class="pnlbwrij">
+      <input value="${esc(t.naam)}" onchange="postnlZet('${t.id}','naam',this.value)">
+      <div class="pnlbwveld"><label>Klant (€)</label><input type="number" min="0" step="0.01" value="${t.prijs}" onchange="postnlZet('${t.id}','prijs',this.value)"></div>
+      ${inkVeld}
+      <button class="btn small danger icoknop" title="Verwijderen" onclick="postnlWeg('${t.id}')"><svg class="i s"><use href="#i-trash"/></svg></button>
+    </div>`;
+  };
   const sectie=(titel, soort)=>{
     const items=lijst.filter(t=>(t.type||'pakket')===soort);
     if(!items.length) return '';
@@ -7335,8 +7395,13 @@ function postnlTeken(){
       <button type="button" class="btn ghost small" onclick="postnlBewerkToggle()"><svg class="i s"><use href="#i-edit"/></svg>${inEdit?'Klaar met aanpassen':'Prijzen aanpassen'}</button>
     </div>
     <p class="pv">${inEdit
-      ? 'Prijs is wat de klant betaalt. Inkoop is wat jij aan PostNL afdraagt. Het verschil is je winst, meestal je vergoeding per pakket. Staat inkoop gelijk aan de prijs, dan is de winst nul (pure doorstroom).'
+      ? 'Prijs is wat de klant betaalt. Je winst is het verschil met de inkoop (afdracht aan PostNL). Wil je liever met een vaste vergoeding rekenen, zet dan "Vast percentage" aan: je winst is dan dat percentage van elke prijs.'
       : 'Tik een product aan om het aan de verkoop toe te voegen. De prijs is het tarief bij een PostNL-punt.'}</p>
+    ${inEdit?`<div class="pnlwinstmodus">
+      <span class="pnllab">Winst berekenen:</span>
+      <div class="segment"><button type="button" class="segknop${!pctAan?' aan':''}" onclick="postnlPctModus('bedrag')">Inkoop per product (€)</button><button type="button" class="segknop${pctAan?' aan':''}" onclick="postnlPctModus('pct')">Vast percentage (%)</button></div>
+      ${pctAan?`<div class="pnlbwveld"><label>Winst %</label><input type="number" min="0" max="100" step="0.1" value="${pctVal}" onchange="postnlPctZet(this.value)"></div>`:''}
+    </div>`:''}
     ${secties || '<span class="muted">Nog geen producten. Zet "Prijzen aanpassen" aan om er een toe te voegen.</span>'}
     ${inEdit?`<div class="pnlsectie">Zelf een type toevoegen</div>
     <div class="row" style="align-items:flex-end">
@@ -7346,7 +7411,7 @@ function postnlTeken(){
         <button type="button" class="bkvar${postnlTypeKeuze==='brief'?' aan':''}" onclick="postnlTypeKies(this,'brief')">Brief</button>
       </div></div>
       <div style="min-width:95px"><label>Klant (€)</label><input id="pnl_prijs" type="number" min="0" step="0.01" autocomplete="off"></div>
-      <div style="min-width:95px"><label>Inkoop (€)</label><input id="pnl_inkoop" type="number" min="0" step="0.01" placeholder="= prijs" autocomplete="off"></div>
+      ${pctAan?'':`<div style="min-width:95px"><label>Inkoop (€)</label><input id="pnl_inkoop" type="number" min="0" step="0.01" placeholder="= prijs" autocomplete="off"></div>`}
       <button class="btn" onclick="postnlNieuwType()">Toevoegen</button>
     </div>`:''}
     <div class="acts" style="margin-top:16px"><button class="btn ghost" onclick="postnlSluit()">Sluiten</button></div>
@@ -7358,17 +7423,38 @@ function postnlZet(id, veld, val){
   else t[veld]=Math.max(0, Number(val)||0);
   save();
 }
+/* Overschakelen tussen inkoop per product (€) en één vast winstpercentage voor alle
+   PostNL-verkopen. null = per product; een getal = dat percentage van de prijs is winst. */
+function postnlPctModus(modus){
+  if(modus==='pct'){ if(state.postnlPct==null || state.postnlPct==='') state.postnlPct=10; }
+  else state.postnlPct=null;
+  save(); postnlTeken();
+}
+function postnlPctZet(val){
+  state.postnlPct=Math.max(0, Math.min(100, Number(val)||0));
+  save(); postnlTeken();
+}
 function postnlTypeKies(btn, soort){
   postnlTypeKeuze=soort;
   const wrap=btn.parentElement;
   wrap.querySelectorAll('.bkvar').forEach(b=>b.classList.toggle('aan', b===btn));
 }
+/* De inkoop (afdracht aan PostNL) per product. Staat er een vast winstpercentage
+   ingesteld (state.postnlPct), dan reken je de inkoop uit de prijs: inkoop =
+   prijs × (1 − winst%). Anders het per product ingevulde inkoopbedrag (standaard
+   gelijk aan de prijs = doorstroom, winst nul). */
+function postnlInkoop(t){
+  const pct=state.postnlPct;
+  if(pct!=null && pct!=='' && !isNaN(Number(pct)))
+    return Math.round((Number(t.prijs)||0)*(1-(Number(pct)||0)/100)*100)/100;
+  return Number(t.inkoop!=null?t.inkoop:t.prijs)||0;
+}
 function postnlVerkoop(id){
   const t=(state.postnl||[]).find(x=>String(x.id)===String(id)); if(!t) return;
   const cat=((state.categorieen||[]).find(c=>/^\s*postnl\s*$/i.test(c.naam||''))||{}).id||null;
-  /* De inkoop (wat je aan PostNL afdraagt) gaat mee, zodat alleen je vergoeding
-     als winst telt en niet de hele portoprijs. */
-  mandjeToevoegen({naam:'PostNL · '+t.naam, aantal:1, verkoopStuk:Number(t.prijs)||0, inkoopStuk:Number(t.inkoop)||0, productId:null, cat, bijbestelCat:null});
+  /* De inkoop gaat mee, zodat alleen je vergoeding als winst telt en niet de hele
+     portoprijs. */
+  mandjeToevoegen({naam:'PostNL · '+t.naam, aantal:1, verkoopStuk:Number(t.prijs)||0, inkoopStuk:postnlInkoop(t), productId:null, cat, bijbestelCat:null});
   toast(t.naam+' toegevoegd aan de verkoop', true);
 }
 function postnlNieuwType(){
@@ -14028,6 +14114,7 @@ const REP_STATUS={
    maar horen niet meer in de planning of de takenkoppeling. */
 function repLopend(r){ return r && r.status!=='afgerond' && r.status!=='geannuleerd'; }
 let repOnd=[];
+let repBewerkId=null;   // null = nieuwe reparatie; anders het id van de reparatie die je bewerkt
 document.querySelectorAll('#repTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#repTabs button').forEach(x=>x.classList.toggle('active', x===b));
   ['overzicht','nieuw','onderdelen'].forEach(s=>document.getElementById('rep-'+s).hidden = s!==b.dataset.s);
@@ -14773,7 +14860,44 @@ function resetRepForm(){
   if(tb){ tb.hidden=true; tb.innerHTML=''; }
   document.getElementById('r_toestel').classList.remove('mistoestel');
   updateZoekLinks();
+  repBewerkId=null;
+  repBewerkModusToon(null);
 }
+/* Een bestaande reparatie bewerken: het nieuwe-reparatieformulier vullen met wat
+   er al staat en in bewerkmodus zetten. Opslaan gaat via maakReparatie, dat op
+   repBewerkId ziet dat het een wijziging is en niet een nieuwe reparatie. */
+function repBewerk(id){
+  const r=state.reparaties.find(x=>x.id===id); if(!r) return;
+  sluitPopup();
+  repBewerkId=id;
+  showTab('reparaties');
+  const knop=document.querySelector('#repTabs button[data-s="nieuw"]'); if(knop) knop.click();
+  document.getElementById('r_naam').value=r.klant.naam||'';
+  document.getElementById('r_tel').value=r.klant.tel||'';
+  document.getElementById('r_email').value=r.klant.email||'';
+  document.getElementById('r_notify').value=r.notify?'1':'0';
+  document.getElementById('r_inleveren').checked=!!r.inleveren;
+  document.getElementById('r_toestel').value=r.toestel||'';
+  document.getElementById('r_type').value=r.type||'';
+  document.getElementById('r_prijs').value=r.prijs!=null?r.prijs:'';
+  document.getElementById('r_klaar').value=r.klaarVoor||'';
+  document.getElementById('r_voorkeur').value=r.voorkeur||'';
+  repOnd=(r.onderdelen||[]).map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad}));
+  renderRepOnd(); checkSeal(); rekenWinst(); updateZoekLinks();
+  repBewerkModusToon(r);
+  window.scrollTo(0,0);
+}
+function repBewerkModusToon(r){
+  const banner=document.getElementById('repBewerkBanner');
+  if(banner){
+    if(r){ banner.hidden=false; banner.innerHTML=`<svg class="i s"><use href="#i-edit"/></svg><span>Je bewerkt reparatie <b>${esc(r.nr)}</b> — ${esc(r.klant.naam)}. Nummer en status blijven gelijk.</span> <button type="button" class="btn small ghost" onclick="repBewerkStop()">Toch een nieuwe</button>`; }
+    else{ banner.hidden=true; banner.innerHTML=''; }
+  }
+  const btn=document.getElementById('repSubmitBtn');
+  if(btn) btn.innerHTML = r ? '<svg class="i s"><use href="#i-save"/></svg>Wijzigingen opslaan'
+                            : '<svg class="i s"><use href="#i-wrench"/></svg>Reparatie aanmaken';
+}
+function repBewerkStop(){ repBewerkId=null; resetRepForm(); }
 function maakReparatie(){
   const naam=document.getElementById('r_naam').value.trim();
   const tel=document.getElementById('r_tel').value.trim();
@@ -14797,6 +14921,39 @@ function maakReparatie(){
     if(box && box.scrollIntoView) box.scrollIntoView({block:'center', behavior:'smooth'});
     toast('Kies eerst welke uitvoering het toestel is', 'let-op');
     return;
+  }
+  /* Een bestaande reparatie bijwerken (klant, toestel, prijs, onderdelen/inkoop).
+     Nummer, status, tijdlijn, opmerkingen en garantie blijven staan. Loopt de
+     reparatie nog, dan verrekenen we de onderdelen met de voorraad: eerst de oude
+     reservering terug, dan opnieuw reserveren wat op voorraad ligt, zodat de
+     voorraad na het bewerken weer klopt. Bij een afgeronde reparatie corrigeren we
+     alleen de inkoopcijfers (winst), zonder aan de voorraad te komen. */
+  if(repBewerkId){
+    const r=state.reparaties.find(x=>x.id===repBewerkId);
+    if(r){
+      const lopend=repLopend(r);
+      if(lopend) r.onderdelen.forEach(o=>{ if(o.uitVoorraad){ const vr=state.onderdelen.find(x=>x.naam.toLowerCase()===o.naam.toLowerCase()); if(vr) vr.voorraad++; } });
+      const nieuw=repOnd.map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:false}));
+      if(lopend) nieuw.forEach(o=>{ const vr=state.onderdelen.find(x=>x.naam.toLowerCase()===o.naam.toLowerCase()); if(vr && vr.voorraad>0){ haalUitVoorraad(vr,1); o.uitVoorraad=true; } });
+      r.klant={naam, tel, email:document.getElementById('r_email').value.trim()};
+      r.notify=document.getElementById('r_notify').value==='1';
+      r.toestel=document.getElementById('r_toestel').value.trim();
+      r.type=document.getElementById('r_type').value.trim();
+      r.prijs=prijs;
+      r.klaarVoor=document.getElementById('r_klaar').value||null;
+      r.voorkeur=document.getElementById('r_voorkeur').value||'';
+      r.inleveren=document.getElementById('r_inleveren').checked;
+      r.onderdelen=nieuw;
+      save();
+      toast('Reparatie '+r.nr+' bijgewerkt.', 'ok');
+      piep(880);
+      repBewerkId=null;
+      resetRepForm();
+      document.querySelector('#repTabs button[data-s="overzicht"]').click();
+      renderReparaties(); updateBadge(); herteken();
+      return;
+    }
+    repBewerkId=null; // reparatie bestaat niet meer: val terug op nieuw aanmaken
   }
   state.repNr++;
   const nr='R'+new Date().getFullYear().toString().slice(2)+'-'+String(state.repNr).padStart(3,'0');
@@ -14947,6 +15104,7 @@ function repDetail(id){
         <button class="btn danger" onclick="voegNotitie(${r.id},true,true)">Als probleem</button>
       </div>
       ${r.status==='klaar'?`<button class="btn ghost" onclick="repNaarMandje(${r.id})"><svg class="i s"><use href="#i-cart"/></svg>Bij een verkoop optellen</button>`:''}
+      <button class="btn ghost" onclick="repBewerk(${r.id})"><svg class="i s"><use href="#i-edit"/></svg>Bewerken</button>
       <button class="btn ghost" onclick="printRepLabel(${r.id})"><svg class="i s"><use href="#i-tag"/></svg>Label printen</button>
       <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
       <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
