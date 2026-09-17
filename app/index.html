@@ -2382,7 +2382,8 @@
       <div style="margin-top:14px"><label>Categorie <span class="muted">(waar hoort dit bij)</span></label><select id="a_cat"></select></div>
 
       <div class="grid" style="margin-top:14px">
-        <div><label>Verkoopprijs (€) <span class="muted">totaal</span></label><input id="a_verkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+        <div><label>Aantal</label><input id="a_aantal" type="number" step="1" min="1" value="1" oninput="aanvReken()"></div>
+        <div><label>Verkoopprijs (€) <span class="muted">per stuk</span></label><input id="a_verkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
         <div><label>Aanbetaling (%)</label><input id="a_pct" type="number" step="1" min="0" max="100" oninput="aanvReken('pct')"></div>
         <div><label>Aanbetaling (€)</label><input id="a_aanbet" type="number" step="0.01" min="0" oninput="aanvReken('bedrag')"></div>
       </div>
@@ -2394,7 +2395,7 @@
             <option value="cash">Cash met bon</option>
             <option value="cash_zb">Cash zonder bon</option>
           </select></div>
-        <div><label>Inkoop (€) <span class="muted">optioneel, voor je winst</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+        <div><label>Inkoop (€) <span class="muted">per stuk, optioneel</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
       </div>
 
       <div class="aanvreken" id="aanvReken"></div>
@@ -9112,7 +9113,9 @@ function aanvBijScan(p){
    bedrag eruit, en andersom. Wie het handiger vindt om gewoon "honderd euro
    aanbetaling" te zeggen kan dat dus ook.                                   */
 function aanvReken(bron){
-  const totaal=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('a_aantal').value)||1));
+  const perStuk=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
+  const totaal=Math.round(perStuk*aantal*100)/100;
   const pctEl=document.getElementById('a_pct'), bedEl=document.getElementById('a_aanbet');
   let pct=Number(pctEl.value); if(isNaN(pct)) pct=stdMarge();
   let aanbet=Number(bedEl.value)||0;
@@ -9126,19 +9129,20 @@ function aanvReken(bron){
     bedEl.value=aanbet ? aanbet.toFixed(2) : '';
   }
   const rest=Math.round((totaal-aanbet)*100)/100;
-  const inkoop=Number(document.getElementById('a_inkoop').value)||0;
-  const winst=inkoop>0 ? Math.round((totaal-inkoop)*100)/100 : null;
+  const inkoopStuk=Number(document.getElementById('a_inkoop').value)||0;
+  const winst=inkoopStuk>0 ? Math.round((totaal-inkoopStuk*aantal)*100)/100 : null;
 
   const el=document.getElementById('aanvReken');
   if(!el) return;
   el.innerHTML=`
     <div class="arrij nu"><span>Klant betaalt nu</span><b class="groot">${euro(aanbet)}</b></div>
     <div class="arrij rest"><span>Bij het ophalen nog</span><b>${euro(rest)}</b></div>
-    <div class="arrij"><span>Totaalprijs</span><b>${euro(totaal)}</b></div>
+    <div class="arrij"><span>Totaalprijs${aantal>1?' ('+aantal+'× '+euro(perStuk)+')':''}</span><b>${euro(totaal)}</b></div>
     ${winst!=null?`<div class="arrij"><span>Jouw winst</span><b>${euro(winst)}</b></div>`:''}`;
 }
 function resetAanvraag(){
   ['a_naam','a_tel','a_email','a_wat','a_verkoop','a_inkoop','a_aanbet'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('a_aantal').value=1;
   document.getElementById('a_pct').value=stdMarge();
   document.getElementById('a_betaal').value='pin';
   document.getElementById('a_notify').value='1';
@@ -9152,7 +9156,9 @@ function maakAanvraag(){
   const naam=document.getElementById('a_naam').value.trim();
   const tel=document.getElementById('a_tel').value.trim();
   const wat=document.getElementById('a_wat').value.trim();
-  const verkoop=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
+  const aantal=Math.max(1, Math.floor(Number(document.getElementById('a_aantal').value)||1));
+  const perStuk=Math.round((Number(document.getElementById('a_verkoop').value)||0)*100)/100;
+  const verkoop=Math.round(perStuk*aantal*100)/100;
   const aanbet=Math.round((Number(document.getElementById('a_aanbet').value)||0)*100)/100;
   const bet=document.getElementById('a_betaal').value;
   if(!naam || !tel){ alert('Naam en telefoonnummer zijn verplicht.'); return; }
@@ -9166,8 +9172,8 @@ function maakAanvraag(){
     id:uid(), nr, t:Date.now(),
     klant:{naam, tel, email:document.getElementById('a_email').value.trim()},
     notify:document.getElementById('a_notify').value==='1',
-    wat, verkoop,
-    inkoop:Math.round((Number(document.getElementById('a_inkoop').value)||0)*100)/100,
+    wat, aantal, prijsStuk:perStuk, verkoop,
+    inkoop:Math.round((Number(document.getElementById('a_inkoop').value)||0)*aantal*100)/100,
     productId:(aanvZoekProduct(wat)||{}).id || null,
     cat: aanvCatKies(wat),
     aanbetPct:Number(document.getElementById('a_pct').value)||0,
@@ -9213,7 +9219,7 @@ function aanvAfrekenen(id){
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='scanOverlay';
   ov.innerHTML=`<div class="popup">
-    <h3>${esc(a.nr)} · ${esc(a.wat)}</h3>
+    <h3>${esc(a.nr)} · ${a.aantal>1?a.aantal+'× ':''}${esc(a.wat)}</h3>
     <div class="pv">Totaal ${euro(aanvTotaal(a))}${a.aanbetaling>0?' · al aanbetaald '+euro(a.aanbetaling)+' ('+betaalNaam(a.aanbetBetaal||'pin')+')':''}</div>
     <div class="avdetail" style="margin:0 0 18px">
       <div class="arrij nu"><span>Nu te betalen</span><b class="groot">${euro(rest)}</b></div>
@@ -9241,8 +9247,8 @@ function aanvBoek(id, bet){
      anders valt hij terug op Diensten. Zo telt de aanvraag mee bij de juiste soort
      in "winst per categorie". */
   const aCat = (a.cat!=null) ? a.cat : ((state.producten.find(p=>p.id===a.productId)||{}).cat);
-  state.verkopen.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr+' · '+a.wat,
-    verkoop:totaal, inkoop:a.inkoop||0, aantal:1, betaal:bet,
+  state.verkopen.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr+' · '+(a.aantal>1?a.aantal+'× ':'')+a.wat,
+    verkoop:totaal, inkoop:a.inkoop||0, aantal:a.aantal||1, betaal:bet,
     cat:(aCat!=null?aCat:dienstCat().id), door:gebruiker?gebruiker.naam:null});
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   state.log.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr, m:'uit', v:null, aantal:1, pid:null});
@@ -9270,7 +9276,7 @@ function aanvRij(a){
   const rest=aanvRestant(a);
   return `<div class="aanvrij" onclick="toonAanvraag(${a.id})">
     <div class="avnr"><b>${esc(a.nr)}</b><div class="muted" style="font-size:12px">${esc(a.klant.naam)}</div></div>
-    <div class="avwat">${esc(a.wat)}</div>
+    <div class="avwat">${a.aantal>1?'<b>'+a.aantal+'× </b>':''}${esc(a.wat)}</div>
     <div><span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span></div>
     <div class="avgeld"><b>${euro(aanvTotaal(a))}</b>
       ${a.status!=='opgehaald' && rest>0 ? `<div class="muted" style="font-size:12px">nog ${euro(rest)}</div>`:''}</div>
@@ -9306,7 +9312,7 @@ function toonAanvraag(id){
   ov.onclick=e=>{ if(e.target===ov) sluitAanvraag(); };
   ov.innerHTML=`<div class="popup groot">
     <div class="hangkop">
-      <div><h3>${esc(a.nr)} · ${esc(a.wat)}</h3>
+      <div><h3>${esc(a.nr)} · ${a.aantal>1?a.aantal+'× ':''}${esc(a.wat)}</h3>
         <div class="pv">${esc(a.klant.naam)} · ${esc(a.klant.tel)}${a.klant.email?' · '+esc(a.klant.email):''}</div></div>
       <span class="chip ${a.status==='binnen'?'klaar':(a.status==='besteld'?'besteld':'aangemeld')}">${s.label}</span>
     </div>
