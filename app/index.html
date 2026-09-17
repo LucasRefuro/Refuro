@@ -2375,10 +2375,11 @@
       <div class="zoekveld" id="aanvZoekveld">
         <label>Product *</label>
         <input id="a_wat" autocomplete="off" placeholder="Typ of kies uit je eigen producten"
-          oninput="aanvTyp()" onfocus="aanvTyp()" onkeydown="aanvToets(event)">
+          oninput="aanvTyp()" onfocus="aanvTyp()" onblur="setTimeout(aanvSluitLijst,180)" onkeydown="aanvToets(event)">
         <div class="zoeklijst" id="aanvLijstje" hidden></div>
       </div>
       <div id="aanvKoppel"></div>
+      <div style="margin-top:14px"><label>Categorie <span class="muted">(waar hoort dit bij)</span></label><select id="a_cat"></select></div>
 
       <div class="grid" style="margin-top:14px">
         <div><label>Verkoopprijs (€) <span class="muted">totaal</span></label><input id="a_verkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
@@ -8980,7 +8981,15 @@ function aanvUitleg(){
    browser ziet er op elk systeem anders uit en je kunt er niets aan sturen;
    deze past bij de rest en toont per product meteen de prijs en de voorraad. */
 let aanvKeus=-1;
-function aanvVulProducten(){ /* niets meer voor te bereiden, de lijst rolt live */ }
+function aanvVulProducten(){
+  /* De productlijst rolt live; hier vullen we alleen de categorie-keuzelijst, zodat
+     je ook bij een product dat je nog niet hebt kunt zeggen waar het bij hoort. */
+  const sel=document.getElementById('a_cat'); if(!sel) return;
+  const huidig=sel.value;
+  const cats=(state.categorieen||[]).filter(c=>!c.systeem);
+  sel.innerHTML='<option value="">Kies categorie…</option>'+cats.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
+  if(huidig) sel.value=huidig;
+}
 
 function aanvTyp(){
   const veld=document.getElementById('a_wat');
@@ -9007,6 +9016,7 @@ function aanvPak(id){
   document.getElementById('a_wat').value=p.naam;
   aanvSluitLijst();
   aanvProductKijk();
+  const cat=document.getElementById('a_cat'); if(cat && p.cat!=null) cat.value=String(p.cat);
   const vk=document.getElementById('a_verkoop');
   if(vk){ vk.value=p.verkoop; }
   const ink=document.getElementById('a_inkoop');
@@ -9112,6 +9122,7 @@ function resetAanvraag(){
   document.getElementById('a_pct').value=stdMarge();
   document.getElementById('a_betaal').value='pin';
   document.getElementById('a_notify').value='1';
+  const c=document.getElementById('a_cat'); if(c) c.value='';
   aanvVulProducten();
   const k=document.getElementById('aanvKoppel'); if(k) k.innerHTML='';
   aanvUitleg();
@@ -9138,6 +9149,7 @@ function maakAanvraag(){
     wat, verkoop,
     inkoop:Math.round((Number(document.getElementById('a_inkoop').value)||0)*100)/100,
     productId:(aanvZoekProduct(wat)||{}).id || null,
+    cat: (document.getElementById('a_cat').value!=='' ? Number(document.getElementById('a_cat').value) : ((aanvZoekProduct(wat)||{}).cat ?? null)),
     aanbetPct:Number(document.getElementById('a_pct').value)||0,
     aanbetaling:aanbet, aanbetBetaal:bet,
     status:'aangevraagd', door:gebruiker?gebruiker.naam:null,
@@ -9205,9 +9217,13 @@ function aanvBoek(id, bet){
   const totaal=aanvTotaal(a);
   const vid=uid();
   /* Omzet is de hele prijs; kosten zijn wat het toestel jou kostte. */
+  /* De categorie die je bij de aanvraag koos (of die van het gekoppelde product);
+     anders valt hij terug op Diensten. Zo telt de aanvraag mee bij de juiste soort
+     in "winst per categorie". */
+  const aCat = (a.cat!=null) ? a.cat : ((state.producten.find(p=>p.id===a.productId)||{}).cat);
   state.verkopen.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr+' · '+a.wat,
     verkoop:totaal, inkoop:a.inkoop||0, aantal:1, betaal:bet,
-    cat:dienstCat().id, door:gebruiker?gebruiker.naam:null});
+    cat:(aCat!=null?aCat:dienstCat().id), door:gebruiker?gebruiker.naam:null});
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   state.log.unshift({id:vid, t:Date.now(), naam:'Aanvraag '+a.nr, m:'uit', v:null, aantal:1, pid:null});
   state.log=state.log.slice(0,50);
