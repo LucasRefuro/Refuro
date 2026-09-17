@@ -47,7 +47,7 @@
      alleen het logo, netjes gecentreerd bovenaan. Het reparatienummer staat toch
      al in "Je toestel", dus dat hoeft hier niet nog eens. */
   header.metlogo{background:transparent; justify-content:center; padding:14px 0 4px; margin-bottom:16px;}
-  header.metlogo .mk{background:transparent; width:auto; height:56px; min-width:0; padding:0; border-radius:0; overflow:visible;}
+  header.metlogo .mk{background:transparent; width:auto; height:42px; min-width:0; padding:0; border-radius:0; overflow:visible;}
   header.metlogo .mk img{width:auto; height:100%; object-fit:contain;}
 
   .kaart{background:var(--card); border-radius:var(--radius); padding:26px 28px; margin-bottom:18px; box-shadow:var(--schaduw);}
@@ -66,20 +66,24 @@
   .balktekst{font-size:12.5px; color:var(--muted-l); text-align:right;}
 
   /* tijdlijn */
-  .tl{position:relative; padding-left:34px; margin-top:6px;}
-  .tl::before{content:''; position:absolute; left:16px; top:10px; bottom:14px; width:2px; background:var(--zacht);}
+  /* Tijdlijn met schone maten: de lijn loopt door het midden van de bolletjes
+     (lijn-midden 12px, bolletje 22px met midden op 12px), en de tekst begint ruim
+     na de bolletjes (padding-left 44px) zodat het niet tegen de lijn plakt. */
+  .tl{position:relative; padding-left:44px; margin-top:6px;}
+  .tl::before{content:''; position:absolute; left:11px; top:11px; bottom:15px; width:2px; background:var(--zacht);}
   .stap{position:relative; padding-bottom:26px;}
   .stap:last-child{padding-bottom:0;}
-  .stap::before{content:''; position:absolute; left:-29px; top:2px; width:24px; height:24px; border-radius:50%;
+  .stap::before{content:''; position:absolute; left:-43px; top:2px; width:22px; height:22px; border-radius:50%;
     background:var(--card); border:2.5px solid var(--zacht); z-index:1;}
   .stap.gedaan::before{background:var(--accent); border-color:var(--accent);}
-  .stap.gedaan::after{content:''; position:absolute; left:-23px; top:9px; width:11px; height:6px;
+  .stap.gedaan::after{content:''; position:absolute; left:-37px; top:8px; width:10px; height:6px;
     border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg); z-index:2;}
   /* De actieve stap is gewoon een gevuld bolletje in de accentkleur: even groot als
      de rest en precies op de lijn. Geen grote pulserende ring meer (die maakte hem
      te groot en oogde scheef). Een subtiele zachte gloed is genoeg. */
-  .stap.nu::before{background:var(--accent); border-color:var(--accent);
-    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);}
+  /* De actieve stap: gewoon een gevuld bolletje in de accentkleur, exact even groot
+     als de rest en op de lijn. Geen ring eromheen (die maakte hem groter en scheef). */
+  .stap.nu::before{background:var(--accent); border-color:var(--accent);}
   .stap .tt{font-weight:600; font-size:15.5px;}
   .stap.todo .tt{color:var(--muted-l); font-weight:500;}
   .stap .tm{font-size:13px; color:var(--muted-l); margin-top:2px;}
