@@ -6683,10 +6683,12 @@ function verwerkScan(code){
     fb.textContent=p.naam+', voorraad is al 0';
     piep(200); return;
   }
+  /* Eerst piepen, dan pas boeken en de lijst opnieuw tekenen. Anders speelt het
+     bliepje pas ná het opslaan en hertekenen, en dat voelt als vertraging. */
+  piep(mode==='in'?880:440);
   if(mode==='in') boekIn(p,1); else boekUit(p,1);
   fb.className='ok';
   fb.textContent=(mode==='in'?'+1 ':'-1 ')+p.naam+' · voorraad: '+p.voorraad+(mode==='in'&&moetBestellen(p)?' · nog bestellen':'');
-  piep(mode==='in'?880:440);
   toast((mode==='in'?'+1 ':'-1 ')+p.naam+' · voorraad '+p.voorraad, true);
 }
 /* Uitscannen op de Inscannen-pagina: voorraad eraf zonder verkoop (kapot, retour,
@@ -6861,14 +6863,14 @@ function scanPopup(code){
 function sluitPopup(){ const o=document.getElementById('scanOverlay'); if(o) o.remove(); }
 function popupIn(id){
   const p=state.producten.find(p=>p.id===id); if(!p) return;
-  boekIn(p,1); sluitPopup(); piep(880);
+  piep(880); boekIn(p,1); sluitPopup();
   toast('+1 '+p.naam+' · voorraad: '+p.voorraad);
   herteken();
 }
 function popupUit(id,bet){
   const p=state.producten.find(p=>p.id===id); if(!p) return;
   if(p.voorraad<=0){ toast(''+p.naam+', voorraad is al 0'); piep(200); return; }
-  boekVerkoop(p,1,bet); sluitPopup(); piep(440);
+  piep(440); boekVerkoop(p,1,bet); sluitPopup();
   toast('Verkocht ('+betaalNaam(bet)+'): '+p.naam+' · voorraad: '+p.voorraad+(moetBestellen(p)?' · bestellen':''), true);
   herteken();
 }
@@ -7123,7 +7125,7 @@ function mandjeToevoegen(item){
   const zelfde=mandje.find(m=>!m.hwId && !item.hwId && !m.repId && !item.repId && (m.productId||null)===(item.productId||null) && m.naam===item.naam && m.verkoopStuk===item.verkoopStuk && m.inkoopStuk===item.inkoopStuk && (m.bijbestelCat||null)===(item.bijbestelCat||null));
   if(zelfde){ zelfde.aantal+=item.aantal; }
   else { item.id=uid(); mandje.push(item); }
-  mandjeBewaar(); renderMandje(); piep(660); mandjeFocus();
+  piep(660); mandjeBewaar(); renderMandje(); mandjeFocus();
 }
 function mandjeAantal(id, delta){
   const m=mandje.find(x=>x.id===id); if(!m || m.hwId || m.repId) return;
@@ -7899,12 +7901,29 @@ function wijzigAantal(logId,val){
 function piep(freq){
   try{
     const ctx=piep.ctx||(piep.ctx=new (window.AudioContext||window.webkitAudioContext)());
+    /* De browser zet de audio na een tijd stil (suspended); dan speelt een piep
+       pas na het hervatten en klinkt hij te laat. Meteen hervatten houdt het snel. */
+    if(ctx.state==='suspended' && ctx.resume) ctx.resume();
     const o=ctx.createOscillator(), g=ctx.createGain();
     o.frequency.value=freq; o.connect(g); g.connect(ctx.destination);
-    g.gain.setValueAtTime(0.15,ctx.currentTime);
-    o.start(); o.stop(ctx.currentTime+0.12);
+    const t=ctx.currentTime;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.15,t+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+    o.start(t); o.stop(t+0.13);
   }catch(e){}
 }
+/* De audio één keer "wakker maken" bij de eerste toetsaanslag of tik, zodat het
+   eerste bliepje na het openen van de app niet vertraagd is. Een handscanner telt
+   als toetsaanslag, dus dit dekt ook het scannen. */
+function piepWarm(){
+  try{
+    const ctx=piep.ctx||(piep.ctx=new (window.AudioContext||window.webkitAudioContext)());
+    if(ctx.state==='suspended' && ctx.resume) ctx.resume();
+  }catch(e){}
+}
+document.addEventListener('keydown', piepWarm, {once:true});
+document.addEventListener('pointerdown', piepWarm, {once:true});
 
 /* ---------- serie inscannen (handmatig, voor leveranciers zonder feed) ----------
    Voor accessoires die je in meerdere modellen hebt (MondiParts, NovaNL, ...). Leg
