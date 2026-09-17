@@ -808,6 +808,9 @@
   .card{background:var(--card); border:none; border-radius:var(--radius); padding:24px 26px; margin-bottom:20px; box-shadow:var(--schaduw);}
   h2{font-size:16px; font-weight:700; margin-bottom:18px;}
   label{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-l); margin-bottom:7px;}
+  /* Een label dat een keuzevakje omsluit is een gewone keuzezin, geen veldkopje:
+     dus niet in kapitalen. Zo blijven aankruis-opties overal netjes in zinsvorm. */
+  label:has(> input[type=checkbox]){text-transform:none; letter-spacing:normal;}
   input,select,textarea{padding:12px 14px; border:1.5px solid var(--border); border-radius:14px; transition:.15s; background:#fff; color:var(--text);}
   input:hover,select:hover{border-color:#DCD8D0;}
   input:focus,select:focus{outline:none; border-color:var(--oranje); box-shadow:0 0 0 4px rgba(11,91,82,.10);}
@@ -820,7 +823,8 @@
      .btn.ghost  = secundair
      .btn.danger = verwijderen                                        */
   .btn{background:var(--oranje); color:#fff; padding:12px 22px; border-radius:var(--pil); font-size:14px; font-weight:700;
-    transition:.16s; box-shadow:0 5px 16px rgba(11,91,82,.20); border:none; font-family:inherit; cursor:pointer;}
+    transition:.16s; box-shadow:0 5px 16px rgba(11,91,82,.20); border:none; font-family:inherit; cursor:pointer;
+    text-transform:none; letter-spacing:normal;}
   .btn:hover{background:var(--oranje-d); transform:translateY(-1px); box-shadow:0 9px 22px rgba(11,91,82,.26);}
   .btn:active{transform:translateY(0);}
   .btn.actie{background:var(--actie); box-shadow:0 5px 16px rgba(232,138,29,.24);}
@@ -2762,8 +2766,8 @@
     <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
       <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
       <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
-      <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
-      <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
+      <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
+      <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
     </div>
     <div class="acts2" style="margin-top:14px">
       <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinding testen</button>
@@ -3621,7 +3625,7 @@ function tekenAlles(){
     pasHuisstijlToe();
   }catch(e){ console.error('opnieuw tekenen:', e); }
 }
-function euro(n){ return '€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function euro(n){ return '€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function catNaam(id){ const c=state.categorieen.find(c=>c.id===id); return c?c.naam:'Overig'; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
@@ -3868,8 +3872,11 @@ function stats(b){
 function pctHtml(nu,vorig){
   if(vorig==null) return '';
   if(vorig<=0) return nu>0?'<span class="pct up">▲ nieuw</span>':'';
-  const p=(nu-vorig)/vorig*100;
-  return `<span class="pct ${p>=0?'up':'down'}" title="t.o.v. vorige week">${p>=0?'▲':'▼'} ${Math.abs(p).toFixed(0)}%</span>`;
+  const p=(nu-vorig)/vorig*100, ap=Math.abs(p);
+  /* Bij een piepkleine vorige periode springt het percentage naar iets als 25.000%.
+     Dat leest als een fout; boven de 999% tonen we ">999%". */
+  const tekst = ap>=1000 ? '>999%' : ap.toFixed(0)+'%';
+  return `<span class="pct ${p>=0?'up':'down'}" title="t.o.v. vorige week">${p>=0?'▲':'▼'} ${tekst}</span>`;
 }
 /* Bij het openen van het dashboard vragen we één keer per dag aandacht voor
    wat er nog opgehangen moet worden. Vaker is zeuren; nooit is te makkelijk

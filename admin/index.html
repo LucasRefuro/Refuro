@@ -677,7 +677,7 @@ function load(){
   return s;
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
-function euro(n){ return '€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function euro(n){ return '€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
 function plan(id){ return state.plannen.find(p=>p.id===id)||{naam:'Geen pakket', prijs:0}; }

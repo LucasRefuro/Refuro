@@ -1077,7 +1077,7 @@ let instel={accu_min:85};
 let tab='werkbank';
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const euro=n=>'€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2});
+const euro=n=>'€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2});
 const datum=d=>new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
 
 function toast(bericht, soort){
