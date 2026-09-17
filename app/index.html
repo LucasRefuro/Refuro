@@ -848,6 +848,12 @@
     color:var(--muted-l); transition:.16s; white-space:nowrap; font-family:inherit; cursor:pointer;}
   .periodesel button:hover{color:var(--text);}
   .periodesel button.active{background:var(--card); color:var(--oranje); box-shadow:0 1px 3px rgba(23,32,30,.10);}
+  /* Sub-tabs die naar een ander SCHERM gaan (Producten/Tellen/Inscannen, of
+     Overzicht/Nieuwe reparatie) krijgen een gevulde groene actieve knop. Zo zie je
+     dat je van pagina wisselt, in plaats van een filter zet (die houdt het witte
+     pilletje). Staat na .periodesel/.voorraadsub zodat het groen wint. */
+  .pagtabs button.active{background:var(--oranje); color:#fff; box-shadow:0 2px 7px rgba(11,91,82,.24);}
+  .pagtabs button.active .badge{background:rgba(255,255,255,.28); color:#fff;}
 
   /* labels in tabellen: Instrument Sans 700 kapitaal */
   th{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); padding-bottom:13px;}
@@ -1960,7 +1966,7 @@
 <!-- Voorraad-hub: een gedeelde sub-balk boven de vier voorraadschermen, zodat je er
      via een ingang in het menu tussen wisselt. De badges wonen hier (een keer, geen
      dubbele id's). Alleen zichtbaar op die vier schermen. -->
-<nav class="voorraadsub" id="voorraadSub" hidden aria-label="Voorraad">
+<nav class="voorraadsub pagtabs" id="voorraadSub" hidden aria-label="Voorraad">
   <button data-vsub="producten" onclick="showTab('producten')">Producten</button>
   <button data-vsub="voorraad" onclick="showTab('voorraad')">Tellen<span class="badge" id="vrdBadge" style="display:none">0</span></button>
   <button data-vsub="scan" onclick="showTab('scan')">Inscannen</button>
@@ -2150,7 +2156,7 @@
 <section id="tab-reparaties"hidden>
   <div class="pagehead">
     <h1>Reparaties</h1>
-    <div class="periodesel" id="repTabs">
+    <div class="periodesel pagtabs" id="repTabs">
       <button data-s="overzicht" class="active">Overzicht</button>
       <button data-s="nieuw">Nieuwe reparatie</button>
       <button data-s="onderdelen">Onderdelen</button>
@@ -2355,7 +2361,7 @@
 <section id="tab-aanvragen"hidden>
   <div class="pagehead">
     <h1>Aanvragen</h1>
-    <div class="periodesel" id="aanvTabs">
+    <div class="periodesel pagtabs" id="aanvTabs">
       <button data-s="overzicht" class="active">Overzicht</button>
       <button data-s="nieuw">Nieuwe aanvraag</button>
     </div>
