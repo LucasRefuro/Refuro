@@ -1003,7 +1003,12 @@ function startAccu(){
         '<button class="btn actie" onclick="accuDownloadWin()">Meet de accu automatisch</button>'+
         '<div class="astatus wacht" id="astatus" hidden><span class="aspin"></span>Wachten op de meting van de laptop</div>'+
         '<details class="poortlees" style="margin-top:12px"><summary>Blokkeert Edge het bestand?</summary>'+
-          '<p class="muted klein" style="margin:10px 0 0">Edge kan een .bat-bestand als gevaarlijk markeren. Klik in de downloadbalk op de drie puntjes bij het bestand en kies <b>Behouden</b>. Waarschuwt Windows daarna nog? Kies <b>Meer info</b> en <b>Toch uitvoeren</b>. Lukt dat niet, vul dan hieronder met de hand in.</p>'+
+          '<p class="muted klein" style="margin:10px 0 12px">Edge vindt een .bat-bestand van internet gevaarlijk. Het is veilig: het leest alleen de accu en stuurt het percentage. Zo laat je het door:</p>'+
+          '<div class="astap"><div class="astapnr">1</div><div>Klik rechtsboven op het <b>download-pijltje</b>. Je ziet <b>Storvo-accu-meten.bat</b> met een waarschuwing.</div></div>'+
+          '<div class="astap"><div class="astapnr">2</div><div>Ga met de muis over het bestand, klik op de <b>drie puntjes</b> en kies <b>Behouden</b>. Vraagt Edge het nog eens: <b>Toch behouden</b>.</div></div>'+
+          '<div class="astap"><div class="astapnr">3</div><div><b>Dubbelklik</b> het bestand. Zegt Windows "Windows heeft je pc beschermd"? Klik <b>Meer info</b> en <b>Toch uitvoeren</b>.</div></div>'+
+          '<div class="astap"><div class="astapnr">4</div><div>Een zwart venster opent kort. Het percentage komt hier vanzelf en het bestand ruimt zichzelf op.</div></div>'+
+          '<p class="muted klein" style="margin:4px 0 0">Lukt het echt niet? Vul hieronder met de hand in.</p>'+
         '</details>'+
         '<p class="muted klein" style="margin:16px 0 6px">Of vul met de hand in:</p>';
     } else if(isMac){
