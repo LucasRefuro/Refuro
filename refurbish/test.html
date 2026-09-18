@@ -943,6 +943,7 @@ function accuBatWindows(){
      stuurt alles in één bericht. Alles in een try, zodat een misser een veld leeg
      laat maar de rest gewoon doorgaat. */
   const ps = String.raw`$ErrorActionPreference='SilentlyContinue'
+try{ [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 }catch{}
 $accu=$null
 try{
   $rep="$env:TEMP\storvo-accu.xml"
@@ -1028,8 +1029,10 @@ function accuToonGegevens(g){
 function accuStartPoll(){
   if(accuPoll) return;
   const mijnStap=stapId;
+  let n=0;
   accuPoll=setInterval(async()=>{
     if(mijnStap!==stapId){ clearInterval(accuPoll); accuPoll=null; return; }
+    n++;
     try{
       const j=await praat({actie:'status'});
       const r=j&&j.ok&&j.resultaat;
@@ -1044,8 +1047,18 @@ function accuStartPoll(){
             : 'Gegevens opgehaald. Haal de uitslag op de pc op.'; }
         if(heeftGeg) accuToonGegevens(r.gegevens);
         clearInterval(accuPoll); accuPoll=null;
+        return;
       }
     }catch(e){}
+    /* Na ongeveer 45 seconden niets: waarschijnlijk kon de laptop de gegevens niet
+       versturen (het zwarte venster zei dan "Versturen lukte niet"). Meld dat, in
+       plaats van eindeloos te blijven wachten. */
+    if(n>=15){
+      const st=document.getElementById('astatus');
+      if(st){ st.className='astatus wacht'; st.hidden=false;
+        st.textContent='Nog niets binnen. Zag het zwarte venster "Versturen lukte niet"? Check de internetverbinding en klik opnieuw, of vul de accu met de hand in.'; }
+      clearInterval(accuPoll); accuPoll=null;
+    }
   }, 3000);
 }
 function accuDownloadWin(){
