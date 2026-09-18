@@ -11236,7 +11236,11 @@ async function uitloggen(){
 
 const SYNC_BASIS_KEY = 'storvo_sync_basis_v1';
 const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','log',
-                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren','vasteLasten','facturen'];
+                      'reparaties','onderdelen','diensten','teams','medewerkers','urgent','taken','uren','vasteLasten','facturen',
+                      /* Deze stonden alleen op het apparaat zelf en gingen niet naar de cloud; daardoor
+                         konden ze op een ander apparaat "verdwenen" lijken. Nu synchroniseren ze net als
+                         de rest (samenvoegen per id, bewerken wint van verwijderen). */
+                      'aanvragen','inkopen','uitbetalingen','reserveringen','postnl'];
 const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','bedrijf'];
 
 let syncVersie = 0;          // versie van het document in de cloud
