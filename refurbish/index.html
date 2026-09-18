@@ -4004,10 +4004,45 @@ async function naarVoorraad(a){
    je; sommige winkels hebben er drie en sommige zeven.                       */
 
 let vrFilterNu='alles';
-/* Standaard staan de slechtste toestellen bovenaan: die wil je als eerste
-   verkopen voor ze nog meer waarde verliezen. Eén knop zet het om naar de
+/* De sorteerknop heeft drie standen. Standaard 'merk', zodat de laptops netjes
+   op merk, model en generatie onder elkaar staan (makkelijk terugvinden). De
+   andere twee: slechtste eerst (verkoop die eerst voor ze waarde verliezen) en
    nieuwste eerst. */
-let vrSlechtsteEerst=true;
+let vrSort='merk';
+const VR_SORT_LABEL={merk:'Op merk', grade:'Slechtste eerst', nieuw:'Nieuwste eerst'};
+
+/* Natuurlijke sortering: "G2" vóór "G10", en alle "840"-modellen bij elkaar. */
+function natCmp(a, b){
+  a=String(a==null?'':a).toLowerCase().trim(); b=String(b==null?'':b).toLowerCase().trim();
+  const ra=a.match(/\d+|\D+/g)||[], rb=b.match(/\d+|\D+/g)||[];
+  const n=Math.min(ra.length, rb.length);
+  for(let i=0;i<n;i++){
+    const x=ra[i], y=rb[i];
+    if(/^\d/.test(x) && /^\d/.test(y)){ const d=parseInt(x,10)-parseInt(y,10); if(d) return d; }
+    else if(x!==y){ return x<y?-1:1; }
+  }
+  return ra.length-rb.length;
+}
+/* Beste gok van de generatie uit de processor; Intel-namen zijn rommelig, dus alleen
+   als extra sleutel ná merk en model. */
+function cpuGen(specs){
+  const p=String((specs&&(specs.Processor||specs.processor))||'').toLowerCase();
+  let m=p.match(/i[3579][\s-]*(\d{3,5})/);
+  if(m){ const nn=m[1];
+    if(nn.length>=5) return parseInt(nn.slice(0,2),10);
+    if(nn.length===4) return nn[0]==='1' ? parseInt(nn.slice(0,2),10) : parseInt(nn[0],10);
+    return parseInt(nn[0],10);
+  }
+  m=p.match(/ryzen\s*\d\s*(\d)\d{3}/);
+  if(m) return parseInt(m[1],10);
+  return 0;
+}
+function apparaatSorteer(a, b){
+  return natCmp(a.merk, b.merk)
+      || natCmp(a.model, b.model)
+      || (cpuGen(a.specs)-cpuGen(b.specs))
+      || natCmp(a.code, b.code);
+}
 
 function vrRijen(){
   return apparaten.filter(a=>OP_VOORRAAD.includes(a.status) &&
@@ -4025,11 +4060,11 @@ function tekenVoorraadFilters(){
   el.innerHTML=knoppen.map(k=>`
     <button class="${vrFilterNu===k.f?'active':''}" onclick="vrFilter('${k.f}')">
       ${esc(k.n)}${k.t?` <span class="filtertel">${k.t}</span>`:''}</button>`).join('')
-    + `<button class="vrsorteer${vrSlechtsteEerst?' active':''}" onclick="vrSorteer()" title="Wisselt tussen slechtste eerst en nieuwste eerst">
-        ${vrSlechtsteEerst?'Slechtste eerst':'Nieuwste eerst'}</button>`;
+    + `<button class="vrsorteer active" onclick="vrSorteer()" title="Wisselt de sortering: op merk, slechtste eerst, nieuwste eerst">
+        ${VR_SORT_LABEL[vrSort]}</button>`;
 }
 function vrFilter(f){ vrFilterNu=f; tekenVoorraad(); }
-function vrSorteer(){ vrSlechtsteEerst=!vrSlechtsteEerst; tekenVoorraad(); }
+function vrSorteer(){ vrSort = vrSort==='merk'?'grade' : vrSort==='grade'?'nieuw' : 'merk'; tekenVoorraad(); }
 
 function tekenVoorraad(){
   tekenVoorraadFilters();
@@ -4052,7 +4087,9 @@ function tekenVoorraad(){
   rijen=rijen.filter(past);
   /* Een kopie sorteren, niet de bronlijst: anders schuift de volgorde ook in de
      werkbank en de tellingen door elkaar. */
-  if(vrSlechtsteEerst) rijen=rijen.slice().sort((a,b)=>gradeRang(a)-gradeRang(b));
+  if(vrSort==='merk')       rijen=rijen.slice().sort(apparaatSorteer);
+  else if(vrSort==='grade') rijen=rijen.slice().sort((a,b)=>gradeRang(a)-gradeRang(b));
+  /* 'nieuw' = de bronvolgorde, die staat al op nieuwste eerst. */
   el.innerHTML=rijen.length
     ? `<div class="tabelrol"><table>
         <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Ligt in</th>

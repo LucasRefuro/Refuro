@@ -12317,6 +12317,43 @@ function hwSpecsKort(h){
   return [sp.Opslag, sp.Scherm, sp.Geheugen, sp.Processor]
     .filter(v=>String(v||'').trim()).join(' · ');
 }
+/* Natuurlijke sortering: splitst in tekst- en getalstukjes en vergelijkt getallen als
+   getal, zodat "G2" vóór "G10" komt en alle "840"-modellen bij elkaar staan. */
+function natCmp(a, b){
+  a=String(a==null?'':a).toLowerCase().trim(); b=String(b==null?'':b).toLowerCase().trim();
+  const ra=a.match(/\d+|\D+/g)||[], rb=b.match(/\d+|\D+/g)||[];
+  const n=Math.min(ra.length, rb.length);
+  for(let i=0;i<n;i++){
+    const x=ra[i], y=rb[i];
+    if(/^\d/.test(x) && /^\d/.test(y)){ const d=parseInt(x,10)-parseInt(y,10); if(d) return d; }
+    else if(x!==y){ return x<y?-1:1; }
+  }
+  return ra.length-rb.length;
+}
+/* Beste gok van de generatie uit de processor (Intel-gen of Ryzen-serie), zodat
+   toestellen van hetzelfde model op leeftijd staan. Intel-namen zijn rommelig, dus dit
+   is niet waterdicht; alleen als extra sleutel ná merk en model. */
+function cpuGen(specs){
+  const p=String((specs&&(specs.Processor||specs.processor))||'').toLowerCase();
+  let m=p.match(/i[3579][\s-]*(\d{3,5})/);
+  if(m){ const nn=m[1];
+    if(nn.length>=5) return parseInt(nn.slice(0,2),10);
+    if(nn.length===4) return nn[0]==='1' ? parseInt(nn.slice(0,2),10) : parseInt(nn[0],10);
+    return parseInt(nn[0],10);
+  }
+  m=p.match(/ryzen\s*\d\s*(\d)\d{3}/);
+  if(m) return parseInt(m[1],10);
+  return 0;
+}
+/* De hardwarelijst overzichtelijk: per soort bij elkaar, dan op merk (HP, Dell...),
+   dan model, dan generatie. Zo staan de laptops netjes gesorteerd. */
+function hwSorteer(a, b){
+  return natCmp(a.categorie, b.categorie)
+      || natCmp(a.merk, b.merk)
+      || natCmp(a.model, b.model)
+      || (cpuGen(a.specs)-cpuGen(b.specs))
+      || natCmp(a.code||a.serienummer, b.code||b.serienummer);
+}
 /* Snel online zetten vanuit de lijst. Nog geen vraagprijs? Dan eerst de detailpagina
    openen om die in te vullen, in plaats van een foutmelding. */
 function hwOnlineSnel(id, knop){
@@ -12341,7 +12378,7 @@ function renderHardware(){
     `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`+
     (onderweg.length?`<div class="kpi hwattentie"><div class="l">Nog inscannen</div><div class="v">${onderweg.length}</div></div>`:'');
 
-  const rijen=hwData.filter(hwZichtbaar);
+  const rijen=hwData.filter(hwZichtbaar).sort(hwSorteer);
   const tel=document.getElementById('hwTelling');
   if(tel) tel.textContent=rijen.length?'('+rijen.length+')':'';
 
