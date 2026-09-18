@@ -1,0 +1,68 @@
+name: Windows-labelprinter bouwen
+
+# Bouwt de Windows-installer voor de Storvo-labelprinter op een Windows-runner
+# (die hebben we niet lokaal). Levert een dubbelklik-installer op als release-download.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "printhulp/helper.py"
+      - "printhulp/windows/**"
+      - ".github/workflows/printhulp-windows.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Onderdelen installeren
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pywin32 pillow brother_ql
+
+      - name: De .exe bouwen (PyInstaller)
+        run: |
+          pyinstaller --onefile --noconsole --name storvo-printhulp `
+            --exclude-module usb --collect-all brother_ql `
+            --hidden-import win32print --hidden-import win32timezone `
+            printhulp/helper.py
+
+      - name: mkcert ophalen
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe" -OutFile "printhulp/windows/mkcert.exe"
+
+      - name: Bestanden bij de installer zetten
+        run: |
+          Copy-Item "dist/storvo-printhulp.exe" "printhulp/windows/storvo-printhulp.exe" -Force
+
+      - name: Inno Setup installeren
+        run: choco install innosetup -y --no-progress
+
+      - name: De installer verpakken
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "printhulp\windows\storvo-printhulp.iss"
+
+      - name: Installer als build-bestand bewaren
+        uses: actions/upload-artifact@v4
+        with:
+          name: storvo-printhulp-setup
+          path: printhulp/windows/Output/storvo-printhulp-setup.exe
+
+      - name: Als download publiceren (release)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: printhulp
+          name: Storvo labelprinter (Windows)
+          body: "Dubbelklik-installer voor de Storvo-labelprinter op Windows. Automatisch gebouwd."
+          files: printhulp/windows/Output/storvo-printhulp-setup.exe
