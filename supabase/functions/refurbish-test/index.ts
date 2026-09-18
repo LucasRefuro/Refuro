@@ -26,7 +26,7 @@ const TESTEN = [
   "touch", "scherm", "luidspreker", "oorspeaker", "microfoon",
   "camera_achter", "camera_voor", "trilfunctie", "sensoren",
   // Laptop
-  "toetsenbord", "touchpad", "camera",
+  "toetsenbord", "touchpad", "camera", "poorten", "lader",
 ];
 
 function fout(bericht: string, code = 400) {

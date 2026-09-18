@@ -121,6 +121,12 @@ h1{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; letter-spacin
 .poortlees{margin-top:14px; background:var(--lblauw); border-radius:14px; padding:12px 14px;}
 .poortlees summary{font-weight:700; cursor:pointer; color:var(--groen);}
 
+/* camera + microfoon samen (een keer toegang vragen) */
+#avbeeld{width:100%; max-width:340px; height:220px; border-radius:16px; background:#111; object-fit:cover; display:block; margin:0 auto;}
+.avrij{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid var(--border);}
+.avrij:last-of-type{border-bottom:0;}
+.avrij b{font-weight:600; font-size:15px;}
+
 #toasts{position:fixed; left:16px; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:200;}
 .toast{background:var(--tekst); color:#fff; padding:13px 18px; border-radius:14px; font-size:14.5px;}
 .toast.ok{background:var(--green-tekst);} .toast.fout{background:var(--red-tekst);}
@@ -249,7 +255,7 @@ const ALLE_TESTS=[
   {id:'touch', naam:'Touchscreen', uit:'Veeg met je vinger over het HELE scherm, ook de randen en hoeken. Alles moet meetekenen.', soorten:['Telefoon','Tablet'], vol:true, start:startTouch},
   {id:'scherm', naam:'Beeldscherm', uit:'Het scherm loopt vanzelf door de kleuren. Zoek dode pixels, vlekken of ingebrande beelden.', soorten:['Telefoon','Tablet'], vol:true, start:startScherm},
   {id:'luidspreker', naam:'Luidspreker (onderkant)', uit:'De speaker onderaan, voor muziek en de speaker-stand. Druk op de knop en luister.', soorten:['Telefoon','Tablet'], start:startLuidspreker},
-  {id:'microfoon', naam:'Microfoon', uit:'Zeg iets. De balk moet meebewegen.', soorten:['Telefoon','Tablet','Laptop'], start:startMicrofoon},
+  {id:'microfoon', naam:'Microfoon', uit:'Zeg iets. De balk moet meebewegen.', soorten:['Telefoon','Tablet'], start:startMicrofoon},
   {id:'oorspeaker', naam:'Oorspeaker (bovenaan)', uit:'De speaker bovenaan die je bij het oor houdt. Druk op de knop, houd het aan je oor en luister.', soorten:['Telefoon'], start:startOorspeaker},
   {id:'camera_achter', naam:'Camera achter', uit:'Bekijk elke lens en kijk of het beeld scherp is, zonder vlekken.', soorten:['Telefoon','Tablet'], start:startCameraAchter},
   {id:'camera_voor', naam:'Camera voor', uit:'Kijk of de selfiecamera goed beeld geeft.', soorten:['Telefoon','Tablet'], start:()=>startCamera('user')},
@@ -262,7 +268,7 @@ const ALLE_TESTS=[
   {id:'touchpad', naam:'Touchpad', uit:'Beweeg de cursor en teken met het touchpad. Test ook de linker- en rechterknop en scrollen.', soorten:['Laptop'], vol:true, start:startTouchpad},
   {id:'scherm', naam:'Beeldscherm', uit:'Het scherm loopt door de kleuren. Zoek dode pixels, vlekken of strepen.', soorten:['Laptop'], vol:true, start:startScherm},
   {id:'luidspreker', naam:'Luidsprekers', uit:'Zet het volume omhoog en druk op de knop. Hoor je hem helder, links en rechts, zonder kraken?', soorten:['Laptop'], start:startLuidspreker},
-  {id:'camera', naam:'Webcam', uit:'Kijk of de webcam goed en scherp beeld geeft.', soorten:['Laptop'], start:()=>startCamera('user')},
+  {id:'camera', naam:'Camera en microfoon', uit:'Zie je jezelf scherp in beeld en beweegt de balk als je praat?', soorten:['Laptop'], geenOordeel:true, start:startAV},
   {id:'poorten', naam:'Aansluitingen', uit:'Sluit je teststick, de lader en een scherm aan en vink af. Lader en extern scherm gaan vanzelf.', soorten:['Laptop'], geenOordeel:true, start:startPoorten}
 ];
 let TESTS=ALLE_TESTS.slice();
@@ -763,6 +769,57 @@ function startSensoren(){
   opruimer=()=>{ loopt=false; window.removeEventListener('deviceorientation', onOri); };
 }
 
+/* ---- camera + microfoon op EEN stap ----
+   Samen op een pagina, zodat de browser maar EEN keer om toegang vraagt (video en
+   audio in dezelfde getUserMedia). Je ziet jezelf in beeld en de balk beweegt bij
+   geluid; je beoordeelt de webcam en de microfoon apart. Vult resultaat.camera en
+   resultaat.microfoon, die allebei naar de controle teruglopen. */
+let avStream=null;
+const avStatus={};
+function avZet(k, w){
+  avStatus[k]=w;
+  document.querySelectorAll(`.poortknop[data-p="${k}"]`).forEach(b=>b.classList.toggle('aan', b.dataset.w===avStatus[k]));
+}
+function avDoor(){
+  resultaat['camera']    = avStatus['cam']==='ok' ? 'ok' : avStatus['cam']==='fout' ? 'fout' : 'over';
+  resultaat['microfoon'] = avStatus['mic']==='ok' ? 'ok' : avStatus['mic']==='fout' ? 'fout' : 'over';
+  nu++; tekenTest();
+}
+function startAV(){
+  delete avStatus['cam']; delete avStatus['mic'];
+  const vak=document.getElementById('testvak');
+  vak.innerHTML=
+    '<video id="avbeeld" autoplay playsinline muted></video>'+
+    '<div class="meter" style="margin-top:10px"><i id="avmic"></i></div>'+
+    '<div class="avrij"><b>Webcam</b><div class="poortknoppen">'+
+      '<button class="poortknop" data-p="cam" data-w="ok" onclick="avZet(\'cam\',\'ok\')">Werkt</button>'+
+      '<button class="poortknop" data-p="cam" data-w="fout" onclick="avZet(\'cam\',\'fout\')">Niet goed</button>'+
+    '</div></div>'+
+    '<div class="avrij"><b>Microfoon</b><div class="poortknoppen">'+
+      '<button class="poortknop" data-p="mic" data-w="ok" onclick="avZet(\'mic\',\'ok\')">Werkt</button>'+
+      '<button class="poortknop" data-p="mic" data-w="fout" onclick="avZet(\'mic\',\'fout\')">Niet goed</button>'+
+    '</div></div>'+
+    '<button class="btn actie" style="margin-top:12px" onclick="avDoor()">Doorgaan</button>';
+  const mijnStap=stapId;
+  navigator.mediaDevices.getUserMedia({audio:true, video:true}).then(stream=>{
+    if(mijnStap!==stapId){ stream.getTracks().forEach(t=>t.stop()); return; }
+    avStream=stream;
+    const v=document.getElementById('avbeeld'); if(v) v.srcObject=stream;
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const bron=ctx.createMediaStreamSource(stream); const an=ctx.createAnalyser(); an.fftSize=512;
+    bron.connect(an); const buf=new Uint8Array(an.fftSize); let loopt=true;
+    (function meet(){ if(!loopt || mijnStap!==stapId) return;
+      an.getByteTimeDomainData(buf); let piek=0;
+      for(let i=0;i<buf.length;i++){ const d=Math.abs(buf[i]-128); if(d>piek) piek=d; }
+      const el=document.getElementById('avmic'); if(el) el.style.width=Math.min(100, piek/1.1)+'%';
+      requestAnimationFrame(meet);
+    })();
+    opruimer=()=>{ loopt=false; try{ stream.getTracks().forEach(t=>t.stop()); }catch(e){} try{ctx.close();}catch(e){} avStream=null; };
+  }).catch(()=>{
+    vak.insertAdjacentHTML('afterbegin','<p class="muted klein" style="margin-bottom:10px">Geen toegang tot camera of microfoon. Sta het toe en probeer opnieuw, of beoordeel met de hand.</p>');
+  });
+}
+
 /* ---- aansluitingen / poorten ----
    Een browser ziet niet welke fysieke poort werkt, dus dit is deels met de hand. Wat
    de browser WEL vanzelf ziet, kleuren we automatisch: de lader (de accu gaat laden)
@@ -865,74 +922,87 @@ function poortDoor(){
 
 /* ---- accu-conditie ----
    Telefoon/tablet: lees de maximale capaciteit af en vul hem in (een browser kan de
-   accugezondheid niet lezen). Laptop: de laptop meet zichzelf. Je plakt één regel in
-   PowerShell of Terminal die de accugezondheid uitleest en het percentage terugstuurt
-   naar dezelfde code; het verschijnt hier vanzelf. Zo zit de accu in DEZELFDE test in
-   plaats van een aparte stap. Lukt het lezen niet, dan vul je het met de hand in. */
-function accuCmd(os){
+   accugezondheid niet lezen). LAPTOP op Windows: één knop downloadt een bestandje dat
+   je dubbelklikt; dat leest de accugezondheid uit het ingebouwde accurapport (powercfg)
+   en stuurt het percentage naar dezelfde code, dat hier vanzelf verschijnt. Geen
+   terminal, geen plakken. Op de Mac lees je het gewoon af in de instellingen. */
+let accuPoll=null;
+function ps64(script){
+  /* PowerShell -EncodedCommand wil UTF-16LE base64. Zo hoeven we in het .bat-bestand
+     niets te escapen en draait het als EEN script (de if/else klopt dan ook). */
+  let bin='';
+  for(let i=0;i<script.length;i++){ const c=script.charCodeAt(i); bin+=String.fromCharCode(c & 0xff, (c>>8) & 0xff); }
+  return btoa(bin);
+}
+function accuBatWindows(){
   const F=SUPABASE_URL+'/functions/v1/refurbish-test', K=SUPABASE_ANON_KEY, C=code;
-  if(os==='win') return `$u='${F}'
-$d=(Get-CimInstance -Namespace ROOT\\WMI -ClassName BatteryStaticData -ErrorAction SilentlyContinue | Select-Object -First 1).DesignedCapacity
-$f=(Get-CimInstance -Namespace ROOT\\WMI -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue | Select-Object -First 1).FullChargedCapacity
-if(-not $d -or -not $f){ Write-Host 'Kon de accu niet automatisch lezen. Vul het percentage met de hand in.'; return }
-$p=[int][math]::Round(($f/$d)*100)
-Invoke-RestMethod -Method Post -Uri $u -Headers @{ apikey='${K}'; 'Content-Type'='application/json' } -Body (@{ code='${C}'; resultaat=@{ accu=$p } } | ConvertTo-Json) | Out-Null
-Write-Host "Accu $p% verstuurd naar Storvo. Sluit dit venster."`;
-  if(os==='mac') return `P=$(system_profiler SPPowerDataType 2>/dev/null | awk -F': ' '/Maximum Capacity/{gsub(/[^0-9]/,"",$2); print $2; exit}')
-[ -z "$P" ] && P=$(ioreg -r -c AppleSmartBattery | awk '/"AppleRawMaxCapacity"/{m=$NF} /"DesignCapacity"/{d=$NF} END{if(d>0) printf "%.0f", m/d*100}')
-[ -z "$P" ] && { echo "Kon de accu niet lezen. Vul het met de hand in."; } || curl -s -X POST '${F}' -H 'apikey: ${K}' -H 'Content-Type: application/json' -d "{\\"code\\":\\"${C}\\",\\"resultaat\\":{\\"accu\\":$P}}" >/dev/null && echo "Accu $P% verstuurd naar Storvo. Sluit dit venster."`;
-  return `P=$(upower -i $(upower -e | grep -m1 BAT) 2>/dev/null | awk -F: '/capacity/{gsub(/[^0-9.]/,"",$2); printf "%.0f",$2; exit}')
-if [ -z "$P" ]; then d=$(cat /sys/class/power_supply/BAT*/charge_full_design 2>/dev/null | head -1); f=$(cat /sys/class/power_supply/BAT*/charge_full 2>/dev/null | head -1); [ -n "$d" ] && [ "$d" -gt 0 ] && P=$(( f*100/d )); fi
-[ -z "$P" ] && echo "Kon de accu niet lezen. Vul het met de hand in." || curl -s -X POST '${F}' -H 'apikey: ${K}' -H 'Content-Type: application/json' -d "{\\"code\\":\\"${C}\\",\\"resultaat\\":{\\"accu\\":$P}}" >/dev/null && echo "Accu $P% verstuurd naar Storvo."`;
+  /* String.raw zodat de backslashes (pad) en de regex letterlijk blijven; alleen
+     ${F}/${K}/${C} worden ingevuld. We lezen het accurapport met een regex, want de
+     WMI-accuklassen zijn op veel laptops leeg. */
+  const ps = String.raw`$ErrorActionPreference='SilentlyContinue'
+$rep="$env:TEMP\storvo-accu.xml"
+powercfg /batteryreport /output $rep /xml | Out-Null
+$raw = Get-Content $rep -Raw
+$md = [regex]::Match($raw,'<DesignCapacity>(\d+)</DesignCapacity>')
+$mf = [regex]::Match($raw,'<FullChargeCapacity>(\d+)</FullChargeCapacity>')
+if($md.Success -and $mf.Success -and [double]$md.Groups[1].Value -gt 0){
+  $p=[int][math]::Round(([double]$mf.Groups[1].Value / [double]$md.Groups[1].Value)*100)
+  try{ Invoke-RestMethod -Method Post -Uri '${F}' -Headers @{ apikey='${K}' } -ContentType 'application/json' -Body (@{ code='${C}'; resultaat=@{ accu=$p } } | ConvertTo-Json) | Out-Null; Write-Host ("  Accu " + $p + "% verstuurd naar Storvo. Je kunt dit venster sluiten.") }
+  catch{ Write-Host ("  Versturen lukte niet. Vul " + $p + "% met de hand in Storvo.") }
+} else { Write-Host "  Kon de accu niet automatisch lezen. Vul het percentage met de hand in Storvo." }`;
+  return "@echo off\r\ntitle Storvo accu meten\r\necho Bezig met de accu meten...\r\npowershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand "+ps64(ps)+"\r\necho.\r\npause\r\n";
 }
-let accuOs='win', accuPoll=null;
-function accuKiesOs(os){
-  accuOs=os;
-  document.querySelectorAll('.ostab').forEach(b=>b.classList.toggle('aan', b.dataset.os===os));
-  const el=document.getElementById('cmdbox'); if(el) el.textContent=accuCmd(os);
+function accuStartPoll(){
+  if(accuPoll) return;
+  const mijnStap=stapId;
+  accuPoll=setInterval(async()=>{
+    if(mijnStap!==stapId){ clearInterval(accuPoll); accuPoll=null; return; }
+    try{
+      const j=await praat({actie:'status'});
+      if(j && j.ok && j.resultaat && typeof j.resultaat.accu==='number'){
+        accuWaarde=String(j.resultaat.accu);
+        const inp=document.getElementById('accuveldL'); if(inp) inp.value=accuWaarde;
+        const st=document.getElementById('astatus'); if(st){ st.className='astatus klaar'; st.hidden=false; st.textContent='Accu ontvangen: '+j.resultaat.accu+'%'; }
+        clearInterval(accuPoll); accuPoll=null;
+      }
+    }catch(e){}
+  }, 3000);
 }
-async function accuKopieer(knop){
-  try{ await navigator.clipboard.writeText(accuCmd(accuOs)); knop.textContent='Gekopieerd, nu plakken en Enter'; }
-  catch(e){ knop.textContent='Selecteer het commando en kopieer (Ctrl+C)'; }
-  setTimeout(()=>{ knop.textContent='Kopieer het commando'; }, 3000);
+function accuDownloadWin(){
+  const blob=new Blob([accuBatWindows()], {type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='Storvo-accu-meten.bat';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ try{ document.body.removeChild(a); }catch(e){} URL.revokeObjectURL(url); }, 1500);
+  const st=document.getElementById('astatus'); if(st) st.hidden=false;
+  accuStartPoll();
 }
 function startAccu(){
   const vak=document.getElementById('testvak');
   if(categorie==='Laptop'){
-    const os0 = /Mac/i.test(navigator.userAgent) ? 'mac'
-      : (/Linux|X11/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent) ? 'linux' : 'win');
-    vak.innerHTML=
-      '<p class="muted klein" style="margin-bottom:12px">De laptop meet zichzelf. Kies het systeem, plak de regel in PowerShell of Terminal en druk Enter. Het percentage komt hier vanzelf binnen.</p>'+
-      '<div class="ostabs">'+
-        '<button class="ostab" data-os="win" onclick="accuKiesOs(\'win\')">Windows</button>'+
-        '<button class="ostab" data-os="mac" onclick="accuKiesOs(\'mac\')">Mac</button>'+
-        '<button class="ostab" data-os="linux" onclick="accuKiesOs(\'linux\')">Linux</button>'+
-      '</div>'+
-      '<div class="astap"><div class="astapnr">1</div><div>Open PowerShell (Windows) of Terminal (Mac of Linux).</div></div>'+
-      '<div class="astap"><div class="astapnr">2</div><div>Plak dit en druk Enter:<pre class="cmdbox" id="cmdbox"></pre></div></div>'+
-      '<button class="btn actie" onclick="accuKopieer(this)">Kopieer het commando</button>'+
-      '<div class="astatus wacht" id="astatus"><span class="aspin"></span>Wachten op de meting van de laptop</div>'+
-      '<p class="muted klein" style="margin:14px 0 6px">Lukt het niet? Vul het met de hand in:</p>'+
+    const isMac = /Mac/i.test(navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent);
+    const isWin = /Windows/i.test(navigator.userAgent);
+    let boven;
+    if(isWin){
+      boven=
+        '<p class="muted klein" style="margin-bottom:12px">Klik de knop. Er wordt een klein bestandje gedownload. Dubbelklik het en klik zo nodig op Uitvoeren. Het percentage komt hier vanzelf. Geen terminal nodig.</p>'+
+        '<button class="btn actie" onclick="accuDownloadWin()">Meet de accu automatisch</button>'+
+        '<div class="astatus wacht" id="astatus" hidden><span class="aspin"></span>Wachten op de meting van de laptop</div>'+
+        '<p class="muted klein" style="margin:16px 0 6px">Of vul met de hand in:</p>';
+    } else if(isMac){
+      boven=
+        '<p class="muted klein" style="margin-bottom:6px">Lees het af op de Mac: menu Apple, Systeeminstellingen, Batterij, klik op de i naast Batterijconditie. Vul de <b>maximale capaciteit</b> in.</p>'+
+        '<p class="muted klein" style="margin:12px 0 6px">Percentage:</p>';
+    } else {
+      boven=
+        '<p class="muted klein" style="margin-bottom:6px">Lees de accugezondheid af (bijvoorbeeld met een accu-app) en vul het percentage in.</p>'+
+        '<p class="muted klein" style="margin:12px 0 6px">Percentage:</p>';
+    }
+    vak.innerHTML= boven +
       '<input id="accuveldL" type="number" min="0" max="100" inputmode="numeric" placeholder="bijvoorbeeld 87" value="'+esc(accuWaarde)+'"'+
       ' style="width:100%; padding:14px 16px; font-size:20px; font-weight:700; border:1.5px solid var(--border); border-radius:14px; text-align:center; font-family:inherit">'+
       '<button class="btn actie" style="margin-top:10px" onclick="accuDoor()">Doorgaan</button>';
-    accuKiesOs(os0);
     const el=document.getElementById('accuveldL'); if(el){ el.oninput=()=>{ accuWaarde=el.value; }; }
-    /* Poll de code: zodra de laptop een accu heeft teruggestuurd, tonen we het en
-       vullen het veld. De poll stopt zodra we hem hebben of bij het opruimen. */
-    const mijnStap=stapId;
-    accuPoll=setInterval(async()=>{
-      if(mijnStap!==stapId) return;
-      try{
-        const j=await praat({actie:'status'});
-        if(j && j.ok && j.resultaat && typeof j.resultaat.accu==='number'){
-          accuWaarde=String(j.resultaat.accu);
-          const inp=document.getElementById('accuveldL'); if(inp) inp.value=accuWaarde;
-          const st=document.getElementById('astatus'); if(st){ st.className='astatus klaar'; st.textContent='Accu ontvangen: '+j.resultaat.accu+'%'; }
-          if(accuPoll){ clearInterval(accuPoll); accuPoll=null; }
-        }
-      }catch(e){}
-    }, 3000);
     opruimer=()=>{ if(accuPoll){ clearInterval(accuPoll); accuPoll=null; } };
     return;
   }
@@ -993,7 +1063,7 @@ async function start(){
     /* Laptop: een prettige volgorde (toetsenbord eerst, accu als laatste), los van
        waar de tests in de lijst staan. */
     if(cat==='Laptop'){
-      const orde=['toetsenbord','touchpad','scherm','luidspreker','microfoon','camera','poorten','accu'];
+      const orde=['toetsenbord','touchpad','scherm','luidspreker','camera','poorten','accu'];
       TESTS.sort((x,y)=>orde.indexOf(x.id)-orde.indexOf(y.id));
     }
     document.getElementById('watIsHet').innerHTML=
