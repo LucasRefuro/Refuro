@@ -119,6 +119,36 @@ export async function cloverWinkel(basis: string, mId: string, token: string) {
   return { naam: d?.name || null, valuta: d?.currency || null, id: d?.id || mId };
 }
 
+/* Alle bestaande items in Clover ophalen, zodat we een product dat er al staat
+   BIJWERKEN in plaats van dubbel aanmaken. Clover pagineert (elements + offset);
+   we halen in blokken van 1000 tot alles binnen is. */
+export async function cloverAlleItems(basis: string, mId: string, token: string) {
+  const items: any[] = [];
+  let offset = 0;
+  for (let ronde = 0; ronde < 50; ronde++) {   // ruim zat (max 50.000 items)
+    const d = await cloverFetch(basis, mId, token, `/items?limit=1000&offset=${offset}`);
+    const blok = (d && d.elements) ? d.elements : [];
+    for (const it of blok) items.push(it);
+    if (blok.length < 1000) break;
+    offset += 1000;
+  }
+  return items;
+}
+
+/* Bouwt uit de bestaande Clover-items een opzoeklijst op barcode (code) en sku,
+   zodat de push per product kan matchen zonder een aparte zoekopdracht per stuk. */
+export function cloverIndex(items: any[]) {
+  const opCode: Record<string, string> = {};
+  const opSku: Record<string, string> = {};
+  for (const it of items) {
+    if (it && it.id) {
+      if (it.code) opCode[String(it.code)] = it.id;
+      if (it.sku) opSku[String(it.sku)] = it.id;
+    }
+  }
+  return { opCode, opSku };
+}
+
 /* Eén product naar een Clover-item. Bestaat er al een item met deze barcode
    (code) of sku, dan werken we dat bij; anders maken we een nieuw item. Zo kun je
    de push zo vaak draaien als je wilt zonder dubbele items. Prijs in centen,

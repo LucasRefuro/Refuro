@@ -8351,7 +8351,8 @@ function renderProducten(){
   const rows=zichtbaar
     .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.barcode)}</td><td>${esc(p.naam)}`+
       `${isUitlopend(p)?' <span class="tag" style="background:var(--amber-soft);color:var(--amber-tekst)">loopt uit</span>':''}`+
-      `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}</td>`+
+      `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}`+
+      `${state.cloverGekoppeld?(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id?' <span class="tag" style="background:var(--green-soft);color:var(--green-tekst)" title="Staat in Clover">in Clover</span>':' <span class="tag muted" title="Nog niet naar Clover gestuurd">niet in Clover</span>'):''}</td>`+
       `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
       `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
@@ -8932,8 +8933,11 @@ function opslaanProduct(){
     minOver:Math.max(0, Math.floor(Number(document.getElementById('f_bestel').value)||0))
   };
   if(editId){
-    Object.assign(state.producten.find(p=>p.id===editId), data);
-    save(); resetForm(); showTab('producten');
+    const prod=state.producten.find(p=>p.id===editId);
+    Object.assign(prod, data);
+    save();
+    if(typeof cloverPushEen==='function') cloverPushEen(prod);   /* wijziging meteen naar de pin */
+    resetForm(); showTab('producten');
     toast('Wijzigingen opgeslagen: '+naam, true);
   }else{
     data.id=uid(); data.besteld=false; data.besteldOp=null;
@@ -8951,6 +8955,7 @@ function opslaanProduct(){
       if(oud){ oud.uitlopend=true; oud.opvolgerId=data.id; }
     }
     save();
+    if(typeof cloverPushEen==='function') cloverPushEen(data);   /* nieuw product meteen naar de pin */
     const n=naam;
     resetForm();
     document.getElementById('formTitel').textContent='"'+n+'"is toegevoegd';
@@ -10534,10 +10539,13 @@ async function cloverStatus(){
   let s;
   try{ s=await cloverCall('status',{}); }
   catch(e){ vak.innerHTML=cloverFormHtml(); return; }
+  state.cloverGekoppeld = !!s.gekoppeld;
   if(s.gekoppeld){
     vak.innerHTML=`<div class="npbron"><div class="npbronkop"><svg class="i s"><use href="#i-check"/></svg> Verbonden met ${esc(s.winkelnaam||'je Clover-winkel')}</div>Merchant ${esc(s.merchantId||'')} · ${esc(String(s.regio||'eu').toUpperCase())} · token ····${esc(s.staart||'')}</div>
-      <div class="acts2" style="margin-top:16px">
-        <button class="btn actie" onclick="cloverPushAlle(this)"><svg class="i s"><use href="#i-upload"/></svg>Zet alle producten in Clover</button>
+      <p class="muted klein" style="margin:14px 0 2px; max-width:80ch">Sync zet al je producten in de pin (naam, prijs, barcode, voorraad). Bestaande items werken we bij op barcode of SKU, dus geen dubbelen. Nieuwe producten die je toevoegt gaan er automatisch bij.</p>
+      <div class="acts2" style="margin-top:12px">
+        <button class="btn actie" onclick="cloverPushAlle(this)"><svg class="i s"><use href="#i-upload"/></svg>Sync alle producten naar Clover</button>
+        <button class="btn ghost" onclick="cloverLeeg(this)"><svg class="i s"><use href="#i-trash"/></svg>Alles uit Clover verwijderen</button>
         <button class="btn ghost" onclick="cloverLos(this)">Loskoppelen</button>
       </div>
       <div id="cloverPushUit" class="muted klein" style="margin-top:12px"></div>`;
@@ -10554,6 +10562,7 @@ async function cloverKoppel(knop){
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Testen…';
   try{
     const r=await cloverCall('koppel',{merchantId:mid, token, regio});
+    state.cloverGekoppeld=true; save();
     toast('Clover gekoppeld: '+((r.winkel&&r.winkel.naam)||'je winkel'), true);
     cloverStatus();
   }catch(e){
@@ -10563,8 +10572,40 @@ async function cloverKoppel(knop){
 }
 async function cloverLos(knop){
   if(!confirm('Clover-koppeling loskoppelen? Je producten blijven gewoon in Clover staan.')) return;
-  try{ await cloverCall('los',{}); toast('Clover losgekoppeld', true); cloverStatus(); }
+  try{ await cloverCall('los',{}); state.cloverGekoppeld=false; save(); toast('Clover losgekoppeld', true); cloverStatus(); }
   catch(e){ toast(e.message,'fout'); }
+}
+/* Alles uit Clover verwijderen (schone start). Daarna halen we ook de clover-markers
+   van de producten af, zodat een volgende sync alles opnieuw aanmaakt. */
+async function cloverLeeg(knop){
+  if(!confirm('Alle producten uit Clover verwijderen? Dit wist je hele Clover-assortiment; daarna sync je vanuit Storvo opnieuw. De koppeling zelf blijft.')) return;
+  const uit=document.getElementById('cloverPushUit');
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Verwijderen…';
+  try{
+    const r=await cloverCall('leegAlles',{});
+    (state.producten||[]).forEach(p=>{ if(p.kanalen&&p.kanalen.clover) delete p.kanalen.clover; });
+    save();
+    if(uit) uit.textContent=r.verwijderd+' producten uit Clover verwijderd. Klik nu "Sync alle producten naar Clover" voor een schone start.';
+    toast(r.verwijderd+' uit Clover verwijderd', true);
+  }catch(e){
+    if(uit) uit.innerHTML='<span style="color:var(--red-tekst)">'+esc(e.message)+'</span>';
+    toast(e.message,'fout');
+  }
+  knop.disabled=false; knop.textContent=oud;
+}
+/* Eén product naar Clover, stil op de achtergrond. Gebruikt bij het toevoegen van
+   een nieuw product, zodat het meteen in de pin staat zonder dat je iets hoeft te doen. */
+async function cloverPushEen(p){
+  if(!state.cloverGekoppeld || !p) return;
+  try{
+    const r=await cloverCall('push',{producten:[{
+      id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
+      voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
+      cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
+    }]});
+    const res=(r.resultaten||[])[0];
+    if(res && res.ok && res.cloverId){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; save(); }
+  }catch(e){ /* stil: de sync-knop vangt het later op */ }
 }
 async function cloverPushAlle(knop){
   const producten=(state.producten||[]).map(p=>({
@@ -10580,7 +10621,8 @@ async function cloverPushAlle(knop){
     const r=await cloverCall('pushAlle',{producten});
     (r.resultaten||[]).forEach(res=>{ if(res.ok && res.cloverId){ const p=state.producten.find(x=>x.id===res.id); if(p){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; } } });
     save();
-    if(uit) uit.textContent=r.gelukt+' van '+r.totaal+' producten staan nu in Clover.';
+    const deel=[]; if(r.nieuw) deel.push(r.nieuw+' nieuw'); if(r.bijgewerkt) deel.push(r.bijgewerkt+' bijgewerkt');
+    if(uit) uit.textContent=r.gelukt+' van '+r.totaal+' producten in Clover'+(deel.length?' ('+deel.join(', ')+')':'')+'.'+(r.matchKon===false?' Let op: bestaande items konden niet gecheckt worden.':'');
     toast(r.gelukt+' van '+r.totaal+' in Clover', r.gelukt===r.totaal);
   }catch(e){
     if(uit) uit.innerHTML='<span style="color:var(--red-tekst)">'+esc(e.message)+'</span>';

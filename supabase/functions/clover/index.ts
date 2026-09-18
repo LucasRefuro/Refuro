@@ -11,7 +11,7 @@
 
 import {
   admin, versleutel, ontsleutel, wieBelt, fout, cors,
-  cloverBasis, cloverWinkel, cloverZetItem,
+  cloverBasis, cloverWinkel, cloverZetItem, cloverAlleItems, cloverIndex, cloverFetch,
 } from "../_gedeeld/clover.ts";
 
 function ok(data: Record<string, unknown> = {}) {
@@ -82,27 +82,57 @@ Deno.serve(async (req) => {
       return ok();
     }
 
+    /* Alle items uit Clover verwijderen (voor een schone start: alles opnieuw
+       vanuit Storvo). De koppeling zelf blijft; alleen de producten gaan weg. */
+    if (actie === "leegAlles") {
+      const k = await koppeling();
+      if (!k) return fout("Nog geen Clover-koppeling. Koppel eerst je pin.");
+      const basis = cloverBasis(k.regio);
+      const items = await cloverAlleItems(basis, k.domein, k.token);
+      let weg = 0;
+      for (const it of items) {
+        if (!it?.id) continue;
+        try { await cloverFetch(basis, k.domein, k.token, `/items/${it.id}`, { method: "DELETE" }); weg++; } catch (_e) { /* volgende */ }
+      }
+      return ok({ verwijderd: weg, totaal: items.length });
+    }
+
     if (actie === "push" || actie === "pushAlle") {
       const k = await koppeling();
       if (!k) return fout("Nog geen Clover-koppeling. Koppel eerst je pin.");
       const basis = cloverBasis(k.regio);
       const producten = Array.isArray(body.producten) ? body.producten : [];
       if (!producten.length) return fout("Geen producten meegestuurd.");
+
+      /* Eerst de bestaande Clover-items ophalen en indexeren op barcode/sku. Zo
+         werken we een product dat al in de pin staat BIJ in plaats van dubbel aan
+         te maken. Lukt het ophalen niet, dan pushen we zonder matching (nieuw). */
+      let opCode: Record<string, string> = {}, opSku: Record<string, string> = {};
+      let matchKon = false;
+      try {
+        const idx = cloverIndex(await cloverAlleItems(basis, k.domein, k.token));
+        opCode = idx.opCode; opSku = idx.opSku; matchKon = true;
+      } catch (_e) { /* zonder matching verder */ }
+
       const resultaten: any[] = [];
-      let gelukt = 0;
+      let gelukt = 0, nieuw = 0, bijgewerkt = 0;
       for (const p of producten) {
         try {
+          const gevonden = p.cloverId
+            || (p.barcode && opCode[String(p.barcode)])
+            || (p.sku && opSku[String(p.sku)])
+            || null;
           const item = await cloverZetItem(basis, k.domein, k.token, {
             naam: p.naam, verkoop: p.verkoop, barcode: p.barcode, sku: p.sku,
-            voorraad: p.voorraad, cloverId: p.cloverId,
+            voorraad: p.voorraad, cloverId: gevonden,
           });
-          if (item?.id) gelukt++;
-          resultaten.push({ id: p.id, cloverId: item?.id || null, ok: true });
+          if (item?.id) { gelukt++; if (gevonden) bijgewerkt++; else nieuw++; }
+          resultaten.push({ id: p.id, cloverId: item?.id || null, ok: true, bijgewerkt: !!gevonden });
         } catch (e) {
           resultaten.push({ id: p.id, ok: false, fout: e instanceof Error ? e.message : "mislukt" });
         }
       }
-      return ok({ gelukt, totaal: producten.length, resultaten });
+      return ok({ gelukt, totaal: producten.length, nieuw, bijgewerkt, matchKon, resultaten });
     }
 
     return fout("Onbekende actie.");
