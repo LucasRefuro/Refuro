@@ -2657,7 +2657,13 @@ function ctrGa(stap){
   ctrVeldBewaar();
   if(ctr.stap!==stap) (ctr.pad=ctr.pad||[]).push(ctr.stap);
   ctr.stap=stap;
-  if(stap==='specs') ctrSpecsUitOnderdelen();
+  if(stap==='specs'){
+    ctrSpecsUitOnderdelen();
+    /* Kom je op de specs-pagina en is er een uitlezing gestart, haal de opgehaalde
+       gegevens dan meteen (stil) op zodat de velden vanzelf gevuld zijn. Eén keer;
+       daarna kun je met de knop opnieuw ophalen. */
+    if(ctr.testcode && !ctr._gegevensAuto){ ctr._gegevensAuto=true; testOphalen(null, true); }
+  }
   ctrTeken();
 }
 /* Wat je al uit je batch aan ram of ssd hebt toegekend (staat als extra onderdeel op
@@ -2848,6 +2854,10 @@ const CTR_STAPPEN={
     return `
       <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
       <p class="pv">${esc(prof().specsTekst||'Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.')}</p>
+      ${ctr.testcode ? `<div class="row" style="margin-bottom:14px">
+        <button class="btn actie small" onclick="testOphalen(this)"><svg class="i s"><use href="#i-cpu"/></svg>Haal de uitgelezen gegevens op</button>
+        <span class="muted klein">accu, specs, merk en model uit de laptop, je kunt alles nog aanpassen</span>
+      </div>` : ''}
       <div class="row" style="margin-bottom:14px">
         <button class="btn actie small" onclick="specsZoeken(this)">
           <svg class="i s"><use href="#i-sparkles"/></svg>Uitvoeringen opzoeken</button>
@@ -3505,18 +3515,19 @@ async function testStart(knop){
     if(error) throw new Error('De code kon niet aangemaakt worden');
     const doel=location.origin+'/refurbish/test?c='+code;
     ctr.testcode=code;
+    ctr._gegevensAuto=false;   // nieuwe uitlezing: op de specs-pagina weer stil auto-ophalen
     /* Geen QR voor laptops; voor telefoon/tablet wel (scannen is daar het snelst). */
     ctr.testqr = ctrCat()==='Laptop' ? '' :
       'https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
     ctrTeken();
   });
 }
-async function testOphalen(knop){
-  if(!ctr.testcode){ toast('Start eerst een test','let-op'); return; }
+async function testOphalen(knop, stil){
+  if(!ctr.testcode){ if(!stil) toast('Start eerst een test','let-op'); return; }
   await bezig(knop, async()=>{
     const {data}=await sb.from('refurbish_testcodes').select('resultaat').eq('code', ctr.testcode).maybeSingle();
     const uit=data&&data.resultaat;
-    if(!uit || !Object.keys(uit).length){ toast('Nog geen uitslag. Rond de test op de telefoon af.','let-op'); return; }
+    if(!uit || !Object.keys(uit).length){ if(!stil) toast('Nog geen uitslag. Rond de test op de telefoon af.','let-op'); return; }
     /* De testsleutels op de checks koppelen aan het antwoord: ok wordt Ja, fout
        wordt Nee. Zo telt een mislukte test meteen als reparatiepunt. We vullen
        alleen nog-lege vragen in en draaien een met de hand gezet antwoord nooit
