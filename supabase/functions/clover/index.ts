@@ -47,21 +47,27 @@ Deno.serve(async (req) => {
       const w = await cloverWinkel(basis, mId, token);   // gooit bij een verkeerd token/mId
       if (actie === "test") return ok({ winkel: w });
 
+      const { data: oud } = await admin.from("winkel_koppelingen")
+        .select("id, webhook_pad").eq("team_id", acc.team_id).eq("kanaal", "clover").maybeSingle();
       const rij = {
         team_id: acc.team_id, kanaal: "clover", via: "token",
         domein: mId,
         token_versleuteld: await versleutel(token),
         token_staart: token.slice(-4),
+        // webhook_pad is NOT NULL in de tabel (Shopify gebruikt het). Voor Clover
+        // fase 1 hebben we het nog niet nodig, maar we zetten alvast een unieke
+        // waarde neer; die kan fase 2 (de Clover-webhook) hergebruiken.
+        webhook_pad: oud?.webhook_pad || crypto.randomUUID().replace(/-/g, ""),
         winkelnaam: w.naam, valuta: w.valuta,
         webhooks: { regio },
         status: "actief", fout: null,
         laatst_gecontroleerd: new Date().toISOString(),
         gekoppeld_door: acc.id, bijgewerkt_op: new Date().toISOString(),
       };
-      const { data: oud } = await admin.from("winkel_koppelingen")
-        .select("id").eq("team_id", acc.team_id).eq("kanaal", "clover").maybeSingle();
-      if (oud) await admin.from("winkel_koppelingen").update(rij).eq("id", oud.id);
-      else await admin.from("winkel_koppelingen").insert(rij);
+      const dbErr = oud
+        ? (await admin.from("winkel_koppelingen").update(rij).eq("id", oud.id)).error
+        : (await admin.from("winkel_koppelingen").insert(rij)).error;
+      if (dbErr) { console.error("clover koppel opslaan:", dbErr); return fout("De koppeling opslaan lukte niet: " + (dbErr.message || "onbekende fout")); }
       return ok({ winkel: w });
     }
 
