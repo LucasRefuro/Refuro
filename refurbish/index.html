@@ -411,6 +411,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 
 .qrkaart{text-align:center;}
 .qrbeeld{width:200px; height:200px; margin:6px auto 12px; display:block; border-radius:12px;}
+.testcode{font-size:44px; font-weight:800; letter-spacing:10px; text-align:center; background:var(--card); color:var(--groen); border-radius:14px; padding:16px 10px; margin:6px 0; border:1.5px solid var(--border); font-variant-numeric:tabular-nums;}
 
 /* de accugrens */
 .accuwaarschuwing{background:var(--amber-soft); color:var(--amber-tekst);
@@ -3369,62 +3370,8 @@ function ctrAccublok(){
     </label>
     <label style="margin-top:12px">Notitie bij de accu</label>
     <input id="c_accu_notitie" value="${esc(ctr.accuNotitie||'')}" maxlength="60" placeholder="bijv. accu in slechte staat" oninput="ctrAccuNotitie(this.value)" style="width:100%">
-    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Het percentage en de notitie komen op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%.</p>
-    ${ctrCat()==='Laptop' ? accuTestBlok() : ''}
+    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Het percentage en de notitie komen op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%. De accu meet je mee in de toestel-test hieronder; het percentage komt vanzelf hier terug.</p>
   </div>`;
-}
-/* Accu automatisch meten op de laptop zelf. Een browser kan de accugezondheid niet
-   lezen, en de winkel-Mac kan het via een kabel ook niet van een andere laptop lezen:
-   de meting hoort op de laptop te draaien. We hergebruiken de telefoontest-plumbing
-   (dezelfde code-rij en edge function): op de laptop open je /refurbish/accu met de
-   code, plakt daar één regel, en die stuurt het percentage terug. Hier haal je het op. */
-function accuTestBlok(){
-  if(ctr.accutestcode && ctr.accutestqr){
-    return `<div class="testapp" style="margin-top:14px">
-      <div class="clkop">Accu automatisch meten</div>
-      <p class="muted klein" style="margin-bottom:12px">Open dit op de <b>laptop die je test</b>: scan de QR of ga naar <b>${esc(location.host)}/refurbish/accu</b> en vul code <b>${esc(ctr.accutestcode)}</b> in. Plak daar het commando; het accupercentage komt hier vanzelf binnen.</p>
-      <img class="qrbeeld" src="${esc(ctr.accutestqr)}" alt="">
-      <button class="btn actie small" style="width:100%; margin-top:10px" onclick="accuTestOphalen(this)">Haal het accupercentage op</button>
-    </div>`;
-  }
-  return `<div class="testapp" style="margin-top:14px">
-    <div class="clkop">Accu automatisch meten</div>
-    <p class="muted klein" style="margin-bottom:12px">Moeilijk af te lezen? Laat de laptop het zelf meten en terugsturen, met één regel plakken. Geen kabel of installatie nodig.</p>
-    <button class="btn actie small" onclick="accuTestStart(this)"><svg class="i s"><use href="#i-qr"/></svg>Meet de accu op de laptop</button>
-  </div>`;
-}
-async function accuTestStart(knop){
-  await bezig(knop, async()=>{
-    const code=Math.random().toString(36).slice(2,8).toUpperCase();
-    const {error}=await sb.from('refurbish_testcodes').insert({
-      code, team_id:account.team_id, apparaat_id:ctr.a.id,
-      vervalt:new Date(Date.now()+30*60000).toISOString()
-    });
-    if(error) throw new Error('De code kon niet aangemaakt worden');
-    const doel=location.origin+'/refurbish/accu?c='+code;
-    ctr.accutestcode=code;
-    ctr.accutestqr='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
-    ctrTeken();
-  });
-}
-async function accuTestOphalen(knop){
-  if(!ctr.accutestcode){ toast('Start eerst een meting','let-op'); return; }
-  await bezig(knop, async()=>{
-    const {data}=await sb.from('refurbish_testcodes').select('resultaat').eq('code', ctr.accutestcode).maybeSingle();
-    const uit=data&&data.resultaat;
-    if(!uit || typeof uit.accu!=='number'){ toast('Nog geen meting. Plak het commando op de laptop.','let-op'); return; }
-    /* Alleen invullen als er nog geen getal staat, zodat een met de hand ingevoerde
-       meting niet stil wordt overschreven (net als bij de telefoontest). */
-    if(!ctr.accu){
-      ctrAccu(String(uit.accu));
-      const inp=document.getElementById('c_accu'); if(inp) inp.value=String(uit.accu);
-      toast('Accu gemeten: '+uit.accu+'%', true);
-    } else if(String(ctr.accu)!==String(uit.accu)){
-      toast('Je had al '+ctr.accu+'% ingevuld; de meting ('+uit.accu+'%) is niet overschreven.','let-op');
-    } else {
-      toast('Accu bevestigd: '+uit.accu+'%', true);
-    }
-  });
 }
 /* Het advies onder het accuveld staat apart, zodat het live kan meelopen zonder
    het hele scherm opnieuw te tekenen. Deed het dat wel, dan was je bij een
@@ -3482,15 +3429,22 @@ function ctrTestApp(){
     ? 'Open dit op de laptop die je test: druk elke toets in (je ziet ze groen worden), en test scherm, touchpad, geluid en de webcam. De uitslag vult de vragen hieronder in.'
     : 'Laat het toestel zichzelf testen: touch, scherm, luidspreker, microfoon, camera, trillen en sensoren. De uitslag vult de vragen hieronder in.';
   const scanUit = laptop
-    ? 'Open op de laptop <b>'+esc(location.host)+'/refurbish/test</b>, typ code <b>'+esc(ctr.testcode||'')+'</b> en druk op Doorgaan. Daarna haal je de uitslag hier op.'
+    ? 'Doe de test op de laptop zelf. Daarna haal je de uitslag hier op; de vragen vullen zich dan vanzelf in.'
     : 'Scan met het toestel dat je test en loop de tests langs. Daarna haal je de uitslag hier op; de vragen hieronder vullen zich dan vanzelf.';
   const knopTekst = laptop ? 'Start de test op de laptop' : 'Test met de telefoon';
-  if(ctr.testcode && ctr.testqr){
+  if(ctr.testcode){
+    /* Laptop: geen QR (die scan je toch niet makkelijk), maar de code groot in beeld.
+       Telefoon/tablet: de QR erbij, dat scant het snelst. */
+    const media = laptop
+      ? `<p class="muted klein" style="margin-bottom:6px">Open op de laptop <b>${esc(location.host)}/refurbish/test</b> en typ deze code:</p>
+         <div class="testcode">${esc(ctr.testcode)}</div>
+         <p class="muted klein" style="margin:10px 0">Druk daarna op de laptop op Doorgaan.</p>`
+      : `<img class="qrbeeld" src="${esc(ctr.testqr)}" alt="">
+         <p class="muted klein" style="margin:10px 0">Of ga op dat toestel naar <b>${esc(location.host)}/refurbish/test</b>, typ code <b>${esc(ctr.testcode)}</b> en druk op Doorgaan.</p>`;
     return `<div class="testapp">
       <div class="clkop">${kop}</div>
       <p class="muted klein" style="margin-bottom:12px">${scanUit}</p>
-      <img class="qrbeeld" src="${esc(ctr.testqr)}" alt="">
-      <p class="muted klein" style="margin:10px 0">Of ga op dat toestel naar <b>${esc(location.host)}/refurbish/test</b>, typ code <b>${esc(ctr.testcode)}</b> en druk op Doorgaan.</p>
+      ${media}
       <button class="btn actie small" style="width:100%" onclick="testOphalen(this)">Uitslag ophalen</button>
     </div>`;
   }
@@ -3502,9 +3456,18 @@ function ctrTestApp(){
 }
 async function testStart(knop){
   await bezig(knop, async()=>{
-    /* Korte code, net als bij het fotograferen. Random is hier prima: het is een
-       tijdelijk toegangsbewijs van een half uur, geen geheim dat blijvend telt. */
-    const code=Math.random().toString(36).slice(2,8).toUpperCase();
+    /* Een kort NUMMER in plaats van letters: sneller te typen op een laptop (ook op
+       de numpad) en geen verwarring tussen 0/O of 1/l. Vier cijfers is ruim zat voor
+       een winkel; we checken nog even dat hij niet al in gebruik is. Het is een
+       tijdelijk toegangsbewijs van een half uur, geen blijvend geheim. */
+    let code='';
+    for(let poging=0; poging<8; poging++){
+      const kandidaat=String(Math.floor(1000+Math.random()*9000));
+      const {data:bezet}=await sb.from('refurbish_testcodes')
+        .select('code').eq('code', kandidaat).gt('vervalt', new Date().toISOString()).maybeSingle();
+      if(!bezet){ code=kandidaat; break; }
+    }
+    if(!code) code=String(Date.now()).slice(-6);  // uiterste terugval
     const {error}=await sb.from('refurbish_testcodes').insert({
       code, team_id:account.team_id, apparaat_id:ctr.a.id,
       vervalt:new Date(Date.now()+30*60000).toISOString()
@@ -3512,7 +3475,9 @@ async function testStart(knop){
     if(error) throw new Error('De code kon niet aangemaakt worden');
     const doel=location.origin+'/refurbish/test?c='+code;
     ctr.testcode=code;
-    ctr.testqr='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
+    /* Geen QR voor laptops; voor telefoon/tablet wel (scannen is daar het snelst). */
+    ctr.testqr = ctrCat()==='Laptop' ? '' :
+      'https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
     ctrTeken();
   });
 }

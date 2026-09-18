@@ -4,7 +4,7 @@ const bron=path.join(__dirname,'..','refurbish/index.html');
 const MOCK=`<script>
 window.__geschreven=[];
 const _leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
-  in(){return this;},maybeSingle:async()=>({data:null}),
+  in(){return this;},gt(){return this;},lt(){return this;},maybeSingle:async()=>({data:null}),
   insert(r){window.__geschreven.push(r);return {select:async()=>({data:[{id:'hw1'}],error:null})};},
   update(r){window.__geschreven.push(r);return this;},delete(){return this;},then(res){res({data:[],error:null});}};
 window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{user:{id:'u1'},access_token:'t'}}})},

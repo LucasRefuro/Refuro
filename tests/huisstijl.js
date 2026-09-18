@@ -143,7 +143,7 @@ console.log('\n── de pagina laden');
 const MOCK=`<script>
 const _leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},
   in(){return this;},or(){return this;},ilike(){return this;},not(){return this;},neq(){return this;},
-  lt(){return this;},maybeSingle:async()=>({data:null}),
+  lt(){return this;},gt(){return this;},maybeSingle:async()=>({data:null}),
   insert(){return {select:()=>({single:async()=>({data:{id:'x'}}),then:(r)=>r({data:[],error:null})})};},
   update(){return this;},upsert(){return this;},delete(){return this;},then(r){ r({data:[],error:null}); }};
 window.supabase={createClient:()=>({
