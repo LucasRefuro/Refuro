@@ -136,8 +136,16 @@ Deno.serve(async (req) => {
   // schrijfwijzen van de modelnaam: zoals ingevoerd, zonder spaties, met
   // streepjes, en in hoofdletters. Dat dekt het grootste deel.
   const ean = String(lijf?.ean || lijf?.gtin || "").replace(/\D/g, "");
+  // De fabrikant-artikelcode (bv. HP '3JX01EA') die de laptop zelf ophaalt is veruit de
+  // beste match: Icecat indexeert daarop. Die proberen we dus als eerste, nog voor de
+  // schrijfwijzen van de modelnaam.
+  const productcode = String(lijf?.productcode || "").trim();
   const pogingen: { soort: "gtin" | "code"; waarde: string }[] = [];
   if (ean) pogingen.push({ soort: "gtin", waarde: ean });
+  if (productcode) {
+    pogingen.push({ soort: "code", waarde: productcode });
+    if (productcode.toUpperCase() !== productcode) pogingen.push({ soort: "code", waarde: productcode.toUpperCase() });
+  }
   for (const c of [model, model.replace(/\s+/g, ""), model.replace(/\s+/g, "-"), model.toUpperCase()]) {
     pogingen.push({ soort: "code", waarde: c });
   }

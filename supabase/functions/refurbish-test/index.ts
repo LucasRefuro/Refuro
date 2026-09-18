@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
   const gIn = (lijf?.gegevens && typeof lijf.gegevens === "object") ? lijf.gegevens : null;
   if (gIn) {
     const g: Record<string, unknown> = {};
-    for (const k of ["merk", "model", "serienummer"]) { const s = tekst(gIn[k]); if (s) g[k] = s; }
+    for (const k of ["merk", "model", "serienummer", "mpn"]) { const s = tekst(gIn[k]); if (s) g[k] = s; }
     if (gIn.specs && typeof gIn.specs === "object") {
       const sp: Record<string, string> = {};
       for (const k of ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm"]) { const s = tekst(gIn.specs[k]); if (s) sp[k] = s; }

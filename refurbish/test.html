@@ -962,6 +962,9 @@ try{
   $model = "$model".Trim()
   if($merk -and $model.ToLower().StartsWith(($merk.ToLower()+' '))){ $model = $model.Substring($merk.Length).Trim() }
   $serie = (Get-CimInstance Win32_BIOS).SerialNumber
+  $mpn = "$($cs.SystemSKUNumber)"
+  if($mpn){ $mpn = ($mpn -split '#')[0].Trim() }
+  if($mpn -match 'To be filled|Default string|System SKU'){ $mpn='' }
   $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
   if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace ' CPU','' -replace '@.*$','').Trim() }
   $ram = [int][math]::Round($cs.TotalPhysicalMemory/1GB)
@@ -980,7 +983,7 @@ try{
     if($h -ge 2000){$lab='4K'} elseif($h -ge 1400){$lab='QHD'} elseif($h -ge 1080){$lab='Full HD'} elseif($h -ge 700){$lab='HD'} else {$lab="$($res.CurrentHorizontalResolution)x$h"}
     if($inch){ $scherm="$inch inch $lab" } else { $scherm=$lab }
   } elseif($inch){ $scherm="$inch inch" }
-  $g = @{ merk=$merk; model=$model; serienummer=$serie; specs=@{ Processor=$cpu; Geheugen="$ram GB"; Opslag=$opslag; Videokaart=$gpu; Scherm=$scherm } }
+  $g = @{ merk=$merk; model=$model; serienummer=$serie; mpn=$mpn; specs=@{ Processor=$cpu; Geheugen="$ram GB"; Opslag=$opslag; Videokaart=$gpu; Scherm=$scherm } }
 }catch{}
 $body=@{ code='${C}' }
 if($accu -ne $null){ $body.resultaat=@{ accu=$accu } }
@@ -1006,6 +1009,22 @@ try{
     "  pause\r\n"+
     ")\r\n";
 }
+/* Alles wat de laptop terugstuurde overzichtelijk tonen: niet alleen de accu, maar
+   ook merk/model, serienummer en de specs. Zo zie je meteen wat er is opgehaald. */
+function accuToonGegevens(g){
+  const el=document.getElementById('accugeg'); if(!el) return;
+  if(!g || typeof g!=='object'){ el.innerHTML=''; return; }
+  const rijen=[];
+  const naam=[g.merk,g.model].filter(Boolean).join(' ');
+  if(naam) rijen.push(['Merk / model', naam]);
+  if(g.serienummer) rijen.push(['Serienummer', g.serienummer]);
+  const sp=g.specs||{};
+  ['Processor','Geheugen','Opslag','Videokaart','Scherm'].forEach(k=>{ if(sp[k]) rijen.push([k, sp[k]]); });
+  el.innerHTML = rijen.length
+    ? '<div style="font-weight:700; margin:14px 0 4px">Opgehaald van de laptop</div>'+
+      rijen.map(([l,v])=>`<div class="uitslagrij"><span class="muted">${esc(l)}</span><span style="margin-left:auto; font-weight:600; text-align:right; max-width:62%">${esc(v)}</span></div>`).join('')
+    : '';
+}
 function accuStartPoll(){
   if(accuPoll) return;
   const mijnStap=stapId;
@@ -1021,8 +1040,9 @@ function accuStartPoll(){
         const st=document.getElementById('astatus');
         if(st){ st.className='astatus klaar'; st.hidden=false;
           st.textContent = heeftAccu
-            ? ('Accu '+r.accu+'%'+(heeftGeg?' en specs':'')+' opgehaald. Haal de uitslag op de pc op.')
-            : 'Specs opgehaald. Haal de uitslag op de pc op.'; }
+            ? ('Accu '+r.accu+'% opgehaald. Haal de uitslag op de pc op.')
+            : 'Gegevens opgehaald. Haal de uitslag op de pc op.'; }
+        if(heeftGeg) accuToonGegevens(r.gegevens);
         clearInterval(accuPoll); accuPoll=null;
       }
     }catch(e){}
@@ -1048,6 +1068,7 @@ function startAccu(){
         '<p class="muted klein" style="margin-bottom:12px">Klik de knop. Er wordt een klein bestandje gedownload; dubbelklik het. Het leest in één keer de <b>accu én de specs</b> uit (processor, geheugen, opslag, videokaart, scherm, plus merk, model en serienummer) en zet ze in Storvo. Daarna ruimt het bestand zichzelf op.</p>'+
         '<button class="btn actie" onclick="accuDownloadWin()">Lees de accu en specs uit</button>'+
         '<div class="astatus wacht" id="astatus" hidden><span class="aspin"></span>Wachten op de laptop</div>'+
+        '<div id="accugeg"></div>'+
         '<details class="poortlees" style="margin-top:12px"><summary>Blokkeert Edge het bestand?</summary>'+
           '<p class="muted klein" style="margin:10px 0 12px">Edge vindt een .bat-bestand van internet gevaarlijk. Het is veilig: het leest alleen de accu en stuurt het percentage. Zo laat je het door:</p>'+
           '<div class="astap"><div class="astapnr">1</div><div>Klik rechtsboven op het <b>download-pijltje</b>. Je ziet <b>Storvo-accu-meten.bat</b> met een waarschuwing.</div></div>'+

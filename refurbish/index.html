@@ -3555,6 +3555,11 @@ async function testOphalen(knop){
           }
         });
       }
+      /* De fabrikant-artikelcode bewaren we verborgen in de specs (geen eigen veld,
+         komt niet op stickers of advertenties). Hij helpt straks om fabrieksfoto's te
+         vinden: Icecat matcht op deze code, niet op de modelnaam. */
+      const mpn=String(g.mpn||'').trim();
+      if(mpn && !String(ctr.specs['Artikelcode']||'').trim()){ ctr.specs['Artikelcode']=mpn; }
       const patch={};
       ['merk','model','serienummer'].forEach(k=>{
         const w=String(g[k]||'').trim();
@@ -4592,7 +4597,7 @@ async function fotosZoeken(knop){
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
                'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({merk:a.merk, model:a.model})
+      body:JSON.stringify({merk:a.merk, model:a.model, productcode:(a.specs&&a.specs.Artikelcode)||''})
     });
     const uit=await res.json().catch(()=>({}));
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Zoeken mislukte');
