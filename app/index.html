@@ -10593,6 +10593,14 @@ async function cloverLeeg(knop){
   }
   knop.disabled=false; knop.textContent=oud;
 }
+/* De categorienaam die naar Clover gaat: soort eerst, dan merk ("Hoesjes · Mobiparts").
+   Clover-tabbladen zijn plat, dus zo krijg je toch beide assen: soort eerst laat alle
+   hoesjes naast elkaar sorteren, het merk splitst ze verder. Geen merk -> alleen soort. */
+function cloverCategorieNaam(p){
+  const soort=(typeof catNaam==='function'?catNaam(p.cat):'')||'Overig';
+  const merk=(p.merk||'').trim();
+  return merk ? soort+' · '+merk : soort;
+}
 /* Eén product naar Clover, stil op de achtergrond. Gebruikt bij het toevoegen van
    een nieuw product, zodat het meteen in de pin staat zonder dat je iets hoeft te doen. */
 async function cloverPushEen(p){
@@ -10601,7 +10609,7 @@ async function cloverPushEen(p){
     const r=await cloverCall('push',{producten:[{
       id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
       voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
-      categorie:(typeof catNaam==='function'?catNaam(p.cat):''),
+      categorie:cloverCategorieNaam(p),
       cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
     }]});
     const res=(r.resultaten||[])[0];
@@ -10612,7 +10620,7 @@ async function cloverPushAlle(knop){
   const producten=(state.producten||[]).map(p=>({
     id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
     voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
-    categorie:(typeof catNaam==='function'?catNaam(p.cat):''),
+    categorie:cloverCategorieNaam(p),
     cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
   }));
   if(!producten.length){ toast('Je hebt nog geen producten om te pushen.','let-op'); return; }
