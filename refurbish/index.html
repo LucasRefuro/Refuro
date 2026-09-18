@@ -166,6 +166,11 @@ tr.klikbaar{cursor:pointer;}
 .partnerpil{display:inline-flex; align-items:center; min-width:118px; justify-content:center; background:var(--green-soft); color:var(--green-tekst); font-weight:700; font-size:12.5px; padding:8px 13px; border-radius:var(--pil); white-space:nowrap;}
 .mono{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12.5px; color:var(--muted);}
 .tabelrol{overflow-x:auto; max-width:100%;}
+/* Lange lijsten (werkbank, controle, reparatie): scrollbaar met een vaste kop en
+   maximaal 150 per pagina, zodat de tellingen bovenin blijven staan. */
+.tabelscroll{max-height:70vh; overflow:auto;}
+.tabelscroll thead th{position:sticky; top:0; background:var(--card); z-index:1; padding-top:10px; box-shadow:inset 0 -1px 0 var(--border);}
+.tabelpager{display:flex; align-items:center; justify-content:center; gap:16px; margin-top:14px;}
 
   /* ---------- batches: partij-overzicht ---------- */
   .batpil{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:var(--pil);
@@ -1336,14 +1341,37 @@ function tekenWerkbank(){
 
   const rijen=bezig.filter(past);
   document.getElementById('wbLijst').innerHTML=rijen.length
-    ? tabel(rijen)
+    ? tabel(rijen,'werkbank')
     : leeg('i-laptop','Nog niets op de werkbank','Voeg apparaten toe met de knop Toevoegen; ze verschijnen hier om te controleren.');
 }
 
-function tabel(rijen){
-  return `<div class="tabelrol"><table>
+/* De lange lijsten: gesorteerd op merk/model/generatie, en per 150 gepagineerd met
+   een scrollbare tabel. Elke lijst (werkbank/controle/reparatie) houdt zijn eigen
+   paginanummer bij. */
+const TABEL_PER=150;
+let tabelPag={};
+function tabelBlader(sleutel, delta){
+  tabelPag[sleutel]=Math.max(0, (tabelPag[sleutel]||0)+delta);
+  const fn={werkbank:tekenWerkbank, controle:tekenControle, reparatie:tekenReparatie}[sleutel];
+  if(fn) fn();
+}
+function tabel(rijen, sleutel){
+  sleutel=sleutel||'werkbank';
+  rijen=rijen.slice().sort(apparaatSorteer);
+  const totaal=rijen.length;
+  const paginas=Math.max(1, Math.ceil(totaal/TABEL_PER));
+  let p=Math.min(Math.max(0, tabelPag[sleutel]||0), paginas-1); tabelPag[sleutel]=p;
+  const zicht=rijen.slice(p*TABEL_PER, p*TABEL_PER+TABEL_PER);
+  const pager = totaal>TABEL_PER
+    ? `<div class="tabelpager">
+        <button class="btn ghost small" ${p<=0?'disabled':''} onclick="tabelBlader('${sleutel}',-1)">Vorige</button>
+        <span class="muted klein">${p*TABEL_PER+1} tot ${Math.min((p+1)*TABEL_PER,totaal)} van ${totaal}</span>
+        <button class="btn ghost small" ${p>=paginas-1?'disabled':''} onclick="tabelBlader('${sleutel}',1)">Volgende</button>
+      </div>`
+    : '';
+  return `<div class="tabelrol tabelscroll"><table>
     <thead><tr><th>Apparaat</th><th>Nummer</th><th>Serienummer</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
-    <tbody>${rijen.map(a=>{
+    <tbody>${zicht.map(a=>{
       /* De hele regel is de knop. Je zoekt niet eerst een klein knopje op
          als je met handschoenen aan achter een tafel vol laptops staat. */
       const bat=batches.find(x=>x.id===a.batch_id);
@@ -1360,7 +1388,7 @@ function tabel(rijen){
         <td class="num hwact">
           <button class="btn ghost small" onclick="event.stopPropagation(); labelsTonen('${a.id}')">Label</button></td>
       </tr>`;
-    }).join('')}</tbody></table></div>`;
+    }).join('')}</tbody></table></div>`+pager;
 }
 
 function leeg(icoon, kop, uitleg){
@@ -1993,7 +2021,7 @@ async function appNaamOpslaan(knop, id){
 function tekenControle(){
   const rijen=apparaten.filter(a=>a.status==='te_controleren'||a.status==='installeren').filter(past);
   document.getElementById('ctrLijst').innerHTML=rijen.length
-    ? tabel(rijen)
+    ? tabel(rijen,'controle')
     : leeg('i-check','Niets te controleren','Alles is nagekeken. Voeg een batch toe om verder te gaan.');
 }
 
@@ -3882,7 +3910,7 @@ function sloopOpen(a){
 function tekenReparatie(){
   const rijen=apparaten.filter(a=>a.status==='te_repareren').filter(past);
   document.getElementById('repLijst').innerHTML=rijen.length
-    ? tabel(rijen)
+    ? tabel(rijen,'reparatie')
     : leeg('i-wrench','Niets te repareren','Alles wat kapot was is hersteld.');
 }
 
