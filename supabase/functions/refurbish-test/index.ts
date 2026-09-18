@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     for (const k of ["merk", "model", "serienummer", "mpn"]) { const s = tekst(gIn[k]); if (s) g[k] = s; }
     if (gIn.specs && typeof gIn.specs === "object") {
       const sp: Record<string, string> = {};
-      for (const k of ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm"]) { const s = tekst(gIn.specs[k]); if (s) sp[k] = s; }
+      for (const k of ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm", "Windows"]) { const s = tekst(gIn.specs[k]); if (s) sp[k] = s; }
       if (Object.keys(sp).length) g.specs = sp;
     }
     if (Object.keys(g).length) schoon.gegevens = g;

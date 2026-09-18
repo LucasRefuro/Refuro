@@ -2967,9 +2967,10 @@ const CTR_STAPPEN={
 const SPEC_VELDEN=[
   {sleutel:'Processor',  id:'c_cpu',    hint:'Intel Core i5-1135G7'},
   {sleutel:'Geheugen',   id:'c_ram',    hint:'16 GB'},
-  {sleutel:'Opslag',     id:'c_ssd',    hint:'512 GB SSD'},
+  {sleutel:'Opslag',     id:'c_ssd',    hint:'512 GB NVMe SSD'},
   {sleutel:'Videokaart', id:'c_gpu',    hint:'Alleen als hij er een heeft'},
-  {sleutel:'Scherm',     id:'c_scherm', hint:'14 inch Full HD'}
+  {sleutel:'Scherm',     id:'c_scherm', hint:'14 inch Full HD'},
+  {sleutel:'Windows',    id:'c_win',    hint:'Windows 11 Pro'}
 ];
 
 /* Extra uitrusting die je pas ziet als je hem voor je hebt. Aan of uit, behalve
@@ -3545,7 +3546,7 @@ async function testOphalen(knop){
     const g=uit.gegevens;
     if(g && typeof g==='object'){
       ctr.specs=ctr.specs||{};
-      const veldId={Processor:'c_cpu',Geheugen:'c_ram',Opslag:'c_ssd',Videokaart:'c_gpu',Scherm:'c_scherm'};
+      const veldId={Processor:'c_cpu',Geheugen:'c_ram',Opslag:'c_ssd',Videokaart:'c_gpu',Scherm:'c_scherm',Windows:'c_win'};
       if(g.specs && typeof g.specs==='object'){
         Object.keys(veldId).forEach(sl=>{
           const w=String(g.specs[sl]||'').trim();

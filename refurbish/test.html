@@ -971,6 +971,9 @@ try{
   elseif($ml -match 'toshiba|dynabook'){ $merk='Toshiba' }
   elseif($ml -match 'samsung'){ $merk='Samsung' }
   elseif($ml -match 'fujitsu'){ $merk='Fujitsu' }
+  elseif($ml -match 'wortmann|terra'){ $merk='Terra' }
+  elseif($ml -match 'sony'){ $merk='Sony' }
+  elseif($ml -match 'medion'){ $merk='Medion' }
   elseif($ml -match 'huawei'){ $merk='Huawei' }
   elseif($ml -match 'razer'){ $merk='Razer' }
   elseif($ml -match 'gigabyte'){ $merk='Gigabyte' }
@@ -996,17 +999,26 @@ try{
   $cpu = "$((Get-CimInstance Win32_Processor | Select-Object -First 1).Name)"
   if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace '\(tm\)','' -replace ' CPU','' -replace '@.*$','' -replace '\s+',' ').Trim() }
   $ram = [int][math]::Round($cs.TotalPhysicalMemory/1GB)
-  # OPSLAG in verkoop-GB (bytes/1e9, niet GiB), afgerond naar een gangbare maat; groot -> TB.
-  $bytes=0; $ssd=$false
-  try{ foreach($d in (Get-PhysicalDisk)){ $bytes += [double]$d.Size; if($d.MediaType -eq 'SSD' -or $d.BusType -eq 'NVMe'){ $ssd=$true } } }catch{}
+  # OPSLAG: totale grootte in verkoop-GB (bytes/1e9, niet GiB), plus de soort van de
+  # hoofdschijf: HDD, SATA SSD of NVMe SSD. NVMe is altijd een SSD.
+  $bytes=0; $soort=''
+  try{
+    $disks = @(Get-PhysicalDisk)
+    foreach($d in $disks){ $bytes += [double]$d.Size }
+    $hoofd = $disks | Sort-Object Size -Descending | Select-Object -First 1
+    if($hoofd){ $mt="$($hoofd.MediaType)"; $bt="$($hoofd.BusType)"
+      if($bt -eq 'NVMe'){ $soort='NVMe SSD' }
+      elseif($mt -eq 'HDD'){ $soort='HDD' }
+      elseif($mt -eq 'SSD'){ if($bt -eq 'SATA' -or $bt -eq 'RAID' -or $bt -eq 'ATA'){ $soort='SATA SSD' } else { $soort='SSD' } } }
+  }catch{}
   if($bytes -eq 0){ try{ foreach($d in (Get-CimInstance Win32_DiskDrive)){ $bytes += [double]$d.Size } }catch{} }
   $opslag=''
   if($bytes -gt 0){ $gb=[int][math]::Round($bytes/1e9)
     $maten=@(120,128,240,250,256,480,500,512,1000,2000,4000); $bm=$gb; $bd=1e9
     foreach($m in $maten){ $v=[math]::Abs($m-$gb); if($v -lt $bd){ $bd=$v; $bm=$m } }
     if($bd -le $gb*0.1){ $gb=$bm }
-    if($gb -ge 960){ $opslag = "$([int][math]::Round($gb/1000)) TB" } else { $opslag = "$gb GB" }
-    if($ssd){ $opslag = "$opslag SSD" } }
+    if($gb -ge 960){ $maat = "$([int][math]::Round($gb/1000)) TB" } else { $maat = "$gb GB" }
+    if($soort){ $opslag = "$maat $soort" } else { $opslag = $maat } }
   $gpu = "$(Get-CimInstance Win32_VideoController | Where-Object { $_.Name -and $_.Name -notmatch 'Microsoft Basic|Remote|Parsec|Meta' } | Select-Object -Last 1 -ExpandProperty Name)"
   if($gpu){ $gpu = ($gpu -replace '\(R\)','' -replace '\(TM\)','' -replace 'Corporation','' -replace '\s+',' ').Trim() }
   $inch=''
@@ -1019,7 +1031,10 @@ try{
     if($h -ge 2000){$lab='4K'} elseif($h -ge 1400){$lab='QHD'} elseif($h -ge 1080){$lab='Full HD'} elseif($h -ge 700){$lab='HD'} else {$lab="$($res.CurrentHorizontalResolution)x$h"}
     if($inch){ $scherm="$inch inch $lab" } else { $scherm=$lab }
   } elseif($inch){ $scherm="$inch inch" }
-  $g = @{ merk=$merk; model=$model; serienummer=$serie; mpn=$mpn; specs=@{ Processor=$cpu; Geheugen="$ram GB"; Opslag=$opslag; Videokaart=$gpu; Scherm=$scherm } }
+  # WINDOWS-editie, bv. "Windows 11 Pro" of "Windows 10 Home".
+  $win=''
+  try{ $win = "$((Get-CimInstance Win32_OperatingSystem).Caption)"; $win = ($win -replace '(?i)microsoft ','' -replace '\s+',' ').Trim() }catch{}
+  $g = @{ merk=$merk; model=$model; serienummer=$serie; mpn=$mpn; specs=@{ Processor=$cpu; Geheugen="$ram GB"; Opslag=$opslag; Videokaart=$gpu; Scherm=$scherm; Windows=$win } }
 }catch{}
 $body=@{ code='${C}' }
 if($accu -ne $null){ $body.resultaat=@{ accu=$accu } }
@@ -1056,7 +1071,7 @@ function accuToonGegevens(g){
   if(g.serienummer) rijen.push(['Serienummer', g.serienummer]);
   if(g.mpn) rijen.push(['Artikelcode', g.mpn]);
   const sp=g.specs||{};
-  ['Processor','Geheugen','Opslag','Videokaart','Scherm'].forEach(k=>{ if(sp[k]) rijen.push([k, sp[k]]); });
+  ['Processor','Geheugen','Opslag','Videokaart','Scherm','Windows'].forEach(k=>{ if(sp[k]) rijen.push([k, sp[k]]); });
   el.innerHTML = rijen.length
     ? '<div style="font-weight:700; margin:14px 0 4px">Opgehaald van de laptop</div>'+
       rijen.map(([l,v])=>`<div class="uitslagrij"><span class="muted">${esc(l)}</span><span style="margin-left:auto; font-weight:600; text-align:right; max-width:62%">${esc(v)}</span></div>`).join('')
