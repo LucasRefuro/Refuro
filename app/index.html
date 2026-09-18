@@ -3198,6 +3198,7 @@
       <button data-s="kassa"><svg class="i"><use href="#i-cash"/></svg>Kassa</button>
       <button data-s="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
       <button data-s="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
+      <button data-s="clover"><svg class="i"><use href="#i-shop"/></svg>Clover (pin)</button>
       <button data-s="factuur"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
       <button data-s="leveranciers"><svg class="i"><use href="#i-truck"/></svg>Leveranciers</button>
       <div class="instgroep">Klantcontact</div>
@@ -3500,6 +3501,15 @@
     <h2><svg class="i"><use href="#i-globe"/></svg>Je webshop koppelen</h2>
     <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Shopify-webshop, dan zet je een toestel met één knop online, gaat hij er vanzelf weer af zodra hij verkocht is, en zie je hier wat er besteld wordt. Zonder koppeling verkoop je een laptop twee keer en mag je een klant bellen dat het toch niet doorgaat.</p>
     <div id="shopVak">Bezig met kijken…</div>
+  </div>
+
+  <!-- ── de pin (Clover) koppelen ──
+       Fase 1: koppelen met een API-token en je producten naar de pin pushen.
+       De verkoop-terugkoppeling (webhooks) komt in fase 2. -->
+  <div class="card" id="inst-clover" hidden>
+    <h2><svg class="i"><use href="#i-shop"/></svg>Je pin koppelen <span class="muted">(Clover)</span></h2>
+    <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Clover-pin, dan zet je je hele assortiment met één knop in de kassa: naam, prijs, barcode en voorraad. Straks (fase 2) komt een verkoop op de pin ook vanzelf terug in Storvo, net als je webshop.</p>
+    <div id="cloverVak">Bezig met kijken…</div>
   </div>
 
   <div class="card" id="inst-leveranciers" hidden>
@@ -10187,11 +10197,12 @@ document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('cli
 }));
 document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','clover','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
     const el=document.getElementById('inst-'+s); if(el) el.hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
   if(b.dataset.s==='webshop') shopStatus();
+  if(b.dataset.s==='clover') cloverStatus();
   if(b.dataset.s==='factuur') facBedrijfVul();
   if(b.dataset.s==='refurbish') renderRefurbishInst();
 }));
@@ -10486,6 +10497,96 @@ function shopTerugkomst(){
   }catch(e){}
   return `<div class="shopuitslag ${stand==='gelukt'?'':'fout'}">${esc(melding ||
     (stand==='gelukt'?'De webshop is gekoppeld.':'Het koppelen is niet gelukt.'))}</div>`;
+}
+
+/* ═══ Clover (de pin) koppelen en producten pushen ═══
+   Fase 1: koppelen met een API-token, verbinding testen, en het assortiment naar
+   de kassa zetten. De edge-functie 'clover' praat met Clover; het token blijft
+   versleuteld op de server (nooit in de browser bewaard). */
+async function cloverCall(actie, extra){
+  const {data:{session}}=await sb.auth.getSession();
+  const res=await fetch(SUPABASE_URL+'/functions/v1/clover',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+(session?session.access_token:'')},
+    body:JSON.stringify(Object.assign({actie}, extra||{}))
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok || !uit.ok) throw new Error(uit.error||'De Clover-actie is mislukt.');
+  return uit;
+}
+function cloverFormHtml(){
+  return `<ol class="setupstappen" style="margin-bottom:16px">
+      <li>Log in op je Clover <b>Merchant Dashboard</b>.</li>
+      <li>Ga naar <b>Settings (tandwiel) → View all settings → Business Operations → API tokens</b> en maak een nieuw token met lees- én schrijfrecht op de inventory (Inventory).</li>
+      <li>Je <b>merchant-ID</b> staat in de URL van je dashboard (of onder Account &amp; Setup).</li>
+    </ol>
+    <div class="grid" style="margin-bottom:14px">
+      <div><label>Merchant-ID</label><input id="clover_mid" placeholder="bijv. ABC123XYZ" autocomplete="off"></div>
+      <div><label>API-token</label>${wwVeld('clover_token','','off')}</div>
+      <div><label>Regio</label><select id="clover_regio"><option value="eu">Europa</option><option value="us">VS / Canada</option></select></div>
+    </div>
+    <div class="acts2"><button class="btn actie" onclick="cloverKoppel(this)"><svg class="i s"><use href="#i-link"/></svg>Testen en koppelen</button></div>
+    <div id="cloverFormUit" class="muted klein" style="margin-top:12px"></div>`;
+}
+async function cloverStatus(){
+  const vak=document.getElementById('cloverVak'); if(!vak) return;
+  vak.innerHTML='Bezig met kijken…';
+  let s;
+  try{ s=await cloverCall('status',{}); }
+  catch(e){ vak.innerHTML=cloverFormHtml(); return; }
+  if(s.gekoppeld){
+    vak.innerHTML=`<div class="npbron"><div class="npbronkop"><svg class="i s"><use href="#i-check"/></svg> Verbonden met ${esc(s.winkelnaam||'je Clover-winkel')}</div>Merchant ${esc(s.merchantId||'')} · ${esc(String(s.regio||'eu').toUpperCase())} · token ····${esc(s.staart||'')}</div>
+      <div class="acts2" style="margin-top:16px">
+        <button class="btn actie" onclick="cloverPushAlle(this)"><svg class="i s"><use href="#i-upload"/></svg>Zet alle producten in Clover</button>
+        <button class="btn ghost" onclick="cloverLos(this)">Loskoppelen</button>
+      </div>
+      <div id="cloverPushUit" class="muted klein" style="margin-top:12px"></div>`;
+  } else {
+    vak.innerHTML=cloverFormHtml();
+  }
+}
+async function cloverKoppel(knop){
+  const mid=(document.getElementById('clover_mid').value||'').trim();
+  const token=(document.getElementById('clover_token').value||'').trim();
+  const regio=(document.getElementById('clover_regio')||{}).value||'eu';
+  const uit=document.getElementById('cloverFormUit');
+  if(!mid||!token){ if(uit) uit.textContent='Vul je merchant-ID en API-token in.'; return; }
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Testen…';
+  try{
+    const r=await cloverCall('koppel',{merchantId:mid, token, regio});
+    toast('Clover gekoppeld: '+((r.winkel&&r.winkel.naam)||'je winkel'), true);
+    cloverStatus();
+  }catch(e){
+    if(uit) uit.innerHTML='<span style="color:var(--red-tekst)">'+esc(e.message)+'</span>';
+    knop.disabled=false; knop.textContent=oud;
+  }
+}
+async function cloverLos(knop){
+  if(!confirm('Clover-koppeling loskoppelen? Je producten blijven gewoon in Clover staan.')) return;
+  try{ await cloverCall('los',{}); toast('Clover losgekoppeld', true); cloverStatus(); }
+  catch(e){ toast(e.message,'fout'); }
+}
+async function cloverPushAlle(knop){
+  const producten=(state.producten||[]).map(p=>({
+    id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
+    voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
+    cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
+  }));
+  if(!producten.length){ toast('Je hebt nog geen producten om te pushen.','let-op'); return; }
+  const uit=document.getElementById('cloverPushUit');
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig… ('+producten.length+')';
+  if(uit) uit.textContent='Producten naar Clover zetten, dit kan even duren…';
+  try{
+    const r=await cloverCall('pushAlle',{producten});
+    (r.resultaten||[]).forEach(res=>{ if(res.ok && res.cloverId){ const p=state.producten.find(x=>x.id===res.id); if(p){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; } } });
+    save();
+    if(uit) uit.textContent=r.gelukt+' van '+r.totaal+' producten staan nu in Clover.';
+    toast(r.gelukt+' van '+r.totaal+' in Clover', r.gelukt===r.totaal);
+  }catch(e){
+    if(uit) uit.innerHTML='<span style="color:var(--red-tekst)">'+esc(e.message)+'</span>';
+    toast(e.message,'fout');
+  }
+  knop.disabled=false; knop.textContent=oud;
 }
 
 /* Kom je terug uit Shopify, dan land je op Instellingen. Dan wil je ook meteen
