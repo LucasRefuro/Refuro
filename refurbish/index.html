@@ -3539,6 +3539,35 @@ async function testOphalen(knop){
         const vak=document.getElementById('accuAdvies'); if(vak) vak.innerHTML=accuAdviesHtml();
       } else if(String(ctr.accu)!==String(uit.accu)){ behouden++; }
     }
+    /* Systeemgegevens die de laptop zelf ophaalde (via het uitlees-bestand): specs en
+       merk/model/serienummer. Alleen lege velden invullen, nooit iets stil overschrijven
+       wat de medewerker zelf al zette. */
+    const g=uit.gegevens;
+    if(g && typeof g==='object'){
+      ctr.specs=ctr.specs||{};
+      const veldId={Processor:'c_cpu',Geheugen:'c_ram',Opslag:'c_ssd',Videokaart:'c_gpu',Scherm:'c_scherm'};
+      if(g.specs && typeof g.specs==='object'){
+        Object.keys(veldId).forEach(sl=>{
+          const w=String(g.specs[sl]||'').trim();
+          if(w && !String(ctr.specs[sl]||'').trim()){
+            ctr.specs[sl]=w; n++;
+            const inp=document.getElementById(veldId[sl]); if(inp) inp.value=w;
+          }
+        });
+      }
+      const patch={};
+      ['merk','model','serienummer'].forEach(k=>{
+        const w=String(g[k]||'').trim();
+        if(w && !String(ctr.a[k]||'').trim()){ ctr.a[k]=w; patch[k]=w; n++; }
+      });
+      if(Object.keys(patch).length){
+        patch.bijgewerkt_op=new Date().toISOString();
+        try{
+          await sb.from('refurbish_apparaten').update(patch).eq('id', ctr.a.id);
+          const A=apparaten.find(x=>x.id===ctr.a.id); if(A) Object.assign(A, patch);
+        }catch(_e){}
+      }
+    }
     ctrTeken();
     toast(n+' '+(n===1?'onderdeel':'onderdelen')+' ingevuld uit de test'
       + (behouden ? ' · '+behouden+' met de hand gezet, behouden' : ''), true);

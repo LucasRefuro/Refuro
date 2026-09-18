@@ -74,22 +74,40 @@ Deno.serve(async (req) => {
 
   // De uitslag: een object met testsleutel -> 'ok' | 'fout'. Alleen bekende
   // sleutels en geldige waarden bewaren we, zodat er niets vreemds op de rij komt.
-  const binnen = (lijf?.resultaat && typeof lijf.resultaat === "object") ? lijf.resultaat : null;
-  if (!binnen) return fout("Geen uitslag meegegeven");
-  const schoon: Record<string, string | number> = {};
+  const binnen = (lijf?.resultaat && typeof lijf.resultaat === "object") ? lijf.resultaat : {};
+  const schoon: Record<string, unknown> = {};
   for (const k of TESTEN) {
     const w = binnen[k];
     if (w === "ok" || w === "fout") schoon[k] = w;
   }
-  // De accu-conditie is een getal 0-100 (met de hand afgelezen in de instellingen).
+  // De accu-conditie is een getal 0-100.
   const accuRuw = binnen.accu;
   if (typeof accuRuw === "number" && Number.isInteger(accuRuw) && accuRuw >= 0 && accuRuw <= 100) {
     schoon.accu = accuRuw;
   }
+
+  // Systeemgegevens die de laptop zelf ophaalt (merk, model, serienummer, specs).
+  // We saneren streng: alleen bekende sleutels, korte tekst. Geen persoonsgegevens.
+  const tekst = (v: unknown, max = 80) => { const s = String(v ?? "").trim(); return s ? s.slice(0, max) : ""; };
+  const gIn = (lijf?.gegevens && typeof lijf.gegevens === "object") ? lijf.gegevens : null;
+  if (gIn) {
+    const g: Record<string, unknown> = {};
+    for (const k of ["merk", "model", "serienummer"]) { const s = tekst(gIn[k]); if (s) g[k] = s; }
+    if (gIn.specs && typeof gIn.specs === "object") {
+      const sp: Record<string, string> = {};
+      for (const k of ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm"]) { const s = tekst(gIn.specs[k]); if (s) sp[k] = s; }
+      if (Object.keys(sp).length) g.specs = sp;
+    }
+    if (Object.keys(g).length) schoon.gegevens = g;
+  }
+
   if (!Object.keys(schoon).length) return fout("Geen bruikbare uitslag");
 
+  // Samenvoegen met wat er al staat, niet vervangen: zo overleven de accu en de
+  // opgehaalde gegevens elkaar, ook als ze in aparte berichten binnenkomen.
+  const nieuw = { ...(sleutel.resultaat || {}), ...schoon };
   const { error } = await admin.from("refurbish_testcodes")
-    .update({ resultaat: schoon }).eq("code", code);
+    .update({ resultaat: nieuw }).eq("code", code);
   if (error) {
     console.error("testuitslag vastleggen", error);
     return fout("De uitslag kon niet vastgelegd worden", 500);

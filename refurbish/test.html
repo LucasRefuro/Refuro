@@ -936,26 +936,66 @@ function ps64(script){
 }
 function accuBatWindows(){
   const F=SUPABASE_URL+'/functions/v1/refurbish-test', K=SUPABASE_ANON_KEY, C=code;
-  /* String.raw zodat de backslashes (pad) en de regex letterlijk blijven; alleen
-     ${F}/${K}/${C} worden ingevuld. We lezen het accurapport met een regex, want de
-     WMI-accuklassen zijn op veel laptops leeg. */
+  /* String.raw zodat de backslashes (paden, regex) letterlijk blijven; alleen
+     ${F}/${K}/${C} worden ingevuld. Het script leest de accugezondheid (uit het
+     accurapport, want de WMI-accuklassen zijn vaak leeg) EN de systeemgegevens
+     (merk, model, serienummer, processor, geheugen, opslag, videokaart, scherm) en
+     stuurt alles in één bericht. Alles in een try, zodat een misser een veld leeg
+     laat maar de rest gewoon doorgaat. */
   const ps = String.raw`$ErrorActionPreference='SilentlyContinue'
-$rep="$env:TEMP\storvo-accu.xml"
-powercfg /batteryreport /output $rep /xml | Out-Null
-$raw = Get-Content $rep -Raw
-$md = [regex]::Match($raw,'<DesignCapacity>(\d+)</DesignCapacity>')
-$mf = [regex]::Match($raw,'<FullChargeCapacity>(\d+)</FullChargeCapacity>')
-if($md.Success -and $mf.Success -and [double]$md.Groups[1].Value -gt 0){
-  $p=[int][math]::Round(([double]$mf.Groups[1].Value / [double]$md.Groups[1].Value)*100)
-  try{ Invoke-RestMethod -Method Post -Uri '${F}' -Headers @{ apikey='${K}' } -ContentType 'application/json' -Body (@{ code='${C}'; resultaat=@{ accu=$p } } | ConvertTo-Json) | Out-Null; Write-Host ("  Accu " + $p + "% verstuurd naar Storvo."); exit 0 }
-  catch{ Write-Host ("  Versturen lukte niet. Vul " + $p + "% met de hand in Storvo."); exit 1 }
-} else { Write-Host "  Kon de accu niet automatisch lezen. Vul het percentage met de hand in Storvo."; exit 1 }`;
+$accu=$null
+try{
+  $rep="$env:TEMP\storvo-accu.xml"
+  powercfg /batteryreport /output $rep /xml | Out-Null
+  $raw = Get-Content $rep -Raw
+  $md = [regex]::Match($raw,'<DesignCapacity>(\d+)</DesignCapacity>')
+  $mf = [regex]::Match($raw,'<FullChargeCapacity>(\d+)</FullChargeCapacity>')
+  if($md.Success -and $mf.Success -and [double]$md.Groups[1].Value -gt 0){ $accu=[int][math]::Round(([double]$mf.Groups[1].Value/[double]$md.Groups[1].Value)*100) }
+}catch{}
+$g=$null
+try{
+  $cs = Get-CimInstance Win32_ComputerSystem
+  $merk = ($cs.Manufacturer -replace 'Inc\.?','' -replace 'Corporation','' -replace 'Co\.,? Ltd\.?','' -replace 'Computer','').Trim()
+  if($merk -match '^LENOVO$'){ $merk='Lenovo' }
+  $model = (Get-CimInstance Win32_ComputerSystemProduct).Version
+  if(-not $model -or $model -match 'To be filled|System Product|Default string|O\.E\.M'){ $model = $cs.Model }
+  $model = "$model".Trim()
+  if($merk -and $model.ToLower().StartsWith(($merk.ToLower()+' '))){ $model = $model.Substring($merk.Length).Trim() }
+  $serie = (Get-CimInstance Win32_BIOS).SerialNumber
+  $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
+  if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace ' CPU','' -replace '@.*$','').Trim() }
+  $ram = [int][math]::Round($cs.TotalPhysicalMemory/1GB)
+  $totGB=0; $ssd=$false
+  try{ foreach($d in (Get-PhysicalDisk)){ $totGB += [int][math]::Round($d.Size/1GB); if($d.MediaType -eq 'SSD' -or $d.BusType -eq 'NVMe'){ $ssd=$true } } }catch{}
+  if($totGB -eq 0){ try{ foreach($d in (Get-CimInstance Win32_DiskDrive)){ $totGB += [int][math]::Round($d.Size/1GB) } }catch{} }
+  $opslag=''
+  if($totGB -gt 0){ $opslag = "$totGB GB"; if($ssd){ $opslag = "$opslag SSD" } }
+  $gpu = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -and $_.Name -notmatch 'Microsoft Basic|Remote|Parsec' } | Select-Object -Last 1 -ExpandProperty Name
+  $inch=''
+  try{ $mon = Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBasicDisplayParams | Select-Object -First 1
+       if($mon.MaxHorizontalImageSize -gt 0){ $inch=[math]::Round([math]::Sqrt([math]::Pow($mon.MaxHorizontalImageSize,2)+[math]::Pow($mon.MaxVerticalImageSize,2))/2.54,1) } }catch{}
+  $scherm=''
+  $res = Get-CimInstance Win32_VideoController | Where-Object { $_.CurrentHorizontalResolution } | Select-Object -First 1
+  if($res){ $h=[int]$res.CurrentVerticalResolution
+    if($h -ge 2000){$lab='4K'} elseif($h -ge 1400){$lab='QHD'} elseif($h -ge 1080){$lab='Full HD'} elseif($h -ge 700){$lab='HD'} else {$lab="$($res.CurrentHorizontalResolution)x$h"}
+    if($inch){ $scherm="$inch inch $lab" } else { $scherm=$lab }
+  } elseif($inch){ $scherm="$inch inch" }
+  $g = @{ merk=$merk; model=$model; serienummer=$serie; specs=@{ Processor=$cpu; Geheugen="$ram GB"; Opslag=$opslag; Videokaart=$gpu; Scherm=$scherm } }
+}catch{}
+$body=@{ code='${C}' }
+if($accu -ne $null){ $body.resultaat=@{ accu=$accu } }
+if($g){ $body.gegevens=$g }
+try{
+  Invoke-RestMethod -Method Post -Uri '${F}' -Headers @{ apikey='${K}' } -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6) | Out-Null
+  Write-Host "  Klaar. De gegevens staan in Storvo."
+  exit 0
+}catch{ Write-Host "  Versturen lukte niet. Vul met de hand in Storvo."; exit 1 }`;
   /* Na een geslaagde meting (exit 0) ruimt het bestand zichzelf op: `(goto) 2>nul &
      del "%~f0"` verwijdert het draaiende .bat-bestand. Bij een fout blijft het staan
      zodat je het opnieuw kunt draaien. Zo blijft er geen bestandje met de code liggen. */
   return "@echo off\r\n"+
-    "title Storvo accu meten\r\n"+
-    "echo Bezig met de accu meten...\r\n"+
+    "title Storvo laptop uitlezen\r\n"+
+    "echo Bezig met uitlezen...\r\n"+
     "powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand "+ps64(ps)+"\r\n"+
     "if %errorlevel%==0 (\r\n"+
     "  echo Klaar. Dit venster sluit vanzelf.\r\n"+
@@ -973,10 +1013,16 @@ function accuStartPoll(){
     if(mijnStap!==stapId){ clearInterval(accuPoll); accuPoll=null; return; }
     try{
       const j=await praat({actie:'status'});
-      if(j && j.ok && j.resultaat && typeof j.resultaat.accu==='number'){
-        accuWaarde=String(j.resultaat.accu);
-        const inp=document.getElementById('accuveldL'); if(inp) inp.value=accuWaarde;
-        const st=document.getElementById('astatus'); if(st){ st.className='astatus klaar'; st.hidden=false; st.textContent='Accu ontvangen: '+j.resultaat.accu+'%'; }
+      const r=j&&j.ok&&j.resultaat;
+      const heeftAccu = r && typeof r.accu==='number';
+      const heeftGeg = r && r.gegevens && typeof r.gegevens==='object';
+      if(heeftAccu || heeftGeg){
+        if(heeftAccu){ accuWaarde=String(r.accu); const inp=document.getElementById('accuveldL'); if(inp) inp.value=accuWaarde; }
+        const st=document.getElementById('astatus');
+        if(st){ st.className='astatus klaar'; st.hidden=false;
+          st.textContent = heeftAccu
+            ? ('Accu '+r.accu+'%'+(heeftGeg?' en specs':'')+' opgehaald. Haal de uitslag op de pc op.')
+            : 'Specs opgehaald. Haal de uitslag op de pc op.'; }
         clearInterval(accuPoll); accuPoll=null;
       }
     }catch(e){}
@@ -999,9 +1045,9 @@ function startAccu(){
     let boven;
     if(isWin){
       boven=
-        '<p class="muted klein" style="margin-bottom:12px">Klik de knop. Er wordt een klein bestandje gedownload; dubbelklik het. Het percentage komt hier vanzelf en daarna ruimt het bestand zichzelf op.</p>'+
-        '<button class="btn actie" onclick="accuDownloadWin()">Meet de accu automatisch</button>'+
-        '<div class="astatus wacht" id="astatus" hidden><span class="aspin"></span>Wachten op de meting van de laptop</div>'+
+        '<p class="muted klein" style="margin-bottom:12px">Klik de knop. Er wordt een klein bestandje gedownload; dubbelklik het. Het leest in één keer de <b>accu én de specs</b> uit (processor, geheugen, opslag, videokaart, scherm, plus merk, model en serienummer) en zet ze in Storvo. Daarna ruimt het bestand zichzelf op.</p>'+
+        '<button class="btn actie" onclick="accuDownloadWin()">Lees de accu en specs uit</button>'+
+        '<div class="astatus wacht" id="astatus" hidden><span class="aspin"></span>Wachten op de laptop</div>'+
         '<details class="poortlees" style="margin-top:12px"><summary>Blokkeert Edge het bestand?</summary>'+
           '<p class="muted klein" style="margin:10px 0 12px">Edge vindt een .bat-bestand van internet gevaarlijk. Het is veilig: het leest alleen de accu en stuurt het percentage. Zo laat je het door:</p>'+
           '<div class="astap"><div class="astapnr">1</div><div>Klik rechtsboven op het <b>download-pijltje</b>. Je ziet <b>Storvo-accu-meten.bat</b> met een waarschuwing.</div></div>'+
