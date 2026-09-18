@@ -1682,7 +1682,7 @@ function labelHtml(a){
        monitor zijn eigen specs op het label krijgt en niet de laptop-velden. */
     const p=CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop;
     regels = [ a.merk ? a.merk + (a.categorie?' / '+a.categorie:'') : a.categorie ]
-      .concat((p.specVelden||[]).map(v=>specs[v.sleutel]?v.sleutel+': '+specs[v.sleutel]:null))
+      .concat((p.specVelden||[]).map(v=>specs[v.sleutel]?(/windows/i.test(v.sleutel)?String(specs[v.sleutel]):v.sleutel+': '+specs[v.sleutel]):null))
       .concat([ (()=>{ let x=a.nieuwe_accu?'Accu: nieuw (100%)':(a.accu?'Accu: '+a.accu+'%':null); if(a.accu_notitie) x=(x?x+' · ':'Accu: ')+a.accu_notitie; return x; })() ])
       .filter(Boolean);
     const hw=(typeof hardwareVan==='function'?hardwareVan(a):null)||{};
@@ -1756,14 +1756,18 @@ function labelRegels(a){
   // De echte specs (processor, geheugen, opslag, scherm...) uit het categorie-profiel; kleur,
   // imei en serienummer laten we weg want die horen niet op een verkoop-sticker. Tot 6 regels,
   // zodat het label goed gevuld is maar niet overvol.
-  const regels=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien/i.test(v.sleutel))
+  const specRegels=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien|windows/i.test(v.sleutel))
     .map(v=>v.sleutel+': '+specs[v.sleutel]);
+  /* Accu, besturingssysteem en een eventuele notitie horen er altijd op; die zetten
+     we apart en garanderen we, de specs vullen de rest van het label op. */
+  const vast=[];
   let accu = a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Accu: '+a.accu+'%' : null);
   if(a.accu_notitie) accu = (accu?accu+' · ':'Accu: ')+a.accu_notitie;
-  if(accu) regels.push(accu);
+  if(accu) vast.push(accu);
   const os = specs.Windows || specs.Besturingssysteem || specs.OS;
-  if(os && !regels.some(r=>r.includes(String(os)))) regels.push(String(os));
-  return regels.slice(0,6);
+  if(os) vast.push(String(os));
+  if(a.notitie) vast.push(a.notitie);
+  return specRegels.slice(0, Math.max(3, 8-vast.length)).concat(vast);
 }
 async function deviceLabelPng(a){
   await laadScript('/app/qrcode.min.js');
@@ -1885,11 +1889,13 @@ function prijskaartHtml(bron){
      specs op het kaartje krijgt. De bullets tonen "Sleutel: waarde"; de accu en
      het besturingssysteem komen er los bij. */
   const p=CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop;
-  const bullets=(p.specVelden||[]).filter(v=>specs[v.sleutel]).map(v=>v.sleutel+': '+specs[v.sleutel]);
-  const accu = a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Batterijconditie: '+a.accu+'%' : null);
+  const bullets=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/windows/i.test(v.sleutel)).map(v=>v.sleutel+': '+specs[v.sleutel]);
+  let accu = a.nieuwe_accu ? 'Accu: nieuw (100%)' : (a.accu ? 'Batterijconditie: '+a.accu+'%' : null);
+  if(a.accu_notitie) accu = (accu?accu+' · ':'Batterijconditie: ')+a.accu_notitie;
   if(accu) bullets.push(accu);
   const os = specs.Windows || specs.Besturingssysteem || specs.OS;
-  if(os) bullets.push(String(os));
+  if(os && !bullets.some(b=>b.includes(String(os)))) bullets.push(String(os));
+  if(a.notitie) bullets.push(a.notitie);
   /* De samenvattingsregel onder de titel: een paar kernspecs kort, zonder de
      minder relevante velden zoals kleur of imei. */
   const sub=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien/i.test(v.sleutel))

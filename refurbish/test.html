@@ -998,7 +998,16 @@ try{
   if($mpn -match $gen){ $mpn='' }
   $cpu = "$((Get-CimInstance Win32_Processor | Select-Object -First 1).Name)"
   if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace '\(tm\)','' -replace ' CPU','' -replace '@.*$','' -replace '\s+',' ').Trim() }
-  $ram = [int][math]::Round($cs.TotalPhysicalMemory/1GB)
+  # GEHEUGEN: de echt geplaatste modules optellen (Win32_PhysicalMemory), niet het
+  # door Windows 'bruikbare' geheugen: dat is minder omdat de videokaart een stuk
+  # afsnoept, waardoor 8 GB als 7 kan tonen. Daarna afronden naar een gangbare maat.
+  $ramB = 0
+  try{ foreach($m in (Get-CimInstance Win32_PhysicalMemory)){ $ramB += [double]$m.Capacity } }catch{}
+  if($ramB -le 0){ $ramB = [double]$cs.TotalPhysicalMemory }
+  $ram = [int][math]::Round($ramB/1GB)
+  $rmaten=@(2,3,4,6,8,12,16,24,32,48,64); $rbest=$ram; $rd=999
+  foreach($rm in $rmaten){ $d=[math]::Abs($rm-$ram); if($d -lt $rd){ $rd=$d; $rbest=$rm } }
+  if($rd -le 1){ $ram=$rbest }
   # OPSLAG: totale grootte in verkoop-GB (bytes/1e9, niet GiB), plus de soort van de
   # hoofdschijf: HDD, SATA SSD of NVMe SSD. NVMe is altijd een SSD.
   $bytes=0; $soort=''
