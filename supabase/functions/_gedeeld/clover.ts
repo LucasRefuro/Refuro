@@ -149,13 +149,56 @@ export function cloverIndex(items: any[]) {
   return { opCode, opSku };
 }
 
+/* De categorieën in Clover ophalen (voor de indeling op de kassa). Net als items
+   pagineert Clover; we halen alles op zodat we op naam kunnen matchen en niet
+   dubbel aanmaken. */
+export async function cloverAlleCategorien(basis: string, mId: string, token: string) {
+  const cats: any[] = [];
+  let offset = 0;
+  for (let ronde = 0; ronde < 20; ronde++) {
+    const d = await cloverFetch(basis, mId, token, `/categories?limit=1000&offset=${offset}`);
+    const blok = (d && d.elements) ? d.elements : [];
+    for (const c of blok) cats.push(c);
+    if (blok.length < 1000) break;
+    offset += 1000;
+  }
+  return cats;
+}
+
+/* Naam (genormaliseerd) -> categorie-id, zodat de push op naam kan matchen en een
+   bestaande categorie hergebruikt in plaats van dubbel aanmaakt. */
+export function cloverCategorieIndex(cats: any[]) {
+  const opNaam: Record<string, string> = {};
+  for (const c of cats) {
+    if (c && c.id && c.name) opNaam[String(c.name).trim().toLowerCase()] = c.id;
+  }
+  return opNaam;
+}
+
+/* Een categorie aanmaken in Clover; geeft de nieuwe id terug. */
+export async function cloverMaakCategorie(basis: string, mId: string, token: string, naam: string) {
+  const c = await cloverFetch(basis, mId, token, `/categories`, {
+    method: "POST", body: JSON.stringify({ name: String(naam).slice(0, 127) }),
+  });
+  return c?.id ? String(c.id) : null;
+}
+
+/* Een item aan een categorie koppelen. Clover behandelt (categorie,item) als een
+   set, dus dit nog eens sturen kan geen kwaad (bij een herhaalde push). */
+export async function cloverKoppelItemCat(basis: string, mId: string, token: string, itemId: string, catId: string) {
+  await cloverFetch(basis, mId, token, `/category_items`, {
+    method: "POST",
+    body: JSON.stringify({ elements: [{ category: { id: catId }, item: { id: itemId } }] }),
+  });
+}
+
 /* Eén product naar een Clover-item. Bestaat er al een item met deze barcode
    (code) of sku, dan werken we dat bij; anders maken we een nieuw item. Zo kun je
    de push zo vaak draaien als je wilt zonder dubbele items. Prijs in centen,
    priceType FIXED. Voorraad zetten we los via item_stocks. */
 export async function cloverZetItem(
   basis: string, mId: string, token: string,
-  p: { naam: string; verkoop: unknown; barcode?: string | null; sku?: string | null; voorraad?: unknown; cloverId?: string | null },
+  p: { naam: string; verkoop: unknown; barcode?: string | null; sku?: string | null; voorraad?: unknown; cloverId?: string | null; categorieId?: string | null },
 ) {
   const lijf: Record<string, unknown> = {
     name: String(p.naam || "").slice(0, 127) || "Product",
@@ -185,6 +228,12 @@ export async function cloverZetItem(
         method: "POST", body: JSON.stringify({ quantity: Math.max(0, Math.floor(Number(p.voorraad) || 0)) }),
       });
     } catch (_e) { /* voorraad is bijzaak; item staat er */ }
+  }
+
+  // In de juiste categorie op de kassa zetten. Een fout hierop mag de push niet
+  // laten klappen; het item staat er dan al, alleen zonder indeling.
+  if (item?.id && p.categorieId) {
+    try { await cloverKoppelItemCat(basis, mId, token, item.id, String(p.categorieId)); } catch (_e) { /* indeling is bijzaak */ }
   }
   return item;
 }

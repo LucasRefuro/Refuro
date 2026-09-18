@@ -10601,6 +10601,7 @@ async function cloverPushEen(p){
     const r=await cloverCall('push',{producten:[{
       id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
       voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
+      categorie:(typeof catNaam==='function'?catNaam(p.cat):''),
       cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
     }]});
     const res=(r.resultaten||[])[0];
@@ -10611,6 +10612,7 @@ async function cloverPushAlle(knop){
   const producten=(state.producten||[]).map(p=>({
     id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
     voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
+    categorie:(typeof catNaam==='function'?catNaam(p.cat):''),
     cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
   }));
   if(!producten.length){ toast('Je hebt nog geen producten om te pushen.','let-op'); return; }

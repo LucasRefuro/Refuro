@@ -12,6 +12,7 @@
 import {
   admin, versleutel, ontsleutel, wieBelt, fout, cors,
   cloverBasis, cloverWinkel, cloverZetItem, cloverAlleItems, cloverIndex, cloverFetch,
+  cloverAlleCategorien, cloverCategorieIndex, cloverMaakCategorie,
 } from "../_gedeeld/clover.ts";
 
 function ok(data: Record<string, unknown> = {}) {
@@ -114,6 +115,22 @@ Deno.serve(async (req) => {
         opCode = idx.opCode; opSku = idx.opSku; matchKon = true;
       } catch (_e) { /* zonder matching verder */ }
 
+      /* De categorieën uit Storvo spiegelen naar Clover: op naam matchen, en een
+         ontbrekende categorie eenmalig aanmaken (gecachet, dus niet per product).
+         Lukt het ophalen niet, dan pushen we zonder indeling. */
+      let catOpNaam: Record<string, string> = {};
+      try { catOpNaam = cloverCategorieIndex(await cloverAlleCategorien(basis, k.domein, k.token)); } catch (_e) { /* zonder categorieën verder */ }
+      async function zorgCategorie(naam: string): Promise<string | null> {
+        const sleutel = String(naam || "").trim().toLowerCase();
+        if (!sleutel) return null;
+        if (catOpNaam[sleutel]) return catOpNaam[sleutel];
+        try {
+          const id = await cloverMaakCategorie(basis, k.domein, k.token, String(naam).trim());
+          if (id) { catOpNaam[sleutel] = id; return id; }
+        } catch (_e) { /* categorie kon niet worden aangemaakt */ }
+        return null;
+      }
+
       const resultaten: any[] = [];
       let gelukt = 0, nieuw = 0, bijgewerkt = 0;
       for (const p of producten) {
@@ -122,9 +139,10 @@ Deno.serve(async (req) => {
             || (p.barcode && opCode[String(p.barcode)])
             || (p.sku && opSku[String(p.sku)])
             || null;
+          const categorieId = p.categorie ? await zorgCategorie(String(p.categorie)) : null;
           const item = await cloverZetItem(basis, k.domein, k.token, {
             naam: p.naam, verkoop: p.verkoop, barcode: p.barcode, sku: p.sku,
-            voorraad: p.voorraad, cloverId: gevonden,
+            voorraad: p.voorraad, cloverId: gevonden, categorieId,
           });
           if (item?.id) { gelukt++; if (gevonden) bijgewerkt++; else nieuw++; }
           resultaten.push({ id: p.id, cloverId: item?.id || null, ok: true, bijgewerkt: !!gevonden });
