@@ -947,10 +947,24 @@ $md = [regex]::Match($raw,'<DesignCapacity>(\d+)</DesignCapacity>')
 $mf = [regex]::Match($raw,'<FullChargeCapacity>(\d+)</FullChargeCapacity>')
 if($md.Success -and $mf.Success -and [double]$md.Groups[1].Value -gt 0){
   $p=[int][math]::Round(([double]$mf.Groups[1].Value / [double]$md.Groups[1].Value)*100)
-  try{ Invoke-RestMethod -Method Post -Uri '${F}' -Headers @{ apikey='${K}' } -ContentType 'application/json' -Body (@{ code='${C}'; resultaat=@{ accu=$p } } | ConvertTo-Json) | Out-Null; Write-Host ("  Accu " + $p + "% verstuurd naar Storvo. Je kunt dit venster sluiten.") }
-  catch{ Write-Host ("  Versturen lukte niet. Vul " + $p + "% met de hand in Storvo.") }
-} else { Write-Host "  Kon de accu niet automatisch lezen. Vul het percentage met de hand in Storvo." }`;
-  return "@echo off\r\ntitle Storvo accu meten\r\necho Bezig met de accu meten...\r\npowershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand "+ps64(ps)+"\r\necho.\r\npause\r\n";
+  try{ Invoke-RestMethod -Method Post -Uri '${F}' -Headers @{ apikey='${K}' } -ContentType 'application/json' -Body (@{ code='${C}'; resultaat=@{ accu=$p } } | ConvertTo-Json) | Out-Null; Write-Host ("  Accu " + $p + "% verstuurd naar Storvo."); exit 0 }
+  catch{ Write-Host ("  Versturen lukte niet. Vul " + $p + "% met de hand in Storvo."); exit 1 }
+} else { Write-Host "  Kon de accu niet automatisch lezen. Vul het percentage met de hand in Storvo."; exit 1 }`;
+  /* Na een geslaagde meting (exit 0) ruimt het bestand zichzelf op: `(goto) 2>nul &
+     del "%~f0"` verwijdert het draaiende .bat-bestand. Bij een fout blijft het staan
+     zodat je het opnieuw kunt draaien. Zo blijft er geen bestandje met de code liggen. */
+  return "@echo off\r\n"+
+    "title Storvo accu meten\r\n"+
+    "echo Bezig met de accu meten...\r\n"+
+    "powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand "+ps64(ps)+"\r\n"+
+    "if %errorlevel%==0 (\r\n"+
+    "  echo Klaar. Dit venster sluit vanzelf.\r\n"+
+    "  timeout /t 2 >nul\r\n"+
+    "  (goto) 2>nul & del \"%~f0\"\r\n"+
+    ") else (\r\n"+
+    "  echo.\r\n"+
+    "  pause\r\n"+
+    ")\r\n";
 }
 function accuStartPoll(){
   if(accuPoll) return;
@@ -985,9 +999,12 @@ function startAccu(){
     let boven;
     if(isWin){
       boven=
-        '<p class="muted klein" style="margin-bottom:12px">Klik de knop. Er wordt een klein bestandje gedownload. Dubbelklik het en klik zo nodig op Uitvoeren. Het percentage komt hier vanzelf. Geen terminal nodig.</p>'+
+        '<p class="muted klein" style="margin-bottom:12px">Klik de knop. Er wordt een klein bestandje gedownload; dubbelklik het. Het percentage komt hier vanzelf en daarna ruimt het bestand zichzelf op.</p>'+
         '<button class="btn actie" onclick="accuDownloadWin()">Meet de accu automatisch</button>'+
         '<div class="astatus wacht" id="astatus" hidden><span class="aspin"></span>Wachten op de meting van de laptop</div>'+
+        '<details class="poortlees" style="margin-top:12px"><summary>Blokkeert Edge het bestand?</summary>'+
+          '<p class="muted klein" style="margin:10px 0 0">Edge kan een .bat-bestand als gevaarlijk markeren. Klik in de downloadbalk op de drie puntjes bij het bestand en kies <b>Behouden</b>. Waarschuwt Windows daarna nog? Kies <b>Meer info</b> en <b>Toch uitvoeren</b>. Lukt dat niet, vul dan hieronder met de hand in.</p>'+
+        '</details>'+
         '<p class="muted klein" style="margin:16px 0 6px">Of vul met de hand in:</p>';
     } else if(isMac){
       boven=
