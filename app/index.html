@@ -10616,26 +10616,45 @@ async function cloverPushEen(p){
     if(res && res.ok && res.cloverId){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; save(); }
   }catch(e){ /* stil: de sync-knop vangt het later op */ }
 }
+/* In blokjes pushen, niet alles in één keer. Elke Clover-call doet per product 2 tot 3
+   trage verzoeken (item, voorraad, categorie); alles ineens loopt bij veel producten
+   tegen de tijdslimiet van de edge function en stopt dan halverwege (het beruchte
+   "maar 10 producten"). Per blok bewaren we de gekoppelde id's, dus onderbreek je hem,
+   dan gaat hij bij de volgende druk verder waar hij was. */
 async function cloverPushAlle(knop){
-  const producten=(state.producten||[]).map(p=>({
+  const alle=(state.producten||[]).map(p=>({
     id:p.id, naam:p.naam, verkoop:p.verkoop, barcode:p.barcode, sku:p.sku,
     voorraad:(typeof inWinkel==='function'?inWinkel(p):p.voorraad),
     categorie:cloverCategorieNaam(p),
     cloverId:(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id)||null
   }));
-  if(!producten.length){ toast('Je hebt nog geen producten om te pushen.','let-op'); return; }
+  if(!alle.length){ toast('Je hebt nog geen producten om te pushen.','let-op'); return; }
   const uit=document.getElementById('cloverPushUit');
-  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig… ('+producten.length+')';
-  if(uit) uit.textContent='Producten naar Clover zetten, dit kan even duren…';
+  const oud=knop.textContent; knop.disabled=true;
+  const BLOK=15;
+  let gelukt=0, nieuw=0, bijgewerkt=0, mislukt=0, matchKon=true;
   try{
-    const r=await cloverCall('pushAlle',{producten});
-    (r.resultaten||[]).forEach(res=>{ if(res.ok && res.cloverId){ const p=state.producten.find(x=>x.id===res.id); if(p){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; } } });
-    save();
-    const deel=[]; if(r.nieuw) deel.push(r.nieuw+' nieuw'); if(r.bijgewerkt) deel.push(r.bijgewerkt+' bijgewerkt');
-    if(uit) uit.textContent=r.gelukt+' van '+r.totaal+' producten in Clover'+(deel.length?' ('+deel.join(', ')+')':'')+'.'+(r.matchKon===false?' Let op: bestaande items konden niet gecheckt worden.':'');
-    toast(r.gelukt+' van '+r.totaal+' in Clover', r.gelukt===r.totaal);
+    for(let i=0;i<alle.length;i+=BLOK){
+      const tot=Math.min(i+BLOK, alle.length);
+      knop.textContent='Bezig… ('+tot+'/'+alle.length+')';
+      if(uit) uit.textContent='Producten naar Clover zetten… '+tot+' van '+alle.length;
+      const r=await cloverCall('pushAlle',{producten:alle.slice(i, i+BLOK)});
+      (r.resultaten||[]).forEach(res=>{
+        if(res.ok && res.cloverId){ const p=state.producten.find(x=>x.id===res.id); if(p){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; } }
+        else if(res.ok===false) mislukt++;
+      });
+      gelukt+=r.gelukt||0; nieuw+=r.nieuw||0; bijgewerkt+=r.bijgewerkt||0;
+      if(r.matchKon===false) matchKon=false;
+      save();   /* na elk blok bewaren, zodat een onderbreking niet alles kwijt is */
+    }
+    const deel=[]; if(nieuw) deel.push(nieuw+' nieuw'); if(bijgewerkt) deel.push(bijgewerkt+' bijgewerkt');
+    if(uit) uit.textContent=gelukt+' van '+alle.length+' producten in Clover'+(deel.length?' ('+deel.join(', ')+')':'')
+      +(mislukt?'. '+mislukt+' mislukt, druk de knop nog eens.':'.')
+      +(matchKon===false?' Let op: bestaande items konden niet gecheckt worden.':'');
+    toast(gelukt+' van '+alle.length+' in Clover', gelukt===alle.length);
   }catch(e){
-    if(uit) uit.innerHTML='<span style="color:var(--red-tekst)">'+esc(e.message)+'</span>';
+    save();
+    if(uit) uit.innerHTML='<span style="color:var(--red-tekst)">Gestopt bij '+gelukt+' van '+alle.length+': '+esc(e.message)+' Druk de knop nog eens om verder te gaan.</span>';
     toast(e.message,'fout');
   }
   knop.disabled=false; knop.textContent=oud;

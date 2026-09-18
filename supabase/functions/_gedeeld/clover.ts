@@ -87,29 +87,35 @@ export function centen(bedrag: unknown) {
 export async function cloverFetch(
   basis: string, mId: string, token: string, pad: string, opties: RequestInit = {},
 ) {
-  const res = await fetch(`${basis}/v3/merchants/${mId}${pad}`, {
-    ...opties,
-    headers: {
-      "Authorization": "Bearer " + token,
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...(opties.headers || {}),
-    },
-  });
-  const tekst = await res.text();
-  let data: any = {};
-  try { data = tekst ? JSON.parse(tekst) : {}; } catch { /* leeg antwoord mag */ }
+  // Clover geeft bij een burst een 429. In plaats van meteen falen wachten we kort
+  // en proberen we het een paar keer opnieuw; de body is een string, dus die kunnen
+  // we veilig hergebruiken. Zo overleeft een blok-push een tijdelijke rem.
+  for (let poging = 0; ; poging++) {
+    const res = await fetch(`${basis}/v3/merchants/${mId}${pad}`, {
+      ...opties,
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        ...(opties.headers || {}),
+      },
+    });
+    const tekst = await res.text();
+    let data: any = {};
+    try { data = tekst ? JSON.parse(tekst) : {}; } catch { /* leeg antwoord mag */ }
 
-  if (res.status === 401 || res.status === 403) {
-    throw new Error("Clover accepteert het token niet. Controleer je API-token, het merchant-ID en of je op het juiste dashboard zit (EU of US).");
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("Clover accepteert het token niet. Controleer je API-token, het merchant-ID en of je op het juiste dashboard zit (EU of US).");
+    }
+    if (res.status === 429) {
+      if (poging < 4) { await new Promise((r) => setTimeout(r, 500 * (poging + 1))); continue; }
+      throw new Error("Clover vraagt om even te wachten. Probeer het over een halve minuut nog eens.");
+    }
+    if (!res.ok) {
+      throw new Error(data?.message || data?.error || ("Clover gaf status " + res.status));
+    }
+    return data;
   }
-  if (res.status === 429) {
-    throw new Error("Clover vraagt om even te wachten. Probeer het over een halve minuut nog eens.");
-  }
-  if (!res.ok) {
-    throw new Error(data?.message || data?.error || ("Clover gaf status " + res.status));
-  }
-  return data;
 }
 
 /* De winkel opzoeken; meteen de controle dat token + merchant-ID kloppen. Geeft
