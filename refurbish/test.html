@@ -108,6 +108,19 @@ h1{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; letter-spacin
 .aspin{display:inline-block; width:14px; height:14px; border:2.5px solid var(--groen); border-top-color:transparent; border-radius:50%; animation:adraai .8s linear infinite; vertical-align:-2px; margin-right:8px;}
 @keyframes adraai{to{transform:rotate(360deg);}}
 
+/* aansluitingen / poorten */
+.poortlijst{display:flex; flex-direction:column; gap:8px;}
+.poortrij{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--border);}
+.poortnaam{flex:1 1 130px; font-weight:600; font-size:15px; display:flex; align-items:center; gap:8px;}
+.poortauto{background:var(--green-soft); color:var(--green-tekst); font-size:11.5px; font-weight:700; border-radius:var(--pil); padding:2px 8px;}
+.poortknoppen{display:flex; gap:6px;}
+.poortknop{padding:8px 11px; border:1.5px solid var(--border); background:var(--card); border-radius:12px; font-family:inherit; font-size:13px; font-weight:700; color:var(--muted); cursor:pointer;}
+.poortknop.aan[data-w="ok"]{background:var(--green-tekst); border-color:var(--green-tekst); color:#fff;}
+.poortknop.aan[data-w="fout"]{background:var(--red-tekst); border-color:var(--red-tekst); color:#fff;}
+.poortknop.aan[data-w="nvt"]{background:var(--muted-l); border-color:var(--muted-l); color:#fff;}
+.poortlees{margin-top:14px; background:var(--lblauw); border-radius:14px; padding:12px 14px;}
+.poortlees summary{font-weight:700; cursor:pointer; color:var(--groen);}
+
 #toasts{position:fixed; left:16px; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:200;}
 .toast{background:var(--tekst); color:#fff; padding:13px 18px; border-radius:14px; font-size:14.5px;}
 .toast.ok{background:var(--green-tekst);} .toast.fout{background:var(--red-tekst);}
@@ -249,7 +262,8 @@ const ALLE_TESTS=[
   {id:'touchpad', naam:'Touchpad', uit:'Beweeg de cursor en teken met het touchpad. Test ook de linker- en rechterknop en scrollen.', soorten:['Laptop'], vol:true, start:startTouchpad},
   {id:'scherm', naam:'Beeldscherm', uit:'Het scherm loopt door de kleuren. Zoek dode pixels, vlekken of strepen.', soorten:['Laptop'], vol:true, start:startScherm},
   {id:'luidspreker', naam:'Luidsprekers', uit:'Zet het volume omhoog en druk op de knop. Hoor je hem helder, links en rechts, zonder kraken?', soorten:['Laptop'], start:startLuidspreker},
-  {id:'camera', naam:'Webcam', uit:'Kijk of de webcam goed en scherp beeld geeft.', soorten:['Laptop'], start:()=>startCamera('user')}
+  {id:'camera', naam:'Webcam', uit:'Kijk of de webcam goed en scherp beeld geeft.', soorten:['Laptop'], start:()=>startCamera('user')},
+  {id:'poorten', naam:'Aansluitingen', uit:'Sluit je teststick, de lader en een scherm aan en vink af. Lader en extern scherm gaan vanzelf.', soorten:['Laptop'], geenOordeel:true, start:startPoorten}
 ];
 let TESTS=ALLE_TESTS.slice();
 let nu=0;
@@ -345,7 +359,7 @@ async function versturen(){
     document.getElementById('watIsHet').textContent='';
     const naam={touch:'Touchscreen',scherm:'Beeldscherm',luidspreker:'Luidspreker',oorspeaker:'Oorspeaker',microfoon:'Microfoon',
       camera_achter:'Camera achter',camera_voor:'Camera voor',camera:'Webcam',toetsenbord:'Toetsenbord',touchpad:'Touchpad',
-      trilfunctie:'Trilfunctie',sensoren:'Sensoren',accu:'Accu-conditie'};
+      poorten:'Aansluitingen',trilfunctie:'Trilfunctie',sensoren:'Sensoren',accu:'Accu-conditie'};
     document.getElementById('uitslagLijst').innerHTML=TESTS.filter(t=>resultaat[t.id]!=null).map(t=>{
       const r=resultaat[t.id];
       const isAccu=t.id==='accu' && typeof r==='number';
@@ -749,6 +763,106 @@ function startSensoren(){
   opruimer=()=>{ loopt=false; window.removeEventListener('deviceorientation', onOri); };
 }
 
+/* ---- aansluitingen / poorten ----
+   Een browser ziet niet welke fysieke poort werkt, dus dit is deels met de hand. Wat
+   de browser WEL vanzelf ziet, kleuren we automatisch: de lader (de accu gaat laden)
+   en een extern scherm (er komt een tweede beeldscherm bij). Voor de USB- en HDMI-
+   poorten steek je je teststick in en tik je Werkt of Niet goed. Met het uitlees-
+   commando kun je zeker weten dat een USB-poort echt data doorgeeft. */
+const POORTEN=[
+  {id:'voeding',  naam:'Voeding (lader / USB-C)'},
+  {id:'beeld',    naam:'Beeld uit (HDMI / USB-C)'},
+  {id:'usba',     naam:'USB-A poorten'},
+  {id:'usbc',     naam:'USB-C (data)'},
+  {id:'audio',    naam:'Koptelefoon / audio'},
+  {id:'sd',       naam:'SD-kaart'},
+  {id:'ethernet', naam:'Netwerk (ethernet)'}
+];
+const poortStatus={};
+let poortBat=null, poortBatFn=null, poortScherm=null, poortOs='win';
+function poortRij(p){
+  return `<div class="poortrij">`+
+    `<div class="poortnaam">${p.naam}<span class="poortauto" id="pa_${p.id}" hidden>vanzelf</span></div>`+
+    `<div class="poortknoppen">`+
+      `<button class="poortknop" data-p="${p.id}" data-w="ok" onclick="poortZet('${p.id}','ok')">Werkt</button>`+
+      `<button class="poortknop" data-p="${p.id}" data-w="fout" onclick="poortZet('${p.id}','fout')">Niet goed</button>`+
+      `<button class="poortknop" data-p="${p.id}" data-w="nvt" onclick="poortZet('${p.id}','nvt')">n.v.t.</button>`+
+    `</div></div>`;
+}
+function poortVerf(id){
+  document.querySelectorAll(`.poortknop[data-p="${id}"]`).forEach(b=>b.classList.toggle('aan', b.dataset.w===poortStatus[id]));
+}
+function poortZet(id, w){ poortStatus[id]=w; poortVerf(id); }
+function poortAuto(id){
+  if(poortStatus[id]==='fout') return;   // een met de hand gezet defect niet overschrijven
+  poortStatus[id]='ok'; poortVerf(id);
+  const b=document.getElementById('pa_'+id); if(b) b.hidden=false;
+}
+function poortCmd(os){
+  if(os==='win') return `Get-PnpDevice -PresentOnly -Class USB | Where-Object { $_.Status -eq 'OK' } | Select-Object -ExpandProperty FriendlyName`;
+  if(os==='mac') return `system_profiler SPUSBDataType`;
+  return `lsusb`;
+}
+function poortKiesOs(os){
+  poortOs=os;
+  document.querySelectorAll('.ostab').forEach(b=>b.classList.toggle('aan', b.dataset.os===os));
+  const el=document.getElementById('poortcmd'); if(el) el.textContent=poortCmd(os);
+}
+async function poortKopieer(knop){
+  try{ await navigator.clipboard.writeText(poortCmd(poortOs)); knop.textContent='Gekopieerd, nu plakken en Enter'; }
+  catch(e){ knop.textContent='Selecteer het commando en kopieer (Ctrl+C)'; }
+  setTimeout(()=>{ knop.textContent='Kopieer het commando'; }, 3000);
+}
+function startPoorten(){
+  Object.keys(poortStatus).forEach(k=>delete poortStatus[k]);
+  const os0 = /Mac/i.test(navigator.userAgent) ? 'mac'
+    : (/Linux|X11/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent) ? 'linux' : 'win');
+  const vak=document.getElementById('testvak');
+  vak.innerHTML=
+    '<div class="poortlijst">'+POORTEN.map(poortRij).join('')+'</div>'+
+    '<details class="poortlees"><summary>Zeker weten dat een USB-poort data doorgeeft?</summary>'+
+      '<p class="muted klein" style="margin:10px 0">Steek je teststick in een poort en plak dit in PowerShell of Terminal. Je ziet hem in de lijst. Herhaal per poort.</p>'+
+      '<div class="ostabs">'+
+        '<button class="ostab" data-os="win" onclick="poortKiesOs(\'win\')">Windows</button>'+
+        '<button class="ostab" data-os="mac" onclick="poortKiesOs(\'mac\')">Mac</button>'+
+        '<button class="ostab" data-os="linux" onclick="poortKiesOs(\'linux\')">Linux</button>'+
+      '</div>'+
+      '<pre class="cmdbox" id="poortcmd"></pre>'+
+      '<button class="btn actie" onclick="poortKopieer(this)">Kopieer het commando</button>'+
+    '</details>'+
+    '<button class="btn actie" style="margin-top:14px" onclick="poortDoor()">Doorgaan</button>';
+  poortKiesOs(os0);
+  /* Auto: de lader (accu gaat laden) en een extern scherm. */
+  try{
+    if(navigator.getBattery){
+      navigator.getBattery().then(bat=>{
+        poortBat=bat;
+        poortBatFn=()=>{ if(bat.charging) poortAuto('voeding'); };
+        poortBatFn();
+        bat.addEventListener('chargingchange', poortBatFn);
+      }).catch(()=>{});
+    }
+  }catch(e){}
+  const mijnStap=stapId;
+  poortScherm=setInterval(()=>{
+    if(mijnStap!==stapId) return;
+    try{ if(window.screen && screen.isExtended) poortAuto('beeld'); }catch(e){}
+  }, 2000);
+  opruimer=()=>{
+    if(poortScherm){ clearInterval(poortScherm); poortScherm=null; }
+    if(poortBat && poortBatFn){ try{ poortBat.removeEventListener('chargingchange', poortBatFn); }catch(e){} }
+    poortBat=null; poortBatFn=null;
+  };
+}
+function poortDoor(){
+  const eenFout = POORTEN.some(p=>poortStatus[p.id]==='fout');
+  const eenOk = POORTEN.some(p=>poortStatus[p.id]==='ok');
+  resultaat['poorten'] = eenFout ? 'fout' : (eenOk ? 'ok' : 'over');
+  const lad = poortStatus['voeding'];
+  if(lad==='ok'||lad==='fout') resultaat['lader']=lad;
+  nu++; tekenTest();
+}
+
 /* ---- accu-conditie ----
    Telefoon/tablet: lees de maximale capaciteit af en vul hem in (een browser kan de
    accugezondheid niet lezen). Laptop: de laptop meet zichzelf. Je plakt één regel in
@@ -879,7 +993,7 @@ async function start(){
     /* Laptop: een prettige volgorde (toetsenbord eerst, accu als laatste), los van
        waar de tests in de lijst staan. */
     if(cat==='Laptop'){
-      const orde=['toetsenbord','touchpad','scherm','luidspreker','microfoon','camera','accu'];
+      const orde=['toetsenbord','touchpad','scherm','luidspreker','microfoon','camera','poorten','accu'];
       TESTS.sort((x,y)=>orde.indexOf(x.id)-orde.indexOf(y.id));
     }
     document.getElementById('watIsHet').innerHTML=

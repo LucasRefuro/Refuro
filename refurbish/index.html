@@ -2283,14 +2283,15 @@ const NA_WINDOWS='Na Windows';
    controles van de winkel. */
 const HARDWARE_CHECKS=[
   {v:'Werkt het scherm zonder strepen of vlekken?', a:['Ja','Nee'], deel:'Scherm', voor:true, test:'scherm'},
-  {v:'Laadt hij op via de lader?',           a:['Ja','Nee'], deel:'Laadpoort', voor:true},
+  {v:'Laadt hij op via de lader?',           a:['Ja','Nee'], deel:'Laadpoort', voor:true, test:'lader'},
   {v:'Werkt het toetsenbord, alle toetsen?', a:['Ja','Nee'], deel:'Toetsenbord', test:'toetsenbord'},
   {v:'Werkt het touchpad?',                  a:['Ja','Nee'], deel:'Touchpad', test:'touchpad'},
   {v:'Werkt de webcam?',                     a:['Ja','Nee'], deel:'Webcam', test:'camera'},
+  {v:'Werkt de microfoon?',                  a:['Ja','Nee'], deel:'Microfoon', test:'microfoon'},
   {v:'Houdt de accu lading vast?',           a:['Ja','Nee'], deel:'Accu'},
   {v:'Werken wifi en bluetooth?',            a:['Ja','Nee'], deel:'Wifi-kaart'},
   {v:'Werkt het geluid?',                    a:['Ja','Nee'], deel:'Luidsprekers', test:'luidspreker'},
-  {v:'Werken alle poorten?',                 a:['Ja','Nee'], deel:'Poorten'}
+  {v:'Werken alle poorten?',                 a:['Ja','Nee'], deel:'Poorten', test:'poorten'}
 ];
 function ctrVoorWindows(){ return prof().hardware.filter(q=>q.voor); }
 function ctrNaWindows(){
