@@ -2854,10 +2854,7 @@ const CTR_STAPPEN={
     return `
       <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
       <p class="pv">${esc(prof().specsTekst||'Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.')}</p>
-      ${ctr.testcode ? `<div class="row" style="margin-bottom:14px">
-        <button class="btn actie small" onclick="testOphalen(this)"><svg class="i s"><use href="#i-cpu"/></svg>Haal de uitgelezen gegevens op</button>
-        <span class="muted klein">accu, specs, merk en model uit de laptop, je kunt alles nog aanpassen</span>
-      </div>` : ''}
+      ${(prof().hardware.some(q=>q.test) && !prof().stappen.includes('test')) ? ctrTestApp() : ''}
       <div class="row" style="margin-bottom:14px">
         <button class="btn actie small" onclick="specsZoeken(this)">
           <svg class="i s"><use href="#i-sparkles"/></svg>Uitvoeringen opzoeken</button>
