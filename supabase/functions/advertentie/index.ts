@@ -85,8 +85,11 @@ Deno.serve(async (req) => {
   const toon = (inst?.ad_toon || "zakelijk en eerlijk").trim();
 
   const specs = a.specs && typeof a.specs === "object" ? a.specs : {};
+  // Verborgen sleutels: interne hulpvelden die nooit in de klant-tekst mogen. De
+  // Artikelcode (fabrikant-MPN) helpt alleen bij het zoeken van fabrieksfoto's.
+  const VERBORGEN = new Set(["Artikelcode"]);
   const specregels = Object.entries(specs)
-    .filter(([, v]) => v != null && String(v).trim() !== "")
+    .filter(([k, v]) => !VERBORGEN.has(k) && v != null && String(v).trim() !== "")
     .map(([k, v]) => `- ${k}: ${v}`).join("\n");
 
   const kanaal = String(lijf?.kanaal || "webshop");

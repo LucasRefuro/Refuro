@@ -63,14 +63,20 @@ async function overnemen(lijf: any, teamId: string) {
     // Een link (Icecat of de fabrikant). Nooit een intern adres ophalen (SSRF).
     let u: URL;
     try { u = new URL(String(lijf?.url || "")); } catch { return fout("Ongeldige foto-URL"); }
-    if (u.protocol !== "https:" && u.protocol !== "http:") return fout("Alleen http(s)-adressen");
+    if (u.protocol !== "https:") return fout("Alleen https-adressen");
     const host = u.hostname.toLowerCase();
-    if (host === "localhost" || host.endsWith(".local") ||
+    // Alleen echte hostnamen met een letter erin: zo vallen IP-adressen ook in
+    // decimale of hex-vorm (2130706433, 0x7f000001) en IPv6 af, plus de interne ranges
+    // en localhost. https-only weert bovendien de meeste interne diensten (die http zijn).
+    if (!/[a-z]/.test(host) || host.includes(":") ||
+        host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") ||
         /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host) ||
-        /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host.includes(":")) {
+        /^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
       return fout("Dit adres kan niet worden opgehaald");
     }
-    const res = await fetch(u.href);
+    // Geen redirects volgen: een publieke URL kan anders alsnog naar een intern adres
+    // doorsturen (SSRF). Een 3xx komt terug met res.ok=false en wordt zo geweigerd.
+    const res = await fetch(u.href, { redirect: "manual" });
     if (!res.ok) return fout("De foto kon niet opgehaald worden", 502);
     type = res.headers.get("content-type") || "";
     if (!type.startsWith("image/")) return fout("Dat adres is geen afbeelding");
@@ -136,9 +142,10 @@ Deno.serve(async (req) => {
   // schrijfwijzen van de modelnaam: zoals ingevoerd, zonder spaties, met
   // streepjes, en in hoofdletters. Dat dekt het grootste deel.
   const ean = String(lijf?.ean || lijf?.gtin || "").replace(/\D/g, "");
-  // De fabrikant-artikelcode (bv. HP '3JX01EA') die de laptop zelf ophaalt is veruit de
-  // beste match: Icecat indexeert daarop. Die proberen we dus als eerste, nog voor de
-  // schrijfwijzen van de modelnaam.
+  // De fabrikant-artikelcode (bv. HP '3JX01EA') die de laptop zelf ophaalt is de beste
+  // tekstmatch: Icecats ProductCode IS het MPN-veld. Na de GTIN, maar nog voor de
+  // modelnaam. Werkt alleen bij een echte MPN (HP-productnummer wel; een Asus-seriecode
+  // of Dell-marketingnaam niet, dan valt hij terug op de modelnaam-varianten).
   const productcode = String(lijf?.productcode || "").trim();
   const pogingen: { soort: "gtin" | "code"; waarde: string }[] = [];
   if (ean) pogingen.push({ soort: "gtin", waarde: ean });
@@ -163,9 +170,18 @@ Deno.serve(async (req) => {
       const galerij = uit?.data?.Gallery;
       if (!Array.isArray(galerij) || !galerij.length) continue;
 
-      const fotos = galerij
+      // Icecat geeft de hoofdfoto met IsMain=Y en een prioriteit No (lager = eerder);
+      // de array-volgorde zelf is niet gegarandeerd. Daarop sorteren zodat de hoofdfoto
+      // vooraan staat. HighPic bestaat niet in deze Gallery; Pic500x500 wel.
+      const gesorteerd = [...galerij].sort((a: any, b: any) => {
+        const am = (a?.IsMain === "Y" || a?.IsMain === true) ? 0 : 1;
+        const bm = (b?.IsMain === "Y" || b?.IsMain === true) ? 0 : 1;
+        if (am !== bm) return am - bm;
+        return (Number(a?.No) || 99) - (Number(b?.No) || 99);
+      });
+      const fotos = gesorteerd
         .map((g: any, i: number) => ({
-          url: g?.Pic || g?.HighPic || g?.LowPic || null,
+          url: g?.Pic || g?.Pic500x500 || g?.LowPic || null,
           klein: g?.ThumbPic || g?.LowPic || g?.Pic || null,
           aanzicht: aanzichtVan(i),
         }))
