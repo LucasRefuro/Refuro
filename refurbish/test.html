@@ -956,28 +956,63 @@ try{
 $g=$null
 try{
   $cs = Get-CimInstance Win32_ComputerSystem
-  $merk = ($cs.Manufacturer -replace 'Inc\.?','' -replace 'Corporation','' -replace 'Co\.,? Ltd\.?','' -replace 'Computer','').Trim()
-  if($merk -match '^LENOVO$'){ $merk='Lenovo' }
-  $model = (Get-CimInstance Win32_ComputerSystemProduct).Version
-  if(-not $model -or $model -match 'To be filled|System Product|Default string|O\.E\.M'){ $model = $cs.Model }
-  $model = "$model".Trim()
+  $csp = Get-CimInstance Win32_ComputerSystemProduct
+  $bb = Get-CimInstance Win32_BaseBoard
+  # MERK: de ruwe fabrikantnaam (bv. "ASUSTeK COMPUTER INC.") terugbrengen naar een
+  # korte merknaam. Merk is echt iets anders dan model, dus die scheiden we netjes.
+  $mr = "$($cs.Manufacturer)"; $ml = $mr.ToLower()
+  if($ml -match 'asus'){ $merk='Asus' }
+  elseif($ml -match 'hewlett|hp inc|^hp'){ $merk='HP' }
+  elseif($ml -match 'dell'){ $merk='Dell' }
+  elseif($ml -match 'lenovo'){ $merk='Lenovo' }
+  elseif($ml -match 'acer'){ $merk='Acer' }
+  elseif($ml -match 'micro-star|msi'){ $merk='MSI' }
+  elseif($ml -match 'microsoft'){ $merk='Microsoft' }
+  elseif($ml -match 'toshiba|dynabook'){ $merk='Toshiba' }
+  elseif($ml -match 'samsung'){ $merk='Samsung' }
+  elseif($ml -match 'fujitsu'){ $merk='Fujitsu' }
+  elseif($ml -match 'huawei'){ $merk='Huawei' }
+  elseif($ml -match 'razer'){ $merk='Razer' }
+  elseif($ml -match 'gigabyte'){ $merk='Gigabyte' }
+  else { $merk = ($mr -replace '(?i)\b(computer|corporation|corp|inc|incorporated|co|ltd|technologies|technology|international|electronics|group|gmbh|systems|s\.a\.|b\.v\.)\b\.?','' -replace '[,\.]',' ' -replace '\s+',' ').Trim() }
+  # MODEL staat per merk in een ander veld. HP en Lenovo: de productversie (nette
+  # naam). Asus en MSI: het moederbord (modelcode). De rest: het systeemmodel. We
+  # nemen de eerste die NIET generiek is ("1.0", "System Product Name", leeg, ...).
+  $gen = '^(?i)(to be filled by o\.?e\.?m\.?|to be filled|system product name|default string|o\.?e\.?m\.?|invalid|not applicable|not specified|none|standard|type1productconfigid|\d+(\.\d+)*)$'
+  if($merk -eq 'HP' -or $merk -eq 'Lenovo'){ $kand = @($csp.Version, $cs.Model, $bb.Product) }
+  elseif($merk -eq 'Asus' -or $merk -eq 'MSI'){ $kand = @($bb.Product, $cs.Model, $csp.Version) }
+  else { $kand = @($cs.Model, $bb.Product, $csp.Version, $csp.Name) }
+  $model=''
+  foreach($k in $kand){ $k="$k".Trim(); if($k -and ($k -notmatch $gen)){ $model=$k; break } }
+  $model = ($model -replace '_',' ' -replace '\s+',' ').Trim()
   if($merk -and $model.ToLower().StartsWith(($merk.ToLower()+' '))){ $model = $model.Substring($merk.Length).Trim() }
-  $serie = (Get-CimInstance Win32_BIOS).SerialNumber
-  $mpn = "$($cs.SystemSKUNumber)"
-  if($mpn){ $mpn = ($mpn -split '#')[0].Trim() }
-  if($mpn -match 'To be filled|Default string|System SKU'){ $mpn='' }
-  $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
-  if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace ' CPU','' -replace '@.*$','').Trim() }
+  $model = [regex]::Replace($model, '\b(\S+)\s+\1\b', '$1')
+  $serie = "$((Get-CimInstance Win32_BIOS).SerialNumber)".Trim()
+  # ARTIKELCODE voor de fotocatalogus: HP-productnummer (SystemSKUNumber, # eraf), val
+  # terug op de moederbord-modelcode (Asus/Acer) als de SKU generiek is.
+  $mpn = "$($cs.SystemSKUNumber)"; if($mpn){ $mpn = ($mpn -split '#')[0].Trim() }
+  if(-not $mpn -or $mpn -match $gen -or $mpn -match 'System SKU'){ $mpn = "$($bb.Product)".Trim() }
+  if($mpn -match $gen){ $mpn='' }
+  $cpu = "$((Get-CimInstance Win32_Processor | Select-Object -First 1).Name)"
+  if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace '\(tm\)','' -replace ' CPU','' -replace '@.*$','' -replace '\s+',' ').Trim() }
   $ram = [int][math]::Round($cs.TotalPhysicalMemory/1GB)
-  $totGB=0; $ssd=$false
-  try{ foreach($d in (Get-PhysicalDisk)){ $totGB += [int][math]::Round($d.Size/1GB); if($d.MediaType -eq 'SSD' -or $d.BusType -eq 'NVMe'){ $ssd=$true } } }catch{}
-  if($totGB -eq 0){ try{ foreach($d in (Get-CimInstance Win32_DiskDrive)){ $totGB += [int][math]::Round($d.Size/1GB) } }catch{} }
+  # OPSLAG in verkoop-GB (bytes/1e9, niet GiB), afgerond naar een gangbare maat; groot -> TB.
+  $bytes=0; $ssd=$false
+  try{ foreach($d in (Get-PhysicalDisk)){ $bytes += [double]$d.Size; if($d.MediaType -eq 'SSD' -or $d.BusType -eq 'NVMe'){ $ssd=$true } } }catch{}
+  if($bytes -eq 0){ try{ foreach($d in (Get-CimInstance Win32_DiskDrive)){ $bytes += [double]$d.Size } }catch{} }
   $opslag=''
-  if($totGB -gt 0){ $opslag = "$totGB GB"; if($ssd){ $opslag = "$opslag SSD" } }
-  $gpu = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -and $_.Name -notmatch 'Microsoft Basic|Remote|Parsec' } | Select-Object -Last 1 -ExpandProperty Name
+  if($bytes -gt 0){ $gb=[int][math]::Round($bytes/1e9)
+    $maten=@(120,128,240,250,256,480,500,512,1000,2000,4000); $bm=$gb; $bd=1e9
+    foreach($m in $maten){ $v=[math]::Abs($m-$gb); if($v -lt $bd){ $bd=$v; $bm=$m } }
+    if($bd -le $gb*0.1){ $gb=$bm }
+    if($gb -ge 960){ $opslag = "$([int][math]::Round($gb/1000)) TB" } else { $opslag = "$gb GB" }
+    if($ssd){ $opslag = "$opslag SSD" } }
+  $gpu = "$(Get-CimInstance Win32_VideoController | Where-Object { $_.Name -and $_.Name -notmatch 'Microsoft Basic|Remote|Parsec|Meta' } | Select-Object -Last 1 -ExpandProperty Name)"
+  if($gpu){ $gpu = ($gpu -replace '\(R\)','' -replace '\(TM\)','' -replace 'Corporation','' -replace '\s+',' ').Trim() }
   $inch=''
   try{ $mon = Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorBasicDisplayParams | Select-Object -First 1
        if($mon.MaxHorizontalImageSize -gt 0){ $inch=[math]::Round([math]::Sqrt([math]::Pow($mon.MaxHorizontalImageSize,2)+[math]::Pow($mon.MaxVerticalImageSize,2))/2.54,1) } }catch{}
+  if($inch){ $maten2=@(10.1,11.6,12.5,13.3,14.0,15.6,16.0,17.3); $bm2=$inch; $bd2=99.0; foreach($s in $maten2){ $v=[math]::Abs($s-$inch); if($v -lt $bd2){ $bd2=$v; $bm2=$s } }; if($bd2 -le 0.6){ $inch=$bm2 } }
   $scherm=''
   $res = Get-CimInstance Win32_VideoController | Where-Object { $_.CurrentHorizontalResolution } | Select-Object -First 1
   if($res){ $h=[int]$res.CurrentVerticalResolution
@@ -1016,9 +1051,10 @@ function accuToonGegevens(g){
   const el=document.getElementById('accugeg'); if(!el) return;
   if(!g || typeof g!=='object'){ el.innerHTML=''; return; }
   const rijen=[];
-  const naam=[g.merk,g.model].filter(Boolean).join(' ');
-  if(naam) rijen.push(['Merk / model', naam]);
+  if(g.merk) rijen.push(['Merk', g.merk]);
+  if(g.model) rijen.push(['Model', g.model]);
   if(g.serienummer) rijen.push(['Serienummer', g.serienummer]);
+  if(g.mpn) rijen.push(['Artikelcode', g.mpn]);
   const sp=g.specs||{};
   ['Processor','Geheugen','Opslag','Videokaart','Scherm'].forEach(k=>{ if(sp[k]) rijen.push([k, sp[k]]); });
   el.innerHTML = rijen.length
