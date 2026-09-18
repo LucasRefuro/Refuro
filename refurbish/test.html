@@ -139,6 +139,14 @@ h1{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; letter-spacin
   <p class="muted klein" id="foutTekst" style="margin-top:6px"></p>
 </div>
 
+<div class="kaart" id="codeInvoer" hidden>
+  <b id="codeKop">Vul de code in</b>
+  <p class="muted klein" id="codeUit" style="margin-top:6px; margin-bottom:12px">Typ de code van de computer over.</p>
+  <input id="codeVeld" type="text" inputmode="latin" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="bijv. A1B2C3"
+    style="width:100%; padding:16px 18px; font-size:24px; font-weight:700; letter-spacing:3px; text-transform:uppercase; border:1.5px solid var(--border); border-radius:16px; text-align:center; font-family:inherit">
+  <button class="btn actie" style="margin-top:12px" onclick="codeDoor()">Doorgaan</button>
+</div>
+
 <div id="vol">
   <button class="terug" id="volTerug" onclick="vorige()" aria-label="Vorige"
     style="position:fixed; left:14px; top:calc(12px + env(safe-area-inset-top)); z-index:3; background:rgba(255,255,255,.9)">
@@ -158,7 +166,15 @@ h1{font-family:'Sora',sans-serif; font-size:21px; font-weight:800; letter-spacin
 const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
 
-const code=new URLSearchParams(location.search).get('c');
+/* De code komt uit ?c=CODE (de QR), uit het pad /refurbish/test/CODE (als je hem
+   op de laptop overtypt), of straks uit het invoerveld. 'let' want het veld kan
+   hem later zetten; praat() pakt de nieuwe waarde dan vanzelf. */
+let code=(function(){
+  const q=new URLSearchParams(location.search).get('c');
+  if(q) return q.trim().toUpperCase();
+  const m=location.pathname.match(/\/test\/([A-Za-z0-9]{3,12})\/?$/);
+  return m ? m[1].trim().toUpperCase() : '';
+})();
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function toast(bericht, soort){
@@ -666,8 +682,37 @@ function accuDoor(){
   nu++; tekenTest();
 }
 
+/* Het invoerscherm tonen in plaats van dood te lopen. Op een laptop scan je de QR
+   niet makkelijk, dus daar typ je de code over; hier komt hij binnen. */
+function vraagCode(kop, uit){
+  volSluit();
+  document.getElementById('werk').hidden=true;
+  document.getElementById('fout').hidden=true;
+  document.getElementById('klaarKaart').hidden=true;
+  document.getElementById('watIsHet').textContent='';
+  document.getElementById('codeKop').textContent=kop||'Vul de code in';
+  document.getElementById('codeUit').textContent=uit||'Typ de code van de computer over.';
+  document.getElementById('codeInvoer').hidden=false;
+  const veld=document.getElementById('codeVeld');
+  veld.value=code||'';
+  veld.oninput=()=>{ veld.value=veld.value.toUpperCase(); };
+  veld.onkeydown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); codeDoor(); } };
+  setTimeout(()=>{ try{ veld.focus(); }catch(_e){} }, 50);
+}
+function codeDoor(){
+  const veld=document.getElementById('codeVeld');
+  const inv=String(veld.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(inv.length<3){ toast('Vul eerst de code in','fout'); veld.focus(); return; }
+  code=inv;
+  /* De code ook in het adres zetten, zodat verversen hem onthoudt. */
+  try{ history.replaceState(null,'','?c='+encodeURIComponent(code)); }catch(_e){}
+  document.getElementById('codeInvoer').hidden=true;
+  document.getElementById('watIsHet').textContent='Bezig met openen…';
+  start();
+}
+
 async function start(){
-  if(!code){ stop('Geen code','Scan de QR-code opnieuw vanaf de computer.'); return; }
+  if(!code){ vraagCode('Vul de code in','Typ de code van de computer over. Zes tekens.'); return; }
   try{
     const uit=await praat({actie:'kijken'});
     const a=uit.apparaat;
@@ -678,7 +723,12 @@ async function start(){
       `<b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${a.code?' · '+esc(a.code):''} · loop de tests langs`;
     document.getElementById('werk').hidden=false;
     tekenTest();
-  }catch(e){ stop('Dit werkt niet meer', e.message); }
+  }catch(e){
+    /* Verkeerde of verlopen code: opnieuw laten invullen in plaats van vastlopen. */
+    const m=String(e.message||'');
+    if(/bestaat niet|verlopen|niet gevonden/i.test(m)){ vraagCode('Klopt de code?', m.replace(/[.\s]*$/,'')+'. Typ hem opnieuw over.'); return; }
+    stop('Dit werkt niet meer', e.message);
+  }
 }
 
 start();

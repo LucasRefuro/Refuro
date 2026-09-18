@@ -3482,7 +3482,7 @@ function ctrTestApp(){
     ? 'Open dit op de laptop die je test: druk elke toets in (je ziet ze groen worden), en test scherm, touchpad, geluid en de webcam. De uitslag vult de vragen hieronder in.'
     : 'Laat het toestel zichzelf testen: touch, scherm, luidspreker, microfoon, camera, trillen en sensoren. De uitslag vult de vragen hieronder in.';
   const scanUit = laptop
-    ? 'Open op de laptop <b>'+esc(location.host)+'/refurbish/test</b> en vul code <b>'+esc(ctr.testcode||'')+'</b> in. Daarna haal je de uitslag hier op.'
+    ? 'Open op de laptop <b>'+esc(location.host)+'/refurbish/test</b>, typ code <b>'+esc(ctr.testcode||'')+'</b> en druk op Doorgaan. Daarna haal je de uitslag hier op.'
     : 'Scan met het toestel dat je test en loop de tests langs. Daarna haal je de uitslag hier op; de vragen hieronder vullen zich dan vanzelf.';
   const knopTekst = laptop ? 'Start de test op de laptop' : 'Test met de telefoon';
   if(ctr.testcode && ctr.testqr){
@@ -3490,7 +3490,7 @@ function ctrTestApp(){
       <div class="clkop">${kop}</div>
       <p class="muted klein" style="margin-bottom:12px">${scanUit}</p>
       <img class="qrbeeld" src="${esc(ctr.testqr)}" alt="">
-      <p class="muted klein" style="margin:10px 0">Of ga op dat toestel naar <b>${esc(location.host)}/refurbish/test</b> en vul code <b>${esc(ctr.testcode)}</b> in.</p>
+      <p class="muted klein" style="margin:10px 0">Of ga op dat toestel naar <b>${esc(location.host)}/refurbish/test</b>, typ code <b>${esc(ctr.testcode)}</b> en druk op Doorgaan.</p>
       <button class="btn actie small" style="width:100%" onclick="testOphalen(this)">Uitslag ophalen</button>
     </div>`;
   }
