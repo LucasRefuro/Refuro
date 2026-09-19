@@ -650,6 +650,21 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   .etiket{border:1px solid #ddd;}
   @page{margin:8mm;}
 }
+/* ---------- klantportaal (winkelkant) ---------- */
+.kpform{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.kpform input, .kpform select{flex:1; min-width:160px;}
+.kpstappen{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px;}
+.kpstap{border:1.5px solid var(--border); border-radius:var(--radius-s); padding:12px 14px;
+  display:flex; flex-direction:column; gap:6px; align-items:flex-start; font-size:13px;}
+.kpstap b{font-size:13.5px;}
+.kpstap span{color:var(--muted);}
+.kpstap-aan{background:var(--green-soft); border-color:var(--green-soft);}
+.kpstap-aan span{color:var(--green-tekst); font-weight:600;}
+.kppersoon{display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding:10px 0; border-top:1px solid var(--soft-2); flex-wrap:wrap;}
+.kppersoon:first-of-type{border-top:none;}
+.kpmelding{border:1.5px solid var(--amber); background:var(--amber-soft);}
+@media (max-width:900px){ .kpstappen{grid-template-columns:repeat(2,minmax(0,1fr));} }
 </style>
 </head>
 <body>
@@ -1309,6 +1324,7 @@ async function allesLaden(){
       ? Object.assign({}, o, {lots:[{aantal:Number(o.aantal)||0, prijs:Number(o.prijs)||0}]})
       : o);
   if(i && i.data) instel=i.data;
+  await kpLaden();
   /* Het logo hoort bij de instellingen, dus dat halen we hier ook op; anders
      tekent het voorbeeld de eerste keer zonder logo. */
   if(instel.scherm_logo && (!schermLogo || schermLogo.dataset_pad!==instel.scherm_logo)) schermLogoLaden();
@@ -6615,10 +6631,10 @@ function tekenBatches(){
   }
   const vak=document.getElementById('batLijst'); if(!vak) return;
   if(!batches.length){
-    vak.innerHTML='<p class="muted">Nog geen batches. Maak een partij aan en koppel er toestellen aan, dan zie je de investering, de omzet en de winst per partij.</p>';
+    vak.innerHTML=kpAanmeldingenHtml()+'<p class="muted">Nog geen batches. Maak een partij aan en koppel er toestellen aan, dan zie je de investering, de omzet en de winst per partij.</p>';
     return;
   }
-  vak.innerHTML=`<div class="tabelrol"><table>
+  vak.innerHTML=kpAanmeldingenHtml()+`<div class="tabelrol"><table>
     <thead><tr><th>Batch</th><th>Leverancier</th><th class="num">Verkocht</th>
       <th class="num">Investering</th><th class="num">Omzet</th><th class="num">Winst</th><th></th></tr></thead>
     <tbody>${batches.map(b=>{
@@ -6725,6 +6741,8 @@ function renderBatchDetail(){
       </div>
       ${b.verklaring_op?`<p class="muted klein" style="margin-top:8px">Ondertekend op ${new Date(b.verklaring_op).toLocaleDateString('nl-NL')}${b.verkoper_naam?' door '+esc(b.verkoper_naam):''}.</p>`:''}
     </div>
+
+    ${kpKaart(b, devs)}
 
     <div class="card">
       <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px">
@@ -7348,6 +7366,250 @@ async function batKostWeg(i){
   b.kosten=kosten; tekenBatches();
 }
 
+/* ═══════════════ klantportaal (winkelkant) ═══════════════
+   Koop je een partij op bij een organisatie (een gemeente, een zorggroep), dan
+   koppel je de batch hier aan die organisatie. De klant volgt de partij dan in
+   het klantportaal (/klantportaal/ of het eigen domein uit de instellingen):
+   ophaling, wissen, testen, bod en betaling, met wiscertificaat en rapporten.
+
+   De klant leest NIETS rechtstreeks uit deze tabellen. Het portaal gebruikt de
+   functies klantportaal_overzicht en klantportaal_opdracht, die alleen veilige
+   velden teruggeven: geen inkoop, geen marge, geen notities.
+
+   Zonder de klantportaal-migratie bestaan de tabellen niet. kpLaden vangt dat af
+   en dan blijft alles hier onzichtbaar; de werkbank werkt gewoon door. */
+let kpInst=null, kpOrgs=[], kpAanm=[], kpGebr=[];
+
+async function kpLaden(){
+  try{
+    const [i,o,a,g]=await Promise.all([
+      sb.from('klantportaal_instellingen').select('*').maybeSingle(),
+      sb.from('klantportaal_organisaties').select('*').order('naam'),
+      sb.from('klantportaal_aanmeldingen').select('*').eq('status','nieuw').order('aangemaakt_op',{ascending:false}),
+      sb.from('klantportaal_gebruikers').select('user_id,organisatie_id,naam,email,rol,actief,laatst_gezien').order('naam')
+    ]);
+    kpInst=(!i.error && i.data && i.data.actief)?i.data:null;
+    kpOrgs=o.data||[]; kpAanm=a.data||[]; kpGebr=g.data||[];
+  }catch(e){ kpInst=null; }
+}
+
+function kpVandaag(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function kpDatum(d){ return d?new Date(d+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'short'}):''; }
+function kpBedrag(id){ const s=v(id).replace(',','.'); if(s==='') return null; const n=Number(s); return isFinite(n)?Math.round(n*100)/100:null; }
+
+const KP_STAPPEN=[['kp_opgehaald_op','Opgehaald'],['kp_gewist_op','Gewist'],['kp_getest_op','Getest'],['kp_afgerond_op','Afgerond en betaald']];
+const KP_WIS={open:'Nog niet', gewist:'Gewist', vernietigd:'Vernietigd', mislukt:'Mislukt', nvt:'Geen opslag'};
+const KP_BEST={'':'Vanzelf', hergebruik:'Hergebruik', recycling:'Recycling', vernietigd:'Vernietigd'};
+
+/* De kaart op de batchpagina. */
+function kpKaart(b, devs){
+  if(!kpInst) return '';
+  const org=b.klantportaal_organisatie_id?kpOrgs.find(o=>o.id===b.klantportaal_organisatie_id):null;
+  if(!org){
+    return `<div class="card">
+      <h2><svg class="i"><use href="#i-users"/></svg>Klantportaal</h2>
+      <p class="muted klein" style="margin-bottom:12px">Koop je deze partij op bij een organisatie? Koppel hem, dan volgt de klant alles in het portaal van ${esc(kpInst.merknaam)}.</p>
+      <div class="kpform">
+        ${kpOrgs.length?`<select id="kp_org">${kpOrgs.map(o=>`<option value="${o.id}">${esc(o.naam)}</option>`).join('')}</select>
+        <button class="btn" onclick="kpKoppel(this,'${b.id}')">Koppelen</button>`:''}
+        <input id="kp_nieuweorg" placeholder="Nieuwe organisatie, bijv. Gemeente Breda">
+        <button class="btn ghost" onclick="kpNieuweOrg(this,'${b.id}')">Toevoegen en koppelen</button>
+      </div>
+    </div>`;
+  }
+  const open=devs.filter(a=>!a.wis_status||a.wis_status==='open').length;
+  const gebr=kpGebr.filter(g=>g.organisatie_id===org.id&&g.actief);
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px; gap:10px; flex-wrap:wrap">
+      <h2 style="margin:0"><svg class="i"><use href="#i-users"/></svg>Klantportaal <span class="muted">${esc(org.naam)}</span></h2>
+      <div class="row" style="gap:8px">
+        <a class="btn ghost small" href="/klantportaal/?bekijk=${org.id}" target="_blank" rel="noopener">Bekijk als klant</a>
+        <button class="btn ghost small" onclick="kpOntkoppel('${b.id}')">Ontkoppelen</button>
+      </div>
+    </div>
+    <p class="muted klein" style="margin-bottom:14px">Wat je hier invult, ziet de klant meteen in het portaal. Inkoop, marge en notities ziet de klant nooit.</p>
+
+    <div class="kpstappen">
+      <div class="kpstap kpstap-aan"><b>Aangemeld</b><span>${kpDatum(String(b.aangemaakt_op||'').slice(0,10))}</span></div>
+      ${KP_STAPPEN.map(([k,n])=>`<div class="kpstap ${b[k]?'kpstap-aan':''}"><b>${n}</b>${b[k]
+        ?`<span>${kpDatum(b[k])}</span><button class="btn ghost small" onclick="kpStap(this,'${b.id}','${k}',false)">Terugzetten</button>`
+        :`<button class="btn small" onclick="kpStap(this,'${b.id}','${k}',true)">Vandaag</button>`}</div>`).join('')}
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div><label>Naam voor de klant</label><input id="kp_titel" value="${esc(b.kp_titel||'')}" placeholder="bijv. Uitfasering hoofdkantoor"></div>
+      <div><label>Locatie</label><input id="kp_locatie" value="${esc(b.kp_locatie||'')}" placeholder="bijv. Breda"></div>
+      <div><label>Wat komt er nu</label><input id="kp_gepland" value="${esc(b.kp_gepland||'')}" placeholder="bijv. Ophaling 24 september"></div>
+      <div><label>Indicatief bod</label><input id="kp_bodi" type="number" step="0.01" min="0" value="${b.kp_bod_indicatief??''}"></div>
+      <div><label>Definitief bod</label><input id="kp_bodd" type="number" step="0.01" min="0" value="${b.kp_bod_definitief??''}"></div>
+      <div><label>Uitbetaald</label><input id="kp_uit" type="number" step="0.01" min="0" value="${b.kp_uitbetaald??''}"></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn actie" onclick="kpBewaar(this,'${b.id}')">Opslaan</button></div>
+
+    <div class="row" style="justify-content:space-between; align-items:center; margin:22px 0 8px; gap:10px; flex-wrap:wrap">
+      <h3 style="margin:0">Wissen en bestemming</h3>
+      ${open?`<button class="btn small" onclick="kpAllesGewist(this,'${b.id}')">${open} open ${open===1?'toestel':'toestellen'} op gewist</button>`:''}
+    </div>
+    ${devs.length?`<div class="tabelrol"><table>
+      <thead><tr><th>Toestel</th><th>Serienummer</th><th>Wissen</th><th>Bestemming</th></tr></thead>
+      <tbody>${devs.map(a=>`<tr>
+        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b></td>
+        <td class="mono">${esc(a.serienummer||a.code||'')}</td>
+        <td><select onchange="kpApparaat('${a.id}','wis_status',this.value)">${Object.entries(KP_WIS).map(([k,n])=>`<option value="${k}"${(a.wis_status||'open')===k?' selected':''}>${n}</option>`).join('')}</select></td>
+        <td><select onchange="kpApparaat('${a.id}','bestemming',this.value)">${Object.entries(KP_BEST).map(([k,n])=>`<option value="${k}"${(a.bestemming||'')===k?' selected':''}>${n}</option>`).join('')}</select></td>
+      </tr>`).join('')}</tbody></table></div>
+      <p class="muted klein" style="margin-top:8px">Bestemming op Vanzelf: na het testen wordt het hergebruik, en recycling voor afgekeurde of gesloopte toestellen.</p>`
+      :'<p class="muted">Nog geen toestellen in deze batch.</p>'}
+
+    <h3 style="margin:22px 0 8px">Wie kan meekijken</h3>
+    ${gebr.length?gebr.map(g=>`<div class="kppersoon"><div><b>${esc(g.naam||g.email)}</b><div class="muted klein">${esc(g.email)} · ${g.rol==='beheerder'?'beheerder':'kijkt mee'}${g.laatst_gezien?' · laatst '+kpDatum(String(g.laatst_gezien).slice(0,10)):' · nog niet ingelogd'}</div></div>
+      <button class="btn ghost small" onclick="kpToegangWeg('${g.user_id}')">Toegang weg</button></div>`).join('')
+      :'<p class="muted klein">Nog niemand. Nodig de contactpersoon uit, die krijgt een mail met een inloglink.</p>'}
+    <div class="kpform" style="margin-top:10px">
+      <input id="kp_unaam" placeholder="Naam">
+      <input id="kp_umail" type="email" placeholder="E-mailadres">
+      <select id="kp_urol"><option value="beheerder">Beheerder</option><option value="lezer">Kijkt mee</option></select>
+      <button class="btn" onclick="kpUitnodigen(this,'${org.id}')">Uitnodigen</button>
+    </div>
+  </div>`;
+}
+
+async function kpKoppel(knop, batchId){
+  const org=v('kp_org'); if(!org) return;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_batches').update({klantportaal_organisatie_id:org}).eq('id',batchId);
+    if(error) throw error;
+    const b=batches.find(x=>x.id===batchId); if(b) b.klantportaal_organisatie_id=org;
+    tekenBatches(); toast('Gekoppeld aan het klantportaal', true);
+  });
+}
+async function kpNieuweOrg(knop, batchId){
+  const naam=v('kp_nieuweorg'); if(!naam){ toast('Vul de naam van de organisatie in.','fout'); return; }
+  await bezig(knop, async()=>{
+    const {data,error}=await sb.from('klantportaal_organisaties').insert({team_id:account.team_id, naam}).select().single();
+    if(error) throw error;
+    kpOrgs.push(data); kpOrgs.sort((a,b)=>a.naam.localeCompare(b.naam));
+    const {error:e2}=await sb.from('refurbish_batches').update({klantportaal_organisatie_id:data.id}).eq('id',batchId);
+    if(e2) throw e2;
+    const b=batches.find(x=>x.id===batchId); if(b) b.klantportaal_organisatie_id=data.id;
+    tekenBatches(); toast('Organisatie toegevoegd en gekoppeld', true);
+  });
+}
+async function kpOntkoppel(batchId){
+  const {error}=await sb.from('refurbish_batches').update({klantportaal_organisatie_id:null}).eq('id',batchId);
+  if(error){ toast('Ontkoppelen lukte niet','fout'); return; }
+  const b=batches.find(x=>x.id===batchId); if(b) b.klantportaal_organisatie_id=null;
+  tekenBatches(); toast('Niet meer zichtbaar in het klantportaal', true);
+}
+async function kpBewaar(knop, batchId){
+  const rij={
+    kp_titel:v('kp_titel')||null, kp_locatie:v('kp_locatie')||null, kp_gepland:v('kp_gepland')||null,
+    kp_bod_indicatief:kpBedrag('kp_bodi'), kp_bod_definitief:kpBedrag('kp_bodd'), kp_uitbetaald:kpBedrag('kp_uit')
+  };
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_batches').update(rij).eq('id',batchId);
+    if(error) throw error;
+    const b=batches.find(x=>x.id===batchId); if(b) Object.assign(b, rij);
+    toast('Opgeslagen, de klant ziet het meteen', true);
+  });
+}
+/* Een stap op vandaag zetten, of terug. Een stap terugzetten zet de latere
+   stappen niet mee terug: soms vul je achteraf een vergeten datum in. */
+async function kpStap(knop, batchId, veld, aan){
+  const rij={}; rij[veld]=aan?kpVandaag():null;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_batches').update(rij).eq('id',batchId);
+    if(error) throw error;
+    const b=batches.find(x=>x.id===batchId); if(b) Object.assign(b, rij);
+    tekenBatches();
+    if(aan && veld==='kp_gewist_op' && apparaten.some(a=>a.batch_id===batchId&&(!a.wis_status||a.wis_status==='open')))
+      toast('Zet ook de toestellen op gewist, dan komen ze op het wiscertificaat.');
+  });
+}
+async function kpAllesGewist(knop, batchId){
+  const ids=apparaten.filter(a=>a.batch_id===batchId&&(!a.wis_status||a.wis_status==='open')).map(a=>a.id);
+  if(!ids.length) return;
+  const rij={wis_status:'gewist', wis_methode:kpInst.wismethode||null, wis_op:new Date().toISOString()};
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten').update(rij).in('id',ids);
+    if(error) throw error;
+    apparaten.forEach(a=>{ if(ids.includes(a.id)) Object.assign(a, rij); });
+    const b=batches.find(x=>x.id===batchId);
+    if(b && !b.kp_gewist_op){
+      const {error:e2}=await sb.from('refurbish_batches').update({kp_gewist_op:kpVandaag()}).eq('id',batchId);
+      if(!e2) b.kp_gewist_op=kpVandaag();
+    }
+    tekenBatches(); toast(ids.length+(ids.length===1?' toestel':' toestellen')+' op gewist', true);
+  });
+}
+async function kpApparaat(id, veld, waarde){
+  const rij={}; rij[veld]=waarde||null;
+  if(veld==='wis_status'){
+    rij.wis_methode = waarde==='gewist' ? (kpInst.wismethode||null) : waarde==='vernietigd' ? 'Fysieke vernietiging' : null;
+    rij.wis_op = (waarde==='gewist'||waarde==='vernietigd') ? new Date().toISOString() : null;
+  }
+  const {error}=await sb.from('refurbish_apparaten').update(rij).eq('id',id);
+  if(error){ toast('Opslaan lukte niet','fout'); tekenBatches(); return; }
+  const a=apparaten.find(x=>x.id===id); if(a) Object.assign(a, rij);
+}
+async function kpUitnodigen(knop, orgId){
+  const email=v('kp_umail'), naam=v('kp_unaam'), rol=v('kp_urol')||'beheerder';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Vul een geldig e-mailadres in.','fout'); return; }
+  await bezig(knop, async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/klantportaal',{method:'POST',
+      headers:{'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+(session?session.access_token:'')},
+      body:JSON.stringify({actie:'uitnodigen', organisatie_id:orgId, email, naam, rol})});
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||uit.ok===false) throw new Error(uit.error||'Uitnodigen lukte niet');
+    await kpLaden(); tekenBatches();
+    toast('Uitnodiging verstuurd naar '+email, true);
+  });
+}
+async function kpToegangWeg(userId){
+  const {error}=await sb.from('klantportaal_gebruikers').update({actief:false}).eq('user_id',userId);
+  if(error){ toast('Dat lukte niet','fout'); return; }
+  const g=kpGebr.find(x=>x.user_id===userId); if(g) g.actief=false;
+  tekenBatches(); toast('Toegang weggehaald', true);
+}
+
+/* Nieuwe aanmeldingen uit het portaal staan bovenaan de batchlijst, tot je er
+   een batch van maakt of ze afwijst. */
+function kpAanmeldingenHtml(){
+  if(!kpInst||!kpAanm.length) return '';
+  return `<div class="card kpmelding">
+    <h2 style="margin-bottom:8px">Nieuw uit het klantportaal <span class="muted">(${kpAanm.length})</span></h2>
+    ${kpAanm.map(a=>{ const o=kpOrgs.find(x=>x.id===a.organisatie_id);
+      return `<div class="kppersoon"><div><b>${esc(o?o.naam:'Onbekende organisatie')}</b>
+        <div class="muted klein">${esc(a.omschrijving)}${a.aantal?' · ongeveer '+a.aantal+' stuks':''}${a.ophaaladres?' · '+esc(a.ophaaladres):''}${a.periode?' · '+esc(a.periode):''}</div></div>
+        <div class="row" style="gap:8px"><button class="btn actie small" onclick="kpAanmVerwerk(this,'${a.id}')">Batch maken</button>
+        <button class="btn ghost small" onclick="kpAanmAf('${a.id}')">Afwijzen</button></div></div>`; }).join('')}
+  </div>`;
+}
+async function kpAanmVerwerk(knop, id){
+  const a=kpAanm.find(x=>x.id===id); if(!a) return;
+  const o=kpOrgs.find(x=>x.id===a.organisatie_id);
+  await bezig(knop, async()=>{
+    const rij={team_id:account.team_id, code:batCode(), leverancier:o?o.naam:null, marge:true,
+      aantal:a.aantal||null, klantportaal_organisatie_id:a.organisatie_id,
+      kp_titel:String(a.omschrijving||'').slice(0,80), kp_locatie:a.ophaaladres||null, kp_gepland:a.periode?('Ophaling '+a.periode):null};
+    const {data,error}=await sb.from('refurbish_batches').insert(rij).select().single();
+    if(error) throw error;
+    await sb.from('klantportaal_aanmeldingen').update({status:'verwerkt', batch_id:data.id}).eq('id',id);
+    kpAanm=kpAanm.filter(x=>x.id!==id);
+    batches.unshift(data); batHuidig=data.id; tekenBatches(); window.scrollTo(0,0);
+    toast('Batch aangemaakt en gekoppeld', true);
+  });
+}
+async function kpAanmAf(id){
+  const {error}=await sb.from('klantportaal_aanmeldingen').update({status:'afgewezen'}).eq('id',id);
+  if(error){ toast('Dat lukte niet','fout'); return; }
+  kpAanm=kpAanm.filter(x=>x.id!==id); tekenBatches();
+}
+
 /* ═══════════════ bundels (voorraad-batches) ═══════════════
    Een bundel is een groep klaargemaakte laptops die als een lot op de tweede
    (groothandel) webshop gaan. Je vult een totale vraagprijs in; die wordt over
@@ -7491,7 +7753,7 @@ function renderBundelDetail(){
       <textarea id="vb_oms" rows="5" placeholder="Beschrijf de bundel: aantal, merken, staat, wat de koper krijgt.">${esc(v.omschrijving||'')}</textarea>
       <div class="row" style="gap:8px;margin-top:10px">
         <button class="btn actie small" onclick="vbAdOpslaan('${v.id}', this)">Advertentie bewaren</button>
-        <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Foto's toevoegen<input type="file" accept="image/*" multiple hidden onchange="vbFotoUpload('${v.id}', this)"></label>
+        <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Foto's toevoegen<input type="file" accept="image/*,.heic,.heif" multiple hidden onchange="vbFotoUpload('${v.id}', this)"></label>
       </div>
       ${(Array.isArray(v.fotos)&&v.fotos.length)?`<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">${v.fotos.map((u,i)=>`<div style="position:relative"><img src="${esc(u)}" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"><button class="btn ghost small" style="position:absolute;top:2px;right:2px;padding:2px 6px" title="Foto weghalen" onclick="vbFotoWeg('${v.id}',${i})">×</button></div>`).join('')}</div>`:''}
     </div>
@@ -7707,6 +7969,25 @@ async function vbAdOpslaan(id, knop){
     toast('Advertentie bewaard', true);
   });
 }
+/* De opslag accepteert alleen jpeg/png/webp (geen HEIC van de iPhone) en max 10 MB.
+   Daarom zetten we elke foto eerst in de browser om naar JPEG: laden, op een canvas
+   tekenen (de Mac decodeert ook HEIC) en teruggeschaald naar max 2000px exporteren.
+   Zo lukt de upload altijd en toont de webshop de foto goed. */
+async function bundelFotoNaarJpeg(bestand){
+  const url=URL.createObjectURL(bestand);
+  try{
+    const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('kon de afbeelding niet lezen')); i.src=url; });
+    let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+    if(!w||!h) throw new Error('lege afbeelding');
+    const max=2000;
+    if(Math.max(w,h)>max){ const s=max/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    const blob=await new Promise(res=>cv.toBlob(res,'image/jpeg',0.85));
+    if(!blob) throw new Error('omzetten mislukte');
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
 async function vbFotoUpload(id, invoer){
   const bestanden=[...(invoer.files||[])]; if(invoer) invoer.value='';
   if(!bestanden.length) return;
@@ -7714,11 +7995,12 @@ async function vbFotoUpload(id, invoer){
   toast('Foto’s uploaden…');
   const nieuw=[];
   for(const bestand of bestanden){
-    if(bestand.size>15*1024*1024){ toast(bestand.name+' is te groot (max 15 MB)','let-op'); continue; }
-    const ext=((bestand.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg';
-    const pad=account.team_id+'/bundel/'+id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
-    const {error}=await sb.storage.from('refurbish-fotos').upload(pad, bestand, {contentType:bestand.type||'image/jpeg'});
-    if(error){ console.error('bundelfoto upload', error); toast('Een foto uploaden mislukte','fout'); continue; }
+    let blob;
+    try{ blob=await bundelFotoNaarJpeg(bestand); }
+    catch(e){ console.error('bundelfoto omzetten', e); toast((bestand.name||'Een foto')+' kon niet gelezen worden','let-op'); continue; }
+    const pad=account.team_id+'/bundel/'+id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.jpg';
+    const {error}=await sb.storage.from('refurbish-fotos').upload(pad, blob, {contentType:'image/jpeg'});
+    if(error){ console.error('bundelfoto upload', error); toast('Uploaden mislukte: '+(error.message||'onbekend'),'fout'); continue; }
     nieuw.push(fotoUrl(pad));
   }
   if(!nieuw.length) return;
