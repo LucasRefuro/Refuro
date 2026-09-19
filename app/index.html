@@ -2128,6 +2128,13 @@
     <div class="chart" id="chart"></div>
     <div class="legend"><span class="lo">Omzet</span><span class="lw">Winst</span><span class="lv" id="legVorig">Vorige week</span></div>
   </div>
+  <div class="card breed" id="dashRoosterKaart" hidden>
+    <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px">
+      <h2 style="margin:0"><svg class="i"><use href="#i-users"/></svg>Rooster deze week</h2>
+      <button class="btn ghost small" onclick="showTab('rooster')">Naar het rooster</button>
+    </div>
+    <div id="dashRoosterLijst"></div>
+  </div>
   <div class="card breed" id="hangKaart" hidden>
     <h2><svg class="i"><use href="#i-up"/></svg>Uit het magazijn de winkel in <span class="muted" id="hangKaartTel"></span></h2>
     <p class="muted" style="margin-bottom:14px; max-width:78ch">Deze liggen achter maar hangen niet in de winkel. Wat niet hangt wordt niet gekocht.</p>
@@ -4522,6 +4529,34 @@ async function roosterHerinneringOpslaan(){
   }catch(e){ toast('Opslaan mislukte','fout'); }
 }
 function roosterNaam(id){ const m=teamLeden.find(x=>x.id===id); if(m) return m.naam; if(gebruiker&&gebruiker.id===id) return gebruiker.naam; return '?'; }
+
+/* Het rooster van deze week compact op het dashboard: per dag wie er ingepland
+   staat, vandaag dik. De knop leidt naar het volledige rooster. Alleen zichtbaar
+   voor wie het rooster mag zien. */
+async function renderDashRooster(){
+  const kaart=document.getElementById('dashRoosterKaart'); if(!kaart) return;
+  if(!account || (typeof mag==='function' && !mag('rooster'))){ kaart.hidden=true; return; }
+  kaart.hidden=false;
+  if(!teamLeden.length){ try{ await laadTeamLeden(); }catch(e){} }
+  const maandag=roosterMaandagVan(new Date());
+  const dagen=[]; for(let i=0;i<7;i++){ const d=new Date(maandag); d.setDate(d.getDate()+i); dagen.push(d); }
+  const van=roosterYmd(dagen[0]), tot=roosterYmd(dagen[6]);
+  let diensten=[];
+  try{ const {data}=await sb.from('rooster').select('account_id,datum,van,tot').gte('datum',van).lte('datum',tot); diensten=data||[]; }catch(e){}
+  const vandaag=roosterYmd(new Date());
+  const lijst=document.getElementById('dashRoosterLijst'); if(!lijst) return;
+  lijst.innerHTML=`<table><tbody>${dagen.map((d,i)=>{
+    const ymd=roosterYmd(d);
+    const open=OPENINGSTIJDEN[i];
+    const dag=diensten.filter(x=>x.datum===ymd);
+    const wie = dag.length
+      ? dag.map(x=>esc(roosterNaam(x.account_id))+((x.van||x.tot)?' <span class="muted klein">'+esc((x.van||'')+(x.tot?'–'+x.tot:''))+'</span>':'')).join(' · ')
+      : (open?'<span class="muted">niemand ingepland</span>':'<span class="muted">gesloten</span>');
+    return `<tr${ymd===vandaag?' style="font-weight:600"':''}>
+      <td style="white-space:nowrap; padding-right:14px">${DAG_KORT[i]} <span class="muted klein">${roosterKort(d)}</span></td>
+      <td>${wie}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
 function tekenRooster(){
   const inh=document.getElementById('roosterInhoud'); if(!inh) return;
   const mag=roosterMagInplannen();
@@ -5460,6 +5495,7 @@ function renderDashboard(){
   document.getElementById('dagPick').value=dagDatum||'';
   renderCatWinst(b,vb);
   renderRepDash();
+  renderDashRooster();
   renderChart(); renderLeveringen(); renderVerkoopLog();
   dashMeerSync();
 }
