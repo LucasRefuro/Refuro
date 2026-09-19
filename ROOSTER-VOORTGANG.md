@@ -62,19 +62,36 @@ de uitnodiging per e-mail of link met een welkomstmail. Nieuw toegevoegd:
 
 **Reloop-IT pagina's als losse rechten.**
 Bij Team, Gebruikers staat nu ook per gebruiker welke pagina's van de werkbank hij
-ziet (Werkbank, Toevoegen, Te controleren, en zo verder), zowel bij het aanmaken
+ziet (Werkbank, Toevoegen, Te controleren, en zo verder), zowel bij het uitnodigen
 als op de detailpagina. De sleutels krijgen een `ref_`-voorvoegsel in
 `accounts.tabs`, los van de winkel-pagina's (die hebben ook Voorraad en Bestellen).
 De refurbish-app leest ze uit en verbergt de tabs die iemand niet mag zien. Heeft
 een account nog geen `ref_`-sleutels, dan ziet het alles, zodat bestaande accounts
 niet ineens buitengesloten worden.
 
-## Nog te doen
+**Extra pagina's als sub-optie.**
+De financiele pagina's, het rooster en personeel volgen normaal de rol. Op de
+detailpagina en bij het uitnodigen staat een uitklap "Meer pagina's" waarin je die
+per gebruiker apart aan of uit kunt zetten. Standaard blijft het bij de rol; een
+markering `pag_uitgebreid` maakt de lijst pas leidend, zodat een oud opgeslagen
+lijstje niemand stilletjes buitensluit.
 
-- Uitnodiging: eventueel de pagina's, omgevingen en het uurloon al meesturen op de
-  uitnodiging zelf (nu zet de collega alleen zijn wachtwoord; rechten stel je daarna
-  in). Dit vraagt extra kolommen op `invites` en een aanpassing in de niet-in-de-repo
-  functie `redeem-invite`. Eerst even met Lucas afstemmen of dit nodig is.
+**Alleen nog via uitnodiging, met rechten mee.**
+Een nieuw teamlid gaat altijd via een uitnodiging (direct aanmaken met een
+wachtwoord is weg). De uitnodiging draagt nu de rol, de pagina's, de omgevingen,
+de Reloop-IT pagina's en het uurloon mee. De collega klikt de link, zet zelf zijn
+naam en wachtwoord, en staat meteen goed. Migratie
+`20260920120000_invites_rechten_meesturen.sql` (kolommen `tabs`, `uurloon`,
+`account_id` op `invites`) is toegepast. `redeem-invite` (versie 26) zet de tabs op
+het account en stempelt `account_id` op de uitnodiging. Het uurloon leeft in de
+blob, niet in accounts; de winkelapp zet het achteraf een keer op het juiste id
+(reconciliatie in `renderTeamAccounts`, markering `state.loonViaInvite`).
+
+**Beheerder-popup voor niet-ingevuld.**
+Drie dagen voor een nieuwe week ingaat, bij het inloggen, een popup met wie er nog
+niks doorgaf. Naast de mail die de cron al stuurt.
+
+## Nog te doen
 
 - Icecat: er moet nog een gratis Open Icecat account komen en het geheim
   `ICECAT_GEBRUIKER` gezet worden.

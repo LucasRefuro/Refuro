@@ -14372,6 +14372,25 @@ async function renderTeamAccounts(){
   teamLedenVol=leden||[];
   /* Meteen de lichte kopie bijwerken die o.a. de Uren-pagina gebruikt. */
   teamLeden=teamLedenVol.map(l=>({id:l.id, naam:l.naam, rol:l.rol}));
+  /* Uurloon dat via een uitnodiging is meegestuurd, landt hier in de blob (state.lonen),
+     want het loon leeft in de blob en niet in accounts. redeem-invite zette account_id op
+     de gebruikte uitnodiging. We doen het per account eenmalig (markering state.loonViaInvite),
+     zodat een loon dat jij later aanpast of weghaalt niet vanzelf terugkomt. */
+  try{
+    const {data:gebruikt}=await sb.from('invites').select('account_id,uurloon').eq('gebruikt',true).not('account_id','is',null).not('uurloon','is',null);
+    if(!state.lonen||typeof state.lonen!=='object') state.lonen={};
+    if(!state.loonViaInvite||typeof state.loonViaInvite!=='object') state.loonViaInvite={};
+    let veranderd=false;
+    (gebruikt||[]).forEach(i=>{
+      if(state.loonViaInvite[i.account_id]) return;
+      if(!teamLedenVol.some(l=>l.id===i.account_id)) return;
+      const n=Number(i.uurloon)||0;
+      if(n>0 && state.lonen[i.account_id]===undefined) state.lonen[i.account_id]=n;
+      state.loonViaInvite[i.account_id]=true;
+      veranderd=true;
+    });
+    if(veranderd) save();
+  }catch(e){}
   /* Openstaande uitnodigingen: iemand die de link kreeg maar zich nog niet aanmeldde. */
   let uitnodigingen=[];
   try{
@@ -14548,13 +14567,10 @@ function teamNieuwOpen(){
   detail.innerHTML=`
     <button class="terugknop" onclick="teamTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug naar gebruikers</button>
     <div class="card breed">
-      <h2 style="margin:0 0 4px"><svg class="i"><use href="#i-plus"/></svg>Nieuwe gebruiker</h2>
-      <p class="muted" style="margin:0 0 16px">Maak een teamlid aan met een eigen e-mail en wachtwoord, of stuur onderaan een uitnodiging.</p>
+      <h2 style="margin:0 0 4px"><svg class="i"><use href="#i-plus"/></svg>Nieuw teamlid uitnodigen</h2>
+      <p class="muted" style="margin:0 0 16px">Je collega krijgt een uitnodiging, zet zelf zijn naam en wachtwoord, en staat daarna met deze rechten in je team.</p>
       <div class="grid">
-        <div><label>Naam</label><input id="nw_naam" placeholder="Naam"></div>
-        <div><label>Gebruikersnaam</label><input id="nw_gebruikersnaam" placeholder="voor het inloggen"></div>
-        <div><label>E-mail</label><input id="nw_email" type="email" placeholder="collega@email.nl"></div>
-        <div><label>Begin-wachtwoord</label><input id="nw_ww" type="text" placeholder="minstens 8 tekens"></div>
+        <div><label>E-mail van je collega</label><input id="nw_email" type="email" placeholder="collega@email.nl" autocomplete="off"></div>
         <div><label>Uurloon <span class="muted">(optioneel)</span></label><input id="nw_uurloon" type="number" step="0.01" min="0" placeholder="bijv. 14,00"></div>
       </div>
       <div class="detailsectie"><div class="sectielabel">Rol</div>
@@ -14570,20 +14586,15 @@ function teamNieuwOpen(){
         <div id="nw_pagwrap">${pagChipsHtml('nw', rolDefaultTabs(rol))}</div></div>
       <div class="detailsectie"><div class="sectielabel">Welke Reloop-IT pagina's ziet hij</div>
         ${refChipsHtml('nw', REFURBISH_PAGINAS.map(([id])=>'ref_'+id))}
-        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hierboven toegang tot de werkbank heeft.</p></div>
-      <div class="detailacts"><button class="btn actie" onclick="gebruikerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Gebruiker aanmaken</button></div>
-      <div id="nw_uit" class="muted klein" style="margin-top:10px"></div>
-      <div class="detailsectie" style="border-top:1px solid var(--border); padding-top:18px">
-        <div class="sectielabel">Of nodig uit per e-mail</div>
-        <p class="muted klein" style="margin:0 0 10px">Je collega zet zelf zijn wachtwoord en verschijnt daarna vanzelf in je team.</p>
-        <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
-          <div style="flex:2; min-width:200px"><label>E-mail van je collega</label><input id="inv_email" type="email" placeholder="collega@email.nl" autocomplete="off"></div>
-          <div style="min-width:150px"><label>Rol</label><select id="inv_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option></select></div>
-          <div><button class="btn actie" onclick="mailUitnodiging(this)"><svg class="i s"><use href="#i-mail"/></svg>Uitnodiging e-mailen</button></div>
-        </div>
-        <div style="margin-top:8px"><button class="btn ghost small" onclick="maakUitnodiging()"><svg class="i s"><use href="#i-link"/></svg>Of maak alleen een link om zelf te delen</button></div>
-        <div id="inviteResultaat" style="margin-top:12px"></div>
+        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hieronder toegang tot de werkbank heeft.</p></div>
+      <details class="meerpaginas"><summary>Meer pagina's (standaard volgens de rol)</summary>
+        <p class="muted klein" style="margin:10px 0">De financiële pagina's, het rooster en personeel volgen normaal de rol. Vink hier aan wat deze gebruiker apart wel of niet mag zien.</p>
+        <div id="nw_extrawrap">${extraChipsHtml('nw', extraActiefVan({rol}))}</div></details>
+      <div class="detailacts">
+        <button class="btn actie" onclick="teamUitnodigVerstuur(this)"><svg class="i s"><use href="#i-mail"/></svg>Uitnodiging versturen</button>
+        <button class="btn ghost" onclick="teamUitnodigLink(this)"><svg class="i s"><use href="#i-link"/></svg>Of maak alleen een link</button>
       </div>
+      <div id="inviteResultaat" style="margin-top:12px"></div>
     </div>`;
   document.getElementById('teamLijstView').hidden=true;
   detail.hidden=false;
@@ -14593,6 +14604,8 @@ function teamNwRol(rol, btn){
   const hid=document.getElementById('nw_rol'); if(hid) hid.value=rol;
   btn.parentElement.querySelectorAll('.segknop').forEach(b=>b.classList.toggle('aan', b===btn));
   const w=document.getElementById('nw_pagwrap'); if(w) w.innerHTML=pagChipsHtml('nw', rolDefaultTabs(rol));
+  /* De extra pagina's hangen ook aan de rol; ververs hun standaard mee. */
+  const x=document.getElementById('nw_extrawrap'); if(x) x.innerHTML=extraChipsHtml('nw', extraActiefVan({rol}));
 }
 function inviteLinkKopieer(token, knop){
   const link=location.origin+location.pathname+'?invite='+token;
@@ -14631,28 +14644,58 @@ async function teamActie(actie, extra, knop, uitEl, onOk){
   }catch(e){ if(uitEl) uitEl.textContent=e.message; toast(e.message,'fout'); }
   finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
 }
-async function gebruikerAanmaken(knop){
-  const naam=(document.getElementById('nw_naam').value||'').trim();
-  const gebruikersnaam=(document.getElementById('nw_gebruikersnaam').value||'').trim();
-  const email=(document.getElementById('nw_email').value||'').trim().toLowerCase();
-  const ww=document.getElementById('nw_ww').value||'';
-  const rol=document.getElementById('nw_rol').value;
-  const uit=document.getElementById('nw_uit');
-  if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
-  const tabs=paginasUit('nw').concat(omgUit('nw')).concat(refUit('nw'));
+/* Een nieuw teamlid komt altijd via een uitnodiging binnen: de collega zet zelf zijn
+   naam en wachtwoord (redeem-invite), en de rechten plus het uurloon staan al klaar op
+   de uitnodiging. Het uurloon leeft in de blob (state.lonen) op het account-id, dat we
+   pas na aanmelden kennen; daarom zetten we het op de uitnodiging en verrekent de app
+   het achteraf via account_id (zie renderTeamAccounts). */
+function nwInviteRechten(){
+  const rol=(document.getElementById('nw_rol')||{}).value||'medewerker';
+  const tabs=paginasUit('nw').concat(omgUit('nw')).concat(refUit('nw')).concat(extraUit('nw'));
   const uurloon=Math.max(0, Number(String((document.getElementById('nw_uurloon')||{}).value||'').replace(',','.'))||0);
-  await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs}, knop, uit, async()=>{
-    /* Het uurloon staat in de blob (state.lonen) op het account-id, dat we pas na
-       het aanmaken weten. Even het verse account ophalen en het loon wegschrijven. */
-    if(uurloon>0){
-      try{
-        const {data:acc}=await sb.from('accounts').select('id').eq('team_id',account.team_id).eq('email',email).maybeSingle();
-        if(acc && acc.id){ if(!state.lonen||typeof state.lonen!=='object') state.lonen={}; state.lonen[acc.id]=uurloon; save(); }
-      }catch(e){ console.error('uurloon zetten', e); }
-    }
-    toast('Gebruiker aangemaakt. Laat hem inloggen met '+email, true);
-    teamTerug();
-  });
+  return {rol, tabs, uurloon};
+}
+async function teamInviteMaak(){
+  if(!account) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+  const {rol, tabs, uurloon}=nwInviteRechten();
+  const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol, tabs, uurloon:uurloon||null}).select().single();
+  if(error || !data) throw new Error('Kon geen uitnodiging aanmaken.');
+  return data;
+}
+async function teamUitnodigVerstuur(knop){
+  const email=(document.getElementById('nw_email').value||'').trim().toLowerCase();
+  const uit=document.getElementById('inviteResultaat');
+  if(!email.includes('@')){ uit.innerHTML='<p style="color:var(--red-tekst)">Vul een geldig e-mailadres in.</p>'; return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
+  try{
+    const data=await teamInviteMaak();
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/uitnodiging-mail',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({ token:data.token, naar:email })
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Versturen mislukt.');
+    uit.innerHTML=`<div class="infobox">Uitnodiging verstuurd naar <b>${esc(email)}</b>. De link is 14 dagen geldig. Zodra je collega zijn wachtwoord instelt, staat hij met deze rechten in je team.</div>`;
+    document.getElementById('nw_email').value='';
+    toast('Uitnodiging verstuurd', true);
+  }catch(e){ uit.innerHTML='<p style="color:var(--red-tekst)">'+esc(e.message||'Versturen mislukt.')+'</p>'; }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
+}
+async function teamUitnodigLink(knop){
+  const uit=document.getElementById('inviteResultaat');
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Even…'; }
+  try{
+    const data=await teamInviteMaak();
+    const link=location.origin+location.pathname+'?invite='+data.token;
+    uit.innerHTML=`<div class="infobox">Deel deze link met je collega (14 dagen geldig). Hij komt met deze rechten binnen:<br>
+      <input readonly value="${esc(link)}" style="margin-top:8px" onclick="this.select()">
+      <button class="btn ghost small" style="margin-top:8px" onclick="navigator.clipboard.writeText('${esc(link)}').then(()=>toast('Link gekopieerd', true))"><svg class="i s"><use href="#i-clipboard"/></svg>Kopiëren</button>
+    </div>`;
+  }catch(e){ uit.innerHTML='<p style="color:var(--red-tekst)">'+esc(e.message||'Kon geen uitnodiging aanmaken.')+'</p>'; }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
 }
 async function gebruikerOpslaan(id, knop){
   const rol=(document.getElementById('rol_'+id)||{}).value;
@@ -14683,46 +14726,6 @@ async function teamWachtwoordInstellen(accountId, naam){
     if(!res.ok || !uit.ok) throw new Error(uit.error||'Wachtwoord wijzigen mislukt.');
     toast('Wachtwoord van '+naam+' is gewijzigd.', true);
   }catch(e){ toast(e.message, 'fout'); }
-}
-async function maakUitnodiging(){
-  if(!account){ return; }
-  const rol=document.getElementById('inv_rol').value;
-  const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol}).select().single();
-  const uit=document.getElementById('inviteResultaat');
-  if(error || !data){ uit.innerHTML='<p style="color:var(--red-tekst)">Kon geen uitnodiging aanmaken.</p>'; return; }
-  const link=location.origin+location.pathname+'?invite='+data.token;
-  uit.innerHTML=`<div class="infobox">Deel deze link met je nieuwe collega (14 dagen geldig):<br>
-    <input readonly value="${esc(link)}" style="margin-top:8px" onclick="this.select()">
-    <button class="btn ghost small" style="margin-top:8px" onclick="navigator.clipboard.writeText('${esc(link)}').then(()=>toast('Link gekopieerd', true))"><svg class="i s"><use href="#i-clipboard"/></svg>Kopiëren</button>
-  </div>`;
-}
-/* Uitnodiging per e-mail: maak een invite en laat de server (uitnodiging-mail) de link
-   naar je collega mailen. Zo hoef je zelf niets te kopiëren; na het instellen van zijn
-   wachtwoord verschijnt hij vanzelf in je team. */
-async function mailUitnodiging(knop){
-  if(!account){ return; }
-  const email=(document.getElementById('inv_email').value||'').trim().toLowerCase();
-  const rol=document.getElementById('inv_rol').value;
-  const uit=document.getElementById('inviteResultaat');
-  if(!email.includes('@')){ uit.innerHTML='<p style="color:var(--red-tekst)">Vul een geldig e-mailadres in.</p>'; return; }
-  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Versturen…'; }
-  try{
-    const {data,error}=await sb.from('invites').insert({team_id:account.team_id, rol}).select().single();
-    if(error || !data) throw new Error('Kon geen uitnodiging aanmaken.');
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
-    const res=await fetch(SUPABASE_URL+'/functions/v1/uitnodiging-mail',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({ token:data.token, naar:email })
-    });
-    const j=await res.json().catch(()=>({}));
-    if(!res.ok||!j.ok) throw new Error(j.error||'Versturen mislukt.');
-    uit.innerHTML=`<div class="infobox">Uitnodiging verstuurd naar <b>${esc(email)}</b>. De link is 14 dagen geldig. Zodra je collega zijn wachtwoord heeft ingesteld, staat hij in je team.</div>`;
-    document.getElementById('inv_email').value='';
-    toast('Uitnodiging verstuurd', true);
-  }catch(e){ uit.innerHTML='<p style="color:var(--red-tekst)">'+esc(e.message||'Versturen mislukt.')+'</p>'; }
-  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
 }
 
 /* -- mijn account (alle rollen): naam, wachtwoord, 2FA -- */
