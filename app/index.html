@@ -2099,6 +2099,7 @@
       <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
       <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     </div>
+    <button data-tab="rooster"><svg class="i"><use href="#i-clock"/></svg> Rooster</button>
     <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
   </nav>
   <div class="onderin">
@@ -3122,7 +3123,6 @@
       <div class="hubgrid">
         <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Uren van het team en de loonkosten</span></span></button>
         <button class="hubtegel" data-tab="personeel" onclick="showTab('personeel')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Personeel</b><span>Loon per uur of percentage en kostenplaats</span></span></button>
-        <button class="hubtegel" data-tab="rooster" onclick="showTab('rooster')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Rooster</b><span>Beschikbaarheid doorgeven en het team inplannen</span></span></button>
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
         <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alle verkopen, per dag of week, zoeken op naam of bedrag</span></span></button>
         <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Wat je inkoopt vastleggen, voor de btw-voorbelasting en investering</span></span></button>
@@ -11342,7 +11342,7 @@ async function web2Los2(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','personeel','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','personeel','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
   beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
