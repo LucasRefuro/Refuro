@@ -10,6 +10,9 @@
 // controleert zelf wie er belt: eigenaar/beheerder van de winkel, of een beheerder
 // van de organisatie in het portaal. 'account_aanmaken' zet het wachtwoord van de
 // ingelogde portaalgebruiker (na de uitnodigingslink of 'wachtwoord vergeten').
+// 'melding' mailt bij een nieuwe aanmelding (naar de winkel, plus een bevestiging aan
+// de klant) en bij elke stap (naar de beheerders van de organisatie). Wat al verstuurd
+// is staat in klantportaal_meldingen: nooit twee keer dezelfde mail.
 //
 // Geheimen: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, RESEND_API_KEY,
 // APP_URL (standaard https://storvo.app), RESEND_FROM (reserve-afzender).
@@ -263,6 +266,108 @@ async function accountAanmaken(req: Request, lijf: any) {
   return antwoord({ ok: true, eerste });
 }
 
+/* ═══ melding: mail bij een aanmelding of een nieuwe stap ═══
+   De inhoud komt altijd uit de database, nooit uit het verzoek. */
+const STAPMAIL: Record<string, { veld: string | null; onderwerp: string; kop: string; tekst: string; docs: string[] }> = {
+  aangenomen: { veld: null, onderwerp: "staat in het portaal", kop: "Je partij staat in het portaal",
+    tekst: "We hebben je partij in behandeling genomen. In het klantportaal zie je steeds hoe ver we zijn. We plannen nu de ophaling.", docs: [] },
+  opgehaald: { veld: "opgehaald_op", onderwerp: "is opgehaald", kop: "Je partij is opgehaald",
+    tekst: "We hebben je apparaten opgehaald. Ze gaan nu naar onze werkplaats om gewist te worden.", docs: ["Ophaalbon", "Apparatenlijst"] },
+  gewist: { veld: "gewist_op", onderwerp: "is gewist", kop: "Alle data is gewist",
+    tekst: "De data op je apparaten is gecertificeerd gewist. Per serienummer staat vast hoe.", docs: ["Wiscertificaat"] },
+  getest: { veld: "getest_op", onderwerp: "is getest", kop: "Je apparaten zijn getest",
+    tekst: "Alles is getest en beoordeeld. Per apparaat zie je of het een tweede leven krijgt of gerecycled wordt.", docs: ["Verwerkingsrapport"] },
+  afgerond: { veld: "afgerond_op", onderwerp: "is afgerond", kop: "Je partij is afgerond",
+    tekst: "Alles is verwerkt en afgerond. Dank je wel dat je je IT een tweede leven geeft.", docs: ["Impactrapport"] },
+};
+
+async function melding(req: Request, lijf: any) {
+  const user = await wieBelt(req);
+  if (!user) return fout("Niet ingelogd", 401);
+  const soort = schoon(lijf?.soort, 20);
+  const id = schoon(lijf?.opdracht_id, 40);
+  if (soort !== "aanvraag" && !STAPMAIL[soort]) return fout("Onbekende melding");
+
+  const { data: o } = await admin.from("klantportaal_opdrachten").select("*").eq("id", id).maybeSingle();
+  if (!o) return fout("Opdracht niet gevonden", 404);
+  const ins = await instellingenVan(o.team_id);
+  if (!ins) return antwoord({ ok: true, verstuurd: 0 });
+
+  // Mag deze beller dit melden? Aanvraag: iemand van die organisatie. Stap: iemand van de winkel.
+  if (soort === "aanvraag") {
+    const { data: ik } = await admin.from("klantportaal_gebruikers").select("organisatie_id, actief").eq("user_id", user.id).maybeSingle();
+    if (!ik || !ik.actief || ik.organisatie_id !== o.organisatie_id) return fout("Geen toegang", 403);
+    if (o.status !== "aanvraag") return antwoord({ ok: true, verstuurd: 0 });
+  } else {
+    const { data: acc } = await admin.from("accounts").select("team_id").eq("id", user.id).maybeSingle();
+    if (!acc || acc.team_id !== o.team_id) return fout("Geen toegang", 403);
+    const st = STAPMAIL[soort];
+    if (o.status !== "actief" || (st.veld && !o[st.veld])) return antwoord({ ok: true, verstuurd: 0 });
+  }
+
+  // Al eens verstuurd? Dan niet nog een keer.
+  const { data: nieuw } = await admin.from("klantportaal_meldingen")
+    .upsert({ opdracht_id: o.id, soort, team_id: o.team_id }, { onConflict: "opdracht_id,soort", ignoreDuplicates: true })
+    .select("opdracht_id");
+  if (!nieuw || !nieuw.length) return antwoord({ ok: true, verstuurd: 0, al: true });
+
+  const { data: org } = await admin.from("klantportaal_organisaties").select("naam").eq("id", o.organisatie_id).maybeSingle();
+  const orgNaam = org?.naam || "je organisatie";
+  const adres = await portaalAdres(ins);
+  const partij = `${o.nummer ? o.nummer + " · " : ""}${o.titel || "Partij"}`;
+  let verstuurd = 0;
+  try {
+    if (soort === "aanvraag") {
+      // 1. De winkel: er is een nieuwe partij aangemeld.
+      let winkel = ins.contact_email;
+      if (!winkel) {
+        const { data: eig } = await admin.from("accounts").select("email").eq("team_id", o.team_id).eq("rol", "eigenaar").limit(1).maybeSingle();
+        winkel = eig?.email || null;
+      }
+      const regels = [
+        ["Organisatie", orgNaam], ["Wat", o.omschrijving || o.titel], ["Aantal", o.aantal_verwacht != null ? String(o.aantal_verwacht) : ""],
+        ["Ophaaladres", o.ophaaladres || ""], ["Wanneer", (o.gepland || "").replace(/^Gewenst: /, "")], ["Aangemeld door", user.email || ""],
+      ].filter(([, w]) => w).map(([k, w]) => `<tr><td style="padding:4px 14px 4px 0;color:#8A938F;vertical-align:top">${html(k)}</td><td style="padding:4px 0">${html(String(w))}</td></tr>`).join("");
+      if (winkel) {
+        await verstuur(ins, winkel, `Nieuwe aanmelding van ${orgNaam}`,
+          mailHtml(ins, "Nieuwe partij aangemeld", `${html(orgNaam)} heeft een partij aangemeld in het klantportaal.`
+            + `<table style="margin-top:14px;font-size:14px;border-collapse:collapse">${regels}</table>`,
+            "Bekijk de aanvraag", APP_URL + "/portaalbeheer/", "Neem de aanvraag aan of wijs hem af in portaalbeheer."));
+        verstuurd++;
+      }
+      // 2. De klant: bevestiging.
+      if (user.email) {
+        await verstuur(ins, user.email, `We hebben je aanmelding ontvangen`,
+          mailHtml(ins, "Aanmelding ontvangen", `Bedankt! We hebben je partij ontvangen: <strong>${html(o.titel || "")}</strong>. `
+            + `Je krijgt binnen twee werkdagen een indicatief bod. Daarna plannen we de ophaling.`,
+            "Naar het klantportaal", adres, `Je krijgt deze mail omdat je een partij hebt aangemeld voor ${html(orgNaam)}.`));
+        verstuurd++;
+      }
+    } else {
+      // Alle actieve beheerders van de organisatie.
+      const st = STAPMAIL[soort];
+      const { data: ontv } = await admin.from("klantportaal_gebruikers").select("email, naam")
+        .eq("organisatie_id", o.organisatie_id).eq("actief", true).eq("rol", "beheerder");
+      const docs = st.docs.length
+        ? `<br><br><strong>Klaar om te downloaden:</strong> ${st.docs.map(html).join(", ")}.` : "";
+      for (const g of ontv || []) {
+        await verstuur(ins, g.email, `${partij} ${st.onderwerp}`,
+          mailHtml(ins, st.kop, `Hallo${g.naam ? " " + html(g.naam) : ""}, een update over <strong>${html(partij)}</strong>. ${st.tekst}${docs}`,
+            "Bekijk in het klantportaal", adres,
+            `Je krijgt deze mail omdat je beheerder bent van ${html(orgNaam)} in het klantportaal van ${html(ins.merknaam)}.`));
+        verstuurd++;
+      }
+    }
+  } catch (e) {
+    console.error("klantportaal melding:", e);
+    // Niets (goed) verstuurd: weghalen, zodat het later opnieuw kan.
+    if (!verstuurd) await admin.from("klantportaal_meldingen").delete().eq("opdracht_id", o.id).eq("soort", soort);
+    return fout("Mail versturen lukte niet", 502);
+  }
+  await admin.from("klantportaal_meldingen").update({ aantal: verstuurd }).eq("opdracht_id", o.id).eq("soort", soort);
+  return antwoord({ ok: true, verstuurd });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -271,5 +376,6 @@ Deno.serve(async (req) => {
   if (lijf?.actie === "inloglink") return inloglink(lijf);
   if (lijf?.actie === "uitnodigen") return uitnodigen(req, lijf);
   if (lijf?.actie === "account_aanmaken") return accountAanmaken(req, lijf);
+  if (lijf?.actie === "melding") return melding(req, lijf);
   return fout("Onbekende actie");
 });

@@ -333,6 +333,7 @@ function opdrachtNieuw(){
     const { data, error } = await sb.from('klantportaal_opdrachten').insert({ team_id:account.team_id, organisatie_id:org, titel, status:'actief', aangemaakt_door:account.id }).select().single();
     if(error) throw error;
     opdrachten.unshift(data); sluit(); opdrachtOpen(data.id); toast('Opdracht aangemaakt');
+    melden(data.id, 'aangenomen');
   }));
 }
 async function aanvraagAannemen(knop, id){
@@ -341,6 +342,7 @@ async function aanvraagAannemen(knop, id){
     if(error) throw error;
     const o = opdrachten.find(x => x.id === id); if(o) o.status = 'actief';
     opdrachtOpen(id); toast('Aangenomen. Vul het bod in, dan ziet de klant het meteen.');
+    melden(id, 'aangenomen');
   });
 }
 async function aanvraagAfwijzen(knop, id){
@@ -372,7 +374,7 @@ function tekenOpdracht(){
     <div class="rij"><a class="btn licht" href="/klantportaal/?bekijk=${o.organisatie_id}" target="_blank" rel="noopener">Bekijk als klant</a>
       <button class="btn licht" onclick="opdrachtVerwijderen('${o.id}')">Verwijderen</button></div></div>
 
-  <div class="kaart"><h2>Stappen</h2><p class="uitleg">Druk op Vandaag zodra een stap klaar is. De klant ziet het meteen.</p>
+  <div class="kaart"><h2>Stappen</h2><p class="uitleg">Druk op Vandaag zodra een stap klaar is. De klant ziet het meteen, en de beheerders van de klant krijgen een mail (één keer per stap).</p>
     <div class="stappen"><div class="stap klaar"><b>Aangemeld</b><span>${datum(o.aangemeld_op)}</span></div>
     ${STAPPEN.map(([k, n]) => `<div class="stap ${o[k] ? 'klaar' : ''}"><b>${n}</b>${o[k]
       ? `<span>${datum(o[k])}</span><button class="btn licht klein" onclick="stapZetten(this,'${k}',false)">Terugzetten</button>`
@@ -412,6 +414,20 @@ function tekenOpdracht(){
     <button class="btn licht klein" style="margin-top:10px" onclick="orgOpen('${o.organisatie_id}')">Naar ${esc(orgNaam(o.organisatie_id))}</button>
   </div>`;
 }
+/* Mail naar de beheerders van de organisatie bij een nieuwe stap. De functie kijkt zelf
+   in de database wat er klaar is en stuurt elke melding maar één keer. */
+const STAPSOORT = { opgehaald_op:'opgehaald', gewist_op:'gewist', getest_op:'getest', afgerond_op:'afgerond' };
+async function melden(opdrachtId, soort){
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', { method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer ' + (session ? session.access_token : '') },
+      body:JSON.stringify({ actie:'melding', opdracht_id:opdrachtId, soort }) });
+    const uit = await res.json().catch(() => ({}));
+    if(!res.ok || uit.ok === false){ toast('De mail naar de klant lukte niet: ' + (uit.error || 'onbekende fout'), 'fout'); return; }
+    if(uit.verstuurd) toast(uit.verstuurd === 1 ? 'De beheerder van de klant heeft een mail gekregen.' : uit.verstuurd + ' beheerders van de klant hebben een mail gekregen.');
+  } catch(e){ console.error('melding:', e); }
+}
 async function opdrachtBijwerken(rij){
   const { error } = await sb.from('klantportaal_opdrachten').update(rij).eq('id', huidigeOpdracht);
   if(error) throw error;
@@ -429,6 +445,7 @@ async function stapZetten(knop, veld, aan){
   const rij = {}; rij[veld] = aan ? vandaag() : null;
   await bezig(knop, async () => {
     await opdrachtBijwerken(rij); teken();
+    if(aan && STAPSOORT[veld]) melden(huidigeOpdracht, STAPSOORT[veld]);
     if(aan && veld === 'gewist_op' && apparaten.some(a => !kpApparaten[a.id] || kpApparaten[a.id].wis_status === 'open'))
       toast('Zet ook de toestellen op gewist, dan komen ze op het wiscertificaat.');
   });

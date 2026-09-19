@@ -837,12 +837,17 @@ async function aanmelden(){
   if(wat.length < 3){ toast('Vertel kort wat je hebt.', 'fout'); return; }
   const knop = f('amKnop'); knop.disabled = true; knop.textContent = 'Versturen...';
   const aantal = parseInt(f('amAantal').value, 10);
-  const { error } = await sb.rpc('klantportaal_aanmelden', {
+  const { data: nieuwId, error } = await sb.rpc('klantportaal_aanmelden', {
     p_omschrijving: wat, p_aantal: isNaN(aantal) ? null : aantal,
     p_ophaaladres: f('amAdres').value.trim() || null, p_periode: f('amPeriode').value.trim() || null
   });
   if(error){ knop.disabled = false; knop.textContent = 'Aanmelden'; toast('Aanmelden lukte niet. Probeer het opnieuw.', 'fout'); return; }
   aanmeldKlaar = true; tekenAanmelden();
+  // De winkel krijgt een mail, de aanmelder een bevestiging. Mislukt dat, dan staat de aanvraag er toch.
+  if(nieuwId) sb.auth.getSession().then(({ data: { session } }) => fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
+    method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+(session ? session.access_token : '') },
+    body: JSON.stringify({ actie:'melding', soort:'aanvraag', opdracht_id:nieuwId })
+  })).catch(() => {});
 }
 function aanmeldOpnieuw(){ aanmeldKlaar = false; tekenAanmelden(); }
 
