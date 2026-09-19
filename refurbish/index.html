@@ -4171,6 +4171,16 @@ async function naarVoorraad(a){
   if(error) throw new Error('Kon hem niet in de voorraad zetten: '+error.message);
   await sb.from('refurbish_apparaten')
     .update({hardware_id:data.id, bijgewerkt_op:new Date().toISOString()}).eq('id',a.id);
+  /* Zat dit toestel al in een bundel (het kon er als 'te controleren' in), dan
+     krijgt de verse hardware-rij meteen de prijs per stuk van die bundel. */
+  if(a.voorraad_batch_id){
+    const vb=vbundels.find(x=>x.id===a.voorraad_batch_id);
+    if(vb && Number(vb.vraagprijs)>0){
+      const n=apparaten.filter(x=>x.voorraad_batch_id===a.voorraad_batch_id).length || 1;
+      const perStuk=Math.round((Number(vb.vraagprijs)/n)*100)/100;
+      await sb.from('hardware').update({verkoop:perStuk, bijgewerkt_op:new Date().toISOString()}).eq('id',data.id);
+    }
+  }
   return data.id;
 }
 
@@ -7695,7 +7705,7 @@ function renderBundelDetail(){
   const ledenRijen=c.leden.map(a=>{
     const partij=a.batch_id?batches.find(b=>b.id===a.batch_id):null;
     return `<tr>
-      <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b>${a.code?`<div class="muted klein mono">${esc(a.code)}</div>`:''}</td>
+      <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b>${!OP_VOORRAAD.includes(a.status)?` <span class="batpil">${esc(STATUS[a.status]||a.status)}</span>`:''}${a.code?`<div class="muted klein mono">${esc(a.code)}</div>`:''}</td>
       <td>${partij?esc(batLabel(partij)):'<span class="muted">los</span>'}</td>
       <td class="num">${euro(Number(a.inkoop)||0)}</td>
       <td class="num">${c.aantal?euro(c.perStuk):'—'}</td>
@@ -7811,19 +7821,27 @@ async function vbBewaar(knop, id){
   });
 }
 
-/* De laptops die je in een bundel mag stoppen: op voorraad, al een hardware-rij,
-   nog niet in een andere bundel, en niet aan een externe partner toegewezen. */
+/* De laptops die je in een bundel mag stoppen: alles wat nog niet verkocht,
+   gesloopt of afgekeurd is, nog niet in een andere bundel zit en niet aan een
+   externe partner is toegewezen. Ook nog-te-controleren laptops mogen erin: voor
+   een groothandel-lot verkoop je soms de hele partij, getest of niet. */
+const VB_STATUS=['te_controleren','installeren','klaar','overgedragen'];
 function vbKandidaten(){
-  return vrRijen().filter(a=>a.hardware_id && !a.voorraad_batch_id && !((hardwareVan(a)||{}).partner_id));
+  return apparaten.filter(a=>VB_STATUS.includes(a.status) && !a.voorraad_batch_id
+    && !isVerkocht(a) && !((hardwareVan(a)||{}).partner_id));
 }
 function vbKoppelOpen(){
   const vrij=vbKandidaten();
   if(!vrij.length){ toast('Geen vrije laptops om toe te voegen','let-op'); return; }
-  const inhoud=`<p class="pv">Vink de laptops aan die in deze bundel gaan. Alleen laptops die op voorraad staan en nog niet in een andere bundel of bij een partner zitten.</p>
-    <div class="batkoppellijst">${vrij.map(a=>`<label class="batkoppelrij">
+  const inhoud=`<p class="pv">Vink de laptops aan die in deze bundel gaan. Ook laptops die nog te controleren zijn mogen erin. Niet: al in een andere bundel, verkocht, of bij een partner.</p>
+    <div class="batkoppellijst">${vrij.map(a=>{
+      const partij=a.batch_id?batches.find(b=>b.id===a.batch_id):null;
+      return `<label class="batkoppelrij">
       <input type="checkbox" value="${a.id}">
-      <span>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}${a.code?' <span class="muted klein mono">'+esc(a.code)+'</span>':''}</span>
-    </label>`).join('')}</div>`;
+      <span>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}${a.code?' <span class="muted klein mono">'+esc(a.code)+'</span>':''}
+        <span class="batpil">${esc(STATUS[a.status]||a.status)}</span>${partij?' <span class="muted klein">'+esc(batLabel(partij))+'</span>':''}</span>
+    </label>`;
+    }).join('')}</div>`;
   venster('Laptops kiezen', inhoud, [
     {tekst:'Toevoegen', klasse:'actie', doe:(kn)=>vbKoppel(kn)}
   ]);
@@ -7845,11 +7863,11 @@ async function vbVoegToe(ids, doel){
     if(!a){ over++; return; }
     if(a.voorraad_batch_id===doel) return;                 // zit er al in: stil overslaan
     if(a.voorraad_batch_id){ over++; return; }              // in een andere bundel
-    if(!a.hardware_id){ over++; return; }                   // nog niet op voorraad
+    if(isVerkocht(a)){ over++; return; }                    // al verkocht
     if((hardwareVan(a)||{}).partner_id){ over++; return; }  // bij een externe partner
     geldig.push(id);
   });
-  if(!geldig.length){ toast(over?'Kon niet toevoegen: al in een bundel, bij een partner of nog niet op voorraad':'Niets toe te voegen','let-op'); return; }
+  if(!geldig.length){ toast(over?'Kon niet toevoegen: al in een bundel, verkocht of bij een partner':'Niets toe te voegen','let-op'); return; }
   const {error}=await sb.from('refurbish_apparaten')
     .update({voorraad_batch_id:doel, bijgewerkt_op:new Date().toISOString()}).in('id',geldig);
   if(error){ toast('Toevoegen mislukt','fout'); return; }
