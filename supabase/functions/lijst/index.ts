@@ -2,7 +2,7 @@
 //
 // GET /functions/v1/lijst?w=<winkel-slug>&k=<sleutel>&soort=<soort>[&merk=..][&id=..][&f=..]
 //   (in plaats van w mag ook t=<team-id>, zoals Storvo zelf doet)
-//   soort: index | voorraad | merk | batch | bundel
+//   soort: index | voorraad | merk | batch | bundel (bundel met id=<uuid> of code=<V0001>)
 //   f:     xlsx (standaard) | csv | json (voor de webshop) | html (stuurt door naar de
 //          printbare pagina /klantportaal/lijst/, ook als PDF op te slaan)
 //
@@ -151,7 +151,9 @@ Deno.serve(async (req) => {
     titel = `Batch ${b.code || b.nummer || ""}`.trim(); sub = "Alle apparaten uit deze partij, met hun status";
     bestand = `${slugify(merknaam)}-batch-${slugify(String(b.code || b.nummer || "partij"))}`;
   } else if (soort === "bundel") {
-    const b = bundels.find((x) => x.id === schoon(p.id, 40));
+    // Op id, of op de bundelcode (V0001): de webshop kent soms alleen de code uit de tags.
+    const code = schoon(p.code, 30).toUpperCase();
+    const b = bundels.find((x) => x.id === schoon(p.id, 40)) || (code ? bundels.find((x) => String(x.code || x.nummer || "").toUpperCase() === code) : undefined);
     if (!b) return fout("Deze bundel bestaat niet", 404);
     lijst = apparaten.filter((a) => a.voorraad_batch_id === b.id && !verkocht(a));
     bundelKol = false;
@@ -235,5 +237,6 @@ Deno.serve(async (req) => {
   const q = new URLSearchParams(slug ? { w: slug, k: sleutel, soort } : { t: teamId, k: sleutel, soort });
   if (p.merk) q.set("merk", schoon(p.merk, 60));
   if (p.id) q.set("id", schoon(p.id, 40));
+  if (p.code) q.set("code", schoon(p.code, 30));
   return new Response(null, { status: 302, headers: { ...cors, Location: `${appUrl}/klantportaal/lijst/?${q}` } });
 });

@@ -368,7 +368,11 @@ function tekenOpdrachten(){
       <div class="kpi"><div class="l">Organisaties</div><div class="v">${organisaties.length}</div></div></div>`;
   if(aanvragen.length){
     h += `<div class="kaart melding"><h2>Nieuwe aanvragen uit het portaal</h2>${aanvragen.map(o => `<div class="persoon"><div><b>${esc(orgNaam(o.organisatie_id))}</b>
-      <div class="muted klein">${esc(o.omschrijving || o.titel)}${o.aantal_verwacht ? ' · ongeveer ' + o.aantal_verwacht + ' stuks' : ''}${o.ophaaladres ? ' · ' + esc(o.ophaaladres) : ''}${o.gepland ? ' · ' + esc(o.gepland) : ''}</div></div>
+      ${Array.isArray(o.regels) && o.regels.length
+        ? `<div class="klein" style="margin-top:6px">${o.regels.map(r => `${r.aantal}× <b>${esc(r.model)}</b>${r.specs ? ' (' + esc(r.specs) + ')' : ''} · ${esc(STAATTEKST[r.staat] || '')} · ${r.per_stuk ? bodTekst(r.per_stuk.min, r.per_stuk.max) + ' p/st' : 'volgt'} <span class="muted">(${esc(BRONTEKST[r.bron] || '')}${r.waarde ? ', waarde ' + euro(r.waarde.advies) : ''})</span>`).join('<br>')}</div>`
+        : `<div class="muted klein">${esc(o.omschrijving || o.titel)}</div>`}
+      <div class="muted klein">${o.aantal_verwacht ? 'ongeveer ' + o.aantal_verwacht + ' stuks' : ''}${o.ophaaladres ? ' · ' + esc(o.ophaaladres) : ''}${o.gepland ? ' · ' + esc(o.gepland) : ''}</div></div>
+      ${o.bod_bandbreedte && o.bod_bandbreedte.max ? `<div class="kpi-bedrag"><b>${bodTekst(o.bod_bandbreedte.min, o.bod_bandbreedte.max)}</b></div>` : ''}
       <div class="rij"><button class="btn actie klein" onclick="aanvraagAannemen(this,'${o.id}')">Aannemen</button><button class="btn licht klein" onclick="aanvraagAfwijzen(this,'${o.id}')">Afwijzen</button></div></div>`).join('')}</div>`;
   }
   h += tekenAanbiedingen();
@@ -402,9 +406,14 @@ function opdrachtNieuw(){
 }
 async function aanvraagAannemen(knop, id){
   await bezig(knop, async () => {
-    const { error } = await sb.from('klantportaal_opdrachten').update({ status:'actief' }).eq('id', id);
+    const o = opdrachten.find(x => x.id === id);
+    // Kwam de aanvraag met een slim bod, dan wordt het midden daarvan het indicatieve bod (aan te passen).
+    const wijz = { status:'actief' };
+    if(o && o.bod_indicatief == null && o.bod_bandbreedte && o.bod_bandbreedte.max)
+      wijz.bod_indicatief = Math.round((Number(o.bod_bandbreedte.min || o.bod_bandbreedte.max) + Number(o.bod_bandbreedte.max)) / 2);
+    const { error } = await sb.from('klantportaal_opdrachten').update(wijz).eq('id', id);
     if(error) throw error;
-    const o = opdrachten.find(x => x.id === id); if(o) o.status = 'actief';
+    if(o) Object.assign(o, wijz);
     opdrachtOpen(id); toast('Aangenomen. Vul het bod in, dan ziet de klant het meteen.');
     melden(id, 'aangenomen');
   });

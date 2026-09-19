@@ -339,7 +339,8 @@ Deno.serve(async (req) => {
       const invoer: any = {
         title: titel,
         descriptionHtml: oms ? "<p>" + esc(oms).replace(/\n/g, "<br>") + "</p>" : "",
-        vendor: "Storvo", productType: "Laptops (bundel)", status: "ACTIVE",
+        // De klant van de winkel hoort Storvo niet te zien: de winkelnaam als merk.
+        vendor: k.winkelnaam || "Groothandel", productType: "Laptops (bundel)", status: "ACTIVE",
         tags: ["bundel", "groothandel", v.code || ""].filter(Boolean),
         productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
         variants: [{
@@ -363,6 +364,16 @@ Deno.serve(async (req) => {
       const p = letOp(uit?.productSet, "Het aanmaken op de webshop").product;
       if (!p?.id) throw new Error("Shopify gaf geen product terug");
       const variant = p?.variants?.nodes?.[0]?.id || null;
+
+      /* De bundel-id op het product, zodat het thema de apparatenlijst kan tonen en
+         laten downloaden (functie 'lijst'). Mislukt dit, dan staat de bundel toch online. */
+      try {
+        const mf = await graphql(k, `
+          mutation($m: [MetafieldsSetInput!]!) { metafieldsSet(metafields: $m) { userErrors { field message } } }`,
+          { m: [{ ownerId: p.id, namespace: "reloop", key: "storvo_bundel", type: "single_line_text_field", value: String(bundelId) }] });
+        const fouten = mf?.metafieldsSet?.userErrors || [];
+        if (fouten.length) console.error("webshop2 metafield", fouten);
+      } catch (e) { console.error("webshop2 metafield", e); }
 
       let zichtbaar = false;
       if (k.publicatie_id) {

@@ -50,7 +50,7 @@ const p = Object.fromEntries(new URLSearchParams(location.search));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 function adres(f){
   const q = new URLSearchParams(p.t ? { t:p.t, k:p.k || '', soort:p.soort || 'voorraad', f } : { w:p.w || '', k:p.k || '', soort:p.soort || 'voorraad', f });
-  if(p.merk) q.set('merk', p.merk); if(p.id) q.set('id', p.id);
+  if(p.merk) q.set('merk', p.merk); if(p.id) q.set('id', p.id); if(p.code) q.set('code', p.code);
   return FUNCTIE + '?' + q;
 }
 async function laden(){
@@ -67,7 +67,7 @@ async function laden(){
     const cel = (k, v) => k === 'Prijs' ? (v == null || v === '' ? '' : '€ ' + Number(v).toLocaleString('nl-NL', { minimumFractionDigits:2, maximumFractionDigits:2 }))
       : k === 'Grade' && v ? `<span class="grade">${esc(v)}</span>` : esc(v);
     vak.innerHTML = `<div class="kop"><div>${logo}<h1>${esc(d.titel)}</h1>
-        <p class="sub">${esc(d.sub)} · <b>${d.aantal}</b> apparaten${grades ? ' · ' + grades : ''}</p>
+        <p class="sub">${esc(d.sub)}${/apparat/.test(d.sub || '') ? '' : ` · <b>${d.aantal}</b> ${d.aantal === 1 ? 'apparaat' : 'apparaten'}`}${grades ? ' · ' + grades : ''}</p>
         <p class="sub"><span class="label">Stand van</span> ${new Date().toLocaleString('nl-NL', { dateStyle:'long', timeStyle:'short' })}</p></div>
       <div class="knoppen"><button class="knop" onclick="print()">Afdrukken of PDF</button>
         <a class="knop licht" href="${esc(adres('xlsx'))}">Excel</a><a class="knop licht" href="${esc(adres('csv'))}">CSV</a></div></div>

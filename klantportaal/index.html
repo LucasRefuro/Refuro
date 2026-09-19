@@ -161,6 +161,18 @@ td { padding:12px 12px 12px 0; border-bottom:1px solid var(--lijn); white-space:
 .leeg { background:var(--card); border:1px dashed var(--lijn); border-radius:var(--radius); padding:48px 24px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; color:var(--muted); }
 .leeg h2 { color:var(--inkt); }
 .leeg p { max-width:440px; }
+.am-rijen { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.am-rij { display:grid; grid-template-columns:120px minmax(0,1.3fr) minmax(0,1fr) 72px 170px 36px; gap:8px; align-items:end; padding:12px; border:1px solid var(--lijn); border-radius:var(--radius-s); background:var(--card); }
+.am-rij .veld { margin-bottom:0; }
+.am-rij .veld label { font-size:12.5px; }
+.am-weg { width:36px; height:44px; border:0; border-radius:10px; background:var(--soft); color:var(--muted); font-size:20px; cursor:pointer; }
+.am-weg:hover { background:var(--rood-soft); color:var(--rood-tekst); }
+.am-bod { grid-column:1/-1; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:14px; border-top:1px dashed var(--lijn); padding-top:8px; }
+.am-bod strong { color:var(--kleur); }
+.am-totaal { display:flex; flex-direction:column; gap:4px; margin-top:14px; padding:16px 18px; border-radius:var(--radius-s); background:var(--kleur); color:#fff; }
+.am-totaal strong { font-family:var(--display); font-size:30px; letter-spacing:-.03em; }
+.am-totaal .label, .am-totaal .muted { color:rgba(255,255,255,.82); }
+@media (max-width:760px) { .am-rij { grid-template-columns:repeat(2, minmax(0,1fr)); } .am-model { grid-column:1/-1; } .am-weg { grid-column:2; justify-self:end; } }
 .twee { display:grid; grid-template-columns:minmax(0, 1.2fr) minmax(0, .8fr); gap:20px; align-items:start; }
 .persoon { display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--lijn); }
 .persoon:first-child { border-top:0; }
@@ -817,37 +829,116 @@ async function collegaUit(id){
 }
 
 /* ═══ partij aanmelden ═══ */
+/* ═══ partij aanmelden, met het slimme bod ═══
+   Per model soort, model, specs, aantal en staat; na elke wijziging (met een korte
+   pauze) rekent de functie 'klantportaal' een indicatief bod uit. Versturen gaat naar
+   de actie 'aanmelden', die het bod zelf opnieuw uitrekent en de winkel mailt. */
+const AM_SOORT = [['laptop','Laptop'],['telefoon','Telefoon'],['tablet','Tablet'],['desktop','Desktop'],['monitor','Monitor'],['server','Server'],['netwerk','Netwerk'],['overig','Overig']];
+const AM_STAAT = [['goed','Werkt, nette staat'],['sporen','Werkt, flinke gebruikssporen'],['defect','Defect of onbekend']];
+const AM_VOORBEELD = { laptop:['Dell Latitude 5420','i5, 16 GB, 256 GB SSD'], telefoon:['iPhone 12','128 GB'], tablet:['iPad 9e generatie','64 GB'], desktop:['HP EliteDesk 800 G6','i5, 8 GB, 256 GB'], monitor:['Dell P2419H','24 inch'], server:['Dell PowerEdge R640','2x Xeon, 128 GB'], netwerk:['Cisco Catalyst 2960X','48 poorten'], overig:['Omschrijving',''] };
+let amRegels = [], amTimer = null, amNr = 0, amUitkomst = null;
+function amNieuw(){ return { soort:'laptop', model:'', specs:'', aantal:1, staat:'goed' }; }
+function amEuro(n){ return '€ ' + Math.round(n).toLocaleString('nl-NL'); }
+function amBereik(a, b){ return a === b ? amEuro(b) : amEuro(a) + ' – ' + amEuro(b); }
+function amOpties(lijst, gekozen){ return lijst.map(o => '<option value="'+o[0]+'"'+(o[0] === gekozen ? ' selected' : '')+'>'+o[1]+'</option>').join(''); }
+function amRijenHtml(){
+  return amRegels.map((r, i) => '<div class="am-rij">'
+    + '<div class="veld"><label for="amSoort'+i+'">Soort</label><select class="invoer" id="amSoort'+i+'" onchange="amZet('+i+',\'soort\',this.value)">'+amOpties(AM_SOORT, r.soort)+'</select></div>'
+    + '<div class="veld am-model"><label for="amModel'+i+'">Merk en model</label><input class="invoer" id="amModel'+i+'" value="'+esc(r.model)+'" placeholder="'+esc(AM_VOORBEELD[r.soort][0])+'" oninput="amZet('+i+',\'model\',this.value)"></div>'
+    + '<div class="veld"><label for="amSpecs'+i+'">Specs</label><input class="invoer" id="amSpecs'+i+'" value="'+esc(r.specs)+'" placeholder="'+esc(AM_VOORBEELD[r.soort][1])+'" oninput="amZet('+i+',\'specs\',this.value)"></div>'
+    + '<div class="veld"><label for="amAantal'+i+'">Aantal</label><input class="invoer" id="amAantal'+i+'" type="number" min="1" inputmode="numeric" value="'+esc(r.aantal)+'" oninput="amZet('+i+',\'aantal\',this.value)"></div>'
+    + '<div class="veld"><label for="amStaat'+i+'">Staat</label><select class="invoer" id="amStaat'+i+'" onchange="amZet('+i+',\'staat\',this.value)">'+amOpties(AM_STAAT, r.staat)+'</select></div>'
+    + '<button class="am-weg" type="button" aria-label="Regel weghalen" onclick="amWeg('+i+')">×</button>'
+    + '<div class="am-bod" id="amBod'+i+'" hidden></div></div>').join('');
+}
 function tekenAanmelden(){
   if(aanmeldKlaar){
-    f('vak').innerHTML = '<div class="leeg">'+icoon('vink',32)+'<h2>Ontvangen</h2><p>We nemen binnen twee werkdagen contact op met een indicatief bod en een voorstel voor de ophaling.</p>'
+    const t = amUitkomst && amUitkomst.max ? '<p><strong>Onze eerste indicatie: '+amBereik(amUitkomst.min, amUitkomst.max)+'.</strong></p>' : '';
+    f('vak').innerHTML = '<div class="leeg">'+icoon('vink',32)+'<h2>Ontvangen</h2>'+t+'<p>We nemen binnen twee werkdagen contact op om de ophaling te plannen. Je krijgt ook een bevestiging per mail.</p>'
       + '<button class="btn licht" onclick="aanmeldOpnieuw()">Nog een partij aanmelden</button></div>';
     return;
   }
+  if(!amRegels.length) amRegels = [amNieuw()];
   f('vak').innerHTML = '<div class="kop"><div><span class="label">'+esc(data.bedrijf)+'</span><h1>Partij aanmelden</h1></div></div>'
     + '<div class="twee"><div class="kaart">'
-    + '<div class="veld"><label for="amWat">Wat heb je?</label><textarea class="invoer" id="amWat" placeholder="Bijvoorbeeld: 120 laptops Dell Latitude 5420, 30 monitoren, 2 servers"></textarea></div>'
-    + '<div class="veld"><label for="amAantal">Ongeveer hoeveel apparaten?</label><input class="invoer" id="amAantal" type="number" min="1" inputmode="numeric"></div>'
+    + '<h3>Wat wil je aanmelden?</h3><p class="muted" style="margin:6px 0 14px">Vul per model in wat je hebt. Je ziet meteen wat we ongeveer bieden.</p>'
+    + '<div id="amRijen" class="am-rijen">'+amRijenHtml()+'</div>'
+    + '<button class="btn licht" type="button" onclick="amRegel()">+ Nog een model</button>'
+    + '<div class="am-totaal" id="amTotaal" hidden></div>'
+    + '<div class="veld" style="margin-top:16px"><label for="amWat">Nog iets dat we moeten weten? (optioneel)</label><textarea class="invoer" id="amWat" placeholder="Bijvoorbeeld: inclusief laders, 3 toestellen zonder SSD"></textarea></div>'
     + '<div class="veld"><label for="amAdres">Ophaaladres</label><input class="invoer" id="amAdres" autocomplete="street-address"></div>'
     + '<div class="veld"><label for="amPeriode">Wanneer?</label><input class="invoer" id="amPeriode" placeholder="Bijvoorbeeld: eind oktober"></div>'
     + '<button class="btn breed" id="amKnop" onclick="aanmelden()">Aanmelden</button></div>'
-    + '<div class="kaart"><h3>Wat er daarna gebeurt</h3><p class="muted" style="margin-top:8px">Je krijgt binnen twee werkdagen een indicatief bod. Daarna plannen we de ophaling. Vanaf dan volg je alles hier in het portaal.</p></div></div>';
+    + '<div class="kaart"><h3>Wat er daarna gebeurt</h3><p class="muted" style="margin-top:8px">Je ziet hier meteen een indicatief bod. Binnen twee werkdagen nemen we contact op om de ophaling te plannen. Het definitieve bod volgt nadat we alles gewist en getest hebben. Vanaf dan volg je alles hier in het portaal.</p></div></div>';
+  amPlan(0);
+}
+function amZet(i, k, w){
+  if(!amRegels[i]) return;
+  amRegels[i][k] = k === 'aantal' ? Math.max(1, parseInt(w, 10) || 1) : w;
+  if(k === 'soort'){ const m = f('amModel'+i), s = f('amSpecs'+i); if(m) m.placeholder = AM_VOORBEELD[w][0]; if(s) s.placeholder = AM_VOORBEELD[w][1]; }
+  amPlan(k === 'soort' || k === 'staat' ? 200 : 900);
+}
+function amRegel(){ bewaarVelden(); amRegels.push(amNieuw()); tekenAanmelden(); const m = f('amModel'+(amRegels.length-1)); if(m) m.focus(); }
+function amWeg(i){ bewaarVelden(); amRegels.splice(i, 1); if(!amRegels.length) amRegels = [amNieuw()]; tekenAanmelden(); }
+/* De losse velden onder de regels onthouden als de lijst opnieuw getekend wordt. */
+let amVelden = {};
+function bewaarVelden(){ ['amWat','amAdres','amPeriode'].forEach(id => { const e = f(id); if(e) amVelden[id] = e.value; }); }
+function amPlan(ms){
+  clearTimeout(amTimer);
+  amTimer = setTimeout(amBereken, ms);
+  ['amWat','amAdres','amPeriode'].forEach(id => { const e = f(id); if(e && amVelden[id] && !e.value) e.value = amVelden[id]; });
+}
+function amBruikbaar(){ return amRegels.map((r, i) => ({ r, i })).filter(x => String(x.r.model || '').trim().length >= 3); }
+async function amBereken(){
+  const lijst = amBruikbaar(), tot = f('amTotaal');
+  amRegels.forEach((r, i) => { const b = f('amBod'+i); if(b && String(r.model || '').trim().length < 3) b.hidden = true; });
+  if(!lijst.length){ if(tot) tot.hidden = true; return; }
+  const nr = ++amNr;
+  lijst.forEach(x => { const b = f('amBod'+x.i); if(b){ b.hidden = false; b.innerHTML = '<span class="muted">Bod berekenen…</span>'; } });
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY },
+      body: JSON.stringify({ actie:'bod', domein:eigenDomein(), slug:params.w || huisstijl.slug || null, regels: lijst.map(x => x.r) })
+    });
+    const d = await res.json();
+    if(nr !== amNr) return;
+    if(!res.ok || d.ok === false) throw new Error(d.error || 'mislukt');
+    (d.regels || []).forEach((u, n) => {
+      const x = lijst[n]; if(!x) return; const b = f('amBod'+x.i); if(!b) return;
+      b.innerHTML = u.per_stuk ? '<span><strong>'+amBereik(u.per_stuk.min, u.per_stuk.max)+'</strong> per stuk</span><span>'+x.r.aantal+'× = <strong>'+amBereik(u.totaal.min, u.totaal.max)+'</strong></span>'
+        : '<span class="muted">Dit model beoordelen we zelf; je krijgt binnen twee werkdagen een bod.</span>';
+    });
+    if(tot){
+      if(d.totaal && d.totaal.max){
+        tot.innerHTML = '<span class="label">Indicatief bod</span><strong>'+amBereik(d.totaal.min, d.totaal.max)+'</strong><span class="muted">'+(d.open ? 'voor de modellen die we al kennen' : 'voor de hele partij')+'. Het definitieve bod volgt na wissen en testen.</span>';
+        tot.hidden = false;
+      } else tot.hidden = true;
+    }
+  } catch(e){
+    if(nr !== amNr) return;
+    lijst.forEach(x => { const b = f('amBod'+x.i); if(b) b.innerHTML = '<span class="muted">Een bod rekenen lukte even niet. Je kunt gewoon aanmelden.</span>'; });
+  }
 }
 async function aanmelden(){
-  const wat = f('amWat').value.trim();
-  if(wat.length < 3){ toast('Vertel kort wat je hebt.', 'fout'); return; }
+  const lijst = amBruikbaar().map(x => x.r);
+  const wat = (f('amWat') ? f('amWat').value : '').trim();
+  if(!lijst.length && wat.length < 3){ toast('Vul minstens één model in, of vertel kort wat je hebt.', 'fout'); return; }
   const knop = f('amKnop'); knop.disabled = true; knop.textContent = 'Versturen...';
-  const aantal = parseInt(f('amAantal').value, 10);
-  const { data: nieuwId, error } = await sb.rpc('klantportaal_aanmelden', {
-    p_omschrijving: wat, p_aantal: isNaN(aantal) ? null : aantal,
-    p_ophaaladres: f('amAdres').value.trim() || null, p_periode: f('amPeriode').value.trim() || null
-  });
-  if(error){ knop.disabled = false; knop.textContent = 'Aanmelden'; toast('Aanmelden lukte niet. Probeer het opnieuw.', 'fout'); return; }
-  aanmeldKlaar = true; tekenAanmelden();
-  // De winkel krijgt een mail, de aanmelder een bevestiging. Mislukt dat, dan staat de aanvraag er toch.
-  if(nieuwId) sb.auth.getSession().then(({ data: { session } }) => fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
-    method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+(session ? session.access_token : '') },
-    body: JSON.stringify({ actie:'melding', soort:'aanvraag', opdracht_id:nieuwId })
-  })).catch(() => {});
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+(session ? session.access_token : '') },
+      body: JSON.stringify({ actie:'aanmelden', regels:lijst, opmerking:wat, ophaaladres:f('amAdres').value.trim(), periode:f('amPeriode').value.trim() })
+    });
+    const d = await res.json().catch(() => ({}));
+    if(!res.ok || d.ok === false) throw new Error(d.error || 'Aanmelden lukte niet. Probeer het opnieuw.');
+    amUitkomst = d.totaal || null; amRegels = []; amVelden = {};
+    aanmeldKlaar = true; tekenAanmelden();
+    laden().then(() => {}, () => {});
+  } catch(e){
+    knop.disabled = false; knop.textContent = 'Aanmelden';
+    toast(e.message || 'Aanmelden lukte niet. Probeer het opnieuw.', 'fout');
+  }
 }
 function aanmeldOpnieuw(){ aanmeldKlaar = false; tekenAanmelden(); }
 

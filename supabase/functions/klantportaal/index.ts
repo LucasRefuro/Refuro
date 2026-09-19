@@ -15,6 +15,8 @@
 // is staat in klantportaal_meldingen: nooit twee keer dezelfde mail.
 // 'bod' (openbaar) geeft een prijsindicatie voor een lijst apparaten, 'aanbieden'
 // (openbaar) slaat een aanbieding van de website op en mailt winkel en klant.
+// 'aanmelden' (ingelogde portaalgebruiker) meldt een partij aan met modelregels; het
+// bod rekent de functie zelf uit, daarna gaat dezelfde mail als bij 'melding' aanvraag.
 //
 // Geheimen: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, RESEND_API_KEY,
 // APP_URL (standaard https://storvo.app), RESEND_FROM (reserve-afzender).
@@ -331,10 +333,17 @@ async function melding(req: Request, lijf: any) {
         ["Organisatie", orgNaam], ["Wat", o.omschrijving || o.titel], ["Aantal", o.aantal_verwacht != null ? String(o.aantal_verwacht) : ""],
         ["Ophaaladres", o.ophaaladres || ""], ["Wanneer", (o.gepland || "").replace(/^Gewenst: /, "")], ["Aangemeld door", user.email || ""],
       ].filter(([, w]) => w).map(([k, w]) => `<tr><td style="padding:4px 14px 4px 0;color:#8A938F;vertical-align:top">${html(k)}</td><td style="padding:4px 0">${html(String(w))}</td></tr>`).join("");
+      const band = o.bod_bandbreedte && o.bod_bandbreedte.max ? o.bod_bandbreedte : null;
+      const euroM = (n: number) => "€ " + Math.round(n).toLocaleString("nl-NL");
+      const bandTekst = band ? (band.min === band.max ? euroM(band.max) : `${euroM(band.min)} – ${euroM(band.max)}`) : "";
+      const regelTabel = Array.isArray(o.regels) && o.regels.length
+        ? `<table style="margin-top:14px;font-size:14px;border-collapse:collapse;width:100%">` + o.regels.map((r: any) =>
+          `<tr><td style="padding:6px 10px 6px 0;border-bottom:1px solid #ECEAE4">${Number(r.aantal) || 1}× <strong>${html(String(r.model || ""))}</strong>${r.specs ? "<br><span style=\"color:#8A938F\">" + html(String(r.specs)) + "</span>" : ""}</td>`
+          + `<td style="padding:6px 0;border-bottom:1px solid #ECEAE4;text-align:right;white-space:nowrap">${r.per_stuk ? (r.per_stuk.min === r.per_stuk.max ? euroM(r.per_stuk.max) : euroM(r.per_stuk.min) + " – " + euroM(r.per_stuk.max)) + " p/st" : "volgt"}</td></tr>`).join("") + `</table>` : "";
       if (winkel) {
-        await verstuur(ins, winkel, `Nieuwe aanmelding van ${orgNaam}`,
-          mailHtml(ins, "Nieuwe partij aangemeld", `${html(orgNaam)} heeft een partij aangemeld in het klantportaal.`
-            + `<table style="margin-top:14px;font-size:14px;border-collapse:collapse">${regels}</table>`,
+        await verstuur(ins, winkel, `Nieuwe aanmelding van ${orgNaam}${bandTekst ? " (" + bandTekst + ")" : ""}`,
+          mailHtml(ins, "Nieuwe partij aangemeld", `${html(orgNaam)} heeft een partij aangemeld in het klantportaal${bandTekst ? `. Indicatief bod: <strong>${bandTekst}</strong>` : ""}.`
+            + regelTabel + `<table style="margin-top:14px;font-size:14px;border-collapse:collapse">${regels}</table>`,
             "Bekijk de aanvraag", APP_URL + "/portaalbeheer/", "Neem de aanvraag aan of wijs hem af in portaalbeheer."));
         verstuurd++;
       }
@@ -342,7 +351,8 @@ async function melding(req: Request, lijf: any) {
       if (user.email) {
         await verstuur(ins, user.email, `We hebben je aanmelding ontvangen`,
           mailHtml(ins, "Aanmelding ontvangen", `Bedankt! We hebben je partij ontvangen: <strong>${html(o.titel || "")}</strong>. `
-            + `Je krijgt binnen twee werkdagen een indicatief bod. Daarna plannen we de ophaling.`,
+            + (bandTekst ? `Onze eerste indicatie: <strong>${bandTekst}</strong>. We nemen binnen twee werkdagen contact op om de ophaling te plannen.` : `Je krijgt binnen twee werkdagen een indicatief bod. Daarna plannen we de ophaling.`)
+            + regelTabel,
             "Naar het klantportaal", adres, `Je krijgt deze mail omdat je een partij hebt aangemeld voor ${html(orgNaam)}.`));
         verstuurd++;
       }
@@ -604,6 +614,38 @@ async function aanbieden(lijf: any) {
 }
 const adresFallback = () => APP_URL;
 
+/* ═══ aanmelden: partij aanmelden vanuit het klantportaal, met het slimme bod ═══ */
+async function aanmelden(req: Request, lijf: any) {
+  const user = await wieBelt(req);
+  if (!user) return fout("Niet ingelogd", 401);
+  const { data: gb } = await admin.from("klantportaal_gebruikers").select("user_id, organisatie_id, team_id, actief").eq("user_id", user.id).maybeSingle();
+  if (!gb || !gb.actief) return fout("Je hebt geen toegang tot het klantportaal", 403);
+  const ins = await instellingenVan(gb.team_id);
+  if (!ins) return fout("Het klantportaal staat uit", 409);
+  const regels = leesRegels(lijf?.regels);
+  const opmerking = schoon(lijf?.opmerking, 2000);
+  if (!regels.length && opmerking.length < 3) return fout("Vul minstens één model in, of vertel kort wat je hebt.");
+  const b = regels.length ? await berekenBod(ins, regels) : { regels: [], totaal: { min: 0, max: 0 }, open: 0 };
+  const omschrijving = [
+    ...b.regels.map((r: any) => `${r.aantal}× ${r.model}${r.specs ? " (" + r.specs + ")" : ""}, ${STAATTEKST[r.staat] || ""}`),
+    ...(opmerking ? ["", opmerking] : []),
+  ].join("\n").trim();
+  const aantal = b.regels.reduce((t: number, r: any) => t + (r.aantal || 0), 0) || null;
+  const titel = b.regels.length ? (b.regels.length === 1 ? b.regels[0].model : b.regels[0].model + " en meer") : opmerking.slice(0, 80);
+  const adres = schoon(lijf?.ophaaladres, 300), periode = schoon(lijf?.periode, 120);
+  const { data: o, error } = await admin.from("klantportaal_opdrachten").insert({
+    team_id: gb.team_id, organisatie_id: gb.organisatie_id, status: "aanvraag", titel: titel.slice(0, 80),
+    omschrijving: omschrijving.slice(0, 4000), aantal_verwacht: aantal, ophaaladres: adres || null, locatie: adres ? adres.slice(0, 120) : null,
+    gepland: periode ? "Gewenst: " + periode : null, aangemaakt_door: user.id,
+    // Zonder 'waarde': de klant kan zijn eigen opdracht lezen, onze doorverkoopwaarde hoort hij niet te zien.
+    regels: b.regels.map(({ waarde: _w, ...r }: any) => r), bod_bandbreedte: b.totaal.max ? b.totaal : null,
+  }).select("id").single();
+  if (error || !o) { console.error("aanmelden:", error); return fout("Aanmelden lukte niet. Probeer het opnieuw.", 500); }
+  // Mail naar de winkel en een bevestiging aan de aanmelder (zelfde als 'melding' aanvraag).
+  try { await melding(req, { soort: "aanvraag", opdracht_id: o.id }); } catch (e) { console.error("aanmelden melding:", e); }
+  return antwoord({ ok: true, id: o.id, totaal: b.totaal, regels: b.regels.map(({ waarde: _w, ...r }: any) => r) });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -615,5 +657,6 @@ Deno.serve(async (req) => {
   if (lijf?.actie === "melding") return melding(req, lijf);
   if (lijf?.actie === "bod") return bod(lijf);
   if (lijf?.actie === "aanbieden") return aanbieden(lijf);
+  if (lijf?.actie === "aanmelden") return aanmelden(req, lijf);
   return fout("Onbekende actie");
 });

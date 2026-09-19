@@ -1,21 +1,21 @@
 # Reloop it: stappenplan
 
-Stand van 19 september 2026. Eén stap tegelijk, van boven naar beneden.
+Stand van 20 september 2026. Eén stap tegelijk, van boven naar beneden.
 Storvo zelf verandert nergens door: alles staat in eigen `klantportaal_*`-tabellen,
-de functie `klantportaal` en het Shopify-thema van Reloop it.
+de functies `klantportaal` en `lijst` en het Shopify-thema van Reloop it. In Refurbish
+zijn alleen knoppen bijgekomen.
 
 ---
 
-## A. Nu doen (jij, ongeveer 20 minuten)
+## A. Nu doen (jij, ongeveer 25 minuten)
 
 ### 1. Code live zetten
 Plak in Terminal:
 ```
 cd ~/"Software SAAS/refuro"
-rm -f .git/HEAD.lock .git/index.lock
-find .git/objects -name 'tmp_obj_*' -delete
 git push
 ```
+Vercel zet het daarna vanzelf live (1–2 minuten).
 
 ### 2. Nieuw thema uploaden
 Het bestand heet `reloop-it-theme.zip`, en je krijgt het in de chat.
@@ -23,53 +23,65 @@ Het bestand heet `reloop-it-theme.zip`, en je krijgt het in de chat.
 2. Klik op **Thema toevoegen**, dan **Zip-bestand uploaden** en kies `reloop-it-theme.zip`.
 3. Bij het nieuwe thema: **...**, dan **Publiceren**.
 
-### 3. Drie pagina's aanmaken
+### 3. Vijf pagina's aanmaken
 https://admin.shopify.com/pages, dan **Pagina toevoegen**. Per pagina: titel invullen, rechts bij
 **Thema-sjabloon** het sjabloon kiezen en op **Opslaan** klikken. De inhoud laat je leeg.
 
-| Titel | Sjabloon |
-|---|---|
-| Partij aanbieden | `aanbieden` |
-| Juridisch | `juridisch` |
-| Veelgestelde vragen | `veelgestelde-vragen` |
+| Titel | Sjabloon | Handle |
+|---|---|---|
+| Partij aanbieden | `aanbieden` | `aanbieden` |
+| Juridisch | `juridisch` | `juridisch` |
+| Veelgestelde vragen | `veelgestelde-vragen` | `veelgestelde-vragen` |
+| Voorraadlijsten | `voorraadlijsten` | `voorraadlijsten` |
+| Zo werkt het | `zo-werkt-het` | `zo-werkt-het` |
 
-Controleer dat de handle (onderaan, "Zoekmachinevermelding") `aanbieden`, `juridisch` en
-`veelgestelde-vragen` is. Dan werken alle knoppen en footerlinks vanzelf, en is de 404 weg.
+Controleer de handle (onderaan, "Zoekmachinevermelding"). Dan werken alle knoppen en footerlinks vanzelf.
 
-### 4. Bedrijfsgegevens invullen
-https://admin.shopify.com/themes, dan **Aanpassen**, **Thema-instellingen** (tandwiel):
+### 4. Lijstsleutel in het thema plakken
+1. https://storvo.app/portaalbeheer/, dan **Instellingen**, kaart **Lijsten voor handelaren**:
+   klik op **Kopiëren** bij de sleutel.
+2. https://admin.shopify.com/themes, dan **Aanpassen**, **Thema-instellingen** (tandwiel),
+   groep **Lijsten (Storvo)**: plak de sleutel bij **Lijstsleutel**. Laat de andere velden staan.
+3. **Opslaan**. Handelaren die ingelogd zijn zien nu downloadknoppen bij elke bundel,
+   op de collectie en op de pagina Voorraadlijsten. Gasten zien een "log in"-melding.
+
+Wil je dat handelaren ook prijzen in de lijst zien: zet in portaalbeheer **Prijzen in voorraadlijsten** op **Ja** en klik op Opslaan.
+
+### 5. Bedrijfsgegevens invullen
+Zelfde plek (Thema-instellingen):
 - **Bedrijfsgegevens**: juridische naam, adres, KvK, btw, telefoon, e-mail, vestigingsplaats.
-  Die komen automatisch in de footer, de voorwaarden en de privacyverklaring.
-- **Links en kanalen**: de link van de WhatsApp-groep voor handelaren (zie C2) en LinkedIn.
+- **Links en kanalen**: de WhatsApp-groep voor handelaren (zie C2) en LinkedIn.
 
-### 5. Contactmail in portaalbeheer
+### 6. Contactmail in portaalbeheer
 https://storvo.app/portaalbeheer/, dan **Instellingen**, **Contact en mail**: vul je e-mail in.
-Daar komen de mails over nieuwe aanbiedingen binnen. Hier zie je ook de bod-percentages
-(60% laptops/telefoons/tablets, 70–80% overige hardware).
+Daar komen de mails over nieuwe aanbiedingen en aanmeldingen binnen (nu gaan ze naar het
+eigenaar-adres van Storvo).
 
-### 6. Testen
-1. Ga naar reloopit.nl, klik op **Partij aanbieden**, vul een model in en kijk of het bod verschijnt.
-2. Verstuur met je eigen mailadres. Je krijgt een bevestiging, en jullie krijgen een mail met de regels en het bod.
-3. In portaalbeheer staat de aanbieding bovenaan. Klik op **Aannemen**. De organisatie en de opdracht
-   worden aangemaakt en de klant krijgt een uitnodiging voor het portaal.
+### 7. Opruimen en testen
+1. In portaalbeheer staat een aanbieding "TEST - controle door Claude (mag weg)": **Afwijzen**.
+2. Zet bundel V0001 in Refurbish één keer opnieuw online (dan krijgt het product de koppeling
+   met de lijst; zonder werkt het ook via het V-nummer in de tags).
+3. Ga naar reloopit.nl, **Partij aanbieden**, vul een model in en kijk of het bod verschijnt.
+4. Log in op portaal.reloopit.nl, tab **Partij aanmelden**: vul een regel in (het bod
+   verschijnt vanzelf) en klik op **Aanmelden**. Jij krijgt een mail met de regels en het bod.
 
 ---
 
 ## B. Wat er klaarstaat
 
 - **Klantportaal** op portaal.reloopit.nl: account met wachtwoord, "wachtwoord vergeten",
-  het e-mailadres staat al ingevuld, favicon en de Reloop it-stijl.
-- **Mails**: uitnodiging, "account klaar" (met waar je inlogt), bevestiging van een aanmelding,
-  en een update bij elke stap (aangenomen, opgehaald, gewist, getest, afgerond) aan alle
-  beheerders van de organisatie, met welke documenten klaarstaan. Elke mail gaat maar één keer.
-- **Partij aanbieden met slim bod**: model, specs, aantal en staat, met meteen een bod per stuk en
-  voor de hele partij. Staat het model in onze voorraad, dan telt onze verkoopprijs; anders een
-  marktschatting (Claude, 30 dagen bewaard, maximaal 400 nieuwe schattingen per dag).
-- **Portaalbeheer**: aanbiedingen van de website met het bod en de bron per regel, en
-  Aannemen/Afwijzen. De percentages stel je in bij Instellingen.
-- **Website**: een nieuwe footer (3 kolommen, bedrijfsgegevens, juridische links, WhatsApp), een
-  pagina Juridisch (voorwaarden, privacy, verwerkersovereenkomst, cookies, disclaimer) en een
-  FAQ-pagina (organisaties en handelaren).
+  e-mailadres al ingevuld, favicon, Reloop it-stijl. **Partij aanmelden** werkt met modelregels
+  en een slim bod; de aanvraag komt in portaalbeheer en jij krijgt een mail.
+- **Mails**: uitnodiging, "account klaar", bevestiging van een aanmelding (met bod), en een update
+  bij elke stap aan alle beheerders van de organisatie. Elke mail gaat maar één keer.
+- **Slim bod**: staat het model in onze voorraad, dan telt onze verkoopprijs; anders een
+  marktschatting (Claude, 30 dagen bewaard). 60% laptops/telefoons/tablets, 70–80% de rest.
+- **Lijsten** (Excel, CSV, print/PDF): hele voorraad, per merk, per batch, per bundel.
+  - Refurbish: knop **Lijsten** op Voorraad, **Lijst voor koper** bij een batch, **Lijst** bij een bundel.
+  - Portaalbeheer: sleutel, prijzen aan/uit, downloads, nieuwe sleutel (oude links stoppen dan).
+  - Webshop: bij elke bundel, op de collectie en op /pages/voorraadlijsten, alleen voor ingelogde klanten.
+  - Nooit zichtbaar in een lijst: inkoop, winst, leverancier.
+- **Website**: footer, Juridisch, FAQ, **Zo werkt het** (uitleg voor organisaties en handelaren).
 
 ---
 

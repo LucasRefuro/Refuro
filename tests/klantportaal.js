@@ -196,15 +196,19 @@ const zichtbaar=(el)=>el && !el.hidden;
   await w.eval("collegaUit('u2')");
   ok('toegang weghalen roept de functie aan', w.__rpc.some(([n,a])=>n==='klantportaal_collega_uit' && a.p_user==='u2'));
 
-  console.log('\n── partij aanmelden');
+  console.log('\n── partij aanmelden (met slim bod)');
   w.eval("naarTab('aanmelden')");
   await w.eval('aanmelden()');
-  ok('lege aanmelding: niets verstuurd', !w.__rpc.some(([n])=>n==='klantportaal_aanmelden'));
-  d.getElementById('amWat').value='120 laptops'; d.getElementById('amAantal').value='120';
-  d.getElementById('amAdres').value='Breda'; d.getElementById('amPeriode').value='oktober';
-  await w.eval('aanmelden()');
-  const am=(w.__rpc.find(([n])=>n==='klantportaal_aanmelden')||[])[1]||{};
-  ok('aanmelding met alle velden', am.p_omschrijving==='120 laptops' && am.p_aantal===120 && am.p_ophaaladres==='Breda', JSON.stringify(am));
+  ok('lege aanmelding: niets verstuurd', !w.__fetch.some(x=>x[1] && x[1].actie==='aanmelden'));
+  ok('eerste modelregel staat klaar', !!d.getElementById('amModel0'));
+  w.eval("amZet(0,'model','Dell Latitude 5420')"); w.eval("amZet(0,'aantal','10')");
+  await w.eval('amBereken()'); await wacht(10);
+  const bodV=(w.__fetch.filter(x=>x[1] && x[1].actie==='bod').pop()||[])[1]||{};
+  ok('bod gevraagd met de regel', bodV.regels && bodV.regels[0].model==='Dell Latitude 5420' && bodV.regels[0].aantal===10, JSON.stringify(bodV));
+  d.getElementById('amAdres').value='Breda'; d.getElementById('amPeriode').value='oktober'; d.getElementById('amWat').value='met laders';
+  await w.eval('aanmelden()'); await wacht(10);
+  const am=(w.__fetch.find(x=>x[1] && x[1].actie==='aanmelden')||[])[1]||{};
+  ok('aanmelding via de functie met regels en velden', am.regels && am.regels[0].model==='Dell Latitude 5420' && am.ophaaladres==='Breda' && am.periode==='oktober' && am.opmerking==='met laders', JSON.stringify(am));
   ok('bevestiging getoond', /Ontvangen/.test(d.getElementById('vak').textContent));
 
   console.log('\n── uitloggen');
