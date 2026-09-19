@@ -569,6 +569,11 @@
   .pagchip input{position:absolute; opacity:0; width:0; height:0;}
   .pagchip span{display:inline-block; padding:8px 14px; border:1.5px solid var(--border); border-radius:var(--pil); font-size:13px; font-weight:600; color:var(--muted); transition:.14s; text-transform:none; letter-spacing:normal;}
   .pagchip input:checked + span{background:var(--green-soft); border-color:var(--green-tekst); color:var(--green-tekst);}
+  .meerpaginas{margin-top:22px; border:1px solid var(--border); border-radius:14px; padding:12px 16px;}
+  .meerpaginas summary{cursor:pointer; font-weight:700; font-size:13px; color:var(--muted); list-style:none;}
+  .meerpaginas summary::-webkit-details-marker{display:none;}
+  .meerpaginas summary::before{content:'+'; display:inline-block; width:16px; font-weight:800; color:var(--muted-l);}
+  .meerpaginas[open] summary::before{content:'\2212';}
   .detailacts{display:flex; gap:10px; flex-wrap:wrap; margin-top:24px;}
   .gevaarzone{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:20px; padding:16px; border:1px solid #E7C9C9; border-radius:14px; background:var(--red-soft);}
   .gevaarzone b{color:var(--red-tekst);}
@@ -11378,6 +11383,9 @@ function mag(tab){
      ouder is dan de pagina hem stilletjes verbergen, en dat overkwam Verkoop en Uren. */
   const eigen = gebruiker && Array.isArray(gebruiker.tabs) ? gebruiker.tabs : null;
   if(eigen && PAGINAS_BEHEER.some(p=>p[0]===hoort)) return eigen.includes(hoort);
+  /* De extra pagina's (financien, rooster, personeel) volgen de rol, tenzij de eigenaar
+     ze bewust per gebruiker heeft ingesteld (markering 'pag_uitgebreid'). */
+  if(eigen && eigen.includes('pag_uitgebreid') && EXTRA_PAGINAS.some(p=>p[0]===hoort)) return eigen.includes(hoort);
   const toegestaan=ROL_TABS[r];
   return !toegestaan || toegestaan.includes(tab);
 }
@@ -14444,6 +14452,34 @@ function refActiefVan(u){
   const t=Array.isArray(u&&u.tabs)?u.tabs:[];
   return t.some(x=>x&&x.indexOf('ref_')===0) ? t : REFURBISH_PAGINAS.map(([id])=>'ref_'+id);
 }
+/* Extra pagina's die normaal de rol volgen (financien, rooster, personeel). De eigenaar
+   kan ze per gebruiker overrulen, maar dat is een sub-optie: standaard blijft het bij de
+   rol. Zetten we ze zomaar in de gewone picker, dan zou een oud opgeslagen lijstje ze
+   stilletjes verbergen (zoals ooit met Verkoop en Uren gebeurde). Daarom een aparte
+   markering 'pag_uitgebreid': alleen als die in tabs staat, is de lijst leidend voor
+   deze pagina's; anders beslist de rol. */
+const EXTRA_PAGINAS=[
+  ['rooster','Rooster'],['personeel','Personeel'],['verkopen','Verkopen'],['inkopen','Inkopen'],
+  ['rapport','Rapport'],['facturen','Facturen'],['vastelasten','Vaste lasten'],['pakketten','Pakketdiensten']
+];
+/* Wat er standaard aan staat voor een gebruiker: heeft hij de markering, dan zijn eigen
+   lijst; anders wat zijn rol toestaat, zodat opslaan de toegang niet verandert. */
+function extraActiefVan(u){
+  const t=Array.isArray(u&&u.tabs)?u.tabs:[];
+  if(t.includes('pag_uitgebreid')) return t;
+  const rd=ROL_TABS[u&&u.rol];
+  return EXTRA_PAGINAS.map(([id])=>id).filter(id=>!rd || rd.includes(id));
+}
+function extraChipsHtml(prefix, actief){
+  return `<div class="pagchips">`+EXTRA_PAGINAS.map(([id,label])=>
+    `<label class="pagchip"><input type="checkbox" id="${prefix}_x_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
+  ).join('')+`</div>`;
+}
+/* Levert de aangevinkte extra-pagina's plus de markering, zodat mag() weet dat de lijst
+   nu leidend is. De markering staat er altijd bij zodra je via deze picker opslaat. */
+function extraUit(prefix){
+  return ['pag_uitgebreid'].concat(EXTRA_PAGINAS.filter(([id])=>{ const el=document.getElementById(prefix+'_x_'+id); return el&&el.checked; }).map(([id])=>id));
+}
 function teamTerug(){
   const d=document.getElementById('teamDetailView'); if(d){ d.hidden=true; d.innerHTML=''; }
   const l=document.getElementById('teamLijstView'); if(l) l.hidden=false;
@@ -14470,7 +14506,10 @@ function teamGebruikerOpen(id){
       </div>
       <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>${pagChipsHtml('acc'+u.id, actief)}</div>
       <div class="detailsectie"><div class="sectielabel">Welke Reloop-IT pagina's ziet hij</div>${refChipsHtml('detref'+u.id, refActiefVan(u))}
-        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hierboven toegang tot de werkbank heeft.</p></div>`;
+        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hierboven toegang tot de werkbank heeft.</p></div>
+      <details class="meerpaginas"><summary>Meer pagina's (standaard volgens de rol)</summary>
+        <p class="muted klein" style="margin:10px 0">De financiële pagina's, het rooster en personeel volgen normaal de rol. Vink hier aan wat deze gebruiker apart wel of niet mag zien.</p>
+        ${extraChipsHtml('detx'+u.id, extraActiefVan(u))}</details>`;
   detail.innerHTML=`
     <button class="terugknop" onclick="teamTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug naar gebruikers</button>
     <div class="card breed">
@@ -14500,7 +14539,7 @@ function teamRolKies(id, rol, btn){
 }
 async function teamGebruikerOpslaan(id, knop){
   const rol=(document.getElementById('detrol_'+id)||{}).value||'medewerker';
-  const tabs=paginasUit('acc'+id).concat(omgUit('det'+id)).concat(refUit('detref'+id));
+  const tabs=paginasUit('acc'+id).concat(omgUit('det'+id)).concat(refUit('detref'+id)).concat(extraUit('detx'+id));
   await teamActie('bijwerken', {account_id:id, rol, tabs}, knop, null, ()=>{ toast('Opgeslagen', true); teamTerug(); });
 }
 function teamNieuwOpen(){
