@@ -5857,7 +5857,7 @@ function tekenVoorraaddelen(){
     return;
   }
   el.innerHTML=`<div class="tabelrol"><table>
-    <thead><tr><th>Onderdeel</th><th>Soort</th><th class="num">Op voorraad</th><th class="num">Minimum</th><th class="num">Prijs</th><th></th></tr></thead>
+    <thead><tr><th>Onderdeel</th><th>Soort</th><th class="num">Op voorraad</th><th class="num">Minimum</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th></th></tr></thead>
     <tbody>${voorraaddelen.map(o=>{
       const laag=vrdLaag(o);
       const lots=Array.isArray(o.lots)?o.lots:[];
@@ -5870,7 +5870,9 @@ function tekenVoorraaddelen(){
         <td class="num${laag?' rood':''}">${o.aantal}${laag?' <span class="batpil batpil-ongetest">bijbestellen</span>':''}</td>
         <td class="num muted">${o.min_aantal||0}</td>
         <td class="num">${euro(Number(o.prijs)||0)}${lots.length>1?' <span class="muted klein">e.v.</span>':''}</td>
+        <td class="num">${o.verkoopprijs!=null&&o.verkoopprijs!==''?euro(o.verkoopprijs):'<span class="muted">—</span>'}</td>
         <td class="num" style="white-space:nowrap">
+          <button class="btn ghost small" title="Prijskaartje voor op de bak" onclick="vrdLabel('${o.id}')"><svg class="i s"><use href="#i-print"/></svg>Label</button>
           <button class="btn ghost small" title="Voorraad bijboeken" onclick="vrdBijboek('${o.id}')">Bijboeken</button>
           <button class="btn ghost small" onclick="vrdBewerk('${o.id}')">Bewerken</button>
         </td>
@@ -5878,6 +5880,24 @@ function tekenVoorraaddelen(){
     }).join('')}</tbody></table></div>`;
 }
 
+/* Een simpel prijskaartje voor op de bak: naam en verkoopprijs, geen barcode.
+   Print via hetzelfde venster-mechanisme als het toestel-kaartje (alleen het
+   venster telt mee in @media print). */
+function vrdLabelHtml(o){
+  const prijs = (o.verkoopprijs!=null && o.verkoopprijs!=='') ? euro(o.verkoopprijs) : '';
+  return `<div class="speckaart" style="min-height:74mm; padding:12mm; text-align:center">
+    <div style="font-size:6mm; color:#666; text-transform:uppercase; letter-spacing:.12em; margin-bottom:6mm">${esc(batSoortNaam(o.soort||'anders'))}</div>
+    <div style="font-size:13mm; font-weight:800; line-height:1.15; margin-bottom:8mm">${esc(o.naam||'Onderdeel')}</div>
+    ${prijs?`<div style="font-size:24mm; font-weight:800">${esc(prijs)}</div>`:'<div style="color:#999; font-size:6mm">Nog geen verkoopprijs ingevuld</div>'}
+  </div>`;
+}
+function vrdLabel(id){
+  const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  venster('Label', `
+    <p class="pv">Print dit kaartje en plak het op de bak. Naam en prijs, geen barcode.</p>
+    <div class="prijskaart-vel" id="vrdLabelVel">${vrdLabelHtml(o)}</div>
+  `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
+}
 function vrdNieuw(){ vrdForm(null); }
 function vrdBewerk(id){ vrdForm(voorraaddelen.find(o=>o.id===id)||null); }
 function vrdForm(o){
@@ -5894,6 +5914,7 @@ function vrdForm(o){
       </select></div>
       <div><label>Minimum</label><input id="vd_min" type="number" min="0" value="${o?(o.min_aantal||0):''}" placeholder="0"></div>
       <div><label>Leverancier</label><input id="vd_lev" value="${o?esc(o.leverancier||''):''}"></div>
+      <div><label>Verkoopprijs</label><input id="vd_verkoop" type="number" step="0.01" min="0" value="${o&&o.verkoopprijs!=null?o.verkoopprijs:''}" placeholder="0,00 (voor het label)"></div>
       ${o?'':`<div><label>Aantal eerste partij</label><input id="vd_aantal" type="number" min="0" value="" placeholder="0"></div>
       <div><label>Prijs per stuk</label><input id="vd_prijs" type="number" step="0.01" min="0" value="" placeholder="0,00"></div>`}
     </div>
@@ -5910,10 +5931,12 @@ function vrdForm(o){
 async function vrdOpslaan(knop, id){
   const naam=(document.getElementById('vd_naam').value||'').trim();
   if(!naam){ toast('Vul een naam in','let-op'); return; }
+  const vkEl=document.getElementById('vd_verkoop');
   const rij={
     naam, soort:document.getElementById('vd_soort').value||null,
     min_aantal:Math.max(0, Math.round(Number(document.getElementById('vd_min').value)||0)),
     leverancier:(document.getElementById('vd_lev').value||'').trim()||null,
+    verkoopprijs:(vkEl && vkEl.value!=='')?Math.round((Number(vkEl.value)||0)*100)/100:null,
     bijgewerkt_op:new Date().toISOString()
   };
   let sync;
