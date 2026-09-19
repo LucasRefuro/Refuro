@@ -71,7 +71,9 @@ Deno.serve(async (req) => {
   if (actie === "doorgegeven") {
     const { data: leden } = await admin.from("accounts").select("email,rol,actief")
       .eq("team_id", ik.team_id).eq("actief", true).not("email", "is", null);
-    const beheerders = (leden || []).filter((l: any) => ["eigenaar", "beheerder"].includes(String(l.rol || "").toLowerCase()) && l.email);
+    // De indiener zelf niet mailen: een beheerder mag ook zijn eigen week doorgeven en
+    // hoeft dan geen "X heeft doorgegeven"-mail over zijn eigen actie te krijgen.
+    const beheerders = (leden || []).filter((l: any) => ["eigenaar", "beheerder"].includes(String(l.rol || "").toLowerCase()) && l.email && l.email !== ik.email);
     if (!beheerders.length) return new Response(JSON.stringify({ ok: true, verstuurd: 0 }), { headers: cors });
     const tekst =
       `${ik.naam || "Een teamlid"} heeft de beschikbaarheid doorgegeven voor de week van ${week}.\n\n` +

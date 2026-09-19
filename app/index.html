@@ -11690,7 +11690,7 @@ const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','l
                          konden ze op een ander apparaat "verdwenen" lijken. Nu synchroniseren ze net als
                          de rest (samenvoegen per id, bewerken wint van verwijderen). */
                       'aanvragen','inkopen','uitbetalingen','reserveringen','postnl'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','bedrijf'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','bedrijf'];
 
 /* Lijsten met vaste (niet-willekeurige) id's: de seed maakt op elk leeg apparaat
    categorie 1/2/3, dienst 1/2/3, postnl 1..16, team 1, enzovoort. Bij de EERSTE sync
@@ -11702,7 +11702,7 @@ const SYNC_SEED_LIJSTEN = new Set(['categorieen','types','modellen','diensten','
 /* Velden die zelf een map met eigen sleutels zijn (loon per medewerker, bestel-reset
    per categorie, de instellingen, de klantpagina). Die per sleutel samenvoegen in plaats
    van het hele veld te overschrijven, anders wist de een stil de sleutel van de ander. */
-const SYNC_KEYED = new Set(['lonen','bijbestelBesteld','klantpagina','instellingen']);
+const SYNC_KEYED = new Set(['lonen','loonViaInvite','bijbestelBesteld','klantpagina','instellingen']);
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
@@ -14462,14 +14462,17 @@ function refChipsHtml(prefix, actief){
   ).join('')+`</div>`;
 }
 function refUit(prefix){
-  return REFURBISH_PAGINAS.filter(([id])=>{ const el=document.getElementById(prefix+'_ref_'+id); return el&&el.checked; }).map(([id])=>'ref_'+id);
+  /* Altijd de markering 'ref_set' meesturen (zoals env_set en pag_uitgebreid), zodat
+     "alles uitgevinkt" (geen enkele ref_-pagina) te onderscheiden is van een account dat
+     er nooit een had. Zonder die markering zou alles-uit stilletjes alles-aan betekenen. */
+  return ['ref_set'].concat(REFURBISH_PAGINAS.filter(([id])=>{ const el=document.getElementById(prefix+'_ref_'+id); return el&&el.checked; }).map(([id])=>'ref_'+id));
 }
 /* Welke refurbish-pagina's staan aangevinkt voor dit account. Heeft het nog geen
    ref_-sleutels (nooit via deze picker opgeslagen), dan tonen we ze allemaal aan,
    want zo werkt de refurbish-app op dat moment ook. */
 function refActiefVan(u){
   const t=Array.isArray(u&&u.tabs)?u.tabs:[];
-  return t.some(x=>x&&x.indexOf('ref_')===0) ? t : REFURBISH_PAGINAS.map(([id])=>'ref_'+id);
+  return t.includes('ref_set') ? t : REFURBISH_PAGINAS.map(([id])=>'ref_'+id);
 }
 /* Extra pagina's die normaal de rol volgen (financien, rooster, personeel). De eigenaar
    kan ze per gebruiker overrulen, maar dat is een sub-optie: standaard blijft het bij de

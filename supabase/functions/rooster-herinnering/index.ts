@@ -47,8 +47,12 @@ async function verwerkTeam(inst: any, transporter: any, vanAdres: string): Promi
 
   const ids = werkers.map((w: any) => w.id);
   // Wie gaf de komende week (M1) en/of de week daarop (M2) al door?
+  // Alleen een echt doorgegeven (of goedgekeurde) week telt als "ingevuld". Een losse
+  // concept-rij (iemand tikte een dag aan maar gaf niks door) of een teruggestuurde week
+  // (afgekeurd) mag de herinnering NIET stilzetten; juist die mensen hebben een duw nodig.
   const { data: besch } = await admin.from("beschikbaarheid").select("account_id,datum")
-    .in("account_id", ids).gte("datum", ymd(M1)).lte("datum", ymd(M2zo));
+    .in("account_id", ids).gte("datum", ymd(M1)).lte("datum", ymd(M2zo))
+    .in("status", ["ingediend", "goedgekeurd"]);
   const filledM1 = new Set<string>(), filledM2 = new Set<string>();
   for (const b of (besch || [])) {
     if (b.datum >= ymd(M1) && b.datum <= ymd(M1zo)) filledM1.add(b.account_id);

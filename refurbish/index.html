@@ -1129,9 +1129,8 @@ const REF_PAGINAS=['werkbank','toevoegen','controle','reparatie','voorraad','bat
 function refToegestaan(){
   if(!account || account.rol==='eigenaar') return REF_PAGINAS.slice();
   const t=Array.isArray(account.tabs)?account.tabs:[];
-  if(!t.some(x=>x&&x.indexOf('ref_')===0)) return REF_PAGINAS.slice();
-  const lijst=REF_PAGINAS.filter(p=>t.includes('ref_'+p));
-  return lijst.length?lijst:REF_PAGINAS.slice();
+  if(!t.includes('ref_set')) return REF_PAGINAS.slice();   // nooit ingesteld = alles zien (achterwaarts compatibel)
+  return REF_PAGINAS.filter(p=>t.includes('ref_'+p));       // bewust ingesteld; ook helemaal leeg mag
 }
 function magPagina(t){ return refToegestaan().includes(t); }
 /* Heeft deze winkel een externe voorraadpartner (StockDeck)? Zo niet, dan is de
