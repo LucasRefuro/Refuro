@@ -101,11 +101,9 @@ async function tokenHalen(domein: string, clientId: string, clientSecret: string
   let uit: any = {};
   try { uit = tekst ? JSON.parse(tekst) : {}; } catch { /* leeg mag */ }
   if (!res.ok || !uit.access_token) {
-    const m = String(uit.error_description || uit.error || ("Shopify gaf status " + res.status));
-    if (/client|unauthorized|invalid|not installed|installation/i.test(m)) {
-      throw new Error("Shopify accepteert de Client ID of het Client secret niet. Controleer ze, en of je de app op je winkel hebt geinstalleerd (Dev Dashboard, Install app).");
-    }
-    throw new Error("Kon geen toegang krijgen tot de tweede webshop: " + m);
+    const m = String(uit.error_description || uit.error || ("status " + res.status));
+    console.error("webshop2 token exchange faalt", res.status, tekst.slice(0, 400));
+    throw new Error("Shopify weigert de tweede webshop. Melding: " + m + " (status " + res.status + "). Controleer de Client ID en het Client secret, en of de app op je winkel staat (Dev Dashboard, Install app).");
   }
   return { token: uit.access_token, scope: String(uit.scope || "") };
 }
