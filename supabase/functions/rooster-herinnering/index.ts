@@ -1,14 +1,13 @@
-// Fase 4 van het rooster: herinnert personeel per e-mail om hun beschikbaarheid voor de
-// KOMENDE week (maandag t/m zondag) in te vullen, X dagen van tevoren (instelbaar per team in
-// tabel rooster_instelling). Alleen teamleden die nog niets doorgaven krijgen een mail.
-// Verstuurt niets tot de eigenaar het aanzet (rooster_instelling.aan). Verstuurt via Zoho SMTP
-// vanaf info@refuro.nl; geen nieuwe geheimen nodig.
+// Rooster-herinneringen. Personeel geeft twee weken vooruit hun beschikbaarheid door;
+// deze functie mailt wie dat nog niet deed, met een oplopend schema: normaal om de dag,
+// en in de laatste drie dagen voor een week ingaat elke dag. Daarnaast krijgt de beheerder
+// drie dagen voor de komende week een mail wie er nog niets invulde.
 //
 // Aanroepen: cron (X-Cron-Secret == MAIL_CRON_SECRET) verwerkt alle teams met aan=true; een
-// ingelogde gebruiker verwerkt alleen zijn eigen team.
+// ingelogde gebruiker verwerkt alleen zijn eigen team. Verstuurt via Zoho SMTP vanaf
+// info@refuro.nl. Verstuurt niets tot de eigenaar het aanzet (rooster_instelling.aan).
 //
-// Geheimen: MAIL_INKOOP_USER, MAIL_INKOOP_PASS, MAIL_SMTP_HOST (val: smtppro.zoho.eu),
-//           MAIL_CRON_SECRET.
+// Geheimen: MAIL_INKOOP_USER, MAIL_INKOOP_PASS, MAIL_SMTP_HOST (val: smtppro.zoho.eu), MAIL_CRON_SECRET.
 
 import nodemailer from "npm:nodemailer@6.9.14";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -26,59 +25,81 @@ const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE
 
 function ymd(d: Date) { return d.toISOString().slice(0, 10); }
 
-// Verwerk één team: bepaal de komende week, wie nog niets doorgaf, en mail die (indien in het
-// venster en nog niet verstuurd voor deze week). Geeft het aantal verstuurde mails terug.
+// Verwerk één team: bepaal de komende week (M1) en de week daarop (M2, twee weken vooruit),
+// mail elke werker over de dichtstbijzijnde week die hij nog niet doorgaf (om de dag, in de
+// laatste 3 dagen dagelijks), en waarschuw de beheerder 3 dagen voor de komende week.
 async function verwerkTeam(inst: any, transporter: any, vanAdres: string): Promise<number> {
   const team = inst.team_id;
-  const dagen = Math.max(0, Math.min(60, Number(inst.herinner_dagen) || 3));
-
   const now = new Date();
-  const dow = now.getUTCDay(); // 0=zo..6=za
-  const totMaandag = ((8 - dow) % 7) || 7; // 1..7 dagen tot de volgende maandag
-  if (totMaandag > dagen) return 0; // nog niet binnen het herinner-venster
+  const dow = now.getUTCDay();                 // 0=zo..6=za
+  const totM1 = ((8 - dow) % 7) || 7;          // dagen tot de maandag van de KOMENDE week (1..7)
+  const totM2 = totM1 + 7;                      // maandag van de week DAAROP (8..14) = twee weken vooruit
+  const dagBij = (n: number) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + n));
+  const M1 = dagBij(totM1), M1zo = new Date(M1.getTime() + 6 * 864e5);
+  const M2 = dagBij(totM2), M2zo = new Date(M2.getTime() + 6 * 864e5);
+  const vandaagYmd = ymd(now);
 
-  const maandag = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + totMaandag));
-  const zondag = new Date(maandag.getTime() + 6 * 864e5);
-  const maandagYmd = ymd(maandag);
-  if (inst.laatst_verstuurd_voor === maandagYmd) return 0; // al gedaan voor deze week
-
-  // Teamleden die een rooster invullen (niet de eigenaar), actief en met e-mail.
   const { data: leden } = await admin.from("accounts").select("id,naam,email,rol,actief")
     .eq("team_id", team).eq("actief", true).not("email", "is", null);
   const werkers = (leden || []).filter((l: any) => String(l.rol || "").toLowerCase() !== "eigenaar" && l.email);
-  if (!werkers.length) {
-    await admin.from("rooster_instelling").update({ laatst_verstuurd_voor: maandagYmd, bijgewerkt_op: new Date().toISOString() }).eq("team_id", team);
-    return 0;
-  }
+  const beheerders = (leden || []).filter((l: any) => ["eigenaar", "beheerder"].includes(String(l.rol || "").toLowerCase()) && l.email);
+  if (!werkers.length) return 0;
 
-  // Wie gaf al iets door voor die week (beschikbaar=true of expliciet niet)?
   const ids = werkers.map((w: any) => w.id);
-  const { data: besch } = await admin.from("beschikbaarheid").select("account_id")
-    .in("account_id", ids).gte("datum", maandagYmd).lte("datum", ymd(zondag));
-  const heeftIngevuld = new Set((besch || []).map((b: any) => b.account_id));
-  const teHerinneren = werkers.filter((w: any) => !heeftIngevuld.has(w.id));
+  // Wie gaf de komende week (M1) en/of de week daarop (M2) al door?
+  const { data: besch } = await admin.from("beschikbaarheid").select("account_id,datum")
+    .in("account_id", ids).gte("datum", ymd(M1)).lte("datum", ymd(M2zo));
+  const filledM1 = new Set<string>(), filledM2 = new Set<string>();
+  for (const b of (besch || [])) {
+    if (b.datum >= ymd(M1) && b.datum <= ymd(M1zo)) filledM1.add(b.account_id);
+    if (b.datum >= ymd(M2) && b.datum <= ymd(M2zo)) filledM2.add(b.account_id);
+  }
 
   const { data: klant } = await admin.from("klanten").select("naam").eq("id", team).maybeSingle();
   const shop = klant?.naam || "je winkel";
 
+  // Om-de-dag-poort op teamniveau: minstens twee dagen sinds de vorige herinnering.
+  const laatst = inst.laatst_herinnerd_op ? new Date(inst.laatst_herinnerd_op + "T00:00:00Z") : null;
+  const magOmDeDag = !laatst || Math.floor((now.getTime() - laatst.getTime()) / 864e5) >= 2;
+
   let verstuurd = 0;
-  for (const w of teHerinneren) {
+  for (const w of werkers) {
+    let doelMa: Date | null = null, doelZo: Date | null = null, dagenTot = 0;
+    if (!filledM1.has(w.id)) { doelMa = M1; doelZo = M1zo; dagenTot = totM1; }
+    else if (!filledM2.has(w.id)) { doelMa = M2; doelZo = M2zo; dagenTot = totM2; }
+    if (!doelMa) continue;                       // alles al doorgegeven
+    const dagelijks = dagenTot <= 3;             // laatste 3 dagen voor die week: elke dag
+    if (!dagelijks && !magOmDeDag) continue;     // anders: om de dag
     const tekst =
       `Hoi ${w.naam || ""},\n\n` +
-      `Vergeet niet je beschikbaarheid voor volgende week (maandag ${maandagYmd} t/m zondag ${ymd(zondag)}) in te vullen in Storvo, ` +
+      `Vul je beschikbaarheid in voor de week van maandag ${ymd(doelMa)} t/m zondag ${ymd(doelZo!)} in Storvo, ` +
       `zodat het rooster op tijd rond is.\n\n` +
       `Invullen: https://storvo.app/app  (ga naar Rooster)\n\n` +
       `Groet,\n${shop}`;
     try {
-      await transporter.sendMail({
-        from: vanAdres, to: w.email,
-        subject: "Vul je beschikbaarheid in voor volgende week",
-        text: tekst,
-      });
+      await transporter.sendMail({ from: vanAdres, to: w.email, subject: "Vul je beschikbaarheid in", text: tekst });
       verstuurd++;
-    } catch (_e) { /* deze overslaan, de rest gaat door */ }
+    } catch (_e) { /* deze overslaan */ }
   }
-  await admin.from("rooster_instelling").update({ laatst_verstuurd_voor: maandagYmd, bijgewerkt_op: new Date().toISOString() }).eq("team_id", team);
+
+  // Beheerder-melding, 3 dagen voor de komende week (op vrijdag, totM1===3): wie vulde niks in.
+  if (totM1 === 3 && beheerders.length) {
+    const achter = werkers.filter((w: any) => !filledM1.has(w.id));
+    if (achter.length) {
+      const namen = achter.map((w: any) => w.naam || w.email).join(", ");
+      const tekst =
+        `Over 3 dagen begint de week van maandag ${ymd(M1)}, en deze teamleden hebben hun ` +
+        `beschikbaarheid nog niet doorgegeven:\n\n${namen}\n\n` +
+        `Bekijk het rooster: https://storvo.app/app  (ga naar Rooster)\n\nStorvo`;
+      for (const b of beheerders) {
+        try { await transporter.sendMail({ from: vanAdres, to: b.email, subject: "Nog niet iedereen heeft beschikbaarheid doorgegeven", text: tekst }); } catch (_e) { /* */ }
+      }
+    }
+  }
+
+  if (verstuurd > 0) {
+    await admin.from("rooster_instelling").update({ laatst_herinnerd_op: vandaagYmd, bijgewerkt_op: new Date().toISOString() }).eq("team_id", team);
+  }
   return verstuurd;
 }
 
@@ -91,7 +112,6 @@ Deno.serve(async (req) => {
   const smtpHost = Deno.env.get("MAIL_SMTP_HOST") || "smtppro.zoho.eu";
   if (!user || !pass) return fout("De mailkoppeling is nog niet ingesteld.", 503);
 
-  // Toegang: cron-geheim (alle teams) of ingelogde gebruiker (eigen team).
   const cronSecret = Deno.env.get("MAIL_CRON_SECRET");
   const isCron = !!cronSecret && (req.headers.get("x-cron-secret") || "") === cronSecret;
   let teams: any[] = [];
