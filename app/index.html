@@ -14380,6 +14380,31 @@ function pagChipsHtml(prefix, actief){
     `<label class="pagchip"><input type="checkbox" id="${prefix}_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
   ).join('')+`</div>`;
 }
+/* De pagina's van de Reloop-IT (refurbish) omgeving, apart van de winkel-pagina's.
+   De sleutels krijgen een 'ref_'-voorvoegsel in accounts.tabs, want de werkbank heeft
+   ook een Voorraad en een Bestellen en die mogen niet botsen met die van de winkel.
+   De refurbish-app leest deze sleutels uit; niets aangevinkt betekent daar: alles zien
+   (achterwaarts compatibel met accounts die van voor deze keuze zijn). */
+const REFURBISH_PAGINAS=[
+  ['werkbank','Werkbank'],['toevoegen','Toevoegen'],['controle','Te controleren'],['reparatie','Te repareren'],
+  ['voorraad','Voorraad'],['batches','Batches'],['bundels','Bundels'],['onderdelen','Onderdelen'],
+  ['bestellen','Bestellen'],['donoren','Donoren'],['partners','Partners'],['checklists','Instellingen']
+];
+function refChipsHtml(prefix, actief){
+  return `<div class="pagchips">`+REFURBISH_PAGINAS.map(([id,label])=>
+    `<label class="pagchip"><input type="checkbox" id="${prefix}_ref_${id}" ${actief.includes('ref_'+id)?'checked':''}><span>${esc(label)}</span></label>`
+  ).join('')+`</div>`;
+}
+function refUit(prefix){
+  return REFURBISH_PAGINAS.filter(([id])=>{ const el=document.getElementById(prefix+'_ref_'+id); return el&&el.checked; }).map(([id])=>'ref_'+id);
+}
+/* Welke refurbish-pagina's staan aangevinkt voor dit account. Heeft het nog geen
+   ref_-sleutels (nooit via deze picker opgeslagen), dan tonen we ze allemaal aan,
+   want zo werkt de refurbish-app op dat moment ook. */
+function refActiefVan(u){
+  const t=Array.isArray(u&&u.tabs)?u.tabs:[];
+  return t.some(x=>x&&x.indexOf('ref_')===0) ? t : REFURBISH_PAGINAS.map(([id])=>'ref_'+id);
+}
 function teamTerug(){
   const d=document.getElementById('teamDetailView'); if(d){ d.hidden=true; d.innerHTML=''; }
   const l=document.getElementById('teamLijstView'); if(l) l.hidden=false;
@@ -14404,7 +14429,9 @@ function teamGebruikerOpen(id){
         <div class="omglijst">${omgToggleHtml('det'+u.id, u)}</div>
         <p class="muted klein" style="margin-top:8px">Winkel heeft iedereen. Vink aan of hij ook bij de werkbank of het partner-dashboard mag.</p>
       </div>
-      <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>${pagChipsHtml('acc'+u.id, actief)}</div>`;
+      <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>${pagChipsHtml('acc'+u.id, actief)}</div>
+      <div class="detailsectie"><div class="sectielabel">Welke Reloop-IT pagina's ziet hij</div>${refChipsHtml('detref'+u.id, refActiefVan(u))}
+        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hierboven toegang tot de werkbank heeft.</p></div>`;
   detail.innerHTML=`
     <button class="terugknop" onclick="teamTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug naar gebruikers</button>
     <div class="card breed">
@@ -14434,7 +14461,7 @@ function teamRolKies(id, rol, btn){
 }
 async function teamGebruikerOpslaan(id, knop){
   const rol=(document.getElementById('detrol_'+id)||{}).value||'medewerker';
-  const tabs=paginasUit('acc'+id).concat(omgUit('det'+id));
+  const tabs=paginasUit('acc'+id).concat(omgUit('det'+id)).concat(refUit('detref'+id));
   await teamActie('bijwerken', {account_id:id, rol, tabs}, knop, null, ()=>{ toast('Opgeslagen', true); teamTerug(); });
 }
 function teamNieuwOpen(){
@@ -14463,6 +14490,9 @@ function teamNieuwOpen(){
         <div class="omglijst">${omgToggleHtml('nw', null)}</div></div>
       <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>
         <div id="nw_pagwrap">${pagChipsHtml('nw', rolDefaultTabs(rol))}</div></div>
+      <div class="detailsectie"><div class="sectielabel">Welke Reloop-IT pagina's ziet hij</div>
+        ${refChipsHtml('nw', REFURBISH_PAGINAS.map(([id])=>'ref_'+id))}
+        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hierboven toegang tot de werkbank heeft.</p></div>
       <div class="detailacts"><button class="btn actie" onclick="gebruikerAanmaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Gebruiker aanmaken</button></div>
       <div id="nw_uit" class="muted klein" style="margin-top:10px"></div>
       <div class="detailsectie" style="border-top:1px solid var(--border); padding-top:18px">
@@ -14531,7 +14561,7 @@ async function gebruikerAanmaken(knop){
   const rol=document.getElementById('nw_rol').value;
   const uit=document.getElementById('nw_uit');
   if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
-  const tabs=paginasUit('nw').concat(omgUit('nw'));
+  const tabs=paginasUit('nw').concat(omgUit('nw')).concat(refUit('nw'));
   const uurloon=Math.max(0, Number(String((document.getElementById('nw_uurloon')||{}).value||'').replace(',','.'))||0);
   await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs}, knop, uit, async()=>{
     /* Het uurloon staat in de blob (state.lonen) op het account-id, dat we pas na

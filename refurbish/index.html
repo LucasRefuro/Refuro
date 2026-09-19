@@ -1116,6 +1116,20 @@ function heeftOmgeving(u, key){
   if(t.includes('env_set')) return t.includes('env_'+key);
   return key==='refurbish';
 }
+/* Toegang per pagina, ingesteld in de winkelapp bij Team, Gebruikers (accounts.tabs,
+   met een 'ref_'-voorvoegsel per pagina). De eigenaar ziet alles. Heeft dit account nog
+   geen ref_-sleutels, dan ziet het ook alles: zo bleef de werkbank werken voor accounts
+   die van voor deze keuze zijn. Niets aangevinkt terwijl er wel ref_-sleutels zijn zou
+   iemand helemaal buitensluiten; dan tonen we toch alles, dat is de veilige kant. */
+const REF_PAGINAS=['werkbank','toevoegen','controle','reparatie','voorraad','batches','bundels','onderdelen','bestellen','donoren','partners','checklists'];
+function refToegestaan(){
+  if(!account || account.rol==='eigenaar') return REF_PAGINAS.slice();
+  const t=Array.isArray(account.tabs)?account.tabs:[];
+  if(!t.some(x=>x&&x.indexOf('ref_')===0)) return REF_PAGINAS.slice();
+  const lijst=REF_PAGINAS.filter(p=>t.includes('ref_'+p));
+  return lijst.length?lijst:REF_PAGINAS.slice();
+}
+function magPagina(t){ return refToegestaan().includes(t); }
 /* Heeft deze winkel een externe voorraadpartner (StockDeck)? Zo niet, dan is de
    portaal-bediening op elke rij en het dashboard-vinkje alleen maar ruis; we
    verbergen die dan. */
@@ -1258,6 +1272,13 @@ async function start(){
   document.getElementById('zijbalk').hidden=false;
   document.getElementById('werkvlak').hidden=false;
   document.getElementById('wie').textContent=acc.naam||acc.email||'';
+  /* Pagina's verbergen die deze gebruiker niet mag zien. We halen alleen weg, we
+     zetten niets zichtbaar: zo blijft Partners (los geregeld voor eigenaar/beheerder)
+     verborgen voor een medewerker, ook als die per ongeluk zou zijn aangevinkt. */
+  const magTabs=refToegestaan();
+  document.querySelectorAll('aside nav button[data-tab]').forEach(b=>{
+    if(!magTabs.includes(b.dataset.tab)) b.hidden=true;
+  });
   merkTekenen();
   tekenSoorten();
   /* Vóór het laden uitlezen: allesLaden tekent het scherm en dat overschrijft de
@@ -1282,6 +1303,8 @@ async function start(){
   /* Kon de controle niet hersteld worden, dan niet op een leeg detailscherm landen
      maar op de lijst. */
   if(doelTab==='controleren' && !ctr) doelTab='controle';
+  /* Landt hij op een pagina die hij niet (meer) mag zien, dan de eerste die wel mag. */
+  if(!magTabs.includes(doelTab) && doelTab!=='controleren') doelTab=magTabs[0]||'werkbank';
   showTab(doelTab);
 }
 
@@ -1345,6 +1368,10 @@ async function allesLaden(){
 }
 
 function showTab(t){
+  /* Backstop: een verborgen tab kun je niet aanklikken, maar mocht een pagina toch
+     via code worden opgeroepen zonder recht, dan wijken we uit naar de eerste die mag.
+     Interne schermen (zoals 'controleren') staan niet in REF_PAGINAS en gaan gewoon door. */
+  if(account && REF_PAGINAS.includes(t) && !magPagina(t)){ t=refToegestaan()[0]||'werkbank'; }
   tab=t;
   let actief=null;
   document.querySelectorAll('aside nav button').forEach(b=>{ const aan=b.dataset.tab===t; b.classList.toggle('active', aan); if(aan) actief=b; });

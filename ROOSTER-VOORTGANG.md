@@ -54,15 +54,27 @@ goedkeuring).
 
 Alle tests groen (`npm test`, exit 0).
 
+## Team en gebruikers
+
+Het meeste stond er al: de detailpagina per gebruiker (rol, omgevingen, pagina's,
+loon) als je op een naam klikt, het uurloon in het nieuwe-gebruiker-formulier, en
+de uitnodiging per e-mail of link met een welkomstmail. Nieuw toegevoegd:
+
+**Reloop-IT pagina's als losse rechten.**
+Bij Team, Gebruikers staat nu ook per gebruiker welke pagina's van de werkbank hij
+ziet (Werkbank, Toevoegen, Te controleren, en zo verder), zowel bij het aanmaken
+als op de detailpagina. De sleutels krijgen een `ref_`-voorvoegsel in
+`accounts.tabs`, los van de winkel-pagina's (die hebben ook Voorraad en Bestellen).
+De refurbish-app leest ze uit en verbergt de tabs die iemand niet mag zien. Heeft
+een account nog geen `ref_`-sleutels, dan ziet het alles, zodat bestaande accounts
+niet ineens buitengesloten worden.
+
 ## Nog te doen
 
-**Team en gebruikers (was uitgesteld, komt hierna).**
-- Alle pagina's als losse rechten laten instellen, ook de Reloop-IT omgeving.
-- Uitnodiging bij het aanmaken van een gebruiker, met een link om zelf een account
-  te maken en een bedankmail. De pagina's, omgevingen en het uurloon meesturen op
-  de uitnodiging.
-- Het uurloon staat al in het formulier van een nieuwe gebruiker (klaar).
+- Uitnodiging: eventueel de pagina's, omgevingen en het uurloon al meesturen op de
+  uitnodiging zelf (nu zet de collega alleen zijn wachtwoord; rechten stel je daarna
+  in). Dit vraagt extra kolommen op `invites` en een aanpassing in de niet-in-de-repo
+  functie `redeem-invite`. Eerst even met Lucas afstemmen of dit nodig is.
 
-**Los openstaand.**
-Icecat: er moet nog een gratis Open Icecat account komen en het geheim
-`ICECAT_GEBRUIKER` gezet worden.
+- Icecat: er moet nog een gratis Open Icecat account komen en het geheim
+  `ICECAT_GEBRUIKER` gezet worden.
