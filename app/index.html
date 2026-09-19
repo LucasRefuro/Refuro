@@ -1941,6 +1941,41 @@
   body.metbestelbalk.metabobalk .topbar{top:calc(var(--abohoogte)*2);}
   body.metbestelbalk.metabobalk .bestelbalk{top:var(--abohoogte);}
 
+  /* De rooster-goedkeurbalk: voor een beheerder, als er inzendingen op goedkeuring
+     wachten. Zelfde plek en maat als de andere twee; hij zakt onder een eventuele
+     abo- en bestelbalk. Groen omdat het over het team en het rooster gaat. */
+  .keurbalk{position:fixed; left:0; right:0; top:0; z-index:898; width:100%;
+    min-height:var(--abohoogte); display:flex; align-items:center;
+    padding:0 22px; font-size:13px; line-height:1.3;
+    background:var(--green-soft); color:var(--green-tekst); border-bottom:1.5px solid rgba(30,158,106,.28);}
+  .keurbinnen{max-width:1640px; margin:0 auto; width:100%;
+    display:flex; align-items:center; gap:12px;}
+  .keurbalk .i{flex:none; width:15px; height:15px; color:var(--green-tekst);}
+  .keurbalk span{flex:1; min-width:0;}
+  .keurbalk b{font-weight:700;}
+  .keurbalk button{border:none; border-radius:var(--pil); padding:5px 14px; font-family:inherit;
+    font-size:12.5px; font-weight:700; line-height:1.35; cursor:pointer; background:var(--actie); color:#fff; flex:none;
+    white-space:nowrap; box-shadow:0 1px 5px rgba(23,32,30,.10); transition:.15s;}
+  .keurbalk button:hover{box-shadow:0 3px 10px rgba(23,32,30,.16);}
+  body.metkeurbalk{padding-top:var(--abohoogte);}
+  body.metkeurbalk aside{top:var(--abohoogte);}
+  body.metkeurbalk .topbar{top:var(--abohoogte);}
+  /* Keurbalk onder de bestelbalk. */
+  body.metkeurbalk.metbestelbalk{padding-top:calc(var(--abohoogte)*2);}
+  body.metkeurbalk.metbestelbalk aside{top:calc(var(--abohoogte)*2);}
+  body.metkeurbalk.metbestelbalk .topbar{top:calc(var(--abohoogte)*2);}
+  body.metkeurbalk.metbestelbalk .keurbalk{top:var(--abohoogte);}
+  /* Keurbalk onder de abobalk (als er geen bestelbalk is). */
+  body.metkeurbalk.metabobalk{padding-top:calc(var(--abohoogte)*2);}
+  body.metkeurbalk.metabobalk aside{top:calc(var(--abohoogte)*2);}
+  body.metkeurbalk.metabobalk .topbar{top:calc(var(--abohoogte)*2);}
+  body.metkeurbalk.metabobalk .keurbalk{top:var(--abohoogte);}
+  /* Alle drie tegelijk: abo boven, bestel in het midden, keur onderaan. */
+  body.metkeurbalk.metbestelbalk.metabobalk{padding-top:calc(var(--abohoogte)*3);}
+  body.metkeurbalk.metbestelbalk.metabobalk aside{top:calc(var(--abohoogte)*3);}
+  body.metkeurbalk.metbestelbalk.metabobalk .topbar{top:calc(var(--abohoogte)*3);}
+  body.metkeurbalk.metbestelbalk.metabobalk .keurbalk{top:calc(var(--abohoogte)*2);}
+
   /* Op een smal scherm staat de zijbalk toch al boven de inhoud. Dan hoeft de
      balk niet vast te staan: hij is gewoon het eerste blok van de pagina. */
   @media(max-width:860px){
@@ -1956,6 +1991,13 @@
     .bestelbalk button{width:100%; padding:8px 14px;}
     body.metbestelbalk, body.metbestelbalk.metabobalk{padding-top:0;}
     body.metbestelbalk .topbar, body.metbestelbalk.metabobalk .topbar{top:0;}
+    .keurbalk{position:static; padding:8px 16px;}
+    .keurbinnen{flex-wrap:wrap; gap:8px;}
+    .keurbalk span{flex:1 1 100%;}
+    .keurbalk button{width:100%; padding:8px 14px;}
+    body.metkeurbalk, body.metkeurbalk.metbestelbalk, body.metkeurbalk.metabobalk, body.metkeurbalk.metbestelbalk.metabobalk{padding-top:0;}
+    body.metkeurbalk .topbar, body.metkeurbalk.metbestelbalk .topbar, body.metkeurbalk.metabobalk .topbar, body.metkeurbalk.metbestelbalk.metabobalk .topbar{top:0;}
+    body.metkeurbalk.metbestelbalk .keurbalk, body.metkeurbalk.metabobalk .keurbalk, body.metkeurbalk.metbestelbalk.metabobalk .keurbalk{top:0;}
   }
 
   /* Scan-knop in de kopbalk + de camera-scanner. iPhone-Safari kan zelf geen QR lezen,
@@ -3925,6 +3967,8 @@ function showTab(t){
   if(typeof mobielBijwerken==='function') mobielBijwerken();
   /* De bestelbalk hoort op elke pagina, dus bij elke paginawissel opnieuw kijken. */
   if(typeof toonBestelBalk==='function') toonBestelBalk();
+  /* De rooster-goedkeurbalk net zo, uit wat er bij het inloggen is opgehaald. */
+  if(typeof toonKeurBalk==='function') toonKeurBalk();
   /* Bij het wisselen van pagina weer bovenaan beginnen, met de kop in beeld. */
   const bar=document.querySelector('.topbar');
   if(bar) bar.classList.remove('weg');
@@ -4455,6 +4499,10 @@ function uitbetalingTerug(id){
    schrijft alleen zijn eigen beschikbaarheid (RLS); alleen eigenaar/beheerder plant in. */
 let roosterMaandag=null;
 let roosterData={besch:[], diensten:[]};
+/* Wie er op goedkeuring van een beheerder wacht, over deze en komende weken. Los
+   van roosterData omdat de balk op elke pagina moet werken, niet alleen op het
+   rooster zelf. Wordt bij inloggen en na een goedkeuring bijgewerkt. */
+let keurWacht={aantal:0, ids:[], week:null};
 const DAG_KORT=['Ma','Di','Wo','Do','Vr','Za','Zo'];
 /* Vaste openingstijden van de winkel, per weekdag (index 0=maandag .. 6=zondag).
    null = gesloten. Zo zie je in het rooster meteen de hele dag met de tijden die
@@ -4649,6 +4697,116 @@ async function roosterGoedkeur(accountId, ja){
   tekenRooster();
   toast(ja?'Goedgekeurd':'Teruggestuurd', true);
   roosterMailRoep({actie:(ja?'goedgekeurd':'afgekeurd'), maandag:van, account_id:accountId, reden:(reden||'')});
+  roosterKeurLaden().then(toonKeurBalk);      // de balk telt nu een inzending minder
+}
+
+/* ── Balk en popup: op elke pagina zien dat er iets op goedkeuring wacht ──
+   De balk staat bovenin (zoals de bestel- en abobalk) en verwijst naar het
+   rooster. De popup komt eenmaal per dag bij het inloggen. Alles hangt aan
+   keurWacht, dat los van de rooster-pagina wordt geladen. */
+async function roosterKeurLaden(){
+  keurWacht={aantal:0, ids:[], week:null};
+  if(!account || !roosterMagInplannen()) return;
+  const van=roosterYmd(roosterMaandagVan(new Date()));   // vanaf de maandag van deze week
+  try{
+    if(!teamLeden.length) await laadTeamLeden();
+    const {data}=await sb.from('beschikbaarheid').select('account_id,datum,status').eq('status','ingediend').gte('datum',van);
+    const mijnId=gebruiker&&gebruiker.id;
+    const ids=new Set(); let vroegste=null;
+    (data||[]).forEach(r=>{
+      if(r.account_id===mijnId) return;                  // je eigen inzending keur je niet zelf goed
+      ids.add(r.account_id);
+      const wk=roosterYmd(roosterMaandagVan(new Date(r.datum+'T12:00:00')));
+      if(!vroegste || wk<vroegste) vroegste=wk;
+    });
+    keurWacht={aantal:ids.size, ids:[...ids], week:vroegste};
+  }catch(e){/* stil: geen balk is beter dan een verkeerde balk */}
+}
+function toonKeurBalk(){
+  let balk=document.getElementById('keurBalk');
+  if(!keurWacht.aantal || !roosterMagInplannen()){
+    if(balk) balk.remove();
+    document.body.classList.remove('metkeurbalk');
+    return;
+  }
+  if(!balk){
+    balk=document.createElement('div'); balk.id='keurBalk';
+    document.body.insertBefore(balk, document.body.firstChild);
+  }
+  balk.className='keurbalk';
+  const n=keurWacht.aantal;
+  const tekst = n===1 ? '1 teamlid wacht op je goedkeuring.' : n+' teamleden wachten op je goedkeuring.';
+  balk.innerHTML=`<div class="keurbinnen">
+    <svg class="i s"><use href="#i-users"/></svg>
+    <span><b>Rooster:</b> ${tekst}</span>
+    <button onclick="keurBalkGa()">Bekijken</button>
+  </div>`;
+  document.body.classList.add('metkeurbalk');
+}
+function keurBalkGa(){
+  /* Spring meteen naar de week waar de oudste inzending in zit, anders sta je op
+     deze week en zie je de wachtrij in de kop niet. */
+  if(keurWacht.week){ roosterMaandag=roosterMaandagVan(new Date(keurWacht.week+'T12:00:00')); }
+  showTab('rooster');
+}
+function keurPopup(){
+  if(!keurWacht.aantal || !roosterMagInplannen()) return;
+  if(document.querySelector('.overlay')) return;         // niet over een ander scherm heen
+  const k='storvo_keur_'+new Date().toISOString().slice(0,10);   // eenmaal per dag
+  if(nudgeGezien(k)) return; nudgeZet(k);
+  const namen=keurWacht.ids.map(id=>roosterNaam(id)).filter(x=>x&&x!=='?');
+  const lijst = namen.length ? esc(namen.join(', ')) : (keurWacht.aantal+' teamleden');
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='keurOverlay';
+  ov.innerHTML=`<div class="popup">
+    <h3 style="margin:0 0 8px">Rooster goedkeuren</h3>
+    <p class="pv">${lijst} ${keurWacht.aantal===1?'heeft':'hebben'} de beschikbaarheid doorgegeven. Keur het goed of stuur het terug.</p>
+    <div class="acts" style="display:flex; gap:10px; margin-top:16px">
+      <button class="btn actie" onclick="keurOverlaySluit(true)">Naar het rooster</button>
+      <button class="btn ghost" onclick="keurOverlaySluit(false)">Later</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) keurOverlaySluit(false); });
+  document.body.appendChild(ov);
+}
+function keurOverlaySluit(ga){ const o=document.getElementById('keurOverlay'); if(o) o.remove(); if(ga) keurBalkGa(); }
+/* Voor de medewerker: drie dagen voor een nieuwe week ingaat, en hij gaf zijn
+   beschikbaarheid nog niet door, eenmaal een popup. De mail komt los daarvan. */
+async function roosterInvulPopup(){
+  if(!gebruiker || gebruiker.rol==='eigenaar') return;
+  const now=new Date();
+  const dow=(now.getDay()+6)%7;                 // 0=maandag
+  const totMa=(7-dow)%7 || 7;                    // dagen tot de komende maandag (1..7)
+  if(totMa>3) return;                            // pas de laatste drie dagen porren
+  const ma=new Date(now.getFullYear(),now.getMonth(),now.getDate()+totMa);
+  const van=roosterYmd(ma), tot=roosterYmd(new Date(ma.getFullYear(),ma.getMonth(),ma.getDate()+6));
+  let ingevuld=false;
+  try{
+    const {data}=await sb.from('beschikbaarheid').select('status').eq('account_id',gebruiker.id).gte('datum',van).lte('datum',tot).in('status',['ingediend','goedgekeurd']).limit(1);
+    ingevuld=!!(data&&data.length);
+  }catch(e){ return; }
+  if(ingevuld) return;
+  if(document.querySelector('.overlay')) return;
+  const sl='storvo_rooster_invul_'+van;          // eenmaal per komende week
+  if(nudgeGezien(sl)) return; nudgeZet(sl);
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='invulOverlay';
+  ov.innerHTML=`<div class="popup">
+    <h3 style="margin:0 0 8px">Geef je rooster door</h3>
+    <p class="pv">De week van maandag ${esc(roosterKort(ma))} begint over ${totMa} dag${totMa>1?'en':''}. Je hebt je beschikbaarheid nog niet doorgegeven.</p>
+    <div class="acts" style="display:flex; gap:10px; margin-top:16px">
+      <button class="btn actie" onclick="invulOverlaySluit('${van}')">Nu invullen</button>
+      <button class="btn ghost" onclick="invulOverlaySluit('')">Later</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) invulOverlaySluit(''); });
+  document.body.appendChild(ov);
+}
+function invulOverlaySluit(van){ const o=document.getElementById('invulOverlay'); if(o) o.remove(); if(van){ roosterMaandag=roosterMaandagVan(new Date(van+'T12:00:00')); showTab('rooster'); } }
+/* Bij het inloggen alles ophalen en tonen: eerst de balk, dan (met een tik vertraging
+   zodat een eventueel proefscherm voorgaat) de popups. */
+async function roosterMeldingen(){
+  await roosterKeurLaden();
+  toonKeurBalk();
+  setTimeout(()=>{ keurPopup(); roosterInvulPopup(); }, 800);
 }
 function tekenRooster(){
   const inh=document.getElementById('roosterInhoud'); if(!inh) return;
@@ -11970,6 +12128,7 @@ async function ladAccountEnStart(session){
   renderInstellingen();
   toonAboBalk();
   toonBestelBalk();
+  roosterMeldingen();     /* balk plus popup voor goedkeuren en voor je eigen rooster */
   moduleLinks();
   hwLaad(true);
   proefNudge();
@@ -12002,7 +12161,7 @@ function aboBewaking(){
     if(!account) return;
     await haalAbonnement();
     if(abonnement && abonnement.geblokkeerd){ syncStop(); toonSlot(); }
-    else { toonAboBalk(); proefNudge(); }
+    else { toonAboBalk(); proefNudge(); roosterKeurLaden().then(toonKeurBalk); }
   }, 30*60*1000);
 }
 

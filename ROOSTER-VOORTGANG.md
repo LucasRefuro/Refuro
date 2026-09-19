@@ -42,16 +42,19 @@ In de winkelapp (`app/index.html`, sectie Rooster):
 - De beheerder ziet boven het rooster wie op goedkeuring wacht, met knoppen
   Goedkeuren en Terugsturen. Terugsturen vraagt om een reden.
 
+**Balk en popup.**
+Een groene bovenbalk voor de beheerder, op elke pagina, als er inzendingen op
+goedkeuring wachten. Hij zakt netjes onder een eventuele abo- en bestelbalk.
+Klik je op Bekijken, dan spring je meteen naar de week met de oudste inzending.
+Bij het inloggen komt er eenmaal per dag een popup: voor de beheerder wie er
+wacht op goedkeuring, voor de medewerker die zijn komende week nog niet doorgaf
+en de week begint binnen drie dagen. Alles hangt aan `keurWacht`, dat los van de
+rooster-pagina wordt geladen (bij inloggen, elke dertig minuten, en na een
+goedkeuring).
+
 Alle tests groen (`npm test`, exit 0).
 
 ## Nog te doen
-
-**Fase 3: balk en popup (nu mee bezig).**
-Een bovenbalk plus popup voor de beheerder als er inzendingen op goedkeuring
-wachten, zichtbaar op elke pagina (niet alleen op de rooster-pagina). En een
-popup voor de medewerker die zijn week nog niet invulde, drie dagen voor de week
-ingaat. Patroon: kopieren van `toonBestelBalk` en `toonAboBalk`, aanhaken in
-`showTab` en bij inloggen.
 
 **Team en gebruikers (was uitgesteld, komt hierna).**
 - Alle pagina's als losse rechten laten instellen, ook de Reloop-IT omgeving.
