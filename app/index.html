@@ -487,6 +487,15 @@
     #strookDoc .acts{display:none;}
   }
   .roosterbalk{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; flex-wrap:wrap;}
+  .rkop{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border:1px solid var(--border); border-radius:var(--radius-s); padding:12px 14px; margin-bottom:14px; font-size:14px; line-height:1.5;}
+  .rkop.wacht{display:block; background:var(--amber-soft); border-color:transparent;}
+  .rstatus{display:inline-block; font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; padding:2px 9px; border-radius:var(--pil); margin-right:8px; vertical-align:1px;}
+  .rstatus.goed{background:var(--green-soft); color:var(--green-tekst);}
+  .rstatus.wacht{background:var(--amber-soft); color:var(--amber-tekst);}
+  .rstatus.af{background:var(--red-soft); color:var(--red-tekst);}
+  .rgoedrij{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid rgba(148,108,7,.2);}
+  .rgoedrij b{font-weight:700;}
+  .rgoedknoppen{display:flex; gap:8px; flex:none;}
   .roostergrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:12px;}
   .dagkaart{border:1px solid var(--border); border-radius:var(--radius-s); padding:12px; display:flex; flex-direction:column; gap:10px;}
   .dagkaart.vandaag{border-color:var(--green);}
@@ -4490,7 +4499,7 @@ async function laadRooster(){
   if(!teamLeden.length && account){ try{ await laadTeamLeden(); }catch(e){} }
   try{
     const [b,r]=await Promise.all([
-      sb.from('beschikbaarheid').select('account_id,datum,beschikbaar,van,tot').gte('datum',van).lte('datum',tot),
+      sb.from('beschikbaarheid').select('account_id,datum,beschikbaar,van,tot,status,afwijs_reden').gte('datum',van).lte('datum',tot),
       sb.from('rooster').select('id,account_id,datum,van,tot,notitie').gte('datum',van).lte('datum',tot)
     ]);
     roosterData.besch = b.data||[];
@@ -4557,6 +4566,90 @@ async function renderDashRooster(){
       <td>${wie}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
+/* ── Doorgeven en goedkeuren ──
+   Personeel geeft de hele week in één keer door (elke dag krijgt status 'ingediend'),
+   een beheerder keurt goed of stuurt terug. De status leeft op de losse dagen; omdat
+   doorgeven alle zeven dagen tegelijk zet, zijn ze consistent. Wijzig je één dag, dan
+   valt die dag terug op 'concept' (zie zetBeschikbaar) en is de week weer een concept.
+   De eigenaar (Lucas) geeft niet door; hij springt hooguit bij. */
+function roosterKandidaten(){
+  return (teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam,rol:gebruiker.rol}]:[])).filter(m=>m.rol!=='eigenaar');
+}
+function roosterWeekStatus(id){
+  const r=(roosterData.besch||[]).filter(x=>x.account_id===id);   // besch is al beperkt tot de getoonde week
+  if(!r.length) return {status:'leeg', reden:''};
+  const st=r.map(x=>x.status||'concept');
+  const reden=(r.find(x=>x.afwijs_reden)||{}).afwijs_reden||'';
+  if(st.includes('afgekeurd')) return {status:'afgekeurd', reden};
+  if(st.every(s=>s==='goedgekeurd')) return {status:'goedgekeurd', reden:''};
+  if(st.every(s=>s==='ingediend')) return {status:'ingediend', reden:''};
+  return {status:'concept', reden:''};
+}
+async function roosterMailRoep(payload){
+  try{
+    const {data:{session}}=await sb.auth.getSession(); if(!session) return;
+    await fetch(SUPABASE_URL+'/functions/v1/rooster-mail',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(payload)});
+  }catch(e){/* de mail is bijzaak; de status in de tabel staat al goed */}
+}
+function roosterKopHtml(){
+  const dagen=roosterDagen();
+  const verleden = roosterYmd(dagen[6]) < roosterYmd(new Date());
+  let uit='';
+  // Wie zelf doorgeeft (iedereen behalve de eigenaar): status van deze week plus de knop.
+  if(gebruiker && gebruiker.rol!=='eigenaar' && !verleden){
+    const ws=roosterWeekStatus(gebruiker.id);
+    let regel='', knop='';
+    if(ws.status==='goedgekeurd'){ regel='<span class="rstatus goed">Goedgekeurd</span>Je beschikbaarheid voor deze week is rond.'; }
+    else if(ws.status==='ingediend'){ regel='<span class="rstatus wacht">Doorgegeven</span>Wacht op goedkeuring. Aanpassen kan nog.'; knop='<button type="button" class="btn small ghost" onclick="roosterDoorgeven()">Opnieuw doorgeven</button>'; }
+    else if(ws.status==='afgekeurd'){ regel='<span class="rstatus af">Teruggestuurd</span>'+(ws.reden?('Reden: '+esc(ws.reden)):'Pas je beschikbaarheid aan en geef het opnieuw door.'); knop='<button type="button" class="btn small" onclick="roosterDoorgeven()">Opnieuw doorgeven</button>'; }
+    else { regel='Vul hieronder je dagen in en geef de week dan door.'; knop='<button type="button" class="btn small" onclick="roosterDoorgeven()">Deze week doorgeven</button>'; }
+    uit += `<div class="rkop"><div>${regel}</div>${knop}</div>`;
+  }
+  // Een beheerder: wie wacht er op goedkeuring (niet jezelf).
+  if(roosterMagInplannen()){
+    const wachten=roosterKandidaten().filter(m=>m.id!==(gebruiker&&gebruiker.id) && roosterWeekStatus(m.id).status==='ingediend');
+    if(wachten.length){
+      uit += `<div class="rkop wacht"><div class="roosterlabel" style="margin-bottom:8px">Wacht op jouw goedkeuring</div>${wachten.map(m=>
+        `<div class="rgoedrij"><b>${esc(m.naam)}</b><span class="rgoedknoppen"><button type="button" class="btn small" onclick="roosterGoedkeur('${m.id}',true)">Goedkeuren</button><button type="button" class="btn small ghost" onclick="roosterGoedkeur('${m.id}',false)">Terugsturen</button></span></div>`
+      ).join('')}</div>`;
+    }
+  }
+  return uit;
+}
+async function roosterDoorgeven(){
+  if(!gebruiker) return;
+  const dagen=roosterDagen();
+  /* De hele week ineens: ingevulde dagen blijven zoals ze staan, lege dagen worden
+     expliciet niet-beschikbaar. Zo is de inzending compleet en stopt de herinnering
+     ook voor wie een week helemaal niet kan. */
+  const rows=dagen.map(d=>{
+    const ymd=roosterYmd(d);
+    const mij=(roosterData.besch||[]).find(x=>x.account_id===gebruiker.id&&x.datum===ymd);
+    return {account_id:gebruiker.id, datum:ymd, beschikbaar: mij?mij.beschikbaar!==false:false, van:(mij&&mij.van)||null, tot:(mij&&mij.tot)||null, status:'ingediend', afwijs_reden:null};
+  });
+  const {error}=await sb.from('beschikbaarheid').upsert(rows,{onConflict:'account_id,datum'});
+  if(error){ toast('Doorgeven mislukte','fout'); return; }
+  rows.forEach(r=>{ const i=(roosterData.besch||[]).findIndex(x=>x.account_id===r.account_id&&x.datum===r.datum); if(i>=0) roosterData.besch[i]=r; else roosterData.besch.push(r); });
+  tekenRooster();
+  toast('Doorgegeven. De beheerder krijgt bericht.', true);
+  roosterMailRoep({actie:'doorgegeven', maandag:roosterYmd(dagen[0])});
+}
+async function roosterGoedkeur(accountId, ja){
+  if(!roosterMagInplannen()) return;
+  let reden=null;
+  if(!ja){ reden=prompt('Waarom stuur je het terug? Dit komt in de mail naar de medewerker.'); if(reden===null) return; reden=(reden||'').trim(); }
+  const dagen=roosterDagen();
+  const van=roosterYmd(dagen[0]), tot=roosterYmd(dagen[6]);
+  const patch = ja
+    ? {status:'goedgekeurd', beoordeeld_op:new Date().toISOString(), beoordeeld_door:(gebruiker?gebruiker.id:null), afwijs_reden:null}
+    : {status:'afgekeurd', beoordeeld_op:new Date().toISOString(), beoordeeld_door:(gebruiker?gebruiker.id:null), afwijs_reden:(reden||null)};
+  const {error}=await sb.from('beschikbaarheid').update(patch).eq('account_id',accountId).gte('datum',van).lte('datum',tot);
+  if(error){ toast('Lukte niet','fout'); return; }
+  (roosterData.besch||[]).forEach(x=>{ if(x.account_id===accountId){ x.status=patch.status; x.afwijs_reden=patch.afwijs_reden; } });
+  tekenRooster();
+  toast(ja?'Goedgekeurd':'Teruggestuurd', true);
+  roosterMailRoep({actie:(ja?'goedgekeurd':'afgekeurd'), maandag:van, account_id:accountId, reden:(reden||'')});
+}
 function tekenRooster(){
   const inh=document.getElementById('roosterInhoud'); if(!inh) return;
   const mag=roosterMagInplannen();
@@ -4568,9 +4661,8 @@ function tekenRooster(){
   const mijnId = gebruiker && gebruiker.id;
   /* De eigenaar (Lucas) staat standaard niet in de inplanlijst: hij springt hooguit
      bij, maar hoeft niet elke dag als keuze te verschijnen. Beheerders/medewerkers wel. */
-  const kandidaten = (teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam,rol:gebruiker.rol}]:[]))
-    .filter(m=>m.rol!=='eigenaar');
-  inh.innerHTML=`<div class="roostergrid">${roosterDagen().map((d,i)=>{
+  const kandidaten = roosterKandidaten();
+  inh.innerHTML=`${roosterKopHtml()}<div class="roostergrid">${roosterDagen().map((d,i)=>{
     const ymd=roosterYmd(d);
     const open=OPENINGSTIJDEN[i];
     const mij=(roosterData.besch||[]).find(x=>x.account_id===mijnId&&x.datum===ymd);
@@ -4629,7 +4721,9 @@ async function zetBeschikbaar(ymd, veld, val){
   if(veld==='toggle') mij.beschikbaar = !(mij.beschikbaar!==false);
   else if(veld==='van') mij.van = val||null;
   else if(veld==='tot') mij.tot = val||null;
-  const rij={account_id:gebruiker.id, datum:ymd, beschikbaar:mij.beschikbaar!==false, van:mij.van||null, tot:mij.tot||null};
+  /* Wijzig je een dag, dan is een eerdere inzending of goedkeuring niet meer geldig:
+     die dag gaat terug naar concept. Je geeft de week daarna opnieuw door. */
+  const rij={account_id:gebruiker.id, datum:ymd, beschikbaar:mij.beschikbaar!==false, van:mij.van||null, tot:mij.tot||null, status:'concept', afwijs_reden:null};
   const {error}=await sb.from('beschikbaarheid').upsert(rij,{onConflict:'account_id,datum'});
   if(error){ toast('Opslaan mislukte','fout'); return; }
   const idx=(roosterData.besch||[]).findIndex(x=>x.account_id===gebruiker.id&&x.datum===ymd);
