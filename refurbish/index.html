@@ -774,6 +774,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <button class="btn actie" onclick="vbNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe bundel</button>
       </div>
       <div id="vbLijstVak">
+        <div id="web2Kaart"></div>
         <div class="card">
           <h2><svg class="i"><use href="#i-tag"/></svg>Bundels <span class="muted" id="vbTelling"></span></h2>
           <div id="vbLijst"></div>
@@ -1102,6 +1103,7 @@ function ledNaam(id){ if(!id) return ''; const m=teamLeden.find(x=>x.id===id); r
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
 let vbundels=[], vbHuidig=null, vbScanDoel=null;   // bundels = voorraad-batches voor de tweede webshop
+let web2Stand=null, web2Geladen=false, web2Bezig=false;   // koppeling met de tweede webshop
 let voorraaddelen=[];
 let instel={accu_min:85};
 let tab='werkbank';
@@ -7396,6 +7398,7 @@ function tekenBundels(){
   vbHuidig=null; vbScanDoel=null; lijstVak.hidden=false; detailVak.hidden=true; detailVak.innerHTML='';
   const tel=document.getElementById('vbTelling');
   if(tel) tel.textContent=vbundels.length?'('+vbundels.length+')':'';
+  web2KaartTeken();
   const vak=document.getElementById('vbLijst'); if(!vak) return;
   if(!vbundels.length){
     vak.innerHTML='<p class="muted">Nog geen bundels. Maak een bundel aan, geef een totale vraagprijs, en scan of kies de laptops die erin gaan. De prijs per laptop rekent zichzelf uit.</p>';
@@ -7477,6 +7480,34 @@ function renderBundelDetail(){
         <thead><tr><th>Toestel</th><th>Uit partij</th><th class="num">Inkoop</th><th class="num">Prijs per stuk</th><th></th></tr></thead>
         <tbody>${ledenRijen}</tbody></table></div>`
         :'<p class="muted">Nog geen laptops. Zet scannen aan en scan ze, of kies ze uit je voorraad.</p>'}
+    </div>
+
+    <div class="card">
+      <h2><svg class="i"><use href="#i-sparkles"/></svg>Advertentie</h2>
+      <p class="muted klein" style="margin-bottom:12px">Deze titel, tekst en foto's komen op de tweede webshop als een advertentie voor de hele bundel.</p>
+      <label>Titel</label>
+      <input id="vb_titel" value="${esc(v.titel||'')}" placeholder="${esc(v.nummer||'Bundel laptops')}">
+      <label style="margin-top:10px;display:block">Omschrijving</label>
+      <textarea id="vb_oms" rows="5" placeholder="Beschrijf de bundel: aantal, merken, staat, wat de koper krijgt.">${esc(v.omschrijving||'')}</textarea>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <button class="btn actie small" onclick="vbAdOpslaan('${v.id}', this)">Advertentie bewaren</button>
+        <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Foto's toevoegen<input type="file" accept="image/*" multiple hidden onchange="vbFotoUpload('${v.id}', this)"></label>
+      </div>
+      ${(Array.isArray(v.fotos)&&v.fotos.length)?`<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">${v.fotos.map((u,i)=>`<div style="position:relative"><img src="${esc(u)}" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"><button class="btn ghost small" style="position:absolute;top:2px;right:2px;padding:2px 6px" title="Foto weghalen" onclick="vbFotoWeg('${v.id}',${i})">×</button></div>`).join('')}</div>`:''}
+    </div>
+
+    <div class="card">
+      <h2><svg class="i"><use href="#i-globe"/></svg>Op de tweede webshop</h2>
+      ${!(web2Stand&&web2Stand.gekoppeld)
+        ? `<p class="muted">Koppel eerst je tweede webshop (bovenaan de bundel-lijst) voordat je een bundel online zet.</p>`
+        : (v.status==='online' && v.shopify
+          ? `<p class="muted klein" style="margin-bottom:10px">Deze bundel staat online${v.shopify.url?` · <a href="${esc(v.shopify.url)}" target="_blank" rel="noopener">bekijk op de shop</a>`:''}.</p>
+             <div class="row" style="gap:8px">
+               <button class="btn ghost small" onclick="web2BundelOnline('${v.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Opnieuw publiceren</button>
+               <button class="btn ghost small" onclick="web2BundelOffline('${v.id}', this)">Offline halen</button>
+             </div>`
+          : `<p class="muted klein" style="margin-bottom:10px">Zet de hele bundel als een advertentie op je tweede webshop. De laptops gaan daarbij van je gewone shop en het portaal af.</p>
+             <button class="btn oranje" onclick="web2BundelOnline('${v.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Bundel online zetten</button>`)}
     </div>`;
 }
 
@@ -7598,6 +7629,149 @@ async function vbVerwijder(id){
   vbundels=vbundels.filter(v=>v.id!==id);
   vbHuidig=null; vbScanDoel=null; tekenBundels();
   toast('Bundel verwijderd', true);
+}
+
+/* ── de tweede webshop koppelen (token) en er bundels op zetten ── */
+async function web2Roep(lijf){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error('Je bent uitgelogd');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/webshop2',{
+    method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(lijf)
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok){ const e=new Error(uit.error||'De tweede webshop reageerde niet'); e.mist=uit.mist; throw e; }
+  return uit;
+}
+async function web2Status(){
+  if(web2Bezig) return; web2Bezig=true;
+  try{ web2Stand=await web2Roep({actie:'status'}); }
+  catch(e){ web2Stand={gekoppeld:false}; }
+  web2Geladen=true; web2Bezig=false;
+  if(tab==='bundels') tekenBundels();
+}
+function web2KaartTeken(){
+  const el=document.getElementById('web2Kaart'); if(!el) return;
+  if(!web2Geladen){ el.innerHTML='<div class="card"><p class="muted">Tweede webshop nakijken…</p></div>'; web2Status(); return; }
+  const s=web2Stand||{};
+  el.innerHTML = s.gekoppeld
+    ? `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+         <div><b>Tweede webshop gekoppeld</b><div class="muted klein">${esc(s.winkelnaam||s.domein||'')}${s.mist&&s.mist.length?' · let op: er ontbreken nog rechten':''}</div></div>
+         <button class="btn ghost small" onclick="web2Loskoppel()">Loskoppelen</button>
+       </div></div>`
+    : `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+         <div><b>Tweede webshop nog niet gekoppeld</b><div class="muted klein">Koppel een tweede Shopify-winkel om bundels als lot te verkopen.</div></div>
+         <button class="btn actie small" onclick="web2KoppelOpen()"><svg class="i s"><use href="#i-globe"/></svg>Koppelen</button>
+       </div></div>`;
+}
+function web2KoppelOpen(){
+  venster('Tweede webshop koppelen', `
+    <p class="pv">Maak in je tweede Shopify-winkel een custom app (Instellingen, Apps, Apps ontwikkelen) met de rechten voor producten, voorraad, locaties, bestellingen en publicaties. Plak hier het winkeladres en het toegangstoken.</p>
+    <div class="grid">
+      <div><label>Winkeladres</label><input id="w2_domein" placeholder="jouwwinkel.myshopify.com"></div>
+      <div><label>Toegangstoken</label><input id="w2_token" placeholder="shpat_..."></div>
+    </div>
+    <p class="muted klein" style="margin-top:8px">Het token gaat versleuteld naar de server; wij zien het nooit terug.</p>
+  `, [{tekst:'Koppelen', klasse:'actie', doe:(k)=>web2Koppel(k)}]);
+}
+async function web2Koppel(knop){
+  const domein=(document.getElementById('w2_domein').value||'').trim();
+  const token=(document.getElementById('w2_token').value||'').trim();
+  if(!domein || !token){ toast('Vul het winkeladres en het token in','let-op'); return; }
+  await bezig(knop, async()=>{
+    let uit;
+    try{ uit=await web2Roep({actie:'opslaan', domein, token}); }
+    catch(e){
+      if(e.mist&&e.mist.length) throw new Error('Er ontbreken nog rechten in je Shopify-app: '+e.mist.join(', '));
+      throw e;
+    }
+    web2Stand=uit; web2Geladen=true; sluit(); tekenBundels();
+    toast('Tweede webshop gekoppeld', true);
+  });
+}
+async function web2Loskoppel(){
+  if(!confirm('De tweede webshop loskoppelen? Bundels die er online staan blijven op Shopify staan tot je ze daar weghaalt.')) return;
+  try{ await web2Roep({actie:'loskoppelen'}); web2Stand={gekoppeld:false}; tekenBundels(); toast('Losgekoppeld', true); }
+  catch(e){ toast(e.message,'fout'); }
+}
+
+async function vbAdOpslaan(id, knop){
+  const titel=(document.getElementById('vb_titel').value||'').trim()||null;
+  const oms=(document.getElementById('vb_oms').value||'').trim()||null;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_voorraad_batches').update({titel, omschrijving:oms}).eq('id',id);
+    if(error) throw error;
+    const v=vbundels.find(x=>x.id===id); if(v){ v.titel=titel; v.omschrijving=oms; }
+    toast('Advertentie bewaard', true);
+  });
+}
+async function vbFotoUpload(id, invoer){
+  const bestanden=[...(invoer.files||[])]; if(invoer) invoer.value='';
+  if(!bestanden.length) return;
+  const v=vbundels.find(x=>x.id===id); if(!v) return;
+  toast('Foto’s uploaden…');
+  const nieuw=[];
+  for(const bestand of bestanden){
+    if(bestand.size>15*1024*1024){ toast(bestand.name+' is te groot (max 15 MB)','let-op'); continue; }
+    const ext=((bestand.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''))||'jpg';
+    const pad=account.team_id+'/bundel/'+id+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
+    const {error}=await sb.storage.from('refurbish-fotos').upload(pad, bestand, {contentType:bestand.type||'image/jpeg'});
+    if(error){ console.error('bundelfoto upload', error); toast('Een foto uploaden mislukte','fout'); continue; }
+    nieuw.push(fotoUrl(pad));
+  }
+  if(!nieuw.length) return;
+  const fotos=(Array.isArray(v.fotos)?v.fotos:[]).concat(nieuw);
+  const {error}=await sb.from('refurbish_voorraad_batches').update({fotos}).eq('id',id);
+  if(error){ toast('Foto’s bewaren mislukte','fout'); return; }
+  v.fotos=fotos; tekenBundels();
+  toast(nieuw.length+(nieuw.length>1?' foto’s toegevoegd':' foto toegevoegd'), true);
+}
+async function vbFotoWeg(id, i){
+  const v=vbundels.find(x=>x.id===id); if(!v || !Array.isArray(v.fotos)) return;
+  const fotos=v.fotos.slice(); if(i<0||i>=fotos.length) return;
+  fotos.splice(i,1);
+  const {error}=await sb.from('refurbish_voorraad_batches').update({fotos}).eq('id',id);
+  if(error){ toast('Mislukt','fout'); return; }
+  v.fotos=fotos; tekenBundels();
+}
+
+/* Bundel online zetten op de tweede webshop. Bij succes gaan de laptops van de
+   gewone shop en het portaal af (exclusief), zodat je niets dubbel verkoopt. */
+async function web2BundelOnline(id, knop){
+  const c=vbCijfers(id);
+  if(!c.aantal){ toast('Deze bundel heeft nog geen laptops','let-op'); return; }
+  if(!(c.vraagprijs>0)){ toast('Vul eerst een totale vraagprijs in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const uit=await web2Roep({actie:'bundel_online', bundel_id:id});
+    const v=vbundels.find(x=>x.id===id); if(v){ v.status='online'; v.shopify=uit.shopify; }
+    let misgelopen=0;
+    for(const a of c.leden){ const ok=await vbAfhalenVanRest(a); if(!ok) misgelopen++; }
+    await allesLaden();
+    if(uit.waarschuwing) toast(uit.waarschuwing,'let-op');
+    else toast('Bundel staat online'+(misgelopen?', '+misgelopen+' niet van de gewone shop gehaald':''), true);
+  });
+}
+async function web2BundelOffline(id, knop){
+  if(!confirm('De bundel offline halen van de tweede webshop?')) return;
+  await bezig(knop, async()=>{
+    await web2Roep({actie:'bundel_offline', bundel_id:id});
+    const v=vbundels.find(x=>x.id===id); if(v){ v.status='concept'; v.shopify=null; }
+    tekenBundels();
+    toast('Bundel offline gehaald', true);
+  });
+}
+/* Een laptop uit de bundel van de gewone shop en het eigen portaal halen. Best-effort. */
+async function vbAfhalenVanRest(a){
+  const h=hardwareVan(a); if(!h) return true;
+  try{
+    const {data:{session}}=await sb.auth.getSession(); if(!session) return false;
+    const kop={'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token};
+    if(h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id)
+      await fetch(SUPABASE_URL+'/functions/v1/shopify',{method:'POST',headers:kop,body:JSON.stringify({actie:'offline',hardware_id:h.id})});
+    if(h.kanalen && h.kanalen.partner)
+      await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{method:'POST',headers:kop,body:JSON.stringify({actie:'dashboard_uit',hardware_id:h.id})});
+    return true;
+  }catch(e){ console.error('van de rest afhalen', e); return false; }
 }
 
 /* Een gescand label opent meteen het juiste apparaat. */
