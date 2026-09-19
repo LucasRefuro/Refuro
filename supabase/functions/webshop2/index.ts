@@ -88,6 +88,35 @@ function nieuwPad() {
   return btoa(String.fromCharCode(...b)).replace(/[^a-zA-Z0-9]/g, "").slice(0, 28);
 }
 
+// De verkoopmeldingen die de tweede shop naar ons stuurt, zodat een bundel-verkoop
+// de laptops vanzelf uit de voorraad haalt. Ze wijzen naar de losse functie
+// webshop2-webhook met ons eigen pad erachter.
+const MELDINGEN = ["ORDERS_CREATE", "ORDERS_PAID", "ORDERS_CANCELLED", "ORDERS_FULFILLED"];
+function webhookAdres(pad: string) {
+  return `${Deno.env.get("SUPABASE_URL")!}/functions/v1/webshop2-webhook/${pad}`;
+}
+async function webhooksZetten(k: { domein: string; token: string }, pad: string) {
+  const adres = webhookAdres(pad);
+  // Eerst onze eigen oude meldingen opruimen, anders krijg je er elke keer een bij.
+  const bestaand = await graphql(k, `query { webhookSubscriptions(first: 100) { nodes { id endpoint { __typename ... on WebhookHttpEndpoint { callbackUrl } } } } }`);
+  for (const w of (bestaand?.webhookSubscriptions?.nodes || [])) {
+    const u = w?.endpoint?.callbackUrl || "";
+    if (u.includes("/functions/v1/webshop2-webhook")) {
+      await graphql(k, `mutation($id: ID!){ webhookSubscriptionDelete(id: $id){ userErrors { message } } }`, { id: w.id });
+    }
+  }
+  const gezet: { topic: string; id: string }[] = [];
+  for (const topic of MELDINGEN) {
+    const uit = await graphql(k, `mutation($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
+      webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) { webhookSubscription { id } userErrors { field message } } }`,
+      { topic, sub: { callbackUrl: adres, format: "JSON" } });
+    const id = uit?.webhookSubscriptionCreate?.webhookSubscription?.id;
+    if (id) gezet.push({ topic, id });
+    else console.error("webshop2 webhook", topic, JSON.stringify(uit?.webhookSubscriptionCreate?.userErrors || []));
+  }
+  return gezet;
+}
+
 // De client-credentials-grant: wissel Client ID + secret om voor een tokentje van
 // 24 uur, scoped op wat je in het Dev Dashboard hebt aangevinkt. De app moet wel
 // eerst op de winkel geinstalleerd zijn.
@@ -240,17 +269,22 @@ Deno.serve(async (req) => {
       if (mist.length) return fout("Er ontbreken nog rechten in je Shopify-app", 400, { mist, rechten: RECHTEN });
       const winkel = await winkelVerkennen({ domein, token });
 
-      const { data: oud } = await admin.from("winkel_koppelingen").select("id").eq("team_id", acc.team_id).eq("kanaal", KANAAL).maybeSingle();
+      const { data: oud } = await admin.from("winkel_koppelingen").select("id, webhook_pad").eq("team_id", acc.team_id).eq("kanaal", KANAAL).maybeSingle();
+      const pad = oud?.webhook_pad || nieuwPad();
+      let meldingen: { topic: string; id: string }[] = [];
+      try { meldingen = await webhooksZetten({ domein: winkel.domein, token }, pad); }
+      catch (e) { console.error("webshop2 meldingen", e); }
       const basis: Record<string, unknown> = {
         team_id: acc.team_id, kanaal: KANAAL, via: "client_credentials", client_id: clientId,
         domein: winkel.domein, token_versleuteld: await versleutel(clientSecret), token_staart: clientSecret.slice(-4),
         winkelnaam: winkel.naam, valuta: winkel.valuta, scopes,
         publicatie_id: winkel.publicatie, locatie_id: winkel.locatie,
+        webhook_pad: pad, webhooks: meldingen,
         status: "actief", fout: null, laatst_gecontroleerd: new Date().toISOString(),
         gekoppeld_door: acc.id, bijgewerkt_op: new Date().toISOString(),
       };
       if (oud) await admin.from("winkel_koppelingen").update(basis).eq("id", oud.id);
-      else await admin.from("winkel_koppelingen").insert({ ...basis, webhook_pad: nieuwPad() });
+      else await admin.from("winkel_koppelingen").insert(basis);
 
       const { data: nu } = await admin.from("winkel_koppelingen").select("*").eq("team_id", acc.team_id).eq("kanaal", KANAAL).maybeSingle();
       return new Response(JSON.stringify(veiligeStand(nu, { publicatieNaam: winkel.publicatieNaam, locatieNaam: winkel.locatieNaam })), { headers: cors });
@@ -269,7 +303,16 @@ Deno.serve(async (req) => {
         .select("*").eq("id", bundelId).eq("team_id", acc.team_id).maybeSingle();
       if (!v) return fout("Deze bundel is niet gevonden", 404);
       const k = await koppeling(acc.team_id);
-      if (!k) return fout("Er is nog geen tweede webshop gekoppeld. Doe dat eerst bij Bundels.", 409);
+      if (!k) return fout("Er is nog geen tweede webshop gekoppeld. Doe dat eerst in de winkelapp bij Instellingen, Webshop.", 409);
+
+      /* Zorg dat de verkoopmeldingen aanstaan, ook voor koppelingen van voor deze
+         functie: dan haalt een bundel-verkoop de laptops vanzelf uit de voorraad. */
+      if (!(k.webhooks && k.webhooks.length)) {
+        try {
+          const w = await webhooksZetten({ domein: k.domein, token: k.token }, k.webhook_pad);
+          await admin.from("winkel_koppelingen").update({ webhooks: w }).eq("id", k.id);
+        } catch (e) { console.error("webshop2 meldingen (bundel)", e); }
+      }
 
       if (actie === "bundel_offline") {
         const s = v.shopify;
