@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Apparatenlijst</title>
+<link rel="icon" href="/klantportaal/merk/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Printbare apparatenlijst (voorraad, merk, batch of bundel).
+   Haalt de gegevens op bij de functie 'lijst' met de sleutel uit de link, en toont ze
+   in de huisstijl van de winkel. Afdrukken of opslaan als PDF via de knop. */
+:root { --kleur:#0F6B4B; --inkt:#10231B; --lijn:#DEDAD0; --zacht:#FAF8F3; --muted:#5A6660; --accent:#C6F36B; }
+* { box-sizing:border-box; }
+body { margin:0; padding:32px; font-family:'Figtree', -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--inkt); background:#fff; font-size:13px; }
+.kop { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; border-bottom:3px solid var(--kleur); padding-bottom:16px; margin-bottom:18px; }
+.kop img { height:32px; display:block; }
+.kop b.merk { font-family:'Bricolage Grotesque', Georgia, serif; font-size:24px; color:var(--kleur); }
+h1 { font-family:'Bricolage Grotesque', Georgia, serif; font-size:28px; letter-spacing:-.03em; margin:14px 0 4px; }
+.sub { color:var(--muted); margin:2px 0; }
+.label { font-family:'JetBrains Mono', ui-monospace, monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--kleur); }
+.knoppen { display:flex; gap:8px; flex-wrap:wrap; }
+.knop { display:inline-flex; align-items:center; gap:6px; background:var(--kleur); color:#fff; border:2px solid var(--kleur); border-radius:999px; padding:10px 18px; font:inherit; font-weight:700; cursor:pointer; text-decoration:none; }
+.knop.licht { background:#fff; color:var(--kleur); }
+.tabelrol { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-family:'JetBrains Mono', ui-monospace, monospace; font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1px solid var(--lijn); padding:7px 6px; white-space:nowrap; }
+td { padding:7px 6px; border-bottom:1px solid #EFEBE2; vertical-align:top; }
+tr:nth-child(even) td { background:var(--zacht); }
+td.num { text-align:right; white-space:nowrap; }
+.grade { display:inline-block; min-width:22px; text-align:center; font-weight:700; border-radius:6px; background:#E3F0E8; color:var(--kleur); padding:1px 6px; }
+.voet { margin-top:18px; color:var(--muted); font-size:11.5px; line-height:1.5; }
+.melding { padding:24px; border-radius:14px; background:var(--zacht); color:var(--muted); }
+@media print {
+  .knoppen { display:none; }
+  body { padding:0; font-size:10.5px; }
+  @page { size:A4 landscape; margin:12mm; }
+  tr { page-break-inside:avoid; }
+}
+</style>
+</head>
+<body>
+<div id="vak"><p class="melding">Lijst laden...</p></div>
+<script>
+const FUNCTIE = 'https://ugilfxqolemxwssbpdwu.supabase.co/functions/v1/lijst';
+const p = Object.fromEntries(new URLSearchParams(location.search));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+function adres(f){
+  const q = new URLSearchParams(p.t ? { t:p.t, k:p.k || '', soort:p.soort || 'voorraad', f } : { w:p.w || '', k:p.k || '', soort:p.soort || 'voorraad', f });
+  if(p.merk) q.set('merk', p.merk); if(p.id) q.set('id', p.id);
+  return FUNCTIE + '?' + q;
+}
+async function laden(){
+  const vak = document.getElementById('vak');
+  try {
+    const res = await fetch(adres('json'));
+    const d = await res.json();
+    if(!res.ok || d.ok === false) throw new Error(d.error || 'Deze lijst kon niet geladen worden.');
+    const w = d.winkel || {};
+    if(/^#[0-9a-f]{3,8}$/i.test(w.kleur || '')) document.documentElement.style.setProperty('--kleur', w.kleur);
+    document.title = d.titel + (w.merknaam ? ' · ' + w.merknaam : '');
+    const logo = w.logo_url && /^https:\/\//.test(w.logo_url) ? `<img src="${esc(w.logo_url)}" alt="${esc(w.merknaam)}">` : `<b class="merk">${esc(w.merknaam || '')}</b>`;
+    const grades = Object.entries(d.per_grade || {}).sort().map(([g, n]) => `${n}× grade ${esc(g)}`).join(' · ');
+    const cel = (k, v) => k === 'Prijs' ? (v == null || v === '' ? '' : '€ ' + Number(v).toLocaleString('nl-NL', { minimumFractionDigits:2, maximumFractionDigits:2 }))
+      : k === 'Grade' && v ? `<span class="grade">${esc(v)}</span>` : esc(v);
+    vak.innerHTML = `<div class="kop"><div>${logo}<h1>${esc(d.titel)}</h1>
+        <p class="sub">${esc(d.sub)} · <b>${d.aantal}</b> apparaten${grades ? ' · ' + grades : ''}</p>
+        <p class="sub"><span class="label">Stand van</span> ${new Date().toLocaleString('nl-NL', { dateStyle:'long', timeStyle:'short' })}</p></div>
+      <div class="knoppen"><button class="knop" onclick="print()">Afdrukken of PDF</button>
+        <a class="knop licht" href="${esc(adres('xlsx'))}">Excel</a><a class="knop licht" href="${esc(adres('csv'))}">CSV</a></div></div>
+      ${d.rijen.length ? `<div class="tabelrol"><table><thead><tr>${d.kolommen.map(k => `<th>${esc(k)}</th>`).join('')}</tr></thead>
+        <tbody>${d.rijen.map(r => `<tr>${d.kolommen.map(k => `<td${k === 'Prijs' ? ' class="num"' : ''}>${cel(k, r[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+        : '<p class="melding">Er staan op dit moment geen apparaten in deze lijst.</p>'}
+      <p class="voet">Alle apparaten zijn gewist volgens NIST 800-88 en getest. Grade A: als nieuw · B: nette gebruikssporen · C: zichtbare sporen, werkt goed.
+      Beschikbaarheid en prijzen onder voorbehoud. ${esc([w.merknaam, w.email, w.telefoon].filter(Boolean).join(' · '))}</p>`;
+  } catch(e){
+    vak.innerHTML = `<p class="melding">${esc(e.message || 'Deze lijst kon niet geladen worden.')}</p>`;
+  }
+}
+laden();
+</script>
+</body>
+</html>

@@ -346,6 +346,7 @@ tr.klikbaar{cursor:pointer;}
 .accurij{background:var(--soft-2); border-radius:var(--radius-s); padding:16px 18px;}
 .testapp{background:var(--lblauw); border-radius:var(--radius-s); padding:16px 18px; margin-bottom:16px; text-align:center;}
 .testapp .clkop{margin-bottom:6px;}
+.lijstknoppen{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
 .expkeuze{display:flex; align-items:center; gap:12px; padding:11px 0; font-size:15px; font-weight:600; cursor:pointer;}
 .accurij label{margin-bottom:8px;}
 
@@ -890,7 +891,10 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <section id="tab-voorraad" hidden>
       <div class="pagehead">
         <h1>Voorraad</h1>
-        <div class="periodesel" id="voorraadFilter"></div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" id="vrLijstKnop" hidden onclick="lijstVenster('voorraad')"><svg class="i s"><use href="#i-print"/></svg>Lijsten</button>
+          <div class="periodesel" id="voorraadFilter"></div>
+        </div>
       </div>
       <div class="kpis" id="vrKpis"></div>
       <div class="card"><div id="voorraadLijst"></div></div>
@@ -1361,6 +1365,7 @@ async function allesLaden(){
       : o);
   if(i && i.data) instel=i.data;
   await kpLaden();
+  await lijstLaden();
   /* Het logo hoort bij de instellingen, dus dat halen we hier ook op; anders
      tekent het voorbeeld de eerste keer zonder logo. */
   if(instel.scherm_logo && (!schermLogo || schermLogo.dataset_pad!==instel.scherm_logo)) schermLogoLaden();
@@ -6846,6 +6851,7 @@ function renderBatchDetail(){
     <div class="pagehead">
       <button class="btn ghost" onclick="batTerug()"><svg class="i s"><use href="#i-left"/></svg>Alle batches</button>
       <div class="row" style="gap:8px">
+        ${lijstSleutel?`<button class="btn ghost" onclick="lijstVenster('batch','${b.id}')"><svg class="i s"><use href="#i-print"/></svg>Lijst voor koper</button>`:''}
         <button class="btn ghost" onclick="batExport('${b.id}')"><svg class="i s"><use href="#i-print"/></svg>Exporteren</button>
         <button class="btn ghost" onclick="batBewerk('${b.id}')"><svg class="i s"><use href="#i-note"/></svg>Bewerken</button>
         <button class="btn ghost" onclick="batVerwijder('${b.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
@@ -7524,6 +7530,61 @@ async function batKostWeg(i){
    en dan blijft alles hier onzichtbaar; de werkbank werkt gewoon door. */
 let kpInst=null, kpOrgs=[], kpAanm=[], kpGebr=[];
 
+/* ═══ Lijsten voor kopers ═══
+   Hele voorraad, per merk, per batch en per bundel, als Excel, CSV of printbare
+   pagina (PDF). De functie 'lijst' maakt ze; zonder inkoop, winst of leverancier,
+   dus je kunt ze zo doorsturen. Dezelfde lijsten zien goedgekeurde handelaren in de
+   webshop. Werkt alleen als het klantportaal is ingesteld (daar staat de sleutel). */
+const LIJST_FUNCTIE='https://ugilfxqolemxwssbpdwu.supabase.co/functions/v1/lijst';
+let lijstSleutel=null;
+async function lijstLaden(){
+  try{
+    const {data}=await sb.from('klantportaal_instellingen').select('lijst_sleutel,actief').eq('team_id',account.team_id).maybeSingle();
+    lijstSleutel=(data&&data.actief&&data.lijst_sleutel)||null;
+  }catch(e){ lijstSleutel=null; }
+  const k=document.getElementById('vrLijstKnop'); if(k) k.hidden=!lijstSleutel;
+}
+function lijstAdres(soort, id, merk, f){
+  const q=new URLSearchParams({t:account.team_id, k:lijstSleutel, soort});
+  if(id) q.set('id',id); if(merk) q.set('merk',merk);
+  if(f==='html') return location.origin+'/klantportaal/lijst/?'+q;
+  q.set('f',f||'xlsx'); return LIJST_FUNCTIE+'?'+q;
+}
+function lijstVenster(soort, id){
+  if(!lijstSleutel) return;
+  let keuze='', titel='Lijst voor een koper';
+  if(soort==='voorraad'){
+    const merken={}; vrRijen().forEach(a=>{ const m=(a.merk||'Onbekend').trim(); merken[m]=(merken[m]||0)+1; });
+    titel='Voorraadlijsten';
+    keuze=`<label class="expkeuze" for="lijstMerk">Welke lijst</label>
+      <select id="lijstMerk" onchange="lijstKnoppen('voorraad')"><option value="">Hele voorraad (${vrRijen().length})</option>
+      ${Object.entries(merken).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`<option value="${esc(m)}">${esc(m)} (${n})</option>`).join('')}</select>`;
+  } else if(soort==='batch'){
+    const b=batches.find(x=>x.id===id); titel='Lijst van batch '+esc((b&&(b.code||b.nummer))||'');
+  } else if(soort==='bundel'){
+    const v=vbundels.find(x=>x.id===id); titel='Lijst van bundel '+esc((v&&(v.code||v.nummer))||'');
+  }
+  venster(titel, `<p class="pv">Merk, model, specs, grade, accu en serienummer per apparaat. Zonder inkoopprijs, winst of leverancier, dus je kunt hem zo naar een koper sturen.</p>
+    ${keuze}<div class="lijstknoppen" id="lijstKnoppen" data-soort="${soort}" data-id="${esc(id||'')}"></div>
+    <p class="pv klein" style="margin-top:14px">Dezelfde lijsten zien goedgekeurde handelaren ook in de webshop. De link werkt voor iedereen die hem heeft.</p>`, []);
+  lijstKnoppen(soort);
+}
+function lijstKnoppen(soort){
+  const vak=document.getElementById('lijstKnoppen'); if(!vak) return;
+  const id=vak.dataset.id||null;
+  const sel=document.getElementById('lijstMerk'); const merk=sel?sel.value:'';
+  const s=merk?'merk':soort;
+  vak.innerHTML=`<a class="btn actie" href="${lijstAdres(s,id,merk,'xlsx')}"><svg class="i s"><use href="#i-print"/></svg>Excel</a>
+    <a class="btn ghost" href="${lijstAdres(s,id,merk,'csv')}">CSV</a>
+    <a class="btn ghost" href="${lijstAdres(s,id,merk,'html')}" target="_blank" rel="noopener">Printen of PDF</a>
+    <button class="btn ghost" onclick="lijstLinkKopieren(this,'${s}','${esc(id||'')}','${esc(merk).replace(/'/g,'&#39;')}')">Link kopiëren</button>`;
+}
+async function lijstLinkKopieren(knop, soort, id, merk){
+  const url=lijstAdres(soort, id||null, merk||null, 'html');
+  try{ await navigator.clipboard.writeText(url); knop.textContent='Gekopieerd'; }
+  catch(e){ prompt('Kopieer deze link:', url); }
+}
+
 async function kpLaden(){
   try{
     const [i,o,a,g]=await Promise.all([
@@ -7851,6 +7912,7 @@ function renderBundelDetail(){
     <div class="pagehead">
       <button class="btn ghost" onclick="vbTerug()"><svg class="i s"><use href="#i-left"/></svg>Alle bundels</button>
       <div class="row" style="gap:8px">
+        ${lijstSleutel?`<button class="btn ghost" onclick="lijstVenster('bundel','${v.id}')"><svg class="i s"><use href="#i-print"/></svg>Lijst</button>`:''}
         <button class="btn ghost" onclick="vbBewerk('${v.id}')"><svg class="i s"><use href="#i-note"/></svg>Bewerken</button>
         <button class="btn ghost" onclick="vbVerwijder('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
       </div>

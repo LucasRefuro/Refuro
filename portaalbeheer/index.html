@@ -657,6 +657,18 @@ function tekenInstellingen(){
     <div class="veld"><label for="inPctO1">Overige hardware: van %</label><input type="number" id="inPctO1" min="0" max="100" value="${esc(((i.bod_pct || {}).overig || [70,80])[0])}"></div>
     <div class="veld"><label for="inPctO2">tot %</label><input type="number" id="inPctO2" min="0" max="100" value="${esc(((i.bod_pct || {}).overig || [70,80])[1])}"></div>
   </div></div>
+  ${instel ? `<div class="kaart"><h2>Lijsten voor handelaren</h2>
+    <p class="uitleg">Hele voorraad, per merk, per batch en per bundel, als Excel, CSV of PDF. Zonder inkoop, winst of leverancier. Goedgekeurde handelaren zien dezelfde lijsten in de webshop; in Storvo staan de knoppen bij Voorraad, Batches en Bundels.</p>
+    <div class="velden">
+      <div class="veld"><label for="inLijstSleutel">Sleutel (voor het Shopify-thema)</label><div class="formrij"><input type="text" id="inLijstSleutel" value="${esc(i.lijst_sleutel || '')}" readonly onclick="this.select()"><button class="btn licht klein" onclick="lijstSleutelKopieren(this)">Kopiëren</button></div></div>
+      <div class="veld"><label for="inLijstPrijs">Prijzen in voorraadlijsten</label><select id="inLijstPrijs"><option value="nee"${i.lijst_prijzen ? '' : ' selected'}>Nee, alleen specificaties</option><option value="ja"${i.lijst_prijzen ? ' selected' : ''}>Ja, de vraagprijs per apparaat</option></select></div>
+    </div>
+    <div class="rij" style="margin-top:14px">
+      <a class="btn licht klein" href="${lijstAdres('voorraad', 'xlsx')}">Hele voorraad (Excel)</a>
+      <a class="btn licht klein" href="${lijstAdres('voorraad', 'html')}" target="_blank" rel="noopener">Hele voorraad (PDF)</a>
+      <button class="btn licht klein" onclick="lijstSleutelNieuw(this)"${magBeheren ? '' : ' disabled'}>Nieuwe sleutel</button>
+    </div>
+    <p class="uitleg" style="margin-top:10px">Een nieuwe sleutel maakt alle oude links ongeldig. Zet hem daarna ook in het Shopify-thema (Thema-instellingen, Lijsten).</p></div>` : ''}
   <div class="kaart"><h2>Contact en mail</h2><div class="velden">
     <div class="veld"><label for="inContact">Contactpersoon</label><input type="text" id="inContact" value="${esc(i.contact_naam || '')}"></div>
     <div class="veld"><label for="inCMail">E-mail</label><input type="email" id="inCMail" value="${esc(i.contact_email || '')}"></div>
@@ -678,12 +690,32 @@ async function instellingenBewaren(knop){
     wismethode:v('inWis') || 'Blancco, NIST 800-88 Purge', bijgewerkt_op:new Date().toISOString() };
   const pct = (a, b, d) => { let x = Math.max(0, Math.min(100, parseInt(v(a), 10))), y = Math.max(0, Math.min(100, parseInt(v(b), 10)));
     if(isNaN(x)) x = d[0]; if(isNaN(y)) y = d[1]; return [Math.min(x, y), Math.max(x, y)]; };
+  if(f('inLijstPrijs')) rij.lijst_prijzen = v('inLijstPrijs') === 'ja';
   rij.bod_pct = { mobiel:pct('inPctM1', 'inPctM2', [60,60]), overig:pct('inPctO1', 'inPctO2', [70,80]) };
   if(!rij.merknaam){ toast('Vul een merknaam in.', 'fout'); return; }
   await bezig(knop, async () => {
     const { data, error } = await sb.from('klantportaal_instellingen').upsert(rij).select().single();
     if(error) throw error;
     instel = data; teken(); toast('Opgeslagen');
+  });
+}
+/* Lijsten: de functie 'lijst' met de sleutel van deze winkel. */
+const LIJST_FUNCTIE = SUPABASE_URL + '/functions/v1/lijst';
+function lijstAdres(soort, f, extra){
+  const q = new URLSearchParams(Object.assign({ t:account.team_id, k:(instel && instel.lijst_sleutel) || '', soort }, extra || {}));
+  if(f === 'html') return location.origin + '/klantportaal/lijst/?' + q;
+  q.set('f', f || 'xlsx'); return LIJST_FUNCTIE + '?' + q;
+}
+async function lijstSleutelKopieren(knop){
+  try { await navigator.clipboard.writeText(instel.lijst_sleutel); knop.textContent = 'Gekopieerd'; } catch(e){ f('inLijstSleutel').select(); }
+}
+async function lijstSleutelNieuw(knop){
+  if(!confirm('Een nieuwe sleutel maakt alle gedeelde lijstlinks ongeldig. Doorgaan?')) return;
+  const nieuw = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+  await bezig(knop, async () => {
+    const { data, error } = await sb.from('klantportaal_instellingen').update({ lijst_sleutel:nieuw }).eq('team_id', account.team_id).select().single();
+    if(error) throw error;
+    instel = data; teken(); toast('Nieuwe sleutel gemaakt. Zet hem ook in het Shopify-thema.');
   });
 }
 async function portaalAanUit(knop){
