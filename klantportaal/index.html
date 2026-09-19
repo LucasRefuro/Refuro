@@ -358,10 +358,14 @@ async function huisstijlLaden(){
    vraagt een link aan. Na de uitnodigingslink maakt de klant eerst zijn account aan. */
 function adresHier(){ return location.hostname + (eigenDomein() ? '' : location.pathname.replace(/\/$/, '')); }
 function contactZin(){ return huisstijl.contact_email ? ' via <a href="mailto:'+esc(huisstijl.contact_email)+'">'+esc(huisstijl.contact_email)+'</a>' : ''; }
+/* Het e-mailadres staat alvast ingevuld: uit de link (?email=) of van de vorige keer
+   op dit apparaat. Alleen het adres, nooit het wachtwoord. */
+function onthoudMail(m){ try { if(m) localStorage.setItem('klantportaal-email', m); } catch(e){} }
+function bekendeMail(){ if(params.email) return params.email; try { return localStorage.getItem('klantportaal-email') || ''; } catch(e){ return ''; } }
 /* Eén e-mailveld voor alle inlogschermen (één plek met id inlogMail). */
 function mailVeld(label, auto, bijEnter){
   return '<div class="veld"><label for="inlogMail">'+label+'</label>'
-    + '<input class="invoer" id="inlogMail" type="email" autocomplete="'+auto+'" placeholder="naam@bedrijf.nl" onkeydown="if(event.key===\'Enter\')'+bijEnter+'"></div>';
+    + '<input class="invoer" id="inlogMail" type="email" autocomplete="'+auto+'" placeholder="naam@bedrijf.nl" value="'+esc(bekendeMail())+'" onkeydown="if(event.key===\'Enter\')'+bijEnter+'"></div>';
 }
 function toonInlog(stand){
   f('app').hidden = true; f('inlog').hidden = false;
@@ -407,6 +411,7 @@ function toonInlog(stand){
     + '<div class="inloglinks"><button class="linkknop" onclick="toonInlog(\'vergeten\')">Wachtwoord vergeten?</button>'
     + '<button class="linkknop" onclick="toonInlog(\'link\')">Inloggen met een link</button></div>'
     + '<p class="inlogvoet">Nog geen account? Je krijgt een uitnodiging van je contactpersoon' + contactZin() + '.</p>';
+  if(bekendeMail()) setTimeout(() => { const w = f('inlogWw'); if(w) w.focus(); }, 0);
 }
 async function wachtwoordInloggen(){
   const mail = (f('inlogMail').value || '').trim(), ww = f('inlogWw').value || '';
@@ -416,6 +421,7 @@ async function wachtwoordInloggen(){
   try {
     const { error } = await sb.auth.signInWithPassword({ email: mail, password: ww });
     if(error) throw error;
+    onthoudMail(mail);
     await opstarten();
   } catch(e){
     knop.disabled = false; knop.textContent = 'Inloggen';
@@ -451,6 +457,7 @@ function toonAccount(nieuwWw){
     + '<p>' + (nieuwWw ? 'Je bent ingelogd als <b>'+esc(data.email || '')+'</b>. Kies een nieuw wachtwoord.'
         : 'Welkom bij het klantportaal van '+esc(data.bedrijf || 'je organisatie')+'. Je e-mailadres is <b>'+esc(data.email || '')+'</b>. '
           + 'Kies een wachtwoord, dan log je voortaan in op <b>'+esc(adresHier())+'</b>.') + '</p>'
+    + '<div class="veld"><label for="accMail">E-mailadres (hiermee log je in)</label><input class="invoer" id="accMail" type="email" autocomplete="username" value="'+esc(data.email || '')+'" readonly></div>'
     + (nieuwWw ? '' : '<div class="veld"><label for="accNaam">Je naam</label><input class="invoer" id="accNaam" type="text" autocomplete="name" value="'+esc(data.naam || '')+'"></div>')
     + '<div class="veld"><label for="accWw">Wachtwoord</label><input class="invoer" id="accWw" type="password" autocomplete="new-password" placeholder="Minstens 8 tekens"></div>'
     + '<div class="veld"><label for="accWw2">Herhaal wachtwoord</label><input class="invoer" id="accWw2" type="password" autocomplete="new-password" onkeydown="if(event.key===\'Enter\')accountOpslaan('+(nieuwWw ? 'true' : 'false')+')"></div>'
@@ -471,6 +478,7 @@ async function accountOpslaan(nieuwWw){
     const uit = await res.json().catch(() => ({}));
     if(!res.ok || uit.ok === false) throw new Error(uit.error || 'Opslaan lukte niet. Probeer het opnieuw.');
     data.account_klaar = true; if(naam) data.naam = naam;
+    onthoudMail(data.email);
     delete params.stap;
     const zoek = new URLSearchParams(location.search); zoek.delete('stap');
     history.replaceState(null, '', location.pathname + (zoek.toString() ? '?' + zoek : ''));
@@ -519,6 +527,7 @@ async function opstartenEcht(){
   }
 }
 function toonApp(){
+  if(!BEKIJK) onthoudMail(data.email);
   {
     f('inlog').hidden = true; f('app').hidden = false;
     f('bekijkBalk').hidden = !BEKIJK;

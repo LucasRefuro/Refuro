@@ -254,7 +254,7 @@ async function accountAanmaken(req: Request, lijf: any) {
           + `Voortaan log je in op <a href="${html(adres)}" style="color:#0F6B4B;font-weight:700">${html(zichtbaar)}</a> `
           + `met je e-mailadres <strong>${html(gb.email)}</strong> en het wachtwoord dat je net hebt gekozen. `
           + `Bewaar deze mail, dan weet je altijd waar je moet zijn.`,
-          "Naar het klantportaal", adres,
+          "Naar het klantportaal", metStap(adres, "inloggen") + "&email=" + encodeURIComponent(gb.email),
           "Wachtwoord vergeten? Klik op de inlogpagina op 'Wachtwoord vergeten', dan krijg je een link om een nieuw wachtwoord te kiezen."));
     } catch (e) {
       console.error("klantportaal welkomstmail:", e);

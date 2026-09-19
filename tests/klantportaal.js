@@ -110,6 +110,7 @@ const zichtbaar=(el)=>el && !el.hidden;
   {
     const nieuw=Object.assign({}, OVERZICHT, {account_klaar:false, email:'sanne@zorggroep.nl'});
     const {w,d,fouten}=await open({sessie:true, overzicht:nieuw}, '?stap=account');
+    ok('e-mailadres staat in het account-scherm', d.getElementById('accMail') && d.getElementById('accMail').value==='sanne@zorggroep.nl' && d.getElementById('accMail').readOnly);
     ok('account-scherm in plaats van de app', /Maak je account aan/.test(d.getElementById('inlogKaart').textContent) && !zichtbaar(d.getElementById('app')) && !fouten.length, fouten.join(' | '));
     d.getElementById('accWw').value='kort'; d.getElementById('accWw2').value='kort';
     await w.eval('accountOpslaan(false)');
@@ -123,6 +124,10 @@ const zichtbaar=(el)=>el && !el.hidden;
     const v=w.__fetch[0]||[];
     ok('account aangemaakt via de functie', v[1] && v[1].actie==='account_aanmaken' && v[1].wachtwoord==='geheim123' && v[1].naam==='Sanne de Vries', JSON.stringify(v));
     ok('daarna de app', zichtbaar(d.getElementById('app')) && !zichtbaar(d.getElementById('inlog')));
+  }
+  {
+    const {d}=await open({sessie:false}, '?email=sanne%40zorggroep.nl');
+    ok('e-mailadres uit de link staat al ingevuld bij inloggen', d.getElementById('inlogMail').value==='sanne@zorggroep.nl');
   }
 
   console.log('\n── ingelogd, geen toegang');
