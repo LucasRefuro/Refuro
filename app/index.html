@@ -4801,12 +4801,51 @@ async function roosterInvulPopup(){
   document.body.appendChild(ov);
 }
 function invulOverlaySluit(van){ const o=document.getElementById('invulOverlay'); if(o) o.remove(); if(van){ roosterMaandag=roosterMaandagVan(new Date(van+'T12:00:00')); showTab('rooster'); } }
+/* Voor de beheerder: drie dagen voor een nieuwe week ingaat, een popup met wie er nog
+   niets invulde. Naast de mail die de cron stuurt. "Niets ingevuld" is hier hetzelfde
+   als in de herinnering-cron: geen enkele beschikbaarheid-rij voor die week, ongeacht
+   de status, zodat de mail en de popup het altijd eens zijn. */
+async function roosterNietIngevuldPopup(){
+  if(!account || !roosterMagInplannen()) return;
+  const now=new Date();
+  const dow=(now.getDay()+6)%7; const totMa=(7-dow)%7 || 7;
+  if(totMa>3) return;
+  if(document.querySelector('.overlay')) return;
+  const ma=new Date(now.getFullYear(),now.getMonth(),now.getDate()+totMa);
+  const van=roosterYmd(ma), tot=roosterYmd(new Date(ma.getFullYear(),ma.getMonth(),ma.getDate()+6));
+  const sl='storvo_rooster_nietin_'+van;          // eenmaal per komende week
+  if(nudgeGezien(sl)) return;
+  try{ if(!teamLeden.length) await laadTeamLeden(); }catch(e){}
+  let ingevuld=new Set();
+  try{
+    const {data}=await sb.from('beschikbaarheid').select('account_id').gte('datum',van).lte('datum',tot);
+    ingevuld=new Set((data||[]).map(r=>r.account_id));
+  }catch(e){ return; }
+  const achter=roosterKandidaten().filter(w=>!ingevuld.has(w.id));
+  if(!achter.length) return;
+  if(document.querySelector('.overlay')) return;   // kan intussen door een andere popup gevuld zijn
+  nudgeZet(sl);
+  const namen=achter.map(w=>esc(w.naam)).join(', ');
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='nietinOverlay';
+  ov.innerHTML=`<div class="popup">
+    <h3 style="margin:0 0 8px">Nog niet iedereen gaf zijn rooster door</h3>
+    <p class="pv">De week van maandag ${esc(roosterKort(ma))} begint over ${totMa} dag${totMa>1?'en':''}. Deze teamleden gaven nog niks door: ${namen}.</p>
+    <div class="acts" style="display:flex; gap:10px; margin-top:16px">
+      <button class="btn actie" onclick="nietinOverlaySluit('${van}')">Naar het rooster</button>
+      <button class="btn ghost" onclick="nietinOverlaySluit('')">Later</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) nietinOverlaySluit(''); });
+  document.body.appendChild(ov);
+}
+function nietinOverlaySluit(van){ const o=document.getElementById('nietinOverlay'); if(o) o.remove(); if(van){ roosterMaandag=roosterMaandagVan(new Date(van+'T12:00:00')); showTab('rooster'); } }
 /* Bij het inloggen alles ophalen en tonen: eerst de balk, dan (met een tik vertraging
-   zodat een eventueel proefscherm voorgaat) de popups. */
+   zodat een eventueel proefscherm voorgaat) de popups. Eén tegelijk: elke popup slaat
+   zichzelf over als er al een overlay staat. Volgorde = belangrijkste eerst. */
 async function roosterMeldingen(){
   await roosterKeurLaden();
   toonKeurBalk();
-  setTimeout(()=>{ keurPopup(); roosterInvulPopup(); }, 800);
+  setTimeout(async()=>{ keurPopup(); await roosterNietIngevuldPopup(); await roosterInvulPopup(); }, 800);
 }
 function tekenRooster(){
   const inh=document.getElementById('roosterInhoud'); if(!inh) return;
