@@ -3823,7 +3823,23 @@ function tekenAlles(){
 function euro(n){ return '€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function catNaam(id){ const c=state.categorieen.find(c=>c.id===id); return c?c.naam:'Overig'; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
+/* Een uniek id. Vroeger Date.now()+willekeurig(0..999): dat is een OPTELLING in een
+   piepkleine ruimte, waardoor twee verkopen in dezelfde milliseconde (een bon met
+   meerdere regels loopt in een synchrone lus, dus deelt dezelfde Date.now()) hetzelfde
+   id konden krijgen. De samenvoeging sleutelt op id, dus dan viel er stil een regel weg
+   en verdween er omzet. Nu: de tijd duizend plaatsen opgeschoven (blijft ruim onder
+   Number.MAX_SAFE_INTEGER: Date.now()*1000 is ~1,8e15, de grens is 9,0e15) met een eigen
+   zaad per tabblad erachter, en een teller die afdwingt dat het altijd oploopt. Zo botst
+   het binnen een apparaat nooit en tussen apparaten vrijwel nooit. Blijft een getal, want
+   ids staan ongequote in de knoppen. Oude, kleinere ids (~1,8e12) botsen niet met de nieuwe. */
+const _uidZaad = 1 + Math.floor(Math.random()*899);
+let _uidVorige = 0;
+function uid(){
+  let n = Date.now()*1000 + _uidZaad;
+  if(n <= _uidVorige) n = _uidVorige + 1;
+  _uidVorige = n;
+  return n;
+}
 
 /* ---------- navigatie ---------- */
 /* Alleen echte tab-knoppen wisselen van pagina. De Scan-knop is een actie (opent de
@@ -11256,6 +11272,18 @@ const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','l
                       'aanvragen','inkopen','uitbetalingen','reserveringen','postnl'];
 const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','bedrijf'];
 
+/* Lijsten met vaste (niet-willekeurige) id's: de seed maakt op elk leeg apparaat
+   categorie 1/2/3, dienst 1/2/3, postnl 1..16, team 1, enzovoort. Bij de EERSTE sync
+   (nog geen basis) moeten die niet de al aangepaste cloudversie overschrijven; dan
+   leidt de cloud. Verkopen/producten/reparaties staan hier bewust NIET in: die krijgen
+   een uniek id, botsen niet, en daar wint een lokale wijziging wel. */
+const SYNC_SEED_LIJSTEN = new Set(['categorieen','types','modellen','diensten','postnl','teams','medewerkers']);
+
+/* Velden die zelf een map met eigen sleutels zijn (loon per medewerker, bestel-reset
+   per categorie, de instellingen, de klantpagina). Die per sleutel samenvoegen in plaats
+   van het hele veld te overschrijven, anders wist de een stil de sleutel van de ander. */
+const SYNC_KEYED = new Set(['lonen','bijbestelBesteld','klantpagina','instellingen']);
+
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
 let syncWachtrij = false;    // er kwam iets binnen terwijl we aan het opslaan waren
@@ -11288,7 +11316,7 @@ function syncOpIndex(lijst){
 
 /* Voegt één lijst samen. Bewerken wint van verwijderen: in een winkel is
    per ongeluk iets kwijtraken erger dan een regel te veel. */
-function syncVoegLijstSamen(basis, lokaal, server){
+function syncVoegLijstSamen(basis, lokaal, server, serverBijEersteSync){
   const b=syncOpIndex(basis), l=syncOpIndex(lokaal), s=syncOpIndex(server);
   const volgorde=[];
   (lokaal||[]).forEach(x=>{ if(x&&x.id!==undefined) volgorde.push(String(x.id)); });
@@ -11298,7 +11326,8 @@ function syncVoegLijstSamen(basis, lokaal, server){
   volgorde.forEach(id=>{
     const bi=b.get(id), li=l.get(id), si=s.get(id);
     if(li && si){
-      if(bi && syncGelijk(li,bi)) uit.push(si);          // wij deden niets, cloud misschien wel
+      if(!bi && serverBijEersteSync) uit.push(si);        // eerste sync van een vaste-id-lijst: neem de cloud over
+      else if(bi && syncGelijk(li,bi)) uit.push(si);      // wij deden niets, cloud misschien wel
       else uit.push(li);                                  // wij wijzigden: dat telt
     } else if(li && !si){
       if(!bi) uit.push(li);                               // hier nieuw aangemaakt
@@ -11312,10 +11341,33 @@ function syncVoegLijstSamen(basis, lokaal, server){
   return uit;
 }
 
+/* Voegt twee sleutel-waarde-objecten samen op dezelfde manier als een lijst: per
+   sleutel kijken wie er iets veranderde t.o.v. de basis. Zo overleeft het loon dat
+   de een invoerde naast het loon dat de ander invoerde, in plaats van dat het hele
+   loon-object van de laatste opslag wint. "Bewerken wint van verwijderen." */
+function syncVoegMapSamen(bi, li, si){
+  bi=bi||{}; li=li||{}; si=si||{};
+  const uit={};
+  new Set([...Object.keys(li), ...Object.keys(si)]).forEach(k=>{
+    const b=bi[k], l=li[k], s=si[k];
+    const hebB=b!==undefined, hebL=l!==undefined, hebS=s!==undefined;
+    if(hebL && hebS){
+      if(!hebB) uit[k]=s;                                 // eerste sync: de cloud leidt
+      else uit[k]=syncGelijk(l,b) ? s : l;                // wij ongewijzigd -> cloud; wij gewijzigd -> wij
+    } else if(hebL && !hebS){
+      if(!hebB || !syncGelijk(l,b)) uit[k]=l;             // hier nieuw, of elders weg maar hier bewerkt
+    } else if(!hebL && hebS){
+      if(!hebB) uit[k]=s;                                 // elders nieuw
+      // anders: hier verwijderd en elders ongewijzigd -> weg
+    }
+  });
+  return uit;
+}
+
 function syncVoegSamen(basis, lokaal, server){
   const uit={};
   SYNC_LIJSTEN.forEach(k=>{
-    uit[k]=syncVoegLijstSamen(basis?basis[k]:null, lokaal[k], server?server[k]:null);
+    uit[k]=syncVoegLijstSamen(basis?basis[k]:null, lokaal[k], server?server[k]:null, SYNC_SEED_LIJSTEN.has(k));
   });
   /* Verkopen en logboek staan nieuw-eerst en worden kort gehouden. */
   if(uit.verkopen) uit.verkopen.sort((a,b)=>(b.t||0)-(a.t||0));
@@ -11323,9 +11375,15 @@ function syncVoegSamen(basis, lokaal, server){
 
   SYNC_VELDEN.forEach(k=>{
     const bi=basis?basis[k]:undefined, li=lokaal[k], si=server?server[k]:undefined;
+    if(SYNC_KEYED.has(k)){
+      if(si===undefined && bi===undefined){ uit[k]=li; return; }
+      uit[k]=syncVoegMapSamen(bi, li, si);
+      return;
+    }
     if(si===undefined){ uit[k]=li; return; }
     if(li===undefined){ uit[k]=si; return; }
-    uit[k] = (bi!==undefined && syncGelijk(li,bi)) ? si : li;
+    if(bi===undefined){ uit[k]=si; return; }   // eerste sync: de cloud leidt
+    uit[k] = syncGelijk(li,bi) ? si : li;
   });
   /* Reparatienummers mogen nooit opnieuw beginnen. */
   uit.repNr=Math.max(lokaal.repNr||0, (server&&server.repNr)||0, (basis&&basis.repNr)||0);
@@ -11352,26 +11410,39 @@ function syncStatusToon(nieuw){
 
 /* Haalt de cloudversie op en voegt die samen met wat hier staat. */
 async function syncHaalOp(){
-  if(!account) return false;
-  const {data,error}=await sb.from('winkeldata').select('data,versie').eq('team_id',account.team_id).maybeSingle();
-  if(error){ console.error('sync ophalen:', error); return false; }
-  const server = data ? data.data : null;
-  syncVersie = data ? data.versie : 0;
+  /* Zelfde slot als syncOpslaan: ophalen en opslaan mogen elkaar nooit overlappen.
+     Deden ze dat wel, dan kon een trage ophaal-merge met een verouderde serverlezing
+     een net opgeslagen verkoop weer uit beeld en uit localStorage gooien, of de basis
+     onder een lopende opslag wegtrekken waardoor de verkoop van een collega als
+     "hier verwijderd" werd overschreven. */
+  if(!account || syncBezig) return false;
+  syncBezig=true;
+  try{
+    const {data,error}=await sb.from('winkeldata').select('data,versie').eq('team_id',account.team_id).maybeSingle();
+    if(error){ console.error('sync ophalen:', error); return false; }
+    const server = data ? data.data : null;
+    syncVersie = data ? data.versie : 0;
 
-  const lokaal = syncDocumentUitState();
-  const basis  = syncBasisLees();
+    const lokaal = syncDocumentUitState();
+    const basis  = syncBasisLees();
 
-  if(!server){
-    /* Nog niets in de cloud: wat hier staat wordt het startpunt. */
+    if(!server){
+      /* Nog niets in de cloud: wat hier staat wordt het startpunt. */
+      return true;
+    }
+    const samen = syncVoegSamen(basis, lokaal, server);
+    SYNC_LIJSTEN.forEach(k=>{ state[k]=samen[k]; });
+    SYNC_VELDEN.forEach(k=>{ if(samen[k]!==undefined) state[k]=samen[k]; });
+    state.repNr=samen.repNr;
+    localStorage.setItem(KEY, JSON.stringify(state));
+    syncBasisSchrijf(server);
     return true;
+  } finally {
+    syncBezig=false;
+    /* Kwam er tijdens het ophalen een wijziging binnen (save zag syncBezig staan),
+       dan die alsnog kort daarna wegschrijven. */
+    if(syncWachtrij){ syncWachtrij=false; syncPlan(600); }
   }
-  const samen = syncVoegSamen(basis, lokaal, server);
-  SYNC_LIJSTEN.forEach(k=>{ state[k]=samen[k]; });
-  SYNC_VELDEN.forEach(k=>{ if(samen[k]!==undefined) state[k]=samen[k]; });
-  state.repNr=samen.repNr;
-  localStorage.setItem(KEY, JSON.stringify(state));
-  syncBasisSchrijf(server);
-  return true;
 }
 
 /* Slaat op in de cloud. Bij een botsing eerst samenvoegen, dan opnieuw. */
@@ -11380,13 +11451,18 @@ async function syncOpslaan(pogingen){
   syncBezig=true;
   syncStatusToon('bezig');
   const doc=syncDocumentUitState();
+  /* De basis die bij PRECIES deze doc hoort, nu vastleggen. Bij een botsing
+     hermergen we straks met deze momentopname, niet met een verse lees die
+     intussen door een ophaal verschoven kan zijn. Anders leek een verkoop van een
+     collega ineens "hier verwijderd" en werd hij overschreven. */
+  const basisBijDoc=syncBasisLees();
   try{
     const {data,error}=await sb.rpc('winkeldata_opslaan',{data_input:doc, verwachte_versie:syncVersie});
     if(error) throw error;
     const uit=Array.isArray(data)?data[0]:data;
     if(uit && uit.conflict){
       /* Een collega was net sneller: samenvoegen en nog een keer proberen. */
-      const samen=syncVoegSamen(syncBasisLees(), doc, uit.data);
+      const samen=syncVoegSamen(basisBijDoc, doc, uit.data);
       SYNC_LIJSTEN.forEach(k=>{ state[k]=samen[k]; });
       SYNC_VELDEN.forEach(k=>{ if(samen[k]!==undefined) state[k]=samen[k]; });
       state.repNr=samen.repNr;
@@ -11438,6 +11514,22 @@ function syncStop(){
 /* Zodra internet terugkomt meteen bijwerken. */
 addEventListener('online', ()=>{ if(account) syncPlan(300); });
 addEventListener('offline', ()=>{ if(account) syncStatusToon('offline'); });
+
+/* Meteen bewaren zodra dit tabblad naar de achtergrond gaat of sluit.
+   Zonder dit blijft een net ingevoerde verkoop tot 1,5 seconde (de wachttijd
+   van syncPlan) alleen op dit apparaat staan. Klik je in die seconde weg of
+   loop je naar een ander apparaat, dan is die invoer nooit in de cloud beland
+   en lijkt de omzet verdwenen. visibilitychange vuurt terwijl de pagina nog
+   leeft, dus het gewone opslaan krijgt de tijd om af te ronden. */
+function syncFlush(){
+  if(!account) return;
+  clearTimeout(syncTimer);
+  if(syncBezig){ syncWachtrij=true; return; }
+  syncOpslaan(0);
+}
+addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') syncFlush(); });
+addEventListener('pagehide', syncFlush);
+
 /* Regelmatig kijken of een collega iets heeft gewijzigd. */
 setInterval(()=>{ if(account && navigator.onLine && !syncBezig) syncHaalOp().then(ok=>{ if(ok) tekenAlles(); }); }, 45000);
 
