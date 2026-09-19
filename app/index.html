@@ -3514,6 +3514,10 @@
     <h2><svg class="i"><use href="#i-globe"/></svg>Je webshop koppelen</h2>
     <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Shopify-webshop, dan zet je een toestel met één knop online, gaat hij er vanzelf weer af zodra hij verkocht is, en zie je hier wat er besteld wordt. Zonder koppeling verkoop je een laptop twee keer en mag je een klant bellen dat het toch niet doorgaat.</p>
     <div id="shopVak">Bezig met kijken…</div>
+
+    <div class="hkkop" style="margin-top:26px">Tweede webshop (groothandel, voor bundels)</div>
+    <p class="muted" style="margin:6px 0 14px; max-width:78ch">Een aparte Shopify-winkel waar je hele bundels laptops als een lot verkoopt. De bundels zelf maak en beheer je in de refurbish-app. Koppelen gaat met een app uit het Dev Dashboard van die winkel (Client ID en Client secret).</p>
+    <div id="shop2Vak">Bezig met kijken…</div>
   </div>
 
   <!-- ── de pin (Clover) koppelen ──
@@ -10235,7 +10239,7 @@ document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('cli
     const el=document.getElementById('inst-'+s); if(el) el.hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='paginas') renderPaginas();
-  if(b.dataset.s==='webshop') shopStatus();
+  if(b.dataset.s==='webshop'){ shopStatus(); web2Status(); }
   if(b.dataset.s==='clover') cloverStatus();
   if(b.dataset.s==='factuur') facBedrijfVul();
   if(b.dataset.s==='refurbish') renderRefurbishInst();
@@ -10920,6 +10924,87 @@ async function shopLos(knop){
     toast('Losgekoppeld', true);
   }catch(e){ toast(e.message,'fout'); }
   finally{ knop.disabled=false; knop.textContent=oud; }
+}
+
+/* ---------- tweede webshop (groothandel, voor de bundels uit de refurbish-app) ----------
+   Aparte Shopify-winkel op kanaal shopify2, via de losse edge function webshop2.
+   Koppelen met Client ID + Client secret uit het Dev Dashboard; de server maakt er
+   zelf telkens een tijdelijk token van. Staat hier naast de gewone webshop. */
+let web2Stand=null;
+async function web2Roep(lijf){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error('Je bent uitgelogd');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/webshop2',{
+    method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(lijf)
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok){ const e=new Error(uit.error||'De tweede webshop reageerde niet'); e.mist=uit.mist; throw e; }
+  return uit;
+}
+async function web2Status(){
+  const vak=document.getElementById('shop2Vak'); if(!vak) return;
+  try{ web2Stand=await web2Roep({actie:'status'}); }
+  catch(e){ web2Stand={gekoppeld:false}; }
+  web2Teken();
+}
+function web2Teken(){
+  const vak=document.getElementById('shop2Vak'); if(!vak) return;
+  const s=web2Stand;
+  if(!s){ vak.innerHTML='<p class="muted">Bezig met kijken…</p>'; return; }
+  if(s.gekoppeld){
+    const stuk=(s.mist||[]).length;
+    vak.innerHTML=`
+      <div class="shopkaart ${stuk?'stuk':'aan'}">
+        <div class="shopkop"><h3>${esc(s.winkelnaam||s.domein||'Tweede webshop')}</h3>
+          <span class="shopbadge">${stuk?'Kijk even na':'Gekoppeld'}</span></div>
+        <p class="muted" style="font-size:13.5px">${esc(s.domein||'')}</p>
+        <div class="shopfeiten">
+          <div class="shopfeit"><div class="l">Verkoopkanaal</div><div class="w">${s.publicatie?'Gevonden':'Niet gevonden'}</div></div>
+          <div class="shopfeit"><div class="l">Voorraadlocatie</div><div class="w">${s.locatie?'Gevonden':'Niet gevonden'}</div></div>
+        </div>
+        ${stuk?`<div class="shopuitslag fout">Er ontbreken nog rechten (${esc((s.mist||[]).join(', '))}). Zet ze aan in het Dev Dashboard, release, en koppel opnieuw.</div>`:''}
+        <div class="row" style="margin-top:16px; gap:10px">
+          <button class="btn ghost" onclick="web2Los2(this)">Loskoppelen</button>
+        </div>
+      </div>`;
+    return;
+  }
+  vak.innerHTML=`
+    <div class="shopkaart">
+      <div class="shopkop"><h3>Koppelen met je tweede winkel</h3></div>
+      <p class="muted" style="font-size:14px; max-width:70ch; margin-bottom:14px">
+        Maak in het Dev Dashboard van je tweede winkel een app met de rechten voor producten, voorraad, locaties, bestellingen en publicaties, installeer die op je winkel, en neem de Client ID en het Client secret over.</p>
+      <div class="grid" style="gap:14px">
+        <div><label>Adres van je winkel</label><input id="web2_domein" placeholder="jouwwinkel.myshopify.com" autocomplete="off"></div>
+        <div><label>Client ID</label><input id="web2_clientid" autocomplete="off" spellcheck="false" placeholder="uit het Dev Dashboard"></div>
+        <div><label>Client secret</label><input id="web2_secret" type="password" autocomplete="off" spellcheck="false" placeholder="uit het Dev Dashboard"></div>
+      </div>
+      <p class="muted" style="font-size:12.5px; margin-top:5px">Gaat versleuteld naar de server; wij zien het nooit terug. Storvo maakt er zelf telkens een tijdelijk token van.</p>
+      <div class="row" style="margin-top:16px"><button class="btn actie" onclick="web2Koppelen2(this)"><svg class="i s"><use href="#i-globe"/></svg>Koppelen</button></div>
+      <div id="web2Uitslag"></div>
+    </div>`;
+}
+async function web2Koppelen2(knop){
+  const domein=(document.getElementById('web2_domein')||{}).value||'';
+  const clientId=(document.getElementById('web2_clientid')||{}).value||'';
+  const clientSecret=(document.getElementById('web2_secret')||{}).value||'';
+  const uit=document.getElementById('web2Uitslag');
+  if(!String(domein).trim()||!String(clientId).trim()||!String(clientSecret).trim()){ toast('Vul winkeladres, Client ID en Client secret in','let-op'); return; }
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{
+    web2Stand=await web2Roep({actie:'opslaan', domein, client_id:clientId, client_secret:clientSecret});
+    web2Teken(); toast('Tweede webshop gekoppeld', true);
+  }catch(e){
+    if(uit) uit.innerHTML=`<div class="shopuitslag fout">${esc((e.mist&&e.mist.length)?('Er ontbreken nog rechten: '+e.mist.join(', ')):e.message)}</div>`;
+    toast(e.message,'fout'); knop.disabled=false; knop.textContent=oud;
+  }
+}
+async function web2Los2(knop){
+  if(!confirm('De tweede webshop loskoppelen? Bundels die er online staan blijven op Shopify staan; die haal je daar zelf weg.')) return;
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
+  try{ await web2Roep({actie:'loskoppelen'}); web2Stand={gekoppeld:false}; web2Teken(); toast('Losgekoppeld', true); }
+  catch(e){ toast(e.message,'fout'); knop.disabled=false; knop.textContent=oud; }
 }
 
 /* ---------- team / medewerkers ---------- */

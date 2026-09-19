@@ -7914,17 +7914,14 @@ async function web2Status(){
 }
 function web2KaartTeken(){
   const el=document.getElementById('web2Kaart'); if(!el) return;
-  if(!web2Geladen){ el.innerHTML='<div class="card"><p class="muted">Tweede webshop nakijken…</p></div>'; web2Status(); return; }
+  if(!web2Geladen){ el.innerHTML=''; web2Status(); return; }
   const s=web2Stand||{};
+  /* Het koppelen zelf staat in de winkelapp bij Instellingen, Webshop, naast je
+     gewone shop. Hier alleen een hint zolang er nog geen tweede webshop is; is hij
+     gekoppeld, dan blijft de bundelpagina schoon. */
   el.innerHTML = s.gekoppeld
-    ? `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-         <div><b>Tweede webshop gekoppeld</b><div class="muted klein">${esc(s.winkelnaam||s.domein||'')}${s.mist&&s.mist.length?' · let op: er ontbreken nog rechten':''}</div></div>
-         <button class="btn ghost small" onclick="web2Loskoppel()">Loskoppelen</button>
-       </div></div>`
-    : `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-         <div><b>Tweede webshop nog niet gekoppeld</b><div class="muted klein">Koppel een tweede Shopify-winkel om bundels als lot te verkopen.</div></div>
-         <button class="btn actie small" onclick="web2KoppelOpen()"><svg class="i s"><use href="#i-globe"/></svg>Koppelen</button>
-       </div></div>`;
+    ? ''
+    : `<div class="card"><p class="muted" style="margin:0">Tweede webshop nog niet gekoppeld. Koppel hem in de winkelapp bij <b>Instellingen, Webshop</b> (naast je gewone shop). Daarna kun je bundels online zetten.</p></div>`;
 }
 function web2KoppelOpen(){
   venster('Tweede webshop koppelen', `
