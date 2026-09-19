@@ -104,6 +104,7 @@ tr:last-child td { border-bottom:none; }
 tr.klik { cursor:pointer; }
 tr.klik:hover td { background:var(--soft-2); }
 td select { padding:8px 32px 8px 10px; font-size:13px; border-radius:10px; min-width:130px; }
+.kpi-bedrag { font-family:var(--display); font-size:20px; letter-spacing:-.02em; white-space:nowrap; }
 .pil { display:inline-block; font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:var(--pil); white-space:nowrap; background:var(--soft-2); color:var(--muted); }
 .pil.ok { background:var(--green-soft); color:var(--green-tekst); }
 .pil.let { background:var(--amber-soft); color:var(--amber-tekst); }
@@ -175,7 +176,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let account = null, instel = null;
-let opdrachten = [], organisaties = [], gebruikers = [], batches = [], apparaten = [], kpApparaten = {};
+let aanbiedingen = [], opdrachten = [], organisaties = [], gebruikers = [], batches = [], apparaten = [], kpApparaten = {};
 let tab = 'opdrachten', huidigeOpdracht = null, huidigeOrg = null;
 
 const STAPPEN = [['opgehaald_op','Opgehaald'],['gewist_op','Gewist'],['getest_op','Getest'],['afgerond_op','Afgerond en betaald']];
@@ -246,18 +247,20 @@ async function opstarten(){
   await allesLaden();
 }
 async function allesLaden(){
-  const [i, o, org, g, b] = await Promise.all([
+  const [i, o, org, g, b, ab] = await Promise.all([
     sb.from('klantportaal_instellingen').select('*').maybeSingle(),
     sb.from('klantportaal_opdrachten').select('*').order('aangemaakt_op', { ascending:false }),
     sb.from('klantportaal_organisaties').select('*').order('naam'),
     sb.from('klantportaal_gebruikers').select('user_id,organisatie_id,naam,email,rol,actief,laatst_gezien').order('naam'),
-    sb.from('refurbish_batches').select('id,code,nummer,leverancier,aantal,aangemaakt_op').order('aangemaakt_op', { ascending:false })
+    sb.from('refurbish_batches').select('id,code,nummer,leverancier,aantal,aangemaakt_op').order('aangemaakt_op', { ascending:false }),
+    sb.from('klantportaal_aanbiedingen').select('*').order('aangemaakt_op', { ascending:false }).limit(200)
   ]);
   if(i.error){
     f('vak').innerHTML = `<div class="kaart"><h2>Het klantportaal is nog niet geïnstalleerd</h2><p class="uitleg">De tabellen ontbreken in de database. Draai eerst de migratie uit KLANTPORTAAL-STAPPENPLAN.md.</p></div>`;
     return;
   }
   instel = i.data || null;
+  aanbiedingen = (ab && ab.data) || [];
   opdrachten = o.data || []; organisaties = org.data || []; gebruikers = g.data || []; batches = b.data || [];
   teken();
 }
@@ -279,7 +282,7 @@ function naarTab(t){
   teken(); window.scrollTo(0, 0);
 }
 function teken(){
-  const n = opdrachten.filter(o => o.status === 'aanvraag').length;
+  const n = opdrachten.filter(o => o.status === 'aanvraag').length + aanbiedingen.filter(a => a.status === 'nieuw').length;
   f('aanvraagTeller').textContent = n; f('aanvraagTeller').hidden = !n;
   if(!instel && tab !== 'instellingen'){ tekenBeginnen(); return; }
   if(tab === 'instellingen') tekenInstellingen();
@@ -290,6 +293,66 @@ function tekenBeginnen(){
   f('vak').innerHTML = `<div class="kop"><div><h1>Klantportaal</h1><p>Laat organisaties van wie je IT opkoopt hun partij volgen: ophaling, wissen, testen en betaling.</p></div></div>
     <div class="kaart"><h2>Eerst je huisstijl</h2><p class="uitleg">Het portaal draait onder jouw merknaam, niet onder Storvo. Vul hem in bij Instellingen, dan kun je beginnen.</p>
     <button class="btn actie" onclick="naarTab('instellingen')">Naar instellingen</button></div>`;
+}
+
+/* ═══════════════ aanbiedingen van de website ═══════════════
+   Via 'Partij aanbieden' op de website (met slim bod). Aannemen maakt een organisatie
+   en opdracht, en nodigt de contactpersoon uit als beheerder in het portaal. */
+const STAATTEKST = { goed:'werkt, nette staat', sporen:'flinke gebruikssporen', defect:'defect of onbekend' };
+const BRONTEKST = { voorraad:'onze verkoopprijs', markt:'marktschatting', onbekend:'zelf beoordelen' };
+function bodTekst(a, b){ if(!b) return '-'; return a === b ? euro(b) : euro(a) + ' – ' + euro(b); }
+function tekenAanbiedingen(){
+  const nieuw = aanbiedingen.filter(a => a.status === 'nieuw');
+  if(!nieuw.length) return '';
+  return `<div class="kaart melding"><h2>Aangeboden via de website</h2><p class="uitleg">Met het slimme bod erbij. Aannemen maakt er een opdracht van en nodigt de contactpersoon uit voor het portaal.</p>
+    ${nieuw.map(a => `<div class="persoon"><div style="flex:1;min-width:260px"><b>${esc(a.bedrijf)}</b> <span class="muted klein">${datum(a.aangemaakt_op)}</span>
+      <div class="muted klein">${esc([a.naam, a.email, a.telefoon].filter(Boolean).join(' · '))}</div>
+      <div class="klein" style="margin-top:6px">${(a.regels || []).map(r => `${r.aantal}× <b>${esc(r.model)}</b>${r.specs ? ' (' + esc(r.specs) + ')' : ''} · ${esc(STAATTEKST[r.staat] || '')} · ${r.per_stuk ? bodTekst(r.per_stuk.min, r.per_stuk.max) + ' p/st' : 'volgt'} <span class="muted">(${esc(BRONTEKST[r.bron] || '')}${r.waarde ? ', waarde ' + euro(r.waarde.advies) : ''})</span>`).join('<br>')}</div>
+      ${a.opmerking ? `<div class="muted klein" style="margin-top:6px">${esc(a.opmerking)}</div>` : ''}
+      <div class="muted klein" style="margin-top:6px">${esc([a.ophaaladres, a.periode, a.dataverwijdering].filter(Boolean).join(' · '))}</div></div>
+      <div style="text-align:right"><div class="kpi-bedrag"><b>${bodTekst(a.bod_min, a.bod_max)}</b></div>
+      <div class="rij" style="justify-content:flex-end;margin-top:8px"><button class="btn actie klein" onclick="aanbiedingAannemen(this,'${a.id}')">Aannemen</button><button class="btn licht klein" onclick="aanbiedingAfwijzen(this,'${a.id}')">Afwijzen</button></div></div></div>`).join('')}</div>`;
+}
+async function aanbiedingAannemen(knop, id){
+  const a = aanbiedingen.find(x => x.id === id); if(!a) return;
+  await bezig(knop, async () => {
+    // Organisatie: bestaat er al een met deze naam, dan die.
+    let org = organisaties.find(o => o.naam.trim().toLowerCase() === a.bedrijf.trim().toLowerCase());
+    if(!org){
+      const { data, error } = await sb.from('klantportaal_organisaties').insert({ team_id:account.team_id, naam:a.bedrijf }).select().single();
+      if(error) throw error; org = data; organisaties.push(org);
+    }
+    const regels = a.regels || [];
+    const omschrijving = regels.map(r => `${r.aantal}× ${r.model}${r.specs ? ' (' + r.specs + ')' : ''}, ${STAATTEKST[r.staat] || ''}`).join('\n') + (a.opmerking ? '\n\n' + a.opmerking : '');
+    const aantal = regels.reduce((t, r) => t + (r.aantal || 0), 0) || null;
+    const titel = regels.length ? (regels.length === 1 ? regels[0].model : regels[0].model + ' en meer') : 'Partij van de website';
+    const bod = a.bod_max ? Math.round((Number(a.bod_min || a.bod_max) + Number(a.bod_max)) / 2) : null;
+    const { data: o, error: oe } = await sb.from('klantportaal_opdrachten').insert({ team_id:account.team_id, organisatie_id:org.id, status:'actief',
+      titel:titel.slice(0, 80), omschrijving:omschrijving.slice(0, 4000), aantal_verwacht:aantal, ophaaladres:a.ophaaladres, locatie:(a.ophaaladres || '').slice(0, 120) || null,
+      gepland:a.periode ? 'Gewenst: ' + a.periode : null, bod_indicatief:bod, aangemaakt_door:account.id }).select().single();
+    if(oe) throw oe;
+    opdrachten.unshift(o);
+    await sb.from('klantportaal_aanbiedingen').update({ status:'aangenomen', organisatie_id:org.id, opdracht_id:o.id }).eq('id', a.id);
+    a.status = 'aangenomen';
+    // Contactpersoon uitnodigen als beheerder.
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', { method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer ' + (session ? session.access_token : '') },
+      body:JSON.stringify({ actie:'uitnodigen', organisatie_id:org.id, email:a.email, naam:a.naam || '', rol:'beheerder' }) });
+    const uit = await res.json().catch(() => ({}));
+    const { data: g } = await sb.from('klantportaal_gebruikers').select('user_id,organisatie_id,naam,email,rol,actief,laatst_gezien').order('naam');
+    gebruikers = g || gebruikers;
+    opdrachtOpen(o.id);
+    toast(res.ok && uit.ok !== false ? 'Aangenomen. ' + a.email + ' is uitgenodigd voor het portaal.' : 'Aangenomen, maar uitnodigen lukte niet: ' + (uit.error || 'onbekende fout'), res.ok && uit.ok !== false ? '' : 'fout');
+  });
+}
+async function aanbiedingAfwijzen(knop, id){
+  await bezig(knop, async () => {
+    const { error } = await sb.from('klantportaal_aanbiedingen').update({ status:'afgewezen' }).eq('id', id);
+    if(error) throw error;
+    const a = aanbiedingen.find(x => x.id === id); if(a) a.status = 'afgewezen';
+    teken(); toast('Afgewezen. Laat het de klant zelf even weten.');
+  });
 }
 
 /* ═══════════════ opdrachten ═══════════════ */
@@ -308,6 +371,7 @@ function tekenOpdrachten(){
       <div class="muted klein">${esc(o.omschrijving || o.titel)}${o.aantal_verwacht ? ' · ongeveer ' + o.aantal_verwacht + ' stuks' : ''}${o.ophaaladres ? ' · ' + esc(o.ophaaladres) : ''}${o.gepland ? ' · ' + esc(o.gepland) : ''}</div></div>
       <div class="rij"><button class="btn actie klein" onclick="aanvraagAannemen(this,'${o.id}')">Aannemen</button><button class="btn licht klein" onclick="aanvraagAfwijzen(this,'${o.id}')">Afwijzen</button></div></div>`).join('')}</div>`;
   }
+  h += tekenAanbiedingen();
   const lijst = opdrachten.filter(o => o.status === 'actief');
   h += `<div class="kaart">${lijst.length ? `<div class="tabelrol"><table><thead><tr><th>Nummer</th><th>Organisatie</th><th>Opdracht</th><th>Batch</th><th>Stap</th><th>Bod</th></tr></thead><tbody>
     ${lijst.map(o => { const s = stapVan(o); const b = batches.find(x => x.id === o.batch_id);
@@ -587,6 +651,12 @@ function tekenInstellingen(){
     <div class="veld"><label for="inAccent">Accentkleur</label><input type="text" id="inAccent" value="${esc(i.accent || '#C6F36B')}"></div>
     <div class="veld"><label for="inInkt">Tekstkleur</label><input type="text" id="inInkt" value="${esc(i.inkt || '#10231B')}"></div>
   </div></div>
+  <div class="kaart"><h2>Slim bod op de website</h2><p class="uitleg">Welk deel van de doorverkoopwaarde je biedt. Staat een model in je voorraad, dan telt jouw verkoopprijs; anders een marktschatting.</p><div class="velden">
+    <div class="veld"><label for="inPctM1">Laptops, telefoons, tablets: van %</label><input type="number" id="inPctM1" min="0" max="100" value="${esc(((i.bod_pct || {}).mobiel || [60,60])[0])}"></div>
+    <div class="veld"><label for="inPctM2">tot %</label><input type="number" id="inPctM2" min="0" max="100" value="${esc(((i.bod_pct || {}).mobiel || [60,60])[1])}"></div>
+    <div class="veld"><label for="inPctO1">Overige hardware: van %</label><input type="number" id="inPctO1" min="0" max="100" value="${esc(((i.bod_pct || {}).overig || [70,80])[0])}"></div>
+    <div class="veld"><label for="inPctO2">tot %</label><input type="number" id="inPctO2" min="0" max="100" value="${esc(((i.bod_pct || {}).overig || [70,80])[1])}"></div>
+  </div></div>
   <div class="kaart"><h2>Contact en mail</h2><div class="velden">
     <div class="veld"><label for="inContact">Contactpersoon</label><input type="text" id="inContact" value="${esc(i.contact_naam || '')}"></div>
     <div class="veld"><label for="inCMail">E-mail</label><input type="email" id="inCMail" value="${esc(i.contact_email || '')}"></div>
@@ -606,6 +676,9 @@ async function instellingenBewaren(knop){
     contact_naam:v('inContact') || null, contact_email:v('inCMail') || null, contact_telefoon:v('inTel') || null,
     afzender:v('inAfz') || null, domein:v('inDomein').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase() || null,
     wismethode:v('inWis') || 'Blancco, NIST 800-88 Purge', bijgewerkt_op:new Date().toISOString() };
+  const pct = (a, b, d) => { let x = Math.max(0, Math.min(100, parseInt(v(a), 10))), y = Math.max(0, Math.min(100, parseInt(v(b), 10)));
+    if(isNaN(x)) x = d[0]; if(isNaN(y)) y = d[1]; return [Math.min(x, y), Math.max(x, y)]; };
+  rij.bod_pct = { mobiel:pct('inPctM1', 'inPctM2', [60,60]), overig:pct('inPctO1', 'inPctO2', [70,80]) };
   if(!rij.merknaam){ toast('Vul een merknaam in.', 'fout'); return; }
   await bezig(knop, async () => {
     const { data, error } = await sb.from('klantportaal_instellingen').upsert(rij).select().single();

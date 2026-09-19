@@ -56,7 +56,10 @@ const BASIS={
     {id:'o2', team_id:TEAM, organisatie_id:'org1', batch_id:null, nummer:'P0002', status:'aanvraag', titel:'120 laptops', omschrijving:'120 laptops', aantal_verwacht:120, aangemeld_op:'2026-09-18'}],
   refurbish_batches:[{id:'b1', code:'B0010', leverancier:'Zorggroep'},{id:'b2', code:'B0011'}],
   refurbish_apparaten:[{id:'a1', merk:'Dell', model:'Latitude 5420', serienummer:'SN1', status:'klaar'},{id:'a2', merk:'HP', model:'EliteDesk', serienummer:'SN2', status:'klaar'}],
-  klantportaal_apparaten:[{apparaat_id:'a2', team_id:TEAM, wis_status:'gewist'}]
+  klantportaal_apparaten:[{apparaat_id:'a2', team_id:TEAM, wis_status:'gewist'}],
+  klantportaal_aanbiedingen:[{id:'ab1', team_id:TEAM, status:'nieuw', bedrijf:'Gemeente <b>Test</b>', naam:'Piet', email:'piet@gemeente.nl',
+    regels:[{soort:'laptop', model:'Dell Latitude 7420', specs:'i5', aantal:10, staat:'goed', bron:'voorraad', per_stuk:{min:175,max:175}, waarde:{advies:299}}],
+    bod_min:1750, bod_max:1750, aangemaakt_op:'2026-09-19T10:00:00Z'}]
 };
 const storvoGeschreven=w=>w.__schrijf.filter(s=>!/^klantportaal_/.test(s[0]));
 
@@ -93,7 +96,7 @@ const storvoGeschreven=w=>w.__schrijf.filter(s=>!/^klantportaal_/.test(s[0]));
   const {w,d,fouten}=bouw(BASIS); await wacht(80);
   ok('start zonder fouten', !fouten.length, fouten.join(' | '));
   ok('aanvraag bovenaan', /Nieuwe aanvragen uit het portaal/.test(d.getElementById('vak').textContent) && /120 laptops/.test(d.getElementById('vak').textContent));
-  ok('teller in het menu', d.getElementById('aanvraagTeller').textContent==='1' && !d.getElementById('aanvraagTeller').hidden);
+  ok('teller in het menu', d.getElementById('aanvraagTeller').textContent==='2' && !d.getElementById('aanvraagTeller').hidden);
   ok('lopende opdracht in de tabel', /P0001/.test(d.getElementById('vak').textContent) && /Opgehaald/.test(d.getElementById('vak').textContent));
 
   await w.eval("aanvraagAannemen(null,'o2')"); await wacht(20);
@@ -143,6 +146,20 @@ const storvoGeschreven=w=>w.__schrijf.filter(s=>!/^klantportaal_/.test(s[0]));
   ok('uitnodiging via de functie', u.actie==='uitnodigen' && u.organisatie_id==='org1' && u.email==='piet@zorg.nl', JSON.stringify(u));
   await w.eval("toegangZetten(null,'k1',false)");
   ok('toegang weghalen', w.__schrijf.some(s=>s[0]==='klantportaal_gebruikers' && s[2] && s[2].actief===false));
+
+  console.log('\n── aanbieding van de website');
+  {
+    const {w:w2, d:d2}=bouw(BASIS); await wacht(80);
+    const t=d2.getElementById('vak').innerHTML;
+    ok('aanbieding staat bij de opdrachten, met bod en bron', /Aangeboden via de website/.test(t) && /Latitude 7420/.test(t) && /onze verkoopprijs/.test(t) && /1\.750/.test(t));
+    ok('bedrijfsnaam ge-escaped', t.includes('&lt;b&gt;Test'));
+    await w2.eval("aanbiedingAannemen(null,'ab1')"); await wacht(30);
+    ok('aannemen: organisatie en opdracht aangemaakt', w2.__schrijf.some(s=>s[0]==='klantportaal_organisaties'&&s[1]==='insert') && w2.__schrijf.some(s=>s[0]==='klantportaal_opdrachten'&&s[1]==='insert'&&s[2].bod_indicatief===1750&&s[2].aantal_verwacht===10));
+    ok('aannemen: aanbieding op aangenomen', w2.__schrijf.some(s=>s[0]==='klantportaal_aanbiedingen'&&s[2]&&s[2].status==='aangenomen'));
+    const u=(w2.__fetch.find(x=>x[1].actie==='uitnodigen')||[])[1]||{};
+    ok('aannemen: contactpersoon uitgenodigd als beheerder', u.email==='piet@gemeente.nl' && u.rol==='beheerder', JSON.stringify(u));
+    ok('ook hier niets naar Storvo geschreven', storvoGeschreven(w2).length===0);
+  }
 
   console.log('\n── Storvo blijft onaangeroerd');
   ok('geen enkele schrijfactie op een Storvo-tabel', storvoGeschreven(w).length===0, JSON.stringify(storvoGeschreven(w)));
