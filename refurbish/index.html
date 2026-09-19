@@ -5911,7 +5911,78 @@ function vrdLabel(id){
     <div class="prijskaart-vel" id="vrdLabelVel">${vrdLabelHtml(o)}</div>
   `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
 }
-function vrdNieuw(){ vrdForm(null); }
+/* Voorraad toevoegen: kies een BESTAAND product (dan komt er een partij bij, met
+   zijn eigen inkoopprijs) of maak een NIEUW product. Zo staat hetzelfde product
+   niet meer dubbel in de lijst als je het ergens anders voor een andere prijs koopt. */
+function vrdNieuw(){ vrdVoegVorm(''); }
+function vrdVoegVorm(bestaandId){
+  const g=id=>{ const e=document.getElementById(id); return e?e.value:''; };
+  const bewaard={ naam:g('vv_naam'), aantal:g('vv_aantal'), prijs:g('vv_prijs'), lev:g('vv_lev') };
+  const o = bestaandId ? voorraaddelen.find(x=>x.id===bestaandId) : null;
+  const opties=`<option value="">Nieuw product</option>`+
+    voorraaddelen.map(x=>`<option value="${x.id}"${x.id===bestaandId?' selected':''}>${esc(x.naam)} (${esc(batSoortNaam(x.soort||'anders'))})</option>`).join('');
+  const inhoud=`<div class="grid">
+      <div style="grid-column:1/-1"><label>Product</label>
+        <select id="vv_product" onchange="vrdVoegVorm(this.value)">${opties}</select></div>
+      ${o
+        ? `<div style="grid-column:1/-1"><p class="muted klein" style="margin:0">Nieuwe partij toevoegen aan <b>${esc(o.naam)}</b>. Het product staat zo niet dubbel; de partijen komen onder elkaar te staan.</p></div>`
+        : `<div style="grid-column:1/-1"><label>Naam</label><input id="vv_naam" value="${esc(bewaard.naam)}" placeholder="bijv. HP Bigpin 65w"></div>
+           <div><label>Soort</label><select id="vv_soort">
+             <option value="ssd">SSD</option><option value="ram">RAM</option><option value="accu">Accu</option><option value="lader" selected>Lader</option><option value="anders">Overig</option>
+           </select></div>
+           <div><label>Minimum</label><input id="vv_min" type="number" min="0" placeholder="0"></div>
+           <div><label>Verkoopprijs</label><input id="vv_verkoop" type="number" step="0.01" min="0" placeholder="0,00 (voor het label)"></div>`}
+      <div><label>Leverancier${o?' (deze partij)':''}</label><input id="vv_lev" value="${esc(bewaard.lev||(o?o.leverancier||'':''))}" placeholder="waar kocht je het"></div>
+      <div><label>Aantal</label><input id="vv_aantal" type="number" min="0" value="${esc(bewaard.aantal)}" placeholder="0"></div>
+      <div><label>Inkoopprijs per stuk</label><input id="vv_prijs" type="number" step="0.01" min="0" value="${esc(bewaard.prijs)}" placeholder="0,00"></div>
+    </div>
+    <p class="muted klein" style="margin-top:8px">Koop je hetzelfde product later ergens anders voor een andere prijs? Kies het hierboven en voeg een partij toe. Zo blijft het één product met meerdere partijen.</p>`;
+  venster('Voorraad toevoegen', inhoud, [
+    {tekst:o?'Partij toevoegen':'Toevoegen', klasse:'actie', doe:(kn)=>vrdVoegOpslaan(kn)}
+  ]);
+}
+async function vrdVoegOpslaan(knop){
+  const productId=(document.getElementById('vv_product')||{}).value||'';
+  const aantal=Math.max(0, Math.round(Number((document.getElementById('vv_aantal')||{}).value)||0));
+  const prijs=Math.round((Number((document.getElementById('vv_prijs')||{}).value)||0)*100)/100;
+  const lev=((document.getElementById('vv_lev')||{}).value||'').trim();
+  if(productId){
+    const o=voorraaddelen.find(x=>x.id===productId); if(!o){ toast('Product niet gevonden','let-op'); return; }
+    if(aantal<=0){ toast('Vul een aantal in','let-op'); return; }
+    await bezig(knop, async()=>{
+      const lots=(Array.isArray(o.lots)?o.lots.slice():[]).concat([{aantal, prijs}]);
+      const sync=vrdSync(lots);
+      const upd={lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()};
+      if(lev) upd.leverancier=lev;
+      const {error}=await sb.from('refurbish_voorraad').update(upd).eq('id',o.id);
+      if(error) throw error;
+      Object.assign(o, upd);
+      sluit(); tekenVoorraaddelen();
+      toast('Partij toegevoegd aan '+o.naam, true);
+    });
+  }else{
+    const naam=((document.getElementById('vv_naam')||{}).value||'').trim();
+    if(!naam){ toast('Vul een naam in','let-op'); return; }
+    const vk=(document.getElementById('vv_verkoop')||{}).value;
+    await bezig(knop, async()=>{
+      const sync=vrdSync(aantal>0?[{aantal, prijs}]:[]);
+      const rij={
+        team_id:account.team_id, naam,
+        soort:(document.getElementById('vv_soort')||{}).value||null,
+        min_aantal:Math.max(0, Math.round(Number((document.getElementById('vv_min')||{}).value)||0)),
+        leverancier:lev||null,
+        verkoopprijs: vk!=='' ? Math.round((Number(vk)||0)*100)/100 : null,
+        lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs,
+        bijgewerkt_op:new Date().toISOString()
+      };
+      const {data,error}=await sb.from('refurbish_voorraad').insert(rij).select().single();
+      if(error) throw error;
+      if(data) voorraaddelen.push(data);
+      sluit(); tekenVoorraaddelen();
+      toast('Product toegevoegd', true);
+    });
+  }
+}
 function vrdBewerk(id){ vrdForm(voorraaddelen.find(o=>o.id===id)||null); }
 function vrdForm(o){
   const s=o?o.soort||'':'';
