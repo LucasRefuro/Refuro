@@ -753,6 +753,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <button class="btn actie" onclick="batNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe batch</button>
       </div>
       <div id="batLijstVak">
+        <div class="kpis" id="batOnlineKpis" style="margin-bottom:16px"></div>
         <div class="card">
           <h2><svg class="i"><use href="#i-box"/></svg>Partijen <span class="muted" id="batTelling"></span></h2>
           <div id="batLijst"></div>
@@ -2105,6 +2106,39 @@ async function apparaatBatchZetten(id, val){
   toast(batch_id?('Toegewezen aan '+naam):'Uit de batch gehaald', true);
   tekenApparaat(); if(typeof tekenBatches==='function') tekenBatches();
 }
+
+/* Een toestel dat al op voorraad staat maar een fout blijkt te hebben, terug de
+   controle in sturen. Het gaat van de webshop, het portaal en uit een eventuele
+   bundel af (het hoort in behandeling nergens meer te koop te staan), de status
+   gaat terug naar te_controleren, en we openen meteen de controle-flow. De
+   hardware-rij blijft bestaan; slaagt de controle weer, dan komt hij daarmee
+   gewoon terug op voorraad. */
+async function appOpnieuwTesten(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const h=hardwareVan(a);
+  if(h && h.partner_id){ toast('Dit toestel is aan een partner toegewezen. Haal het eerst terug voor je opnieuw test.','let-op'); return; }
+  if(!confirm('Dit toestel terug naar Te controleren zetten om opnieuw te testen? Het gaat van de webshop, het portaal en uit een eventuele bundel af. Zodra de controle weer slaagt komt het vanzelf terug op voorraad.')) return;
+  const bundelWas=a.voorraad_batch_id;
+  if(h){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      if(session){
+        const kop={'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token};
+        if(h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id)
+          await fetch(SUPABASE_URL+'/functions/v1/shopify',{method:'POST',headers:kop,body:JSON.stringify({actie:'offline',hardware_id:h.id})});
+        if(h.kanalen && h.kanalen.partner)
+          await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{method:'POST',headers:kop,body:JSON.stringify({actie:'dashboard_uit',hardware_id:h.id})});
+      }
+    }catch(e){ console.error('opnieuw testen: offline halen', e); }
+  }
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({status:'te_controleren', voorraad_batch_id:null, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Mislukt','fout'); return; }
+  await allesLaden();
+  if(bundelWas) await vbPrijsHerdelen(bundelWas);
+  toast('Terug naar Te controleren. Je kunt opnieuw testen.', true);
+  appOpen(id);
+}
 function tekenApparaat(){
   const el=document.getElementById('appPagina');
   if(!el) return;
@@ -2152,6 +2186,7 @@ function tekenApparaat(){
       ${OP_VOORRAAD.includes(a.status) ? (staatOnline(a)
         ? `<button class="btn ghost" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Advertentie aanpassen</button>`
         : `<button class="btn oranje" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`):''}
+      ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appOpnieuwTesten('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Opnieuw testen</button>`:''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
       <button class="btn ghost" onclick="appNaamWijzig('${a.id}')"><svg class="i s"><use href="#i-note"/></svg>Naam wijzigen</button>
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
@@ -6421,6 +6456,27 @@ function batCijfers(id){
           omzet, omzetBon, omzetZb, winst, btw, margeGemengd, devs};
 }
 
+/* De geschatte opbrengst van alles wat nu online staat, gesplitst per kanaal:
+   de shop (Shopify), het portaal (partner-dashboard of toegewezen aan een
+   partner) en de bundels (tweede webshop). Elke laptop telt een keer; zit hij in
+   een bundel dan telt hij als bundel, ook als hij daarnaast nog ergens staat.
+   De opbrengst per laptop is de vraagprijs op de hardware-rij (bruto, zoals de
+   teKoopWaarde op de batchpagina). Verkochte laptops tellen niet mee. */
+function onlineOpbrengst(){
+  let shop=0, portaal=0, bundel=0, nShop=0, nPortaal=0, nBundel=0;
+  apparaten.forEach(a=>{
+    const h=hardwareVan(a);
+    if(!h || h.status==='verkocht') return;
+    const bedrag=Number(h.verkoop)||0;
+    if(a.voorraad_batch_id){ bundel+=bedrag; nBundel++; }
+    else if(h.partner_id || (h.kanalen && h.kanalen.partner)){ portaal+=bedrag; nPortaal++; }
+    else if(h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id){ shop+=bedrag; nShop++; }
+  });
+  const r=x=>Math.round(x*100)/100;
+  return {shop:r(shop), portaal:r(portaal), bundel:r(bundel), totaal:r(shop+portaal+bundel),
+          nShop, nPortaal, nBundel, aantal:nShop+nPortaal+nBundel};
+}
+
 function batExtraSom(a){
   return (Array.isArray(a.extra_kosten)?a.extra_kosten:[]).reduce((n,k)=>n+(Number(k.bedrag)||0),0);
 }
@@ -6544,6 +6600,17 @@ function tekenBatches(){
   batHuidig=null; lijstVak.hidden=false; detailVak.hidden=true; detailVak.innerHTML='';
   const tel=document.getElementById('batTelling');
   if(tel) tel.textContent=batches.length?'('+batches.length+')':'';
+  const okpi=document.getElementById('batOnlineKpis');
+  if(okpi){
+    const o=onlineOpbrengst();
+    okpi.innerHTML = o.aantal
+      ? `<div class="kpi"><div class="l">Geschatte opbrengst online</div><div class="v">${euro(o.totaal)}</div>
+           <div class="muted klein" style="margin-top:6px">${o.aantal} ${o.aantal===1?'laptop':'laptops'} online</div></div>`
+        + `<div class="kpi"><div class="l">Op de shop</div><div class="v">${euro(o.shop)}</div><div class="muted klein" style="margin-top:6px">${o.nShop} ${o.nShop===1?'laptop':'laptops'}</div></div>`
+        + `<div class="kpi"><div class="l">Op het portaal</div><div class="v">${euro(o.portaal)}</div><div class="muted klein" style="margin-top:6px">${o.nPortaal} ${o.nPortaal===1?'laptop':'laptops'}</div></div>`
+        + `<div class="kpi"><div class="l">In bundels</div><div class="v">${euro(o.bundel)}</div><div class="muted klein" style="margin-top:6px">${o.nBundel} ${o.nBundel===1?'laptop':'laptops'}</div></div>`
+      : '';
+  }
   const vak=document.getElementById('batLijst'); if(!vak) return;
   if(!batches.length){
     vak.innerHTML='<p class="muted">Nog geen batches. Maak een partij aan en koppel er toestellen aan, dan zie je de investering, de omzet en de winst per partij.</p>';
@@ -6576,6 +6643,7 @@ function renderBatchDetail(){
   const devs=c.devs;
   const kosten=Array.isArray(b.kosten)?b.kosten:[];
   const onderdelen=batOnderdelen(b, devs);
+  const inBundel=devs.filter(a=>a.voorraad_batch_id);
 
   const devRijen=devs.map(a=>{
     const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
@@ -6584,7 +6652,7 @@ function renderBatchDetail(){
     const bet=verkocht?(hw.verkocht_via==='webshop'?'webshop':(hw.verkocht_betaal||'cash')):null;
     const hoe=verkocht
       ? `<span class="batbon ${bet==='cash_zb'?'batbon-zb':''}">${batBetaalNaam(bet)}</span>`
-      : (hw?'<span class="locpil">te koop</span>':'<span class="locpil leeg">werkbank</span>');
+      : (a.voorraad_batch_id?'<span class="batpil">in bundel</span>':(hw?'<span class="locpil">te koop</span>':'<span class="locpil leeg">werkbank</span>'));
     return `<tr>
       <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b>${a.code?`<div class="muted klein mono">${esc(a.code)}</div>`:''}</td>
       <td class="num">${euro(Number(a.inkoop)||0)}</td>
@@ -6669,6 +6737,22 @@ function renderBatchDetail(){
         <tbody>${devRijen}</tbody></table></div>`
         :'<p class="muted">Nog geen toestellen. Voeg ze toe bij Toevoegen en koppel ze hier, of gebruik de knop hierboven.</p>'}
     </div>
+
+    ${inBundel.length?`<div class="card">
+      <h2><svg class="i"><use href="#i-tag"/></svg>Al in een bundel <span class="muted">(${inBundel.length})</span></h2>
+      <p class="muted klein" style="margin-bottom:8px">Deze laptops uit deze partij staan al in een verkoop-bundel voor de tweede webshop.</p>
+      <div class="tabelrol"><table>
+        <thead><tr><th>Toestel</th><th>Bundel</th><th class="num">Prijs per stuk</th></tr></thead>
+        <tbody>${inBundel.map(a=>{
+          const v=vbundels.find(x=>x.id===a.voorraad_batch_id);
+          const hw=a.hardware_id?hardwares.find(h=>h.id===a.hardware_id):null;
+          return `<tr>
+            <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b>${a.code?`<div class="muted klein mono">${esc(a.code)}</div>`:''}</td>
+            <td>${v?esc(vbLabel(v)):'<span class="muted">—</span>'}</td>
+            <td class="num">${hw&&hw.verkoop!=null?euro(hw.verkoop):'<span class="muted">—</span>'}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+    </div>`:''}
 
     <div class="card">
       <h2><svg class="i"><use href="#i-wrench"/></svg>Extra investering${onderdelen?` <span class="muted">(${onderdelen})</span>`:''}</h2>
