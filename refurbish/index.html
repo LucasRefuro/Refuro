@@ -7666,21 +7666,23 @@ function web2KaartTeken(){
 }
 function web2KoppelOpen(){
   venster('Tweede webshop koppelen', `
-    <p class="pv">Maak in je tweede Shopify-winkel een custom app (Instellingen, Apps, Apps ontwikkelen) met de rechten voor producten, voorraad, locaties, bestellingen en publicaties. Plak hier het winkeladres en het toegangstoken.</p>
+    <p class="pv">Maak in het Dev Dashboard van je tweede Shopify-winkel een app met de rechten voor producten, voorraad, locaties, bestellingen en publicaties, en installeer die op je winkel. Neem daarna de Client ID en het Client secret over.</p>
     <div class="grid">
       <div><label>Winkeladres</label><input id="w2_domein" placeholder="jouwwinkel.myshopify.com"></div>
-      <div><label>Toegangstoken</label><input id="w2_token" placeholder="shpat_..."></div>
+      <div><label>Client ID</label><input id="w2_clientid" placeholder="uit het Dev Dashboard"></div>
+      <div><label>Client secret</label><input id="w2_secret" placeholder="uit het Dev Dashboard"></div>
     </div>
-    <p class="muted klein" style="margin-top:8px">Het token gaat versleuteld naar de server; wij zien het nooit terug.</p>
+    <p class="muted klein" style="margin-top:8px">Het secret gaat versleuteld naar de server; wij zien het nooit terug. Storvo maakt er zelf telkens een tijdelijk token van.</p>
   `, [{tekst:'Koppelen', klasse:'actie', doe:(k)=>web2Koppel(k)}]);
 }
 async function web2Koppel(knop){
   const domein=(document.getElementById('w2_domein').value||'').trim();
-  const token=(document.getElementById('w2_token').value||'').trim();
-  if(!domein || !token){ toast('Vul het winkeladres en het token in','let-op'); return; }
+  const clientId=(document.getElementById('w2_clientid').value||'').trim();
+  const clientSecret=(document.getElementById('w2_secret').value||'').trim();
+  if(!domein || !clientId || !clientSecret){ toast('Vul het winkeladres, de Client ID en het Client secret in','let-op'); return; }
   await bezig(knop, async()=>{
     let uit;
-    try{ uit=await web2Roep({actie:'opslaan', domein, token}); }
+    try{ uit=await web2Roep({actie:'opslaan', domein, client_id:clientId, client_secret:clientSecret}); }
     catch(e){
       if(e.mist&&e.mist.length) throw new Error('Er ontbreken nog rechten in je Shopify-app: '+e.mist.join(', '));
       throw e;

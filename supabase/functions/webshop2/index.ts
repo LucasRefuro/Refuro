@@ -4,12 +4,16 @@
 // Bewust losgekoppeld van de eerste webshop: die draait via de functies shopify,
 // shopify-koppelen en shopify-installeren op kanaal 'shopify'. Deze functie raakt
 // die niet aan en werkt op kanaal 'shopify2', zodat er niets kan breken aan de
-// winkel die al verkoopt. Koppelen gaat met een toegangstoken uit een custom app
-// in de tweede winkel (geen OAuth, geen gedeelde app-instellingen).
+// winkel die al verkoopt.
+//
+// Koppelen gaat met een app uit het Dev Dashboard van de tweede winkel. Sinds 2026
+// geeft Shopify daar geen vast token meer, maar een Client ID + Client secret. Wij
+// wisselen die met de client-credentials-grant zelf om naar een token (24 uur
+// geldig), telkens vers per bewerking. Zo hoeft de winkelier nooit een verlopen
+// token te vervangen en komt er geen omleiding aan te pas.
 //
 // Een bundel is EEN product op deze tweede shop: een titel, een omschrijving, de
-// geuploade foto's en de totale vraagprijs. De laptops erin staan in Storvo per
-// stuk voor vraagprijs/aantal, maar op de shop is het een lot.
+// geuploade foto's en de totale vraagprijs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -56,7 +60,7 @@ function domeinOpschonen(rauw: string) {
   return d;
 }
 
-// Het token versleuteld opslaan met KOPPELING_SLEUTEL (AES-GCM), net als de eerste shop.
+// De client secret versleuteld opslaan met KOPPELING_SLEUTEL (AES-GCM).
 async function sleutel() {
   const rauw = Deno.env.get("KOPPELING_SLEUTEL");
   if (!rauw) throw new Error("De instelling KOPPELING_SLEUTEL ontbreekt.");
@@ -84,6 +88,28 @@ function nieuwPad() {
   return btoa(String.fromCharCode(...b)).replace(/[^a-zA-Z0-9]/g, "").slice(0, 28);
 }
 
+// De client-credentials-grant: wissel Client ID + secret om voor een tokentje van
+// 24 uur, scoped op wat je in het Dev Dashboard hebt aangevinkt. De app moet wel
+// eerst op de winkel geinstalleerd zijn.
+async function tokenHalen(domein: string, clientId: string, clientSecret: string): Promise<{ token: string; scope: string }> {
+  const res = await fetch(`https://${domein}/admin/oauth/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+    body: new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
+  });
+  const tekst = await res.text();
+  let uit: any = {};
+  try { uit = tekst ? JSON.parse(tekst) : {}; } catch { /* leeg mag */ }
+  if (!res.ok || !uit.access_token) {
+    const m = String(uit.error_description || uit.error || ("Shopify gaf status " + res.status));
+    if (/client|unauthorized|invalid|not installed|installation/i.test(m)) {
+      throw new Error("Shopify accepteert de Client ID of het Client secret niet. Controleer ze, en of je de app op je winkel hebt geinstalleerd (Dev Dashboard, Install app).");
+    }
+    throw new Error("Kon geen toegang krijgen tot de tweede webshop: " + m);
+  }
+  return { token: uit.access_token, scope: String(uit.scope || "") };
+}
+
 // Een ingang voor GraphQL, met dezelfde foutafhandeling als de eerste shop.
 async function graphql(k: { domein: string; token: string }, query: string, variabelen?: unknown) {
   const res = await fetch(`https://${k.domein}/admin/api/${API}/graphql.json`, {
@@ -91,7 +117,7 @@ async function graphql(k: { domein: string; token: string }, query: string, vari
     headers: { "X-Shopify-Access-Token": k.token, "Content-Type": "application/json", "Accept": "application/json" },
     body: JSON.stringify({ query, variables: variabelen || {} }),
   });
-  if (res.status === 401 || res.status === 403) throw new Error("Shopify accepteert het token niet. Koppel de tweede webshop opnieuw.");
+  if (res.status === 401 || res.status === 403) throw new Error("Shopify accepteert de toegang niet. Koppel de tweede webshop opnieuw.");
   if (res.status === 429) throw new Error("Shopify vraagt om even te wachten. Probeer het over een halve minuut nog eens.");
   const tekst = await res.text();
   let uit: any = {};
@@ -145,13 +171,16 @@ async function wieBelt(req: Request) {
   return acc || null;
 }
 
+// De koppeling ophalen EN meteen een vers token halen (24 uur geldig).
 async function koppeling(teamId: string) {
   const { data } = await admin.from("winkel_koppelingen").select("*").eq("team_id", teamId).eq("kanaal", KANAAL).maybeSingle();
   if (!data) return null;
-  return { ...data, token: await ontsleutel(data.token_versleuteld) };
+  const clientSecret = await ontsleutel(data.token_versleuteld);
+  const { token } = await tokenHalen(data.domein, data.client_id, clientSecret);
+  return { ...data, token };
 }
 
-// Wat de browser mag zien: nooit het token, wel of het goed staat.
+// Wat de browser mag zien: nooit de secret, wel of het goed staat.
 function veiligeStand(rij: any, extra?: Record<string, unknown>) {
   if (!rij) return { ok: true, gekoppeld: false, rechten: RECHTEN, ...(extra || {}) };
   const mist = Object.keys(RECHTEN).filter((r) => !(rij.scopes || []).includes(r));
@@ -188,44 +217,35 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(veiligeStand(data)), { headers: cors });
     }
 
-    // Koppelen met een geplakt token: eerst 'testen' (laat zien welke winkel het is
-    // en welke rechten er missen), dan 'opslaan'.
+    // Koppelen met Client ID + Client secret uit het Dev Dashboard.
     if (actie === "testen" || actie === "opslaan") {
       const domein = domeinOpschonen(lijf?.domein);
-      const token = String(lijf?.token || "").trim();
+      const clientId = String(lijf?.client_id || "").trim();
+      const clientSecret = String(lijf?.client_secret || "").trim();
       if (!domein) return fout("Dat winkeladres herken ik niet. Het ziet eruit als jouwwinkel.myshopify.com");
-      if (!token) return fout("Vul het toegangstoken in");
-      if (!/^shp(at|ca|ss)_[A-Za-z0-9]+$/.test(token)) {
-        return fout("Dit lijkt geen Shopify-token. Een token begint met shpat_ en staat onder API-referenties in je custom app.");
-      }
+      if (!clientId || !clientSecret) return fout("Vul de Client ID en het Client secret in");
 
-      let scopes: string[];
-      try { scopes = await effectieveScopes({ domein, token }); }
-      catch (e) {
-        const m = e instanceof Error ? e.message : "";
-        if (/token/i.test(m)) return fout("Shopify herkent dit token niet. Kijk of je hem helemaal hebt gekopieerd.");
-        throw e;
-      }
+      const { token } = await tokenHalen(domein, clientId, clientSecret);
+      const scopes = await effectieveScopes({ domein, token });
       const mist = Object.keys(RECHTEN).filter((r) => !scopes.includes(r));
-      if (mist.length && actie === "testen") {
-        // Nog even door met de winkelinfo als het kan, maar meld wel de missende rechten.
-        return new Response(JSON.stringify({ ok: true, geldig: true, domein, winkelnaam: null, scopes, mist, rechten: RECHTEN }), { headers: cors });
-      }
-      const winkel = await winkelVerkennen({ domein, token });
 
       if (actie === "testen") {
+        let winkel: any = null;
+        try { winkel = await winkelVerkennen({ domein, token }); } catch { /* rechten kunnen missen; toch de scopes teruggeven */ }
         return new Response(JSON.stringify({
-          ok: true, geldig: true, domein: winkel.domein, winkelnaam: winkel.naam, valuta: winkel.valuta,
-          scopes, mist, rechten: RECHTEN, publicatie: winkel.publicatieNaam, locatie: winkel.locatieNaam,
+          ok: true, geldig: true, domein: winkel?.domein || domein, winkelnaam: winkel?.naam || null,
+          valuta: winkel?.valuta || null, scopes, mist, rechten: RECHTEN,
+          publicatie: winkel?.publicatieNaam || null, locatie: winkel?.locatieNaam || null,
         }), { headers: cors });
       }
 
       if (mist.length) return fout("Er ontbreken nog rechten in je Shopify-app", 400, { mist, rechten: RECHTEN });
+      const winkel = await winkelVerkennen({ domein, token });
 
-      const { data: oud } = await admin.from("winkel_koppelingen").select("id, webhook_pad").eq("team_id", acc.team_id).eq("kanaal", KANAAL).maybeSingle();
+      const { data: oud } = await admin.from("winkel_koppelingen").select("id").eq("team_id", acc.team_id).eq("kanaal", KANAAL).maybeSingle();
       const basis: Record<string, unknown> = {
-        team_id: acc.team_id, kanaal: KANAAL, via: "token", client_id: null,
-        domein: winkel.domein, token_versleuteld: await versleutel(token), token_staart: token.slice(-4),
+        team_id: acc.team_id, kanaal: KANAAL, via: "client_credentials", client_id: clientId,
+        domein: winkel.domein, token_versleuteld: await versleutel(clientSecret), token_staart: clientSecret.slice(-4),
         winkelnaam: winkel.naam, valuta: winkel.valuta, scopes,
         publicatie_id: winkel.publicatie, locatie_id: winkel.locatie,
         status: "actief", fout: null, laatst_gecontroleerd: new Date().toISOString(),
@@ -251,7 +271,7 @@ Deno.serve(async (req) => {
         .select("*").eq("id", bundelId).eq("team_id", acc.team_id).maybeSingle();
       if (!v) return fout("Deze bundel is niet gevonden", 404);
       const k = await koppeling(acc.team_id);
-      if (!k) return fout("Er is nog geen tweede webshop gekoppeld. Doe dat eerst bij Instellingen.", 409);
+      if (!k) return fout("Er is nog geen tweede webshop gekoppeld. Doe dat eerst bij Bundels.", 409);
 
       if (actie === "bundel_offline") {
         const s = v.shopify;
