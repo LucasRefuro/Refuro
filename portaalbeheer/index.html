@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Storvo Klantportaal</title>
+<title>Reloop it · Portaalbeheer</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
    Klantportaal beheren
@@ -21,39 +21,43 @@
    eigen klantportaal_-tabellen; aan Storvo zelf verandert niets.
    ═══════════════════════════════════════════════════════════════════════════ */
 :root { color-scheme: light;
-  --groen:#0B5B52; --groen-d:#093F39; --navy:#123F39; --actie:#E88A1D; --actie-d:#CE7811;
-  --tekst:#17201E; --bg:#F7F6F3; --card:#FFFFFF; --soft-2:#F0EEE8; --border:#ECEAE4;
-  --lblauw:#E7F1EE; --muted:#5B6663; --muted-l:#8A938F;
-  --green:#1E9E6A; --green-soft:#E3F4EC; --green-tekst:#177A51;
-  --amber:#E8B31D; --amber-soft:#FAF0D8; --amber-tekst:#946C07;
+  /* Reloop it-huisstijl (brandbook): groen, bos, lime, kalk en inkt. */
+  --groen:#0F6B4B; --groen-d:#0A3D2C; --bos:#0A3D2C; --lime:#C6F36B; --lime-d:#B5E558;
+  --actie:#C6F36B; --actie-d:#B5E558;
+  --tekst:#10231B; --bg:#F4F1EA; --card:#FFFFFF; --soft-2:#EFEBE2; --border:#DEDAD0;
+  --lblauw:#E3F0E8; --muted:#5A6660; --muted-l:#7F8A84;
+  --green:#0F6B4B; --green-soft:#E3F0E8; --green-tekst:#0F6B4B;
+  --amber:#E8B31D; --amber-soft:#FFF1D6; --amber-tekst:#8A5A00;
   --red:#D64545; --red-soft:#FAE4E4; --red-tekst:#A33333;
-  --radius:24px; --radius-s:18px; --pil:100px;
-  --schaduw:0 6px 24px rgba(23,32,30,.07); --schaduw-l:0 10px 34px rgba(23,32,30,.10); }
+  --display:'Bricolage Grotesque', Georgia, serif; --body:'Figtree', system-ui, sans-serif; --mono-f:'JetBrains Mono', ui-monospace, monospace;
+  --radius:20px; --radius-s:14px; --pil:999px;
+  --schaduw:0 6px 24px rgba(16,35,27,.07); --schaduw-l:0 10px 34px rgba(16,35,27,.12); }
 /* Verbergen moet altijd winnen, ook als er ergens display:flex op staat. */
 [hidden] { display:none !important; }
 * { box-sizing:border-box; margin:0; padding:0; }
 html { overflow-x:clip; }
-body { font-family:'Instrument Sans', system-ui, sans-serif; font-size:15px; color:var(--tekst); background:var(--bg); line-height:1.55; overflow-x:clip; }
-h1, h2, h3 { font-family:'Sora', sans-serif; letter-spacing:-.01em; }
-h1 { font-size:26px; font-weight:800; letter-spacing:-.02em; }
+body { font-family:var(--body); -webkit-font-smoothing:antialiased; font-size:15px; color:var(--tekst); background:var(--bg); line-height:1.55; overflow-x:clip; }
+h1, h2, h3 { font-family:var(--display); letter-spacing:-.03em; line-height:1.1; }
+:focus-visible { outline:3px solid var(--lime); outline-offset:2px; }
+h1 { font-size:34px; font-weight:800; letter-spacing:-.04em; }
 h2 { font-size:18px; font-weight:800; margin-bottom:6px; }
 h3 { font-size:15px; font-weight:800; }
 a { color:var(--groen); }
 svg.i { width:20px; height:20px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .muted { color:var(--muted); }
 .klein { font-size:13px; }
-.mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; }
+.mono { font-family:var(--mono-f); font-size:12.5px; }
 
 /* ---------- vakken ---------- */
 #app { display:flex; min-height:100vh; }
-aside { width:246px; background:var(--card); border-right:1.5px solid var(--border); padding:26px 16px 20px; display:flex; flex-direction:column; gap:4px; position:sticky; top:0; height:100vh; flex-shrink:0; }
+aside { width:246px; background:var(--bos); color:#fff; border-right:none; padding:26px 16px 20px; display:flex; flex-direction:column; gap:4px; position:sticky; top:0; height:100vh; flex-shrink:0; }
 .logo { display:flex; align-items:center; gap:11px; padding:0 6px 24px; }
-.logo svg { width:40px; height:40px; }
-.logo b { display:block; font-family:'Sora', sans-serif; font-weight:800; font-size:17px; line-height:1.1; }
-.logo small { font-size:10px; font-weight:600; color:var(--muted-l); letter-spacing:.12em; text-transform:uppercase; }
-.navknop { display:flex; align-items:center; gap:11px; width:100%; text-decoration:none; text-align:left; background:none; border:none; color:var(--muted); padding:11px 16px; border-radius:var(--pil); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
-.navknop:hover { background:var(--soft-2); color:var(--tekst); }
-.navknop.aan { background:var(--lblauw); color:var(--groen); }
+.logo { flex-direction:column; align-items:flex-start; gap:10px; }
+.logo img { height:30px; width:auto; display:block; }
+.logo small { font-family:var(--mono-f); font-size:11px; font-weight:500; color:var(--lime); letter-spacing:.1em; text-transform:uppercase; }
+.navknop { display:flex; align-items:center; gap:11px; width:100%; text-decoration:none; text-align:left; background:none; border:none; color:#D9E8DF; padding:11px 16px; border-radius:var(--pil); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+.navknop:hover { background:rgba(255,255,255,.08); color:#fff; }
+.navknop.aan { background:var(--lime); color:var(--tekst); }
 .teller { margin-left:auto; background:var(--amber-soft); color:var(--amber-tekst); font-size:11px; font-weight:700; border-radius:var(--pil); min-width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; padding:0 6px; }
 .ruimte { flex:1; }
 main { flex:1; min-width:0; padding:30px 40px 80px; max-width:1400px; margin:0 auto; width:100%; }
@@ -64,22 +68,22 @@ main { flex:1; min-width:0; padding:30px 40px 80px; max-width:1400px; margin:0 a
 .kaart.melding { border:1.5px solid var(--amber); background:var(--amber-soft); box-shadow:none; }
 .kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:18px; }
 .kpi { background:var(--card); border-radius:var(--radius-s); padding:18px 22px; box-shadow:var(--schaduw); }
-.kpi .l { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
-.kpi .v { font-family:'Sora', sans-serif; font-size:26px; font-weight:800; }
+.kpi .l { font-family:var(--mono-f); font-size:11px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
+.kpi .v { font-family:var(--display); font-size:30px; font-weight:800; letter-spacing:-.03em; }
 
 /* ---------- knoppen en velden ---------- */
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--groen); color:#fff; border:none; border-radius:var(--pil); padding:11px 20px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; text-decoration:none; white-space:nowrap; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--groen); color:#fff; border:none; border-radius:var(--pil); padding:12px 22px; font-size:14.5px; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; white-space:nowrap; }
 .btn:hover { background:var(--groen-d); }
 .btn:disabled { opacity:.5; cursor:default; }
-.btn.actie { background:var(--actie); }
+.btn.actie { background:var(--actie); color:var(--tekst); }
 .btn.actie:hover { background:var(--actie-d); }
-.btn.licht { background:#fff; color:var(--groen); border:1.5px solid rgba(11,91,82,.24); }
+.btn.licht { background:#fff; color:var(--groen); border:1.5px solid rgba(15,107,75,.28); }
 .btn.licht:hover { background:var(--lblauw); }
 .btn.klein { padding:7px 14px; font-size:12.5px; }
-label { display:block; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
+label { display:block; font-family:var(--mono-f); font-size:11.5px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
 input[type=text], input[type=number], input[type=email], input[type=password], input[type=search], input[type=date], input[type=url], textarea, select {
   width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:14px; font-size:14px; font-family:inherit; background:#fff; color:var(--tekst); }
-input:focus, textarea:focus, select:focus { outline:none; border-color:var(--groen); box-shadow:0 0 0 4px rgba(11,91,82,.10); }
+input:focus, textarea:focus, select:focus { outline:none; border-color:var(--groen); box-shadow:0 0 0 4px rgba(198,243,107,.55); }
 select { appearance:none; -webkit-appearance:none; cursor:pointer; padding-right:36px;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235B6663' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 14px center; }
@@ -92,7 +96,7 @@ textarea { resize:vertical; min-height:80px; }
 /* ---------- tabellen en labels ---------- */
 .tabelrol { overflow-x:auto; border-radius:var(--radius-s); }
 table { width:100%; border-collapse:collapse; font-size:13.5px; background:var(--card); }
-th { text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); padding:12px 12px; border-bottom:1px solid var(--soft-2); white-space:nowrap; }
+th { text-align:left; font-family:var(--mono-f); font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); padding:12px 12px; border-bottom:1px solid var(--soft-2); white-space:nowrap; }
 td { padding:12px 12px; border-bottom:1px solid var(--soft-2); vertical-align:middle; }
 tr:last-child td { border-bottom:none; }
 tr.klik { cursor:pointer; }
@@ -115,13 +119,13 @@ td select { padding:8px 32px 8px 10px; font-size:13px; border-radius:10px; min-w
 .tussenkop { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:22px 0 10px; }
 
 /* ---------- inloggen, venster, melding ---------- */
-#inlog { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #123F39, #0E4C44 55%, #0B5B52); padding:20px; }
-.inlogkaart { background:#fff; border-radius:24px; padding:36px 32px 28px; width:400px; max-width:100%; box-shadow:0 30px 80px rgba(10,20,60,.35); }
+#inlog { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:var(--groen); padding:20px; }
+.inlogkaart { background:#fff; border-radius:28px; padding:36px 32px 28px; width:400px; max-width:100%; box-shadow:0 30px 80px rgba(10,20,60,.35); }
 .inlogkaart h2 { font-size:22px; margin:14px 0 4px; }
 .inlogkaart p { color:var(--muted); margin-bottom:18px; font-size:14.5px; }
 .inlogkaart .veld { margin-bottom:12px; }
 .fouttekst { color:var(--red-tekst); font-size:13px; margin-top:8px; }
-#venster { position:fixed; inset:0; background:rgba(18,63,57,.44); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+#venster { position:fixed; inset:0; background:rgba(10,61,44,.44); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
 .vensterkaart { background:#fff; border-radius:var(--radius); padding:28px; width:480px; max-width:100%; max-height:88vh; overflow-y:auto; box-shadow:var(--schaduw-l); }
 .vensterkaart h2 { margin-bottom:14px; }
 .vensterknoppen { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
@@ -131,7 +135,7 @@ td select { padding:8px 32px 8px 10px; font-size:13px; border-radius:10px; min-w
 
 @media (max-width:900px) {
   #app { flex-direction:column; }
-  aside { position:static; width:100%; height:auto; flex-direction:row; overflow-x:auto; padding:10px; border-right:none; border-bottom:1.5px solid var(--border); }
+  aside { position:static; width:100%; height:auto; flex-direction:row; overflow-x:auto; padding:10px; border-right:none; }
   .logo, .ruimte { display:none; }
   .navknop { width:auto; white-space:nowrap; }
   main { padding:18px 14px 60px; }
@@ -148,7 +152,7 @@ td select { padding:8px 32px 8px 10px; font-size:13px; border-radius:10px; min-w
 
 <div id="app" hidden>
   <aside>
-    <div class="logo"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Klantportaal</b><small>Storvo</small></div></div>
+    <div class="logo"><img src="/klantportaal/merk/reloopit-logo-op-groen.svg" alt="Reloop it"><small>Portaalbeheer</small></div>
     <button class="navknop aan" data-tab="opdrachten" onclick="naarTab('opdrachten')"><svg class="i" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>Opdrachten<span class="teller" id="aanvraagTeller" hidden></span></button>
     <button class="navknop" data-tab="organisaties" onclick="naarTab('organisaties')"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5a3.5 3.5 0 0 1 0 6.5M18 14a6 6 0 0 1 3.5 6"/></svg>Organisaties</button>
     <button class="navknop" data-tab="instellingen" onclick="naarTab('instellingen')"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Instellingen</button>
@@ -212,8 +216,8 @@ function stapVan(o){ let i = 0; STAPPEN.forEach(([k], n) => { if(o[k]) i = n + 1
 /* ═══════════════ inloggen ═══════════════ */
 function toonInlog(melding){
   f('app').hidden = true; f('inlog').hidden = false;
-  f('inlogKaart').innerHTML = `<svg viewBox="0 0 400 400" width="48" height="48" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <h2>Klantportaal beheren</h2>
+  f('inlogKaart').innerHTML = `<img src="/klantportaal/merk/reloopit-logo.svg" alt="Reloop it" style="height:34px;width:auto;display:block">
+    <h2>Portaalbeheer</h2>
     <p>Log in met je Storvo-account.</p>
     ${melding ? `<p class="fouttekst">${esc(melding)}</p>` : ''}
     <div class="veld"><label for="inlogMail">E-mail</label><input type="email" id="inlogMail" autocomplete="email" onkeydown="if(event.key==='Enter')f('inlogWw').focus()"></div>
