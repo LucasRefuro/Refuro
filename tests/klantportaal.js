@@ -45,6 +45,7 @@ const __opties=${JSON.stringify(opties)};
 window.supabase={createClient:(url,key,cfg)=>{ window.__cfg=cfg||null; return {
   auth:{ getSession:async()=>({data:{session:__opties.sessie?{access_token:'tok',user:{id:'u1'}}:null}}),
          onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
+         signInWithPassword:async(a)=>{ window.__ww=a; return {error:__opties.wwFout?{message:'Invalid login credentials'}:null}; },
          signOut:async()=>{ window.__uitgelogd=true; return {}; } },
   rpc:async(naam,args)=>{ window.__rpc.push([naam,args]);
     if(naam==='klantportaal_huisstijl') return {data:{merknaam:'Reloop it', kleur:'#0F6B4B', contact_email:'info@reloopit.nl'}};
@@ -88,6 +89,40 @@ const zichtbaar=(el)=>el && !el.hidden;
     const v=w.__fetch[0]||[];
     ok('inloglink aangevraagd via de functie', /functions\/v1\/klantportaal$/.test(v[0]||'') && v[1].actie==='inloglink' && v[1].email==='sanne@zorggroep.nl' && v[1].domein==='portaal.reloopit.nl', JSON.stringify(v));
     ok('daarna: check je mail', /Check je mail/.test(d.getElementById('inlogKaart').textContent));
+  }
+
+  console.log('\n── inloggen met wachtwoord');
+  {
+    const {w,d,fouten}=await open({sessie:false, wwFout:true});
+    ok('wachtwoordveld staat er', !!d.getElementById('inlogWw') && !fouten.length, fouten.join(' | '));
+    d.getElementById('inlogMail').value='sanne@zorggroep.nl'; d.getElementById('inlogWw').value='geheim123';
+    await w.eval('wachtwoordInloggen()'); await wacht(10);
+    ok('inloggen met e-mail en wachtwoord', w.__ww && w.__ww.email==='sanne@zorggroep.nl' && w.__ww.password==='geheim123');
+    ok('fout wachtwoord: knop weer bruikbaar', !d.getElementById('wwKnop').disabled);
+    w.eval("toonInlog('vergeten')");
+    d.getElementById('inlogMail').value='sanne@zorggroep.nl';
+    await w.eval("inlogLinkVragen('wachtwoord')"); await wacht(10);
+    const v=w.__fetch[0]||[];
+    ok('wachtwoord vergeten: link aangevraagd', v[1] && v[1].actie==='inloglink' && v[1].doel==='wachtwoord', JSON.stringify(v));
+  }
+
+  console.log('\n── account aanmaken na de uitnodiging');
+  {
+    const nieuw=Object.assign({}, OVERZICHT, {account_klaar:false, email:'sanne@zorggroep.nl'});
+    const {w,d,fouten}=await open({sessie:true, overzicht:nieuw}, '?stap=account');
+    ok('account-scherm in plaats van de app', /Maak je account aan/.test(d.getElementById('inlogKaart').textContent) && !zichtbaar(d.getElementById('app')) && !fouten.length, fouten.join(' | '));
+    d.getElementById('accWw').value='kort'; d.getElementById('accWw2').value='kort';
+    await w.eval('accountOpslaan(false)');
+    ok('te kort wachtwoord: niets verstuurd', w.__fetch.length===0);
+    d.getElementById('accWw').value='geheim123'; d.getElementById('accWw2').value='geheim124';
+    await w.eval('accountOpslaan(false)');
+    ok('ongelijke wachtwoorden: niets verstuurd', w.__fetch.length===0);
+    d.getElementById('accNaam').value='Sanne de Vries';
+    d.getElementById('accWw').value='geheim123'; d.getElementById('accWw2').value='geheim123';
+    await w.eval('accountOpslaan(false)'); await wacht(20);
+    const v=w.__fetch[0]||[];
+    ok('account aangemaakt via de functie', v[1] && v[1].actie==='account_aanmaken' && v[1].wachtwoord==='geheim123' && v[1].naam==='Sanne de Vries', JSON.stringify(v));
+    ok('daarna de app', zichtbaar(d.getElementById('app')) && !zichtbaar(d.getElementById('inlog')));
   }
 
   console.log('\n── ingelogd, geen toegang');

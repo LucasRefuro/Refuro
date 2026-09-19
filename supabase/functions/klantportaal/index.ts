@@ -8,7 +8,8 @@
 //
 // Openbaar (verify_jwt uit): de actie 'inloglink' heeft geen login nodig. 'uitnodigen'
 // controleert zelf wie er belt: eigenaar/beheerder van de winkel, of een beheerder
-// van de organisatie in het portaal.
+// van de organisatie in het portaal. 'account_aanmaken' zet het wachtwoord van de
+// ingelogde portaalgebruiker (na de uitnodigingslink of 'wachtwoord vergeten').
 //
 // Geheimen: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, RESEND_API_KEY,
 // APP_URL (standaard https://storvo.app), RESEND_FROM (reserve-afzender).
@@ -51,8 +52,10 @@ async function portaalAdres(ins: Instellingen) {
   const { data: k } = await admin.from("klanten").select("slug").eq("id", ins.team_id).maybeSingle();
   return APP_URL + "/klantportaal/?w=" + encodeURIComponent(k?.slug || "");
 }
+const metStap = (url: string, stap: string) => url + (url.includes("?") ? "&" : "?") + "stap=" + stap;
+const LINKVOET = "De link werkt één keer en is een uur geldig. Heb je dit niet aangevraagd, dan kun je deze mail negeren.";
 
-function mailHtml(ins: Instellingen, kop: string, tekst: string, knop: string, url: string) {
+function mailHtml(ins: Instellingen, kop: string, tekst: string, knop: string, url: string, voet = LINKVOET) {
   const merk = html(ins.merknaam);
   const kleur = /^#[0-9a-f]{3,8}$/i.test(ins.kleur) ? ins.kleur : "#0F6B4B";
   const accent = /^#[0-9a-f]{3,8}$/i.test(ins.accent) ? ins.accent : "#C6F36B";
@@ -66,7 +69,7 @@ function mailHtml(ins: Instellingen, kop: string, tekst: string, knop: string, u
     + `<h1 style="font-size:22px;margin:0 0 12px">${html(kop)}</h1>`
     + `<p style="color:#475350;margin:0">${tekst}</p>`
     + `<p style="margin:26px 0"><a href="${html(url)}" style="display:inline-block;padding:13px 26px;background:${kleur};color:#fff;text-decoration:none;border-radius:100px;font-weight:700">${html(knop)}</a></p>`
-    + `<p style="color:#8A938F;font-size:13px">De link werkt één keer en is een uur geldig. Heb je dit niet aangevraagd, dan kun je deze mail negeren.</p>`
+    + `<p style="color:#8A938F;font-size:13px">${voet}</p>`
     + `<p style="color:#8A938F;font-size:12.5px;border-top:1px solid #ECEAE4;padding-top:12px;margin-top:22px">${merk}${contact ? " · " + contact : ""}`
     + `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${accent};margin-left:8px"></span></p></div>`;
 }
@@ -111,6 +114,7 @@ async function wieBelt(req: Request) {
 async function inloglink(lijf: any) {
   const email = schoon(lijf?.email, 320).toLowerCase();
   const neutraal = antwoord({ ok: true });
+  const wachtwoord = lijf?.doel === "wachtwoord";
   if (!EMAIL.test(email)) return fout("Vul een geldig e-mailadres in.");
 
   let q = admin.from("klantportaal_instellingen").select("*").eq("actief", true);
@@ -132,9 +136,16 @@ async function inloglink(lijf: any) {
   await admin.from("klantportaal_gebruikers").update({ inloglink_op: new Date().toISOString() }).eq("user_id", gb.user_id);
 
   try {
-    const { link } = await maakLink(email, await portaalAdres(ins));
-    await verstuur(ins, email, `Inloggen bij ${ins.merknaam}`,
-      mailHtml(ins, "Je inloglink", `Hallo${gb.naam ? " " + html(gb.naam) : ""}, klik op de knop om in je klantportaal van ${html(ins.merknaam)} te komen.`, "Inloggen", link));
+    const adres = await portaalAdres(ins);
+    const { link } = await maakLink(email, wachtwoord ? metStap(adres, "wachtwoord") : adres);
+    const hallo = `Hallo${gb.naam ? " " + html(gb.naam) : ""}, `;
+    if (wachtwoord) {
+      await verstuur(ins, email, `Nieuw wachtwoord voor ${ins.merknaam}`,
+        mailHtml(ins, "Kies een nieuw wachtwoord", hallo + `klik op de knop en kies een nieuw wachtwoord voor je klantportaal van ${html(ins.merknaam)}.`, "Nieuw wachtwoord kiezen", link));
+    } else {
+      await verstuur(ins, email, `Inloggen bij ${ins.merknaam}`,
+        mailHtml(ins, "Je inloglink", hallo + `klik op de knop om in je klantportaal van ${html(ins.merknaam)} te komen.`, "Inloggen", link));
+    }
   } catch (e) {
     console.error("klantportaal inloglink:", e);
   }
@@ -176,7 +187,7 @@ async function uitnodigen(req: Request, lijf: any) {
 
   let link: string, uid: string;
   try {
-    const r = await maakLink(email, await portaalAdres(ins));
+    const r = await maakLink(email, metStap(await portaalAdres(ins), "account"));
     link = r.link; uid = r.user!.id;
   } catch (e) {
     console.error("klantportaal uitnodigen:", e);
@@ -195,12 +206,61 @@ async function uitnodigen(req: Request, lijf: any) {
     await verstuur(ins, email, `Je klantportaal bij ${ins.merknaam}`,
       mailHtml(ins, "Welkom in je klantportaal",
         `Je bent uitgenodigd voor het klantportaal van <strong>${html(org?.naam || "je organisatie")}</strong> bij ${html(ins.merknaam)}. `
-        + `Daar volg je elke partij: ophaling, wissen, testen en betaling, met alle certificaten en rapporten.`,
-        "Portaal openen", link));
+        + `Daar volg je elke partij: ophaling, wissen, testen en betaling, met alle certificaten en rapporten. `
+        + `Klik op de knop en kies een wachtwoord, dan is je account klaar.`,
+        "Account aanmaken", link,
+        "De link werkt één keer en is een uur geldig. Verlopen? Vraag je contactpersoon om een nieuwe uitnodiging."));
   } catch (e) {
     return fout(String((e as Error).message || e), 502);
   }
   return antwoord({ ok: true });
+}
+
+/* ═══ account_aanmaken: de ingelogde portaalgebruiker kiest zijn wachtwoord ═══
+   Na de uitnodigingslink (eerste keer: dan volgt een welkomstmail met waar je
+   inlogt) of na 'wachtwoord vergeten' (dan alleen opslaan). */
+async function accountAanmaken(req: Request, lijf: any) {
+  const user = await wieBelt(req);
+  if (!user) return fout("Niet ingelogd", 401);
+  const ww = String(lijf?.wachtwoord ?? "");
+  if (ww.length < 8) return fout("Kies een wachtwoord van minstens 8 tekens.");
+  if (ww.length > 72) return fout("Dit wachtwoord is te lang.");
+  const naam = schoon(lijf?.naam, 120);
+
+  const { data: gb } = await admin.from("klantportaal_gebruikers")
+    .select("user_id, team_id, email, naam, actief, account_op").eq("user_id", user.id).maybeSingle();
+  if (!gb || !gb.actief) return fout("Je hebt geen toegang tot het klantportaal", 403);
+  const ins = await instellingenVan(gb.team_id);
+  if (!ins) return fout("Het klantportaal staat uit", 409);
+
+  const { error: wwFout } = await admin.auth.admin.updateUserById(user.id, { password: ww });
+  if (wwFout) {
+    console.error("klantportaal wachtwoord:", wwFout);
+    return fout(/weak|pwned|short/i.test(wwFout.message) ? "Dit wachtwoord is te zwak. Kies een langer of ander wachtwoord." : "Opslaan lukte niet. Probeer het opnieuw.", 400);
+  }
+  const eerste = !gb.account_op;
+  const wijziging: Record<string, unknown> = {};
+  if (eerste) wijziging.account_op = new Date().toISOString();
+  if (naam) wijziging.naam = naam;
+  if (Object.keys(wijziging).length) await admin.from("klantportaal_gebruikers").update(wijziging).eq("user_id", user.id);
+
+  if (eerste) {
+    const adres = await portaalAdres(ins);
+    const zichtbaar = adres.replace(/^https:\/\//, "").replace(/\/klantportaal$/, "");
+    try {
+      await verstuur(ins, gb.email, `Je account bij ${ins.merknaam} is klaar`,
+        mailHtml(ins, "Je account is klaar",
+          `Hallo${(naam || gb.naam) ? " " + html(naam || gb.naam) : ""}, je account voor het klantportaal van ${html(ins.merknaam)} is aangemaakt. `
+          + `Voortaan log je in op <a href="${html(adres)}" style="color:#0F6B4B;font-weight:700">${html(zichtbaar)}</a> `
+          + `met je e-mailadres <strong>${html(gb.email)}</strong> en het wachtwoord dat je net hebt gekozen. `
+          + `Bewaar deze mail, dan weet je altijd waar je moet zijn.`,
+          "Naar het klantportaal", adres,
+          "Wachtwoord vergeten? Klik op de inlogpagina op 'Wachtwoord vergeten', dan krijg je een link om een nieuw wachtwoord te kiezen."));
+    } catch (e) {
+      console.error("klantportaal welkomstmail:", e);
+    }
+  }
+  return antwoord({ ok: true, eerste });
 }
 
 Deno.serve(async (req) => {
@@ -210,5 +270,6 @@ Deno.serve(async (req) => {
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
   if (lijf?.actie === "inloglink") return inloglink(lijf);
   if (lijf?.actie === "uitnodigen") return uitnodigen(req, lijf);
+  if (lijf?.actie === "account_aanmaken") return accountAanmaken(req, lijf);
   return fout("Onbekende actie");
 });

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Klantportaal</title>
+<link rel="icon" href="/klantportaal/merk/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/klantportaal/merk/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/klantportaal/merk/apple-touch-icon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,6 +68,9 @@ textarea.invoer { min-height:110px; resize:vertical; }
 .merk { display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:800; font-size:22px; letter-spacing:-.03em; color:var(--inkt); text-decoration:none; }
 .merk img { height:30px; width:auto; display:block; }
 .inlogvoet { margin-top:18px; font-size:13px; color:var(--muted-l); }
+.inloglinks { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px; }
+.linkknop { background:none; border:none; padding:0; font:inherit; font-size:14px; font-weight:600; color:var(--kleur); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.linkknop:hover { color:var(--inkt); }
 
 /* ═══ de app ═══ */
 #app { min-height:100vh; display:flex; flex-direction:column; }
@@ -347,50 +353,132 @@ async function huisstijlLaden(){
   } catch(e){ console.error('huisstijl:', e); }
 }
 
-/* ═══ inloggen ═══ */
+/* ═══ inloggen ═══
+   Gewoon: e-mail en wachtwoord. Wie nog geen wachtwoord heeft (of het kwijt is)
+   vraagt een link aan. Na de uitnodigingslink maakt de klant eerst zijn account aan. */
+function adresHier(){ return location.hostname + (eigenDomein() ? '' : location.pathname.replace(/\/$/, '')); }
+function contactZin(){ return huisstijl.contact_email ? ' via <a href="mailto:'+esc(huisstijl.contact_email)+'">'+esc(huisstijl.contact_email)+'</a>' : ''; }
+/* Eén e-mailveld voor alle inlogschermen (één plek met id inlogMail). */
+function mailVeld(label, auto, bijEnter){
+  return '<div class="veld"><label for="inlogMail">'+label+'</label>'
+    + '<input class="invoer" id="inlogMail" type="email" autocomplete="'+auto+'" placeholder="naam@bedrijf.nl" onkeydown="if(event.key===\'Enter\')'+bijEnter+'"></div>';
+}
 function toonInlog(stand){
   f('app').hidden = true; f('inlog').hidden = false;
   const k = f('inlogKaart');
-  if(stand === 'verstuurd'){
-    k.innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+  const merk = '<div class="merk">'+merkHtml()+'</div>';
+  if(stand === 'verstuurd' || stand === 'verstuurdww'){
+    k.innerHTML = merk
       + '<h1>Check je mail</h1>'
-      + '<p>Als je e-mailadres bij ons bekend is, staat er nu een inloglink in je mailbox. Die werkt een uur.</p>'
-      + '<button class="btn licht breed" onclick="toonInlog()">Ander e-mailadres</button>';
+      + '<p>' + (stand === 'verstuurdww'
+          ? 'Als je e-mailadres bij ons bekend is, staat er nu een link in je mailbox om een nieuw wachtwoord te kiezen. Die werkt een uur.'
+          : 'Als je e-mailadres bij ons bekend is, staat er nu een inloglink in je mailbox. Die werkt een uur.') + '</p>'
+      + '<button class="btn licht breed" onclick="toonInlog()">Terug naar inloggen</button>';
     return;
   }
   if(stand === 'geentoegang'){
-    k.innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+    k.innerHTML = merk
       + '<h1>Geen toegang</h1>'
       + '<p>Dit account hoort niet bij een klantportaal, of je toegang is uitgezet. Neem contact met ons op als dat niet klopt.</p>'
       + '<button class="btn breed" onclick="uitloggen()">Opnieuw inloggen</button>';
     return;
   }
   const verlopen = /error_code=otp_expired|error=access_denied/.test(location.hash);
-  k.innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+  const melding = verlopen ? '<div class="melding fout">Deze link is verlopen of al gebruikt. Vraag hieronder een nieuwe aan.</div>' : '';
+  if(stand === 'link' || stand === 'vergeten' || verlopen){
+    const ww = stand === 'vergeten';
+    k.innerHTML = merk
+      + '<h1>' + (ww ? 'Wachtwoord vergeten' : 'Inloggen met een link') + '</h1>'
+      + '<p>' + (ww ? 'Vul je e-mailadres in. Je krijgt een link om een nieuw wachtwoord te kiezen.'
+                    : 'Vul je e-mailadres in. Je krijgt een link waarmee je zonder wachtwoord binnenkomt.') + '</p>'
+      + melding
+      + mailVeld('Je e-mailadres', 'email', 'inlogLinkVragen('+(ww ? '\'wachtwoord\'' : '')+')')
+      + '<button class="btn breed" id="inlogKnop" onclick="inlogLinkVragen('+(ww ? '\'wachtwoord\'' : '')+')">' + (ww ? 'Stuur mij de link' : 'Stuur mij een inloglink') + '</button>'
+      + '<div class="inloglinks"><button class="linkknop" onclick="toonInlog()">Terug naar inloggen</button></div>';
+    return;
+  }
+  k.innerHTML = merk
     + '<h1>Klantportaal</h1>'
     + '<p>Volg je partij: ophaling, wissen, testen en betaling. Met al je certificaten en rapporten.</p>'
-    + (verlopen ? '<div class="melding fout">Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe aan.</div>' : '')
-    + '<div class="veld"><label for="inlogMail">Je e-mailadres</label>'
-    + '<input class="invoer" id="inlogMail" type="email" autocomplete="email" placeholder="naam@bedrijf.nl" onkeydown="if(event.key===\'Enter\')inlogLinkVragen()"></div>'
-    + '<button class="btn breed" id="inlogKnop" onclick="inlogLinkVragen()">Stuur mij een inloglink</button>'
-    + '<p class="inlogvoet">Geen wachtwoord nodig. Nog geen toegang? Vraag het aan je contactpersoon'
-    + (huisstijl.contact_email ? ' via <a href="mailto:'+esc(huisstijl.contact_email)+'">'+esc(huisstijl.contact_email)+'</a>' : '') + '.</p>';
+    + mailVeld('E-mailadres', 'username', 'f(\'inlogWw\').focus()')
+    + '<div class="veld"><label for="inlogWw">Wachtwoord</label>'
+    + '<input class="invoer" id="inlogWw" type="password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')wachtwoordInloggen()"></div>'
+    + '<button class="btn breed" id="wwKnop" onclick="wachtwoordInloggen()">Inloggen</button>'
+    + '<div class="inloglinks"><button class="linkknop" onclick="toonInlog(\'vergeten\')">Wachtwoord vergeten?</button>'
+    + '<button class="linkknop" onclick="toonInlog(\'link\')">Inloggen met een link</button></div>'
+    + '<p class="inlogvoet">Nog geen account? Je krijgt een uitnodiging van je contactpersoon' + contactZin() + '.</p>';
 }
-async function inlogLinkVragen(){
+async function wachtwoordInloggen(){
+  const mail = (f('inlogMail').value || '').trim(), ww = f('inlogWw').value || '';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)){ toast('Vul een geldig e-mailadres in.', 'fout'); return; }
+  if(!ww){ toast('Vul je wachtwoord in.', 'fout'); f('inlogWw').focus(); return; }
+  const knop = f('wwKnop'); knop.disabled = true; knop.textContent = 'Even geduld...';
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email: mail, password: ww });
+    if(error) throw error;
+    await opstarten();
+  } catch(e){
+    knop.disabled = false; knop.textContent = 'Inloggen';
+    toast(/invalid|credentials/i.test(e && e.message || '') ? 'E-mailadres of wachtwoord klopt niet.' : 'Inloggen lukte niet. Probeer het zo nog eens.', 'fout');
+  }
+}
+async function inlogLinkVragen(doel){
   const mail = (f('inlogMail').value || '').trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)){ toast('Vul een geldig e-mailadres in.', 'fout'); return; }
-  const knop = f('inlogKnop'); knop.disabled = true; knop.textContent = 'Even geduld...';
+  const knop = f('inlogKnop'), tekst = knop ? knop.textContent : '';
+  if(knop){ knop.disabled = true; knop.textContent = 'Even geduld...'; }
   try {
     const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
       method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY },
-      body: JSON.stringify({ actie:'inloglink', email:mail, domein:eigenDomein(), slug:params.w || huisstijl.slug || null })
+      body: JSON.stringify({ actie:'inloglink', email:mail, domein:eigenDomein(), slug:params.w || huisstijl.slug || null, doel: doel || null })
     });
     const uit = await res.json().catch(() => ({}));
     if(!res.ok || uit.ok === false){ throw new Error(uit.error || 'mislukt'); }
-    toonInlog('verstuurd');
+    if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+    toonInlog(doel === 'wachtwoord' ? 'verstuurdww' : 'verstuurd');
   } catch(e){
-    knop.disabled = false; knop.textContent = 'Stuur mij een inloglink';
+    if(knop){ knop.disabled = false; knop.textContent = tekst; }
     toast('Versturen lukte niet. Probeer het zo nog eens.', 'fout');
+  }
+}
+
+/* ═══ account aanmaken / nieuw wachtwoord ═══
+   Na de uitnodigingslink (nog geen account) of na 'wachtwoord vergeten' (?stap=wachtwoord). */
+function toonAccount(nieuwWw){
+  f('app').hidden = true; f('inlog').hidden = false;
+  f('inlogKaart').innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+    + '<h1>' + (nieuwWw ? 'Kies een nieuw wachtwoord' : 'Maak je account aan') + '</h1>'
+    + '<p>' + (nieuwWw ? 'Je bent ingelogd als <b>'+esc(data.email || '')+'</b>. Kies een nieuw wachtwoord.'
+        : 'Welkom bij het klantportaal van '+esc(data.bedrijf || 'je organisatie')+'. Je e-mailadres is <b>'+esc(data.email || '')+'</b>. '
+          + 'Kies een wachtwoord, dan log je voortaan in op <b>'+esc(adresHier())+'</b>.') + '</p>'
+    + (nieuwWw ? '' : '<div class="veld"><label for="accNaam">Je naam</label><input class="invoer" id="accNaam" type="text" autocomplete="name" value="'+esc(data.naam || '')+'"></div>')
+    + '<div class="veld"><label for="accWw">Wachtwoord</label><input class="invoer" id="accWw" type="password" autocomplete="new-password" placeholder="Minstens 8 tekens"></div>'
+    + '<div class="veld"><label for="accWw2">Herhaal wachtwoord</label><input class="invoer" id="accWw2" type="password" autocomplete="new-password" onkeydown="if(event.key===\'Enter\')accountOpslaan('+(nieuwWw ? 'true' : 'false')+')"></div>'
+    + '<button class="btn breed" id="accKnop" onclick="accountOpslaan('+(nieuwWw ? 'true' : 'false')+')">' + (nieuwWw ? 'Wachtwoord opslaan' : 'Account aanmaken') + '</button>';
+}
+async function accountOpslaan(nieuwWw){
+  const ww = f('accWw').value || '', ww2 = f('accWw2').value || '';
+  const naam = f('accNaam') ? (f('accNaam').value || '').trim() : '';
+  if(ww.length < 8){ toast('Kies een wachtwoord van minstens 8 tekens.', 'fout'); return; }
+  if(ww !== ww2){ toast('De twee wachtwoorden zijn niet gelijk.', 'fout'); return; }
+  const knop = f('accKnop'), tekst = knop.textContent; knop.disabled = true; knop.textContent = 'Even geduld...';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+(session ? session.access_token : '') },
+      body: JSON.stringify({ actie:'account_aanmaken', wachtwoord:ww, naam: naam || null })
+    });
+    const uit = await res.json().catch(() => ({}));
+    if(!res.ok || uit.ok === false) throw new Error(uit.error || 'Opslaan lukte niet. Probeer het opnieuw.');
+    data.account_klaar = true; if(naam) data.naam = naam;
+    delete params.stap;
+    const zoek = new URLSearchParams(location.search); zoek.delete('stap');
+    history.replaceState(null, '', location.pathname + (zoek.toString() ? '?' + zoek : ''));
+    toast(nieuwWw ? 'Je nieuwe wachtwoord is opgeslagen.' : 'Je account is klaar. We hebben je een mail gestuurd met waar je voortaan inlogt.');
+    toonApp();
+  } catch(e){
+    knop.disabled = false; knop.textContent = tekst;
+    toast(e.message || 'Opslaan lukte niet.', 'fout');
   }
 }
 async function uitloggen(){
@@ -423,6 +511,15 @@ async function opstartenEcht(){
   if(await laden()){
     // De tokens uit de inloglink staan nog in de adresbalk: weghalen.
     if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+    if(!BEKIJK && (data.account_klaar === false || params.stap === 'wachtwoord')){
+      toonAccount(data.account_klaar !== false && params.stap === 'wachtwoord');
+      return;
+    }
+    toonApp();
+  }
+}
+function toonApp(){
+  {
     f('inlog').hidden = true; f('app').hidden = false;
     f('bekijkBalk').hidden = !BEKIJK;
     f('uitlogKnop').textContent = BEKIJK ? 'Sluiten' : 'Uitloggen';
