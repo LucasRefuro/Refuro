@@ -14197,6 +14197,7 @@ function teamNieuwOpen(){
         <div><label>Gebruikersnaam</label><input id="nw_gebruikersnaam" placeholder="voor het inloggen"></div>
         <div><label>E-mail</label><input id="nw_email" type="email" placeholder="collega@email.nl"></div>
         <div><label>Begin-wachtwoord</label><input id="nw_ww" type="text" placeholder="minstens 8 tekens"></div>
+        <div><label>Uurloon <span class="muted">(optioneel)</span></label><input id="nw_uurloon" type="number" step="0.01" min="0" placeholder="bijv. 14,00"></div>
       </div>
       <div class="detailsectie"><div class="sectielabel">Rol</div>
         <div class="segment">
@@ -14278,7 +14279,16 @@ async function gebruikerAanmaken(knop){
   const uit=document.getElementById('nw_uit');
   if(!naam||!email.includes('@')||ww.length<8){ uit.textContent='Vul naam, een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.'; return; }
   const tabs=paginasUit('nw').concat(omgUit('nw'));
-  await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs}, knop, uit, ()=>{
+  const uurloon=Math.max(0, Number(String((document.getElementById('nw_uurloon')||{}).value||'').replace(',','.'))||0);
+  await teamActie('aanmaken', {naam, gebruikersnaam, email, wachtwoord:ww, rol, tabs}, knop, uit, async()=>{
+    /* Het uurloon staat in de blob (state.lonen) op het account-id, dat we pas na
+       het aanmaken weten. Even het verse account ophalen en het loon wegschrijven. */
+    if(uurloon>0){
+      try{
+        const {data:acc}=await sb.from('accounts').select('id').eq('team_id',account.team_id).eq('email',email).maybeSingle();
+        if(acc && acc.id){ if(!state.lonen||typeof state.lonen!=='object') state.lonen={}; state.lonen[acc.id]=uurloon; save(); }
+      }catch(e){ console.error('uurloon zetten', e); }
+    }
     toast('Gebruiker aangemaakt. Laat hem inloggen met '+email, true);
     teamTerug();
   });
