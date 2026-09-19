@@ -698,6 +698,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-shop"/></svg> Voorraad<span class="badge" id="bKlaar" hidden>0</span></button>
     <button data-tab="batches"><svg class="i"><use href="#i-box"/></svg> Batches</button>
+    <button data-tab="bundels"><svg class="i"><use href="#i-tag"/></svg> Bundels</button>
     <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen<span class="badge" id="bVrd" hidden>0</span></button>
     <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
     <button data-tab="donoren"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
@@ -758,6 +759,26 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         </div>
       </div>
       <div id="batDetailVak" hidden></div>
+    </section>
+
+    <!-- ── bundels (voorraad-batches) ──
+         Een bundel is een groep klaargemaakte laptops die je als een lot op de
+         tweede (groothandel) webshop verkoopt. Je geeft een totale vraagprijs;
+         die deelt het systeem door het aantal laptops en zet de prijs per stuk
+         op elke laptop. De laptops zijn refurbish_apparaten met een
+         voorraad_batch_id; de bundel zelf staat in refurbish_voorraad_batches. -->
+    <section id="tab-bundels" hidden>
+      <div class="pagehead">
+        <h1>Bundels</h1>
+        <button class="btn actie" onclick="vbNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Nieuwe bundel</button>
+      </div>
+      <div id="vbLijstVak">
+        <div class="card">
+          <h2><svg class="i"><use href="#i-tag"/></svg>Bundels <span class="muted" id="vbTelling"></span></h2>
+          <div id="vbLijst"></div>
+        </div>
+      </div>
+      <div id="vbDetailVak" hidden></div>
     </section>
 
     <!-- ── toevoegen ──
@@ -1079,6 +1100,7 @@ let heeftPartner=false, partnersData=[], teamLeden=[];
 function ledNaam(id){ if(!id) return ''; const m=teamLeden.find(x=>x.id===id); return m?(m.naam||'iemand'):''; }
 let apparaten=[], onderdelen=[], checklists=[], orders=[], modellen=[], hardwares=[];
 let batches=[], batHuidig=null;
+let vbundels=[], vbHuidig=null, vbScanDoel=null;   // bundels = voorraad-batches voor de tweede webshop
 let voorraaddelen=[];
 let instel={accu_min:85};
 let tab='werkbank';
@@ -1252,7 +1274,7 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
-  const [a,o,c,r,m,i,h,bt,vd]=await Promise.all([
+  const [a,o,c,r,m,i,h,bt,vd,vb]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_checklists').select('*').order('categorie'),
@@ -1262,7 +1284,8 @@ async function allesLaden(){
     sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,inkoop,marge,partner_id')
       .order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
-    sb.from('refurbish_voorraad').select('*').order('naam')
+    sb.from('refurbish_voorraad').select('*').order('naam'),
+    sb.from('refurbish_voorraad_batches').select('*').order('aangemaakt_op',{ascending:false})
   ]);
   /* Faalt de belangrijkste query (netwerk, RLS, hapering), dan tekenen we NIET leeg
      over wat er stond: dan lijkt een tijdelijke fout een lege werkbank en denkt de
@@ -1274,7 +1297,7 @@ async function allesLaden(){
   }
   apparaten=a.data||[]; onderdelen=o.data||[];
   checklists=c.data||[]; orders=r.data||[]; modellen=m.data||[];
-  hardwares=h.data||[]; batches=bt.data||[];
+  hardwares=h.data||[]; batches=bt.data||[]; vbundels=vb.data||[];
   /* Voorraad van vóór de partijen-migratie (aantal wel, lots niet) alsnog als
      één partij behandelen. Anders zou afboeken de hele voorraad op nul zetten,
      want vrdSync([]) geeft aantal 0. */
@@ -1316,7 +1339,7 @@ function past(a){
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenVoorraad(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
-  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches(); tekenVoorraaddelen();
+  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches(); tekenBundels(); tekenVoorraaddelen();
   if(tab==='partners') renderPartners();
 }
 function tekenBadges(){
@@ -7239,6 +7262,260 @@ async function batKostWeg(i){
   b.kosten=kosten; tekenBatches();
 }
 
+/* ═══════════════ bundels (voorraad-batches) ═══════════════
+   Een bundel is een groep klaargemaakte laptops die als een lot op de tweede
+   (groothandel) webshop gaan. Je vult een totale vraagprijs in; die wordt over
+   de laptops verdeeld en als prijs per stuk op elke hardware-rij gezet, zodat de
+   cijfers overal kloppen. De koppeling laptop -> bundel staat op
+   refurbish_apparaten.voorraad_batch_id (zoals batch_id bij de inkoop-partijen). */
+function vbCode(){
+  const nrs=(vbundels||[]).map(v=>Number(String(v.code||'').replace(/\D/g,''))||0);
+  return 'V'+String((nrs.length?Math.max(...nrs):0)+1).padStart(4,'0');
+}
+function vbLabel(v){ if(!v) return 'bundel'; return v.code ? (v.code+(v.nummer?' · '+v.nummer:'')) : (v.nummer||'bundel'); }
+function vbLeden(id){ return apparaten.filter(a=>a.voorraad_batch_id===id); }
+
+/* Alle cijfers van een bundel. Investering = som van de inkoop van de laptops.
+   De prijs per stuk is de totale vraagprijs gedeeld door het aantal laptops. */
+function vbCijfers(id){
+  const v=vbundels.find(x=>x.id===id)||{};
+  const leden=vbLeden(id);
+  const investering=Math.round(leden.reduce((n,a)=>n+(Number(a.inkoop)||0),0)*100)/100;
+  const vraagprijs=Number(v.vraagprijs)||0;
+  const aantal=leden.length;
+  const perStuk=aantal?Math.round((vraagprijs/aantal)*100)/100:0;
+  const winst=Math.round((vraagprijs-investering)*100)/100;
+  return {v, leden, aantal, investering, vraagprijs, perStuk, winst};
+}
+
+/* De vraagprijs per laptop opnieuw verdelen en op elke gekoppelde hardware-rij
+   zetten. Zo staat de laptop voor bijvoorbeeld 100 euro in het systeem als de
+   bundel 10.000 euro over 100 laptops is. Alle laptops krijgen dezelfde prijs,
+   dus een enkele update volstaat. */
+async function vbPrijsHerdelen(id){
+  const c=vbCijfers(id);
+  const hwIds=c.leden.map(a=>a.hardware_id).filter(Boolean);
+  if(!hwIds.length) return;
+  const {error}=await sb.from('hardware')
+    .update({verkoop:c.perStuk, bijgewerkt_op:new Date().toISOString()}).in('id',hwIds);
+  if(error){ console.error('bundelprijs verdelen', error); return; }
+  hwIds.forEach(hid=>{ const h=hardwares.find(x=>x.id===hid); if(h) h.verkoop=c.perStuk; });
+}
+
+function tekenBundels(){
+  const lijstVak=document.getElementById('vbLijstVak');
+  const detailVak=document.getElementById('vbDetailVak');
+  if(!lijstVak || !detailVak) return;
+  if(vbHuidig && vbundels.some(v=>v.id===vbHuidig)){
+    lijstVak.hidden=true; detailVak.hidden=false; renderBundelDetail(); return;
+  }
+  vbHuidig=null; vbScanDoel=null; lijstVak.hidden=false; detailVak.hidden=true; detailVak.innerHTML='';
+  const tel=document.getElementById('vbTelling');
+  if(tel) tel.textContent=vbundels.length?'('+vbundels.length+')':'';
+  const vak=document.getElementById('vbLijst'); if(!vak) return;
+  if(!vbundels.length){
+    vak.innerHTML='<p class="muted">Nog geen bundels. Maak een bundel aan, geef een totale vraagprijs, en scan of kies de laptops die erin gaan. De prijs per laptop rekent zichzelf uit.</p>';
+    return;
+  }
+  vak.innerHTML=`<div class="tabelrol"><table>
+    <thead><tr><th>Bundel</th><th class="num">Laptops</th><th class="num">Investering</th>
+      <th class="num">Vraagprijs</th><th class="num">Per stuk</th><th class="num">Winst</th><th></th></tr></thead>
+    <tbody>${vbundels.map(v=>{
+      const c=vbCijfers(v.id);
+      const st = v.status==='online'?' <span class="batpil">online</span>':(v.status==='verkocht'?' <span class="batpil">verkocht</span>':'');
+      return `<tr class="batrij" onclick="vbOpen('${v.id}')">
+        <td><b>${esc(vbLabel(v))}</b>${st}</td>
+        <td class="num">${c.aantal}</td>
+        <td class="num">${euro(c.investering)}</td>
+        <td class="num">${euro(c.vraagprijs)}</td>
+        <td class="num">${c.aantal?euro(c.perStuk):'—'}</td>
+        <td class="num"><b class="${c.winst>=0?'batwinst':'batverlies'}">${euro(c.winst)}</b></td>
+        <td class="num"><svg class="i s"><use href="#i-arrow"/></svg></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function vbOpen(id){ vbHuidig=id; vbScanDoel=null; tekenBundels(); window.scrollTo(0,0); }
+function vbTerug(){ vbHuidig=null; vbScanDoel=null; tekenBundels(); }
+
+function renderBundelDetail(){
+  const vak=document.getElementById('vbDetailVak'); if(!vak) return;
+  const v=vbundels.find(x=>x.id===vbHuidig); if(!v){ vbTerug(); return; }
+  const c=vbCijfers(v.id);
+  const scanAan = vbScanDoel===v.id;
+  const ledenRijen=c.leden.map(a=>{
+    const partij=a.batch_id?batches.find(b=>b.id===a.batch_id):null;
+    return `<tr>
+      <td><b>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}</b>${a.code?`<div class="muted klein mono">${esc(a.code)}</div>`:''}</td>
+      <td>${partij?esc(batLabel(partij)):'<span class="muted">los</span>'}</td>
+      <td class="num">${euro(Number(a.inkoop)||0)}</td>
+      <td class="num">${c.aantal?euro(c.perStuk):'—'}</td>
+      <td class="num"><button class="btn ghost small" title="Uit bundel halen" onclick="vbLos('${a.id}')">×</button></td>
+    </tr>`;
+  }).join('');
+
+  vak.innerHTML=`
+    <div class="pagehead">
+      <button class="btn ghost" onclick="vbTerug()"><svg class="i s"><use href="#i-left"/></svg>Alle bundels</button>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost" onclick="vbBewerk('${v.id}')"><svg class="i s"><use href="#i-note"/></svg>Bewerken</button>
+        <button class="btn ghost" onclick="vbVerwijder('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom:2px">${esc(vbLabel(v))}</h2>
+      <p class="muted klein">Een bundel gaat als een advertentie op de tweede webshop. De totale vraagprijs delen we door het aantal laptops; die prijs per stuk komt op elke laptop te staan.</p>
+      ${v.notitie?`<p class="muted klein" style="margin-top:4px">${esc(v.notitie)}</p>`:''}
+      <div class="kpis" style="margin-top:18px">
+        <div class="kpi"><div class="l">Laptops</div><div class="v">${c.aantal}</div></div>
+        <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div></div>
+        <div class="kpi"><div class="l">Vraagprijs totaal</div><div class="v">${euro(c.vraagprijs)}</div></div>
+        <div class="kpi"><div class="l">Prijs per laptop</div><div class="v">${c.aantal?euro(c.perStuk):'—'}</div>
+          <div class="muted klein" style="margin-top:6px">${c.vraagprijs&&c.aantal?'vraagprijs gedeeld door '+c.aantal:'vul een vraagprijs en laptops in'}</div></div>
+        <div class="kpi"><div class="l">Winst</div><div class="v ${c.winst>=0?'batwinst':'batverlies'}">${euro(c.winst)}</div>
+          <div class="muted klein" style="margin-top:6px">vraagprijs min investering</div></div>
+      </div>
+    </div>
+
+    ${scanAan?`<div class="card"><p style="margin:0"><b>Scanmodus aan.</b> Scan laptops met de handscanner of de camera om ze aan deze bundel toe te voegen. <button class="btn ghost small" onclick="vbScanToggle('${v.id}')">Stoppen</button></p></div>`:''}
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:6px">
+        <h2 style="margin:0"><svg class="i"><use href="#i-laptop"/></svg>Laptops in deze bundel <span class="muted">(${c.leden.length})</span></h2>
+        <div class="row" style="gap:8px">
+          <button class="btn ${scanAan?'actie':'ghost'} small" onclick="vbScanToggle('${v.id}')"><svg class="i s"><use href="#i-qr"/></svg>${scanAan?'Scannen aan':'Scannen'}</button>
+          <button class="btn ghost small" onclick="vbScanCam('${v.id}')"><svg class="i s"><use href="#i-camera"/></svg>Camera</button>
+          <button class="btn ghost small" onclick="vbKoppelOpen()"><svg class="i s"><use href="#i-plus"/></svg>Laptops kiezen</button>
+        </div>
+      </div>
+      ${c.leden.length?`<div class="tabelrol"><table>
+        <thead><tr><th>Toestel</th><th>Uit partij</th><th class="num">Inkoop</th><th class="num">Prijs per stuk</th><th></th></tr></thead>
+        <tbody>${ledenRijen}</tbody></table></div>`
+        :'<p class="muted">Nog geen laptops. Zet scannen aan en scan ze, of kies ze uit je voorraad.</p>'}
+    </div>`;
+}
+
+function vbNieuw(){ vbForm(null); }
+function vbBewerk(id){ vbForm(vbundels.find(v=>v.id===id)||null); }
+function vbForm(v){
+  const inhoud=`<div class="grid">
+      <div><label>Bundelnummer</label><input value="${v?esc(v.code||''):esc(vbCode())}" disabled></div>
+      <div><label>Naam (optioneel)</label><input id="vf_naam" value="${v?esc(v.nummer||''):''}" placeholder="bijv. 100x zakelijke laptops"></div>
+      <div><label>Totale vraagprijs</label><input id="vf_prijs" type="number" step="0.01" min="0" value="${v&&v.vraagprijs!=null?v.vraagprijs:''}" placeholder="bijv. 10000"></div>
+    </div>
+    <p class="muted klein" style="margin-top:6px">De totale vraagprijs wordt gedeeld door het aantal laptops in de bundel. Die prijs per stuk komt op elke laptop te staan.</p>
+    <div class="veldkop"><label>Notitie</label></div>
+    <textarea id="vf_notitie" rows="2" placeholder="bijv. voor welke koper">${v?esc(v.notitie||''):''}</textarea>`;
+  venster(v?'Bundel bewerken':'Nieuwe bundel', inhoud, [
+    {tekst:v?'Opslaan':'Aanmaken', klasse:'actie', doe:(kn)=>vbBewaar(kn, v?v.id:null)}
+  ]);
+}
+async function vbBewaar(knop, id){
+  const rij={
+    nummer:(document.getElementById('vf_naam').value||'').trim()||null,
+    vraagprijs:Math.round((Number(document.getElementById('vf_prijs').value)||0)*100)/100,
+    notitie:(document.getElementById('vf_notitie').value||'').trim()||null
+  };
+  await bezig(knop, async()=>{
+    if(id){
+      const {error}=await sb.from('refurbish_voorraad_batches').update(rij).eq('id',id);
+      if(error) throw error;
+      const v=vbundels.find(x=>x.id===id); if(v) Object.assign(v, rij);
+      await vbPrijsHerdelen(id);
+    }else{
+      rij.team_id=account.team_id; rij.code=vbCode();
+      const {data,error}=await sb.from('refurbish_voorraad_batches').insert(rij).select().single();
+      if(error) throw error;
+      if(data){ vbundels.unshift(data); vbHuidig=data.id; }
+    }
+    sluit(); tekenBundels();
+    toast(id?'Bundel bijgewerkt':'Bundel aangemaakt', true);
+  });
+}
+
+/* De laptops die je in een bundel mag stoppen: op voorraad, al een hardware-rij,
+   nog niet in een andere bundel, en niet aan een externe partner toegewezen. */
+function vbKandidaten(){
+  return vrRijen().filter(a=>a.hardware_id && !a.voorraad_batch_id && !((hardwareVan(a)||{}).partner_id));
+}
+function vbKoppelOpen(){
+  const vrij=vbKandidaten();
+  if(!vrij.length){ toast('Geen vrije laptops om toe te voegen','let-op'); return; }
+  const inhoud=`<p class="pv">Vink de laptops aan die in deze bundel gaan. Alleen laptops die op voorraad staan en nog niet in een andere bundel of bij een partner zitten.</p>
+    <div class="batkoppellijst">${vrij.map(a=>`<label class="batkoppelrij">
+      <input type="checkbox" value="${a.id}">
+      <span>${esc([a.merk,a.model].filter(Boolean).join(' ')||'Naamloos')}${a.code?' <span class="muted klein mono">'+esc(a.code)+'</span>':''}</span>
+    </label>`).join('')}</div>`;
+  venster('Laptops kiezen', inhoud, [
+    {tekst:'Toevoegen', klasse:'actie', doe:(kn)=>vbKoppel(kn)}
+  ]);
+}
+async function vbKoppel(knop){
+  const ids=[...document.querySelectorAll('#vensterInhoud input[type=checkbox]:checked')].map(e=>e.value);
+  if(!ids.length){ toast('Niets aangevinkt','let-op'); return; }
+  await bezig(knop, async()=>{ await vbVoegToe(ids, vbHuidig); sluit(); });
+}
+
+/* Laptops aan een bundel koppelen. Ongeschikte (al in een bundel, bij een partner,
+   nog niet op voorraad) worden overgeslagen en geteld. Daarna de prijs per stuk
+   opnieuw verdelen. */
+async function vbVoegToe(ids, doel){
+  doel = doel || vbHuidig; if(!doel) return;
+  const geldig=[]; let over=0;
+  ids.forEach(id=>{
+    const a=apparaten.find(x=>x.id===id);
+    if(!a){ over++; return; }
+    if(a.voorraad_batch_id===doel) return;                 // zit er al in: stil overslaan
+    if(a.voorraad_batch_id){ over++; return; }              // in een andere bundel
+    if(!a.hardware_id){ over++; return; }                   // nog niet op voorraad
+    if((hardwareVan(a)||{}).partner_id){ over++; return; }  // bij een externe partner
+    geldig.push(id);
+  });
+  if(!geldig.length){ toast(over?'Kon niet toevoegen: al in een bundel, bij een partner of nog niet op voorraad':'Niets toe te voegen','let-op'); return; }
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({voorraad_batch_id:doel, bijgewerkt_op:new Date().toISOString()}).in('id',geldig);
+  if(error){ toast('Toevoegen mislukt','fout'); return; }
+  geldig.forEach(id=>{ const a=apparaten.find(x=>x.id===id); if(a) a.voorraad_batch_id=doel; });
+  await vbPrijsHerdelen(doel);
+  tekenBundels();
+  toast(geldig.length+(geldig.length>1?' laptops toegevoegd':' laptop toegevoegd')+(over?', '+over+' overgeslagen':''), true);
+}
+
+async function vbLos(apparaatId){
+  const a=apparaten.find(x=>x.id===apparaatId); if(!a) return;
+  const doel=a.voorraad_batch_id;
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({voorraad_batch_id:null, bijgewerkt_op:new Date().toISOString()}).eq('id',apparaatId);
+  if(error){ toast('Mislukt','fout'); return; }
+  a.voorraad_batch_id=null;
+  if(doel) await vbPrijsHerdelen(doel);
+  tekenBundels();
+}
+
+/* Scannen: zet scanmodus aan op een bundel, dan voegt elke gescande laptop (via de
+   handscanner of de camera) zich toe. Zo scan je een stapel laptops achter elkaar. */
+function vbScanToggle(id){ vbScanDoel = (vbScanDoel===id ? null : id); tekenBundels(); }
+function vbScanCam(id){ vbScanDoel=id; qrScanOpen(); }
+async function vbScanToevoegen(apparaatId){
+  if(!vbScanDoel) return;
+  const a=apparaten.find(x=>x.id===apparaatId);
+  if(!a){ toast('Dit label ken ik niet','let-op'); return; }
+  if(a.voorraad_batch_id===vbScanDoel){ toast('Zit al in deze bundel','let-op'); return; }
+  await vbVoegToe([apparaatId], vbScanDoel);
+}
+
+async function vbVerwijder(id){
+  const c=vbCijfers(id);
+  if(!confirm('Deze bundel verwijderen? De '+c.aantal+' '+(c.aantal===1?'laptop blijft':'laptops blijven')+' gewoon op voorraad staan.')) return;
+  const {error}=await sb.from('refurbish_voorraad_batches').delete().eq('id',id);
+  if(error){ toast('Verwijderen mislukt','fout'); return; }
+  apparaten.forEach(a=>{ if(a.voorraad_batch_id===id) a.voorraad_batch_id=null; });
+  vbundels=vbundels.filter(v=>v.id!==id);
+  vbHuidig=null; vbScanDoel=null; tekenBundels();
+  toast('Bundel verwijderd', true);
+}
+
 /* Een gescand label opent meteen het juiste apparaat. */
 function uitAdres(){
   const p=new URLSearchParams(location.search);
@@ -7301,10 +7578,12 @@ function qrScanGevonden(tekst){
   try{
     const u=new URL(tekst);
     if(u.origin===location.origin){
+      const id=u.searchParams.get('apparaat');
+      /* Scanmodus voor een bundel: een gescande laptop gaat de bundel in i.p.v. open. */
+      if(vbScanDoel && id && apparaten.find(x=>x.id===id)){ vbScanToevoegen(id); return; }
       const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
       if(bId && n){ batSlotInvullen(bId, Number(n)); return; }
       if(bId && batches.find(x=>x.id===bId)){ showTab('batches'); batOpen(bId); return; }
-      const id=u.searchParams.get('apparaat');
       if(id && apparaten.find(x=>x.id===id)){ appPagina(id); return; }
     }
   }catch(_e){}
@@ -7408,10 +7687,12 @@ document.addEventListener('keydown', e=>{
     try{
       const u=new URL(t);
       if(u.origin===location.origin){
+        const id=u.searchParams.get('apparaat');
+        /* Scanmodus voor een bundel: een gescande laptop gaat de bundel in i.p.v. open. */
+        if(vbScanDoel && id && apparaten.find(x=>x.id===id)){ e.preventDefault(); vbScanToevoegen(id); return; }
         const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
         if(bId && n){ e.preventDefault(); batSlotInvullen(bId, Number(n)); return; }
         if(bId && batches.find(x=>x.id===bId)){ e.preventDefault(); showTab('batches'); batOpen(bId); return; }
-        const id=u.searchParams.get('apparaat');
         if(id && apparaten.find(x=>x.id===id)){ e.preventDefault(); appPagina(id); }
       }
     }catch(_e){}
