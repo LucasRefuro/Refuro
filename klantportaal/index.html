@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Klantportaal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* De kleuren komen uit klantportaal_instellingen van de winkel; dit zijn de
+   standaardwaarden (Reloop it) tot die geladen zijn. */
+:root { color-scheme: light;
+  --kleur:#0F6B4B; --accent:#C6F36B; --inkt:#10231B;
+  --bg:#F4F1EA; --card:#FFFFFF; --soft:#EFEBE2; --lijn:#DEDAD0; --muted:#5A6660; --muted-l:#8A938F;
+  --zacht:#E3F0E8; --oranje-soft:#FFF1D6; --oranje-tekst:#8A5A00; --rood-soft:#FAE4E4; --rood-tekst:#A33333;
+  --radius:20px; --radius-s:14px; --pil:999px; --schaduw:0 6px 24px rgba(16,35,27,.07);
+  --display:'Bricolage Grotesque', Georgia, serif; --body:'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, monospace; }
+[hidden] { display:none !important; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html { overflow-x:clip; }
+body { font-family:var(--body); background:var(--bg); color:var(--inkt); min-height:100vh; font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+a { color:var(--kleur); }
+button, input, textarea { font:inherit; color:inherit; }
+:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+svg.i { width:18px; height:18px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.mono { font-family:var(--mono); letter-spacing:.02em; }
+.muted { color:var(--muted); }
+.klein { font-size:13px; }
+.label { font-family:var(--mono); font-weight:500; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+h1, h2, h3 { font-family:var(--display); font-weight:800; letter-spacing:-.03em; line-height:1.1; }
+h1 { font-size:clamp(30px, 4vw, 44px); }
+h2 { font-size:clamp(22px, 2.4vw, 28px); }
+h3 { font-size:18px; letter-spacing:-.01em; }
+
+/* ═══ knoppen en velden ═══ */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 20px; border-radius:var(--pil); border:2px solid transparent; background:var(--kleur); color:#fff; font-weight:700; font-size:15px; cursor:pointer; text-decoration:none; white-space:nowrap; transition:filter .15s, background .15s; }
+.btn:hover { filter:brightness(.92); }
+.btn:disabled { opacity:.5; cursor:default; filter:none; }
+.btn.licht { background:#fff; color:var(--inkt); border-color:var(--lijn); }
+.btn.licht:hover { border-color:var(--inkt); filter:none; }
+.btn.accent { background:var(--accent); color:var(--inkt); }
+.btn.klein { min-height:36px; padding:0 14px; font-size:13.5px; }
+.btn.breed { width:100%; }
+.veld { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+.veld label { font-weight:600; font-size:14px; }
+.invoer { width:100%; min-height:48px; padding:12px 14px; border:1.5px solid var(--lijn); border-radius:var(--radius-s); background:#fff; font-size:15px; }
+.invoer:focus { outline:none; border-color:var(--kleur); box-shadow:0 0 0 4px rgba(15,107,75,.12); }
+textarea.invoer { min-height:110px; resize:vertical; }
+.keuzes { display:flex; gap:8px; flex-wrap:wrap; }
+.keuze { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 16px; border:1.5px solid var(--lijn); border-radius:var(--pil); background:#fff; cursor:pointer; font-weight:600; font-size:14px; }
+.keuze.aan { border-color:var(--kleur); background:var(--zacht); color:var(--kleur); }
+.melding { border-radius:var(--radius-s); padding:14px 16px; font-size:14.5px; margin-bottom:16px; background:var(--zacht); color:var(--kleur); }
+.melding.fout { background:var(--rood-soft); color:var(--rood-tekst); }
+
+/* ═══ inloggen ═══ */
+#inlog { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px 16px; background:var(--kleur); position:relative; overflow:hidden; }
+.inlogboog { position:absolute; width:min(70vw, 620px); right:-14%; top:-24%; pointer-events:none; }
+.inlogkaart { position:relative; background:#fff; border-radius:28px; padding:36px 32px 30px; width:420px; max-width:100%; box-shadow:0 30px 80px rgba(0,0,0,.25); }
+.inlogkaart h1 { font-size:30px; margin:18px 0 6px; }
+.inlogkaart p { color:var(--muted); margin-bottom:22px; }
+.merk { display:flex; align-items:center; gap:10px; font-family:var(--display); font-weight:800; font-size:22px; letter-spacing:-.03em; color:var(--inkt); text-decoration:none; }
+.merk img { height:30px; width:auto; display:block; }
+.inlogvoet { margin-top:18px; font-size:13px; color:var(--muted-l); }
+
+/* ═══ de app ═══ */
+#app { min-height:100vh; display:flex; flex-direction:column; }
+.balk { position:sticky; top:0; z-index:10; background:rgba(244,241,234,.9); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid var(--lijn); }
+.balk-in { max-width:1320px; margin:0 auto; padding:14px clamp(16px, 4vw, 40px); display:flex; align-items:center; gap:20px; }
+.tabs { display:flex; gap:4px; margin-left:12px; overflow-x:auto; }
+.tab { display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 14px; border-radius:var(--pil); background:none; border:0; color:var(--muted); font-weight:600; cursor:pointer; white-space:nowrap; }
+.tab:hover { background:var(--soft); color:var(--inkt); }
+.tab.aan { background:var(--zacht); color:var(--kleur); }
+.wie { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.wie-naam { text-align:right; font-size:13px; line-height:1.3; }
+.wie-naam b { display:block; font-size:14px; }
+.bekijkbalk { background:var(--inkt); color:var(--accent); font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; text-align:center; padding:8px 16px; }
+main { flex:1; width:100%; max-width:1320px; margin:0 auto; padding:28px clamp(16px, 4vw, 40px) 72px; display:flex; flex-direction:column; gap:22px; }
+.kop { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+.kop .knoppen { display:flex; gap:10px; flex-wrap:wrap; }
+.kaart { background:var(--card); border:1px solid var(--lijn); border-radius:var(--radius); padding:clamp(18px, 2.4vw, 26px); }
+
+.kpis { list-style:none; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+.kpis li { background:var(--card); border:1px solid var(--lijn); border-radius:16px; padding:18px; }
+.kpis b { display:block; font-family:var(--display); font-weight:800; font-size:30px; letter-spacing:-.03em; line-height:1.1; }
+.kpis small { color:var(--muted); font-size:13px; }
+.kpis li.accent { background:var(--accent); border-color:var(--accent); }
+.kpis li.accent small { color:var(--inkt); }
+
+.raster { display:grid; grid-template-columns:300px minmax(0, 1fr); gap:20px; align-items:start; }
+.raster > *, .twee > * { min-width:0; }
+.lijst { list-style:none; display:flex; flex-direction:column; gap:10px; }
+.opdracht { width:100%; text-align:left; background:var(--card); border:1px solid var(--lijn); border-radius:16px; padding:14px 16px; display:flex; flex-direction:column; gap:4px; cursor:pointer; }
+.opdracht:hover { border-color:var(--muted-l); }
+.opdracht.aan { border-color:var(--kleur); box-shadow:0 0 0 1px var(--kleur); }
+.opdracht-boven { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--muted); }
+.opdracht b { font-size:15.5px; }
+.opdracht small { color:var(--muted); font-size:13px; }
+.voortgang { height:5px; border-radius:var(--pil); background:var(--lijn); overflow:hidden; margin-top:6px; }
+.voortgang span { display:block; height:100%; background:var(--kleur); border-radius:var(--pil); }
+.status { display:inline-flex; align-items:center; border-radius:var(--pil); padding:4px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
+.status.bezig { background:var(--oranje-soft); color:var(--oranje-tekst); }
+.status.klaar { background:var(--zacht); color:var(--kleur); }
+.status.nieuw { background:var(--soft); color:var(--inkt); }
+
+.detail { display:flex; flex-direction:column; gap:22px; min-width:0; }
+.detail-kop { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.detail-kop h2 { margin-top:4px; }
+.stappen { list-style:none; display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); }
+.stap { position:relative; display:flex; flex-direction:column; gap:6px; padding-right:8px; }
+.stap::before { content:''; position:absolute; top:14px; left:30px; right:0; height:3px; border-radius:3px; background:var(--lijn); }
+.stap:last-child::before { display:none; }
+.stap.klaar::before { background:var(--kleur); }
+.stip { position:relative; z-index:1; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; background:var(--lijn); color:var(--muted); }
+.stap.klaar .stip { background:var(--kleur); color:#fff; }
+.stap.volgende .stip { background:var(--accent); color:var(--inkt); box-shadow:0 0 0 5px rgba(198,243,107,.35); }
+.stap-naam { font-size:13.5px; font-weight:600; line-height:1.25; }
+.stap.later .stap-naam { color:var(--muted); }
+.stap-datum { font-size:12px; color:var(--muted); min-height:16px; }
+.panelen { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; }
+.paneel { border:1px solid var(--lijn); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; background:var(--bg); }
+.paneel.accent { background:var(--accent); border-color:var(--accent); }
+.groot { font-family:var(--display); font-weight:800; font-size:30px; letter-spacing:-.035em; line-height:1; }
+.groot small { font-family:var(--body); font-weight:500; font-size:13px; letter-spacing:0; color:var(--muted); }
+.paneel.accent .groot small { color:var(--inkt); }
+.balkje { display:flex; height:12px; border-radius:var(--pil); overflow:hidden; gap:3px; background:var(--lijn); }
+.balkje span { display:block; min-width:4px; }
+.legenda { list-style:none; display:flex; flex-direction:column; gap:7px; font-size:14px; }
+.legenda li, .regels li { display:flex; justify-content:space-between; gap:8px; }
+.legenda i { width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:8px; }
+.regels { list-style:none; display:flex; flex-direction:column; gap:8px; font-size:14px; }
+.regels li { padding-bottom:8px; border-bottom:1px dashed var(--lijn); }
+.regels li:last-child { border:0; padding:0; }
+.docs { list-style:none; }
+.docs li { display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--lijn); }
+.docs li:first-child { border-top:0; }
+.doc-ic { width:38px; height:38px; border-radius:10px; background:var(--zacht); color:var(--kleur); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.docs li.wacht .doc-ic { background:var(--soft); color:var(--muted); }
+.doc-t { flex:1; min-width:0; display:flex; flex-direction:column; }
+.doc-t b { font-size:14.5px; }
+.doc-t small { color:var(--muted); font-size:12.5px; }
+.wacht-tekst { font-size:12.5px; color:var(--muted); white-space:nowrap; }
+.zoek { display:flex; align-items:center; gap:8px; border:1.5px solid var(--lijn); border-radius:var(--pil); padding:0 14px; min-height:40px; background:#fff; color:var(--muted); }
+.zoek input { border:0; outline:0; background:none; min-width:180px; font-size:14px; }
+.tabelrol { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { text-align:left; font-family:var(--mono); font-weight:500; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:10px 12px 10px 0; border-bottom:1px solid var(--inkt); white-space:nowrap; }
+td { padding:12px 12px 12px 0; border-bottom:1px solid var(--lijn); white-space:nowrap; }
+.pil { display:inline-flex; align-items:center; gap:4px; border-radius:var(--pil); padding:3px 9px; font-size:12px; font-weight:700; background:var(--soft); }
+.pil.ok { background:var(--zacht); color:var(--kleur); }
+.pil.donker { background:var(--inkt); color:#fff; }
+.leeg { background:var(--card); border:1px dashed var(--lijn); border-radius:var(--radius); padding:48px 24px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; color:var(--muted); }
+.leeg h2 { color:var(--inkt); }
+.leeg p { max-width:440px; }
+.twee { display:grid; grid-template-columns:minmax(0, 1.2fr) minmax(0, .8fr); gap:20px; align-items:start; }
+.persoon { display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--lijn); }
+.persoon:first-child { border-top:0; }
+.ava { width:38px; height:38px; border-radius:50%; background:var(--zacht); color:var(--kleur); display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+.persoon-t { flex:1; min-width:0; }
+.persoon-t small { display:block; color:var(--muted); font-size:13px; overflow:hidden; text-overflow:ellipsis; }
+#toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--inkt); color:#fff; padding:12px 18px; border-radius:var(--pil); font-weight:600; font-size:14px; z-index:50; max-width:92vw; }
+#toast.fout { background:var(--rood-tekst); }
+
+@media (max-width:1000px) { .raster, .twee { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:700px) {
+  .balk-in { flex-wrap:wrap; gap:10px; }
+  .tabs { order:3; width:100%; margin-left:0; }
+  .wie-naam { display:none; }
+  .stappen { grid-template-columns:1fr; gap:12px; }
+  .stap { flex-direction:row; align-items:center; gap:12px; }
+  .stap::before { display:none; }
+  .stap-datum { margin-left:auto; }
+}
+
+/* ═══ documenten om te printen ═══
+   De documenten zijn gewone HTML die de browser als PDF bewaart (Afdrukken >
+   Bewaar als PDF). Zo is er geen PDF-bibliotheek of opslag nodig, en klopt een
+   document altijd met wat er op dat moment in Storvo staat. */
+#printvak { display:none; }
+.blad { font-family:var(--body); color:#111; max-width:780px; margin:0 auto; }
+.blad-kop { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; padding-bottom:18px; border-bottom:2px solid var(--kleur); margin-bottom:22px; }
+.blad-kop h1 { font-size:26px; margin-top:12px; }
+.blad-meta { text-align:right; font-size:12.5px; color:#444; line-height:1.6; }
+.blad table { font-size:12px; }
+.blad td, .blad th { padding:7px 10px 7px 0; }
+.blad-tekst { font-size:13.5px; margin-bottom:16px; line-height:1.6; }
+.blad-cijfers { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin:18px 0 22px; }
+.blad-cijfers div { border:1px solid #ddd; border-radius:10px; padding:12px; }
+.blad-cijfers b { display:block; font-family:var(--display); font-size:24px; }
+.blad-voet { margin-top:30px; display:flex; justify-content:space-between; align-items:flex-end; gap:20px; font-size:12px; color:#444; }
+.handtekening { border-top:1px solid #111; padding-top:6px; min-width:220px; }
+@media print {
+  @page { margin:16mm; }
+  body { background:#fff; }
+  body.printen #app, body.printen #inlog, body.printen #toast { display:none !important; }
+  body.printen #printvak { display:block; }
+  .blad table { page-break-inside:auto; }
+  .blad tr { page-break-inside:avoid; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ inloggen ═══ -->
+<section id="inlog" hidden>
+  <svg class="inlogboog" viewBox="16 8 70 76" aria-hidden="true"><path d="M70.8 38 A24 24 0 1 1 62 29.2" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round"/><path d="M59.2 18.6 L62 29.2 L51.4 32" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="inlogkaart" id="inlogKaart"></div>
+</section>
+
+<!-- ═══ de app ═══ -->
+<div id="app" hidden>
+  <div class="bekijkbalk" id="bekijkBalk" hidden>Je kijkt mee als de klant. Alleen lezen.</div>
+  <header class="balk">
+    <div class="balk-in">
+      <a class="merk" id="merkApp" href="./" aria-label="Klantportaal"></a>
+      <nav class="tabs" aria-label="Portaal">
+        <button class="tab aan" data-tab="overzicht" onclick="naarTab('overzicht')">Overzicht</button>
+        <button class="tab" data-tab="collegas" onclick="naarTab('collegas')">Collega's</button>
+        <button class="tab" data-tab="aanmelden" onclick="naarTab('aanmelden')">Partij aanmelden</button>
+      </nav>
+      <div class="wie">
+        <div class="wie-naam" id="wieNaam"></div>
+        <button class="btn licht klein" id="uitlogKnop" onclick="uitloggen()">Uitloggen</button>
+      </div>
+    </div>
+  </header>
+  <main id="vak"></main>
+</div>
+
+<div id="printvak"></div>
+<div id="toast" hidden></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Klantportaal
+
+   Organisaties van wie de winkel IT opkoopt, volgen hier hun partij: status,
+   wissen, testen, bod en betaling, en de documenten. De gegevens komen uit
+   Supabase via de functies klantportaal_overzicht en klantportaal_opdracht. Die
+   geven alleen veilige velden terug; een portaalgebruiker heeft geen toegang tot
+   de tabellen zelf.
+
+   Het portaal draait op het eigen domein van de winkel (portaal.reloopit.nl) of
+   op storvo.app/klantportaal/?w=<slug>. De huisstijl komt uit
+   klantportaal_instellingen.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+
+let params = {};
+try { params = Object.fromEntries(new URLSearchParams(location.search)); } catch(e){}
+/* Meekijken: de winkel opent het portaal van een organisatie vanuit de refurbish-app
+   met ?bekijk=<organisatie_id>. Dan gebruiken we de gewone Storvo-sessie (dezelfde
+   opslag als de winkelapp) en is alles alleen-lezen. De database controleert zelf
+   of je eigenaar of beheerder bent van die winkel. */
+const BEKIJK = params.bekijk || null;
+/* Een eigen opslagsleutel voor portaalklanten. Anders delen ze de sessie met de
+   winkelapp op hetzelfde domein, en logt uitloggen hier ook de winkel uit. */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
+  BEKIJK ? {} : { auth: { storageKey: 'storvo-klantportaal', persistSession: true, detectSessionInUrl: true, flowType: 'implicit' } });
+
+const STAPPEN = [
+  { sleutel: 'aangemeld', naam: 'Aangemeld' },
+  { sleutel: 'opgehaald', naam: 'Opgehaald' },
+  { sleutel: 'gewist', naam: 'Gewist' },
+  { sleutel: 'getest', naam: 'Getest' },
+  { sleutel: 'afgerond', naam: 'Afgerond' }
+];
+const VOLGENDE = { opgehaald: 'Ophaling gepland', gewist: 'Wordt gewist', getest: 'Wordt getest', afgerond: 'Rapport en betaling' };
+const BESTEMMING = { hergebruik: 'Hergebruik', recycling: 'Recycling', vernietigd: 'Vernietigd' };
+const DOCSOORT = {
+  ophaalbon: { naam: 'Ophaalbon', icoon: 'truck' },
+  wiscertificaat: { naam: 'Wiscertificaat', icoon: 'schild' },
+  verwerkingsrapport: { naam: 'Verwerkingsrapport', icoon: 'doc' },
+  apparatenlijst: { naam: 'Apparatenlijst', icoon: 'lijst' },
+  impactrapport: { naam: 'Impactrapport', icoon: 'blad' }
+};
+
+let huisstijl = {}, data = null, gekozen = null, detailCache = {}, zoekterm = '', tabNu = 'overzicht';
+let aanmeldKlaar = false, collegas = [];
+
+/* ═══ hulpjes ═══ */
+function f(id){ return document.getElementById(id); }
+/* Een class-attribuut met een wisselende klasse. Via een template-string, zodat
+   tests/huisstijl.js hem niet als losse (ongestijlde) klassen leest. */
+function kl(c){ return ` class="${String(c).trim()}"`; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+const nf = new Intl.NumberFormat('nl-NL');
+const euroFmt = new Intl.NumberFormat('nl-NL', { style:'currency', currency:'EUR', maximumFractionDigits:0 });
+function euro(n){ return euroFmt.format(Number(n) || 0); }
+function datum(d, lang){
+  if(!d) return '';
+  const dt = new Date(String(d).length === 10 ? d + 'T12:00:00' : d);
+  if(isNaN(dt)) return esc(d);
+  return dt.toLocaleDateString('nl-NL', lang ? { day:'numeric', month:'long', year:'numeric' } : { day:'numeric', month:'short' });
+}
+function ton(kg){ kg = Number(kg) || 0; return kg >= 1000 ? (kg/1000).toLocaleString('nl-NL', { maximumFractionDigits:1 }) + ' t' : nf.format(kg) + ' kg'; }
+function kleurOk(k){ return /^#[0-9a-f]{3,8}$/i.test(String(k || '')); }
+let toastTimer = null;
+function toast(tekst, soort){
+  const t = f('toast'); t.textContent = tekst; t.className = soort === 'fout' ? 'fout' : ''; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3600);
+}
+const ICONEN = {
+  truck:'<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
+  schild:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  doc:'<path d="M7 3h7l4 4v14H7z"/><path d="M10 12h5M10 16h5M14 3v4h4"/>',
+  lijst:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+  blad:'<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19l7-7"/>',
+  download:'<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>',
+  vink:'<path d="M5 12l5 5 9-10"/>',
+  klok:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+  zoek:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  bel:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/>',
+  doos:'<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+  euro:'<path d="M17 6.5A7 7 0 1 0 17 17.5"/><path d="M4 10h9M4 14h9"/>'
+};
+function icoon(naam, maat){ maat = maat || 18; return '<svg class="i" width="'+maat+'" height="'+maat+'" viewBox="0 0 24 24" aria-hidden="true">'+(ICONEN[naam]||'')+'</svg>'; }
+
+/* ═══ huisstijl ═══ */
+function merkHtml(){
+  const naam = esc(huisstijl.merknaam || 'Klantportaal');
+  return huisstijl.logo_url && /^https:\/\//.test(huisstijl.logo_url)
+    ? '<img src="'+esc(huisstijl.logo_url)+'" alt="'+naam+'">'
+    : naam;
+}
+function huisstijlToepassen(h){
+  huisstijl = Object.assign({}, huisstijl, h || {});
+  const r = document.documentElement.style;
+  if(kleurOk(huisstijl.kleur)) r.setProperty('--kleur', huisstijl.kleur);
+  if(kleurOk(huisstijl.accent)) r.setProperty('--accent', huisstijl.accent);
+  if(kleurOk(huisstijl.inkt)) r.setProperty('--inkt', huisstijl.inkt);
+  document.title = 'Klantportaal' + (huisstijl.merknaam ? ' · ' + huisstijl.merknaam : '');
+  f('merkApp').innerHTML = merkHtml();
+}
+/* Op het eigen domein van de winkel zoeken we de huisstijl op hostnaam, op
+   storvo.app op de slug uit ?w=. */
+function eigenDomein(){ const h = location.hostname; return /(^|\.)storvo\.(app|nl)$|^localhost$|^127\./.test(h) ? null : h; }
+async function huisstijlLaden(){
+  try {
+    const { data: h } = await sb.rpc('klantportaal_huisstijl', { p_domein: eigenDomein(), p_slug: params.w || null });
+    if(h) huisstijlToepassen(h);
+  } catch(e){ console.error('huisstijl:', e); }
+}
+
+/* ═══ inloggen ═══ */
+function toonInlog(stand){
+  f('app').hidden = true; f('inlog').hidden = false;
+  const k = f('inlogKaart');
+  if(stand === 'verstuurd'){
+    k.innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+      + '<h1>Check je mail</h1>'
+      + '<p>Als je e-mailadres bij ons bekend is, staat er nu een inloglink in je mailbox. Die werkt een uur.</p>'
+      + '<button class="btn licht breed" onclick="toonInlog()">Ander e-mailadres</button>';
+    return;
+  }
+  if(stand === 'geentoegang'){
+    k.innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+      + '<h1>Geen toegang</h1>'
+      + '<p>Dit account hoort niet bij een klantportaal, of je toegang is uitgezet. Neem contact met ons op als dat niet klopt.</p>'
+      + '<button class="btn breed" onclick="uitloggen()">Opnieuw inloggen</button>';
+    return;
+  }
+  const verlopen = /error_code=otp_expired|error=access_denied/.test(location.hash);
+  k.innerHTML = '<div class="merk">'+merkHtml()+'</div>'
+    + '<h1>Klantportaal</h1>'
+    + '<p>Volg je partij: ophaling, wissen, testen en betaling. Met al je certificaten en rapporten.</p>'
+    + (verlopen ? '<div class="melding fout">Deze inloglink is verlopen of al gebruikt. Vraag een nieuwe aan.</div>' : '')
+    + '<div class="veld"><label for="inlogMail">Je e-mailadres</label>'
+    + '<input class="invoer" id="inlogMail" type="email" autocomplete="email" placeholder="naam@bedrijf.nl" onkeydown="if(event.key===\'Enter\')inlogLinkVragen()"></div>'
+    + '<button class="btn breed" id="inlogKnop" onclick="inlogLinkVragen()">Stuur mij een inloglink</button>'
+    + '<p class="inlogvoet">Geen wachtwoord nodig. Nog geen toegang? Vraag het aan je contactpersoon'
+    + (huisstijl.contact_email ? ' via <a href="mailto:'+esc(huisstijl.contact_email)+'">'+esc(huisstijl.contact_email)+'</a>' : '') + '.</p>';
+}
+async function inlogLinkVragen(){
+  const mail = (f('inlogMail').value || '').trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)){ toast('Vul een geldig e-mailadres in.', 'fout'); return; }
+  const knop = f('inlogKnop'); knop.disabled = true; knop.textContent = 'Even geduld...';
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer '+SUPABASE_ANON_KEY },
+      body: JSON.stringify({ actie:'inloglink', email:mail, domein:eigenDomein(), slug:params.w || huisstijl.slug || null })
+    });
+    const uit = await res.json().catch(() => ({}));
+    if(!res.ok || uit.ok === false){ throw new Error(uit.error || 'mislukt'); }
+    toonInlog('verstuurd');
+  } catch(e){
+    knop.disabled = false; knop.textContent = 'Stuur mij een inloglink';
+    toast('Versturen lukte niet. Probeer het zo nog eens.', 'fout');
+  }
+}
+async function uitloggen(){
+  if(BEKIJK){ window.close(); return; }
+  try { await sb.auth.signOut(); } catch(e){}
+  data = null; detailCache = {}; gekozen = null;
+  history.replaceState(null, '', location.pathname + (params.w ? '?w=' + encodeURIComponent(params.w) : ''));
+  toonInlog();
+}
+
+/* ═══ laden ═══ */
+async function laden(){
+  const { data: d, error } = await sb.rpc('klantportaal_overzicht', BEKIJK ? { p_organisatie: BEKIJK } : {});
+  if(error){ console.error('overzicht:', error); toast('Kon je gegevens niet laden. Probeer het opnieuw.', 'fout'); return false; }
+  if(!d){ toonInlog('geentoegang'); return false; }
+  data = d;
+  huisstijlToepassen(d.huisstijl);
+  if(!gekozen || !(d.opdrachten || []).some(o => o.id === gekozen)) gekozen = (d.opdrachten[0] || {}).id || null;
+  return true;
+}
+let opstartBezig = false;
+async function opstarten(){
+  if(opstartBezig) return; opstartBezig = true;
+  try { await opstartenEcht(); } finally { opstartBezig = false; }
+}
+async function opstartenEcht(){
+  await huisstijlLaden();
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ toonInlog(); return; }
+  if(await laden()){
+    // De tokens uit de inloglink staan nog in de adresbalk: weghalen.
+    if(location.hash) history.replaceState(null, '', location.pathname + location.search);
+    f('inlog').hidden = true; f('app').hidden = false;
+    f('bekijkBalk').hidden = !BEKIJK;
+    f('uitlogKnop').textContent = BEKIJK ? 'Sluiten' : 'Uitloggen';
+    f('wieNaam').innerHTML = '<b>'+esc(data.bedrijf)+'</b>'+esc(data.naam || '');
+    document.querySelectorAll('.tab').forEach(t => { if(BEKIJK && t.dataset.tab !== 'overzicht') t.hidden = true; });
+    if(!BEKIJK) sb.rpc('klantportaal_gezien').then(() => {}, () => {});
+    teken();
+  }
+}
+
+/* ═══ tabs ═══ */
+function naarTab(t){
+  tabNu = t;
+  document.querySelectorAll('.tab').forEach(k => k.classList.toggle('aan', k.dataset.tab === t));
+  if(t === 'collegas') collegasLaden();
+  teken(); window.scrollTo(0, 0);
+}
+function teken(){
+  if(!data) return;
+  if(tabNu === 'collegas') tekenCollegas();
+  else if(tabNu === 'aanmelden') tekenAanmelden();
+  else tekenOverzicht();
+}
+
+/* ═══ overzicht ═══ */
+function stapIndex(o){ const t = o.tijdlijn || {}; let i = -1; STAPPEN.forEach((s, n) => { if(t[s.sleutel]) i = n; }); return i; }
+function statusVan(o){
+  const i = stapIndex(o);
+  if(i >= STAPPEN.length - 1) return { tekst:'Afgerond', kort:'Afgerond', klas:'klaar' };
+  if(i < 0) return { tekst:'Nieuw', kort:'Nieuw', klas:'nieuw' };
+  return { tekst:VOLGENDE[STAPPEN[i+1].sleutel], kort:'Bezig', klas:'bezig' };
+}
+function begroeting(){ const u = new Date().getHours(); return u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : 'Goedenavond'; }
+function kpiRij(){
+  let tot = 0, herg = 0, verw = 0, co2 = 0, waarde = 0;
+  (data.opdrachten || []).forEach(o => {
+    const a = o.aantallen || {};
+    tot += a.totaal || 0;
+    if(a.hergebruik != null){ herg += a.hergebruik; verw += (a.hergebruik||0) + (a.recycling||0) + (a.vernietigd||0); }
+    if(o.impact) co2 += o.impact.co2_kg || 0;
+    if(o.bod) waarde += o.bod.definitief || o.bod.indicatief || 0;
+  });
+  const pct = verw ? Math.round(herg / verw * 100) + '%' : '-';
+  return '<ul class="kpis">'
+    + '<li><b>'+nf.format(tot)+'</b><small>apparaten aangeboden</small></li>'
+    + '<li class="accent"><b>'+pct+'</b><small>krijgt een tweede leven</small></li>'
+    + '<li><b>'+ton(co2)+'</b><small>CO₂-uitstoot vermeden</small></li>'
+    + '<li><b>'+euro(waarde)+'</b><small>opbrengst</small></li></ul>';
+}
+function tekenOverzicht(){
+  const lijst = data.opdrachten || [];
+  const am = data.accountmanager || {};
+  let h = '<div class="kop"><div><span class="label">'+esc(data.bedrijf)+'</span><h1>'+begroeting()+(data.naam ? ', '+esc(data.naam) : '')+'</h1></div>'
+    + '<div class="knoppen">'
+    + (am.telefoon ? '<a class="btn licht klein" href="tel:'+esc(String(am.telefoon).replace(/\s/g,''))+'">'+icoon('bel',16)+esc(am.naam || 'Bel ons')+'</a>' : '')
+    + (BEKIJK ? '' : '<button class="btn klein" onclick="naarTab(\'aanmelden\')">'+icoon('plus',16)+'Partij aanmelden</button>')
+    + '</div></div>';
+  if(!lijst.length){
+    h += '<div class="leeg">'+icoon('doos',32)+'<h2>Nog geen opdrachten</h2><p>Zodra je een partij aanmeldt, volg je hier alles: ophaling, wissen, testen, rapporten en betaling.</p>'
+      + (BEKIJK ? '' : '<button class="btn" onclick="naarTab(\'aanmelden\')">Partij aanmelden</button>') + '</div>';
+    f('vak').innerHTML = h; return;
+  }
+  h += kpiRij();
+  h += '<div class="raster"><div><p class="label" style="margin-bottom:10px">Opdrachten ('+lijst.length+')</p><ul class="lijst">'
+    + lijst.map(o => {
+      const s = statusVan(o), pct = Math.round((stapIndex(o) + 1) / STAPPEN.length * 100);
+      return '<li><button'+kl('opdracht'+(o.id === gekozen ? ' aan' : ''))+' onclick="kiesOpdracht(\''+esc(o.id)+'\')" aria-pressed="'+(o.id === gekozen)+'">'
+        + '<span class="opdracht-boven"><span class="mono">'+esc(o.nummer || '')+'</span><span'+kl('status '+s.klas)+'>'+s.kort+'</span></span>'
+        + '<b>'+esc(o.titel)+'</b><small>'+nf.format((o.aantallen||{}).totaal || 0)+' apparaten'+((o.tijdlijn||{}).aangemeld ? ' · '+datum(o.tijdlijn.aangemeld) : '')+'</small>'
+        + '<span class="voortgang"><span style="width:'+pct+'%"></span></span></button></li>';
+    }).join('') + '</ul></div><div id="detailVak"></div></div>';
+  f('vak').innerHTML = h;
+  tekenDetail();
+}
+async function kiesOpdracht(id){
+  gekozen = id; zoekterm = '';
+  tekenOverzicht();
+  const d = f('detailVak');
+  if(d && window.innerWidth < 1000 && d.scrollIntoView) d.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+async function detailLaden(id){
+  if(detailCache[id]) return detailCache[id];
+  const { data: d, error } = await sb.rpc('klantportaal_opdracht', BEKIJK ? { p_id:id, p_organisatie:BEKIJK } : { p_id:id });
+  if(error || !d){ console.error('opdracht:', error); return null; }
+  detailCache[id] = d; return d;
+}
+function tekenDetail(){
+  const vak = f('detailVak'); if(!vak) return;
+  const o = (data.opdrachten || []).find(x => x.id === gekozen); if(!o){ vak.innerHTML = ''; return; }
+  const s = statusVan(o), t = o.tijdlijn || {}, cur = stapIndex(o), a = o.aantallen || {}, b = o.bod || {};
+  const stappen = '<ol class="stappen">' + STAPPEN.map((st, i) => {
+    const stand = i <= cur ? 'klaar' : (i === cur + 1 ? 'volgende' : 'later');
+    const sub = t[st.sleutel] ? datum(t[st.sleutel]) : (stand === 'volgende' && o.gepland ? esc(o.gepland) : '');
+    return '<li'+kl('stap '+stand)+'><span class="stip">'+(stand === 'klaar' ? icoon('vink',14) : (i+1))+'</span><span class="stap-naam">'+st.naam+'</span><span class="stap-datum">'+sub+'</span></li>';
+  }).join('') + '</ol>';
+
+  let verwerking;
+  if(a.hergebruik == null){
+    verwerking = '<div class="paneel"><span class="label">Aangemeld</span><p class="groot">'+nf.format(a.totaal || 0)+' <small>apparaten</small></p>'
+      + '<ul class="regels">'+(o.categorieen || []).map(c => '<li><span>'+esc(c.naam)+'</span><b>'+nf.format(c.aantal)+'</b></li>').join('')+'</ul></div>';
+  } else {
+    const delen = [['hergebruik','var(--kleur)'],['recycling','#9CCBB1'],['vernietigd','var(--inkt)']];
+    verwerking = '<div class="paneel"><span class="label">Verwerking</span><p class="groot">'+nf.format(a.totaal || 0)+' <small>apparaten</small></p>'
+      + '<div class="balkje">'+delen.map(d => a[d[0]] ? '<span style="flex:'+a[d[0]]+';background:'+d[1]+'"></span>' : '').join('')+'</div>'
+      + '<ul class="legenda">'+delen.map(d => '<li><span><i style="background:'+d[1]+'"></i>'+BESTEMMING[d[0]]+'</span><b>'+nf.format(a[d[0]] || 0)+'</b></li>').join('')+'</ul></div>';
+  }
+  const bod = '<div class="paneel"><span class="label">Bod en betaling</span><ul class="regels">'
+    + [['Indicatief bod', b.indicatief], ['Definitief bod', b.definitief], ['Uitbetaald', b.uitbetaald]]
+      .map(r => '<li><span>'+r[0]+'</span><b>'+(r[1] != null ? euro(r[1]) : '<span class="muted">volgt</span>')+'</b></li>').join('') + '</ul></div>';
+  const impact = o.impact
+    ? '<div class="paneel accent"><span class="label">Impact</span><p class="groot">'+ton(o.impact.co2_kg)+' <small>CO₂ vermeden</small></p><p class="klein">'+ton(o.impact.ewaste_kg)+' e-waste voorkomen</p></div>'
+    : '<div class="paneel"><span class="label">Impact</span><p class="muted klein">Je impact rekenen we uit zodra alles getest is.</p></div>';
+
+  const docs = o.documenten || [];
+  const docLijst = '<div class="kaart"><div class="kop" style="margin-bottom:6px"><h3>Documenten</h3><span class="muted klein">'+docs.filter(d => d.beschikbaar).length+' van '+docs.length+' klaar</span></div><ul class="docs">'
+    + docs.map(d => {
+      const soort = DOCSOORT[d.type] || { naam:d.type, icoon:'doc' };
+      const rechts = d.beschikbaar
+        ? '<button class="btn klein licht" onclick="documentOpenen(\''+esc(o.id)+'\',\''+esc(d.type)+'\')">'+icoon('download',16)+esc(d.formaat || 'PDF')+'</button>'
+        : '<span class="wacht-tekst">'+icoon('klok',14)+' '+esc(d.verwacht || 'volgt')+'</span>';
+      return '<li'+kl(''+(d.beschikbaar ? '' : 'wacht'))+'><span class="doc-ic">'+icoon(soort.icoon)+'</span><span class="doc-t"><b>'+esc(d.naam || soort.naam)+'</b><small>'+esc(soort.naam)+(d.datum ? ' · '+datum(d.datum, true) : '')+'</small></span>'+rechts+'</li>';
+    }).join('') + '</ul></div>';
+
+  vak.innerHTML = '<div class="detail kaart">'
+    + '<div class="detail-kop"><div><span class="label">'+esc(o.nummer || '')+(o.locatie ? ' · '+esc(o.locatie) : '')+'</span><h2>'+esc(o.titel)+'</h2></div><span'+kl('status '+s.klas)+'>'+esc(s.tekst)+'</span></div>'
+    + stappen + '<div class="panelen">'+verwerking+bod+impact+'</div>' + docLijst
+    + '<div class="kaart" id="apparatenVak"><h3>Apparaten</h3><p class="muted klein" style="margin-top:6px">Laden...</p></div></div>';
+  apparatenTekenen(o.id);
+}
+async function apparatenTekenen(id){
+  const d = await detailLaden(id);
+  const vak = f('apparatenVak'); if(!vak || gekozen !== id) return;
+  const lijst = (d && d.apparaten) || [];
+  if(!lijst.length){ vak.innerHTML = '<h3>Apparaten</h3><p class="muted klein" style="margin-top:6px">Zodra je partij is opgehaald en ingescand, staat hier elk apparaat.</p>'; return; }
+  vak.innerHTML = '<div class="kop" style="margin-bottom:10px"><h3>Apparaten <span class="muted">('+lijst.length+')</span></h3>'
+    + '<label class="zoek">'+icoon('zoek',16)+'<input type="search" id="zoekVeld" placeholder="Zoek serienummer of model" aria-label="Zoek apparaat" value="'+esc(zoekterm)+'" oninput="zoekApparaat(this.value)"></label></div>'
+    + '<div class="tabelrol"><table><thead><tr><th>Serienummer</th><th>Model</th><th>Wissen</th><th>Grade</th><th>Bestemming</th></tr></thead><tbody id="apparaatRijen"></tbody></table></div>';
+  apparaatRijen();
+}
+function wisPil(w){
+  if(w === 'gewist') return '<span class="pil ok">'+icoon('vink',12)+' Gewist</span>';
+  if(w === 'vernietigd') return '<span class="pil donker">Vernietigd</span>';
+  if(w === 'nvt') return '<span class="muted">n.v.t.</span>';
+  if(w === 'mislukt') return '<span class="pil">Wordt vernietigd</span>';
+  return '<span class="muted">Nog niet</span>';
+}
+function apparaatRijen(){
+  const d = detailCache[gekozen], tb = f('apparaatRijen'); if(!d || !tb) return;
+  const q = zoekterm.trim().toLowerCase();
+  const rijen = (d.apparaten || []).filter(a => !q || ((a.sn || '') + ' ' + (a.model || '')).toLowerCase().includes(q));
+  tb.innerHTML = rijen.map(a => '<tr><td class="mono">'+esc(a.sn || '-')+'</td><td>'+esc(a.model || '-')+'</td><td>'+wisPil(a.wis)+'</td><td>'+esc(a.grade || '-')+'</td><td>'
+    + (a.bestemming ? '<span'+kl('pil'+(a.bestemming === 'hergebruik' ? ' ok' : a.bestemming === 'vernietigd' ? ' donker' : ''))+'>'+esc(BESTEMMING[a.bestemming] || a.bestemming)+'</span>' : '<span class="muted">Volgt</span>')
+    + '</td></tr>').join('') || '<tr><td colspan="5" class="muted">Niets gevonden.</td></tr>';
+}
+function zoekApparaat(v){ zoekterm = v || ''; apparaatRijen(); }
+
+/* ═══ documenten ═══ */
+async function documentOpenen(id, soort){
+  const o = (data.opdrachten || []).find(x => x.id === id);
+  const d = await detailLaden(id);
+  if(!o || !d){ toast('Kon het document niet maken.', 'fout'); return; }
+  if(soort === 'apparatenlijst'){ csvDownloaden(o, d); return; }
+  const html = soort === 'ophaalbon' ? docOphaalbon(o, d)
+    : soort === 'wiscertificaat' ? docWiscertificaat(o, d)
+    : soort === 'verwerkingsrapport' ? docVerwerking(o, d)
+    : soort === 'impactrapport' ? docImpact(o, d) : '';
+  if(!html) return;
+  f('printvak').innerHTML = '<div class="blad">'+html+'</div>';
+  document.body.classList.add('printen');
+  const oud = document.title;
+  document.title = (DOCSOORT[soort] || {}).naam + ' ' + (o.nummer || '');
+  const klaar = () => { document.body.classList.remove('printen'); document.title = oud; window.removeEventListener('afterprint', klaar); };
+  window.addEventListener('afterprint', klaar);
+  setTimeout(() => { window.print(); setTimeout(klaar, 1000); }, 50);
+}
+function bladKop(titel, o, datumTekst){
+  return '<div class="blad-kop"><div><div class="merk">'+merkHtml()+'</div><h1>'+esc(titel)+'</h1></div>'
+    + '<div class="blad-meta">'+esc(data.bedrijf)+'<br>Opdracht '+esc(o.nummer || '')+(o.titel ? ' · '+esc(o.titel) : '')+'<br>'+esc(datumTekst || '')+'</div></div>';
+}
+function bladVoet(){
+  return '<div class="blad-voet"><div>'+esc(huisstijl.merknaam || '')+(huisstijl.contact_email ? ' · '+esc(huisstijl.contact_email) : '')+'</div>'
+    + '<div class="handtekening">Namens '+esc(huisstijl.merknaam || 'de verwerker')+'</div></div>';
+}
+function docOphaalbon(o){
+  const cats = o.categorieen || [];
+  return bladKop('Ophaalbon', o, 'Opgehaald op ' + datum((o.tijdlijn||{}).opgehaald, true))
+    + '<p class="blad-tekst">Wij hebben de onderstaande apparatuur opgehaald en in verzegeld transport naar onze verwerkingslocatie gebracht.</p>'
+    + '<table><thead><tr><th>Soort</th><th>Aantal</th></tr></thead><tbody>'
+    + cats.map(c => '<tr><td>'+esc(c.naam)+'</td><td>'+nf.format(c.aantal)+'</td></tr>').join('')
+    + '<tr><td><b>Totaal</b></td><td><b>'+nf.format((o.aantallen||{}).totaal || 0)+'</b></td></tr></tbody></table>' + bladVoet();
+}
+function docWiscertificaat(o, d){
+  const lijst = (d.apparaten || []).filter(a => a.wis === 'gewist' || a.wis === 'vernietigd');
+  return bladKop('Wiscertificaat', o, 'Afgegeven op ' + datum((o.tijdlijn||{}).gewist, true))
+    + '<p class="blad-tekst">Hierbij verklaren wij dat de gegevensdragers in de onderstaande apparaten volledig en onherstelbaar zijn gewist'
+    + (huisstijl.wismethode ? ' volgens <b>'+esc(huisstijl.wismethode)+'</b>' : '')
+    + ', of fysiek zijn vernietigd waar dat staat vermeld. Per apparaat is vastgelegd wanneer en hoe.</p>'
+    + '<div class="blad-cijfers"><div><b>'+nf.format(lijst.length)+'</b>apparaten</div><div><b>'+nf.format(lijst.filter(a => a.wis === 'gewist').length)+'</b>gewist</div><div><b>'+nf.format(lijst.filter(a => a.wis === 'vernietigd').length)+'</b>fysiek vernietigd</div></div>'
+    + '<table><thead><tr><th>Serienummer</th><th>Model</th><th>Methode</th><th>Datum</th><th>Resultaat</th></tr></thead><tbody>'
+    + lijst.map(a => '<tr><td class="mono">'+esc(a.sn || '-')+'</td><td>'+esc(a.model || '-')+'</td><td>'+esc(a.wis === 'vernietigd' ? 'Fysieke vernietiging' : (a.wis_methode || huisstijl.wismethode || '-'))+'</td><td>'+datum(a.wis_op || (o.tijdlijn||{}).gewist)+'</td><td>'+(a.wis === 'vernietigd' ? 'Vernietigd' : 'Geslaagd')+'</td></tr>').join('')
+    + '</tbody></table>' + bladVoet();
+}
+function docVerwerking(o, d){
+  const a = o.aantallen || {};
+  return bladKop('Verwerkingsrapport', o, 'Getest op ' + datum((o.tijdlijn||{}).getest, true))
+    + '<p class="blad-tekst">Wat er met elk apparaat uit deze partij is gebeurd.</p>'
+    + '<div class="blad-cijfers"><div><b>'+nf.format(a.hergebruik || 0)+'</b>hergebruik</div><div><b>'+nf.format(a.recycling || 0)+'</b>recycling</div><div><b>'+nf.format(a.vernietigd || 0)+'</b>vernietigd</div></div>'
+    + '<table><thead><tr><th>Serienummer</th><th>Model</th><th>Grade</th><th>Wissen</th><th>Bestemming</th></tr></thead><tbody>'
+    + (d.apparaten || []).map(x => '<tr><td class="mono">'+esc(x.sn || '-')+'</td><td>'+esc(x.model || '-')+'</td><td>'+esc(x.grade || '-')+'</td><td>'+esc(x.wis === 'gewist' ? 'Gewist' : x.wis === 'vernietigd' ? 'Vernietigd' : x.wis === 'nvt' ? 'n.v.t.' : '-')+'</td><td>'+esc(BESTEMMING[x.bestemming] || '-')+'</td></tr>').join('')
+    + '</tbody></table>' + bladVoet();
+}
+function docImpact(o){
+  const i = o.impact || {}, a = o.aantallen || {};
+  return bladKop('Impactrapport', o, 'Afgerond op ' + datum((o.tijdlijn||{}).afgerond, true))
+    + '<p class="blad-tekst">Door hergebruik hoeven deze apparaten niet opnieuw gemaakt te worden. Dat scheelt uitstoot en grondstoffen.</p>'
+    + '<div class="blad-cijfers"><div><b>'+ton(i.co2_kg)+'</b>CO₂-uitstoot vermeden</div><div><b>'+ton(i.ewaste_kg)+'</b>e-waste voorkomen</div><div><b>'+nf.format(a.hergebruik || 0)+'</b>apparaten hergebruikt</div></div>'
+    + '<p class="blad-tekst muted">Berekend met gemiddelde waarden per soort apparaat voor de productie van een nieuw exemplaar. De cijfers zijn een indicatie.</p>'
+    + bladVoet();
+}
+function csvDownloaden(o, d){
+  const kol = ['Serienummer','Model','Soort','Wissen','Methode','Datum gewist','Grade','Bestemming'];
+  const cel = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const regels = [kol.map(cel).join(';')].concat((d.apparaten || []).map(a =>
+    [a.sn, a.model, a.categorie, a.wis, a.wis_methode, a.wis_op ? String(a.wis_op).slice(0,10) : '', a.grade, BESTEMMING[a.bestemming] || ''].map(cel).join(';')));
+  // BOM zodat Excel de accenten goed leest; puntkomma omdat Excel in Nederland die verwacht.
+  const blob = new Blob(['﻿' + regels.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob), link = document.createElement('a');
+  link.href = url; link.download = 'apparaten-' + (o.nummer || 'opdracht') + '.csv';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ═══ collega's ═══ */
+async function collegasLaden(){
+  const { data: c, error } = await sb.rpc('klantportaal_collegas');
+  collegas = error ? [] : (c || []);
+  if(tabNu === 'collegas') tekenCollegas();
+}
+function tekenCollegas(){
+  const beheerder = data.rol === 'beheerder';
+  let h = '<div class="kop"><div><span class="label">'+esc(data.bedrijf)+'</span><h1>Collega\'s</h1></div></div><div class="twee"><div class="kaart"><h3 style="margin-bottom:6px">Wie kan erin</h3>'
+    + (collegas.length ? collegas.map(c => '<div class="persoon"><span class="ava">'+esc((c.naam || c.email || '?').slice(0,1).toUpperCase())+'</span>'
+      + '<div class="persoon-t"><b>'+esc(c.naam || c.email)+(c.ik ? ' <span class="muted">(jij)</span>' : '')+'</b><small>'+esc(c.email)+' · '+(c.rol === 'beheerder' ? 'beheerder' : 'kan meekijken')+'</small></div>'
+      + (beheerder && !c.ik ? '<button class="btn licht klein" onclick="collegaUit(\''+esc(c.user_id)+'\')">Toegang weg</button>' : '') + '</div>').join('')
+      : '<p class="muted">Laden...</p>') + '</div>';
+  if(beheerder){
+    h += '<div class="kaart"><h3 style="margin-bottom:12px">Collega uitnodigen</h3>'
+      + '<div class="veld"><label for="nieuwNaam">Naam</label><input class="invoer" id="nieuwNaam" autocomplete="off"></div>'
+      + '<div class="veld"><label for="nieuwMail">E-mailadres</label><input class="invoer" id="nieuwMail" type="email" autocomplete="off"></div>'
+      + '<div class="veld"><span style="font-weight:600;font-size:14px">Rechten</span><div class="keuzes">'
+      + '<button type="button" class="keuze aan" data-rol="lezer" onclick="kiesRol(this)">Meekijken</button>'
+      + '<button type="button" class="keuze" data-rol="beheerder" onclick="kiesRol(this)">Beheerder</button></div></div>'
+      + '<button class="btn breed" id="uitnodigKnop" onclick="collegaUitnodigen()">Uitnodiging sturen</button>'
+      + '<p class="muted klein" style="margin-top:10px">Een beheerder kan ook zelf collega\'s uitnodigen.</p></div>';
+  } else {
+    h += '<div class="kaart"><h3>Iemand toevoegen?</h3><p class="muted" style="margin-top:6px">Vraag het aan een beheerder van jouw organisatie.</p></div>';
+  }
+  f('vak').innerHTML = h + '</div>';
+}
+function kiesRol(knop){ document.querySelectorAll('.keuze[data-rol]').forEach(k => k.classList.toggle('aan', k === knop)); }
+async function collegaUitnodigen(){
+  const naam = f('nieuwNaam').value.trim(), mail = f('nieuwMail').value.trim();
+  const rolKnop = document.querySelector('.keuze.aan[data-rol]');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)){ toast('Vul een geldig e-mailadres in.', 'fout'); return; }
+  const knop = f('uitnodigKnop'); knop.disabled = true; knop.textContent = 'Versturen...';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer ' + (session ? session.access_token : '') },
+      body: JSON.stringify({ actie:'uitnodigen', email:mail, naam:naam, rol:rolKnop ? rolKnop.dataset.rol : 'lezer' })
+    });
+    const uit = await res.json().catch(() => ({}));
+    if(!res.ok || uit.ok === false) throw new Error(uit.error || 'Uitnodigen lukte niet.');
+    toast('Uitnodiging verstuurd naar ' + mail);
+    await collegasLaden();
+  } catch(e){
+    toast(e.message || 'Uitnodigen lukte niet.', 'fout');
+    knop.disabled = false; knop.textContent = 'Uitnodiging sturen';
+  }
+}
+async function collegaUit(id){
+  if(!confirm('Deze collega kan dan niet meer inloggen. Doorgaan?')) return;
+  const { data: gelukt } = await sb.rpc('klantportaal_collega_uit', { p_user:id });
+  toast(gelukt ? 'Toegang weggehaald.' : 'Dat lukte niet.', gelukt ? '' : 'fout');
+  collegasLaden();
+}
+
+/* ═══ partij aanmelden ═══ */
+function tekenAanmelden(){
+  if(aanmeldKlaar){
+    f('vak').innerHTML = '<div class="leeg">'+icoon('vink',32)+'<h2>Ontvangen</h2><p>We nemen binnen twee werkdagen contact op met een indicatief bod en een voorstel voor de ophaling.</p>'
+      + '<button class="btn licht" onclick="aanmeldOpnieuw()">Nog een partij aanmelden</button></div>';
+    return;
+  }
+  f('vak').innerHTML = '<div class="kop"><div><span class="label">'+esc(data.bedrijf)+'</span><h1>Partij aanmelden</h1></div></div>'
+    + '<div class="twee"><div class="kaart">'
+    + '<div class="veld"><label for="amWat">Wat heb je?</label><textarea class="invoer" id="amWat" placeholder="Bijvoorbeeld: 120 laptops Dell Latitude 5420, 30 monitoren, 2 servers"></textarea></div>'
+    + '<div class="veld"><label for="amAantal">Ongeveer hoeveel apparaten?</label><input class="invoer" id="amAantal" type="number" min="1" inputmode="numeric"></div>'
+    + '<div class="veld"><label for="amAdres">Ophaaladres</label><input class="invoer" id="amAdres" autocomplete="street-address"></div>'
+    + '<div class="veld"><label for="amPeriode">Wanneer?</label><input class="invoer" id="amPeriode" placeholder="Bijvoorbeeld: eind oktober"></div>'
+    + '<button class="btn breed" id="amKnop" onclick="aanmelden()">Aanmelden</button></div>'
+    + '<div class="kaart"><h3>Wat er daarna gebeurt</h3><p class="muted" style="margin-top:8px">Je krijgt binnen twee werkdagen een indicatief bod. Daarna plannen we de ophaling. Vanaf dan volg je alles hier in het portaal.</p></div></div>';
+}
+async function aanmelden(){
+  const wat = f('amWat').value.trim();
+  if(wat.length < 3){ toast('Vertel kort wat je hebt.', 'fout'); return; }
+  const knop = f('amKnop'); knop.disabled = true; knop.textContent = 'Versturen...';
+  const aantal = parseInt(f('amAantal').value, 10);
+  const { error } = await sb.rpc('klantportaal_aanmelden', {
+    p_omschrijving: wat, p_aantal: isNaN(aantal) ? null : aantal,
+    p_ophaaladres: f('amAdres').value.trim() || null, p_periode: f('amPeriode').value.trim() || null
+  });
+  if(error){ knop.disabled = false; knop.textContent = 'Aanmelden'; toast('Aanmelden lukte niet. Probeer het opnieuw.', 'fout'); return; }
+  aanmeldKlaar = true; tekenAanmelden();
+}
+function aanmeldOpnieuw(){ aanmeldKlaar = false; tekenAanmelden(); }
+
+/* Bij het inloggen via de link komt de sessie binnen via de adresbalk. */
+try { sb.auth.onAuthStateChange((event) => { if(event === 'SIGNED_IN' && !data && !BEKIJK) opstarten(); }); } catch(e){}
+opstarten();
+</script>
+</body>
+</html>

@@ -19,6 +19,8 @@ harde manier ontdekt.
 | De refurbish-app (bijkoopmodule) | /refurbish/ |
 | Het beheerpaneel van Storvo zelf | /admin/ |
 | Publieke klantpagina bij een reparatie | /r/ |
+| Klantportaal voor organisaties waarvan we IT opkopen | /klantportaal/ (en portaal.reloopit.nl) |
+| Het klantportaal beheren (winkelkant) | /portaalbeheer/ |
 
 Supabase-project: `ugilfxqolemxwssbpdwu`.
 Uitrollen gaat via GitHub naar Vercel: elke push naar `main` staat binnen een
@@ -193,6 +195,7 @@ Wat er over de grens gaat is weinig: een goedgekeurd toestel wordt een rij in
 |---|---|
 | `OPENSTAAND.md` | **wat er nog moet gebeuren, begin hier** |
 | `REFURBISH-STAPPENPLAN.md` | de refurbishmodule, van toevoegen tot online |
+| `KLANTPORTAAL-STAPPENPLAN.md` | het klantportaal: hoe het werkt en hoe je het live zet |
 | `ABONNEMENT-STAPPENPLAN.md` | Stripe, proefperiode, blokkade |
 | `WHATSAPP-STAPPENPLAN.md` | berichten naar de klant |
 | `MAILBOX-STAPPENPLAN.md` | de mailbox op info@storvo.nl |

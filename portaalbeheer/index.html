@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Storvo Klantportaal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Klantportaal beheren
+
+   De winkelkant van het klantportaal, net als /refurbish/ en /partner/ een eigen
+   app. Hier maak je opdrachten aan, koppel je een inkoopbatch, zet je de stappen
+   en het wissen, en nodig je de klant uit. De klant zelf gebruikt /klantportaal/.
+
+   Deze app leest de refurbish-tabellen alleen. Alles wat hij schrijft staat in de
+   eigen klantportaal_-tabellen; aan Storvo zelf verandert niets.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root { color-scheme: light;
+  --groen:#0B5B52; --groen-d:#093F39; --navy:#123F39; --actie:#E88A1D; --actie-d:#CE7811;
+  --tekst:#17201E; --bg:#F7F6F3; --card:#FFFFFF; --soft-2:#F0EEE8; --border:#ECEAE4;
+  --lblauw:#E7F1EE; --muted:#5B6663; --muted-l:#8A938F;
+  --green:#1E9E6A; --green-soft:#E3F4EC; --green-tekst:#177A51;
+  --amber:#E8B31D; --amber-soft:#FAF0D8; --amber-tekst:#946C07;
+  --red:#D64545; --red-soft:#FAE4E4; --red-tekst:#A33333;
+  --radius:24px; --radius-s:18px; --pil:100px;
+  --schaduw:0 6px 24px rgba(23,32,30,.07); --schaduw-l:0 10px 34px rgba(23,32,30,.10); }
+/* Verbergen moet altijd winnen, ook als er ergens display:flex op staat. */
+[hidden] { display:none !important; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html { overflow-x:clip; }
+body { font-family:'Instrument Sans', system-ui, sans-serif; font-size:15px; color:var(--tekst); background:var(--bg); line-height:1.55; overflow-x:clip; }
+h1, h2, h3 { font-family:'Sora', sans-serif; letter-spacing:-.01em; }
+h1 { font-size:26px; font-weight:800; letter-spacing:-.02em; }
+h2 { font-size:18px; font-weight:800; margin-bottom:6px; }
+h3 { font-size:15px; font-weight:800; }
+a { color:var(--groen); }
+svg.i { width:20px; height:20px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.muted { color:var(--muted); }
+.klein { font-size:13px; }
+.mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; }
+
+/* ---------- vakken ---------- */
+#app { display:flex; min-height:100vh; }
+aside { width:246px; background:var(--card); border-right:1.5px solid var(--border); padding:26px 16px 20px; display:flex; flex-direction:column; gap:4px; position:sticky; top:0; height:100vh; flex-shrink:0; }
+.logo { display:flex; align-items:center; gap:11px; padding:0 6px 24px; }
+.logo svg { width:40px; height:40px; }
+.logo b { display:block; font-family:'Sora', sans-serif; font-weight:800; font-size:17px; line-height:1.1; }
+.logo small { font-size:10px; font-weight:600; color:var(--muted-l); letter-spacing:.12em; text-transform:uppercase; }
+.navknop { display:flex; align-items:center; gap:11px; width:100%; text-decoration:none; text-align:left; background:none; border:none; color:var(--muted); padding:11px 16px; border-radius:var(--pil); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+.navknop:hover { background:var(--soft-2); color:var(--tekst); }
+.navknop.aan { background:var(--lblauw); color:var(--groen); }
+.teller { margin-left:auto; background:var(--amber-soft); color:var(--amber-tekst); font-size:11px; font-weight:700; border-radius:var(--pil); min-width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; padding:0 6px; }
+.ruimte { flex:1; }
+main { flex:1; min-width:0; padding:30px 40px 80px; max-width:1400px; margin:0 auto; width:100%; }
+.kop { display:flex; justify-content:space-between; align-items:flex-end; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
+.kop p { color:var(--muted); font-size:14px; }
+.rij { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.kaart { background:var(--card); border-radius:var(--radius); padding:24px 26px; margin-bottom:18px; box-shadow:var(--schaduw); }
+.kaart.melding { border:1.5px solid var(--amber); background:var(--amber-soft); box-shadow:none; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:18px; }
+.kpi { background:var(--card); border-radius:var(--radius-s); padding:18px 22px; box-shadow:var(--schaduw); }
+.kpi .l { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
+.kpi .v { font-family:'Sora', sans-serif; font-size:26px; font-weight:800; }
+
+/* ---------- knoppen en velden ---------- */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--groen); color:#fff; border:none; border-radius:var(--pil); padding:11px 20px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; text-decoration:none; white-space:nowrap; }
+.btn:hover { background:var(--groen-d); }
+.btn:disabled { opacity:.5; cursor:default; }
+.btn.actie { background:var(--actie); }
+.btn.actie:hover { background:var(--actie-d); }
+.btn.licht { background:#fff; color:var(--groen); border:1.5px solid rgba(11,91,82,.24); }
+.btn.licht:hover { background:var(--lblauw); }
+.btn.klein { padding:7px 14px; font-size:12.5px; }
+label { display:block; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
+input[type=text], input[type=number], input[type=email], input[type=password], input[type=search], input[type=date], input[type=url], textarea, select {
+  width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:14px; font-size:14px; font-family:inherit; background:#fff; color:var(--tekst); }
+input:focus, textarea:focus, select:focus { outline:none; border-color:var(--groen); box-shadow:0 0 0 4px rgba(11,91,82,.10); }
+select { appearance:none; -webkit-appearance:none; cursor:pointer; padding-right:36px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235B6663' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center; }
+textarea { resize:vertical; min-height:80px; }
+.velden { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; }
+.veld { display:flex; flex-direction:column; }
+.formrij { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.formrij input, .formrij select { flex:1; min-width:160px; }
+
+/* ---------- tabellen en labels ---------- */
+.tabelrol { overflow-x:auto; border-radius:var(--radius-s); }
+table { width:100%; border-collapse:collapse; font-size:13.5px; background:var(--card); }
+th { text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); padding:12px 12px; border-bottom:1px solid var(--soft-2); white-space:nowrap; }
+td { padding:12px 12px; border-bottom:1px solid var(--soft-2); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr.klik { cursor:pointer; }
+tr.klik:hover td { background:var(--soft-2); }
+td select { padding:8px 32px 8px 10px; font-size:13px; border-radius:10px; min-width:130px; }
+.pil { display:inline-block; font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:var(--pil); white-space:nowrap; background:var(--soft-2); color:var(--muted); }
+.pil.ok { background:var(--green-soft); color:var(--green-tekst); }
+.pil.let { background:var(--amber-soft); color:var(--amber-tekst); }
+.pil.info { background:var(--lblauw); color:var(--groen); }
+.stappen { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:10px; }
+.stap { border:1.5px solid var(--border); border-radius:var(--radius-s); padding:12px 14px; display:flex; flex-direction:column; gap:6px; align-items:flex-start; font-size:13px; }
+.stap b { font-size:13.5px; }
+.stap span { color:var(--muted); }
+.stap.klaar { background:var(--green-soft); border-color:var(--green-soft); }
+.stap.klaar span { color:var(--green-tekst); font-weight:600; }
+.persoon { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--soft-2); flex-wrap:wrap; }
+.persoon:first-child { border-top:none; }
+.leeg { color:var(--muted-l); text-align:center; padding:36px 16px; }
+.uitleg { color:var(--muted); font-size:13.5px; margin-bottom:14px; }
+.tussenkop { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:22px 0 10px; }
+
+/* ---------- inloggen, venster, melding ---------- */
+#inlog { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #123F39, #0E4C44 55%, #0B5B52); padding:20px; }
+.inlogkaart { background:#fff; border-radius:24px; padding:36px 32px 28px; width:400px; max-width:100%; box-shadow:0 30px 80px rgba(10,20,60,.35); }
+.inlogkaart h2 { font-size:22px; margin:14px 0 4px; }
+.inlogkaart p { color:var(--muted); margin-bottom:18px; font-size:14.5px; }
+.inlogkaart .veld { margin-bottom:12px; }
+.fouttekst { color:var(--red-tekst); font-size:13px; margin-top:8px; }
+#venster { position:fixed; inset:0; background:rgba(18,63,57,.44); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+.vensterkaart { background:#fff; border-radius:var(--radius); padding:28px; width:480px; max-width:100%; max-height:88vh; overflow-y:auto; box-shadow:var(--schaduw-l); }
+.vensterkaart h2 { margin-bottom:14px; }
+.vensterknoppen { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+#toasts { position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:8px; z-index:99; }
+.toast { background:var(--card); padding:14px 18px; border-radius:var(--radius-s); font-size:14px; font-weight:500; box-shadow:0 12px 32px rgba(23,32,30,.18); border-left:4px solid var(--green); max-width:360px; }
+.toast.fout { border-left-color:var(--red); }
+
+@media (max-width:900px) {
+  #app { flex-direction:column; }
+  aside { position:static; width:100%; height:auto; flex-direction:row; overflow-x:auto; padding:10px; border-right:none; border-bottom:1.5px solid var(--border); }
+  .logo, .ruimte { display:none; }
+  .navknop { width:auto; white-space:nowrap; }
+  main { padding:18px 14px 60px; }
+  .stappen { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  #toasts { left:14px; right:14px; }
+}
+</style>
+</head>
+<body>
+
+<section id="inlog" hidden>
+  <div class="inlogkaart" id="inlogKaart"></div>
+</section>
+
+<div id="app" hidden>
+  <aside>
+    <div class="logo"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Klantportaal</b><small>Storvo</small></div></div>
+    <button class="navknop aan" data-tab="opdrachten" onclick="naarTab('opdrachten')"><svg class="i" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>Opdrachten<span class="teller" id="aanvraagTeller" hidden></span></button>
+    <button class="navknop" data-tab="organisaties" onclick="naarTab('organisaties')"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5a3.5 3.5 0 0 1 0 6.5M18 14a6 6 0 0 1 3.5 6"/></svg>Organisaties</button>
+    <button class="navknop" data-tab="instellingen" onclick="naarTab('instellingen')"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Instellingen</button>
+    <div class="ruimte"></div>
+    <a class="navknop" href="/klantportaal/" target="_blank" rel="noopener"><svg class="i" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>Portaal openen</a>
+    <a class="navknop" href="/refurbish/"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Naar refurbish</a>
+  </aside>
+  <main id="vak"></main>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+const SUPABASE_URL = 'https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
+/* Gedeelde login met de winkelapp en de refurbish-app: zelfde opslag, dus ben je
+   daar ingelogd, dan ben je hier ook binnen. */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let account = null, instel = null;
+let opdrachten = [], organisaties = [], gebruikers = [], batches = [], apparaten = [], kpApparaten = {};
+let tab = 'opdrachten', huidigeOpdracht = null, huidigeOrg = null;
+
+const STAPPEN = [['opgehaald_op','Opgehaald'],['gewist_op','Gewist'],['getest_op','Getest'],['afgerond_op','Afgerond en betaald']];
+const WIS = { open:'Nog niet', gewist:'Gewist', vernietigd:'Vernietigd', mislukt:'Mislukt', nvt:'Geen opslag' };
+const BEST = { '':'Vanzelf', hergebruik:'Hergebruik', recycling:'Recycling', vernietigd:'Vernietigd' };
+
+/* ═══════════════ hulpjes ═══════════════ */
+function f(id){ return document.getElementById(id); }
+function v(id){ const e = f(id); return e ? String(e.value || '').trim() : ''; }
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const euro = n => n == null ? '' : '€ ' + Number(n).toLocaleString('nl-NL', { minimumFractionDigits:0, maximumFractionDigits:2 });
+function vandaag(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function datum(d){ return d ? new Date(String(d).slice(0,10) + 'T12:00:00').toLocaleDateString('nl-NL', { day:'numeric', month:'short' }) : ''; }
+function bedrag(id){ const s = v(id).replace(',', '.'); if(s === '') return null; const n = Number(s); return isFinite(n) ? Math.round(n * 100) / 100 : null; }
+function toast(tekst, soort){
+  const t = document.createElement('div');
+  t.className = soort === 'fout' ? 'toast fout' : 'toast';
+  t.textContent = tekst; f('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+async function bezig(knop, doe){
+  const oud = knop ? knop.textContent : '';
+  if(knop){ knop.disabled = true; knop.textContent = 'Bezig...'; }
+  try { await doe(); } catch(e){ console.error(e); toast(e.message || 'Er ging iets mis', 'fout'); }
+  if(knop && knop.isConnected){ knop.disabled = false; knop.textContent = oud; }
+}
+function venster(kop, inhoud, knopTekst, doe){
+  sluit();
+  const ov = document.createElement('div'); ov.id = 'venster';
+  ov.onclick = e => { if(e.target === ov) sluit(); };
+  ov.innerHTML = `<div class="vensterkaart"><h2>${esc(kop)}</h2>${inhoud}<div class="vensterknoppen"><button class="btn licht" onclick="sluit()">Annuleren</button><button class="btn actie" id="vensterOk">${esc(knopTekst)}</button></div></div>`;
+  document.body.appendChild(ov);
+  f('vensterOk').onclick = () => doe(f('vensterOk'));
+}
+function sluit(){ const o = f('venster'); if(o) o.remove(); }
+function orgNaam(id){ const o = organisaties.find(x => x.id === id); return o ? o.naam : 'Onbekend'; }
+function batchLabel(b){ return b ? [b.code, b.nummer, b.leverancier].filter(Boolean).join(' · ') || 'Batch' : ''; }
+function stapVan(o){ let i = 0; STAPPEN.forEach(([k], n) => { if(o[k]) i = n + 1; }); return i; }
+
+/* ═══════════════ inloggen ═══════════════ */
+function toonInlog(melding){
+  f('app').hidden = true; f('inlog').hidden = false;
+  f('inlogKaart').innerHTML = `<svg viewBox="0 0 400 400" width="48" height="48" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2>Klantportaal beheren</h2>
+    <p>Log in met je Storvo-account.</p>
+    ${melding ? `<p class="fouttekst">${esc(melding)}</p>` : ''}
+    <div class="veld"><label for="inlogMail">E-mail</label><input type="email" id="inlogMail" autocomplete="email" onkeydown="if(event.key==='Enter')f('inlogWw').focus()"></div>
+    <div class="veld"><label for="inlogWw">Wachtwoord</label><input type="password" id="inlogWw" autocomplete="current-password" onkeydown="if(event.key==='Enter')inloggen()"></div>
+    <button class="btn actie" style="width:100%" onclick="inloggen()">Inloggen</button>`;
+}
+async function inloggen(){
+  const { error } = await sb.auth.signInWithPassword({ email:v('inlogMail'), password:f('inlogWw').value });
+  if(error){ toonInlog('E-mail of wachtwoord klopt niet.'); return; }
+  opstarten();
+}
+async function uitloggen(){ await sb.auth.signOut(); toonInlog(); }
+
+/* ═══════════════ laden ═══════════════ */
+async function opstarten(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ toonInlog(); return; }
+  const { data: acc } = await sb.from('accounts').select('id,naam,rol,team_id').eq('id', session.user.id).maybeSingle();
+  /* Alleen mensen van een winkel. Een externe partner heeft geen team_id en een
+     portaalklant heeft helemaal geen account: die horen hier niet. */
+  if(!acc || !acc.team_id){ toonInlog('Dit account hoort niet bij een winkel.'); return; }
+  account = acc;
+  f('inlog').hidden = true; f('app').hidden = false;
+  await allesLaden();
+}
+async function allesLaden(){
+  const [i, o, org, g, b] = await Promise.all([
+    sb.from('klantportaal_instellingen').select('*').maybeSingle(),
+    sb.from('klantportaal_opdrachten').select('*').order('aangemaakt_op', { ascending:false }),
+    sb.from('klantportaal_organisaties').select('*').order('naam'),
+    sb.from('klantportaal_gebruikers').select('user_id,organisatie_id,naam,email,rol,actief,laatst_gezien').order('naam'),
+    sb.from('refurbish_batches').select('id,code,nummer,leverancier,aantal,aangemaakt_op').order('aangemaakt_op', { ascending:false })
+  ]);
+  if(i.error){
+    f('vak').innerHTML = `<div class="kaart"><h2>Het klantportaal is nog niet geïnstalleerd</h2><p class="uitleg">De tabellen ontbreken in de database. Draai eerst de migratie uit KLANTPORTAAL-STAPPENPLAN.md.</p></div>`;
+    return;
+  }
+  instel = i.data || null;
+  opdrachten = o.data || []; organisaties = org.data || []; gebruikers = g.data || []; batches = b.data || [];
+  teken();
+}
+async function toestellenLaden(opdracht){
+  apparaten = []; kpApparaten = {};
+  if(!opdracht || !opdracht.batch_id) return;
+  const { data: a } = await sb.from('refurbish_apparaten').select('id,merk,model,serienummer,code,status,categorie').eq('batch_id', opdracht.batch_id).order('merk');
+  apparaten = a || [];
+  if(apparaten.length){
+    const { data: k } = await sb.from('klantportaal_apparaten').select('*').in('apparaat_id', apparaten.map(x => x.id));
+    (k || []).forEach(r => { kpApparaten[r.apparaat_id] = r; });
+  }
+}
+
+/* ═══════════════ tabs ═══════════════ */
+function naarTab(t){
+  tab = t; huidigeOpdracht = null; huidigeOrg = null;
+  document.querySelectorAll('.navknop[data-tab]').forEach(k => k.classList.toggle('aan', k.dataset.tab === t));
+  teken(); window.scrollTo(0, 0);
+}
+function teken(){
+  const n = opdrachten.filter(o => o.status === 'aanvraag').length;
+  f('aanvraagTeller').textContent = n; f('aanvraagTeller').hidden = !n;
+  if(!instel && tab !== 'instellingen'){ tekenBeginnen(); return; }
+  if(tab === 'instellingen') tekenInstellingen();
+  else if(tab === 'organisaties') huidigeOrg ? tekenOrganisatie() : tekenOrganisaties();
+  else huidigeOpdracht ? tekenOpdracht() : tekenOpdrachten();
+}
+function tekenBeginnen(){
+  f('vak').innerHTML = `<div class="kop"><div><h1>Klantportaal</h1><p>Laat organisaties van wie je IT opkoopt hun partij volgen: ophaling, wissen, testen en betaling.</p></div></div>
+    <div class="kaart"><h2>Eerst je huisstijl</h2><p class="uitleg">Het portaal draait onder jouw merknaam, niet onder Storvo. Vul hem in bij Instellingen, dan kun je beginnen.</p>
+    <button class="btn actie" onclick="naarTab('instellingen')">Naar instellingen</button></div>`;
+}
+
+/* ═══════════════ opdrachten ═══════════════ */
+function tekenOpdrachten(){
+  const aanvragen = opdrachten.filter(o => o.status === 'aanvraag');
+  const lopend = opdrachten.filter(o => o.status === 'actief' && !o.afgerond_op);
+  const klaar = opdrachten.filter(o => o.status === 'actief' && o.afgerond_op);
+  let h = `<div class="kop"><div><h1>Opdrachten</h1><p>Elke opdracht is één partij van een organisatie. De klant ziet hem in het portaal van ${esc(instel.merknaam)}.</p></div>
+    <button class="btn actie" onclick="opdrachtNieuw()">Nieuwe opdracht</button></div>
+    <div class="kpis"><div class="kpi"><div class="l">Aanvragen</div><div class="v">${aanvragen.length}</div></div>
+      <div class="kpi"><div class="l">Lopend</div><div class="v">${lopend.length}</div></div>
+      <div class="kpi"><div class="l">Afgerond</div><div class="v">${klaar.length}</div></div>
+      <div class="kpi"><div class="l">Organisaties</div><div class="v">${organisaties.length}</div></div></div>`;
+  if(aanvragen.length){
+    h += `<div class="kaart melding"><h2>Nieuwe aanvragen uit het portaal</h2>${aanvragen.map(o => `<div class="persoon"><div><b>${esc(orgNaam(o.organisatie_id))}</b>
+      <div class="muted klein">${esc(o.omschrijving || o.titel)}${o.aantal_verwacht ? ' · ongeveer ' + o.aantal_verwacht + ' stuks' : ''}${o.ophaaladres ? ' · ' + esc(o.ophaaladres) : ''}${o.gepland ? ' · ' + esc(o.gepland) : ''}</div></div>
+      <div class="rij"><button class="btn actie klein" onclick="aanvraagAannemen(this,'${o.id}')">Aannemen</button><button class="btn licht klein" onclick="aanvraagAfwijzen(this,'${o.id}')">Afwijzen</button></div></div>`).join('')}</div>`;
+  }
+  const lijst = opdrachten.filter(o => o.status === 'actief');
+  h += `<div class="kaart">${lijst.length ? `<div class="tabelrol"><table><thead><tr><th>Nummer</th><th>Organisatie</th><th>Opdracht</th><th>Batch</th><th>Stap</th><th>Bod</th></tr></thead><tbody>
+    ${lijst.map(o => { const s = stapVan(o); const b = batches.find(x => x.id === o.batch_id);
+      return `<tr class="klik" onclick="opdrachtOpen('${o.id}')"><td class="mono">${esc(o.nummer || '')}</td><td>${esc(orgNaam(o.organisatie_id))}</td><td><b>${esc(o.titel)}</b></td>
+      <td>${b ? esc(batchLabel(b)) : '<span class="muted">nog niet</span>'}</td>
+      <td><span class="pil ${s === 4 ? 'ok' : s ? 'info' : ''}">${s === 4 ? 'Afgerond' : s ? STAPPEN[s-1][1] : 'Aangemeld'}</span></td>
+      <td>${euro(o.bod_definitief ?? o.bod_indicatief)}</td></tr>`; }).join('')}</tbody></table></div>`
+    : '<p class="leeg">Nog geen opdrachten. Maak er een, of wacht op een aanvraag uit het portaal.</p>'}</div>`;
+  f('vak').innerHTML = h;
+}
+function opdrachtNieuw(){
+  venster('Nieuwe opdracht', `<div class="veld"><label for="noOrg">Organisatie</label><select id="noOrg">${organisaties.map(o => `<option value="${o.id}">${esc(o.naam)}</option>`).join('')}<option value="__nieuw">Nieuwe organisatie...</option></select></div>
+    <div class="veld" style="margin-top:12px"><label for="noOrgNaam">Naam nieuwe organisatie</label><input type="text" id="noOrgNaam" placeholder="Alleen bij een nieuwe organisatie"></div>
+    <div class="veld" style="margin-top:12px"><label for="noTitel">Naam van de opdracht</label><input type="text" id="noTitel" placeholder="bijv. Uitfasering hoofdkantoor"></div>`,
+  'Aanmaken', knop => bezig(knop, async () => {
+    let org = v('noOrg');
+    if(!org || org === '__nieuw'){
+      const naam = v('noOrgNaam'); if(!naam) throw new Error('Vul de naam van de organisatie in.');
+      const { data, error } = await sb.from('klantportaal_organisaties').insert({ team_id:account.team_id, naam }).select().single();
+      if(error) throw error; organisaties.push(data); org = data.id;
+    }
+    const titel = v('noTitel'); if(!titel) throw new Error('Geef de opdracht een naam.');
+    const { data, error } = await sb.from('klantportaal_opdrachten').insert({ team_id:account.team_id, organisatie_id:org, titel, status:'actief', aangemaakt_door:account.id }).select().single();
+    if(error) throw error;
+    opdrachten.unshift(data); sluit(); opdrachtOpen(data.id); toast('Opdracht aangemaakt');
+  }));
+}
+async function aanvraagAannemen(knop, id){
+  await bezig(knop, async () => {
+    const { error } = await sb.from('klantportaal_opdrachten').update({ status:'actief' }).eq('id', id);
+    if(error) throw error;
+    const o = opdrachten.find(x => x.id === id); if(o) o.status = 'actief';
+    opdrachtOpen(id); toast('Aangenomen. Vul het bod in, dan ziet de klant het meteen.');
+  });
+}
+async function aanvraagAfwijzen(knop, id){
+  await bezig(knop, async () => {
+    const { error } = await sb.from('klantportaal_opdrachten').update({ status:'afgewezen' }).eq('id', id);
+    if(error) throw error;
+    const o = opdrachten.find(x => x.id === id); if(o) o.status = 'afgewezen';
+    teken(); toast('Afgewezen. De klant ziet hem niet meer.');
+  });
+}
+async function opdrachtOpen(id){
+  huidigeOpdracht = id; tab = 'opdrachten';
+  document.querySelectorAll('.navknop[data-tab]').forEach(k => k.classList.toggle('aan', k.dataset.tab === 'opdrachten'));
+  await toestellenLaden(opdrachten.find(o => o.id === id));
+  teken(); window.scrollTo(0, 0);
+}
+function opdrachtTerug(){ huidigeOpdracht = null; teken(); }
+
+function tekenOpdracht(){
+  const o = opdrachten.find(x => x.id === huidigeOpdracht); if(!o){ opdrachtTerug(); return; }
+  const gekoppeld = batches.find(b => b.id === o.batch_id);
+  const bezet = new Set(opdrachten.filter(x => x.batch_id && x.id !== o.id).map(x => x.batch_id));
+  const vrij = batches.filter(b => !bezet.has(b.id));
+  const open = apparaten.filter(a => !kpApparaten[a.id] || kpApparaten[a.id].wis_status === 'open').length;
+  const mensen = gebruikers.filter(g => g.organisatie_id === o.organisatie_id && g.actief);
+
+  f('vak').innerHTML = `<div class="kop"><div><button class="btn licht klein" onclick="opdrachtTerug()">Alle opdrachten</button>
+      <h1 style="margin-top:12px">${esc(o.titel)}</h1><p><span class="mono">${esc(o.nummer || '')}</span> · ${esc(orgNaam(o.organisatie_id))}</p></div>
+    <div class="rij"><a class="btn licht" href="/klantportaal/?bekijk=${o.organisatie_id}" target="_blank" rel="noopener">Bekijk als klant</a>
+      <button class="btn licht" onclick="opdrachtVerwijderen('${o.id}')">Verwijderen</button></div></div>
+
+  <div class="kaart"><h2>Stappen</h2><p class="uitleg">Druk op Vandaag zodra een stap klaar is. De klant ziet het meteen.</p>
+    <div class="stappen"><div class="stap klaar"><b>Aangemeld</b><span>${datum(o.aangemeld_op)}</span></div>
+    ${STAPPEN.map(([k, n]) => `<div class="stap ${o[k] ? 'klaar' : ''}"><b>${n}</b>${o[k]
+      ? `<span>${datum(o[k])}</span><button class="btn licht klein" onclick="stapZetten(this,'${k}',false)">Terugzetten</button>`
+      : `<button class="btn klein" onclick="stapZetten(this,'${k}',true)">Vandaag</button>`}</div>`).join('')}</div></div>
+
+  <div class="kaart"><h2>Gegevens voor de klant</h2><p class="uitleg">Inkoop, marge en notities uit Storvo ziet de klant nooit. Alleen wat hier staat.</p>
+    <div class="velden">
+      <div class="veld"><label for="odTitel">Naam</label><input type="text" id="odTitel" value="${esc(o.titel)}"></div>
+      <div class="veld"><label for="odLocatie">Locatie</label><input type="text" id="odLocatie" value="${esc(o.locatie || '')}" placeholder="bijv. Breda"></div>
+      <div class="veld"><label for="odGepland">Wat komt er nu</label><input type="text" id="odGepland" value="${esc(o.gepland || '')}" placeholder="bijv. Ophaling 24 september"></div>
+      <div class="veld"><label for="odAantal">Verwacht aantal</label><input type="number" id="odAantal" min="0" value="${o.aantal_verwacht ?? ''}"></div>
+      <div class="veld"><label for="odBodI">Indicatief bod</label><input type="number" id="odBodI" step="0.01" min="0" value="${o.bod_indicatief ?? ''}"></div>
+      <div class="veld"><label for="odBodD">Definitief bod</label><input type="number" id="odBodD" step="0.01" min="0" value="${o.bod_definitief ?? ''}"></div>
+      <div class="veld"><label for="odUit">Uitbetaald</label><input type="number" id="odUit" step="0.01" min="0" value="${o.uitbetaald ?? ''}"></div>
+    </div>
+    ${o.omschrijving ? `<p class="uitleg" style="margin-top:12px">De klant schreef: ${esc(o.omschrijving)}</p>` : ''}
+    <div class="rij" style="margin-top:14px"><button class="btn actie" onclick="opdrachtBewaren(this)">Opslaan</button></div></div>
+
+  <div class="kaart"><h2>Toestellen</h2>
+    <p class="uitleg">De toestellen komen uit een inkoopbatch in de refurbish-app. Koppel de batch waar je deze partij in hebt gezet.</p>
+    <div class="formrij"><select id="odBatch"><option value="">Geen batch</option>${vrij.map(b => `<option value="${b.id}"${b.id === o.batch_id ? ' selected' : ''}>${esc(batchLabel(b))}</option>`).join('')}</select>
+      <button class="btn" onclick="batchKoppelen(this)">${gekoppeld ? 'Andere batch' : 'Koppelen'}</button></div>
+    ${gekoppeld ? `<div class="tussenkop"><h3>${apparaten.length} ${apparaten.length === 1 ? 'toestel' : 'toestellen'} in ${esc(batchLabel(gekoppeld))}</h3>
+      ${open ? `<button class="btn klein" onclick="allesGewist(this)">${open} open op gewist</button>` : ''}</div>
+      ${apparaten.length ? `<div class="tabelrol"><table><thead><tr><th>Toestel</th><th>Serienummer</th><th>Wissen</th><th>Bestemming</th></tr></thead><tbody>
+      ${apparaten.map(a => { const k = kpApparaten[a.id] || {};
+        return `<tr><td><b>${esc([a.merk, a.model].filter(Boolean).join(' ') || 'Naamloos')}</b></td><td class="mono">${esc(a.serienummer || a.code || '')}</td>
+        <td><select onchange="toestelZetten('${a.id}','wis_status',this.value)">${Object.entries(WIS).map(([w, n]) => `<option value="${w}"${(k.wis_status || 'open') === w ? ' selected' : ''}>${n}</option>`).join('')}</select></td>
+        <td><select onchange="toestelZetten('${a.id}','bestemming',this.value)">${Object.entries(BEST).map(([w, n]) => `<option value="${w}"${(k.bestemming || '') === w ? ' selected' : ''}>${n}</option>`).join('')}</select></td></tr>`; }).join('')}
+      </tbody></table></div><p class="uitleg" style="margin-top:10px">Bestemming op Vanzelf: na het testen wordt het hergebruik, en recycling voor afgekeurde of gesloopte toestellen.</p>`
+      : '<p class="leeg">Nog geen toestellen in deze batch.</p>'}` : ''}
+  </div>
+
+  <div class="kaart"><h2>Wie kan meekijken</h2>
+    ${mensen.length ? mensen.map(g => `<div class="persoon"><div><b>${esc(g.naam || g.email)}</b><div class="muted klein">${esc(g.email)} · ${g.rol === 'beheerder' ? 'beheerder' : 'kijkt mee'} · ${g.laatst_gezien ? 'laatst ' + datum(g.laatst_gezien) : 'nog niet ingelogd'}</div></div></div>`).join('')
+      : '<p class="uitleg">Nog niemand van deze organisatie. Nodig iemand uit bij Organisaties.</p>'}
+    <button class="btn licht klein" style="margin-top:10px" onclick="orgOpen('${o.organisatie_id}')">Naar ${esc(orgNaam(o.organisatie_id))}</button>
+  </div>`;
+}
+async function opdrachtBijwerken(rij){
+  const { error } = await sb.from('klantportaal_opdrachten').update(rij).eq('id', huidigeOpdracht);
+  if(error) throw error;
+  Object.assign(opdrachten.find(x => x.id === huidigeOpdracht), rij);
+}
+async function opdrachtBewaren(knop){
+  const aantal = parseInt(v('odAantal'), 10);
+  const rij = { titel:v('odTitel') || 'Opdracht', locatie:v('odLocatie') || null, gepland:v('odGepland') || null,
+    aantal_verwacht:isNaN(aantal) ? null : aantal, bod_indicatief:bedrag('odBodI'), bod_definitief:bedrag('odBodD'), uitbetaald:bedrag('odUit') };
+  await bezig(knop, async () => { await opdrachtBijwerken(rij); toast('Opgeslagen, de klant ziet het meteen'); });
+}
+/* Een stap terugzetten zet de latere stappen niet mee terug: soms vul je achteraf
+   een vergeten datum in. */
+async function stapZetten(knop, veld, aan){
+  const rij = {}; rij[veld] = aan ? vandaag() : null;
+  await bezig(knop, async () => {
+    await opdrachtBijwerken(rij); teken();
+    if(aan && veld === 'gewist_op' && apparaten.some(a => !kpApparaten[a.id] || kpApparaten[a.id].wis_status === 'open'))
+      toast('Zet ook de toestellen op gewist, dan komen ze op het wiscertificaat.');
+  });
+}
+async function batchKoppelen(knop){
+  const id = v('odBatch') || null;
+  await bezig(knop, async () => {
+    await opdrachtBijwerken({ batch_id:id });
+    await toestellenLaden(opdrachten.find(x => x.id === huidigeOpdracht));
+    teken(); toast(id ? 'Batch gekoppeld' : 'Batch losgekoppeld');
+  });
+}
+function wisVelden(status){
+  return { wis_status:status,
+    wis_methode: status === 'gewist' ? (instel.wismethode || null) : status === 'vernietigd' ? 'Fysieke vernietiging' : null,
+    wis_op: (status === 'gewist' || status === 'vernietigd') ? new Date().toISOString() : null };
+}
+async function toestelZetten(id, veld, waarde){
+  const huidig = kpApparaten[id] || { wis_status:'open', bestemming:null };
+  const rij = Object.assign({ apparaat_id:id, team_id:account.team_id, wis_status:huidig.wis_status, wis_methode:huidig.wis_methode || null,
+    wis_op:huidig.wis_op || null, bestemming:huidig.bestemming || null, bijgewerkt_op:new Date().toISOString() },
+    veld === 'wis_status' ? wisVelden(waarde) : { bestemming:waarde || null });
+  const { error } = await sb.from('klantportaal_apparaten').upsert(rij);
+  if(error){ toast('Opslaan lukte niet', 'fout'); teken(); return; }
+  kpApparaten[id] = rij;
+}
+async function allesGewist(knop){
+  const ids = apparaten.filter(a => !kpApparaten[a.id] || kpApparaten[a.id].wis_status === 'open').map(a => a.id);
+  if(!ids.length) return;
+  await bezig(knop, async () => {
+    const rijen = ids.map(id => Object.assign({ apparaat_id:id, team_id:account.team_id, bestemming:(kpApparaten[id] || {}).bestemming || null,
+      bijgewerkt_op:new Date().toISOString() }, wisVelden('gewist')));
+    const { error } = await sb.from('klantportaal_apparaten').upsert(rijen);
+    if(error) throw error;
+    rijen.forEach(r => { kpApparaten[r.apparaat_id] = r; });
+    const o = opdrachten.find(x => x.id === huidigeOpdracht);
+    if(o && !o.gewist_op) await opdrachtBijwerken({ gewist_op:vandaag() });
+    teken(); toast(ids.length + (ids.length === 1 ? ' toestel' : ' toestellen') + ' op gewist');
+  });
+}
+function opdrachtVerwijderen(id){
+  venster('Opdracht verwijderen?', '<p class="uitleg">De klant ziet hem dan niet meer. De batch en de toestellen in Storvo blijven gewoon bestaan.</p>', 'Verwijderen',
+    knop => bezig(knop, async () => {
+      const { error } = await sb.from('klantportaal_opdrachten').delete().eq('id', id);
+      if(error) throw error;
+      opdrachten = opdrachten.filter(x => x.id !== id); sluit(); opdrachtTerug(); toast('Verwijderd');
+    }));
+}
+
+/* ═══════════════ organisaties ═══════════════ */
+function tekenOrganisaties(){
+  f('vak').innerHTML = `<div class="kop"><div><h1>Organisaties</h1><p>Van wie je IT opkoopt, en wie daar mag meekijken.</p></div>
+    <button class="btn actie" onclick="orgNieuw()">Nieuwe organisatie</button></div>
+    <div class="kaart">${organisaties.length ? `<div class="tabelrol"><table><thead><tr><th>Organisatie</th><th>Contact</th><th>Opdrachten</th><th>Mensen</th></tr></thead><tbody>
+    ${organisaties.map(o => `<tr class="klik" onclick="orgOpen('${o.id}')"><td><b>${esc(o.naam)}</b></td><td>${esc(o.contact_naam || '')}${o.contact_email ? ' <span class="muted">' + esc(o.contact_email) + '</span>' : ''}</td>
+      <td>${opdrachten.filter(x => x.organisatie_id === o.id && x.status !== 'afgewezen').length}</td><td>${gebruikers.filter(g => g.organisatie_id === o.id && g.actief).length}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="leeg">Nog geen organisaties.</p>'}</div>`;
+}
+function orgNieuw(){
+  venster('Nieuwe organisatie', `<div class="veld"><label for="noNaam">Naam</label><input type="text" id="noNaam" placeholder="bijv. Gemeente Breda"></div>`, 'Toevoegen',
+    knop => bezig(knop, async () => {
+      const naam = v('noNaam'); if(!naam) throw new Error('Vul een naam in.');
+      const { data, error } = await sb.from('klantportaal_organisaties').insert({ team_id:account.team_id, naam }).select().single();
+      if(error) throw error;
+      organisaties.push(data); organisaties.sort((a, b) => a.naam.localeCompare(b.naam)); sluit(); orgOpen(data.id);
+    }));
+}
+function orgOpen(id){
+  tab = 'organisaties'; huidigeOrg = id; huidigeOpdracht = null;
+  document.querySelectorAll('.navknop[data-tab]').forEach(k => k.classList.toggle('aan', k.dataset.tab === 'organisaties'));
+  teken(); window.scrollTo(0, 0);
+}
+function tekenOrganisatie(){
+  const o = organisaties.find(x => x.id === huidigeOrg); if(!o){ huidigeOrg = null; teken(); return; }
+  const mensen = gebruikers.filter(g => g.organisatie_id === o.id);
+  const hunOpdrachten = opdrachten.filter(x => x.organisatie_id === o.id && x.status !== 'afgewezen');
+  f('vak').innerHTML = `<div class="kop"><div><button class="btn licht klein" onclick="huidigeOrg=null;teken()">Alle organisaties</button><h1 style="margin-top:12px">${esc(o.naam)}</h1></div>
+    <a class="btn licht" href="/klantportaal/?bekijk=${o.id}" target="_blank" rel="noopener">Bekijk als klant</a></div>
+  <div class="kaart"><h2>Gegevens</h2><div class="velden">
+    <div class="veld"><label for="orNaam">Naam</label><input type="text" id="orNaam" value="${esc(o.naam)}"></div>
+    <div class="veld"><label for="orKvk">KvK</label><input type="text" id="orKvk" value="${esc(o.kvk || '')}"></div>
+    <div class="veld"><label for="orContact">Contactpersoon</label><input type="text" id="orContact" value="${esc(o.contact_naam || '')}"></div>
+    <div class="veld"><label for="orMail">E-mail</label><input type="email" id="orMail" value="${esc(o.contact_email || '')}"></div>
+    <div class="veld"><label for="orTel">Telefoon</label><input type="text" id="orTel" value="${esc(o.telefoon || '')}"></div>
+    <div class="veld"><label for="orAdres">Adres</label><input type="text" id="orAdres" value="${esc(o.adres || '')}"></div>
+  </div><div class="rij" style="margin-top:14px"><button class="btn actie" onclick="orgBewaren(this)">Opslaan</button></div></div>
+
+  <div class="kaart"><h2>Wie kan meekijken</h2><p class="uitleg">Uitgenodigde mensen krijgen een mail met een inloglink. Een beheerder kan zelf collega's toevoegen.</p>
+    ${mensen.length ? mensen.map(g => `<div class="persoon"><div><b>${esc(g.naam || g.email)}</b> ${g.actief ? '' : '<span class="pil let">geen toegang</span>'}<div class="muted klein">${esc(g.email)} · ${g.rol === 'beheerder' ? 'beheerder' : 'kijkt mee'} · ${g.laatst_gezien ? 'laatst ' + datum(g.laatst_gezien) : 'nog niet ingelogd'}</div></div>
+      ${g.actief ? `<button class="btn licht klein" onclick="toegangZetten(this,'${g.user_id}',false)">Toegang weg</button>` : `<button class="btn licht klein" onclick="toegangZetten(this,'${g.user_id}',true)">Weer toegang</button>`}</div>`).join('') : '<p class="leeg">Nog niemand.</p>'}
+    <div class="formrij" style="margin-top:12px"><input type="text" id="uiNaam" placeholder="Naam"><input type="email" id="uiMail" placeholder="E-mailadres">
+      <select id="uiRol"><option value="beheerder">Beheerder</option><option value="lezer">Kijkt mee</option></select>
+      <button class="btn" onclick="uitnodigen(this,'${o.id}')">Uitnodigen</button></div></div>
+
+  <div class="kaart"><h2>Opdrachten</h2>${hunOpdrachten.length ? hunOpdrachten.map(x => `<div class="persoon"><div><b>${esc(x.titel)}</b><div class="muted klein"><span class="mono">${esc(x.nummer || '')}</span> · ${x.status === 'aanvraag' ? 'aanvraag' : x.afgerond_op ? 'afgerond' : 'lopend'}</div></div>
+    <button class="btn licht klein" onclick="opdrachtOpen('${x.id}')">Openen</button></div>`).join('') : '<p class="leeg">Nog geen opdrachten.</p>'}</div>`;
+}
+async function orgBewaren(knop){
+  const rij = { naam:v('orNaam') || 'Organisatie', kvk:v('orKvk') || null, contact_naam:v('orContact') || null, contact_email:v('orMail') || null, telefoon:v('orTel') || null, adres:v('orAdres') || null };
+  await bezig(knop, async () => {
+    const { error } = await sb.from('klantportaal_organisaties').update(rij).eq('id', huidigeOrg);
+    if(error) throw error;
+    Object.assign(organisaties.find(x => x.id === huidigeOrg), rij); toast('Opgeslagen');
+  });
+}
+async function uitnodigen(knop, orgId){
+  const email = v('uiMail');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Vul een geldig e-mailadres in.', 'fout'); return; }
+  await bezig(knop, async () => {
+    const { data:{ session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/klantportaal', { method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:SUPABASE_ANON_KEY, Authorization:'Bearer ' + (session ? session.access_token : '') },
+      body:JSON.stringify({ actie:'uitnodigen', organisatie_id:orgId, email, naam:v('uiNaam'), rol:v('uiRol') || 'beheerder' }) });
+    const uit = await res.json().catch(() => ({}));
+    if(!res.ok || uit.ok === false) throw new Error(uit.error || 'Uitnodigen lukte niet');
+    const { data: g } = await sb.from('klantportaal_gebruikers').select('user_id,organisatie_id,naam,email,rol,actief,laatst_gezien').order('naam');
+    gebruikers = g || gebruikers; teken(); toast('Uitnodiging verstuurd naar ' + email);
+  });
+}
+async function toegangZetten(knop, userId, aan){
+  await bezig(knop, async () => {
+    const { error } = await sb.from('klantportaal_gebruikers').update({ actief:aan }).eq('user_id', userId);
+    if(error) throw error;
+    const g = gebruikers.find(x => x.user_id === userId); if(g) g.actief = aan;
+    teken(); toast(aan ? 'Toegang terug' : 'Toegang weggehaald');
+  });
+}
+
+/* ═══════════════ instellingen ═══════════════ */
+function tekenInstellingen(){
+  const i = instel || {};
+  const magBeheren = ['eigenaar', 'beheerder'].includes(account.rol);
+  f('vak').innerHTML = `<div class="kop"><div><h1>Instellingen</h1><p>Hoe het portaal eruitziet voor je klanten, en van wie de mails komen.</p></div></div>
+  ${magBeheren ? '' : '<div class="kaart melding"><p>Alleen de eigenaar of een beheerder kan dit aanpassen.</p></div>'}
+  <div class="kaart"><h2>Huisstijl</h2><div class="velden">
+    <div class="veld"><label for="inMerk">Merknaam</label><input type="text" id="inMerk" value="${esc(i.merknaam || '')}" placeholder="bijv. Reloop it"></div>
+    <div class="veld"><label for="inLogo">Logo (https-link)</label><input type="url" id="inLogo" value="${esc(i.logo_url || '')}" placeholder="https://..."></div>
+    <div class="veld"><label for="inKleur">Hoofdkleur</label><input type="text" id="inKleur" value="${esc(i.kleur || '#0F6B4B')}"></div>
+    <div class="veld"><label for="inAccent">Accentkleur</label><input type="text" id="inAccent" value="${esc(i.accent || '#C6F36B')}"></div>
+    <div class="veld"><label for="inInkt">Tekstkleur</label><input type="text" id="inInkt" value="${esc(i.inkt || '#10231B')}"></div>
+  </div></div>
+  <div class="kaart"><h2>Contact en mail</h2><div class="velden">
+    <div class="veld"><label for="inContact">Contactpersoon</label><input type="text" id="inContact" value="${esc(i.contact_naam || '')}"></div>
+    <div class="veld"><label for="inCMail">E-mail</label><input type="email" id="inCMail" value="${esc(i.contact_email || '')}"></div>
+    <div class="veld"><label for="inTel">Telefoon</label><input type="text" id="inTel" value="${esc(i.contact_telefoon || '')}"></div>
+    <div class="veld"><label for="inAfz">Afzender van de mails</label><input type="text" id="inAfz" value="${esc(i.afzender || '')}" placeholder="Reloop it &lt;portaal@reloopit.nl&gt;"></div>
+    <div class="veld"><label for="inDomein">Eigen domein</label><input type="text" id="inDomein" value="${esc(i.domein || '')}" placeholder="portaal.reloopit.nl"></div>
+    <div class="veld"><label for="inWis">Wismethode op het certificaat</label><input type="text" id="inWis" value="${esc(i.wismethode || 'Blancco, NIST 800-88 Purge')}"></div>
+  </div>
+  <p class="uitleg" style="margin-top:12px">De afzender moet een domein zijn dat bij Resend is ingesteld. Het eigen domein moet ook in Vercel en bij de inlog-adressen van Supabase staan (zie KLANTPORTAAL-STAPPENPLAN.md).</p>
+  <div class="rij"><button class="btn actie" onclick="instellingenBewaren(this)"${magBeheren ? '' : ' disabled'}>${instel ? 'Opslaan' : 'Klantportaal aanzetten'}</button>
+    ${instel ? `<button class="btn licht" onclick="portaalAanUit(this)"${magBeheren ? '' : ' disabled'}>${instel.actief ? 'Portaal uitzetten' : 'Portaal weer aanzetten'}</button>` : ''}</div></div>`;
+}
+async function instellingenBewaren(knop){
+  const kleur = x => /^#[0-9a-f]{3,8}$/i.test(x) ? x : null;
+  const rij = { team_id:account.team_id, merknaam:v('inMerk'), logo_url:/^https:\/\//.test(v('inLogo')) ? v('inLogo') : null,
+    kleur:kleur(v('inKleur')) || '#0F6B4B', accent:kleur(v('inAccent')) || '#C6F36B', inkt:kleur(v('inInkt')) || '#10231B',
+    contact_naam:v('inContact') || null, contact_email:v('inCMail') || null, contact_telefoon:v('inTel') || null,
+    afzender:v('inAfz') || null, domein:v('inDomein').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase() || null,
+    wismethode:v('inWis') || 'Blancco, NIST 800-88 Purge', bijgewerkt_op:new Date().toISOString() };
+  if(!rij.merknaam){ toast('Vul een merknaam in.', 'fout'); return; }
+  await bezig(knop, async () => {
+    const { data, error } = await sb.from('klantportaal_instellingen').upsert(rij).select().single();
+    if(error) throw error;
+    instel = data; teken(); toast('Opgeslagen');
+  });
+}
+async function portaalAanUit(knop){
+  await bezig(knop, async () => {
+    const { data, error } = await sb.from('klantportaal_instellingen').update({ actief:!instel.actief }).eq('team_id', account.team_id).select().single();
+    if(error) throw error;
+    instel = data; teken(); toast(instel.actief ? 'Portaal staat aan' : 'Portaal staat uit. Klanten kunnen niet meer inloggen.');
+  });
+}
+
+opstarten();
+</script>
+</body>
+</html>

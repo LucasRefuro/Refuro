@@ -14,7 +14,7 @@ const ok=(n,c,uitleg)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c){ fout++; if(
 
 const PAGINAS=['index.html','404.html','admin/index.html','app/index.html','app/scan.html',
   'refurbish/index.html','refurbish/foto.html','refurbish/test.html','contact/index.html','privacy/index.html',
-  'proberen/index.html','r/index.html','voorwaarden/index.html','verwerkersovereenkomst/index.html'];
+  'proberen/index.html','r/index.html','klantportaal/index.html','portaalbeheer/index.html','voorwaarden/index.html','verwerkersovereenkomst/index.html'];
 
 /* Klassen die er alleen zijn om ze met javascript terug te vinden. Die horen
    geen stijl te hebben; dat is geen slordigheid maar opzet. */
