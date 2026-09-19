@@ -101,7 +101,7 @@ Stap voor stap, in deze volgorde.
 
 6. **Domein in Vercel:** voeg `portaal.reloopit.nl` toe aan het project en zet bij
    de domeinnaam een CNAME naar `cname.vercel-dns.com`. De rewrite in
-   `vercel.json` stuurt dat domein naar `/klantportaal`.
+   `vercel.json` stuurt elk adres op dat domein door naar `/klantportaal` (een redirect: een rewrite werkt niet voor `/`, want daar staat de Storvo-voorpagina).
 
 7. **Proberen:** op /portaalbeheer/ een opdracht maken, een batch koppelen, jezelf uitnodigen met een ander e-mailadres dan je
    Storvo-account, inloggen via de mail.

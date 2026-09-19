@@ -19,6 +19,12 @@
       "has": [{ "type": "host", "value": "admin.storvo.app" }],
       "destination": "https://storvo.app/admin/",
       "permanent": false
+    },
+    {
+      "source": "/((?!klantportaal).*)",
+      "has": [{ "type": "host", "value": "portaal.reloopit.nl" }],
+      "destination": "/klantportaal",
+      "permanent": false
     }
   ],
   "rewrites": [
@@ -26,8 +32,6 @@
     { "source": "/r/:winkel/:code", "destination": "/r" },
     { "source": "/r/:winkel", "destination": "/r" },
     { "source": "/", "has": [{ "type": "host", "value": "refuro.storvo.app" }], "destination": "/r" },
-    { "source": "/:code", "has": [{ "type": "host", "value": "refuro.storvo.app" }], "destination": "/r" },
-    { "source": "/", "has": [{ "type": "host", "value": "portaal.reloopit.nl" }], "destination": "/klantportaal" },
-    { "source": "/:pad*", "has": [{ "type": "host", "value": "portaal.reloopit.nl" }], "destination": "/klantportaal" }
+    { "source": "/:code", "has": [{ "type": "host", "value": "refuro.storvo.app" }], "destination": "/r" }
   ]
 }

@@ -46,7 +46,8 @@ async function instellingenVan(team_id: string): Promise<Instellingen | null> {
    de slug van de winkel. Een adres dat de browser meestuurt nemen we NIET over: dan kon
    iemand een inloglink naar zijn eigen site laten wijzen. */
 async function portaalAdres(ins: Instellingen) {
-  if (ins.domein) return "https://" + ins.domein.replace(/^https?:\/\//, "").replace(/\/.*$/, "") + "/";
+  // Direct naar /klantportaal: de voorpagina van het domein is de Storvo-site.
+  if (ins.domein) return "https://" + ins.domein.replace(/^https?:\/\//, "").replace(/\/.*$/, "") + "/klantportaal";
   const { data: k } = await admin.from("klanten").select("slug").eq("id", ins.team_id).maybeSingle();
   return APP_URL + "/klantportaal/?w=" + encodeURIComponent(k?.slug || "");
 }
