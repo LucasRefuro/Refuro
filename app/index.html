@@ -7377,6 +7377,7 @@ function bijvullen(id, stil){
   p.winkel=inWinkel(p)+n;
   if(!stil){ save(); renderVoorraad(); updateBadge(); herteken();
              toast(n+'× '+p.naam+' opgehangen', true); }
+  if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);   /* winkelvoorraad steeg */
   return n;
 }
 function allesBijvullen(){
@@ -7396,6 +7397,7 @@ function boekIn(p,n){
   state.log.unshift({id, t:Date.now(), naam:p.naam, m:'in', v:p.voorraad, aantal:n, pid:p.id});
   state.log=state.log.slice(0,50);
   save(); renderScanLog(); updateBadge();
+  if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
   return id;
 }
 function boekVerkoop(p,n,bet){
@@ -7408,6 +7410,7 @@ function boekVerkoop(p,n,bet){
   state.log.unshift({id, t:Date.now(), naam:p.naam, m:'uit', v:p.voorraad, aantal:n, pid:p.id});
   state.log=state.log.slice(0,50);
   save(); renderScanLog(); updateBadge();
+  if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
   return id;
 }
 
@@ -7504,6 +7507,7 @@ function boekHandmatig(p, naam, verkoopStuk, inkoopStuk, aantal, bet, cat, bijbe
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   if(p){ state.log.unshift({id, t:Date.now(), naam, m:'uit', v:p.voorraad, aantal, pid:p.id}); state.log=state.log.slice(0,50); }
   save(); renderScanLog(); updateBadge();
+  if(p && typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
   return id;
 }
 
@@ -7849,11 +7853,13 @@ function wisselTeken(tot){
 function verkoopTerug(id){
   const v=(state.verkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
   if(!confirm('Deze verkoop terugdraaien? '+v.naam+' ('+euro(v.verkoop)+')')) return;
-  if(v.pid!=null){ const p=state.producten.find(pp=>pp.id===v.pid); if(p){ p.voorraad=(p.voorraad||0)+(v.aantal||1); if(p.winkel!=null) p.winkel=(p.winkel||0)+(v.aantal||1); } }
+  let terugP=null;
+  if(v.pid!=null){ const p=state.producten.find(pp=>pp.id===v.pid); if(p){ p.voorraad=(p.voorraad||0)+(v.aantal||1); if(p.winkel!=null) p.winkel=(p.winkel||0)+(v.aantal||1); terugP=p; } }
   if(v.betaal==='cash') kasVerkoop(-(Number(v.verkoop)||0), 'cash', 'Teruggedraaid: '+v.naam);
   if(v.hardware){ sb.from('hardware').update({status:'voorraad', verkocht_op:null, verkocht_via:null, verkocht_betaal:null, bijgewerkt_op:new Date().toISOString()}).eq('id', v.hardware).then(()=>{ if(typeof hwLaad==='function') hwLaad(true); }); }
   state.verkopen=(state.verkopen||[]).filter(x=>String(x.id)!==String(id));
   save(); renderVerkoop(); updateBadge();
+  if(terugP && typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(terugP);   /* voorraad terug ook naar Clover */
   toast('Verkoop teruggedraaid: '+v.naam, true);
 }
 /* Het blokje: een dialoog om snel een generiek product van deze categorie te verkopen. */
@@ -8776,6 +8782,7 @@ function zetVeld(id, veld, val){
   else if(veld==='minOver'){ p.minOver=n; }
   else return;
   save(); renderProducten(); updateBadge(); herteken();
+  if((veld==='winkel'||veld==='over') && typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
 }
 function bewerk(id){
   const p=state.producten.find(p=>p.id===id); if(!p) return;
@@ -10980,6 +10987,27 @@ async function cloverPushEen(p){
     const res=(r.resultaten||[])[0];
     if(res && res.ok && res.cloverId){ p.kanalen=p.kanalen||{}; p.kanalen.clover={id:res.cloverId}; save(); }
   }catch(e){ /* stil: de sync-knop vangt het later op */ }
+}
+/* Elke voorraadmutatie (verkoop, scan, bijvullen, terugdraaien, handmatig) moet de
+   Clover-voorraad meetrekken, anders telt de pin te hoog na een balieverkoop. cloverPushEen
+   stuurt de ABSOLUTE winkelvoorraad, dus dubbel pushen is onschadelijk. We verzamelen de
+   gewijzigde producten en pushen ze na een korte pauze in blokjes: elke Clover-call doet
+   2 tot 3 trage verzoeken, en per stuk pushen bij een bon met meerdere regels loopt tegen
+   de rate-limit (429). */
+let _cloverWachtrij=new Set(), _cloverTimer=null;
+function cloverVoorraadGewijzigd(p){
+  if(!state.cloverGekoppeld || !p || p.id==null) return;
+  _cloverWachtrij.add(p.id);
+  if(_cloverTimer) clearTimeout(_cloverTimer);
+  _cloverTimer=setTimeout(()=>{
+    const ids=[..._cloverWachtrij]; _cloverWachtrij.clear(); _cloverTimer=null;
+    (function volgende(i){
+      if(i>=ids.length) return;
+      const prod=(state.producten||[]).find(x=>x.id===ids[i]);
+      const klaar=()=>setTimeout(()=>volgende(i+1), 250);   // even ademen tussen calls
+      if(prod) cloverPushEen(prod).then(klaar, klaar); else klaar();
+    })(0);
+  }, 1200);
 }
 /* In blokjes pushen, niet alles in één keer. Elke Clover-call doet per product 2 tot 3
    trage verzoeken (item, voorraad, categorie); alles ineens loopt bij veel producten
