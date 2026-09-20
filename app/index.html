@@ -3939,6 +3939,9 @@ function showTab(t){
   if(t==='dashboard') renderDashboard();
   if(t==='scan') focusScan();
   if(t==='verkoop') renderVerkoop();
+  /* Bij het openen van een verkoop/voorraad-pagina eerst kijken of er terminalverkopen
+     van Clover binnen zijn die nog ingeboekt moeten worden. */
+  if(['verkoop','producten','verkopen','dashboard','rapport'].includes(t) && typeof cloverBestellingenVerwerken==='function') cloverBestellingenVerwerken();
   if(t==='uren') renderUren();
   if(t==='personeel'){ renderPersoneel(); renderPersoneelMaand(); }
   if(t==='rooster') renderRooster();
@@ -11009,6 +11012,48 @@ function cloverVoorraadGewijzigd(p){
     })(0);
   }, 1200);
 }
+/* Fase 2, de kant terug: verkopen die op de Clover-terminal gebeuren staan als ruwe bon
+   in de tabel clover_bestellingen (door de edge clover-inkomend, via pollen of webhook).
+   Hier boeken we ze in: match op barcode/sku tegen je eigen producten, verkoop met
+   betaalwijze pin, voorraad eraf. Een los pin-bedrag voor een verkoop die je in Storvo
+   aansloeg heeft geen product-match en wordt overgeslagen, dus niks telt dubbel. We
+   onthouden per bon dat hij verwerkt is in state.cloverVerwerkt (meegesynct), en gebruiken
+   een stabiele verkoop-id, zodat verwerken op twee apparaten samenvalt i.p.v. dubbel boekt. */
+async function cloverBestellingenVerwerken(){
+  if(!account || !state.cloverGekoppeld) return;
+  let bonnen;
+  try{ const r=await sb.from('clover_bestellingen').select('clover_order_id,bedrag,regels,besteld_op').order('aangemaakt_op',{ascending:true}); bonnen=r.data||[]; }
+  catch(e){ return; }
+  if(!state.cloverVerwerkt||typeof state.cloverVerwerkt!=='object') state.cloverVerwerkt={};
+  let veranderd=false, nieuw=0;
+  for(const bon of bonnen){
+    const oid=String(bon.clover_order_id);
+    if(state.cloverVerwerkt[oid]) continue;
+    const regels=Array.isArray(bon.regels)?bon.regels:[];
+    regels.forEach((r,idx)=>{
+      const code=r.code!=null?String(r.code):null, sku=r.sku!=null?String(r.sku):null;
+      const p=(state.producten||[]).find(pp=> (code && String(pp.barcode)===code) || (sku && pp.sku && String(pp.sku)===sku));
+      if(!p) return;                          // los bedrag of onbekend item: overslaan (geen dubbeltelling)
+      const aantal=Math.max(1, Math.floor(Number(r.aantal)||1));
+      const prijs=(r.prijs!=null?Number(r.prijs):null)||p.verkoop||0;
+      haalUitVoorraad(p, aantal);
+      state.verkopen.unshift({id:'clv_'+oid+'_'+idx, t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
+        naam:p.naam, verkoop:prijs*aantal, inkoop:(Number(p.inkoop)||0)*aantal, aantal, betaal:'pin', cat:p.cat,
+        door:'Clover-terminal', pid:p.id, cloverOrder:oid});
+      if(state.verkopen.length>5000) state.verkopen.length=5000;
+      if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);   // Clover-voorraad gelijk houden
+      nieuw++;
+    });
+    state.cloverVerwerkt[oid]=true; veranderd=true;
+  }
+  if(veranderd){
+    save();
+    if(typeof renderVoorraad==='function') renderVoorraad();
+    if(typeof updateBadge==='function') updateBadge();
+    if(typeof renderVerkoop==='function') renderVerkoop();
+    if(nieuw) toast(nieuw+' verkoop'+(nieuw===1?'':'en')+' van de Clover-terminal ingeboekt', true);
+  }
+}
 /* In blokjes pushen, niet alles in één keer. Elke Clover-call doet per product 2 tot 3
    trage verzoeken (item, voorraad, categorie); alles ineens loopt bij veel producten
    tegen de tijdslimiet van de edge function en stopt dan halverwege (het beruchte
@@ -11718,7 +11763,7 @@ const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','l
                          konden ze op een ander apparaat "verdwenen" lijken. Nu synchroniseren ze net als
                          de rest (samenvoegen per id, bewerken wint van verwijderen). */
                       'aanvragen','inkopen','uitbetalingen','reserveringen','postnl'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','bedrijf'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','bedrijf'];
 
 /* Lijsten met vaste (niet-willekeurige) id's: de seed maakt op elk leeg apparaat
    categorie 1/2/3, dienst 1/2/3, postnl 1..16, team 1, enzovoort. Bij de EERSTE sync
@@ -11730,7 +11775,7 @@ const SYNC_SEED_LIJSTEN = new Set(['categorieen','types','modellen','diensten','
 /* Velden die zelf een map met eigen sleutels zijn (loon per medewerker, bestel-reset
    per categorie, de instellingen, de klantpagina). Die per sleutel samenvoegen in plaats
    van het hele veld te overschrijven, anders wist de een stil de sleutel van de ander. */
-const SYNC_KEYED = new Set(['lonen','loonViaInvite','bijbestelBesteld','klantpagina','instellingen']);
+const SYNC_KEYED = new Set(['lonen','loonViaInvite','cloverVerwerkt','bijbestelBesteld','klantpagina','instellingen']);
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
@@ -12204,6 +12249,13 @@ async function ladAccountEnStart(session){
   toonAboBalk();
   toonBestelBalk();
   roosterMeldingen();     /* balk plus popup voor goedkeuren en voor je eigen rooster */
+  /* Verkopen van de Clover-terminal inboeken, nu en daarna elke paar minuten (de edge
+     pollt Clover, deze app boekt de bonnen om). */
+  if(typeof cloverBestellingenVerwerken==='function'){
+    cloverBestellingenVerwerken();
+    if(window._cloverTimerLus) clearInterval(window._cloverTimerLus);
+    window._cloverTimerLus=setInterval(()=>{ if(account) cloverBestellingenVerwerken(); }, 3*60*1000);
+  }
   moduleLinks();
   hwLaad(true);
   proefNudge();
