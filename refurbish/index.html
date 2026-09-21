@@ -1197,7 +1197,7 @@ function sessieBewaar(){
       s.ctr={ id:ctr.a.id, bijgewerkt_op:ctr.a.bijgewerkt_op, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
         accu:ctr.accu, accuVoor:ctr._accuVoor, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
-        accuNotitie:ctr.accuNotitie,
+        accuNotitie:ctr.accuNotitie, extraReparatie:ctr.extraReparatie,
         notitie:ctr.notitie, opties:ctr.opties, varianten:ctr.varianten, specsBron:ctr.specsBron,
         testcode:ctr.testcode, testqr:ctr.testqr };
     }
@@ -1214,6 +1214,7 @@ function ctrHerstel(snap, a){
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
     accuNotitie:snap.accuNotitie!=null?snap.accuNotitie:(a.accu_notitie||''),
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
+    extraReparatie:snap.extraReparatie||'',
     opties:snap.opties||{}, varianten:snap.varianten||[], specsBron:snap.specsBron||'', _accuVoor:snap.accuVoor,
     testcode:snap.testcode||null, testqr:snap.testqr||null,
     pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
@@ -2201,6 +2202,42 @@ async function appOpnieuwTesten(id){
   toast('Terug naar Te controleren. Je kunt opnieuw testen.', true);
   appOpen(id);
 }
+/* Een toestel dat al op voorraad ligt toch naar reparatie: bijvoorbeeld omdat je de
+   accu wilt vervangen of een mankement vond. Zelfde opruimen als opnieuw-testen (van de
+   webshop, het portaal en uit de bundel), maar het gaat naar Te repareren met de reden
+   erbij als defect. Na de reparatie komt het via de gewone weg weer op voorraad. */
+async function appNaarReparatie(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const h=hardwareVan(a);
+  if(h && h.partner_id){ toast('Dit toestel is aan een partner toegewezen. Haal het eerst terug voor je het naar reparatie zet.','let-op'); return; }
+  const reden=prompt('Waarom naar reparatie? Bijvoorbeeld: nieuwe accu, scherm vervangen.');
+  if(reden===null) return;
+  const r=(reden||'').trim();
+  if(!confirm('Dit toestel naar Te repareren zetten? Het gaat van de webshop, het portaal en uit een eventuele bundel af.')) return;
+  const bundelWas=a.voorraad_batch_id;
+  if(h){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      if(session){
+        const kop={'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token};
+        if(h.kanalen && h.kanalen.shopify && h.kanalen.shopify.id)
+          await fetch(SUPABASE_URL+'/functions/v1/shopify',{method:'POST',headers:kop,body:JSON.stringify({actie:'offline',hardware_id:h.id})});
+        if(h.kanalen && h.kanalen.partner)
+          await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{method:'POST',headers:kop,body:JSON.stringify({actie:'dashboard_uit',hardware_id:h.id})});
+      }
+    }catch(e){ console.error('naar reparatie: offline halen', e); }
+  }
+  const defecten=(Array.isArray(a.defecten)?a.defecten.slice():[]);
+  if(r && !defecten.includes(r)) defecten.push(r);
+  if(!defecten.length) defecten.push('Handmatig naar reparatie');
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({status:'te_repareren', defecten, voorraad_batch_id:null, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Mislukt','fout'); return; }
+  await allesLaden();
+  if(bundelWas) await vbPrijsHerdelen(bundelWas);
+  toast('Naar Te repareren gezet'+(r?': '+r:''), true);
+  appOpen(id);
+}
 function tekenApparaat(){
   const el=document.getElementById('appPagina');
   if(!el) return;
@@ -2249,6 +2286,7 @@ function tekenApparaat(){
         ? `<button class="btn ghost" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Advertentie aanpassen</button>`
         : `<button class="btn oranje" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`):''}
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appOpnieuwTesten('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Opnieuw testen</button>`:''}
+      ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appNaarReparatie('${a.id}')"><svg class="i s"><use href="#i-wrench"/></svg>Naar reparatie</button>`:''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
       <button class="btn ghost" onclick="appNaamWijzig('${a.id}')"><svg class="i s"><use href="#i-note"/></svg>Naam wijzigen</button>
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
@@ -2549,7 +2587,7 @@ function appOpen(id){
     specs:Object.assign({}, a.specs||{}),
     accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
     nieuweAccu:!!a.nieuwe_accu, accuNotitie:a.accu_notitie||'',
-    notitie:a.notitie||'', opties:{},
+    notitie:a.notitie||'', extraReparatie:'', opties:{},
     /* Het pad tot hier uit het profiel halen, niet de vaste laptoplijst: een
        desktop heeft er een blokkers-stap voor, die anders uit de tijdlijn en de
        terugknop wegvalt. Tot en met de Windows-stap, want daarna land je op
@@ -2782,6 +2820,8 @@ function ctrVeldBewaar(){
   });
   const not=document.getElementById('c_notitie');
   if(not) ctr.notitie=not.value;
+  const er=document.getElementById('c_extra_rep');
+  if(er) ctr.extraReparatie=er.value;
 }
 function ctrSpecsUitVelden(){
   const uit={};
@@ -3765,8 +3805,15 @@ function ctrNotitieVeld(){
       placeholder="Bijvoorbeeld: kleine deuk linksachter" oninput="ctrNotitieTel()">
     <span class="tekens ${over<10?'krap':''}" id="notitieTel">${over}</span>
   </div>
-  <p class="muted klein">Komt op het label te staan, dus hou het kort.</p>`;
+  <p class="muted klein">Komt op het label te staan, dus hou het kort.</p>
+  <div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:12px">
+    <label style="font-weight:700; display:block; margin-bottom:6px">Zelf naar reparatie zetten</label>
+    <input id="c_extra_rep" maxlength="80" value="${esc(ctr.extraReparatie||'')}"
+      placeholder="Bijv. nieuwe accu, scherm vervangen" oninput="ctrExtraReparatie(this.value)" style="width:100%">
+    <p class="muted klein" style="margin-top:6px">Vul iets in als dit toestel toch naar Te repareren moet, ook al is de test verder goed. Bijvoorbeeld een accu die je wilt vervangen of een ander mankement. Laat leeg om gewoon naar de voorraad te gaan.</p>
+  </div>`;
 }
+function ctrExtraReparatie(v){ ctr.extraReparatie=String(v||'').slice(0,80); sessieBewaar(); }
 function ctrNotitieTel(){
   const e=document.getElementById('c_notitie'), t=document.getElementById('notitieTel');
   if(!e||!t) return;
@@ -3977,6 +4024,7 @@ function ctrDefecten(){
   const uit=[];
   prof().hardware.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
   if(ctr.accuVervangen) uit.push({vraag:'Accu vervangen, capaciteit te laag', deel:'Accu'});
+  if((ctr.extraReparatie||'').trim()) uit.push({vraag:ctr.extraReparatie.trim(), deel:null});   // handmatig: toch naar reparatie
   const sv=prof().specVragen;
   Object.keys(sv).forEach(k=>{
     if(!ctr.specs[k]) return;
