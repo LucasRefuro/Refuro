@@ -13915,7 +13915,6 @@ async function hwOpslaan(knop){
 function hwPrijskaartDoc(h, metPrint){
   const A='#1800ad';
   const titel=esc([h.merk,h.model].filter(Boolean).join(' '))||'Toestel';
-  const sub=esc(hwSpecsKort(h)||'');
   const specs=(h.specs&&typeof h.specs==='object')?h.specs:{};
   const bullets=Object.entries(specs)
     .filter(([k,w])=>String(w||'').trim() && !/serien|imei|kleur|servicetag/i.test(k))
@@ -13943,10 +13942,9 @@ function hwPrijskaartDoc(h, metPrint){
      komt niets tegen de rand en snijdt de printer nooit de titel eraf. Op A6 vult het het
      vel (93+2*6mm breed, 132+2*8mm hoog = precies A6); op A4 staat de kaart bovenin, klaar
      om uit te knippen. overflow:hidden vangt een extreem lang model netjes af. */
-  const kaart='<div style="width:93mm;height:132mm;margin:8mm auto;padding:5mm;background:#fff;border:0.3mm solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden">'
+  const kaart='<div style="width:93mm;height:118mm;margin:7mm auto;padding:5mm;background:#fff;border:0.3mm solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden">'
     +'<div style="font-size:21pt;font-weight:700;line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere">'+titel+'</div>'
-    +(sub?'<div style="font-size:10pt;color:#222;margin-top:1.5mm;line-height:1.3">'+sub+'</div>':'')
-    +'<div style="margin-top:4mm">'
+    +'<div style="margin-top:5mm">'
       +'<div style="display:inline-block;background:'+A+';color:#fff;font-weight:700;font-size:12pt;padding:1.2mm 4mm;margin-bottom:2.5mm">Specificaties</div>'
       +'<div style="font-size:10.5pt;line-height:1.4">'+specHtml+'</div>'
       +'<div style="display:flex;justify-content:flex-end;margin-top:4mm"><div style="text-align:center">'
