@@ -2075,8 +2075,8 @@ function prijskaartHtml(bron){
       <div class="sk-band">Specificaties</div>
       <ul class="sk-specs">${bullets.slice(0,6).map(b=>`<li>${esc(b)}</li>`).join('')}</ul>
       <div class="sk-prijsrij"><div class="sk-prijsblok">
-        <div class="sk-prijs">${bron.prijs!=null?esc(euro(bron.prijs)):''}</div>
-        ${np?`<div class="sk-nieuwprijs">Nieuwprijs: ${esc(euro(np))}</div>`:''}
+        <div class="sk-prijs">${bron.prijs!=null?esc(euro(bron.prijs).replace(/,00$/,',-')):''}</div>
+        ${np?`<div class="sk-nieuwprijs">Nieuwprijs: ${esc(euro(np).replace(/,00$/,',-'))}</div>`:''}
       </div></div>
     </div>
     <div class="sk-onder">
