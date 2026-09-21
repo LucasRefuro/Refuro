@@ -2002,6 +2002,7 @@ async function ondLabelPng(o){
   ctx.font='800 '+Math.round(3.8*dpmm)+'px Arial'; y=labelWrap(ctx, String(o.naam||'Onderdeel'), pad, y, W-2*pad, Math.round(4.4*dpmm), 3);
   const app=(typeof apparaten!=='undefined')?apparaten.find(a=>a.id===o.voor_apparaat):null;
   if(app){ y+=Math.round(0.6*dpmm); ctx.font='500 '+Math.round(2.4*dpmm)+'px Arial'; y=labelWrap(ctx, 'Voor: '+[app.merk,app.model].filter(Boolean).join(' '), pad, y, W-2*pad, Math.round(3.0*dpmm), 2); }
+  if(o.leverancier){ y+=Math.round(0.5*dpmm); ctx.font='500 '+Math.round(2.4*dpmm)+'px Arial'; y=labelWrap(ctx, 'Van: '+String(o.leverancier), pad, y, W-2*pad, Math.round(3.0*dpmm), 1); }
   if(o.voor_apparaat){
     y+=Math.round(2.5*dpmm);
     const qrS=Math.min(Math.round(22*dpmm), W-2*pad), qx=Math.round((W-qrS)/2);
@@ -6362,7 +6363,7 @@ async function orderOntvangen(id){
     <div class="labelvel">${deel.map(o=>`
       <div class="label">
         <img src="${labelUrl(o.voor_apparaat||o.id)}" alt="" loading="lazy">
-        <div class="lt"><b>${esc(o.naam)}</b><span class="muted">${esc(o.soort||'')}</span></div>
+        <div class="lt"><b>${esc(o.naam)}</b><span class="muted">${esc(o.soort||'')}${o.leverancier?' · '+esc(o.leverancier):''}</span></div>
       </div>`).join('')}</div>
   `, [
     {tekst:'Op labelprinter', klasse:'actie', doe:()=>ondLabelsPrint(deel.map(o=>o.id))},
