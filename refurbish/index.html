@@ -562,27 +562,33 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
    printer scherp blijft. Geen QR of interne code, wel de prijs groot en de
    nieuwprijs als korting eronder. */
 .prijskaart-vel{display:flex; flex-wrap:wrap; gap:6mm; max-width:100%; overflow-x:auto;}
-.speckaart{width:105mm; min-height:148mm; box-sizing:border-box; padding:9mm 9mm 8mm;
+.speckaart{width:105mm; min-height:148mm; box-sizing:border-box; padding:10mm 9mm 9mm;
   background:#fff; color:#111; border:0.3mm solid #e2e2e2; break-inside:avoid;
   display:flex; flex-direction:column;
-  font-family:'Instrument Sans',Helvetica,Arial,sans-serif;}
-.sk-titel{font-family:'Sora',sans-serif; font-size:23pt; font-weight:800; line-height:1.05;
-  letter-spacing:-.02em; overflow-wrap:anywhere;}
-.sk-sub{font-size:12.5pt; color:#333; margin-top:2mm; line-height:1.3;}
-.sk-band{align-self:flex-start; background:#2a17cc; color:#fff; font-family:'Sora',sans-serif;
-  font-weight:800; font-size:13.5pt; padding:1.6mm 4mm; margin:7mm 0 3.5mm;}
-.sk-specs{list-style:none; padding:0; margin:0; font-size:12.5pt; line-height:1.5;}
-.sk-specs li{display:flex; gap:2.5mm; align-items:flex-start; margin-bottom:1mm;}
-.sk-specs li::before{content:""; flex:none; width:2mm; height:2mm; border-radius:50%;
-  background:#111; margin-top:2.2mm;}
-.sk-prijsblok{margin-top:auto; padding-top:6mm; text-align:right;}
-.sk-prijs{display:inline-block; background:#2a17cc; color:#fff; font-family:'Sora',sans-serif;
-  font-size:30pt; font-weight:800; line-height:1; padding:2.5mm 5mm;}
-.sk-nieuwprijs{font-size:11pt; color:#333; margin-top:2mm;}
-.sk-staat{font-family:'Sora',sans-serif; font-weight:800; font-size:13.5pt; margin:6mm 0 2.5mm;}
-.sk-garrij{list-style:none; padding:0; margin:0; font-size:11.5pt; line-height:1.5;}
-.sk-garrij li{display:flex; gap:2.5mm; align-items:flex-start; margin-bottom:.6mm;}
-.sk-vink{flex:none; width:4mm; height:4mm; margin-top:.8mm; color:#2a17cc;}
+  font-family:Georgia,'Times New Roman',Times,serif;}
+.sk-titel{font-size:24pt; font-weight:700; line-height:1.04; letter-spacing:-.01em;
+  overflow-wrap:anywhere;}
+.sk-sub{font-size:12pt; color:#222; margin-top:2mm; line-height:1.3;}
+/* Het middenblok: de specs staan links en over de volle breedte (elke spec op een
+   regel), de prijs staat als blok rechtsonder in de vrije ruimte ernaast, precies
+   zoals op het Canva-kaartje. Geen strakke twee kolommen, anders breken de specs af. */
+.sk-midden{margin-top:8mm;}
+.sk-band{display:inline-block; background:#1800ad; color:#fff; font-weight:700; font-size:13pt;
+  padding:1.4mm 4.5mm; margin-bottom:4mm;}
+.sk-specs{list-style:none; padding:0; margin:0; font-size:12pt; line-height:1.5;}
+.sk-specs li{display:flex; gap:2.5mm; align-items:flex-start; margin-bottom:1.4mm;}
+.sk-specs li::before{content:""; flex:none; width:1.5mm; height:1.5mm; border-radius:50%;
+  background:#111; margin-top:2.4mm;}
+.sk-prijsrij{display:flex; justify-content:flex-end; margin-top:6mm;}
+.sk-prijsblok{text-align:center;}
+.sk-prijs{display:block; background:#1800ad; color:#fff; font-size:32pt; font-weight:700;
+  line-height:1; padding:3mm 6mm; white-space:nowrap;}
+.sk-nieuwprijs{font-size:10.5pt; color:#222; margin-top:2.5mm;}
+.sk-onder{margin-top:auto; padding-top:8mm;}
+.sk-staat{font-weight:700; font-size:13pt; margin:0 0 2.5mm;}
+.sk-garrij{list-style:none; padding:0; margin:0; font-size:11pt; line-height:1.5;}
+.sk-garrij li{display:flex; gap:2.5mm; align-items:flex-start; margin-bottom:.7mm;}
+.sk-vink{flex:none; width:4mm; height:4mm; margin-top:.8mm; color:#1800ad;}
 
 /* zoeklijst onder het modelveld */
 .zoekveld{position:relative;}
@@ -2063,14 +2069,18 @@ function prijskaartHtml(bron){
   return `<div class="speckaart">
     <div class="sk-titel">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
     ${sub?`<div class="sk-sub">${esc(sub)}</div>`:''}
-    <div class="sk-band">Specificaties</div>
-    <ul class="sk-specs">${bullets.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>
-    <div class="sk-prijsblok">
-      <div class="sk-prijs">${bron.prijs!=null?esc(euro(bron.prijs)):''}</div>
-      ${np?`<div class="sk-nieuwprijs">Nieuwprijs: ${esc(euro(np))}</div>`:''}
+    <div class="sk-midden">
+      <div class="sk-band">Specificaties</div>
+      <ul class="sk-specs">${bullets.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>
+      <div class="sk-prijsrij"><div class="sk-prijsblok">
+        <div class="sk-prijs">${bron.prijs!=null?esc(euro(bron.prijs)):''}</div>
+        ${np?`<div class="sk-nieuwprijs">Nieuwprijs: ${esc(euro(np))}</div>`:''}
+      </div></div>
     </div>
-    <div class="sk-staat">Staat: ${esc(staatWoord)}</div>
-    <ul class="sk-garrij">${garanties.map(g=>`<li>${vink}<span>${esc(g)}</span></li>`).join('')}</ul>
+    <div class="sk-onder">
+      <div class="sk-staat">Staat: ${esc(staatWoord)}</div>
+      <ul class="sk-garrij">${garanties.map(g=>`<li>${vink}<span>${esc(g)}</span></li>`).join('')}</ul>
+    </div>
   </div>`;
 }
 
