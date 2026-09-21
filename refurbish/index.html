@@ -1986,6 +1986,45 @@ async function labelsKlaar(knop, ids){
     sluit(); await allesLaden(); toast('Labels afgevinkt', true);
   });
 }
+/* Een label voor een besteld onderdeel dat binnenkomt (refurbish_onderdelen), als PNG voor
+   de labelprinter. Geen prijs; soort en naam, en een QR naar het toestel waar het voor is,
+   zodat je aan de werkbank de sticker scant en meteen het juiste toestel opent. */
+async function ondLabelPng(o){
+  await laadScript('/app/qrcode.min.js');
+  const {breedte}=labelInstelling();
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2.5*dpmm);
+  const Hmax=Math.round(90*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top'; ctx.fillStyle='#000';
+  let y=pad;
+  if(o.soort){ ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial'; y=labelWrap(ctx, String(o.soort).toUpperCase(), pad, y, W-2*pad, Math.round(2.8*dpmm), 1); y+=Math.round(1.0*dpmm); }
+  ctx.font='800 '+Math.round(3.8*dpmm)+'px Arial'; y=labelWrap(ctx, String(o.naam||'Onderdeel'), pad, y, W-2*pad, Math.round(4.4*dpmm), 3);
+  const app=(typeof apparaten!=='undefined')?apparaten.find(a=>a.id===o.voor_apparaat):null;
+  if(app){ y+=Math.round(0.6*dpmm); ctx.font='500 '+Math.round(2.4*dpmm)+'px Arial'; y=labelWrap(ctx, 'Voor: '+[app.merk,app.model].filter(Boolean).join(' '), pad, y, W-2*pad, Math.round(3.0*dpmm), 2); }
+  if(o.voor_apparaat){
+    y+=Math.round(2.5*dpmm);
+    const qrS=Math.min(Math.round(22*dpmm), W-2*pad), qx=Math.round((W-qrS)/2);
+    const qr=qrcode(0,'M'); qr.addData(location.origin+'/refurbish/?apparaat='+o.voor_apparaat); qr.make();
+    const qrUrl=qr.createDataURL(6,0);
+    await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, qx, y, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
+    y+=qrS;
+  }
+  y+=pad;
+  const Hc=Math.min(Hmax, y);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c,0,0,W,Hc,0,0,W,Hc);
+  return { data:out.toDataURL('image/png').split(',')[1] };
+}
+async function ondLabelsPrint(ids){
+  const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>onderdelen.find(o=>o.id===id)).filter(Boolean);
+  if(!lijst.length){ toast('Geen onderdelen om te printen','let-op'); return; }
+  const {breedte, tweekleuren}=labelInstelling();
+  try{
+    for(const o of lijst){ const {data}=await ondLabelPng(o); await printViaHelper(data, {label:breedte, red:tweekleuren}); }
+    toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
+  }catch(e){ toast('Printen: '+e.message,'fout'); }
+}
 
 /* Het klant-prijskaartje hoort naast het toestel in de winkel, niet op het
    toestel zelf. Daarom geen QR of interne code zoals op de werksticker, maar de
@@ -6319,15 +6358,16 @@ async function orderOpslaan(knop, ids){
 async function orderOntvangen(id){
   const deel=onderdelen.filter(o=>o.order_id===id);
   venster('Bestelling ontvangen', `
-    <p class="pv">${deel.length} onderdeel${deel.length===1?'':'en'} binnengekomen. Print de labels, plak ze erop en bevestig dan.</p>
+    <p class="pv">${deel.length} onderdeel${deel.length===1?'':'en'} binnengekomen. Print de labels op je labelprinter (stil, geen printvenster), plak ze erop en bevestig dan. De QR opent het toestel waar het onderdeel voor is.</p>
     <div class="labelvel">${deel.map(o=>`
       <div class="label">
-        <img src="${labelUrl(o.id)}" alt="" loading="lazy">
+        <img src="${labelUrl(o.voor_apparaat||o.id)}" alt="" loading="lazy">
         <div class="lt"><b>${esc(o.naam)}</b><span class="muted">${esc(o.soort||'')}</span></div>
       </div>`).join('')}</div>
   `, [
-    {tekst:'Printen', klasse:'', doe:()=>window.print()},
-    {tekst:'Labels zitten erop, op de plank', klasse:'actie', doe:(k)=>orderKlaar(k,id)}
+    {tekst:'Op labelprinter', klasse:'actie', doe:()=>ondLabelsPrint(deel.map(o=>o.id))},
+    {tekst:'Op A4-vel', klasse:'', doe:()=>window.print()},
+    {tekst:'Labels zitten erop, op de plank', klasse:'', doe:(k)=>orderKlaar(k,id)}
   ], 'groot');
 }
 
