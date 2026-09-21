@@ -13935,30 +13935,32 @@ function hwPrijskaartDoc(h, metPrint){
   garanties.push('Direct klaar voor gebruik');
   const vink='<svg viewBox="0 0 24 24" fill="none" stroke="'+A+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;width:3.6mm;height:3.6mm;margin-top:.7mm"><path d="M20 6 9 17l-5-5"/></svg>';
   const stip='<span style="flex:none;width:1.4mm;height:1.4mm;border-radius:50%;background:#111;margin-top:2.2mm"></span>';
-  const specHtml=bullets.map(b=>'<div style="display:flex;gap:2.2mm;align-items:flex-start;margin-bottom:1mm">'+stip+'<span>'+b+'</span></div>').join('');
+  const specHtml=bullets.map(b=>'<div style="display:flex;gap:2.2mm;align-items:flex-start;margin-bottom:.6mm">'+stip+'<span>'+b+'</span></div>').join('');
   const garHtml=garanties.map(g=>'<div style="display:flex;gap:2.2mm;align-items:flex-start;margin-bottom:.6mm">'+vink+'<span>'+esc(g)+'</span></div>').join('');
-  /* Niet vol-bleed printen: de printer kan niet tot de rand en knipt dan de bovenkant
-     (de titel) eraf. Daarom een echte pagina-marge van 8mm (via @page) en de kaart
-     precies de printbare ruimte: 105-16=89mm breed, 148-16=132mm hoog. overflow:hidden
-     vangt een extreem lang model netjes af, en de vaste hoogte houdt het op één vel. */
-  const kaart='<div style="width:100%;height:132mm;background:#fff;display:flex;flex-direction:column;overflow:hidden">'
+  /* Robuust printen ongeacht welk papier in de printer zit (A4 of A6): een kaart met een
+     VASTE maat (93x132mm) die we met een echte marge (margin:8mm auto = content-marge, die
+     de printer altijd respecteert, anders dan @page-marges) midden bovenaan zetten. Zo
+     komt niets tegen de rand en snijdt de printer nooit de titel eraf. Op A6 vult het het
+     vel (93+2*6mm breed, 132+2*8mm hoog = precies A6); op A4 staat de kaart bovenin, klaar
+     om uit te knippen. overflow:hidden vangt een extreem lang model netjes af. */
+  const kaart='<div style="width:93mm;height:132mm;margin:8mm auto;padding:5mm;background:#fff;border:0.3mm solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden">'
     +'<div style="font-size:21pt;font-weight:700;line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere">'+titel+'</div>'
-    +(sub?'<div style="font-size:10.5pt;color:#222;margin-top:2mm;line-height:1.3">'+sub+'</div>':'')
-    +'<div style="margin-top:6mm">'
-      +'<div style="display:inline-block;background:'+A+';color:#fff;font-weight:700;font-size:12pt;padding:1.2mm 4mm;margin-bottom:3mm">Specificaties</div>'
-      +'<div style="font-size:10.5pt;line-height:1.45">'+specHtml+'</div>'
-      +'<div style="display:flex;justify-content:flex-end;margin-top:5mm"><div style="text-align:center">'
-        +'<div style="background:'+A+';color:#fff;font-size:27pt;font-weight:700;line-height:1;padding:2.5mm 5mm;white-space:nowrap">'+prijs+'</div>'
-        +(np?'<div style="font-size:10pt;color:#222;margin-top:2mm">Nieuwprijs: '+np+'</div>':'')
+    +(sub?'<div style="font-size:10pt;color:#222;margin-top:1.5mm;line-height:1.3">'+sub+'</div>':'')
+    +'<div style="margin-top:4mm">'
+      +'<div style="display:inline-block;background:'+A+';color:#fff;font-weight:700;font-size:12pt;padding:1.2mm 4mm;margin-bottom:2.5mm">Specificaties</div>'
+      +'<div style="font-size:10.5pt;line-height:1.4">'+specHtml+'</div>'
+      +'<div style="display:flex;justify-content:flex-end;margin-top:4mm"><div style="text-align:center">'
+        +'<div style="background:'+A+';color:#fff;font-size:25pt;font-weight:700;line-height:1;padding:2mm 5mm;white-space:nowrap">'+prijs+'</div>'
+        +(np?'<div style="font-size:10pt;color:#222;margin-top:1.5mm">Nieuwprijs: '+np+'</div>':'')
       +'</div></div>'
     +'</div>'
-    +'<div style="margin-top:auto;padding-top:5mm">'
-      +'<div style="font-weight:700;font-size:12pt;margin:0 0 2mm">Staat: '+staat+'</div>'
-      +'<div style="font-size:10.5pt;line-height:1.45">'+garHtml+'</div>'
+    +'<div style="margin-top:auto;padding-top:3mm">'
+      +'<div style="font-weight:700;font-size:12pt;margin:0 0 1.5mm">Staat: '+staat+'</div>'
+      +'<div style="font-size:10.5pt;line-height:1.4">'+garHtml+'</div>'
     +'</div>'
   +'</div>';
   return '<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Prijskaartje '+titel+'</title>'
-    +'<style>@page{size:A6;margin:8mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}html,body{margin:0}</style></head>'
+    +'<style>@page{margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}html,body{margin:0}</style></head>'
     +'<body style="font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;color:#111">'+kaart
     +(metPrint?'<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt>':'')
     +'</body></html>';
