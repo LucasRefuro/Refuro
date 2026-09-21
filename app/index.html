@@ -2852,29 +2852,6 @@
 </section>
 
 <!-- PERSONEEL -->
-<section id="tab-personeel"hidden>
-  <div class="pagehead"><h1>Personeel</h1></div>
-  <div class="modules">
-  <div class="card breed">
-    <h2><svg class="i"><use href="#i-users"/></svg>Wie werkt er voor je</h2>
-    <p class="muted" style="margin-bottom:4px">Per persoon stel je in hoe het loon werkt: een vast bedrag per uur, of een percentage van de winst die tijdens de gewerkte uren is gedraaid, met een minimum en maximum per keer. En op welke kostenplaats het loon valt.</p>
-    <div id="personeelLijst"></div>
-  </div>
-  <div class="card breed">
-    <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:4px">
-      <h2 style="margin:0"><svg class="i"><use href="#i-euro"/></svg>Loon per maand</h2>
-      <div class="bkvarr">
-        <button type="button" class="bkvar" onclick="personeelMaandNav(-1)">Vorige</button>
-        <button type="button" class="bkvar" id="personeelMaandLabel" onclick="personeelMaandNav(0)">deze maand</button>
-        <button type="button" class="bkvar" onclick="personeelMaandNav(1)">Volgende</button>
-      </div>
-    </div>
-    <p class="muted klein" style="margin:0 0 12px">Wat elke persoon deze maand verdient. Uurloon = uren × tarief; percentage = het afgesproken deel van de winst tijdens de gewerkte uren, per dag begrensd. Dit loon telt als loonkost en gaat in het rapport van je resultaat af. Met "Uitbetalen" leg je vast dát en hoe je het betaald hebt (contant of bank) en maak je een loonstrook.</p>
-    <div id="personeelMaandLijst"></div>
-  </div>
-  </div>
-</section>
-
 <!-- ROOSTER -->
 <section id="tab-rooster"hidden>
   <div class="pagehead"><h1>Rooster</h1></div>
@@ -3161,7 +3138,6 @@
       <div class="hubgroep">Administratie</div>
       <div class="hubgrid">
         <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Uren van het team en de loonkosten</span></span></button>
-        <button class="hubtegel" data-tab="personeel" onclick="showTab('personeel')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Personeel</b><span>Loon per uur of percentage en kostenplaats</span></span></button>
         <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
         <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alle verkopen, per dag of week, zoeken op naam of bedrag</span></span></button>
         <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Wat je inkoopt vastleggen, voor de btw-voorbelasting en investering</span></span></button>
@@ -3264,6 +3240,29 @@
         </div>
         <p class="muted" style="margin:10px 0 18px">Klik op een gebruiker om alles in te stellen: de rol, tot welke omgevingen hij toegang heeft, welke pagina's hij ziet en het loon.</p>
         <div id="teamAccBody">Bezig met laden…</div>
+      </div>
+      <!-- Winkel personeel: het loon en de uitbetaling. Onder de gebruikerslijst, alleen
+           voor de eigenaar (loon is gevoelig). display:contents zodat de kaarten gewoon in
+           het grid van teamLijstView meelopen. -->
+      <div id="teamPersoneelBlok" style="display:contents" hidden>
+        <h2 class="breed" style="grid-column:1/-1; margin:10px 0 -4px"><svg class="i"><use href="#i-euro"/></svg>Winkel personeel</h2>
+        <div class="card breed">
+          <h2><svg class="i"><use href="#i-users"/></svg>Wie werkt er voor je</h2>
+          <p class="muted" style="margin-bottom:4px">Per persoon stel je in hoe het loon werkt: een vast bedrag per uur, of een percentage van de winst die tijdens de gewerkte uren is gedraaid, met een minimum en maximum per keer. En op welke kostenplaats het loon valt.</p>
+          <div id="personeelLijst"></div>
+        </div>
+        <div class="card breed">
+          <div class="row" style="justify-content:space-between; align-items:center; gap:12px; margin-bottom:4px">
+            <h2 style="margin:0"><svg class="i"><use href="#i-euro"/></svg>Loon per maand</h2>
+            <div class="bkvarr">
+              <button type="button" class="bkvar" onclick="personeelMaandNav(-1)">Vorige</button>
+              <button type="button" class="bkvar" id="personeelMaandLabel" onclick="personeelMaandNav(0)">deze maand</button>
+              <button type="button" class="bkvar" onclick="personeelMaandNav(1)">Volgende</button>
+            </div>
+          </div>
+          <p class="muted klein" style="margin:0 0 12px">Wat elke persoon deze maand verdient. Uurloon = uren × tarief; percentage = het afgesproken deel van de winst tijdens de gewerkte uren, per dag begrensd. Dit loon telt als loonkost en gaat in het rapport van je resultaat af. Met "Uitbetalen" leg je vast dát en hoe je het betaald hebt (contant of bank) en maak je een loonstrook.</p>
+          <div id="personeelMaandLijst"></div>
+        </div>
       </div>
     </div>
     <!-- Detail- of aanmaakscherm van één gebruiker (in JS gevuld). -->
@@ -3982,7 +3981,6 @@ function showTab(t){
      van Clover binnen zijn die nog ingeboekt moeten worden. */
   if(['verkoop','producten','verkopen','dashboard','rapport'].includes(t) && typeof cloverBestellingenVerwerken==='function') cloverBestellingenVerwerken();
   if(t==='uren') renderUren();
-  if(t==='personeel'){ renderPersoneel(); renderPersoneelMaand(); }
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
   if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); }
@@ -4366,7 +4364,7 @@ function tekenLoonBlok(id){
 function renderPersoneel(){
   const box=document.getElementById('personeelLijst'); if(!box) return;
   if(!teamLeden.length && account){
-    laadTeamLeden().then(()=>{ if(!document.getElementById('tab-personeel').hidden) renderPersoneel(); });
+    laadTeamLeden().then(()=>{ const t=document.getElementById('tab-team'); if(t && !t.hidden) renderPersoneel(); });
   }
   const leden = teamLeden.length ? teamLeden : (gebruiker?[{id:gebruiker.id, naam:gebruiker.naam, rol:gebruiker.rol}]:[]);
   if(!leden.length){ box.innerHTML='<p class="muted">Nog geen teamleden. Voeg ze toe bij Team.</p>'; return; }
@@ -4447,7 +4445,7 @@ function personeelMaandNav(richting){
 function renderPersoneelMaand(){
   const box=document.getElementById('personeelMaandLijst'); if(!box) return;
   if(!personeelMaandDatum){ const n=new Date(); personeelMaandDatum=new Date(n.getFullYear(), n.getMonth(), 1); }
-  if(!teamLeden.length && account){ laadTeamLeden().then(()=>{ const t=document.getElementById('tab-personeel'); if(t && !t.hidden) renderPersoneelMaand(); }); }
+  if(!teamLeden.length && account){ laadTeamLeden().then(()=>{ const t=document.getElementById('tab-team'); if(t && !t.hidden) renderPersoneelMaand(); }); }
   const jaar=personeelMaandDatum.getFullYear(), m0=personeelMaandDatum.getMonth();
   const lbl=document.getElementById('personeelMaandLabel');
   if(lbl) lbl.textContent=personeelMaandDatum.toLocaleDateString('nl-NL',{month:'long', year:'numeric'});
@@ -11733,7 +11731,7 @@ async function web2Los2(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','personeel','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners'];
 const ROL_TABS={
   eigenaar:null,
   beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
@@ -14879,7 +14877,7 @@ function refActiefVan(u){
    markering 'pag_uitgebreid': alleen als die in tabs staat, is de lijst leidend voor
    deze pagina's; anders beslist de rol. */
 const EXTRA_PAGINAS=[
-  ['rooster','Rooster'],['personeel','Personeel'],['verkopen','Verkopen'],['inkopen','Inkopen'],
+  ['rooster','Rooster'],['verkopen','Verkopen'],['inkopen','Inkopen'],
   ['rapport','Rapport'],['facturen','Facturen'],['vastelasten','Vaste lasten'],['pakketten','Pakketdiensten']
 ];
 /* Wat er standaard aan staat voor een gebruiker: heeft hij de markering, dan zijn eigen
@@ -14900,10 +14898,19 @@ function extraChipsHtml(prefix, actief){
 function extraUit(prefix){
   return ['pag_uitgebreid'].concat(EXTRA_PAGINAS.filter(([id])=>{ const el=document.getElementById(prefix+'_x_'+id); return el&&el.checked; }).map(([id])=>id));
 }
+/* Het blok Winkel personeel (loon + uitbetaling) onder de gebruikerslijst. Alleen voor
+   de eigenaar, want loon is gevoelig; zo staat het bij Team maar zien beheerders het niet. */
+function teamPersoneelToon(){
+  const blok=document.getElementById('teamPersoneelBlok'); if(!blok) return;
+  const magLoon = gebruiker && gebruiker.rol==='eigenaar';
+  blok.hidden=!magLoon;
+  if(magLoon){ if(typeof renderPersoneel==='function') renderPersoneel(); if(typeof renderPersoneelMaand==='function') renderPersoneelMaand(); }
+}
 function teamTerug(){
   const d=document.getElementById('teamDetailView'); if(d){ d.hidden=true; d.innerHTML=''; }
   const l=document.getElementById('teamLijstView'); if(l) l.hidden=false;
   renderTeamAccounts();
+  teamPersoneelToon();
 }
 function teamGebruikerOpen(id){
   const u=teamLedenVol.find(x=>x.id===id); if(!u) return;
@@ -15239,6 +15246,7 @@ function renderTeam(){
   const dv=document.getElementById('teamDetailView'); if(dv){ dv.hidden=true; dv.innerHTML=''; }
   const lv=document.getElementById('teamLijstView'); if(lv) lv.hidden=false;
   renderTeamAccounts();
+  teamPersoneelToon();
 }
 function updMw(id,veld,val){
   const m=state.medewerkers.find(m=>m.id===id); if(!m) return;
