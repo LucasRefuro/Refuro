@@ -5916,7 +5916,7 @@ function tekenVoorraaddelen(){
         <td class="num">${euro(Number(o.prijs)||0)}${lots.length>1?' <span class="muted klein">e.v.</span>':''}</td>
         <td class="num">${o.verkoopprijs!=null&&o.verkoopprijs!==''?euro(o.verkoopprijs):'<span class="muted">—</span>'}</td>
         <td class="num" style="white-space:nowrap">
-          <button class="btn ghost small" title="Prijskaartje voor op de bak" onclick="vrdLabel('${o.id}')"><svg class="i s"><use href="#i-print"/></svg>Label</button>
+          <button class="btn ghost small" title="Interne sticker met barcode voor op de bak" onclick="vrdLabel('${o.id}')"><svg class="i s"><use href="#i-print"/></svg>Label</button>
           <button class="btn ghost small" title="Voorraad bijboeken" onclick="vrdBijboek('${o.id}')">Bijboeken</button>
           <button class="btn ghost small" onclick="vrdBewerk('${o.id}')">Bewerken</button>
         </td>
@@ -5924,23 +5924,101 @@ function tekenVoorraaddelen(){
     }).join('')}</tbody></table></div>`;
 }
 
-/* Een simpel prijskaartje voor op de bak: naam en verkoopprijs, geen barcode.
-   Print via hetzelfde venster-mechanisme als het toestel-kaartje (alleen het
-   venster telt mee in @media print). */
-function vrdLabelHtml(o){
-  const prijs = (o.verkoopprijs!=null && o.verkoopprijs!=='') ? euro(o.verkoopprijs) : '';
-  return `<div class="speckaart" style="min-height:74mm; padding:12mm; text-align:center">
-    <div style="font-size:6mm; color:#666; text-transform:uppercase; letter-spacing:.12em; margin-bottom:6mm">${esc(batSoortNaam(o.soort||'anders'))}</div>
-    <div style="font-size:13mm; font-weight:800; line-height:1.15; margin-bottom:8mm">${esc(o.naam||'Onderdeel')}</div>
-    ${prijs?`<div style="font-size:24mm; font-weight:800">${esc(prijs)}</div>`:'<div style="color:#999; font-size:6mm">Nog geen verkoopprijs ingevuld</div>'}
+/* De inhoud die de QR-code van een onderdeel bevat: een link terug naar de werkbank
+   met dit onderdeel, zodat scannen (camera of handscanner) meteen "gebruik er een" opent. */
+function vrdQrInhoud(o){ return location.origin+'/refurbish/?onderdeel='+o.id; }
+/* Een interne bak-sticker: soort, naam, leverancier en een scanbare QR-code. GEEN prijs;
+   dit is geen prijskaartje maar een werksticker die je scant als je er een pakt. Voor het
+   voorbeeld op het scherm en het A4-vel; de labelprinter gebruikt vrdLabelPng. */
+function vrdLabelHtml(o, qrUrl){
+  return `<div class="speckaart" style="min-height:74mm; padding:12mm; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center">
+    <div style="font-size:6mm; color:#666; text-transform:uppercase; letter-spacing:.12em; margin-bottom:5mm">${esc(batSoortNaam(o.soort||'anders'))}</div>
+    <div style="font-size:11mm; font-weight:800; line-height:1.15; margin-bottom:7mm">${esc(o.naam||'Onderdeel')}</div>
+    ${qrUrl?`<img src="${esc(qrUrl)}" alt="" style="width:40mm; height:40mm; image-rendering:pixelated">`:''}
+    ${o.leverancier?`<div style="color:#666; font-size:5mm; margin-top:5mm">${esc(o.leverancier)}</div>`:''}
   </div>`;
 }
-function vrdLabel(id){
+/* De sticker als PNG voor de labelprinter (Brother QL-800 via de printhulp), net als de
+   toestel-stickers: soort, naam, leverancier en een QR gecentreerd eronder. Geen prijs. */
+async function vrdLabelPng(o){
+  await laadScript('/app/qrcode.min.js');
+  const {breedte}=labelInstelling();
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2.5*dpmm);
+  const Hmax=Math.round(90*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top';
+  ctx.fillStyle='#000';
+  let y=pad;
+  ctx.font='700 '+Math.round(2.3*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(batSoortNaam(o.soort||'anders')).toUpperCase(), pad, y, W-2*pad, Math.round(2.8*dpmm), 1);
+  y+=Math.round(1.0*dpmm);
+  ctx.font='800 '+Math.round(3.9*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(o.naam||'Onderdeel'), pad, y, W-2*pad, Math.round(4.5*dpmm), 3);
+  if(o.leverancier){ y+=Math.round(0.6*dpmm); ctx.font='500 '+Math.round(2.4*dpmm)+'px Arial'; y=labelWrap(ctx, String(o.leverancier), pad, y, W-2*pad, Math.round(3.0*dpmm), 1); }
+  // QR gecentreerd onder de tekst.
+  y+=Math.round(2.5*dpmm);
+  const qrS=Math.min(Math.round(22*dpmm), W-2*pad);
+  const qx=Math.round((W-qrS)/2);
+  const qr=qrcode(0,'M'); qr.addData(vrdQrInhoud(o)); qr.make();
+  const qrUrl=qr.createDataURL(6,0);
+  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, qx, y, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qrUrl; });
+  y+=qrS+pad;
+  const Hc=Math.min(Hmax, y);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c,0,0,W,Hc,0,0,W,Hc);
+  return { data:out.toDataURL('image/png').split(',')[1] };
+}
+async function vrdLabelPrint(id){
   const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  const {breedte, tweekleuren}=labelInstelling();
+  try{
+    const {data}=await vrdLabelPng(o);
+    await printViaHelper(data, {label:breedte, red:tweekleuren});
+    toast('Label geprint', true);
+  }catch(e){ toast('Printen: '+e.message,'fout'); }
+}
+async function vrdLabel(id){
+  const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  let qrUrl='';
+  try{ await laadScript('/app/qrcode.min.js'); const qr=qrcode(0,'M'); qr.addData(vrdQrInhoud(o)); qr.make(); qrUrl=qr.createDataURL(6,0); }catch(_e){}
   venster('Label', `
-    <p class="pv">Print dit kaartje en plak het op de bak. Naam en prijs, geen barcode.</p>
-    <div class="prijskaart-vel" id="vrdLabelVel">${vrdLabelHtml(o)}</div>
-  `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
+    <p class="pv">Print op je labelprinter (stil, geen printvenster) en plak het op de bak. Pak je er later een, scan dan de QR-code, dan boek je meteen een van de voorraad af. Geen labelprinter? Kies "Op A4-vel".</p>
+    <div class="labelvel" id="vrdLabelVel">${vrdLabelHtml(o, qrUrl)}</div>
+  `, [
+    {tekst:'Op labelprinter', klasse:'actie', doe:()=>vrdLabelPrint(o.id)},
+    {tekst:'Op A4-vel', klasse:'', doe:()=>window.print()}
+  ], 'groot');
+}
+/* Scan-je-gebruikt-er-een: een gescande onderdeel-QR opent dit; je bevestigt en er gaat
+   een van de voorraad af (FIFO: uit de oudste partij), zodat de teller klopt. */
+function vrdGebruik(id){
+  const o=voorraaddelen.find(x=>x.id===id);
+  if(!o){ toast('Dit onderdeel ken ik niet','let-op'); return; }
+  if(typeof showTab==='function') showTab('onderdelen');
+  venster('Onderdeel gebruiken', `<div class="pv">
+      <div style="font-size:18px; font-weight:800; margin-bottom:2px">${esc(o.naam)}</div>
+      <div class="muted">${esc(batSoortNaam(o.soort||'anders'))} · nog ${Number(o.aantal)||0} op voorraad</div>
+    </div>`,
+    (Number(o.aantal)||0)>0
+      ? [{tekst:'Gebruik er een', klasse:'actie', doe:(kn)=>vrdGebruikDoen(kn, id)}, {tekst:'Annuleren', klasse:'', doe:()=>sluit()}]
+      : [{tekst:'Sluiten', klasse:'', doe:()=>sluit()}]);
+}
+async function vrdGebruikDoen(knop, id){
+  const o=voorraaddelen.find(x=>x.id===id); if(!o) return;
+  const lots=(Array.isArray(o.lots)?o.lots.map(l=>({...l})):[]);
+  let af=false;
+  for(const l of lots){ if((Number(l.aantal)||0)>0){ l.aantal=(Number(l.aantal)||0)-1; af=true; break; } }
+  if(!af){ toast(o.naam+' is op','let-op'); return; }
+  const sync=vrdSync(lots);
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_voorraad')
+      .update({lots:sync.lots, aantal:sync.aantal, prijs:sync.prijs, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw error;
+    sluit(); await allesLaden();
+    const laag=(Number(o.min_aantal)||0)>0 && sync.aantal<=(Number(o.min_aantal)||0);
+    toast('1 '+o.naam+' gebruikt. Nog '+sync.aantal+' over'+(laag?', bijbestellen!':''), true);
+  });
 }
 /* Voorraad toevoegen: kies een BESTAAND product (dan komt er een partij bij, met
    zijn eigen inkoopprijs) of maak een NIEUW product. Zo staat hetzelfde product
@@ -8274,6 +8352,8 @@ function uitAdres(){
   const batchId=p.get('batch'), nr=p.get('nr');
   if(batchId && nr){ batSlotInvullen(batchId, Number(nr)); return; }   // genummerd batch-label
   if(batchId && batches.find(x=>x.id===batchId)){ showTab('batches'); batOpen(batchId); return; }  // batch-sticker
+  const ond=p.get('onderdeel');
+  if(ond && voorraaddelen.find(x=>x.id===ond)){ vrdGebruik(ond); return; }   // onderdeel-sticker: gebruik er een
   const id=p.get('apparaat');
   if(!id) return;
   const a=apparaten.find(x=>x.id===id);
@@ -8333,6 +8413,8 @@ function qrScanGevonden(tekst){
       const id=u.searchParams.get('apparaat');
       /* Scanmodus voor een bundel: een gescande laptop gaat de bundel in i.p.v. open. */
       if(vbScanDoel && id && apparaten.find(x=>x.id===id)){ vbScanToevoegen(id); return; }
+      const ond=u.searchParams.get('onderdeel');
+      if(ond && voorraaddelen.find(x=>x.id===ond)){ vrdGebruik(ond); return; }
       const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
       if(bId && n){ batSlotInvullen(bId, Number(n)); return; }
       if(bId && batches.find(x=>x.id===bId)){ showTab('batches'); batOpen(bId); return; }
@@ -8442,6 +8524,8 @@ document.addEventListener('keydown', e=>{
         const id=u.searchParams.get('apparaat');
         /* Scanmodus voor een bundel: een gescande laptop gaat de bundel in i.p.v. open. */
         if(vbScanDoel && id && apparaten.find(x=>x.id===id)){ e.preventDefault(); vbScanToevoegen(id); return; }
+        const ond=u.searchParams.get('onderdeel');
+        if(ond && voorraaddelen.find(x=>x.id===ond)){ e.preventDefault(); vrdGebruik(ond); return; }
         const bId=u.searchParams.get('batch'), n=u.searchParams.get('nr');
         if(bId && n){ e.preventDefault(); batSlotInvullen(bId, Number(n)); return; }
         if(bId && batches.find(x=>x.id===bId)){ e.preventDefault(); showTab('batches'); batOpen(bId); return; }
