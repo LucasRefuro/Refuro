@@ -497,6 +497,45 @@
   .rgoedrij b{font-weight:700;}
   .rgoedknoppen{display:flex; gap:8px; flex:none;}
   .roostergrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:12px;}
+  /* ── Het planbord (beheerder): matrix op desktop, dagstrip op de telefoon ── */
+  .pb-balk{display:flex; align-items:center; justify-content:flex-end; gap:14px; flex-wrap:wrap; margin:2px 0 14px;}
+  .pb-weektot{font-weight:800; font-size:15px;}
+  .pb-desktop{display:block;}
+  .pb-mobiel{display:none;}
+  .planbord{display:grid; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; overflow-x:auto;}
+  .pb-hoek{background:var(--card); padding:8px 10px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); position:sticky; left:0; z-index:2;}
+  .pb-kop{background:var(--card); padding:7px 9px; font-size:12px; line-height:1.35;}
+  .pb-kop.vandaag{box-shadow:inset 0 -2px 0 var(--green);}
+  .pb-open{display:block; color:var(--muted); font-size:11px;}
+  .pb-dagtot{display:block; font-size:11px; font-weight:700; color:var(--muted-l);}
+  .pb-leeg{color:var(--amber-tekst); font-weight:700;}
+  .pb-naam{background:var(--card); padding:9px 10px; font-weight:700; font-size:13px; position:sticky; left:0; z-index:1; display:flex; align-items:center;}
+  .pb-cel{background:var(--card); min-height:46px; padding:5px; display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start; position:relative; cursor:pointer;}
+  .pb-cel.dicht{background:var(--soft); cursor:default;}
+  .pb-cel.bes-kan{background:var(--green-soft);}
+  .pb-cel.bes-niet{background:var(--red-soft);}
+  .pb-cel.bes-onbekend{background:var(--card);}
+  .pb-cel.dicht.bes-kan, .pb-cel.dicht.bes-niet{background:var(--soft);}
+  .pb-cel.vandaag{outline:1.5px solid var(--green); outline-offset:-1.5px;}
+  .pb-plus{color:var(--muted-l); font-weight:800; font-size:15px; opacity:.55;}
+  .pb-plus2{border:none; background:transparent; color:var(--muted-l); font-weight:800; cursor:pointer; padding:0 4px; font-size:14px;}
+  .pb-week{background:var(--card); padding:9px 10px; font-size:12.5px; font-weight:700; display:flex; align-items:center;}
+  .dienstchip{border:1.5px solid var(--green); background:var(--card); color:var(--green-tekst); border-radius:8px; padding:3px 7px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; line-height:1.3;}
+  .dienstchip.let{border-color:var(--amber); color:var(--amber-tekst); background:var(--amber-soft);}
+  .dienstchip.fout{border-color:var(--red); color:var(--red-tekst); background:var(--red-soft);}
+  .dagstrip{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px;}
+  .ds-dag{flex:1 0 auto; min-width:44px; border:1.5px solid var(--border); border-radius:12px; background:var(--card); padding:8px 4px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .ds-dag.aan{background:var(--green-soft); border-color:var(--green); color:var(--green-tekst);}
+  .ds-dag b{font-size:12px;} .ds-dag span{font-size:14px; font-weight:700;}
+  .ds-stip{width:6px; height:6px; border-radius:50%; margin-top:2px;}
+  .ds-stip.goed{background:var(--green);}
+  .ds-stip.leeg{background:var(--amber);}
+  .dagpaneel{border:1px solid var(--border); border-radius:var(--radius-s); padding:14px 16px;}
+  .dp-dienst{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--border);}
+  .dp-dienst:first-of-type{border-top:0;}
+  .dp-acts{flex:none;}
+  .dp-totaal{margin-top:12px; padding-top:10px; border-top:1px solid var(--border); font-weight:700;}
+  @media(max-width:760px){ .pb-desktop{display:none;} .pb-mobiel{display:block;} }
   .dagkaart{border:1px solid var(--border); border-radius:var(--radius-s); padding:12px; display:flex; flex-direction:column; gap:10px;}
   .dagkaart.vandaag{border-color:var(--green);}
   .dagkop{display:flex; align-items:baseline; gap:6px;}
@@ -4556,7 +4595,7 @@ async function laadRooster(){
   try{
     const [b,r]=await Promise.all([
       sb.from('beschikbaarheid').select('account_id,datum,beschikbaar,van,tot,status,afwijs_reden').gte('datum',van).lte('datum',tot),
-      sb.from('rooster').select('id,account_id,datum,van,tot,notitie').gte('datum',van).lte('datum',tot)
+      sb.from('rooster').select('id,account_id,datum,van,tot,notitie,pauze_min').gte('datum',van).lte('datum',tot)
     ]);
     roosterData.besch = b.data||[];
     roosterData.diensten = r.data||[];
@@ -4651,8 +4690,9 @@ function roosterKopHtml(){
   const dagen=roosterDagen();
   const verleden = roosterYmd(dagen[6]) < roosterYmd(new Date());
   let uit='';
-  // Wie zelf doorgeeft (iedereen behalve de eigenaar): status van deze week plus de knop.
-  if(gebruiker && gebruiker.rol!=='eigenaar' && !verleden){
+  // Wie zelf doorgeeft: alleen wie NIET mag inplannen (een medewerker). Beheerders en de
+  // eigenaar plannen zelf via het bord; die geven geen beschikbaarheid door.
+  if(gebruiker && !roosterMagInplannen() && !verleden){
     const ws=roosterWeekStatus(gebruiker.id);
     let regel='', knop='';
     if(ws.status==='goedgekeurd'){ regel='<span class="rstatus goed">Goedgekeurd</span>Je beschikbaarheid voor deze week is rond.'; }
@@ -4855,7 +4895,264 @@ async function roosterMeldingen(){
   toonKeurBalk();
   setTimeout(async()=>{ keurPopup(); await roosterNietIngevuldPopup(); await roosterInvulPopup(); }, 800);
 }
+/* ═══ Het planbord: wie werkt wanneer (voor wie mag inplannen) ═══
+   Beschikbaarheid is de onderlegger (wie kan), het ingedeelde rooster de uitvoer.
+   Netto uren = tot - van - pauze; loopt een dienst over middernacht (tot<van), dan
+   telt er 24 uur bij. Alles op HH:MM-strings, nooit via Date (tijdzone-valkuil). */
+function dienstMin(van, tot, pauze){
+  const m=t=>{ const p=String(t||'').split(':'); return (Number(p[0])||0)*60+(Number(p[1])||0); };
+  if(!van || !tot) return 0;
+  let d=m(tot)-m(van); if(d<0) d+=1440;
+  return Math.max(0, d-(Number(pauze)||0));
+}
+function dienstUren(x){ return dienstMin(x.van, x.tot, x.pauze_min)/60; }
+function roosterKostenZichtbaar(){ return typeof urenMagAlles==='function' ? urenMagAlles() : true; }
+function roosterOpPercentage(id){ if(typeof pCfg!=='function') return false; const c=pCfg(id); return c && c.vorm==='percentage'; }
+function roosterCelDiensten(id, ymd){ return (roosterData.diensten||[]).filter(x=>x.account_id===id && x.datum===ymd); }
+function roosterWeekUren(id){ return (roosterData.diensten||[]).filter(x=>x.account_id===id).reduce((s,x)=>s+dienstUren(x),0); }
+/* De rijen van het bord: de gewone kandidaten, plus de eigenaar onderaan zodat je
+   jezelf ook kunt inplannen. */
+function roosterBordMensen(){
+  const k=roosterKandidaten().slice();
+  const bron=teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam,rol:gebruiker.rol}]:[]);
+  const eig=bron.find(m=>m.rol==='eigenaar');
+  if(eig && !k.some(m=>m.id===eig.id)) k.push(eig);
+  return k;
+}
+/* Beschikbaarheid van iemand op een dag als onderlegger-kleur: kan (groen),
+   niet (rood), onbekend (grijs). Alleen ingediend of goedgekeurd telt als "kan";
+   een concept blijft grijs. */
+function roosterBeschikStatus(id, ymd){
+  const b=(roosterData.besch||[]).find(x=>x.account_id===id && x.datum===ymd);
+  if(!b) return 'onbekend';
+  const st=b.status||'concept';
+  if(st!=='ingediend' && st!=='goedgekeurd') return 'onbekend';
+  return b.beschikbaar===false ? 'niet' : 'kan';
+}
+function roosterBeschikTijd(id, ymd){
+  const b=(roosterData.besch||[]).find(x=>x.account_id===id && x.datum===ymd && x.beschikbaar!==false);
+  return b ? {van:b.van, tot:b.tot} : null;
+}
+function euroKort(n){ return '€'+(Math.round(Number(n)||0)).toLocaleString('nl-NL'); }
+function urenKort(u){ return (Math.round(u*10)/10).toLocaleString('nl-NL')+' u'; }
+/* Kosten van een aantal uren voor iemand: uurtarief maal uren. Percentage-loners
+   ramen we niet als vast bedrag (hun kosten hangen van de winst af): "op %". */
+function roosterKostTekst(id, uren){
+  if(!roosterKostenZichtbaar()) return '';
+  if(roosterOpPercentage(id)) return 'op %';
+  const tar=(typeof loonTarief==='function')?loonTarief(id):0;
+  return tar? (' · '+euroKort(tar*uren)) : '';
+}
+function dienstChip(x){
+  const tijd=(x.van||'')+(x.tot?'–'+x.tot:'');
+  const pz=(Number(x.pauze_min)||0)>0 ? ' · '+x.pauze_min+'m' : '';
+  const waarsch=roosterDienstWaarschuwing(x);
+  return `<button type="button" class="dienstchip${waarsch?' '+waarsch:''}" onclick="roosterDienstOpen('${x.id}')" title="Aanpassen">${esc(tijd)}${esc(pz)}</button>`;
+}
+/* Waarschuwing per dienst: buiten de doorgegeven beschikbaarheid (let), of dubbel
+   met een andere eigen dienst die dag (fout). Adviserend, nooit blokkerend. */
+function roosterDienstWaarschuwing(x){
+  const zelfde=(roosterData.diensten||[]).filter(d=>d.account_id===x.account_id && d.datum===x.datum && d.id!==x.id);
+  const overlap=zelfde.some(d=>{
+    const a1=dienstMin(x.van,x.tot,0), b0=dienstMin(d.van,d.tot,0);
+    // simpele overlaptest op minuten sinds middernacht (geen middernacht-diensten hier verwacht)
+    const s=t=>{ const p=String(t||'').split(':'); return (Number(p[0])||0)*60+(Number(p[1])||0); };
+    return x.van&&x.tot&&d.van&&d.tot && s(x.van)<s(d.tot) && s(d.van)<s(x.tot);
+  });
+  if(overlap) return 'fout';
+  const bt=roosterBeschikTijd(x.account_id, x.datum);
+  const bs=roosterBeschikStatus(x.account_id, x.datum);
+  if(bs==='niet') return 'let';
+  if(bt && bt.van && bt.tot && x.van && x.tot){
+    const s=t=>{ const p=String(t||'').split(':'); return (Number(p[0])||0)*60+(Number(p[1])||0); };
+    if(s(x.van)<s(bt.van) || s(x.tot)>s(bt.tot)) return 'let';
+  }
+  return '';
+}
+let roosterDagMobiel=null;   // gekozen dag in de mobiele dagstrip
+/* Een klein venster voor het rooster (dienst-kaart, vorige week overnemen). De
+   winkelapp heeft geen generieke venster-helper, dus deze bouwt er zelf een uit
+   het bestaande overlay/popup-patroon. */
+function roosterModal(titel, inhoud, acties){
+  const oud=document.getElementById('roosterModal'); if(oud) oud.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='roosterModal';
+  const knoppen=(acties||[]).map((a,i)=>`<button class="btn ${a.klasse==='actie'?'actie':(a.klasse==='gevaar'?'gevaar':'ghost')}" data-i="${i}">${esc(a.tekst)}</button>`).join('');
+  ov.innerHTML=`<div class="popup"><h3 style="margin:0 0 10px">${esc(titel)}</h3>${inhoud}<div class="acts" style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap">${knoppen}</div></div>`;
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  ov.querySelectorAll('.acts button').forEach((b,i)=>{ b.onclick=()=>{ try{ (acties[i].doe||function(){})(b); }catch(e){ console.error('rooster-venster', e); } }; });
+  return ov;
+}
+function roosterModalDicht(){ const m=document.getElementById('roosterModal'); if(m) m.remove(); }
+async function roosterKnopBezig(knop, fn){
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{ await fn(); }catch(e){ toast((e&&e.message)||'Mislukt','fout'); }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
+}
 function tekenRooster(){
+  if(roosterMagInplannen()) tekenRoosterBord();
+  else tekenRoosterEigen();
+}
+function tekenRoosterBord(){
+  const inh=document.getElementById('roosterInhoud'); if(!inh) return;
+  const uitleg=document.getElementById('roosterUitleg');
+  if(uitleg) uitleg.textContent='Deel het team in: tik een lege cel om iemand te plannen. De kleur onder de cel laat zien wie kan. Iedereen geeft zelf zijn beschikbaarheid door; jij en de andere beheerders plannen.';
+  const dagen=roosterDagen();
+  const vandaag=roosterYmd(new Date());
+  const mensen=roosterBordMensen();
+  const kostenAan=roosterKostenZichtbaar();
+  if(!roosterDagMobiel || !dagen.some(d=>roosterYmd(d)===roosterDagMobiel)){
+    roosterDagMobiel = dagen.some(d=>roosterYmd(d)===vandaag) ? vandaag : roosterYmd(dagen[0]);
+  }
+  // Weektotaal voor in de balk.
+  let weekU=0, weekK=0;
+  mensen.forEach(m=>{ const u=roosterWeekUren(m.id); weekU+=u; if(kostenAan && !roosterOpPercentage(m.id)) weekK+=((typeof loonTarief==='function')?loonTarief(m.id):0)*u; });
+  const weekTot=`<span class="pb-weektot">${urenKort(weekU)}${kostenAan&&weekK?(' · '+euroKort(weekK)):''}</span>`;
+  const kopExtra=`<div class="pb-balk">${weekTot}<button type="button" class="btn ghost small" onclick="roosterKopieerVorige()"><svg class="i s"><use href="#i-clipboard"/></svg>Neem vorige week over</button></div>`;
+
+  // ── Desktop: matrix mensen x 7 dagen ──
+  const dagKop=dagen.map((d,i)=>{ const ymd=roosterYmd(d); const open=OPENINGSTIJDEN[i];
+    const dagU=mensen.reduce((s,m)=>s+roosterCelDiensten(m.id,ymd).reduce((a,x)=>a+dienstUren(x),0),0);
+    const iemand=mensen.some(m=>roosterCelDiensten(m.id,ymd).length);
+    return `<div class="pb-kop${ymd===vandaag?' vandaag':''}"><b>${DAG_KORT[i]}</b> <span class="muted klein">${roosterKort(d)}</span>
+      <span class="pb-open">${open?esc(open.van+'–'+open.tot):'Gesloten'}</span>
+      <span class="pb-dagtot">${open&&!iemand?'<span class="pb-leeg">Niemand</span>':(dagU?urenKort(dagU):'')}</span></div>`;
+  }).join('');
+  const rijen=mensen.map(m=>{
+    const cellen=dagen.map((d,i)=>{ const ymd=roosterYmd(d); const open=OPENINGSTIJDEN[i];
+      const bs=roosterBeschikStatus(m.id,ymd);
+      const diensten=roosterCelDiensten(m.id,ymd);
+      const chips=diensten.map(dienstChip).join('');
+      const klik = open ? ` onclick="roosterSnelPlan('${ymd}','${m.id}')"` : '';
+      const leeg = !diensten.length ? `<span class="pb-plus">+</span>` : (open?`<button type="button" class="pb-plus2" onclick="roosterSnelPlan('${ymd}','${m.id}')" title="Nog een dienst">+</button>`:'');
+      return `<div class="pb-cel bes-${bs}${open?'':' dicht'}${ymd===vandaag?' vandaag':''}"${diensten.length?'':klik}>${chips}${leeg}</div>`;
+    }).join('');
+    const u=roosterWeekUren(m.id);
+    return `<div class="pb-naam">${esc(m.naam)}</div>${cellen}<div class="pb-week">${u?urenKort(u)+roosterKostTekst(m.id,u):'<span class="muted klein">—</span>'}</div>`;
+  }).join('');
+  const matrix=`<div class="planbord" style="grid-template-columns:140px repeat(7,minmax(84px,1fr)) 104px">
+    <div class="pb-hoek"></div>${dagKop}<div class="pb-hoek">Week</div>
+    ${rijen}
+  </div>`;
+
+  // ── Mobiel: dagstrip + dagpaneel ──
+  const strip=dagen.map((d,i)=>{ const ymd=roosterYmd(d); const open=OPENINGSTIJDEN[i];
+    const iemand=mensen.some(m=>roosterCelDiensten(m.id,ymd).length);
+    const stip = !open ? '' : (iemand?'<span class="ds-stip goed"></span>':'<span class="ds-stip leeg"></span>');
+    return `<button type="button" class="ds-dag${ymd===roosterDagMobiel?' aan':''}" onclick="roosterKiesDag('${ymd}')"><b>${DAG_KORT[i]}</b><span>${d.getDate()}</span>${stip}</button>`;
+  }).join('');
+  const di=dagen.findIndex(d=>roosterYmd(d)===roosterDagMobiel);
+  const dOpen=OPENINGSTIJDEN[di<0?0:di];
+  const dYmd=roosterDagMobiel;
+  const paneelDiensten=mensen.map(m=>{ const ds=roosterCelDiensten(m.id,dYmd); if(!ds.length) return '';
+    return ds.map(x=>`<div class="dp-dienst"><span><b>${esc(m.naam)}</b> <span class="muted klein">${esc((x.van||'')+(x.tot?'–'+x.tot:''))}${(Number(x.pauze_min)||0)>0?' · '+x.pauze_min+'m pauze':''}</span></span>
+      <span class="dp-acts"><button type="button" class="btn ghost small" onclick="roosterDienstOpen('${x.id}')">Aanpassen</button></span></div>`).join('');
+  }).join('');
+  const vrijChips=mensen.map(m=>{ if(roosterCelDiensten(m.id,dYmd).length) return ''; const bs=roosterBeschikStatus(m.id,dYmd);
+    return `<button type="button" class="inplanchip${bs==='kan'?'':' geen'}" onclick="roosterSnelPlan('${dYmd}','${m.id}')">${bs==='kan'?'● ':''}${esc(m.naam)}</button>`;
+  }).join('');
+  const dagU=mensen.reduce((s,m)=>s+roosterCelDiensten(m.id,dYmd).reduce((a,x)=>a+dienstUren(x),0),0);
+  const paneel=`<div class="dagstrip">${strip}</div>
+    <div class="dagpaneel">
+      <div class="openrij${dOpen?'':' dicht'}">${dOpen?('Open '+dOpen.van+'–'+dOpen.tot):'Gesloten'}</div>
+      <div class="roosterlabel" style="margin-top:12px">Ingepland</div>
+      ${paneelDiensten||'<p class="beschhint">Nog niemand ingepland.</p>'}
+      <div class="roosterlabel" style="margin-top:14px">Wie kan er nog</div>
+      <div class="inplanrij">${vrijChips||'<span class="muted klein">Iedereen staat al ingepland.</span>'}</div>
+      <div class="dp-totaal">${dagU?urenKort(dagU):'0 u'} deze dag</div>
+    </div>`;
+
+  inh.innerHTML=`${roosterKopHtml()}${kopExtra}<div class="pb-desktop">${matrix}</div><div class="pb-mobiel">${paneel}</div>`;
+}
+function roosterKiesDag(ymd){ roosterDagMobiel=ymd; tekenRoosterBord(); }
+/* Snel plannen: klik een lege cel of een chip. Slimme tijden uit de doorgegeven
+   beschikbaarheid, anders de openingstijden. Pauze standaard 0; die stel je in de
+   dienst-kaart bij. Hergebruikt de bestaande insert-logica. */
+async function roosterSnelPlan(ymd, accountId){
+  if(!roosterMagInplannen()) return;
+  const b=roosterBeschikTijd(accountId, ymd);
+  const wd=(new Date(ymd+'T12:00:00').getDay()+6)%7;
+  const open=OPENINGSTIJDEN[wd];
+  const van=(b&&b.van)||(open&&open.van)||'09:00';
+  const tot=(b&&b.tot)||(open&&open.tot)||'17:00';
+  const {error}=await sb.from('rooster').insert({account_id:accountId, datum:ymd, van, tot, pauze_min:0});
+  if(error){ toast('Inplannen mislukte','fout'); return; }
+  await laadRooster();
+}
+/* De dienst-kaart: los venster dat een geheugenkopie bewerkt en pas bij opslaan
+   wegschrijft en een keer hertekent. Zo gooit hertekenen je invoer niet weg. */
+function roosterDienstOpen(id){
+  const x=(roosterData.diensten||[]).find(d=>d.id===id); if(!x) return;
+  const naam=roosterNaam(x.account_id);
+  const dObj=new Date(x.datum+'T12:00:00');
+  const pauzes=[0,15,30,45,60];
+  roosterModal('Dienst aanpassen', `
+    <p class="pv"><b>${esc(naam)}</b> op ${esc(dObj.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}))}</p>
+    <div class="row" style="gap:10px; align-items:flex-end">
+      <div><label>Van</label><input type="time" id="ds_van" value="${esc(x.van||'')}"></div>
+      <div><label>Tot</label><input type="time" id="ds_tot" value="${esc(x.tot||'')}"></div>
+    </div>
+    <div style="margin-top:12px"><label>Pauze</label>
+      <div class="segment" id="ds_pauze">${pauzes.map(p=>`<button type="button" class="segknop${(Number(x.pauze_min)||0)===p?' aan':''}" data-p="${p}" onclick="roosterPauzeKies(${p},this)">${p===0?'Geen':p+' min'}</button>`).join('')}</div>
+    </div>
+    <div class="pv" id="ds_netto" style="margin-top:12px; font-weight:700"></div>
+  `, [
+    {tekst:'Opslaan', klasse:'actie', doe:(kn)=>roosterDienstBewaar(kn, id)},
+    {tekst:'Dienst weghalen', klasse:'gevaar', doe:()=>roosterDienstWegBevestig(id)}
+  ]);
+  const upd=()=>{ const v=document.getElementById('ds_van').value, t=document.getElementById('ds_tot').value;
+    const p=Number((document.querySelector('#ds_pauze .segknop.aan')||{}).dataset?.p||0);
+    const min=dienstMin(v,t,p); const el=document.getElementById('ds_netto');
+    if(el) el.textContent = min ? ('Netto '+urenKort(min/60)+roosterKostTekst(x.account_id, min/60).replace(' · ',' · ')) : ''; };
+  ['ds_van','ds_tot'].forEach(i=>{ const e=document.getElementById(i); if(e) e.addEventListener('change', upd); });
+  setTimeout(upd, 30);
+}
+function roosterPauzeKies(p, btn){ btn.parentElement.querySelectorAll('.segknop').forEach(b=>b.classList.toggle('aan', b===btn));
+  const x=btn.closest('.popup'); const ev=new Event('change'); const v=document.getElementById('ds_van'); if(v) v.dispatchEvent(ev); }
+async function roosterDienstBewaar(knop, id){
+  const van=(document.getElementById('ds_van')||{}).value||null;
+  const tot=(document.getElementById('ds_tot')||{}).value||null;
+  const p=Number((document.querySelector('#ds_pauze .segknop.aan')||{}).dataset?.p||0);
+  if(!van||!tot){ toast('Vul een begin- en eindtijd in','let-op'); return; }
+  await roosterKnopBezig(knop, async()=>{
+    const {error}=await sb.from('rooster').update({van, tot, pauze_min:p}).eq('id', id);
+    if(error) throw error;
+    roosterModalDicht(); await laadRooster();
+  });
+}
+function roosterDienstWegBevestig(id){
+  roosterDienstWeg(id).then(()=>roosterModalDicht());
+}
+/* Neem de indeling van vorige week over: kopieer elke dienst zeven dagen vooruit.
+   Vertrokken teamleden slaan we over. Je kiest of het erbij komt of de week vervangt. */
+async function roosterKopieerVorige(){
+  const dagen=roosterDagen();
+  const vorMa=new Date(roosterMaandag.getFullYear(),roosterMaandag.getMonth(),roosterMaandag.getDate()-7);
+  const vVan=roosterYmd(vorMa), vTot=roosterYmd(new Date(vorMa.getFullYear(),vorMa.getMonth(),vorMa.getDate()+6));
+  let bron=[];
+  try{ const {data}=await sb.from('rooster').select('account_id,datum,van,tot,notitie,pauze_min').gte('datum',vVan).lte('datum',vTot); bron=data||[]; }catch(e){ toast('Vorige week laden mislukte','fout'); return; }
+  if(!bron.length){ toast('Vorige week is leeg, niets om over te nemen','let-op'); return; }
+  const geldig=new Set(roosterBordMensen().map(m=>m.id));
+  const nieuw=bron.filter(d=>geldig.has(d.account_id)).map(d=>{
+    const nd=new Date(d.datum+'T12:00:00'); nd.setDate(nd.getDate()+7);
+    return {account_id:d.account_id, datum:roosterYmd(nd), van:d.van, tot:d.tot, notitie:d.notitie||null, pauze_min:d.pauze_min||0};
+  });
+  if(!nieuw.length){ toast('Niets over te nemen','let-op'); return; }
+  roosterModal('Vorige week overnemen', `<p class="pv">Dit zet ${nieuw.length} dienst${nieuw.length===1?'':'en'} in deze week. Wat er al staat blijft staan, of vervang de hele week.</p>`, [
+    {tekst:'Erbij zetten', klasse:'actie', doe:(kn)=>roosterKopieerDoen(kn, nieuw, false)},
+    {tekst:'Week vervangen', klasse:'', doe:(kn)=>roosterKopieerDoen(kn, nieuw, true)}
+  ]);
+}
+async function roosterKopieerDoen(knop, nieuw, vervang){
+  const dagen=roosterDagen();
+  await roosterKnopBezig(knop, async()=>{
+    if(vervang){ await sb.from('rooster').delete().gte('datum',roosterYmd(dagen[0])).lte('datum',roosterYmd(dagen[6])); }
+    if(nieuw.length){ const {error}=await sb.from('rooster').insert(nieuw); if(error) throw error; }
+    roosterModalDicht(); await laadRooster();
+    toast(nieuw.length+' dienst'+(nieuw.length===1?'':'en')+' overgenomen', true);
+  });
+}
+function tekenRoosterEigen(){
   const inh=document.getElementById('roosterInhoud'); if(!inh) return;
   const mag=roosterMagInplannen();
   const uitleg=document.getElementById('roosterUitleg');
