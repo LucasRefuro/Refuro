@@ -24,6 +24,9 @@ export const RECHTEN: Record<string, string> = {
   read_locations: "je winkellocaties uitlezen voor de voorraad",
   read_orders: "zien wat er besteld is",
   write_publications: "het toestel zichtbaar maken in de webshop",
+  read_customers: "de naam van de koper tonen bij een bestelling",
+  read_merchant_managed_fulfillment_orders: "zien wat er nog verzonden moet worden",
+  write_merchant_managed_fulfillment_orders: "een bestelling vanuit Storvo als verzonden markeren",
 };
 export const SCOPES = Object.keys(RECHTEN).join(",");
 

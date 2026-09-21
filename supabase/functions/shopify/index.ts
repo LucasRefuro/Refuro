@@ -144,6 +144,37 @@ Deno.serve(async (req) => {
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
   const actie = String(lijf?.actie || "");
+
+  /* Verzenden gaat over een BESTELLING, niet over een toestel. Daarom hier apart, nog
+     voor de hardware_id-controle. We halen de fulfillmentOrders van de order op en
+     markeren de open ervan als vervuld; Shopify stuurt daarna zelf ORDERS_FULFILLED
+     terug, waarmee de bestellingenlijst in Storvo vanzelf op verzonden komt. */
+  if (actie === "verzenden") {
+    const orderIn = String(lijf?.order_id || "");
+    if (!orderIn) return fout("Geen bestelling meegegeven");
+    const kk = await koppelingVan(acc.team_id);
+    if (!kk) return fout("Er is nog geen webshop gekoppeld.", 409);
+    const gid = orderIn.startsWith("gid://") ? orderIn : `gid://shopify/Order/${orderIn}`;
+    const d = await graphql(kk, `
+      query($id: ID!) { order(id: $id) { id fulfillmentOrders(first: 20) { nodes { id status } } } }`, { id: gid });
+    const fos = (d?.order?.fulfillmentOrders?.nodes || [])
+      .filter((f: any) => ["OPEN", "IN_PROGRESS", "SCHEDULED"].includes(String(f.status || "").toUpperCase()));
+    if (!fos.length) return new Response(JSON.stringify({ ok: true, verzonden: true, aantal: 0 }), { headers: cors });
+    let gedaan = 0;
+    for (const fo of fos) {
+      const uit = await graphql(kk, `
+        mutation($f: FulfillmentV2Input!) {
+          fulfillmentCreateV2(fulfillment: $f) {
+            fulfillment { id status }
+            userErrors { field message }
+          }
+        }`, { f: { lineItemsByFulfillmentOrder: [{ fulfillmentOrderId: fo.id }], notifyCustomer: false } });
+      letOp(uit?.fulfillmentCreateV2, "Verzenden");
+      if (uit?.fulfillmentCreateV2?.fulfillment?.id) gedaan++;
+    }
+    return new Response(JSON.stringify({ ok: true, verzonden: gedaan > 0, aantal: gedaan }), { headers: cors });
+  }
+
   const id = String(lijf?.hardware_id || "");
   if (!id) return fout("Geen toestel meegegeven");
 

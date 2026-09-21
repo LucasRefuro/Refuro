@@ -82,6 +82,7 @@ Deno.serve(async (req) => {
      via beheer_url (de Shopify-orderlink). Wil je klantnaam in Storvo: voeg
      read_customers toe aan de app-scopes en koppel opnieuw, dan kan dit veld terug. */
   let order: any = null;
+  let klantNaam: string | null = null, klantEmail: string | null = null;
   try {
     const token = await ontsleutel(kop.token_versleuteld);
     const d = await graphql({ domein: kop.domein, token }, `
@@ -105,6 +106,15 @@ Deno.serve(async (req) => {
       return klaar("Ongeldig", 401);
     }
     order = d.order;
+    /* Klantnaam is best-effort en apart: alleen als het token read_customers heeft.
+       Faalt deze query (geen scope), dan blijft de naam leeg en loopt de verkoop-sync
+       gewoon door. Zo kan deze extra nooit de hele sync breken, zoals de read_customers-
+       500 dat vroeger deed toen customer/email in de hoofdquery zat. */
+    try {
+      const c = await graphql({ domein: kop.domein, token }, `query($id: ID!){ order(id: $id){ customer { displayName email } email } }`, { id: bestellingId });
+      klantNaam = c?.order?.customer?.displayName || null;
+      klantEmail = c?.order?.customer?.email || c?.order?.email || null;
+    } catch (_e) { /* geen read_customers: klant blijft leeg, sync gaat door */ }
   } catch (e) {
     console.error("shopify-webhook: bestelling ophalen mislukt", e);
     /* Een fout van onze kant is geen reden om Shopify te laten stoppen met
@@ -222,8 +232,8 @@ Deno.serve(async (req) => {
     team_id: kop.team_id, kanaal: "shopify",
     bestelling_id: String(bestellingId),
     nummer: order.name || null,
-    klant: order.customer?.displayName || null,
-    email: order.customer?.email || order.email || null,
+    klant: klantNaam,
+    email: klantEmail,
     bedrag: geld(order.totalPriceSet),
     valuta: order.totalPriceSet?.shopMoney?.currencyCode || kop.valuta || null,
     status: geannuleerd ? "geannuleerd" : (verzonden ? "verzonden" : (betaald ? "betaald" : "open")),

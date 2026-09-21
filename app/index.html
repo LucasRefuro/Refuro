@@ -10684,10 +10684,31 @@ function renderBestellingen(){
           : ''}</span>
         <span style="margin-left:auto"></span>
         ${!x.gezien?`<button class="btn ghost small" onclick="bstGezien('${x.id}')">Gezien</button>`:''}
+        ${(!x.verzonden && !x.geannuleerd && x.bestelling_id)?`<button class="btn small" onclick="bstVerzenden('${x.id}', this)"><svg class="i s"><use href="#i-check"/></svg>Markeer als verzonden</button>`:''}
         ${x.beheer_url?`<a class="btn ghost small" href="${esc(x.beheer_url)}" target="_blank" rel="noopener">Openen in Shopify</a>`:''}
       </div>
     </div>`;
   }).join('');
+}
+/* Een webshopbestelling vanuit Storvo afronden: markeer hem als verzonden bij Shopify.
+   Shopify stuurt daarna zelf ORDERS_FULFILLED terug, waarmee de status bevestigd wordt.
+   Werkt pas nadat de webshop een keer opnieuw is gekoppeld met het verzend-recht. */
+async function bstVerzenden(id, knop){
+  const x=bstData.find(b=>b.id===id); if(!x) return;
+  if(!x.bestelling_id){ toast('Geen Shopify-bestelling gevonden bij deze regel','let-op'); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/shopify',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({actie:'verzenden', order_id:x.bestelling_id})});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Verzenden mislukte');
+    x.verzonden=true; x.status='verzonden';
+    await sb.from('webshop_bestellingen').update({verzonden:true, status:'verzonden', bijgewerkt_op:new Date().toISOString()}).eq('id', id);
+    toast('Gemarkeerd als verzonden', true);
+    renderBestellingen(); if(typeof bstBadge==='function') bstBadge();
+  }catch(e){ toast(e.message||'Verzenden mislukte','fout'); }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
 }
 
 function bstStatusNaam(x){
