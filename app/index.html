@@ -13906,67 +13906,85 @@ async function hwOpslaan(knop){
   toast(hwOpen?'Toestel bijgewerkt':'Toestel toegevoegd', true);
 }
 
-/* Het klant-prijskaartje op A6 (105 bij 148 mm), staand: dezelfde opmaak als in de
-   refurbish-app (serif, indigo accent, prijs groot rechtsonder, specs links, garantie-
-   vinkjes onderaan). We printen het net als een factuur in een eigen venster
-   (window.open + auto-print), daarom met INLINE stijlen en zonder klassen: zo staat de
-   printopmaak los van de app en het print-@page. Geen QR of interne code op dit kaartje,
-   alleen wat de klant moet weten. */
-function hwPrijskaartDoc(h, metPrint){
-  const A='#1800ad';
-  const titel=esc([h.merk,h.model].filter(Boolean).join(' '))||'Toestel';
-  const specs=(h.specs&&typeof h.specs==='object')?h.specs:{};
-  const bullets=Object.entries(specs)
+/* Het klant-prijskaartje op A6 (105 bij 148 mm), staand. We TEKENEN het op een canvas
+   en zetten dat in een PDF met een echt A6-paginaformaat. Reden: printen vanuit de
+   browser (window.print) gaf in Safari een kaartje klein in de hoek en soms twee vellen;
+   een PDF met vaste A6-pagina print altijd op ware grootte. Opmaak zoals de refurbish-
+   kant: schreefloos, indigo accent, prijs groot rechtsonder, garantie-vinkjes onderaan.
+   Geen QR of interne code, alleen wat de klant moet weten. */
+function hwKaartData(h){
+  const specsObj=(h.specs&&typeof h.specs==='object')?h.specs:{};
+  const specs=Object.entries(specsObj)
     .filter(([k,w])=>String(w||'').trim() && !/serien|imei|kleur|servicetag/i.test(k))
-    .map(([k,w])=>esc(k+': '+w)).slice(0,6);   // max 6, anders past het niet op A6
-  /* Op een prijskaartje leest "€ 499,-" prettiger dan "€ 499,00"; hele euro's dus zonder
-     centen. Een bedrag met echte centen (bijv. 499,50) laten we staan. */
-  const prijs=h.verkoop!=null?esc(euro(h.verkoop).replace(/,00$/,',-')):'';
-  const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?esc(euro(Number(h.nieuwprijs)).replace(/,00$/,',-')):null;
-  /* Klantvriendelijke staat-woorden (gelijk aan de refurbish-kant), niet de korte
-     interne labels A/B/C uit HW_STAAT: dit kaartje ziet de klant. */
+    .map(([k,w])=>k+': '+w).slice(0,6);   // max 6, anders past het niet op A6
+  /* Hele euro's als "\u20AC 499,-"; een bedrag met echte centen laten we staan. */
+  const prijs=h.verkoop!=null?euro(h.verkoop).replace(/,00$/,',-'):'';
+  const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?euro(Number(h.nieuwprijs)).replace(/,00$/,',-'):null;
   const STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
-  const staat=esc(STAAT_KLANT[h.staat]||'Nette staat');
-  const gar=(h.garantie!=null)?Number(h.garantie):12;
-  const garanties=[];
-  if(gar>0) garanties.push(gar+' maanden garantie');
-  garanties.push('Technisch 100% gecontroleerd');
-  garanties.push('Direct klaar voor gebruik');
-  const vink='<svg viewBox="0 0 24 24" fill="none" stroke="'+A+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;width:3.6mm;height:3.6mm;margin-top:.7mm"><path d="M20 6 9 17l-5-5"/></svg>';
-  const stip='<span style="flex:none;width:1.4mm;height:1.4mm;border-radius:50%;background:#111;margin-top:2.2mm"></span>';
-  const specHtml=bullets.map(b=>'<div style="display:flex;gap:2.2mm;align-items:flex-start;margin-bottom:.6mm">'+stip+'<span>'+b+'</span></div>').join('');
-  const garHtml=garanties.map(g=>'<div style="display:flex;gap:2.2mm;align-items:flex-start;margin-bottom:.6mm">'+vink+'<span>'+esc(g)+'</span></div>').join('');
-  /* Robuust printen ongeacht welk papier in de printer zit (A4 of A6): een kaart met een
-     VASTE maat (93x132mm) die we met een echte marge (margin:8mm auto = content-marge, die
-     de printer altijd respecteert, anders dan @page-marges) midden bovenaan zetten. Zo
-     komt niets tegen de rand en snijdt de printer nooit de titel eraf. Op A6 vult het het
-     vel (93+2*6mm breed, 132+2*8mm hoog = precies A6); op A4 staat de kaart bovenin, klaar
-     om uit te knippen. overflow:hidden vangt een extreem lang model netjes af. */
-  const kaart='<div style="width:93mm;height:118mm;margin:7mm auto;padding:5mm;background:#fff;border:0.3mm solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden">'
-    +'<div style="font-size:21pt;font-weight:700;line-height:1.05;letter-spacing:-.01em;overflow-wrap:anywhere">'+titel+'</div>'
-    +'<div style="margin-top:5mm">'
-      +'<div style="display:inline-block;background:'+A+';color:#fff;font-weight:700;font-size:12pt;padding:1.2mm 4mm;margin-bottom:2.5mm">Specificaties</div>'
-      +'<div style="font-size:10.5pt;line-height:1.4">'+specHtml+'</div>'
-      +'<div style="display:flex;justify-content:flex-end;margin-top:4mm"><div style="text-align:center">'
-        +'<div style="background:'+A+';color:#fff;font-size:25pt;font-weight:700;line-height:1;padding:2mm 5mm;white-space:nowrap">'+prijs+'</div>'
-        +(np?'<div style="font-size:10pt;color:#222;margin-top:1.5mm">Nieuwprijs: '+np+'</div>':'')
-      +'</div></div>'
-    +'</div>'
-    +'<div style="margin-top:auto;padding-top:3mm">'
-      +'<div style="font-weight:700;font-size:12pt;margin:0 0 1.5mm">Staat: '+staat+'</div>'
-      +'<div style="font-size:10.5pt;line-height:1.4">'+garHtml+'</div>'
-    +'</div>'
-  +'</div>';
-  return '<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Prijskaartje '+titel+'</title>'
-    +'<style>@page{margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}html,body{margin:0}</style></head>'
-    +'<body style="font-family:\'Helvetica Neue\',Helvetica,Arial,sans-serif;color:#111">'+kaart
-    +(metPrint?'<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt>':'')
-    +'</body></html>';
+  const staat=STAAT_KLANT[h.staat]||'Nette staat';
+  const g=(h.garantie!=null)?Number(h.garantie):12;
+  const gar=[]; if(g>0) gar.push(g+' maanden garantie');
+  gar.push('Technisch 100% gecontroleerd'); gar.push('Direct klaar voor gebruik');
+  return { titel:[h.merk,h.model].filter(Boolean).join(' ')||'Toestel', specs, prijs, np, staat, gar };
 }
-/* Open het kaartje in een eigen venster en print het. We nemen de waarden die nu in
-   het formulier staan mee (ook nog niet opgeslagen), zodat het kaartje klopt met wat
-   je ziet; de specs zelf komen van het toestel. */
-function hwPrijskaart(id){
+/* De kaart op een canvas tekenen, ware A6-grootte (105x148mm) bij ~305 dpi. Alles in
+   millimeters (PX px per mm); punten -> px via 0.3528mm/pt. Vinkjes tekenen we met
+   lijntjes (Helvetica heeft geen nette check-glyph). */
+function hwKaartTeken(ctx, PX, data){
+  const W=105,H=148,M=9,A='#1800ad';
+  const mm=v=>v*PX, pt=v=>v*0.3528*PX;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,mm(W),mm(H));
+  const font=(w,s)=>ctx.font=w+' '+pt(s)+"px 'Helvetica Neue',Helvetica,Arial,sans-serif";
+  function wrap(txt,maxW){ const words=String(txt).split(' '); const lines=[]; let ln='';
+    for(const w of words){ const t=ln?ln+' '+w:w; if(ctx.measureText(t).width>maxW && ln){lines.push(ln); ln=w;} else ln=t; }
+    if(ln)lines.push(ln); return lines; }
+  ctx.textBaseline='top'; ctx.textAlign='left';
+  let y=M+1;
+  ctx.fillStyle='#111'; font('700',19);
+  const tl=wrap(data.titel, mm(W-2*M)), tlh=pt(19)*1.12;
+  tl.forEach(l=>{ ctx.fillText(l, mm(M), y); y+=tlh; });
+  y+=mm(4);
+  font('700',11); const bandW=ctx.measureText('Specificaties').width+mm(8), bandH=mm(6.6);
+  ctx.fillStyle=A; ctx.fillRect(mm(M), y, bandW, bandH);
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText('Specificaties', mm(M)+mm(4), y+bandH/2+pt(.4));
+  ctx.textBaseline='top'; y+=bandH+mm(4);
+  font('400',10.5); const lh=pt(10.5)*1.35;
+  (data.specs||[]).forEach(s=>{
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(mm(M+1), y+pt(10.5)*0.62, mm(.75), 0, 7); ctx.fill();
+    wrap(s, mm(W-2*M-5)).forEach(l=>{ ctx.fillText(l, mm(M+4.5), y); y+=lh; });
+    y+=mm(.6);
+  });
+  y+=mm(4);
+  font('700',24); const pw=ctx.measureText(data.prijs).width+mm(12), ph=mm(13.5), pxX=mm(W-M)-pw;
+  ctx.fillStyle=A; ctx.fillRect(pxX, y, pw, ph);
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6), y+ph/2+pt(.6));
+  ctx.textBaseline='top';
+  if(data.np){ font('400',9.5); ctx.fillStyle='#222'; ctx.textAlign='right';
+    ctx.fillText('Nieuwprijs: '+data.np, mm(W-M), y+ph+mm(2)); ctx.textAlign='left'; }
+  const gh=pt(10.5)*1.35, onderH=pt(11)*1.2+mm(2.5)+(data.gar||[]).length*gh;
+  let oy=mm(H-M)-onderH;
+  ctx.fillStyle='#111'; font('700',11); ctx.fillText('Staat: '+data.staat, mm(M), oy); oy+=pt(11)*1.2+mm(2.5);
+  font('400',10.5);
+  (data.gar||[]).forEach(gtxt=>{
+    ctx.strokeStyle=A; ctx.lineWidth=mm(.7); ctx.lineCap='round'; ctx.lineJoin='round';
+    const cy=oy+pt(10.5)*0.5;
+    ctx.beginPath(); ctx.moveTo(mm(M+.3), cy+mm(.2)); ctx.lineTo(mm(M+1.4), cy+mm(1.5)); ctx.lineTo(mm(M+3.6), cy-mm(1.5)); ctx.stroke();
+    ctx.fillStyle='#111'; ctx.fillText(gtxt, mm(M+5.5), oy); oy+=gh;
+  });
+}
+/* jsPDF eenmalig van de CDN laden (geen bouwstap, net als de Supabase-client van een CDN). */
+let _jspdfLaadt=null;
+function jspdfKlaar(){
+  if(window.jspdf&&window.jspdf.jsPDF) return Promise.resolve();
+  if(_jspdfLaadt) return _jspdfLaadt;
+  _jspdfLaadt=new Promise((res,rej)=>{ const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('pdf')); document.head.appendChild(s); });
+  return _jspdfLaadt;
+}
+/* Het kaartje maken en als A6-PDF in een nieuw tabblad openen (printen of bewaren). We
+   nemen de waarden mee die nu in het formulier staan, ook nog niet opgeslagen. */
+async function hwPrijskaart(id){
   const basis=hwData.find(x=>String(x.id)===String(id))||hwOpen;
   if(!basis){ toast('Dit toestel bestaat niet meer','let-op'); return; }
   const g=document.getElementById('hw_gar');
@@ -13979,9 +13997,20 @@ function hwPrijskaart(id){
     garantie:(g&&g.value!=='')?Number(g.value):basis.garantie
   });
   if(h.verkoop==null){ toast('Vul eerst een vraagprijs in','let-op'); const p=document.getElementById('hw_verkoop'); if(p) p.focus(); return; }
-  const w=window.open('','_blank');
-  if(!w){ toast('Sta pop-ups toe om het kaartje te openen','let-op'); return; }
-  w.document.write(hwPrijskaartDoc(h, true)); w.document.close();
+  /* Het tabblad meteen openen tijdens de klik: doen we dat pas NA de await, dan ziet
+     Safari het niet meer als klik en blokkeert het de pop-up. Lukt openen niet, dan
+     downloaden we de PDF gewoon. */
+  const win=window.open('', '_blank');
+  try{ await jspdfKlaar(); }
+  catch(e){ if(win) win.close(); toast('Kon de PDF-maker niet laden. Check je internet.','fout'); return; }
+  const PX=12, cv=document.createElement('canvas');
+  cv.width=Math.round(105*PX); cv.height=Math.round(148*PX);
+  hwKaartTeken(cv.getContext('2d'), PX, hwKaartData(h));
+  const doc=new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a6'});
+  doc.addImage(cv.toDataURL('image/png'), 'PNG', 0, 0, 105, 148);
+  const naam=('prijskaartje '+[h.merk,h.model].filter(Boolean).join(' ')).replace(/[^\w -]+/g,'').trim()||'prijskaartje';
+  const url=doc.output('bloburl');
+  if(win){ win.location.href=url; } else { doc.save(naam+'.pdf'); toast('Kaartje gedownload. Open het en print op A6.', true); }
 }
 
 async function hwVerwijder(id){
