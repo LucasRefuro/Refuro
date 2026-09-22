@@ -2430,6 +2430,16 @@ function tekenApparaat(){
           <h2><svg class="i"><use href="#i-recycle"/></svg>Eruit gehaald</h2>
           <div class="delenrij">${(a.goede_delen||[]).map(d=>`<span class="deelpil">${esc(d)}</span>`).join('')}</div>
         </div>` : ''}
+
+        ${hw ? `<div class="card" id="mpKaart">
+          <h2><svg class="i"><use href="#i-search"/></svg>Marktprijs</h2>
+          <p class="muted klein" style="margin-bottom:12px">Zoekt vergelijkbare toestellen van particulieren op Marktplaats (zonder winkels) en stelt een scherpe vraagprijs voor: net onder de mediaan. Pas de zoekterm gerust aan.</p>
+          <div class="row" style="gap:8px; align-items:stretch">
+            <input id="mp_query" value="${esc(mpQuery(a))}" placeholder="Merk en model" style="flex:1; min-width:0">
+            <button class="btn actie" onclick="mpZoek('${a.id}')" style="white-space:nowrap"><svg class="i s"><use href="#i-search"/></svg>Zoeken</button>
+          </div>
+          <div id="mpUit" style="margin-top:14px"></div>
+        </div>` : ''}
       </div>
 
       <div>
@@ -4591,6 +4601,62 @@ async function hwPartnerVink(apparaatId, partnerId, el){
     if(typeof tekenApparaat==='function' && opendApparaat) tekenApparaat();
     toast(wil?'Toegewezen aan de partner':'Teruggehaald. De partner heeft bericht gekregen.', true);
   }catch(e){ el.disabled=false; el.checked=!wil; toast(e.message,'fout'); }
+}
+
+/* ═══ Marktprijs: vergelijkbare particuliere Marktplaats-advertenties ophalen en een
+   scherpe vraagprijs voorstellen. De edge 'marktprijs' filtert winkels/accessoires eruit. ═══ */
+function mpQuery(a){
+  const delen=[a.merk, a.model].filter(Boolean);
+  const cat=(a.categorie||'').toLowerCase();
+  const sp=a.specs||{};
+  if(/telefoon|tablet/.test(cat) && sp.Opslag) delen.push(String(sp.Opslag).replace(/\s+/g,''));
+  return delen.join(' ').trim();
+}
+function mpCategorie(a){ return /laptop|desktop|monitor|computer/.test((a.categorie||'').toLowerCase()) ? '322' : ''; }
+async function mpZoek(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const q=((document.getElementById('mp_query')||{}).value||'').trim();
+  const uit=document.getElementById('mpUit'); if(!uit) return;
+  if(q.length<2){ uit.innerHTML='<p class="muted klein">Vul een zoekterm in.</p>'; return; }
+  uit.innerHTML='<p class="muted klein">Bezig met zoeken op Marktplaats…</p>';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/marktprijs',{
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({query:q, categorie:mpCategorie(a)})
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Zoeken mislukt');
+    uit.innerHTML=mpResultaat(id, j);
+  }catch(e){ uit.innerHTML='<p class="klein" style="color:var(--red-tekst)">'+esc(e.message)+'</p>'; }
+}
+function mpResultaat(id, j){
+  if(!j.aantal){ return '<p class="muted klein">Geen particuliere advertenties gevonden voor deze zoekterm. Probeer een kortere of andere term (bijv. alleen merk + model).</p>'; }
+  const ads=(j.advertenties||[]).map(ad=>`
+    <div style="display:flex; align-items:center; gap:12px; padding:9px 0; border-top:1px solid var(--border)">
+      <b style="min-width:58px; font-variant-numeric:tabular-nums">${euro(ad.prijs)}</b>
+      <div style="flex:1; min-width:0">${ad.url?`<a href="${esc(ad.url)}" target="_blank" rel="noopener">${esc(ad.titel)}</a>`:esc(ad.titel)}<div class="muted klein">${esc(ad.verkoper)}${ad.datum?' · '+esc(ad.datum):''}</div></div>
+    </div>`).join('');
+  const kop = (j.voorstel!=null)
+    ? `<div style="background:var(--green-soft); color:var(--green-tekst); border-radius:14px; padding:14px 16px; margin-bottom:12px">
+         <div style="font-family:'Sora',sans-serif; font-weight:800; font-size:20px">Voorstel: ${euro(j.voorstel)}</div>
+         <div class="klein" style="margin:4px 0 12px; opacity:.85">${j.aantal} particuliere advertenties · mediaan ${euro(j.mediaan)} · van ${euro(j.min)} tot ${euro(j.max)}. Wij zetten hem net onder de markt.</div>
+         <button class="btn actie" onclick="mpNeemPrijs('${id}', ${j.voorstel})">Gebruik ${euro(j.voorstel)} als vraagprijs</button>
+       </div>`
+    : `<p class="muted klein" style="margin-bottom:6px">Maar ${j.aantal} particuliere advertentie(s) gevonden — te weinig voor een betrouwbaar voorstel. Beoordeel zelf op basis van hieronder.</p>`;
+  return kop + '<div style="max-height:300px; overflow-y:auto">'+ads+'</div>';
+}
+async function mpNeemPrijs(id, prijs){
+  const a=apparaten.find(x=>x.id===id), h=hardwareVan(a);
+  if(!h){ toast('Dit toestel staat nog niet in de winkelvoorraad','let-op'); return; }
+  try{
+    const {error}=await sb.from('hardware').update({verkoop:Number(prijs)||0, bijgewerkt_op:new Date().toISOString()}).eq('id', h.id);
+    if(error) throw error;
+    await allesLaden();
+    if(typeof tekenApparaat==='function' && opendApparaat) tekenApparaat();
+    toast('Vraagprijs op '+euro(prijs)+' gezet', true);
+  }catch(e){ toast('Prijs zetten mislukt','fout'); }
 }
 
 /* Waar hij ligt, als pil. Ligt er nog geen locatie vast, dan zeggen we dat
