@@ -119,6 +119,49 @@ async function mailPartner(email: string, naam: string, ww: string): Promise<boo
   } catch { return false; }
 }
 
+// Mailt de partner dat een toestel is teruggetrokken. Best-effort.
+async function mailPartnerTeruggetrokken(email: string, naam: string, toestel: string): Promise<boolean> {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return false;
+  const van = Deno.env.get("RESEND_FROM") || "Storvo <welkom@storvo.app>";
+  const url = Deno.env.get("PARTNER_URL") || "https://storvo.nl/partner";
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:15px;color:#17201E;line-height:1.6">
+    <h2 style="margin:0 0 12px">Een laptop is teruggetrokken</h2>
+    <p>Hoi ${escHtml(naam)},</p>
+    <p><b>${escHtml(toestel)}</b> is door de winkel teruggetrokken. Het staat niet meer in je
+    dashboard en je mag het niet meer aanbieden op je verkoopkanalen. Haal het daar weg als je het
+    online had staan.</p>
+    <p style="background:#F7F6F3;border-radius:12px;padding:14px 16px">Bekijk je dashboard:
+      <a href="${escHtml(url)}">${escHtml(url)}</a></p>
+    </div>`;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: van, to: [email], subject: "Een laptop is teruggetrokken", html }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+// De partner op de hoogte brengen dat een toestel is teruggetrokken: een melding in de
+// echte tabel partner_meldingen (voor de popup in het dashboard) én een e-mail. Beide
+// best-effort: mislukt er een, dan gaat het terughalen zelf gewoon door.
+async function meldPartner(teamId: string | null, partnerId: string, hardwareId: string, toestel: string) {
+  const tekst = `"${toestel}" is teruggetrokken door de winkel en staat niet meer in je dashboard of op je verkoopkanalen.`;
+  try {
+    await admin.from("partner_meldingen").insert({
+      team_id: teamId, partner_id: partnerId, hardware_id: hardwareId,
+      toestel, soort: "teruggetrokken", tekst,
+    });
+  } catch (_e) { /* melding is best-effort */ }
+  try {
+    const { data: a } = await admin.from("accounts").select("email, naam").eq("id", partnerId).maybeSingle();
+    if (a?.email) await mailPartnerTeruggetrokken(String(a.email), String(a.naam || "Partner"), toestel);
+  } catch (_e) { /* mail is best-effort */ }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -315,20 +358,29 @@ Deno.serve(async (req) => {
     const hardwareId = String(lijf.hardware_id || "");
     if (!hardwareId) return fout("Toestel is nodig");
     const { data: h } = await admin.from("hardware")
-      .select("id, partner_id").eq("id", hardwareId).eq("team_id", acc.team_id).maybeSingle();
+      .select("id, partner_id, titel").eq("id", hardwareId).eq("team_id", acc.team_id).maybeSingle();
     if (!h) return fout("Dit toestel is niet gevonden", 404);
-    if (h.partner_id) {
-      const { data: partner } = await admin.from("partners").select("id, data").eq("id", h.partner_id).maybeSingle();
+    let toestel = (h as any).titel || "een laptop";
+    const partnerId = h.partner_id;
+    if (partnerId) {
+      const { data: partner } = await admin.from("partners").select("id, data").eq("id", partnerId).maybeSingle();
       if (partner) {
         const data = (partner.data && typeof partner.data === "object") ? partner.data : {};
-        const producten = (Array.isArray(data.products) ? data.products : []).filter((p: any) => p.hardware_id !== h.id);
+        const alle = Array.isArray(data.products) ? data.products : [];
+        // De naam zoals de partner hem zag, voor een herkenbare melding/mail.
+        const eruit = alle.find((p: any) => p.hardware_id === h.id);
+        if (eruit && eruit.model) toestel = String(eruit.model);
+        const producten = alle.filter((p: any) => p.hardware_id !== h.id);
+        // ...data behouden zodat andere sleutels (bijv. meldingen elders) niet sneuvelen.
         await admin.from("partners")
-          .update({ data: { products: producten, settings: data.settings || {} }, bijgewerkt_op: new Date().toISOString() })
-          .eq("id", h.partner_id);
+          .update({ data: { ...data, products: producten, settings: data.settings || {} }, bijgewerkt_op: new Date().toISOString() })
+          .eq("id", partnerId);
       }
     }
     await admin.from("hardware")
       .update({ partner_id: null, status: null, bijgewerkt_op: new Date().toISOString() }).eq("id", hardwareId);
+    // Pas ná het terughalen de partner op de hoogte brengen (melding + e-mail).
+    if (partnerId) await meldPartner(acc.team_id, partnerId, h.id, toestel);
     return new Response(JSON.stringify({ ok: true }), { headers: cors });
   }
 

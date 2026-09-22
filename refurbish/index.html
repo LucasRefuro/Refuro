@@ -2443,6 +2443,17 @@ function tekenApparaat(){
           <p class="muted klein">Dit apparaat staat in je winkelvoorraad${hw.verkoop?' voor '+euro(hw.verkoop):''}.</p>
           <a class="btn ghost" style="margin-top:12px" href="/app/?tab=hardware" target="_blank" rel="noopener">Openen in Storvo</a>
         </div>` : ''}
+
+        ${hw ? `<div class="card">
+          <h2><svg class="i"><use href="#i-globe"/></svg>Partner</h2>
+          ${hw.partner_id
+            ? `<p class="muted klein" style="margin-bottom:12px">Toegewezen aan <b>${esc((partnersData.find(p=>p.id===hw.partner_id)||{}).naam||'een partner')}</b>. Alleen die partner ziet dit toestel in zijn dashboard. Haal je het terug, dan krijgt de partner automatisch een e-mail en een melding in zijn dashboard.</p>
+               <button class="btn ghost" onclick="vrTerughalen('${a.id}', this)"><svg class="i s"><use href="#i-arrow"/></svg>Terughalen bij partner</button>`
+            : (heeftPartner
+              ? `<p class="muted klein" style="margin-bottom:12px">Geef dit toestel aan een partner. Alleen die partner ziet het in zijn dashboard; bij terughalen krijgt hij vanzelf bericht.</p>
+                 <button class="btn actie" onclick="vrNaarPartner('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Aan een partner geven</button>`
+              : `<p class="muted klein">Je hebt nog geen partners. Maak er een aan bij <a onclick="showTab('partners')" style="cursor:pointer;text-decoration:underline">Partners</a> om laptops toe te wijzen.</p>`)}
+        </div>` : ''}
       </div>
     </div>`;
 }
@@ -4508,7 +4519,9 @@ async function vrToewijzen(knop, hardwareId){
       body:JSON.stringify({actie:'toewijzen', hardware_id:hardwareId, partner_id:partnerId})
     });
     const j=await res.json().catch(()=>({})); if(!res.ok||!j.ok) throw new Error(j.error||'Toewijzen mislukt');
-    sluit(); await allesLaden(); toast('Toegewezen aan de partner', true);
+    sluit(); await allesLaden();
+    if(typeof tekenApparaat==='function' && opendApparaat) tekenApparaat();
+    toast('Toegewezen aan de partner', true);
   });
 }
 async function vrTerughalen(id, knop){
@@ -4523,7 +4536,9 @@ async function vrTerughalen(id, knop){
       body:JSON.stringify({actie:'terughalen', hardware_id:h.id})
     });
     const j=await res.json().catch(()=>({})); if(!res.ok||!j.ok) throw new Error(j.error||'Terughalen mislukt');
-    await allesLaden(); toast('Teruggehaald in de voorraad', true);
+    await allesLaden();
+    if(typeof tekenApparaat==='function' && opendApparaat) tekenApparaat();
+    toast('Teruggehaald. De partner heeft automatisch bericht gekregen.', true);
   }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
 }
 

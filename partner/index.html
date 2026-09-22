@@ -389,6 +389,42 @@ async function pullRemote(renderAfter){
     return true;
   } catch(e){ setSync('offline'); return false; }
 }
+
+/* ============ meldingen van de winkel (bijv. een teruggetrokken laptop) ============
+   Staan in de echte tabel partner_meldingen, niet in de blob: die wordt door zowel de
+   winkel als dit dashboard geschreven, dus een melding die alleen in de blob zou leven
+   verdwijnt bij de eerstvolgende write. We tonen ongelezen meldingen één keer als popup
+   en zetten ze daarna op gelezen. */
+let _meldingIds = [];
+async function laadMeldingen(){
+  if (ALLEENLEZEN || !PARTNER_ID) return;              // bekijk-modus toont niets
+  if (f('modalbg') && f('modalbg').style.display === 'flex') return;   // niet over een ander venster heen
+  try {
+    const { data } = await sb.from('partner_meldingen')
+      .select('id, toestel, tekst, aangemaakt_op')
+      .eq('partner_id', PARTNER_ID).eq('gelezen', false)
+      .order('aangemaakt_op', { ascending:false });
+    if (data && data.length) toonMeldingen(data);
+  } catch(e){}
+}
+function toonMeldingen(lijst){
+  _meldingIds = lijst.map(x=>x.id);
+  const rijen = lijst.map(x=>{
+    const t = x.tekst || ((x.toestel||'Een laptop') + ' is teruggetrokken door de winkel.');
+    return '<div class="notice" style="margin:10px 0 0;text-align:left">' + esc(t) + '</div>';
+  }).join('');
+  const m = f('modal');
+  m.innerHTML = '<h2>Bericht van de winkel</h2>' + rijen +
+    '<div style="display:flex;justify-content:flex-end;margin-top:16px">' +
+    '<button class="btn" onclick="meldingenGelezen()">Begrepen</button></div>';
+  f('modalbg').style.display = 'flex';
+}
+async function meldingenGelezen(){
+  const ids = _meldingIds.slice(); _meldingIds = [];
+  closeModal();
+  if (!ids.length) return;
+  try { await sb.from('partner_meldingen').update({ gelezen:true }).in('id', ids); } catch(e){}
+}
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function eur(n){ return '€ ' + (Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -570,8 +606,9 @@ async function naLogin(session){
   await pullRemote(false);
   await laadUitdraaien();
   applyUser(); render();
+  laadMeldingen();
   clearInterval(syncInterval);
-  syncInterval = setInterval(()=>{ pendingLocalChange ? pushRemote() : pullRemote(page==='dash'); }, 25000);
+  syncInterval = setInterval(()=>{ pendingLocalChange ? pushRemote() : pullRemote(page==='dash'); laadMeldingen(); }, 25000);
 }
 function applyUser(){
   if (!USER) return;
@@ -584,7 +621,7 @@ async function logout(){
   USER = null; PARTNER_ID = null; ACCOUNT = null;
   f('app').style.display='none'; f('loginwrap').style.display='flex';
 }
-document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && USER) pullRemote(page==='dash'); });
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && USER){ pullRemote(page==='dash'); laadMeldingen(); } });
 function doSearch(){ searchQ = f('q').value.trim(); nav('voorraad'); }
 function clearSearch(){ searchQ = ''; if (f('q')) f('q').value = ''; nav('voorraad'); }
 
