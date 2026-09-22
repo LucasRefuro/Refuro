@@ -4357,6 +4357,15 @@ async function repKlaar(knop, id){
 
 async function naarVoorraad(a){
   if(a.hardware_id) return a.hardware_id;
+  /* Neem de werkbank-foto's mee naar de hardware-rij (hoofdfoto voorop). Een toestel dat
+     hierna direct aan een partner of de webshop gaat, komt anders zonder foto's binnen: de
+     externe partner mag refurbish_fotos niet lezen (RLS), dus die foto's waren voor hem
+     definitief weg. Zelfde bron en volgorde als bij het online zetten. */
+  let fotoUrls=[];
+  try{
+    const {data:frows}=await sb.from('refurbish_fotos').select('pad,hoofd,volgorde').eq('apparaat_id',a.id).order('volgorde');
+    if(frows && frows.length) fotoUrls=frows.slice().sort((x,y)=>(y.hoofd?1:0)-(x.hoofd?1:0)).map(f=>fotoUrl(f.pad));
+  }catch(e){}
   const {data, error}=await sb.from('hardware').insert({
     team_id:account.team_id,
     merk:a.merk, model:a.model, categorie:a.categorie,
@@ -4375,6 +4384,7 @@ async function naarVoorraad(a){
     plek:a.plek||null,
     nieuwe_accu:!!a.nieuwe_accu,
     marge:margeVan(a),
+    fotos:fotoUrls,
     kanalen:{winkel:true}
   }).select().single();
   if(error) throw new Error('Kon hem niet in de voorraad zetten: '+error.message);

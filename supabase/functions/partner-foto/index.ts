@@ -52,7 +52,11 @@ Deno.serve(async (req) => {
   const m = beeld.match(/^data:(image\/(jpeg|png|webp));base64,(.+)$/);
   if (!m) return fout("Dit is geen bruikbare foto");
   const soort = m[1];
-  const bytes = Uint8Array.from(atob(m[3]), (c) => c.charCodeAt(0));
+  // De regex laat via (.+) ook tekens buiten het base64-alfabet door; atob gooit daar op.
+  // Zonder deze vangst zou dat een kale 500 zonder CORS/foutmelding geven.
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob(m[3]), (c) => c.charCodeAt(0)); }
+  catch { return fout("Dit is geen bruikbare foto"); }
   if (bytes.length > 8 * 1024 * 1024) return fout("Deze foto is te groot");
 
   const ext = soort === "image/png" ? "png" : (soort === "image/webp" ? "webp" : "jpg");
