@@ -14159,53 +14159,53 @@ function hwKaartTeken(ctx, PX, data){
   ctx.textBaseline='top'; ctx.textAlign='left';
   let y=M+1;
   /* Titel in het zwart. */
-  ctx.fillStyle='#111'; font('700',19);
-  const tlh=pt(19)*1.12;
+  ctx.fillStyle='#111'; font('700',21);
+  const tlh=pt(21)*1.12;
   wrap(data.titel, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=tlh; });
   /* Samenvattingsregel eronder ("i7 | 32GB | 512GB SSD | 13.3\" Full HD"). */
   if(data.samenvatting){
-    y+=mm(2.5); font('400',10.5); ctx.fillStyle=DONKER;
-    const slh=pt(10.5)*1.28;
+    y+=mm(2.5); font('400',11.5); ctx.fillStyle=DONKER;
+    const slh=pt(11.5)*1.28;
     wrap(data.samenvatting, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=slh; });
     y+=mm(4.5);
   } else { y+=mm(4); }
   /* Specificaties-balk, ruim opgezet. */
-  font('700',12); const bandW=ctx.measureText('Specificaties').width+mm(9), bandH=mm(7.6);
+  font('700',13); const bandW=ctx.measureText('Specificaties').width+mm(9), bandH=mm(8.2);
   ctx.fillStyle=A; ctx.fillRect(mm(M), y, bandW, bandH);
   ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText('Specificaties', mm(M)+mm(4.5), y+bandH/2+pt(.4));
   ctx.textBaseline='top'; y+=bandH+mm(4.5);
   /* Specs met ruime regelafstand, grotere opsommingsbolletjes. */
-  font('400',11); const lh=pt(11)*1.42;
+  font('400',12); const lh=pt(12)*1.4;
   (data.specs||[]).forEach(s=>{
-    ctx.fillStyle=DONKER; ctx.beginPath(); ctx.arc(mm(M+1.2), y+pt(11)*0.62, mm(.85), 0, 7); ctx.fill();
-    wrap(s, mm(W-2*M-6)).forEach(l=>{ ctx.fillText(l, mm(M+5.2), y); y+=lh; });
-    y+=mm(1.7);
+    ctx.fillStyle=DONKER; ctx.beginPath(); ctx.arc(mm(M+1.2), y+pt(12)*0.62, mm(.9), 0, 7); ctx.fill();
+    wrap(s, mm(W-2*M-6)).forEach(l=>{ ctx.fillText(l, mm(M+5.4), y); y+=lh; });
+    y+=mm(1.5);
   });
   const ySpecs=y;
   /* De onderkant (Staat + garantie-vinkjes) hoort onderaan de kaart. De prijs zetten we
      NETJES gecentreerd in de ruimte tussen de specs en die onderkant, zodat de witruimte
      boven en onder de prijs gelijk is en het geheel mooi gekaderd staat. Bij heel veel specs
      drukken we 'm omlaag zodat hij nooit over de Staat-regel valt. */
-  const gh=pt(11)*1.45, onderH=pt(12)*1.2+mm(3)+(data.gar||[]).length*gh;
+  const gh=pt(12)*1.42, onderH=pt(13)*1.2+mm(3)+(data.gar||[]).length*gh;
   const oyStaat=mm(H-M)-onderH;
-  font('700',26); const pw=ctx.measureText(data.prijs).width+mm(11), ph=mm(14), pxX=mm(W-M)-pw;
-  const priceBlokH=ph+(data.np ? mm(2)+pt(10)*1.2 : 0);
+  font('700',28); const pw=ctx.measureText(data.prijs).width+mm(12), ph=mm(15.5), pxX=mm(W-M)-pw;
+  const priceBlokH=ph+(data.np ? mm(2)+pt(11)*1.2 : 0);
   let py=ySpecs+Math.max(mm(6), (oyStaat-ySpecs-priceBlokH)/2);
   const maxPy=oyStaat-priceBlokH-mm(5);
   if(py>maxPy) py=Math.max(ySpecs+mm(4), maxPy);
   ctx.fillStyle=A; ctx.fillRect(pxX, py, pw, ph);
-  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(5.5), py+ph/2+pt(.8));
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6), py+ph/2+pt(.9));
   ctx.textBaseline='top';
-  if(data.np){ font('400',10); ctx.fillStyle='#3a3f55'; ctx.textAlign='right';
+  if(data.np){ font('400',11); ctx.fillStyle='#3a3f55'; ctx.textAlign='right';
     ctx.fillText('Nieuwprijs: '+data.np, mm(W-M), py+ph+mm(2)); ctx.textAlign='left'; }
   let oy=oyStaat;
-  ctx.fillStyle=DONKER; font('700',12); ctx.fillText('Staat: '+data.staat, mm(M), oy); oy+=pt(12)*1.2+mm(3);
-  font('400',11);
+  ctx.fillStyle=DONKER; font('700',13); ctx.fillText('Staat: '+data.staat, mm(M), oy); oy+=pt(13)*1.2+mm(3);
+  font('400',12);
   (data.gar||[]).forEach(gtxt=>{
-    ctx.strokeStyle=A; ctx.lineWidth=mm(.8); ctx.lineCap='round'; ctx.lineJoin='round';
-    const cy=oy+pt(11)*0.52;
-    ctx.beginPath(); ctx.moveTo(mm(M+.3), cy+mm(.2)); ctx.lineTo(mm(M+1.6), cy+mm(1.7)); ctx.lineTo(mm(M+4), cy-mm(1.7)); ctx.stroke();
-    ctx.fillStyle=DONKER; ctx.fillText(gtxt, mm(M+6), oy); oy+=gh;
+    ctx.strokeStyle=A; ctx.lineWidth=mm(.85); ctx.lineCap='round'; ctx.lineJoin='round';
+    const cy=oy+pt(12)*0.52;
+    ctx.beginPath(); ctx.moveTo(mm(M+.3), cy+mm(.2)); ctx.lineTo(mm(M+1.7), cy+mm(1.8)); ctx.lineTo(mm(M+4.2), cy-mm(1.8)); ctx.stroke();
+    ctx.fillStyle=DONKER; ctx.fillText(gtxt, mm(M+6.3), oy); oy+=gh;
   });
 }
 /* jsPDF eenmalig van de CDN laden (geen bouwstap, net als de Supabase-client van een CDN). */
