@@ -11438,48 +11438,62 @@ function cloverVoorraadGewijzigd(p){
 async function cloverBestellingenVerwerken(){
   if(!account || !state.cloverGekoppeld) return;
   let bonnen;
-  try{ const r=await sb.from('clover_bestellingen').select('clover_order_id,bedrag,regels,besteld_op,historisch').order('aangemaakt_op',{ascending:true}); bonnen=r.data||[]; }
+  try{ const r=await sb.from('clover_bestellingen').select('clover_order_id,bedrag,betaald,regels,besteld_op,historisch').order('aangemaakt_op',{ascending:true}); bonnen=r.data||[]; }
   catch(e){ return; }
-  if(!state.cloverVerwerkt||typeof state.cloverVerwerkt!=='object') state.cloverVerwerkt={};
+  /* Idempotent op de verkoop-id: we bouwen één keer een set van wat er al in de verkopen
+     staat en boeken alleen wat er nog niet in zit. Zo mogen we gerust álle bonnen opnieuw
+     langslopen zonder dubbel te tellen, en pikken we ook bonnen op die eerder werden
+     overgeslagen (bijv. handmatig ingetypte pinverkopen zonder barcode). */
+  if(!Array.isArray(state.verkopen)) state.verkopen=[];
+  const bestaand=new Set(state.verkopen.map(v=>v.id));
   let veranderd=false, nieuw=0;
+  const boek=(v)=>{ if(bestaand.has(v.id)) return false; state.verkopen.unshift(v); bestaand.add(v.id);
+    if(state.verkopen.length>5000) state.verkopen.length=5000; veranderd=true; nieuw++; return true; };
   for(const bon of bonnen){
     const oid=String(bon.clover_order_id);
-    if(state.cloverVerwerkt[oid]) continue;
     const regels=Array.isArray(bon.regels)?bon.regels:[];
+    const bedrag=Number(bon.bedrag)||0;
     if(bon.historisch){
-      /* Historische (backfill) betaling: boek als pin-omzet op de echte datum, maar raak
-         de voorraad NIET aan; die verkoop is al lang geleden gebeurd en de voorraad van nu
-         klopt al. Eén regel per bon (het gaat om de betaling), volledig getagd
-         (id clv_<order>, door 'Clover-terminal', historisch:true) zodat je hem kunt
-         terugvinden of terugdraaien. Inkoop kennen we niet meer, dus 0. */
-      const bedrag=Number(bon.bedrag)||0;
+      /* Historische (backfill) betaling: hele bonbedrag als pin-omzet op de echte datum,
+         voorraad NIET aanraken (die verkoop is al lang geleden; inkoop kennen we niet, dus 0). */
       if(bedrag>0){
         const namen=regels.map(r=>r&&r.naam).filter(Boolean);
         const naam=namen.length? namen.slice(0,3).join(', ')+(namen.length>3?' e.a.':'') : 'Clover-verkoop';
-        state.verkopen.unshift({id:'clv_'+oid, t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
+        boek({id:'clv_'+oid, t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
           naam, verkoop:bedrag, inkoop:0, aantal:(regels.length||1), betaal:'pin', cat:'Clover',
           door:'Clover-terminal', pid:null, cloverOrder:oid, historisch:true});
-        if(state.verkopen.length>5000) state.verkopen.length=5000;
-        nieuw++;
       }
-      state.cloverVerwerkt[oid]=true; veranderd=true;
       continue;
     }
+    /* Live verkoop op de terminal. Alleen een BETAALDE bon telt als omzet; een open of nog
+       niet betaalde order laten we staan tot een volgende keer (dan is hij vaak wél betaald). */
+    if(!bon.betaald || bedrag<=0) continue;
+    /* Regels die matchen op barcode/SKU boeken we als productverkoop, mét de voorraad eraf.
+       Wat niet matcht (op de pin met de hand ingetypt, zoals "telefoon nakijken" of "postnl")
+       boeken we als één losse pin-regel voor het restbedrag, zodat het HELE bonbedrag meetelt. */
+    let matchBedrag=0; const restNamen=[];
     regels.forEach((r,idx)=>{
       const code=r.code!=null?String(r.code):null, sku=r.sku!=null?String(r.sku):null;
       const p=(state.producten||[]).find(pp=> (code && String(pp.barcode)===code) || (sku && pp.sku && String(pp.sku)===sku));
-      if(!p) return;                          // los bedrag of onbekend item: overslaan (geen dubbeltelling)
       const aantal=Math.max(1, Math.floor(Number(r.aantal)||1));
+      if(!p){ if(r&&r.naam) restNamen.push(r.naam); return; }
       const prijs=(r.prijs!=null?Number(r.prijs):null)||p.verkoop||0;
+      matchBedrag+=prijs*aantal;
+      const id='clv_'+oid+'_'+idx;
+      if(bestaand.has(id)) return;                 // al geboekt: niet nóg eens de voorraad eraf
       haalUitVoorraad(p, aantal);
-      state.verkopen.unshift({id:'clv_'+oid+'_'+idx, t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
+      if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
+      boek({id, t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
         naam:p.naam, verkoop:prijs*aantal, inkoop:(Number(p.inkoop)||0)*aantal, aantal, betaal:'pin', cat:p.cat,
         door:'Clover-terminal', pid:p.id, cloverOrder:oid});
-      if(state.verkopen.length>5000) state.verkopen.length=5000;
-      if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);   // Clover-voorraad gelijk houden
-      nieuw++;
     });
-    state.cloverVerwerkt[oid]=true; veranderd=true;
+    const rest=Math.round((bedrag-matchBedrag)*100)/100;
+    if(rest>0.01){
+      const naam=restNamen.length? restNamen.slice(0,3).join(', ')+(restNamen.length>3?' e.a.':'') : 'Clover-verkoop';
+      boek({id:'clv_'+oid+'_rest', t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
+        naam, verkoop:rest, inkoop:0, aantal:1, betaal:'pin', cat:'Clover',
+        door:'Clover-terminal', pid:null, cloverOrder:oid});
+    }
   }
   if(veranderd){
     save();

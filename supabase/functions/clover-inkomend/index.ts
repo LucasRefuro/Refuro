@@ -51,20 +51,27 @@ async function bewaarOrder(koppeling: any, order: any, historisch = false) {
   if (!order || !order.id) return false;
   const betaald = !!(order.payments && order.payments.elements && order.payments.elements.length) ||
     String(order.paymentState || "").toUpperCase() === "PAID";
-  const rij = {
+  const velden = {
     team_id: koppeling.team_id,
     clover_order_id: String(order.id),
     bedrag: (Number(order.total) || 0) / 100,
     besteld_op: order.createdTime ? new Date(Number(order.createdTime)).toISOString() : null,
     betaald,
     regels: regelsUit(order),
-    historisch,
   };
-  // Idempotent: dezelfde order tweemaal is geen dubbele rij. Bestaat de order al (bijv.
-  // via het pollen binnengekomen als live-verkoop), dan laten we hem met rust: we willen
-  // een al-geboekte live-verkoop niet stiekem tot historisch ombouwen.
-  const { error } = await admin.from("clover_bestellingen")
-    .upsert(rij, { onConflict: "team_id,clover_order_id", ignoreDuplicates: true });
+  // Bestaat de order al? Dan werken we de veranderlijke velden BIJ. Dat is nodig omdat een
+  // order bij het pollen eerst ONBETAALD kan binnenkomen (de betaling hangt er nog niet aan)
+  // en pas een poll later betaald is; met een simpele "insert-of-negeer" bleef 'betaald' dan
+  // voor altijd op false staan. We laten 'historisch' bewust met rust, zodat een backfill een
+  // al live-geboekte verkoop niet stiekem tot historisch ombouwt.
+  const { data: oud } = await admin.from("clover_bestellingen")
+    .select("id").eq("team_id", koppeling.team_id).eq("clover_order_id", String(order.id)).maybeSingle();
+  if (oud) {
+    const { error } = await admin.from("clover_bestellingen").update(velden).eq("id", oud.id);
+    if (error) { console.error("clover_bestellingen bijwerken:", error.message); }
+    return false;   // geen NIEUWE bon
+  }
+  const { error } = await admin.from("clover_bestellingen").insert({ ...velden, historisch });
   if (error) { console.error("clover_bestellingen bewaren:", error.message); return false; }
   return true;
 }
