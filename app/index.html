@@ -3999,13 +3999,13 @@ function showTab(t){
   if(t==='uren') renderUren();
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
-  if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); }
+  if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); inkConceptHerstel(); }
   if(t==='pakketten') renderPakketten();
   if(t==='mail') renderMail();
   if(t==='labelprinter') renderLabelprinter();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
-  if(t==='facturen') renderFacturen();
+  if(t==='facturen'){ renderFacturen(); facHervatCheck(); }
   if(t==='meer') renderMeer();
   if(t==='reparaties'){ renderReparaties(); if(typeof repConceptHerstel==='function') repConceptHerstel(); }
   if(t==='team') renderTeam();
@@ -5768,6 +5768,19 @@ async function refurbInstBewaar(knop){
   if(error){ toast('Opslaan mislukte','fout'); return; }
   toast('Werkbank-instelling opgeslagen', true);
 }
+let _facHersteld=false;
+/* 'Terug naar de lijst': de gebruiker verlaat de editor bewust, dus het concept mag weg. */
+function facSluit(){ conceptWis('factuur'); facConcept=null; facBewerkId=null; renderFacturen(); }
+/* Bij het openen van de facturenpagina: staat er nog een niet-afgemaakte factuur/offerte
+   (na een crash of tab-wissel zonder sluiten) en ben je niet al aan het bewerken, zet die
+   dan terug in de editor. Opslaan en 'Terug' wissen het concept, dus dit springt alleen aan
+   als er echt nog iets openstaat. */
+function facHervatCheck(){
+  if(facConcept) return;
+  const _fc=conceptLees('factuur', 72); if(!_fc || !_fc.c) return;
+  facBewerkId=_fc.id||null; facConcept=_fc.c; facEditRender();
+  if(!_facHersteld){ _facHersteld=true; toast('Een niet-afgemaakte factuur is teruggezet', true); }
+}
 function renderFacturen(){
   const ev=document.getElementById('facEditVak'); if(ev){ ev.hidden=true; ev.innerHTML=''; }
   const lv=document.getElementById('facLijstVak'); if(lv) lv.hidden=false;
@@ -5830,7 +5843,7 @@ function facEditRender(){
   ev.innerHTML=`
     <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px">
       <h2 style="margin-bottom:0">${facBewerkId?'Bewerken':'Nieuw'}: ${isOff?'offerte':'factuur'}</h2>
-      <button class="btn ghost small" onclick="renderFacturen()"><svg class="i s"><use href="#i-left"/></svg>Terug naar de lijst</button>
+      <button class="btn ghost small" onclick="facSluit()"><svg class="i s"><use href="#i-left"/></svg>Terug naar de lijst</button>
     </div>
     <div class="grid">
       <div><label>Klantnaam</label><input id="fk_naam" value="${esc(f.klant.naam||'')}" oninput="facLees()" autocomplete="off"></div>
@@ -5866,6 +5879,7 @@ function facLees(){
     });
   }
   const tv=document.getElementById('facTotVak'); if(tv) tv.innerHTML=facTotalenHtml(facTotalen(facConcept));
+  conceptSchrijf('factuur', {c:facConcept, id:facBewerkId||null});   /* crash-back-up van de concept-factuur */
 }
 function facRegelToe(){ facLees(); facConcept.regels.push(facLeegRegel()); facEditRender(); }
 function facRegelWeg(i){ facLees(); facConcept.regels.splice(i,1); if(!facConcept.regels.length) facConcept.regels.push(facLeegRegel()); facEditRender(); }
@@ -5890,6 +5904,7 @@ function facOpslaan(print){
     facBewerkId=f.id;
   }
   save();
+  conceptWis('factuur');   /* opgeslagen: concept-back-up weg */
   toast((f.soort==='offerte'?'Offerte':'Factuur')+' opgeslagen: '+f.nummer, true);
   if(print) facPrint(f.id); else renderFacturen();
 }
@@ -6338,6 +6353,27 @@ function renderVerkopen(){
    wordt en je investering klopt. Bedragen incl. btw; de btw wordt eruit gerekend. */
 let inkopenPeriode='kwartaal';
 function inkoopBtwBedrag(ink){ const t=Number(ink.btw)||0, b=Number(ink.bedrag)||0; return b*t/(100+t); }
+/* Concept-back-up van de inkoop-invoer (de tekstvelden; de gekozen factuur zelf kan niet in
+   localStorage en blijft hierbuiten). */
+const INK_CONCEPT_VELDEN=['ink_datum','ink_wat','ink_lev','ink_soort','ink_bedrag','ink_btw'];
+let _inkConceptTimer=null, _inkConceptGebonden=false;
+function inkConceptBewaar(){
+  if(!conceptIetsIn(['ink_wat','ink_lev','ink_bedrag'])){ conceptWis('inkoop'); return; }
+  conceptSchrijf('inkoop', conceptVelden(INK_CONCEPT_VELDEN));
+}
+function inkConceptPlan(){ clearTimeout(_inkConceptTimer); _inkConceptTimer=setTimeout(inkConceptBewaar, 500); }
+function inkConceptBind(){
+  if(_inkConceptGebonden) return; const sec=document.getElementById('tab-inkopen'); if(!sec) return;
+  const h=e=>{ if(e.target && INK_CONCEPT_VELDEN.includes(e.target.id)) inkConceptPlan(); };
+  sec.addEventListener('input', h); sec.addEventListener('change', h); _inkConceptGebonden=true;
+}
+function inkConceptHerstel(){
+  inkConceptBind();
+  if(conceptIetsIn(['ink_wat','ink_lev','ink_bedrag'])) return;
+  const d=conceptLees('inkoop', 72); if(!d) return;
+  conceptZet(d);
+  toast('Een niet-afgemaakte inkoop is teruggezet', true);
+}
 async function inkoopToevoegen(){
   const datum=(document.getElementById('ink_datum').value||new Date().toISOString().slice(0,10));
   const wat=(document.getElementById('ink_wat').value||'').trim();
@@ -6364,6 +6400,7 @@ async function inkoopToevoegen(){
   }
   pendingFactuur=null;
   save();
+  conceptWis('inkoop');   /* inkoop opgeslagen: concept-back-up weg */
   document.getElementById('ink_wat').value=''; document.getElementById('ink_bedrag').value=''; document.getElementById('ink_lev').value='';
   const nm=document.getElementById('ink_factuurNaam'); if(nm) nm.innerHTML='Lees een factuur automatisch uit; Storvo vult het formulier hieronder in en bewaart de factuur bij de inkoop.';
   const prev=document.getElementById('ink_factuurPreview'); if(prev){ if(prev.dataset.url){ try{ URL.revokeObjectURL(prev.dataset.url); }catch(e){} prev.dataset.url=''; } prev.innerHTML=''; prev.hidden=true; }
