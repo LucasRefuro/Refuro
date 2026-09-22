@@ -14158,8 +14158,8 @@ function hwKaartTeken(ctx, PX, data){
     if(ln)lines.push(ln); return lines; }
   ctx.textBaseline='top'; ctx.textAlign='left';
   let y=M+1;
-  /* Titel in het blauw, net als op het Canva-kaartje. */
-  ctx.fillStyle=A; font('700',19);
+  /* Titel in het zwart. */
+  ctx.fillStyle='#111'; font('700',19);
   const tlh=pt(19)*1.12;
   wrap(data.titel, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=tlh; });
   /* Samenvattingsregel eronder ("i7 | 32GB | 512GB SSD | 13.3\" Full HD"). */
