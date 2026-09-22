@@ -12097,8 +12097,8 @@ const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','l
                       /* Deze stonden alleen op het apparaat zelf en gingen niet naar de cloud; daardoor
                          konden ze op een ander apparaat "verdwenen" lijken. Nu synchroniseren ze net als
                          de rest (samenvoegen per id, bewerken wint van verwijderen). */
-                      'aanvragen','inkopen','uitbetalingen','reserveringen','postnl'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','cloverGekoppeld','bedrijf'];
+                      'aanvragen','inkopen','uitbetalingen','reserveringen','postnl','kasboek'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','cloverGekoppeld','bedrijf','kasMax','personeel'];
 
 /* Lijsten met vaste (niet-willekeurige) id's: de seed maakt op elk leeg apparaat
    categorie 1/2/3, dienst 1/2/3, postnl 1..16, team 1, enzovoort. Bij de EERSTE sync
@@ -12110,7 +12110,7 @@ const SYNC_SEED_LIJSTEN = new Set(['categorieen','types','modellen','diensten','
 /* Velden die zelf een map met eigen sleutels zijn (loon per medewerker, bestel-reset
    per categorie, de instellingen, de klantpagina). Die per sleutel samenvoegen in plaats
    van het hele veld te overschrijven, anders wist de een stil de sleutel van de ander. */
-const SYNC_KEYED = new Set(['lonen','loonViaInvite','cloverVerwerkt','bijbestelBesteld','klantpagina','instellingen']);
+const SYNC_KEYED = new Set(['lonen','loonViaInvite','cloverVerwerkt','bijbestelBesteld','klantpagina','instellingen','personeel']);
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
@@ -13603,11 +13603,24 @@ function hwVenster(h){
     </div>`:''}
     </div>`;
   window.scrollTo(0,0);
+  hwDirty=false;
+  /* Automatisch opslaan zodra je een veld verlaat, zodat niets afhangt van de Opslaan-
+     knop. Op de container (dedupt zichzelf bij herhaald openen, want hwStilPlan is een
+     vaste functie-referentie). */
+  d.addEventListener('change', hwStilPlan);
   if(h) hwHistorieLaden(h.id);
 }
 function hwSluit(){
   /* Sluit zowel een los dialoog (partner toewijzen, verkopen) als de volledige
      detailpagina, en toont de lijst weer. */
+  clearTimeout(_hwStilTimer);
+  /* Nog niet-opgeslagen wijziging? Nu, met het formulier nog in beeld, alsnog
+     wegschrijven — DAARNA pas het scherm wissen. hwStilBewaar leest het formulier
+     synchroon in, dus de momentopname is veilig ook al wist innerHTML zo de velden.
+     Zou een uitgestelde opslag ná het wissen vuren, dan las hij lege velden en wiste
+     hij juist de data; daarom vangen we hem hier af. */
+  if(hwDirty && hwOpen && hwOpen.id && document.getElementById('hw_model')) hwStilBewaar();
+  hwDirty=false;
   const o=document.getElementById('hwOverlay'); if(o) o.remove();
   const d=document.getElementById('hwDetail'); if(d){ d.hidden=true; d.innerHTML=''; }
   const lv=document.getElementById('hwLijstWeergave'); if(lv) lv.hidden=false;
@@ -13851,12 +13864,12 @@ async function hwHistorieLaden(id){
 function hwVeld(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
 function hwGetal(id){ const v=hwVeld(id); return v===''?null:Math.round(Number(v)*100)/100; }
 
-async function hwOpslaan(knop){
-  const model=hwVeld('hw_model');
-  if(!model){ toast('Vul in elk geval het model in','let-op'); return; }
+/* Leest het hardware-detailformulier uit tot een rij-object. Gedeeld door de Opslaan-
+   knop en de automatische opslag, zodat die twee nooit uit elkaar lopen. */
+function hwFormRij(){
   const rij={
     merk:hwVeld('hw_merk')||null,
-    model,
+    model:hwVeld('hw_model'),
     serienummer:hwVeld('hw_serie')||null,
     categorie:hwVeld('hw_cat'),
     staat:hwVeld('hw_staat'),
@@ -13880,6 +13893,35 @@ async function hwOpslaan(knop){
     if(m) k.marktplaats=m.checked;
     rij.kanalen=k;
   }
+  return rij;
+}
+/* Automatisch opslaan van het hardware-detail: leest het formulier, werkt de rij in het
+   geheugen meteen bij (zodat verkopen/prijskaart de ACTUELE prijs/tekst pakken) en
+   schrijft naar de database — zonder het scherm te sluiten of te verversen. Zo blijft
+   je invoer bewaard ook als je vergeet op Opslaan te klikken. Alleen voor een bestaand
+   toestel met een ingevuld model. */
+let _hwStilTimer=null, _hwStilBezig=false, hwDirty=false;
+async function hwStilBewaar(){
+  if(!hwOpen || !hwOpen.id) return {error:null};
+  if(!hwVeld('hw_model')) return {error:null};        // model verplicht; nog niet compleet
+  const rij=hwFormRij();
+  Object.assign(hwOpen, rij);
+  const inHw=hwData.find(x=>x.id===hwOpen.id); if(inHw && inHw!==hwOpen) Object.assign(inHw, rij);
+  const {error}=await sb.from('hardware').update(rij).eq('id',hwOpen.id);
+  if(error){ console.error('hardware auto-opslaan:', error); }
+  else hwDirty=false;
+  return {error};
+}
+function hwStilPlan(){
+  hwDirty=true;
+  if(!hwOpen || !hwOpen.id) return;
+  clearTimeout(_hwStilTimer);
+  _hwStilTimer=setTimeout(()=>{ if(!_hwStilBezig){ _hwStilBezig=true; hwStilBewaar().finally(()=>_hwStilBezig=false); } }, 700);
+}
+async function hwOpslaan(knop){
+  const model=hwVeld('hw_model');
+  if(!model){ toast('Vul in elk geval het model in','let-op'); return; }
+  const rij=hwFormRij();
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Opslaan…'; }
   let fout=null;
   if(hwOpen){
@@ -13891,6 +13933,7 @@ async function hwOpslaan(knop){
   }
   if(knop){ knop.disabled=false; knop.textContent=oud; }
   if(fout){ console.error('hardware opslaan:',fout); toast('Opslaan mislukt','fout'); return; }
+  hwDirty=false;
   /* Btw-regime en plek ook op het gekoppelde refurbish-toestel bijwerken: de
      batchcijfers en het refurbish-label lezen die rij, niet de hardware-rij.
      Zonder deze spiegeling zou een wijziging aan de balie daar onzichtbaar
@@ -14042,6 +14085,11 @@ async function hwVerwijder(id){
    twee keer verkopen is het ergste wat je kan overkomen.                    */
 function hwVerkoop(id){
   const h=hwData.find(x=>x.id===id); if(!h) return;
+  /* Neem de prijs/btw die NU in het detail staat mee, ook als er nog niet op Opslaan is
+     geklikt: anders verkoopt de balie tegen de OUDE prijs. hwSluit bewaart de wijziging
+     hierna ook naar de database. */
+  const _v=hwGetal('hw_verkoop'); if(_v!=null) h.verkoop=_v;
+  const _m=document.getElementById('hw_marge'); if(_m) h.marge=_m.value!=='nee';
   if(h.verkoop==null){ toast('Vul eerst een vraagprijs in','let-op'); return; }
   hwSluit();
   const ov=document.createElement('div');
@@ -14084,10 +14132,14 @@ async function hwBoek(id, bet){
   if(state.verkopen.length>5000) state.verkopen.length=5000;
   save();
 
-  await sb.from('hardware').update({
+  const {error:vkErr}=await sb.from('hardware').update({
     status:'verkocht', verkocht_op:new Date().toISOString(), verkocht_via:'winkel',
     verkocht_betaal:bet, marge, bijgewerkt_op:new Date().toISOString()
   }).eq('id',id);
+  /* De verkoop staat al veilig in de boeken (state.verkopen + kasboek). Lukt het niet
+     om het toestel op 'verkocht' te zetten, waarschuw dan eerlijk: anders blijft het in
+     de voorraad staan en kun je het per ongeluk nog eens verkopen. */
+  if(vkErr){ console.error('hardware verkocht-status:', vkErr); toast('Verkoop is geboekt, maar het toestel bleef in de voorraad staan. Ververs en zet hem zelf op verkocht.','let-op'); }
   /* Het regime ook op de refurbish-rij, want de batchcijfers rekenen de btw daar. */
   sb.from('refurbish_apparaten').update({marge, bijgewerkt_op:new Date().toISOString()})
     .eq('hardware_id', id).then(({error})=>{ if(error) console.error('marge syncen bij verkoop:', error); });
@@ -14112,6 +14164,10 @@ async function hwBoek(id, bet){
 
 /* ---------- Shopify ---------- */
 async function hwShopify(id, wat, knop){
+  /* Bij online zetten eerst de nu ingevulde titel/omschrijving/prijs naar de database:
+     de edge-functie publiceert de DATABASE-rij, niet wat op je scherm staat. Zonder dit
+     ging de oude/lege tekst naar de webshop en was je getypte tekst kwijt. */
+  if(wat==='online' && hwOpen && hwOpen.id===id) await hwStilBewaar();
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
   try{
     const {data:{session}}=await sb.auth.getSession();
@@ -14167,6 +14223,7 @@ async function hwSchrijf(knop){
     const t=document.getElementById('hw_titel'), o=document.getElementById('hw_oms');
     if(t&&uit.titel) t.value=uit.titel;
     if(o&&uit.omschrijving) o.value=uit.omschrijving;
+    await hwStilBewaar();   // meteen bewaren; anders staat de AI-tekst alleen op je scherm
     toast('Tekst geschreven, kijk hem even na', true);
   }catch(e){ toast(e.message,'fout'); }
   knop.disabled=false; knop.textContent=oud;
