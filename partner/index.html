@@ -302,6 +302,7 @@ let S = load();
 function migrate(s){
   s.products = s.products || [];
   s.settings = Object.assign({nextAd: 1, template: '', pin: '1234', labW: 62, labH: 32}, s.settings || {});
+  s.settings.verwijderd = Array.isArray(s.settings.verwijderd) ? s.settings.verwijderd : [];  // grafstenen: door de partner verwijderde product-id's, niet terugduwen via de server-merge
   const today = new Date().toISOString().slice(0,10);
   s.products.forEach(p => {
     if (!p.type) p.type = 'anders';
@@ -361,21 +362,58 @@ async function pushRemote(){
   if (!PARTNER_ID) return false;
   setSync('syncing');
   try {
-    /* Niet blind overschrijven: de winkel kan een toestel aan ons hebben toegewezen
-       terwijl wij een oudere kopie in het geheugen hadden. Zouden we nu domweg onze
-       lijst wegschrijven, dan gooien we dat toestel eruit (de blob-lost-update-race).
-       Daarom halen we de huidige serverproducten erbij en voegen we de producten die
-       wij nog niet kennen (op id) vooraan toe voordat we schrijven. */
+    /* De blob wordt door twee kanten geschreven (de winkel via de edges én dit dashboard),
+       dus nooit blind onze lijst wegschrijven: dat is de blob-lost-update-race. We halen de
+       verse serverkopie erbij en mergen daartegen:
+       1. foto's per product samenvoegen op url — anders wist een oudere sessie de foto's die
+          alleen in de blob leven (camera/bestand-foto's hebben geen partner_fotos-rij);
+       2. een door de winkel TERUGGETROKKEN toestel (hardware-product dat niet meer op de
+          server staat, en niets verkocht) lokaal laten vallen i.p.v. terugduwen (anders blijft
+          een teruggehaald toestel staan en kan het dubbel uitbetaald worden);
+       3. een door de partner VERWIJDERD product (grafsteen) niet opnieuw toevoegen;
+       4. producten die de winkel aan ons toewees en wij nog niet kennen, erbij zetten;
+       5. de winkel-teller nextAd nooit terugdraaien (anders dubbele adnummers). */
     let teSchrijven = S.products;
+    let nieuweSettings = S.settings;
     try {
       const { data: srv } = await sb.from('partners').select('data').eq('id', PARTNER_ID).maybeSingle();
-      const srvProducts = (srv && srv.data && Array.isArray(srv.data.products)) ? srv.data.products : [];
-      const lokaleIds = new Set(S.products.map(p=>p && p.id));
-      const extra = srvProducts.filter(p => p && p.id && !lokaleIds.has(p.id));
-      if (extra.length){ teSchrijven = extra.concat(S.products); S.products = teSchrijven; }
-    } catch(_e){ /* lukt het ophalen niet, dan schrijven we onze eigen lijst */ }
+      const srvData = (srv && srv.data && typeof srv.data === 'object') ? srv.data : {};
+      const srvProducts = Array.isArray(srvData.products) ? srvData.products : [];
+      const srvById = new Map(srvProducts.filter(p=>p&&p.id).map(p => [p.id, p]));
+      const srvIds = new Set(srvById.keys());
+      const grafstenen = new Set(S.settings.verwijderd || []);
+
+      // 1. foto's van de server terug in onze eigen producten mergen (union op url)
+      S.products.forEach(p => {
+        const sp = p && srvById.get(p.id);
+        if (sp && Array.isArray(sp.fotos)){
+          if (!Array.isArray(p.fotos)) p.fotos = [];
+          sp.fotos.forEach(u => { if (u && !p.fotos.includes(u)) p.fotos.push(u); });
+        }
+      });
+      // 2. teruggetrokken winkel-producten laten vallen (de server is leidend voor lidmaatschap)
+      const behouden = S.products.filter(p => {
+        if (!p) return false;
+        if (p.hardware_id && !srvIds.has(p.id) && !soldUnits(p).length) return false;
+        return true;
+      });
+      // 3+4. serverproducten die wij nog niet kennen erbij, behalve grafstenen
+      const lokaleIds = new Set(behouden.map(p => p && p.id));
+      const extra = srvProducts.filter(p => p && p.id && !lokaleIds.has(p.id) && !grafstenen.has(p.id));
+      teSchrijven = extra.concat(behouden);
+      S.products = teSchrijven;
+
+      // grafstenen opschonen: een id dat niet meer op de server staat heeft zijn werk gedaan
+      if ((S.settings.verwijderd || []).length){
+        S.settings.verwijderd = (S.settings.verwijderd || []).filter(id => srvIds.has(id));
+      }
+      // 5. de door de winkel opgehoogde teller nooit terugdraaien
+      const srvNext = Number(srvData.settings && srvData.settings.nextAd) || 1;
+      S.settings.nextAd = Math.max(Number(S.settings.nextAd) || 1, srvNext);
+      nieuweSettings = S.settings;
+    } catch(_e){ /* geen serverkopie te pakken: schrijf onze eigen lijst */ }
     const { error } = await sb.from('partners')
-      .update({ data: { products: teSchrijven, settings: S.settings }, bijgewerkt_op: new Date().toISOString() })
+      .update({ data: { products: teSchrijven, settings: nieuweSettings }, bijgewerkt_op: new Date().toISOString() })
       .eq('id', PARTNER_ID);
     if (error) throw error;
     pendingLocalChange = false;
@@ -438,7 +476,7 @@ async function reconcileFotos(){
     S.products.forEach(p=>{
       const urls = perProduct[p.id]; if (!urls) return;
       if (!Array.isArray(p.fotos)) p.fotos = [];
-      urls.forEach(u=>{ if (!p.fotos.includes(u)){ p.fotos.push(u); veranderd = true; } });
+      urls.forEach(u=>{ if (!_fotoVerwijderd.has(u) && !p.fotos.includes(u)){ p.fotos.push(u); veranderd = true; } });
     });
     if (veranderd){ save(); pushRemote(); }
   } catch(e){}
@@ -1266,7 +1304,11 @@ function delProduct(pid){
   if (soldUnits(p).length){ toast('Kan niet: er zijn al stuks verkocht. Die blijven voor de administratie.'); return; }
   if (!confirm('"'+(p.model||'dit product')+'" uit je dashboard verwijderen? Dit kan niet ongedaan gemaakt worden.')) return;
   S.products = S.products.filter(x=>x.id!==pid);
+  /* Grafsteen: anders ziet pushRemote het product nog op de server, denkt dat het een nieuw
+     toegewezen toestel is en zet het zo weer terug (verwijderen was daardoor onmogelijk). */
+  if (!(S.settings.verwijderd||[]).includes(pid)) S.settings.verwijderd = (S.settings.verwijderd||[]).concat(pid);
   save();
+  pushRemote();   // meteen doorzetten zodat de verwijdering ook server-side landt
   toast('Product verwijderd');
   nav('voorraad');
 }
@@ -1484,6 +1526,7 @@ function mpNeemPrijsP(pid, prijs){
    maakt de foto's, en de edge zet ze in de opslag + partner_fotos. Hier pollen we die tabel
    op deze code en zetten nieuwe foto's bij het product. */
 let _fotoPoll=null, _fotoCode=null, _fotoPid=null, _fotoGezien=null;
+let _fotoVerwijderd=new Set();   // urls die deze sessie zijn verwijderd; reconcileFotos zet ze niet terug
 async function pFotoQr(pid){
   const p = S.products.find(x=>x.id===pid); if (!p) return;
   if (ALLEENLEZEN){ toast('Alleen-lezen: aanmelden als partner om foto\'s toe te voegen'); return; }
@@ -1546,10 +1589,13 @@ function delPFoto(pid, i){
   const p=S.products.find(x=>x.id===pid); if(!p) return;
   const url = p.fotos[i];
   p.fotos.splice(i,1);
-  /* Ook uit de duurzame tabel halen; anders zet reconcileFotos hem er bij de eerstvolgende
-     sync gewoon weer bij. Alleen QR-foto's staan in partner_fotos; camera/bestand-foto's
-     matchen niets en dan gebeurt er terecht niets. Best-effort. */
-  if (url && PARTNER_ID){ sb.from('partner_fotos').delete().eq('partner_id', PARTNER_ID).eq('url', url).then(()=>{}, ()=>{}); }
+  /* Grafsteen: reconcileFotos zet deze url niet terug, ook niet als de delete hieronder faalt
+     of een gelijktijdige pull er net tussendoor komt. Daarna ook uit de duurzame tabel halen;
+     alleen QR-foto's staan in partner_fotos, camera/bestand-foto's matchen niets. Best-effort. */
+  if (url){
+    _fotoVerwijderd.add(url);
+    if (PARTNER_ID) sb.from('partner_fotos').delete().eq('partner_id', PARTNER_ID).eq('url', url).then(()=>{}, ()=>{});
+  }
   save(); render();
 }
 function setMpU(pid, uidv, v){
