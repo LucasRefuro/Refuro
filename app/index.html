@@ -14099,70 +14099,113 @@ async function hwOpslaan(knop){
    een PDF met vaste A6-pagina print altijd op ware grootte. Opmaak zoals de refurbish-
    kant: schreefloos, indigo accent, prijs groot rechtsonder, garantie-vinkjes onderaan.
    Geen QR of interne code, alleen wat de klant moet weten. */
+/* Korte samenvattingsregel onder de titel op het prijskaartje, in de stijl van de winkel:
+   "i7 | 32GB | 512GB SSD | 13.3" Full HD". We korten de volle specs in; lukt een stukje niet,
+   dan laten we het weg (liever een korte nette regel dan half geraden onzin). */
+function hwSamenvatting(sp){
+  const S=k=>String((sp&&sp[k])||'').trim();
+  const delen=[];
+  const cpu=S('Processor');
+  if(cpu){
+    let kort='', m;
+    if(m=cpu.match(/\bi([3579])\b/i)) kort='i'+m[1];
+    else if(m=cpu.match(/ryzen\s*([3579])/i)) kort='Ryzen '+m[1];
+    else if(m=cpu.match(/\bapple\s*(m\d\w*)/i)) kort='Apple '+m[1].toUpperCase();
+    else if(m=cpu.match(/\b(celeron|pentium|athlon|xeon)\b/i)) kort=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
+    else kort=cpu.split(/\s+/).slice(0,2).join(' ');
+    delen.push(kort);
+  }
+  const ram=S('Geheugen');
+  if(ram){ const m=ram.match(/\d+\s*[gt]b/i); delen.push(m?m[0].replace(/\s+/g,'').toUpperCase():ram); }
+  const op=S('Opslag');
+  if(op){
+    const size=(op.match(/\d+\s*[gt]b/i)||[''])[0].replace(/\s+/g,'').toUpperCase();
+    const type=/nvme|ssd/i.test(op)?'SSD':(/hdd|hard/i.test(op)?'HDD':'');
+    delen.push([size,type].filter(Boolean).join(' ')||op);
+  }
+  const sc=S('Scherm');
+  if(sc){ delen.push(sc.replace(/\s*inch\b/i,'"').replace(/(\d)\s*"/,'$1"')); }
+  return delen.filter(Boolean).slice(0,4).join('   |   ');
+}
 function hwKaartData(h){
   const specsObj=(h.specs&&typeof h.specs==='object')?h.specs:{};
   const specs=Object.entries(specsObj)
     .filter(([k,w])=>String(w||'').trim() && !/serien|imei|kleur|servicetag/i.test(k))
     .map(([k,w])=>k+': '+w).slice(0,6);   // max 6, anders past het niet op A6
-  /* Hele euro's als "\u20AC 499,-"; een bedrag met echte centen laten we staan. */
-  const prijs=h.verkoop!=null?euro(h.verkoop).replace(/,00$/,',-'):'';
-  const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?euro(Number(h.nieuwprijs)).replace(/,00$/,',-'):null;
+  /* Prijs strak als "\u20AC499,-" (geen spatie na het euroteken, zoals op het Canva-kaartje);
+     een bedrag met echte centen laten we staan als "\u20AC499,50". */
+  const eur=n=>euro(n).replace(/,00$/,',-').replace(/\u20AC\s+/,'\u20AC');
+  const prijs=h.verkoop!=null?eur(h.verkoop):'';
+  const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?eur(Number(h.nieuwprijs)):null;
   const STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
   const staat=STAAT_KLANT[h.staat]||'Nette staat';
   const g=(h.garantie!=null)?Number(h.garantie):12;
   const gar=[]; if(g>0) gar.push(g+' maanden garantie');
   gar.push('Technisch 100% gecontroleerd'); gar.push('Direct klaar voor gebruik');
-  return { titel:[h.merk,h.model].filter(Boolean).join(' ')||'Toestel', specs, prijs, np, staat, gar };
+  return { titel:[h.merk,h.model].filter(Boolean).join(' ')||'Toestel',
+           samenvatting:hwSamenvatting(specsObj), specs, prijs, np, staat, gar };
 }
 /* De kaart op een canvas tekenen, ware A6-grootte (105x148mm) bij ~305 dpi. Alles in
    millimeters (PX px per mm); punten -> px via 0.3528mm/pt. Vinkjes tekenen we met
    lijntjes (Helvetica heeft geen nette check-glyph). */
 function hwKaartTeken(ctx, PX, data){
-  const W=105,H=148,M=9,A='#1800ad';
+  const W=105,H=148,M=9,A='#1800ad',DONKER='#1b2340';
   const mm=v=>v*PX, pt=v=>v*0.3528*PX;
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,mm(W),mm(H));
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,mm(W),mm(H));   // "wit" = geen inkt; het papier schijnt door
   const font=(w,s)=>ctx.font=w+' '+pt(s)+"px 'Helvetica Neue',Helvetica,Arial,sans-serif";
   function wrap(txt,maxW){ const words=String(txt).split(' '); const lines=[]; let ln='';
     for(const w of words){ const t=ln?ln+' '+w:w; if(ctx.measureText(t).width>maxW && ln){lines.push(ln); ln=w;} else ln=t; }
     if(ln)lines.push(ln); return lines; }
   ctx.textBaseline='top'; ctx.textAlign='left';
   let y=M+1;
-  ctx.fillStyle='#111'; font('700',19);
-  const tl=wrap(data.titel, mm(W-2*M)), tlh=pt(19)*1.12;
-  tl.forEach(l=>{ ctx.fillText(l, mm(M), y); y+=tlh; });
-  y+=mm(4);
-  font('700',11); const bandW=ctx.measureText('Specificaties').width+mm(8), bandH=mm(6.6);
+  /* Titel in het blauw, net als op het Canva-kaartje. */
+  ctx.fillStyle=A; font('700',19);
+  const tlh=pt(19)*1.12;
+  wrap(data.titel, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=tlh; });
+  /* Samenvattingsregel eronder ("i7 | 32GB | 512GB SSD | 13.3\" Full HD"). */
+  if(data.samenvatting){
+    y+=mm(2.5); font('400',10.5); ctx.fillStyle=DONKER;
+    const slh=pt(10.5)*1.28;
+    wrap(data.samenvatting, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=slh; });
+    y+=mm(4.5);
+  } else { y+=mm(4); }
+  /* Specificaties-balk, ruim opgezet. */
+  font('700',12); const bandW=ctx.measureText('Specificaties').width+mm(9), bandH=mm(7.6);
   ctx.fillStyle=A; ctx.fillRect(mm(M), y, bandW, bandH);
-  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText('Specificaties', mm(M)+mm(4), y+bandH/2+pt(.4));
-  ctx.textBaseline='top'; y+=bandH+mm(4);
-  font('400',10.5); const lh=pt(10.5)*1.35;
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText('Specificaties', mm(M)+mm(4.5), y+bandH/2+pt(.4));
+  ctx.textBaseline='top'; y+=bandH+mm(4.5);
+  /* Specs met ruime regelafstand, grotere opsommingsbolletjes. */
+  font('400',11); const lh=pt(11)*1.42;
   (data.specs||[]).forEach(s=>{
-    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(mm(M+1), y+pt(10.5)*0.62, mm(.75), 0, 7); ctx.fill();
-    wrap(s, mm(W-2*M-5)).forEach(l=>{ ctx.fillText(l, mm(M+4.5), y); y+=lh; });
-    y+=mm(.6);
+    ctx.fillStyle=DONKER; ctx.beginPath(); ctx.arc(mm(M+1.2), y+pt(11)*0.62, mm(.85), 0, 7); ctx.fill();
+    wrap(s, mm(W-2*M-6)).forEach(l=>{ ctx.fillText(l, mm(M+5.2), y); y+=lh; });
+    y+=mm(1.7);
   });
   const ySpecs=y;
-  /* De onderkant (Staat + garantie-vinkjes) hoort onderaan; de prijs zetten we NETJES in
-     het midden van de ruimte tussen de specs en die onderkant, zodat de witruimte gelijk
-     verdeeld is en er geen groot gat in het midden valt. */
-  const gh=pt(10.5)*1.35, onderH=pt(11)*1.2+mm(2.5)+(data.gar||[]).length*gh;
+  /* De onderkant (Staat + garantie-vinkjes) hoort onderaan de kaart. De prijs zetten we
+     NETJES gecentreerd in de ruimte tussen de specs en die onderkant, zodat de witruimte
+     boven en onder de prijs gelijk is en het geheel mooi gekaderd staat. Bij heel veel specs
+     drukken we 'm omlaag zodat hij nooit over de Staat-regel valt. */
+  const gh=pt(11)*1.45, onderH=pt(12)*1.2+mm(3)+(data.gar||[]).length*gh;
   const oyStaat=mm(H-M)-onderH;
-  font('700',24); const pw=ctx.measureText(data.prijs).width+mm(12), ph=mm(13.5), pxX=mm(W-M)-pw;
-  const priceBlokH=ph+(data.np ? mm(2)+pt(9.5)*1.2 : 0);
-  const py=ySpecs+Math.max(mm(6), (oyStaat-ySpecs-priceBlokH)/2);
+  font('700',26); const pw=ctx.measureText(data.prijs).width+mm(11), ph=mm(14), pxX=mm(W-M)-pw;
+  const priceBlokH=ph+(data.np ? mm(2)+pt(10)*1.2 : 0);
+  let py=ySpecs+Math.max(mm(6), (oyStaat-ySpecs-priceBlokH)/2);
+  const maxPy=oyStaat-priceBlokH-mm(5);
+  if(py>maxPy) py=Math.max(ySpecs+mm(4), maxPy);
   ctx.fillStyle=A; ctx.fillRect(pxX, py, pw, ph);
-  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6), py+ph/2+pt(.6));
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(5.5), py+ph/2+pt(.8));
   ctx.textBaseline='top';
-  if(data.np){ font('400',9.5); ctx.fillStyle='#222'; ctx.textAlign='right';
+  if(data.np){ font('400',10); ctx.fillStyle='#3a3f55'; ctx.textAlign='right';
     ctx.fillText('Nieuwprijs: '+data.np, mm(W-M), py+ph+mm(2)); ctx.textAlign='left'; }
   let oy=oyStaat;
-  ctx.fillStyle='#111'; font('700',11); ctx.fillText('Staat: '+data.staat, mm(M), oy); oy+=pt(11)*1.2+mm(2.5);
-  font('400',10.5);
+  ctx.fillStyle=DONKER; font('700',12); ctx.fillText('Staat: '+data.staat, mm(M), oy); oy+=pt(12)*1.2+mm(3);
+  font('400',11);
   (data.gar||[]).forEach(gtxt=>{
-    ctx.strokeStyle=A; ctx.lineWidth=mm(.7); ctx.lineCap='round'; ctx.lineJoin='round';
-    const cy=oy+pt(10.5)*0.5;
-    ctx.beginPath(); ctx.moveTo(mm(M+.3), cy+mm(.2)); ctx.lineTo(mm(M+1.4), cy+mm(1.5)); ctx.lineTo(mm(M+3.6), cy-mm(1.5)); ctx.stroke();
-    ctx.fillStyle='#111'; ctx.fillText(gtxt, mm(M+5.5), oy); oy+=gh;
+    ctx.strokeStyle=A; ctx.lineWidth=mm(.8); ctx.lineCap='round'; ctx.lineJoin='round';
+    const cy=oy+pt(11)*0.52;
+    ctx.beginPath(); ctx.moveTo(mm(M+.3), cy+mm(.2)); ctx.lineTo(mm(M+1.6), cy+mm(1.7)); ctx.lineTo(mm(M+4), cy-mm(1.7)); ctx.stroke();
+    ctx.fillStyle=DONKER; ctx.fillText(gtxt, mm(M+6), oy); oy+=gh;
   });
 }
 /* jsPDF eenmalig van de CDN laden (geen bouwstap, net als de Supabase-client van een CDN). */
