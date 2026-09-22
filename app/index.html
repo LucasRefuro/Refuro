@@ -17764,6 +17764,11 @@ function pakketHerinneringNodig(){
 }
 
 let pakketBewerkTarief=null;   /* de dienst-key waarvan we de tarieven aan het bewerken zijn */
+/* Getypte dag-aantallen (nog niet 'Aantallen opslaan') onthouden per dienst, zodat een
+   re-render (van maand wisselen of tarieven aanpassen) ze niet weggooit. Gewist na opslaan. */
+let pakketAantalDraft={};
+function pakketDraftAantal(key,i,val){ (pakketAantalDraft[key]=pakketAantalDraft[key]||{aantallen:{}}).aantallen[i]=val; }
+function pakketDraftDatum(key,val){ (pakketAantalDraft[key]=pakketAantalDraft[key]||{aantallen:{}}).datum=val; }
 let pakketMaandKeuze=null;     /* 'YYYY-MM' of null = deze maand */
 function pakketMaandActief(){ return pakketMaandKeuze || pakketMaandKey(new Date()); }
 function pakketMaandLabel(key){ const [j,m]=key.split('-').map(Number); return new Date(j,m-1,1).toLocaleDateString('nl-NL',{month:'long',year:'numeric'}); }
@@ -17820,8 +17825,8 @@ function pakketDienstKaart(d, maand){
       +`<div class="pdtariefacties"><button type="button" class="btn ghost small" onclick="pakketTariefErbij('${d.key}')"><svg class="i s"><use href="#i-plus"/></svg>Tarief erbij</button><button type="button" class="btn actie small" onclick="pakketTariefOpslaan('${d.key}')">Tarieven opslaan</button></div>`
     : (d.tarieven.length ? d.tarieven.map(t=>`<div class="pdtarief"><span>${esc(t.label)}</span><b>${euro(t.prijs)} <span class="muted klein">/stuk</span></b></div>`).join('') : '<div class="muted">Nog geen tarieven ingesteld.</div>');
   const invoer = `<div class="pdinvoer">
-      <div class="pdinvoerrij"><label>Datum</label><input type="date" id="pd_datum_${d.key}" value="${pakketStandaardDatum(maand)}"></div>
-      ${d.tarieven.map((t,i)=>`<div class="pdinvoerrij"><label>${esc(t.label)}</label><input type="number" min="0" step="1" id="pd_aantal_${d.key}_${i}" placeholder="0" inputmode="numeric"></div>`).join('')}
+      <div class="pdinvoerrij"><label>Datum</label><input type="date" id="pd_datum_${d.key}" value="${(pakketAantalDraft[d.key]&&pakketAantalDraft[d.key].datum)||pakketStandaardDatum(maand)}" onchange="pakketDraftDatum('${d.key}',this.value)"></div>
+      ${d.tarieven.map((t,i)=>`<div class="pdinvoerrij"><label>${esc(t.label)}</label><input type="number" min="0" step="1" id="pd_aantal_${d.key}_${i}" value="${(pakketAantalDraft[d.key]&&pakketAantalDraft[d.key].aantallen&&pakketAantalDraft[d.key].aantallen[i])||''}" placeholder="0" inputmode="numeric" oninput="pakketDraftAantal('${d.key}',${i},this.value)"></div>`).join('')}
       <button type="button" class="btn actie small" onclick="pakketOpslaan('${d.key}')"><svg class="i s"><use href="#i-check"/></svg>Aantallen opslaan</button>
     </div>`;
   const lijst = regs.length
@@ -17868,6 +17873,7 @@ function pakketOpslaan(key){
      zodat je je invoer meteen ziet staan. */
   const m=pakketMaandKey(datum);
   if(m!==pakketMaandActief()) pakketMaandKeuze=m;
+  delete pakketAantalDraft[key];   /* opgeslagen: de getypte-aantallen-back-up mag weg */
   save(); renderPakketten();
   if(typeof toonBestelBalk==='function') toonBestelBalk();
   toast('Aantallen opgeslagen voor '+d.naam+' ('+pakketDatumKort(datum)+')', true);
