@@ -14188,13 +14188,13 @@ function hwKaartTeken(ctx, PX, data){
      drukken we 'm omlaag zodat hij nooit over de Staat-regel valt. */
   const gh=pt(12)*1.42, onderH=pt(13)*1.2+mm(3)+(data.gar||[]).length*gh;
   const oyStaat=mm(H-M)-onderH;
-  font('700',28); const pw=ctx.measureText(data.prijs).width+mm(12), ph=mm(15.5), pxX=mm(W-M)-pw;
+  font('700',36); const pw=ctx.measureText(data.prijs).width+mm(13), ph=mm(18), pxX=mm(W-M)-pw;
   const priceBlokH=ph+(data.np ? mm(2)+pt(11)*1.2 : 0);
-  let py=ySpecs+Math.max(mm(6), (oyStaat-ySpecs-priceBlokH)/2);
-  const maxPy=oyStaat-priceBlokH-mm(5);
-  if(py>maxPy) py=Math.max(ySpecs+mm(4), maxPy);
+  let py=ySpecs+Math.max(mm(5), (oyStaat-ySpecs-priceBlokH)/2);
+  const maxPy=oyStaat-priceBlokH-mm(4);
+  if(py>maxPy) py=Math.max(ySpecs+mm(3), maxPy);
   ctx.fillStyle=A; ctx.fillRect(pxX, py, pw, ph);
-  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6), py+ph/2+pt(.9));
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6.5), py+ph/2+pt(1));
   ctx.textBaseline='top';
   if(data.np){ font('400',11); ctx.fillStyle='#3a3f55'; ctx.textAlign='right';
     ctx.fillText('Nieuwprijs: '+data.np, mm(W-M), py+ph+mm(2)); ctx.textAlign='left'; }
