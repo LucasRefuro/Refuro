@@ -1210,7 +1210,8 @@ function rOnlineEdit(p){
     '<div class="mini" style="margin:4px 0 12px">Op je telefoon opent "Foto maken" meteen de camera. Maak er gerust meerdere achter elkaar.</div>' +
     '<div class="fotoknoppen">' +
     '<button class="btn" onclick="saveOnline(\''+p.id+'\',true);pFotoCam(\''+p.id+'\')"><svg class="i s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto maken</button> ' +
-    '<button class="btn gray" onclick="saveOnline(\''+p.id+'\',true);pFoto(\''+p.id+'\')">Foto\'s kiezen</button>' +
+    '<button class="btn gray" onclick="saveOnline(\''+p.id+'\',true);pFoto(\''+p.id+'\')">Foto\'s kiezen</button> ' +
+    '<button class="btn gray" onclick="saveOnline(\''+p.id+'\',true);pFotoQr(\''+p.id+'\')">Scan met telefoon</button>' +
     '</div>' +
     '<div class="fotos" style="margin-top:14px">'+((p.fotos||[]).map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="saveOnline(\''+p.id+'\',true);delPFoto(\''+p.id+'\','+i+')">&times;</button></div>').join('') || '<div class="mini" style="padding:8px 0">Nog geen foto\'s</div>')+'</div>' +
   '</div>' +
