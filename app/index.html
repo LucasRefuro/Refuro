@@ -3916,6 +3916,18 @@ function betaalNaam(b){ return b==='pin'?'pin':b==='cash'?'cash met bon':b==='ca
    wordt opgeslagen. Voedt de "niet-opgeslagen wijzigingen"-waarschuwing bij afsluiten. */
 let _vuil=false;
 function save(){ _vuil=false; localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); }
+
+/* ===== Concept-vangnet: een half ingevuld formulier (reparatie-intake, inkoop, factuur)
+   overleeft een crash of herlaad. We bewaren de velden per sleutel in localStorage, zetten
+   ze terug bij het openen, en wissen na een geslaagde opslag. Zo raak je nooit een halve
+   invoer kwijt, ook niet als de browser omvalt. ===== */
+function _conceptKey(k){ return 'storvo_concept_'+k; }
+function conceptSchrijf(k, data){ try{ localStorage.setItem(_conceptKey(k), JSON.stringify({t:Date.now(), data})); }catch(e){} }
+function conceptLees(k, maxUur){ try{ const r=localStorage.getItem(_conceptKey(k)); if(!r) return null; const o=JSON.parse(r); if(maxUur && o.t && Date.now()-o.t>maxUur*3600000) return null; return (o&&o.data)||null; }catch(e){ return null; } }
+function conceptWis(k){ try{ localStorage.removeItem(_conceptKey(k)); }catch(e){} }
+function conceptVelden(ids){ const d={}; ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; d[id]= el.type==='checkbox'?el.checked:el.value; }); return d; }
+function conceptZet(data){ if(!data) return; Object.keys(data).forEach(id=>{ if(id.slice(0,2)==='__') return; const el=document.getElementById(id); if(!el) return; if(el.type==='checkbox') el.checked=!!data[id]; else el.value=(data[id]==null?'':data[id]); }); }
+function conceptIetsIn(ids){ return ids.some(id=>{ const el=document.getElementById(id); return el && (el.type==='checkbox'? el.checked : String(el.value||'').trim()); }); }
 /* Alles opnieuw tekenen, bijvoorbeeld na binnenkomende wijzigingen van een collega. */
 function tekenAlles(){
   try{
@@ -3995,7 +4007,7 @@ function showTab(t){
   if(t==='rapport') renderRapport();
   if(t==='facturen') renderFacturen();
   if(t==='meer') renderMeer();
-  if(t==='reparaties') renderReparaties();
+  if(t==='reparaties'){ renderReparaties(); if(typeof repConceptHerstel==='function') repConceptHerstel(); }
   if(t==='team') renderTeam();
   if(t==='partners') renderPartners();
   if(t==='producten') renderProducten();
@@ -16823,6 +16835,7 @@ function renderRepOnd(){
     return `<div class="ondItem"><svg class="i s"><use href="#i-layers"/></svg> ${esc(o.naam)} <b>${euro(o.inkoop)}</b> ${st}<span class="x" onclick="repOnd.splice(${i},1); renderRepOnd(); checkSeal();"></span></div>`;
   }).join('') || '<p class="muted">Nog geen onderdelen toegevoegd.</p>';
   rekenWinst();
+  if(typeof repConceptPlan==='function') repConceptPlan();   /* onderdelen-wijziging in het concept */
 }
 function rekenWinst(){
   const kosten=repOnd.reduce((s,o)=>s+o.inkoop,0);
@@ -16840,6 +16853,36 @@ function repPrijshulpToggle(){
   if(!blok) return;
   blok.hidden=!blok.hidden;
   if(knop) knop.classList.toggle('aan', !blok.hidden);
+}
+/* Concept-back-up van de reparatie-INTAKE (alleen een nieuwe, niet het bewerken van een
+   bestaande). Bewaart de velden + de onderdelenlijst, zodat een crash/herlaad de intake
+   niet wist. */
+const REP_CONCEPT_VELDEN=['r_naam','r_tel','r_email','r_notify','r_inleveren','r_toestel','r_type','r_prijs','r_klaar','r_voorkeur','r_exbtw'];
+let _repConceptTimer=null, _repConceptGebonden=false;
+function repConceptBewaar(){
+  if(repBewerkId) return;
+  if(!conceptIetsIn(REP_CONCEPT_VELDEN) && !repOnd.length){ conceptWis('reparatie'); return; }
+  const d=conceptVelden(REP_CONCEPT_VELDEN);
+  d.__ond=repOnd.map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad}));
+  conceptSchrijf('reparatie', d);
+}
+function repConceptPlan(){ clearTimeout(_repConceptTimer); _repConceptTimer=setTimeout(repConceptBewaar, 500); }
+function repConceptBind(){
+  if(_repConceptGebonden) return;
+  const sec=document.getElementById('tab-reparaties'); if(!sec) return;
+  const h=e=>{ if(e.target && REP_CONCEPT_VELDEN.includes(e.target.id)) repConceptPlan(); };
+  sec.addEventListener('input', h); sec.addEventListener('change', h);
+  _repConceptGebonden=true;
+}
+function repConceptHerstel(){
+  repConceptBind();
+  if(repBewerkId) return;
+  if(conceptIetsIn(REP_CONCEPT_VELDEN) || repOnd.length) return;   // niets clobberen
+  const d=conceptLees('reparatie', 72); if(!d) return;
+  conceptZet(d);
+  if(Array.isArray(d.__ond) && d.__ond.length){ repOnd=d.__ond.map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad})); }
+  if(typeof renderRepOnd==='function') renderRepOnd();
+  toast('Een niet-afgemaakte intake is teruggezet', true);
 }
 function resetRepForm(){
   ['r_naam','r_tel','r_email','r_toestel','r_type','r_prijs','r_ondNaam','r_ondPrijs'].forEach(id=>document.getElementById(id).value='');
@@ -16860,6 +16903,7 @@ function resetRepForm(){
   updateZoekLinks();
   repBewerkId=null;
   repBewerkModusToon(null);
+  conceptWis('reparatie');   /* formulier is leeg (na opslaan of annuleren): concept weg */
 }
 /* Een bestaande reparatie bewerken: het nieuwe-reparatieformulier vullen met wat
    er al staat en in bewerkmodus zetten. Opslaan gaat via maakReparatie, dat op
