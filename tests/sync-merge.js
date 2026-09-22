@@ -107,6 +107,26 @@ setTimeout(()=>{
       "var r=syncVoegSamen(basis,lokaal,server).instellingen;"+
       "return r.naam==='Nieuw'&&r.tel==='2';})()"));
 
+  // ── dezelfde reparatie op twee apparaten: A zet de status, B voegt een opmerking toe;
+  //    beide blijven behouden (per-veld merge i.p.v. laatste opslag wint) ──
+  ok('gelijktijdige reparatie-wijziging (status + opmerking) blijft allebei behouden',
+    w.eval("(function(){"+
+      "var basis={reparaties:[{id:1,status:'binnen',notities:[{t:1,tekst:'a'}]}]};"+
+      "var lokaal={reparaties:[{id:1,status:'klaar',notities:[{t:1,tekst:'a'}]}]};"+
+      "var server={reparaties:[{id:1,status:'binnen',notities:[{t:1,tekst:'a'},{t:2,tekst:'b'}]}]};"+
+      "var r=syncVoegSamen(basis,lokaal,server).reparaties[0];"+
+      "return r.status==='klaar' && r.notities.length===2 && r.notities.some(function(n){return n.tekst==='b';});})()"));
+
+  // ── beide apparaten voegen een ANDERE opmerking toe aan dezelfde reparatie: geen valt weg ──
+  ok('twee gelijktijdige opmerkingen op een reparatie blijven allebei',
+    w.eval("(function(){"+
+      "var basis={reparaties:[{id:1,notities:[{t:1,tekst:'a'}]}]};"+
+      "var lokaal={reparaties:[{id:1,notities:[{t:1,tekst:'a'},{t:2,tekst:'hier'}]}]};"+
+      "var server={reparaties:[{id:1,notities:[{t:1,tekst:'a'},{t:3,tekst:'daar'}]}]};"+
+      "var r=syncVoegSamen(basis,lokaal,server).reparaties[0].notities;"+
+      "var teksten=r.map(function(n){return n.tekst;});"+
+      "return teksten.indexOf('hier')>=0 && teksten.indexOf('daar')>=0;})()"));
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nsync-merge in orde');
   process.exit(fout?1:0);
 }, 400);

@@ -12170,6 +12170,11 @@ const SYNC_SEED_LIJSTEN = new Set(['categorieen','types','modellen','diensten','
    per categorie, de instellingen, de klantpagina). Die per sleutel samenvoegen in plaats
    van het hele veld te overschrijven, anders wist de een stil de sleutel van de ander. */
 const SYNC_KEYED = new Set(['lonen','loonViaInvite','cloverVerwerkt','bijbestelBesteld','klantpagina','instellingen','personeel']);
+/* Lijsten waarvan één record door twee mensen tegelijk bewerkt kan worden (dezelfde
+   reparatie: de een zet de status, de ander voegt een opmerking toe). Die voegen we per
+   VELD samen i.p.v. het hele record van de laatste opslag te laten winnen, zodat geen van
+   beide wijzigingen verloren gaat. */
+const SYNC_VELD_MERGE = new Set(['reparaties']);
 
 let syncVersie = 0;          // versie van het document in de cloud
 let syncBezig = false;
@@ -12203,7 +12208,30 @@ function syncOpIndex(lijst){
 
 /* Voegt één lijst samen. Bewerken wint van verwijderen: in een winkel is
    per ongeluk iets kwijtraken erger dan een regel te veel. */
-function syncVoegLijstSamen(basis, lokaal, server, serverBijEersteSync){
+/* Twee versies van HETZELFDE record (bijv. een reparatie) per veld samenvoegen t.o.v. de
+   basis: wie een veld wijzigde, wint dat veld; deden beiden niets, dan de basiswaarde.
+   Wijzigden beiden dezelfde LIJST binnen het record (bijv. de opmerkingen), dan voegen we
+   die lijsten samen zonder dubbele, zodat geen enkele opmerking verdwijnt. */
+function syncRecordSamen(bi, li, si){
+  bi=bi||{}; li=li||{}; si=si||{};
+  const uit={};
+  new Set([...Object.keys(li), ...Object.keys(si)]).forEach(k=>{
+    const b=bi[k], l=li[k], s=si[k];
+    const hebL=l!==undefined, hebS=s!==undefined;
+    if(hebL && hebS){
+      const lV=!syncGelijk(l,b), sV=!syncGelijk(s,b);
+      if(lV && sV && Array.isArray(l) && Array.isArray(s)){
+        const zien=new Set(), samen=[];
+        [...l, ...s].forEach(it=>{ const key=JSON.stringify(it); if(!zien.has(key)){ zien.add(key); samen.push(it); } });
+        uit[k]=samen;
+      } else if(lV) uit[k]=l;        // wij wijzigden dit veld
+      else uit[k]=s;                  // wij niet -> de cloud (die het misschien wel deed)
+    } else if(hebL) uit[k]=l;
+    else uit[k]=s;
+  });
+  return uit;
+}
+function syncVoegLijstSamen(basis, lokaal, server, serverBijEersteSync, veldMerge){
   const b=syncOpIndex(basis), l=syncOpIndex(lokaal), s=syncOpIndex(server);
   const volgorde=[];
   (lokaal||[]).forEach(x=>{ if(x&&x.id!==undefined) volgorde.push(String(x.id)); });
@@ -12215,7 +12243,8 @@ function syncVoegLijstSamen(basis, lokaal, server, serverBijEersteSync){
     if(li && si){
       if(!bi && serverBijEersteSync) uit.push(si);        // eerste sync van een vaste-id-lijst: neem de cloud over
       else if(bi && syncGelijk(li,bi)) uit.push(si);      // wij deden niets, cloud misschien wel
-      else uit.push(li);                                  // wij wijzigden: dat telt
+      else if(veldMerge && bi && !syncGelijk(si,bi)) uit.push(syncRecordSamen(bi,li,si));   // beiden wijzigden ditzelfde record: per veld samenvoegen
+      else uit.push(li);                                  // alleen wij wijzigden: dat telt
     } else if(li && !si){
       if(!bi) uit.push(li);                               // hier nieuw aangemaakt
       else if(!syncGelijk(li,bi)) uit.push(li);           // elders verwijderd, maar hier bewerkt
@@ -12254,7 +12283,7 @@ function syncVoegMapSamen(bi, li, si){
 function syncVoegSamen(basis, lokaal, server){
   const uit={};
   SYNC_LIJSTEN.forEach(k=>{
-    uit[k]=syncVoegLijstSamen(basis?basis[k]:null, lokaal[k], server?server[k]:null, SYNC_SEED_LIJSTEN.has(k));
+    uit[k]=syncVoegLijstSamen(basis?basis[k]:null, lokaal[k], server?server[k]:null, SYNC_SEED_LIJSTEN.has(k), SYNC_VELD_MERGE.has(k));
   });
   /* Verkopen en logboek staan nieuw-eerst en worden kort gehouden. */
   if(uit.verkopen) uit.verkopen.sort((a,b)=>(b.t||0)-(a.t||0));
