@@ -4819,7 +4819,10 @@ function tekenOnline(){
   const a=onl.a;
   const fotos=onl.fotos||[];
   const perAanzicht={};
-  fotos.forEach(f=>{ if(!perAanzicht[f.aanzicht]) perAanzicht[f.aanzicht]=f; });
+  /* Eén foto per aanzicht in het rooster; een eigen foto (met apparaat_id) wint van een
+     fabrieksfoto (apparaat_id null), zodat je bij een gedeeld aanzicht betrouwbaar je eigen
+     foto ziet en niet willekeurig de modelfoto. */
+  fotos.forEach(f=>{ const h=perAanzicht[f.aanzicht]; if(!h || (!h.apparaat_id && f.apparaat_id)) perAanzicht[f.aanzicht]=f; });
   const compleet=AANZICHTEN.filter(v=>perAanzicht[v.id]).length;
 
   el.innerHTML=`
@@ -5307,9 +5310,17 @@ async function onlPubliceren(knop){
     const kanalen=Object.assign({}, (hardwareVan(a)||{}).kanalen||{}, {
       winkel:onlKanaalAan('winkel'), marktplaats:onlKanaalAan('marktplaats')
     });
-    /* De hoofdfoto hoort voorop te staan, want dat is de foto die de koper
-       in het overzicht ziet. */
-    const gesorteerd=(onl.fotos||[]).slice().sort((x,y)=>(y.hoofd?1:0)-(x.hoofd?1:0));
+    /* Eén foto per vast aanzicht online (eigen foto boven fabrieksfoto), plus alle losse
+       'overig'-foto's; anders zou een fabrieksfoto dubbel meegaan naast een eigen foto van
+       hetzelfde aanzicht. Daarna de hoofdfoto voorop, want die ziet de koper in het overzicht. */
+    const gekozen={}, teTonen=[];
+    (onl.fotos||[]).forEach(f=>{
+      if(f.aanzicht==='overig'){ teTonen.push(f); return; }
+      const h=gekozen[f.aanzicht];
+      if(!h){ gekozen[f.aanzicht]=f; teTonen.push(f); }
+      else if(!h.apparaat_id && f.apparaat_id){ const i=teTonen.indexOf(h); if(i>=0) teTonen.splice(i,1,f); gekozen[f.aanzicht]=f; }
+    });
+    const gesorteerd=teTonen.slice().sort((x,y)=>(y.hoofd?1:0)-(x.hoofd?1:0));
     const {error}=await sb.from('hardware').update({
       staat:onl.staat||a.grade||'B',
       verkoop:Number(onl.prijs)||0,

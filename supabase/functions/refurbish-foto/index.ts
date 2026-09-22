@@ -79,11 +79,27 @@ Deno.serve(async (req) => {
     return fout("De foto kon niet opgeslagen worden", 500);
   }
 
+  // Eén foto per vast aanzicht: 'overig' mag meerdere losse foto's hebben, de andere niet.
+  // Bij opnieuw fotograferen vervangen we de oude (rij + bestand) i.p.v. te stapelen; anders
+  // bleef een afgekeurde opname als verborgen dubbele rij + weesbestand achter en ging hij
+  // alsnog mee online. De nieuwe upload staat al op zijn eigen pad (Date.now), dus geen botsing.
+  let hoofd = false;
+  if (aanzicht !== "overig") {
+    const { data: oud } = await admin.from("refurbish_fotos")
+      .select("id, pad, hoofd").eq("apparaat_id", a.id).eq("aanzicht", aanzicht);
+    if (oud && oud.length) {
+      hoofd = oud.some((r) => r.hoofd);   // was dit de hoofdfoto, dan blijft de nieuwe dat
+      await admin.from("refurbish_fotos").delete().in("id", oud.map((r) => r.id));
+      const paden = oud.map((r) => r.pad).filter(Boolean);
+      if (paden.length) await admin.storage.from(EMMER).remove(paden);
+    }
+  }
+
   const { error } = await admin.from("refurbish_fotos").insert({
     team_id: sleutel.team_id,
     apparaat_id: a.id,
     merk: a.merk, model: a.model,
-    aanzicht, pad,
+    aanzicht, pad, hoofd,
     volgorde: AANZICHTEN.indexOf(aanzicht),
   });
   if (error) {
