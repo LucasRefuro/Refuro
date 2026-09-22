@@ -2440,6 +2440,13 @@ function tekenApparaat(){
           </div>
           <div id="mpUit" style="margin-top:14px"></div>
         </div>` : ''}
+
+        <div class="card">
+          <h2><svg class="i"><use href="#i-camera"/></svg>Foto's</h2>
+          <p class="muted klein" style="margin-bottom:12px">Fotografeer dit toestel met je telefoon; de foto's komen hier meteen te staan en gaan mee als je hem online zet.</p>
+          <div id="detailFotos" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px"><span class="muted klein">Laden…</span></div>
+          <button class="btn actie" onclick="detailFotoQr('${a.id}')"><svg class="i s"><use href="#i-qr"/></svg>Scan met telefoon</button>
+        </div>
       </div>
 
       <div>
@@ -2469,6 +2476,7 @@ function tekenApparaat(){
         </div>` : '')}
       </div>
     </div>`;
+  detailFotosLaden(a.id);
 }
 
 function feit(naam, waarde, mono){
@@ -4658,6 +4666,55 @@ async function mpNeemPrijs(id, prijs){
     toast('Vraagprijs op '+euro(prijs)+' gezet', true);
   }catch(e){ toast('Prijs zetten mislukt','fout'); }
 }
+
+/* ═══ Foto's op de detailpagina: fotografeer met de telefoon via een QR. Hergebruikt het
+   bestaande mechanisme (refurbish_fotocodes/refurbish_fotos + de companion /refurbish/foto). ═══ */
+async function detailFotosLaden(id){
+  const vak=document.getElementById('detailFotos'); if(!vak) return;
+  try{
+    const {data}=await sb.from('refurbish_fotos').select('id,pad').eq('apparaat_id', id).order('volgorde');
+    const fotos=data||[];
+    vak.innerHTML = fotos.length
+      ? fotos.map(f=>`<img src="${esc(fotoUrl(f.pad))}" alt="" loading="lazy" style="width:88px; height:88px; object-fit:cover; border-radius:10px; border:1px solid var(--border)">`).join('')
+      : '<span class="muted klein">Nog geen foto\'s. Scan de QR met je telefoon om ze te maken.</span>';
+  }catch(e){ vak.innerHTML='<span class="muted klein">Foto\'s konden niet geladen worden.</span>'; }
+}
+let _detailFotoPoll=null, _detailFotoAantal=-1;
+async function detailFotoQr(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  let code;
+  try{
+    code=Math.random().toString(36).slice(2,8).toUpperCase();
+    const {error}=await sb.from('refurbish_fotocodes').insert({
+      code, team_id:account.team_id, apparaat_id:id,
+      vervalt:new Date(Date.now()+30*60000).toISOString()
+    });
+    if(error) throw error;
+  }catch(e){ toast('De code kon niet aangemaakt worden','fout'); return; }
+  const doel=location.origin+'/refurbish/foto?c='+code;
+  const qr='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data='+encodeURIComponent(doel);
+  venster('Foto\'s met je telefoon', `
+    <p class="pv">Scan deze QR met je telefoon. De foto's die je maakt komen hier meteen te staan.</p>
+    <div style="text-align:center"><img src="${qr}" alt="QR-code" style="width:220px; height:220px; border-radius:12px"></div>
+    <p class="muted klein" style="text-align:center; margin-top:8px">Of ga naar <b>${esc(location.host)}/refurbish/foto</b> en vul code <b>${esc(code)}</b> in. Een half uur geldig.</p>
+    <div id="detailFotoWacht" class="muted klein" style="text-align:center; margin-top:10px; color:var(--green-tekst)">Wachten op foto's…</div>
+  `, [{tekst:'Klaar', klasse:'actie', doe:()=>{ detailFotoStop(); sluit(); if(opendApparaat) tekenApparaat(); }}]);
+  _detailFotoAantal=-1;
+  clearInterval(_detailFotoPoll);
+  _detailFotoPoll=setInterval(()=>detailFotoPoll(id), 4000);
+}
+async function detailFotoPoll(id){
+  if(!document.getElementById('detailFotoWacht')){ detailFotoStop(); return; }   // venster dicht → stoppen
+  try{
+    const {count}=await sb.from('refurbish_fotos').select('id',{count:'exact',head:true}).eq('apparaat_id', id);
+    const n=count||0;
+    if(n===_detailFotoAantal) return;
+    _detailFotoAantal=n;
+    const w=document.getElementById('detailFotoWacht'); if(w) w.textContent = n ? (n+' foto\'s ontvangen') : 'Wachten op foto\'s…';
+    detailFotosLaden(id);
+  }catch(e){}
+}
+function detailFotoStop(){ clearInterval(_detailFotoPoll); _detailFotoPoll=null; _detailFotoAantal=-1; }
 
 /* Waar hij ligt, als pil. Ligt er nog geen locatie vast, dan zeggen we dat
    ook: dat is namelijk een gaatje in je administratie en geen detail. */
