@@ -3477,22 +3477,22 @@
     <h2><svg class="i"><use href="#i-card"/></svg>Facturen <span class="muted">(gegevens en opmaak)</span></h2>
     <p class="muted" style="margin-bottom:12px">Deze staan op elke factuur en offerte. Eén keer invullen. Facturen maak je op de Verkoop-pagina.</p>
     <div class="grid">
-      <div><label>Bedrijfsnaam</label><input id="fb_naam" autocomplete="off"></div>
-      <div><label>E-mail</label><input id="fb_email" type="email" autocomplete="off"></div>
-      <div><label>Telefoon</label><input id="fb_tel" autocomplete="off"></div>
-      <div><label>Adres</label><input id="fb_adres" autocomplete="off"></div>
-      <div><label>Postcode</label><input id="fb_pc" autocomplete="off"></div>
-      <div><label>Plaats</label><input id="fb_plaats" autocomplete="off"></div>
-      <div><label>KVK-nummer</label><input id="fb_kvk" autocomplete="off"></div>
-      <div><label>Btw-nummer</label><input id="fb_btw" autocomplete="off"></div>
-      <div><label>IBAN</label><input id="fb_iban" autocomplete="off"></div>
+      <div><label>Bedrijfsnaam</label><input id="fb_naam" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>E-mail</label><input id="fb_email" onchange="facBedrijfLees()" type="email" autocomplete="off"></div>
+      <div><label>Telefoon</label><input id="fb_tel" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>Adres</label><input id="fb_adres" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>Postcode</label><input id="fb_pc" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>Plaats</label><input id="fb_plaats" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>KVK-nummer</label><input id="fb_kvk" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>Btw-nummer</label><input id="fb_btw" onchange="facBedrijfLees()" autocomplete="off"></div>
+      <div><label>IBAN</label><input id="fb_iban" onchange="facBedrijfLees()" autocomplete="off"></div>
     </div>
     <div class="hkkop" style="margin-top:18px">Opmaak van de factuur</div>
     <p class="muted klein" style="margin:2px 0 10px">Je logo en kleuren komen uit je huisstijl. Hier stel je de accentkleur, betaaltermijn en een voettekst voor de factuur in.</p>
     <div class="row" style="gap:14px; flex-wrap:wrap; align-items:flex-end">
-      <div><label>Accentkleur</label><input id="fb_kleur" type="color" style="width:56px; height:40px; padding:2px"></div>
-      <div style="min-width:150px"><label>Betaaltermijn (dagen)</label><input id="fb_termijn" type="number" min="0" step="1" placeholder="14"></div>
-      <div style="flex:1; min-width:200px"><label>Voettekst <span class="muted">(optioneel)</span></label><input id="fb_voet" placeholder="bijv. Bedankt voor je bezoek" autocomplete="off"></div>
+      <div><label>Accentkleur</label><input id="fb_kleur" oninput="facBedrijfLees()" type="color" style="width:56px; height:40px; padding:2px"></div>
+      <div style="min-width:150px"><label>Betaaltermijn (dagen)</label><input id="fb_termijn" onchange="facBedrijfLees()" type="number" min="0" step="1" placeholder="14"></div>
+      <div style="flex:1; min-width:200px"><label>Voettekst <span class="muted">(optioneel)</span></label><input id="fb_voet" onchange="facBedrijfLees()" placeholder="bijv. Bedankt voor je bezoek" autocomplete="off"></div>
       <div><button class="btn ghost" onclick="facVoorbeeld()"><svg class="i s"><use href="#i-download"/></svg>Voorbeeld</button></div>
     </div>
     <button class="btn" style="margin-top:16px" onclick="facBedrijfOpslaan()"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
@@ -15413,6 +15413,11 @@ function zetVergrendeling(aan){
 }
 function teamNaam(id){ const t=state.teams.find(t=>t.id===id); return t?t.naam:'Geen team'; }
 function renderTeam(){
+  /* Ben je met de cursor in een geopend gebruikers-/uitnodigingsdetail bezig (rol,
+     rechten, uurloon), dan niet hertekenen: een achtergrondsync zou anders je invoer
+     en het hele detail wegvegen. */
+  const _tv=document.getElementById('teamDetailView');
+  if(_tv && !_tv.hidden && _tv.contains(document.activeElement)) return;
   document.getElementById('mwBody').innerHTML=state.medewerkers.map(m=>`<tr>`+
     `<td><input value="${esc(m.naam)}" onchange="updMw(${m.id},'naam',this.value)"></td>`+
     `<td><select onchange="updMw(${m.id},'rol',this.value)">${['medewerker','beheerder','eigenaar'].map(r=>`<option value="${r}" ${m.rol===r?'selected':''}>${r}</option>`).join('')}</select></td>`+
@@ -15769,6 +15774,12 @@ function slaBedrijfOp(){
   toast('Bedrijfsgegevens opgeslagen', true);
 }
 function renderInstellingen(){
+  /* Verversen (bijv. de 45s-achtergrondsync) terwijl je in het instellingenscherm typt
+     zou een half ingevuld veld (bericht-tekst, leverancier-wachtwoord) overschrijven.
+     Sta je met de cursor IN dit scherm, dan slaan we deze her-teken over; je invoer
+     blijft staan en wordt bij het verlaten van het veld opgeslagen. */
+  const _it=document.getElementById('tab-instellingen');
+  if(_it && !_it.hidden && _it.contains(document.activeElement)) return;
   shopTabAls();
   renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
   document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:1;
@@ -17336,6 +17347,10 @@ function verwijderRep(id){
 }
 /* onderdelenvoorraad */
 function renderOnderdelen(){
+  /* Niet hertekenen terwijl je in een veld van deze tabel typt (bijv. tijdens de 45s-
+     sync), anders is de ingetypte waarde weg voor je hem verlaten hebt. */
+  const _ob=document.getElementById('ondBody');
+  if(_ob && _ob.contains(document.activeElement)) return;
   document.getElementById('ondBody').innerHTML=state.onderdelen.map(o=>`<tr>`+
     `<td><input value="${esc(o.naam)}" onchange="updOnd(${o.id},'naam',this.value)"></td>`+
     `<td><input class="num" type="number" step="0.01" value="${o.inkoop}" onchange="updOnd(${o.id},'inkoop',this.value)"></td>`+
