@@ -14141,15 +14141,21 @@ function hwKaartTeken(ctx, PX, data){
     wrap(s, mm(W-2*M-5)).forEach(l=>{ ctx.fillText(l, mm(M+4.5), y); y+=lh; });
     y+=mm(.6);
   });
-  y+=mm(4);
+  const ySpecs=y;
+  /* De onderkant (Staat + garantie-vinkjes) hoort onderaan; de prijs zetten we NETJES in
+     het midden van de ruimte tussen de specs en die onderkant, zodat de witruimte gelijk
+     verdeeld is en er geen groot gat in het midden valt. */
+  const gh=pt(10.5)*1.35, onderH=pt(11)*1.2+mm(2.5)+(data.gar||[]).length*gh;
+  const oyStaat=mm(H-M)-onderH;
   font('700',24); const pw=ctx.measureText(data.prijs).width+mm(12), ph=mm(13.5), pxX=mm(W-M)-pw;
-  ctx.fillStyle=A; ctx.fillRect(pxX, y, pw, ph);
-  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6), y+ph/2+pt(.6));
+  const priceBlokH=ph+(data.np ? mm(2)+pt(9.5)*1.2 : 0);
+  const py=ySpecs+Math.max(mm(6), (oyStaat-ySpecs-priceBlokH)/2);
+  ctx.fillStyle=A; ctx.fillRect(pxX, py, pw, ph);
+  ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6), py+ph/2+pt(.6));
   ctx.textBaseline='top';
   if(data.np){ font('400',9.5); ctx.fillStyle='#222'; ctx.textAlign='right';
-    ctx.fillText('Nieuwprijs: '+data.np, mm(W-M), y+ph+mm(2)); ctx.textAlign='left'; }
-  const gh=pt(10.5)*1.35, onderH=pt(11)*1.2+mm(2.5)+(data.gar||[]).length*gh;
-  let oy=mm(H-M)-onderH;
+    ctx.fillText('Nieuwprijs: '+data.np, mm(W-M), py+ph+mm(2)); ctx.textAlign='left'; }
+  let oy=oyStaat;
   ctx.fillStyle='#111'; font('700',11); ctx.fillText('Staat: '+data.staat, mm(M), oy); oy+=pt(11)*1.2+mm(2.5);
   font('400',10.5);
   (data.gar||[]).forEach(gtxt=>{
