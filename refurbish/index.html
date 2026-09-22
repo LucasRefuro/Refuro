@@ -2340,6 +2340,9 @@ function tekenApparaat(){
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appOpnieuwTesten('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Opnieuw testen</button>`:''}
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appNaarReparatie('${a.id}')"><svg class="i s"><use href="#i-wrench"/></svg>Naar reparatie</button>`:''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
+      ${hw && hw.partner_id
+        ? `<button class="btn ghost" onclick="vrTerughalen('${a.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Terughalen bij partner</button>`
+        : (hw && heeftPartner ? `<button class="btn ghost" onclick="vrNaarPartner('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Aan partner geven</button>` : '')}
       <button class="btn ghost" onclick="appNaamWijzig('${a.id}')"><svg class="i s"><use href="#i-note"/></svg>Naam wijzigen</button>
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="prijskaartVoor('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>`:''}
@@ -2444,15 +2447,9 @@ function tekenApparaat(){
           <a class="btn ghost" style="margin-top:12px" href="/app/?tab=hardware" target="_blank" rel="noopener">Openen in Storvo</a>
         </div>` : ''}
 
-        ${hw ? `<div class="card">
+        ${hw && hw.partner_id ? `<div class="card">
           <h2><svg class="i"><use href="#i-globe"/></svg>Partner</h2>
-          ${hw.partner_id
-            ? `<p class="muted klein" style="margin-bottom:12px">Toegewezen aan <b>${esc((partnersData.find(p=>p.id===hw.partner_id)||{}).naam||'een partner')}</b>. Alleen die partner ziet dit toestel in zijn dashboard. Haal je het terug, dan krijgt de partner automatisch een e-mail en een melding in zijn dashboard.</p>
-               <button class="btn ghost" onclick="vrTerughalen('${a.id}', this)"><svg class="i s"><use href="#i-arrow"/></svg>Terughalen bij partner</button>`
-            : (heeftPartner
-              ? `<p class="muted klein" style="margin-bottom:12px">Geef dit toestel aan een partner. Alleen die partner ziet het in zijn dashboard; bij terughalen krijgt hij vanzelf bericht.</p>
-                 <button class="btn actie" onclick="vrNaarPartner('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Aan een partner geven</button>`
-              : `<p class="muted klein">Je hebt nog geen partners. Maak er een aan bij <a onclick="showTab('partners')" style="cursor:pointer;text-decoration:underline">Partners</a> om laptops toe te wijzen.</p>`)}
+          <p class="muted klein">Toegewezen aan <b>${esc((partnersData.find(p=>p.id===hw.partner_id)||{}).naam||'een partner')}</b>. Alleen die partner ziet dit toestel in zijn dashboard. Met <b>Terughalen bij partner</b> bovenaan komt hij terug in je voorraad en krijgt de partner automatisch een e-mail en een melding.</p>
         </div>` : ''}
       </div>
     </div>`;
@@ -3194,7 +3191,17 @@ const CTR_STAPPEN={
       ${heeftPartner?`<label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
         <input type="checkbox" id="ctr_dashboard" ${ctr.naarDashboard?'checked':''} onchange="ctrDashboardToggle(this)">
         <span>Zichtbaar maken in partner-dashboard <span class="muted klein" style="font-weight:400">— zodra hij goedgekeurd is, staat hij bij Online zetten in je dashboard</span></span>
-      </label>`:''}` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
+      </label>
+      ${partnersData.length?`<div style="margin-top:12px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw)">
+        <div style="font-weight:600">Of geef hem meteen aan een partner</div>
+        <div class="muted klein" style="margin:2px 0 10px">Alleen die partner ziet het toestel in zijn dashboard. Haal je het later terug, dan krijgt hij vanzelf bericht.</div>
+        <div style="display:flex; flex-direction:column; gap:6px">
+          ${partnersData.map(p=>`<label style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:12px; cursor:pointer; font-weight:600${ctr.naarPartner===p.id?'; background:var(--green-soft)':''}">
+            <input type="checkbox" ${ctr.naarPartner===p.id?'checked':''} onchange="ctrPartnerToggle('${p.id}', this)">
+            <span>${esc(p.naam||'Partner')}</span>
+          </label>`).join('')}
+        </div>
+      </div>`:''}`:''}` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
   }, knoppen:()=>ctrCompleet()
       ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
 
@@ -4106,8 +4113,16 @@ function ctrDefecten(){
 
 /* De keuze "zichtbaar in partner-dashboard" bij de laatste controlestap. In ctr
    bewaren, niet alleen in de DOM: de stap tekent zichzelf opnieuw bij elke klik en
-   dan zou een vinkje in het scherm verloren gaan. */
-function ctrDashboardToggle(el){ if(ctr) ctr.naarDashboard = !!el.checked; }
+   dan zou een vinkje in het scherm verloren gaan. Dashboard en "aan een partner geven"
+   sluiten elkaar uit: een toestel kan niet én in je eigen dashboard staan én bij een
+   externe partner liggen. */
+function ctrDashboardToggle(el){ if(!ctr) return; ctr.naarDashboard = !!el.checked; if(el.checked) ctr.naarPartner=null; ctrTeken(); }
+function ctrPartnerToggle(id, el){
+  if(!ctr) return;
+  if(el.checked){ ctr.naarPartner = id; ctr.naarDashboard = false; }   // enkelvoudig: kiest deze partner
+  else if(ctr.naarPartner === id){ ctr.naarPartner = null; }
+  ctrTeken();
+}
 
 async function ctrAfronden(knop){
   const a=ctr.a;
@@ -4143,17 +4158,23 @@ async function ctrAfronden(knop){
     let hwId=null;
     if(status==='klaar') hwId=await naarVoorraad(Object.assign({}, a, {grade, specs, nieuwe_accu:!!ctr.nieuweAccu}));
 
-    /* Is bij de laatste stap gekozen om hem in het partner-dashboard te tonen, doe
-       dat nu de hardware-rij bestaat. Best-effort: mislukt het, dan is de controle
-       zelf wél goed afgerond en dat is wat telt. */
-    if(hwId && ctr && ctr.naarDashboard){
+    /* Is bij de laatste stap gekozen waar hij heen moet, doe dat nu de hardware-rij
+       bestaat. Aan een specifieke partner geven gaat vóór het eigen dashboard (ze
+       sluiten elkaar uit). Best-effort: mislukt het, dan is de controle zelf wél goed
+       afgerond en dat is wat telt. */
+    if(hwId && ctr && (ctr.naarPartner || ctr.naarDashboard)){
       try{
         const {data:{session}}=await sb.auth.getSession();
-        if(session) await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
-          method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-          body:JSON.stringify({actie:'dashboard_aan', hardware_id:hwId})
-        });
-      }catch(e){ console.error('naar partner-dashboard bij afronden', e); }
+        if(session){
+          const lijf = ctr.naarPartner
+            ? {actie:'toewijzen', hardware_id:hwId, partner_id:ctr.naarPartner}
+            : {actie:'dashboard_aan', hardware_id:hwId};
+          await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{
+            method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+            body:JSON.stringify(lijf)
+          });
+        }
+      }catch(e){ console.error('naar partner/dashboard bij afronden', e); }
     }
 
     ctr=null; await allesLaden(); showTab('controle');
