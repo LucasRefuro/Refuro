@@ -1938,10 +1938,11 @@ async function deviceLabelPng(a){
   }else if(OP_VOORRAAD.includes(a.status) && (a.defecten||[]).length){
     rep.push('Hersteld: '+a.defecten.join(', '));
   }
-  // Batch + hoe ingekocht, zodat je aan de werkbank ziet uit welke partij het toestel komt.
+  // Batch, zodat je aan de werkbank ziet uit welke partij het toestel komt. De inkoopconditie
+  // ("Ingekocht: ongetest") staat op de genummerde pre-sticker; op de definitieve voorraadsticker
+  // is het toestel al gecontroleerd en gegradeerd, dus dan is die regel overbodig en verwarrend.
   const bat=batches.find(x=>x.id===a.batch_id);
-  const cond=bat?verwachtTekst(bat.verwacht):'';
-  const extra=rep.concat([bat?('Batch '+(bat.code||bat.nummer||'')):null, cond?('Ingekocht: '+cond):null]).filter(Boolean);
+  const extra=rep.concat([bat?('Batch '+(bat.code||bat.nummer||'')):null]).filter(Boolean);
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
   for(const r of extra.concat(labelRegels(a))){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
