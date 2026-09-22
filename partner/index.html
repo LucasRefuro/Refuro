@@ -360,14 +360,43 @@ async function pushRemote(){
   if (!PARTNER_ID) return false;
   setSync('syncing');
   try {
+    /* Niet blind overschrijven: de winkel kan een toestel aan ons hebben toegewezen
+       terwijl wij een oudere kopie in het geheugen hadden. Zouden we nu domweg onze
+       lijst wegschrijven, dan gooien we dat toestel eruit (de blob-lost-update-race).
+       Daarom halen we de huidige serverproducten erbij en voegen we de producten die
+       wij nog niet kennen (op id) vooraan toe voordat we schrijven. */
+    let teSchrijven = S.products;
+    try {
+      const { data: srv } = await sb.from('partners').select('data').eq('id', PARTNER_ID).maybeSingle();
+      const srvProducts = (srv && srv.data && Array.isArray(srv.data.products)) ? srv.data.products : [];
+      const lokaleIds = new Set(S.products.map(p=>p && p.id));
+      const extra = srvProducts.filter(p => p && p.id && !lokaleIds.has(p.id));
+      if (extra.length){ teSchrijven = extra.concat(S.products); S.products = teSchrijven; }
+    } catch(_e){ /* lukt het ophalen niet, dan schrijven we onze eigen lijst */ }
     const { error } = await sb.from('partners')
-      .update({ data: { products: S.products, settings: S.settings }, bijgewerkt_op: new Date().toISOString() })
+      .update({ data: { products: teSchrijven, settings: S.settings }, bijgewerkt_op: new Date().toISOString() })
       .eq('id', PARTNER_ID);
     if (error) throw error;
     pendingLocalChange = false;
     setSync('ok');
     return true;
   } catch(e){ setSync('offline'); return false; }
+}
+/* De partner klopt zijn voorraad af tegen de winkel: toestellen die de winkel aan hem
+   toewees (hardware.partner_id, leidend) maar die door een sync-race uit zijn blob
+   verdwenen, zet de edge er weer in. Draaien we vóór pullRemote, dan haalt de pull ze
+   meteen op. Best-effort. */
+async function syncMetWinkel(){
+  if (ALLEENLEZEN || !PARTNER_ID) return;
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    if (!session) return;
+    await fetch(SUPABASE_URL + '/functions/v1/partner-sync', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:'{}'
+    });
+  } catch(e){}
 }
 async function pullRemote(renderAfter){
   if (!PARTNER_ID){ setSync('offline'); return false; }
@@ -603,6 +632,7 @@ async function naLogin(session){
   }
   f('loginerr').style.display='none'; f('loginpin').value='';
   f('loginwrap').style.display='none'; f('app').style.display='flex';
+  await syncMetWinkel();          // eerst afkloppen tegen de winkel (herstelt verdwenen toestellen)
   await pullRemote(false);
   await laadUitdraaien();
   applyUser(); render();
@@ -621,7 +651,7 @@ async function logout(){
   USER = null; PARTNER_ID = null; ACCOUNT = null;
   f('app').style.display='none'; f('loginwrap').style.display='flex';
 }
-document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && USER){ pullRemote(page==='dash'); laadMeldingen(); } });
+document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && USER){ syncMetWinkel().then(()=>pullRemote(page==='dash')); laadMeldingen(); } });
 function doSearch(){ searchQ = f('q').value.trim(); nav('voorraad'); }
 function clearSearch(){ searchQ = ''; if (f('q')) f('q').value = ''; nav('voorraad'); }
 

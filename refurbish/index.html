@@ -2340,9 +2340,6 @@ function tekenApparaat(){
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appOpnieuwTesten('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Opnieuw testen</button>`:''}
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appNaarReparatie('${a.id}')"><svg class="i s"><use href="#i-wrench"/></svg>Naar reparatie</button>`:''}
       ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
-      ${hw && hw.partner_id
-        ? `<button class="btn ghost" onclick="vrTerughalen('${a.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Terughalen bij partner</button>`
-        : (hw && heeftPartner ? `<button class="btn ghost" onclick="vrNaarPartner('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Aan partner geven</button>` : '')}
       <button class="btn ghost" onclick="appNaamWijzig('${a.id}')"><svg class="i s"><use href="#i-note"/></svg>Naam wijzigen</button>
       <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
       ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="prijskaartVoor('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>`:''}
@@ -2447,10 +2444,19 @@ function tekenApparaat(){
           <a class="btn ghost" style="margin-top:12px" href="/app/?tab=hardware" target="_blank" rel="noopener">Openen in Storvo</a>
         </div>` : ''}
 
-        ${hw && hw.partner_id ? `<div class="card">
+        ${hw && heeftPartner && partnersData.length ? `<div class="card">
           <h2><svg class="i"><use href="#i-globe"/></svg>Partner</h2>
-          <p class="muted klein">Toegewezen aan <b>${esc((partnersData.find(p=>p.id===hw.partner_id)||{}).naam||'een partner')}</b>. Alleen die partner ziet dit toestel in zijn dashboard. Met <b>Terughalen bij partner</b> bovenaan komt hij terug in je voorraad en krijgt de partner automatisch een e-mail en een melding.</p>
-        </div>` : ''}
+          <p class="muted klein" style="margin-bottom:12px">Vink aan bij wie dit toestel hoort. Alleen die partner ziet het in zijn dashboard. Haal je het weer weg, dan krijgt hij automatisch een e-mail en een melding.</p>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            ${partnersData.map(p=>`<label style="display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:12px; cursor:pointer; font-weight:600; border:1.5px solid var(--border)${hw.partner_id===p.id?'; background:var(--green-soft); border-color:var(--green-tekst)':''}">
+              <input type="checkbox" ${hw.partner_id===p.id?'checked':''} onchange="hwPartnerVink('${a.id}','${p.id}', this)">
+              <span>${esc(p.naam||'Partner')}</span>
+            </label>`).join('')}
+          </div>
+        </div>` : (hw && !heeftPartner ? `<div class="card">
+          <h2><svg class="i"><use href="#i-globe"/></svg>Partner</h2>
+          <p class="muted klein">Je hebt nog geen partners. Maak er een aan bij <a onclick="showTab('partners')" style="cursor:pointer;text-decoration:underline">Partners</a> om laptops toe te wijzen.</p>
+        </div>` : '')}
       </div>
     </div>`;
 }
@@ -4561,6 +4567,30 @@ async function vrTerughalen(id, knop){
     if(typeof tekenApparaat==='function' && opendApparaat) tekenApparaat();
     toast('Teruggehaald. De partner heeft automatisch bericht gekregen.', true);
   }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
+}
+/* Vanaf de detailpagina een toestel aan/uit een partner vinken. Aanvinken = toewijzen
+   (staat hij al bij een andere partner, dan eerst terughalen zodat die ook bericht krijgt);
+   uitvinken = terughalen. Herstelt de detailpagina na afloop. */
+async function hwPartnerVink(apparaatId, partnerId, el){
+  const a=apparaten.find(x=>x.id===apparaatId), h=hardwareVan(a);
+  if(!a||!h){ toast('Dit toestel staat nog niet in de winkelvoorraad','let-op'); return; }
+  const wil=el.checked; el.disabled=true;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd');
+    const kop={'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token};
+    const call=async(lijf)=>{ const r=await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{method:'POST',headers:kop,body:JSON.stringify(lijf)});
+      const j=await r.json().catch(()=>({})); if(!r.ok||!j.ok) throw new Error(j.error||'Mislukt'); return j; };
+    if(wil){
+      if(h.partner_id && h.partner_id!==partnerId) await call({actie:'terughalen', hardware_id:h.id});
+      await call({actie:'toewijzen', hardware_id:h.id, partner_id:partnerId});
+    } else {
+      await call({actie:'terughalen', hardware_id:h.id});
+    }
+    await allesLaden();
+    if(typeof tekenApparaat==='function' && opendApparaat) tekenApparaat();
+    toast(wil?'Toegewezen aan de partner':'Teruggehaald. De partner heeft bericht gekregen.', true);
+  }catch(e){ el.disabled=false; el.checked=!wil; toast(e.message,'fout'); }
 }
 
 /* Waar hij ligt, als pil. Ligt er nog geen locatie vast, dan zeggen we dat
