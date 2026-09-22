@@ -3690,6 +3690,47 @@
   <button class="qrscan-dicht" onclick="qrScanDicht()">Sluiten</button>
 </div>
 <div class="mobmeer" id="mobMeer" hidden onclick="mobMeerAchtergrond(event)" aria-label="Alle pagina's"></div>
+
+<!-- Hulp-assistent rechtsonder: stel een vraag, hij wijst je de weg (en brengt je erheen),
+     of meld een bug of een idee. Alleen zichtbaar als je ingelogd bent. -->
+<style>
+#hulpBubbel{ position:fixed; right:20px; bottom:20px; z-index:900; width:56px; height:56px; border-radius:50%;
+  background:var(--oranje); color:#fff; border:none; cursor:pointer; box-shadow:var(--schaduw-l);
+  display:none; align-items:center; justify-content:center; }
+body.ingelogd #hulpBubbel{ display:flex; }
+#hulpBubbel svg{ width:26px; height:26px; }
+#hulpPaneel{ position:fixed; right:20px; bottom:20px; z-index:901; width:min(380px, calc(100vw - 32px));
+  height:min(560px, calc(100vh - 40px)); background:var(--card); border:1.5px solid var(--border);
+  border-radius:var(--radius-s); box-shadow:var(--schaduw-l); display:none; flex-direction:column; overflow:hidden; }
+#hulpPaneel.open{ display:flex; }
+.hulpkop{ display:flex; align-items:center; gap:10px; padding:14px 16px; background:var(--oranje); color:#fff; }
+.hulpkop b{ font-size:15px; }
+.hulpkop .i{ width:20px; height:20px; }
+.hulpx{ margin-left:auto; background:none; border:none; color:#fff; cursor:pointer; font-size:22px; line-height:1; padding:0 4px; }
+.hulplijf{ flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.hulpbericht{ max-width:86%; padding:10px 12px; border-radius:14px; font-size:14px; line-height:1.45; white-space:pre-wrap; }
+.hulpbericht.ik{ align-self:flex-end; background:var(--oranje); color:#fff; border-bottom-right-radius:5px; }
+.hulpbericht.bot{ align-self:flex-start; background:var(--soft-2); color:var(--text); border-bottom-left-radius:5px; }
+.hulpchips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; }
+.hulpchip{ background:var(--card); border:1.5px solid var(--border); border-radius:100px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--text); text-align:left; }
+.hulpvoet{ border-top:1.5px solid var(--border); padding:10px; display:flex; flex-direction:column; gap:8px; }
+.hulpinvoer{ display:flex; gap:8px; }
+.hulpinvoer input{ flex:1; min-width:0; }
+.hulprij{ display:flex; gap:8px; }
+.hulprij .btn{ flex:1; }
+.hulpvoet textarea{ width:100%; box-sizing:border-box; resize:vertical; }
+@media(max-width:860px){ #hulpBubbel{ bottom:80px; } #hulpPaneel{ bottom:12px; right:12px; height:min(560px, calc(100vh - 90px)); } }
+@keyframes hulppuls{ 0%{ box-shadow:0 0 0 0 var(--oranje); } 100%{ box-shadow:0 0 0 12px rgba(11,91,82,0); } }
+.hulp-wijs{ animation:hulppuls 1.1s ease-out 2; border-radius:12px; }
+</style>
+<button id="hulpBubbel" onclick="hulpOpen()" title="Hulp nodig?" aria-label="Hulp">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+</button>
+<div id="hulpPaneel" role="dialog" aria-label="Hulp-assistent">
+  <div class="hulpkop"><svg class="i"><use href="#i-zap"/></svg><b>Hulp</b><button class="hulpx" onclick="hulpDicht()" aria-label="Sluiten">&times;</button></div>
+  <div class="hulplijf" id="hulpLijf"></div>
+  <div class="hulpvoet" id="hulpVoet"></div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const KEY='refuro_stock_v2';
@@ -18756,6 +18797,95 @@ kopVolgen();
     else toast('Het afrekenen is afgebroken. Je proefperiode loopt gewoon door.','let-op');
   }, 900);
 })();
+
+/* ===== Hulp-assistent (rechtsonder): stelt vragen aan de assistent-edge, brengt je naar de
+   juiste pagina, en meldt bugs/ideeën in de tabel meldingen. ===== */
+const HULP_TABS=['dashboard','verkoop','verkopen','producten','voorraad','scan','bestellen','nieuw','catalogus','hardware','reparaties','inkopen','pakketten','mail','labelprinter','vastelasten','rapport','facturen','uren','rooster','team','partners','instellingen','meer'];
+let hulpGesch=[], hulpBezig=false;
+const HULP_START=['Waar maak ik een factuur?','Hoe zet ik een toestel online?','Waar zie ik mijn omzet?','Hoe koppel ik de webshop?'];
+function hulpHuidigeTab(){ const s=document.querySelector('main section[id^="tab-"]:not([hidden])'); return s? s.id.replace('tab-','') : ''; }
+function hulpNaarBeneden(){ const l=document.getElementById('hulpLijf'); if(l) l.scrollTop=l.scrollHeight; }
+function hulpVoegBericht(wie, tekst){
+  const l=document.getElementById('hulpLijf'); if(!l) return null;
+  const d=document.createElement('div'); d.className='hulpbericht '+(wie==='ik'?'ik':'bot'); d.textContent=tekst;
+  l.appendChild(d); hulpNaarBeneden(); return d;
+}
+function hulpChips(){
+  const l=document.getElementById('hulpLijf'); if(!l) return;
+  const wrap=document.createElement('div'); wrap.className='hulpchips';
+  HULP_START.forEach(v=>{ const b=document.createElement('button'); b.className='hulpchip'; b.textContent=v;
+    b.onclick=()=>{ const i=document.getElementById('hulpInput'); if(i){ i.value=v; hulpVerstuur(); } }; wrap.appendChild(b); });
+  l.appendChild(wrap); hulpNaarBeneden();
+}
+function hulpOpen(){
+  const p=document.getElementById('hulpPaneel'); if(!p) return;
+  const v=document.getElementById('hulpVoet'); if(v && !v.children.length) hulpVoetHerstel();
+  p.classList.add('open');
+  if(!hulpGesch.length){ hulpVoegBericht('bot','Hoi! Ik ken de software. Vraag me waar iets staat of hoe iets werkt, dan breng ik je er meteen heen. Zie je een bug of heb je een idee? Meld het onderin.'); hulpChips(); }
+  const i=document.getElementById('hulpInput'); if(i) setTimeout(()=>i.focus(),80);
+}
+function hulpDicht(){ const p=document.getElementById('hulpPaneel'); if(p) p.classList.remove('open'); }
+async function hulpVerstuur(){
+  const i=document.getElementById('hulpInput'); if(!i) return;
+  const vraag=(i.value||'').trim(); if(!vraag || hulpBezig) return;
+  i.value=''; hulpVoegBericht('ik', vraag); hulpGesch.push({rol:'gebruiker', tekst:vraag});
+  hulpBezig=true; const knop=document.getElementById('hulpVerstuurKnop'); if(knop) knop.disabled=true;
+  const bezig=hulpVoegBericht('bot','…');
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Log opnieuw in');
+    const toeg=HULP_TABS.filter(t=> typeof mag!=='function' || mag(t));
+    const res=await fetch(SUPABASE_URL+'/functions/v1/assistent',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({vraag, huidige_tab:hulpHuidigeTab(), toegankelijk:toeg, geschiedenis:hulpGesch.slice(-6)})
+    });
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'De assistent gaf een fout');
+    if(bezig) bezig.textContent=j.antwoord;
+    hulpGesch.push({rol:'assistent', tekst:j.antwoord});
+    if(j.ga && j.ga.tab){
+      const l=document.getElementById('hulpLijf');
+      const b=document.createElement('button'); b.className='btn actie small'; b.style.alignSelf='flex-start';
+      b.innerHTML='<svg class="i s"><use href="#i-right"/></svg>'+esc(j.ga.label||'Breng me erheen');
+      b.onclick=()=>hulpGaNaar(j.ga.tab, j.ga.sub);
+      if(l){ l.appendChild(b); hulpNaarBeneden(); }
+    }
+  }catch(e){ if(bezig) bezig.textContent='Sorry, dat lukte niet: '+(e&&e.message||e); }
+  hulpBezig=false; const k2=document.getElementById('hulpVerstuurKnop'); if(k2) k2.disabled=false;
+}
+function hulpWijs(el){ if(!el) return; el.classList.add('hulp-wijs'); setTimeout(()=>el.classList.remove('hulp-wijs'), 2600); }
+function hulpGaNaar(tab, sub){
+  hulpDicht();
+  try{ showTab(tab); }catch(e){}
+  if(sub){ setTimeout(()=>{ const b=document.querySelector('#instTabs [data-s="'+sub+'"]'); if(b){ b.click(); hulpWijs(b); } }, 160); }
+  else { setTimeout(()=>{ const b=document.querySelector('aside nav button.active'); if(b) hulpWijs(b); }, 160); }
+}
+function hulpVoetHerstel(){
+  const v=document.getElementById('hulpVoet'); if(!v) return;
+  v.innerHTML='<div class="hulpinvoer"><input id="hulpInput" placeholder="Waar kan ik…? Hoe doe ik…?" autocomplete="off" onkeydown="if(event.key===\'Enter\')hulpVerstuur()"><button class="btn actie small" onclick="hulpVerstuur()" id="hulpVerstuurKnop">Vraag</button></div>'+
+    '<div class="hulprij"><button class="btn ghost small" onclick="hulpMeldStart(\'bug\')"><svg class="i s"><use href="#i-bell"/></svg>Bug melden</button><button class="btn ghost small" onclick="hulpMeldStart(\'idee\')"><svg class="i s"><use href="#i-zap"/></svg>Idee melden</button></div>';
+  const i=document.getElementById('hulpInput'); if(i) i.focus();
+}
+function hulpMeldStart(soort){
+  const v=document.getElementById('hulpVoet'); if(!v) return;
+  v.innerHTML='<textarea id="hulpMeldTekst" rows="3" placeholder="'+(soort==='bug'?'Wat ging er mis? Wat deed je precies?':'Wat zou je graag willen?')+'"></textarea>'+
+    '<div class="hulprij"><button class="btn ghost small" onclick="hulpVoetHerstel()">Annuleren</button>'+
+    '<button class="btn actie small" onclick="hulpMeldVerstuur(\''+soort+'\')">'+(soort==='bug'?'Bug versturen':'Idee versturen')+'</button></div>';
+  const t=document.getElementById('hulpMeldTekst'); if(t) t.focus();
+}
+async function hulpMeldVerstuur(soort){
+  const t=document.getElementById('hulpMeldTekst'); const tekst=(t&&t.value||'').trim();
+  if(!tekst){ toast('Schrijf eerst even wat','let-op'); return; }
+  if(!account){ toast('Log opnieuw in','let-op'); return; }
+  try{
+    const {error}=await sb.from('meldingen').insert({team_id:account.team_id, soort, tekst, pagina:hulpHuidigeTab()||null});
+    if(error) throw error;
+    hulpVoetHerstel();
+    hulpVoegBericht('bot', soort==='bug'?'Dank je, de bug is gemeld. We pakken het op.':'Top, je idee is genoteerd. Bedankt!');
+    toast('Melding verstuurd', true);
+  }catch(e){ console.error('melding', e); toast('Versturen mislukte, probeer opnieuw','fout'); }
+}
 
 authBoot();
 </script>
