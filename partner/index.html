@@ -1309,7 +1309,8 @@ function rProduct(id){
   /* foto's */
   html += '<div class="card"><b style="font-size:14px">Foto\'s</b><div style="margin-top:10px">' +
     '<button class="btn sm" onclick="pFotoCam(\''+p.id+'\')">Foto maken</button> ' +
-    '<button class="btn gray sm" onclick="pFoto(\''+p.id+'\')">Foto\'s kiezen</button>' +
+    '<button class="btn gray sm" onclick="pFoto(\''+p.id+'\')">Foto\'s kiezen</button> ' +
+    '<button class="btn gray sm" onclick="pFotoQr(\''+p.id+'\')">Scan met telefoon</button>' +
     '<div class="fotos">'+p.fotos.map((src,i)=>'<div class="foto"><img src="'+src+'"><button class="del" onclick="delPFoto(\''+p.id+'\','+i+')">&times;</button></div>').join('')+'</div></div></div>';
   /* voorraad-units */
   html += '<div class="card"><b style="font-size:14px">Op voorraad ('+vu.length+')</b><div style="margin-top:8px">';
@@ -1411,6 +1412,61 @@ function mpNeemPrijsP(pid, prijs){
   pendingLocalChange = true;
   saveProduct(pid);     // leest het formulier (incl. de nieuwe prijs), bewaart en herrendert
   pushRemote();         // meteen naar de server
+}
+
+/* ============ foto's via QR (telefoon) ============
+   De pc maakt een code (30 min geldig, in een QR). De telefoon opent /partner/foto?c=CODE,
+   maakt de foto's, en de edge zet ze in de opslag + partner_fotos. Hier pollen we die tabel
+   op deze code en zetten nieuwe foto's bij het product. */
+let _fotoPoll=null, _fotoCode=null, _fotoPid=null, _fotoGezien=null;
+async function pFotoQr(pid){
+  const p = S.products.find(x=>x.id===pid); if (!p) return;
+  if (ALLEENLEZEN){ toast('Alleen-lezen: aanmelden als partner om foto\'s toe te voegen'); return; }
+  try {
+    const code = Math.random().toString(36).slice(2,8).toUpperCase();
+    const { error } = await sb.from('partner_fotocodes').insert({
+      code, partner_id: PARTNER_ID, product_id: pid,
+      vervalt: new Date(Date.now()+30*60000).toISOString()
+    });
+    if (error) throw error;
+    _fotoCode = code; _fotoPid = pid; _fotoGezien = new Set();
+    const doel = location.origin + '/partner/foto?c=' + code;
+    const qr = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data=' + encodeURIComponent(doel);
+    const m = f('modal');
+    m.innerHTML = '<h2>Foto\'s met je telefoon</h2>' +
+      '<p class="mini" style="margin-bottom:12px">Scan deze QR met je telefoon. De foto\'s die je maakt verschijnen hier vanzelf bij het product.</p>' +
+      '<div style="text-align:center"><img src="'+qr+'" alt="QR-code" style="width:220px;height:220px;border-radius:12px"></div>' +
+      '<p class="mini" style="text-align:center;margin-top:8px">Of open op je telefoon:<br><b>'+esc(location.host)+'/partner/foto?c='+code+'</b></p>' +
+      '<div id="fotoWacht" class="mini" style="text-align:center;margin-top:10px;color:var(--green-tekst)">Wachten op foto\'s...</div>' +
+      '<div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn green" onclick="pFotoQrDicht()">Klaar</button></div>';
+    f('modalbg').style.display='flex';
+    clearInterval(_fotoPoll);
+    _fotoPoll = setInterval(pFotoPoll, 4000);
+  } catch(e){ toast('De code kon niet aangemaakt worden','fout'); }
+}
+async function pFotoPoll(){
+  if (!_fotoCode || !_fotoPid) return;
+  try {
+    const { data } = await sb.from('partner_fotos').select('id,url').eq('code', _fotoCode).order('aangemaakt_op');
+    if (!data || !data.length) return;
+    const p = S.products.find(x=>x.id===_fotoPid); if (!p) return;
+    if (!Array.isArray(p.fotos)) p.fotos = [];
+    let nieuw = 0;
+    data.forEach(r=>{
+      if (!r.url || _fotoGezien.has(r.id)) return;
+      _fotoGezien.add(r.id);
+      if (!p.fotos.includes(r.url)){ p.fotos.push(r.url); nieuw++; }
+    });
+    if (nieuw){
+      pendingLocalChange = true; save(); pushRemote();
+      const w = f('fotoWacht'); if (w) w.textContent = p.fotos.length + ' foto\'s ontvangen';
+    }
+  } catch(e){}
+}
+function pFotoQrDicht(){
+  clearInterval(_fotoPoll); _fotoPoll=null; _fotoCode=null; _fotoPid=null; _fotoGezien=null;
+  closeModal();
+  render();
 }
 function pFoto(pid){
   const p = S.products.find(x=>x.id===pid);
