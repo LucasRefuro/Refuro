@@ -703,7 +703,7 @@ async function naarMarktplaats(pid){
   const prijs = p.vraagprijs || 0;
   const pakket = {
     storvo: true,
-    titel: (f('o_titel') && f('o_titel').value) || p.titel || autoTitel(p),
+    titel: (f('o_titel') && f('o_titel').value) || ((p.titel && p.titel!==p.model) ? p.titel : autoTitel(p)),
     prijs: prijs,
     tekst: (f('o_tekst') && f('o_tekst').value) || p.adtekst || '',
     specs: p.specs || {}
@@ -894,9 +894,18 @@ function rAdd(){
   }
 }
 function pickType(t){ if (!addData) addData = blankAdd(t); else addData.type = t; addStep = 1; captureDraft(); render(); }
+/* Klantvriendelijk staat-woord uit de grade (A/B/C). */
+function staatWoord(g){ return ({A:'Als nieuw', B:'Nette staat', C:'Gebruikt, goede staat'})[g] || ''; }
+/* Korte pakkende beschrijving; sluit aan op de staat. */
+function kortBeschrijving(d){
+  const st = staatWoord(d.grade);
+  const wat = d.type==='laptop' ? 'Refurbished laptop' : (d.model||'Toestel');
+  return wat + ', volledig getest en klaar voor gebruik' + (st ? ' — ' + st.toLowerCase() : '') + '.';
+}
+/* Titel = model + spec + staat. */
 function autoTitel(d){
-  if (d.type==='laptop') return [d.model, d.specs.cpu, d.specs.ram, d.specs.opslag].filter(Boolean).join(' | ');
-  return d.model;
+  const specs = d.type==='laptop' ? [d.specs.cpu, d.specs.ram, d.specs.opslag].filter(Boolean).join(' · ') : '';
+  return [d.model, specs, staatWoord(d.grade)].filter(Boolean).join(' | ');
 }
 function renderRows(){
   const box = f('unitrows'); if (!box || !addData) return;
@@ -972,14 +981,15 @@ async function genAdOnline(pid){
   const units = voorraadUnits(p);
   const defects = units.map(u=>u.defect).filter(Boolean);
   const extras = units.map(u=>u.extra).filter(Boolean);
-  let prompt = 'Schrijf een Nederlandse advertentietekst (alleen de beschrijving, geen titel, geen uitleg) voor Marktplaats/Facebook voor dit tweedehands product.\n';
+  let prompt = 'Schrijf een Nederlandse advertentietekst (alleen de beschrijving, geen titel, geen uitleg) voor Marktplaats/Facebook voor dit tweedehands product. Houd deze opbouw aan: (1) de modelnaam op de eerste regel, (2) een korte pakkende beschrijving, (3) de specificaties als korte opsomming, (4) de staat van het toestel.\n';
   if (S.settings.template) prompt += 'BELANGRIJK — volg deze standaard opbouw/richtlijnen van de verkoper:\n' + S.settings.template + '\n\n';
   prompt += 'Product: ' + (p.titel || p.model) + '.';
   if (p.type==='laptop') prompt += ' Specificaties: processor ' + (p.specs.cpu||'-') + ', RAM ' + (p.specs.ram||'-') + ', opslag ' + (p.specs.opslag||'-') + ', scherm ' + (p.specs.scherm||'-') + '.';
   prompt += ' Vraagprijs: €' + p.vraagprijs + '.';
   if (extras.length) prompt += ' Recent geüpgraded/vervangen: ' + extras.join('; ') + '.';
   if (defects.length) prompt += ' Vermeld deze gebreken eerlijk, verwerkt in of onderaan de tekst: ' + defects.join('; ') + '.';
-  else prompt += ' Product is in nette staat.';
+  const _st = staatWoord(p.grade);
+  prompt += _st ? ' Staat volgens de winkel: ' + _st + '.' : ' Product is in nette staat.';
   if (p.notitie) prompt += ' Extra aantekeningen van de verkoper: ' + p.notitie + '.';
   prompt += ' Sluit af met: ophalen of verzenden mogelijk.';
   try {
@@ -1000,13 +1010,15 @@ async function genAdOnline(pid){
   }
   btn.disabled = false; btn.textContent = 'Maak tekst met AI';
 }
+/* Opbouw: model, korte beschrijving, specificaties, staat, prijs. */
 function fallbackTekst(d, defects, extras){
-  let t = 'Te koop: ' + (d.titel||d.model) + '\n\n';
+  let t = (d.model||'') + '\n\n';                       // model bovenaan
+  t += kortBeschrijving(d) + '\n\n';                    // korte beschrijving
   if (d.type==='laptop') t += 'Specificaties:\n- Processor: '+(d.specs.cpu||'-')+'\n- RAM: '+(d.specs.ram||'-')+'\n- Opslag: '+(d.specs.opslag||'-')+'\n- Scherm: '+(d.specs.scherm||'-')+'\n\n';
-  t += 'Nette ' + d.model + ', werkt goed en is klaar voor gebruik.\n';
+  const st = staatWoord(d.grade); if (st) t += 'Staat: ' + st + '\n';
   if (extras.length) t += 'Recent geüpgraded: ' + extras.join(', ') + '.\n';
-  if (defects.length) t += '\nLet op: ' + defects.join('; ') + '.\n';
-  if (d.notitie) t += '\n' + d.notitie + '\n';
+  if (defects.length) t += 'Let op: ' + defects.join('; ') + '.\n';
+  if (d.notitie) t += d.notitie + '\n';
   t += '\nVraagprijs: ' + eur(d.vraagprijs) + '\nOphalen of verzenden mogelijk. Interesse? Stuur een bericht!';
   return t;
 }
@@ -1188,7 +1200,7 @@ function rOnlineEdit(p){
   }
 
   html += '<div class="card"><b style="font-size:14px">Advertentie</b><div class="mini" style="margin:4px 0 0">Kopieer en plak op Marktplaats of Facebook.</div>' +
-    '<div class="grid2" style="margin-top:12px"><div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="o_titel" value="'+esc(p.titel || autoTitel(p))+'"><button class="btn gray sm" onclick="copyTxt(\'o_titel\')">Kopieren</button></div></div>' +
+    '<div class="grid2" style="margin-top:12px"><div class="field"><label>Titel</label><div class="copyrow"><input type="text" id="o_titel" value="'+esc((p.titel && p.titel!==p.model) ? p.titel : autoTitel(p))+'"><button class="btn gray sm" onclick="copyTxt(\'o_titel\')">Kopieren</button></div></div>' +
     '<div class="field"><label>Prijs</label><div class="copyrow"><input type="text" id="o_ptxt" value="'+esc('€ '+(p.vraagprijs||0))+'"><button class="btn gray sm" onclick="copyTxt(\'o_ptxt\')">Kopieren</button></div></div></div>' +
     '<div class="field"><label>Beschrijving</label><div class="copyrow"><textarea id="o_tekst" rows="8" placeholder="Schrijf zelf, of laat AI een tekst maken. Defecten en extra\'s worden er automatisch in verwerkt.">'+esc(p.adtekst||'')+'</textarea><button class="btn gray sm" onclick="copyTxt(\'o_tekst\')">Kopieren</button></div>' +
     '<div style="margin-top:8px"><button class="btn purple sm" id="aibtn" onclick="genAdOnline(\''+p.id+'\')">Maak tekst met AI</button> <span class="mini">volgt jouw sjabloon uit Instellingen</span></div>' +
