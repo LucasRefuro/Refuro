@@ -17757,7 +17757,13 @@ function pakketDienstKaart(d, maand){
     ${lijst}
   </div>`;
 }
-function pakketTariefBewerk(key){ pakketBewerkTarief = (pakketBewerkTarief===key ? null : key); renderPakketten(); }
+function pakketTariefBewerk(key){
+  /* 'Klaar' klikken (bewerken sluiten) las de getypte tarieven niet uit -> aanpassingen
+     weg. Nu eerst lezen + bewaren voor we sluiten. */
+  if(pakketBewerkTarief===key){ pakketTariefLees(key); save(); pakketBewerkTarief=null; }
+  else pakketBewerkTarief=key;
+  renderPakketten();
+}
 function pakketTariefLees(key){
   const d=pakketDienst(key); if(!d) return;
   const rijen={};
