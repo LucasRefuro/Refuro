@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title data-t="title">Storvo · Voorraad &amp; reparaties voor telefoonwinkels</title>
+<title data-t="title">Storvo · Alles-in-één software voor reparatie- en refurbishwinkels</title>
 <link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
 <meta name="theme-color" content="#0B5B52">
-<meta name="description" content="Storvo: alles-in-één systeem voor telefoonwinkels. Voorraad scannen, reparaties volgen, klanten automatisch op de hoogte houden en je omzet live inzien.">
+<meta name="description" content="Storvo: alles-in-één software voor telefoon- en laptopreparatiewinkels. Balie, reparaties, refurbish-werkbank, webshop en boekhouding in één systeem. In het Nederlands, 30 dagen gratis proberen.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -424,6 +424,94 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
   .klantvenster{margin:14px;}
   .demokop{padding:14px;}
 }
+
+/* ═══════════════ uitbreiding: pijlers, modules, integraties ═══════════════ */
+
+/* "meer"-link en 'binnenkort'-label op een functiekaart */
+.f{display:flex; flex-direction:column;}
+.f h3 .soon{display:inline-block; margin-left:7px; font-size:10px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--amber-d); background:#FBEAD6; padding:3px 9px; border-radius:var(--pil); vertical-align:middle;}
+.f .meer{display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:16px; font-size:14px;
+  font-weight:700; color:var(--groen);}
+.f .meer svg{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round;
+  stroke-linejoin:round; transition:.2s;}
+.f:hover .meer svg{transform:translateX(3px);}
+
+/* tekst naast een beeld */
+.split{display:grid; grid-template-columns:1.02fr .98fr; gap:58px; align-items:center;}
+.split + .split{margin-top:104px;}
+.split .beeld{order:2;} .split.om .beeld{order:-1;}
+.split .tekst h2{margin-bottom:16px;}
+.split .tekst .tag{display:inline-block; background:var(--ijsgroen); color:var(--groen); font-size:12px; font-weight:700;
+  padding:7px 18px; border-radius:var(--pil); letter-spacing:.12em; text-transform:uppercase; margin-bottom:18px;}
+.split .tekst > p{color:var(--body); font-size:18px; line-height:1.55; margin-bottom:26px; max-width:520px;}
+.punten{list-style:none; display:flex; flex-direction:column; gap:15px;}
+.punten li{position:relative; padding-left:34px; font-size:15.5px; color:var(--ink); line-height:1.5; font-weight:600;}
+.punten li span{display:block; font-size:14px; color:var(--muted); font-weight:400; margin-top:2px;}
+.punten li::before{content:''; position:absolute; left:0; top:0; width:22px; height:22px; border-radius:7px;
+  background:var(--ijsgroen) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B5B52' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/13px no-repeat;}
+@media(max-width:860px){ .split{grid-template-columns:1fr; gap:30px;} .split .beeld,.split.om .beeld{order:0;} .split + .split{margin-top:64px;} }
+
+/* visueel paneel binnen een split */
+.paneel{background:var(--card); border-radius:var(--radius); box-shadow:var(--schaduw-l); border:1px solid var(--rand); overflow:hidden;}
+.paneel .pk{display:flex; align-items:center; gap:11px; padding:16px 20px; border-bottom:1.5px solid var(--rand);}
+.paneel .pk .pt{font-family:'Sora',sans-serif; font-weight:700; font-size:14px;}
+.paneel .pk .pt span{display:block; font-family:'Instrument Sans',sans-serif; font-weight:400; font-size:12px; color:var(--muted-l);}
+.paneel .pico{width:34px; height:34px; border-radius:10px; background:var(--ijsgroen); color:var(--groen); flex:none;
+  display:flex; align-items:center; justify-content:center;}
+.paneel .pbody{padding:20px;}
+.paneel .prij{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--rand-zacht); font-size:13.5px;}
+.paneel .prij:last-child{border-bottom:none;}
+.paneel .prij .lab{color:var(--muted); flex:1;}
+.paneel .prij .waarde{font-family:'Sora',sans-serif; font-weight:700;}
+.paneel .prij .waarde.groen{color:var(--st-groen);}
+.chips{display:flex; gap:10px; flex-wrap:wrap;}
+.chip{display:inline-flex; align-items:center; gap:8px; background:var(--ijsgroen); color:var(--groen);
+  border-radius:var(--pil); padding:9px 15px; font-size:13px; font-weight:600;}
+.chip.amber{background:#FBEAD6; color:var(--amber-d);}
+.chip svg{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
+
+/* prijskaart-mock (werkbank) */
+.stapmini{display:flex; flex-direction:column; gap:0; padding:6px 4px;}
+.stapmini .s{display:flex; align-items:center; gap:12px; position:relative; padding:9px 0;}
+.stapmini .s .bl{width:22px; height:22px; border-radius:50%; border:2px solid var(--rand); background:#fff; flex:none;
+  display:flex; align-items:center; justify-content:center;}
+.stapmini .s .bl svg{width:11px; height:11px; stroke:#fff; fill:none; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; opacity:0;}
+.stapmini .s.klaar .bl{background:var(--groen); border-color:var(--groen);} .stapmini .s.klaar .bl svg{opacity:1;}
+.stapmini .s.nu .bl{border-color:var(--amber); box-shadow:0 0 0 5px rgba(232,138,29,.16);}
+.stapmini .s .tx{font-size:13.5px; color:var(--muted-l); font-weight:600;}
+.stapmini .s.klaar .tx,.stapmini .s.nu .tx{color:var(--ink);}
+
+/* integratie-badges */
+.merken{display:flex; flex-wrap:wrap; gap:14px;}
+.merkje{display:inline-flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--rand);
+  border-radius:var(--pil); padding:11px 20px; font-family:'Sora',sans-serif; font-weight:700; font-size:15px;
+  color:var(--ink); box-shadow:var(--schaduw);}
+.merkje .stip{width:9px; height:9px; border-radius:50%; flex:none;}
+.merkje small{font-family:'Instrument Sans',sans-serif; font-weight:500; font-size:12px; color:var(--muted-l);}
+
+/* winkeliersverhaal */
+.verhaal{display:grid; grid-template-columns:auto 1fr; gap:30px; align-items:center; background:var(--card);
+  border-radius:var(--radius); padding:44px; box-shadow:var(--schaduw); border:1px solid var(--rand);}
+.verhaal .foto{width:120px; height:120px; border-radius:24px; background:radial-gradient(120px 120px at 30% 25%,#0e4c44,var(--petrol));
+  color:var(--mint); display:flex; align-items:center; justify-content:center; font-family:'Sora',sans-serif;
+  font-weight:800; font-size:40px; flex:none;}
+.verhaal .q{font-family:'Sora',sans-serif; font-size:clamp(19px,2.4vw,26px); line-height:1.35; font-weight:700; margin-bottom:16px;}
+.verhaal .wie{font-size:14.5px; color:var(--muted);}
+@media(max-width:640px){ .verhaal{grid-template-columns:1fr; padding:30px; text-align:left;} .verhaal .foto{width:78px; height:78px; font-size:28px; border-radius:20px;} }
+
+/* AI-band */
+.aiband{background:radial-gradient(1200px 800px at 12% 18%,#0e4c44 0%,var(--petrol) 62%); border-radius:var(--radius);
+  padding:52px 48px; color:var(--warmwit);}
+.aiband .kop-a{max-width:640px; margin-bottom:34px;}
+.aiband h2{color:var(--warmwit);} .aiband .kop-a p{color:#A8C5BE; font-size:18px; line-height:1.55; margin-top:12px;}
+.aigrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px;}
+.aikaart{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:22px;}
+.aikaart .aic{width:42px; height:42px; border-radius:12px; background:rgba(127,196,182,.16); color:var(--mint);
+  display:flex; align-items:center; justify-content:center; margin-bottom:14px;}
+.aikaart h3{color:var(--warmwit); font-size:16px;}
+.aikaart p{color:#A8C5BE; font-size:13.5px; line-height:1.5;}
+@media(max-width:760px){ .aiband{padding:36px 24px;} .verhaal .q{font-size:19px;} }
 </style>
 </head>
 <body>
@@ -438,6 +526,15 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
   <symbol id="w-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
   <symbol id="w-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
   <symbol id="w-gereed" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="w-card" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="w-laptop" viewBox="0 0 24 24"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9"/><path d="M2 20h20"/><path d="M4 16h16l1.5 3a1 1 0 0 1-.9 1H3.4a1 1 0 0 1-.9-1L4 16"/></symbol>
+  <symbol id="w-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+  <symbol id="w-euro" viewBox="0 0 24 24"><path d="M4 10h11"/><path d="M4 14h9"/><path d="M19 5.5A7 7 0 0 0 14 4a8 8 0 0 0 0 16 7 7 0 0 0 5-1.5"/></symbol>
+  <symbol id="w-brain" viewBox="0 0 24 24"><path d="M12 5a3 3 0 0 0-5.9-.8A3 3 0 0 0 4 9a3 3 0 0 0 1 5.6V16a3 3 0 0 0 6 .8"/><path d="M12 5a3 3 0 0 1 5.9-.8A3 3 0 0 1 20 9a3 3 0 0 1-1 5.6V16a3 3 0 0 1-6 .8"/><path d="M12 5v14"/></symbol>
+  <symbol id="w-photo" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="w-doc" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="w-tag" viewBox="0 0 24 24"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.2 8.2a2 2 0 0 0 2.8 0l7.2-7.2a2 2 0 0 0 0-2.8Z"/><path d="M7 7h.01"/></symbol>
+  <symbol id="w-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/><path d="M2 12h20"/></symbol>
 </svg>
 <div class="voortgang" id="voortgang"></div>
 <div class="cur-ring" id="curRing"></div>
@@ -448,7 +545,8 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
     <a href="#" class="merk" aria-label="Storvo"><span class="mk"><svg viewBox="0 0 400 400" aria-hidden="true"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="wm">storvo</span></a>
     <div class="links">
       <a href="#functies" data-t="nav_functies">Functies</a>
-      <a href="#werkwijze" data-t="nav_werkwijze">Hoe het werkt</a>
+      <a href="#werkbank" data-t="nav_werkbank">Werkbank</a>
+      <a href="#webshop" data-t="nav_webshop">Webshop</a>
       <a href="#prijzen" data-t="nav_prijzen">Prijzen</a>
       <a href="#vragen" data-t="nav_vragen">Vragen</a>
     </div>
@@ -467,7 +565,9 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
 
 <div id="mobielMenu">
   <a href="#functies" onclick="sluitMenu()" data-t="nav_functies">Functies</a>
-  <a href="#werkwijze" onclick="sluitMenu()" data-t="nav_werkwijze">Hoe het werkt</a>
+  <a href="#werkbank" onclick="sluitMenu()" data-t="nav_werkbank">Werkbank</a>
+  <a href="#webshop" onclick="sluitMenu()" data-t="nav_webshop">Webshop</a>
+  <a href="#boekhouding" onclick="sluitMenu()" data-t="nav_boekhouding">Boekhouding</a>
   <a href="#prijzen" onclick="sluitMenu()" data-t="nav_prijzen">Prijzen</a>
   <a href="#vragen" onclick="sluitMenu()" data-t="nav_vragen">Vragen</a>
   <a href="/contact" data-t="f_contact">Contact</a>
@@ -482,9 +582,9 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
   <div class="blob b2" data-par="-0.1"></div>
   <div class="blob b3" data-par="0.08"></div>
   <div class="wrap in">
-    <div class="pill op" data-t="hero_pill"><b>Nieuw</b> Je klant volgt de reparatie live mee</div>
-    <h1 class="op" data-t="hero_h1">Je hele winkel in <span class="grad">één overzicht</span></h1>
-    <p class="lead op" data-t="hero_lead">Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.</p>
+    <div class="pill op" data-t="hero_pill"><b>Nieuw</b> Een complete refurbish-werkbank, van inkoop tot webshop</div>
+    <h1 class="op" data-t="hero_h1">Je hele winkel in <span class="grad">één systeem</span></h1>
+    <p class="lead op" data-t="hero_lead">Balie, reparaties, refurbish-werkbank, webshop én boekhouding in één app. Gemaakt voor telefoon- en laptopreparatiewinkels, samen met de winkels zelf. In het Nederlands, zonder gedoe.</p>
     <div class="heroknoppen op">
       <a href="/proberen" class="btn" data-t="hero_cta1">30 dagen gratis proberen</a>
       <a href="#werkwijze" class="btn lijn" data-t="hero_cta2">Bekijk hoe het werkt</a>
@@ -597,17 +697,154 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
 <section id="functies">
   <div class="wrap">
     <div class="kop op">
-      <div class="tag" data-t="f_tag">Functies</div>
-      <h2 data-t="f_h2">Alles wat je nodig hebt, niets wat je afleidt</h2>
-      <p data-t="f_p">Eén systeem voor je voorraad, je reparaties en je cijfers, in plaats van drie schriften en een spreadsheet.</p>
+      <div class="tag" data-t="f_tag">Alles-in-één</div>
+      <h2 data-t="f_h2">Je hele winkel, in acht onderdelen</h2>
+      <p data-t="f_p">Van de balie tot de werkbank, van je webshop tot je boekhouding. Eén systeem in het Nederlands, in plaats van een kassasysteem, een boekhoudpakket en drie schriften ernaast.</p>
     </div>
     <div class="rooster">
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-scan"/></svg></div><h3 data-t="f1_h">Scannen dat gewoon werkt</h3><p data-t="f1_p">Scan waar je ook bent in de app. Er verschijnt meteen een venster om in of uit te boeken. Staat een barcode nog niet in het systeem, dan maak je het product direct aan.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-wrench"/></svg></div><h3 data-t="f2_h">Reparaties van begin tot eind</h3><p data-t="f2_p">Van aanmelden tot ophalen, met een eigen reparatienummer, onderdelen, winstberekening en een tijdlijn die je klant live kan volgen.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-message"/></svg></div><h3 data-t="f3_h">Klanten automatisch bijpraten</h3><p data-t="f3_p">Bij elke stap gaat er een bericht uit. Onderdelen besteld, reparatie gestart, klaar om op te halen. Dat scheelt telefoontjes.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-chart"/></svg></div><h3 data-t="f4_h">Cijfers die kloppen</h3><p data-t="f4_p">Omzet, winst, marge en cash apart van pin. Per uur, per dag en vergeleken met vorige week, zodat je ziet of het beter gaat.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-cart"/></svg></div><h3 data-t="f5_h">Nooit meer misgrijpen</h3><p data-t="f5_p">Zakt de voorraad onder je minimum, dan verschijnt het artikel op de bestellijst. Besteld vóór 16:30 betekent morgen binnen.</p></div>
-      <div class="f op"><div class="ic"><svg class="i"><use href="#w-users"/></svg></div><h3 data-t="f6_h">Je team erbij</h3><p data-t="f6_p">Iedereen krijgt een eigen pincode en rechten. Elke verkoop en reparatie staat op naam, dus je ziet precies wie wat heeft gedaan.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-card"/></svg></div><h3 data-t="pil1_h">Aan de balie</h3><p data-t="pil1_p">Kassa die aanvoelt als een kassa: scannen of zoeken, afrekenen met pin, contant of allebei, btw en korting automatisch, en een nette bon.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-wrench"/></svg></div><h3 data-t="pil2_h">Reparaties</h3><p data-t="pil2_p">Aannemen met een eigen nummer, een pijplijn-bord met één volgende stap per kaart, een richtprijs uit de database en een klantpagina die live meeloopt.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-scan"/></svg></div><h3 data-t="pil3_h">Voorraad &amp; bestellen</h3><p data-t="pil3_p">Winkel- en magazijnvoorraad, scannen met je telefoon, een bestellijst die zichzelf vult onder het minimum en de leverancierscatalogus die je formulier invult.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-laptop"/></svg></div><h3 data-t="pil4_h">Refurbish-werkbank</h3><p data-t="pil4_p">De hele lijn voor opgekochte laptops en telefoons: controle-stappenpad, accutest, upgrade uit voorraad, foto's, advertentie en marge per partij.</p><a class="meer" href="#werkbank" data-t="pil4_m">Bekijk de werkbank <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-bag"/></svg></div><h3 data-t="pil5_h">Webshop &amp; online</h3><p data-t="pil5_p">Koppel je Shopify en zet een toestel met één knop online. Balie en webshop delen één voorraad, dus je verkoopt nooit iets dubbel. Met inruil en groothandel-bundels.</p><a class="meer" href="#webshop" data-t="pil5_m">Bekijk de webshop-koppeling <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-euro"/></svg></div><h3 data-t="pil6_h">Cijfers &amp; boekhouding</h3><p data-t="pil6_p">Facturen en offertes, inkopen met een AI-factuurlezer, koppeling met Moneybird, en een rapport met btw per kwartaal, een IB-indicatie en je buffers.</p><a class="meer" href="#boekhouding" data-t="pil6_m">Bekijk de boekhouding <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-users"/></svg></div><h3 data-t="pil7_h">Team &amp; personeel</h3><p data-t="pil7_p">Iedereen een eigen pincode en rechten per pagina, uren en loon, een rooster met beschikbaarheid en automatische herinneringen. Alles staat op naam.</p></div>
+      <div class="f op"><div class="ic"><svg class="i"><use href="#w-message"/></svg></div><h3 data-t="pil8_h">Klant &amp; communicatie</h3><p data-t="pil8_p">Automatische WhatsApp en mail bij elke stap, een mailbox met AI-sortering, en een klantportaal voor bedrijven waarvan je IT opkoopt.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="werkbank">
+  <div class="wrap">
+    <div class="split op">
+      <div class="tekst">
+        <div class="tag" data-t="wb_tag">Refurbish-werkbank</div>
+        <h2 data-t="wb_h2">De enige met een complete werkbank voor refurbished</h2>
+        <p data-t="wb_p">Koop je laptops en telefoons op om weer te verkopen? Storvo loopt met je mee van doos tot webshop, zodat elk toestel dezelfde controle en dezelfde nette advertentie krijgt.</p>
+        <ul class="punten">
+          <li data-t="wb_l1">Vast controle-stappenpad<span>Start, hardware, upgrade, Windows, specs en staat, met een aparte checklist per soort toestel.</span></li>
+          <li data-t="wb_l2">Accutest en zelftest op het toestel zelf<span>Plak één commando en de accu, het toetsenbord, het scherm en de webcam worden gemeten.</span></li>
+          <li data-t="wb_l3">Foto's en advertentie in jouw stijl<span>Zes-foto's-flow, scherm rechttrekken, een strakke achtergrond en een advertentietekst die de AI schrijft.</span></li>
+          <li data-t="wb_l4">Marge per partij<span>Zie per ingekochte batch je investering, je omzet en je winst. Losse toestellen of hele bundels.</span></li>
+        </ul>
+      </div>
+      <div class="beeld">
+        <div class="paneel">
+          <div class="pk"><span class="pico"><svg class="i" style="width:19px;height:19px"><use href="#w-laptop"/></svg></span>
+            <span class="pt">HP Elitebook 840 G8<span data-t="wb_pv_sub">Controle · stap 5 van 6</span></span></div>
+          <div class="pbody">
+            <div class="stapmini">
+              <div class="s klaar"><span class="bl"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tx" data-t="wb_s1">Start &amp; herkenning</span></div>
+              <div class="s klaar"><span class="bl"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tx" data-t="wb_s2">Hardware getest</span></div>
+              <div class="s klaar"><span class="bl"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tx" data-t="wb_s3">Upgrade: 16GB uit voorraad</span></div>
+              <div class="s klaar"><span class="bl"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tx" data-t="wb_s4">Windows opnieuw gezet</span></div>
+              <div class="s nu"><span class="bl"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tx" data-t="wb_s5">Specs &amp; accu (94%)</span></div>
+              <div class="s"><span class="bl"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tx" data-t="wb_s6">Staat bepalen → online</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="webshop" style="background:var(--ijsgroen)">
+  <div class="wrap">
+    <div class="split om op">
+      <div class="tekst">
+        <div class="tag" data-t="ws_tag">Webshop &amp; online</div>
+        <h2 data-t="ws_h2">Balie en webshop delen één voorraad</h2>
+        <p data-t="ws_p">Koppel je eigen Shopify in een paar minuten. Zet een toestel met één knop online, met foto's, tekst en voorraad erbij. Verkoop je aan de balie, dan gaat het meteen offline. Nooit meer twee klanten voor hetzelfde toestel.</p>
+        <ul class="punten">
+          <li data-t="ws_l1">Eén knop naar je webshop<span>Foto's, advertentietekst en voorraad gaan in één keer mee naar Shopify.</span></li>
+          <li data-t="ws_l2">Nooit dubbel verkocht<span>Verkocht is binnen een minuut overal weg, aan de balie én online.</span></li>
+          <li data-t="ws_l3">Inruil via je webshop<span>De klant biedt zijn oude toestel aan en krijgt meteen een eerlijk bod.</span></li>
+          <li data-t="ws_l4">Groothandel-bundels<span>Verkoop een hele partij laptops als bundel op een aparte groothandels-shop.</span></li>
+        </ul>
+      </div>
+      <div class="beeld">
+        <div class="paneel">
+          <div class="pk"><span class="pico"><svg class="i" style="width:19px;height:19px"><use href="#w-bag"/></svg></span>
+            <span class="pt" data-t="ws_pv_t">iPhone 13 · 128GB<span data-t="ws_pv_sub">Eén voorraad, twee plekken</span></span></div>
+          <div class="pbody">
+            <div class="chips" style="margin-bottom:18px">
+              <span class="chip"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span data-t="ws_c1">In de winkel</span></span>
+              <span class="chip"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span data-t="ws_c2">Op je webshop</span></span>
+            </div>
+            <div class="prij"><span class="lab" data-t="ws_r1">Voorraad</span><span class="waarde">1</span></div>
+            <div class="prij"><span class="lab" data-t="ws_r2">Verkoopprijs</span><span class="waarde">€ 349,-</span></div>
+            <div class="prij"><span class="lab" data-t="ws_r3">Verkocht aan de balie</span><span class="waarde groen" data-t="ws_r3v">→ direct offline</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="boekhouding">
+  <div class="wrap">
+    <div class="split op">
+      <div class="tekst">
+        <div class="tag" data-t="bh_tag">Cijfers &amp; boekhouding</div>
+        <h2 data-t="bh_h2">Je boekhouding loopt gewoon mee</h2>
+        <p data-t="bh_p">Facturen en offertes maak je in Storvo zelf. Een inkoopfactuur fotografeer je en de AI vult bedrag, btw en leverancier in. En je rapport laat zien wat je opzij moet zetten voor de Belastingdienst.</p>
+        <ul class="punten">
+          <li data-t="bh_l1">AI-factuurlezer<span>Upload een factuur, de AI leest bedrag, btw, leverancier en datum en zet hem klaar.</span></li>
+          <li data-t="bh_l2">Koppeling met Moneybird<span>Zet een inkoop met één druk als inkoopfactuur in je boekhouding, met pdf.</span></li>
+          <li data-t="bh_l3">Btw per kwartaal en een IB-indicatie<span>Inclusief MKB-vrijstelling, zelfstandigenaftrek en een buffer-advies.</span></li>
+          <li data-t="bh_l4">Facturen &amp; offertes<span>Maak ze in je eigen huisstijl en verstuur ze direct.</span></li>
+        </ul>
+      </div>
+      <div class="beeld">
+        <div class="paneel">
+          <div class="pk"><span class="pico"><svg class="i" style="width:19px;height:19px"><use href="#w-euro"/></svg></span>
+            <span class="pt" data-t="bh_pv_t">Rapport<span data-t="bh_pv_sub">Derde kwartaal</span></span></div>
+          <div class="pbody">
+            <div class="prij"><span class="lab" data-t="bh_r1">Omzet</span><span class="waarde">€ 24.180</span></div>
+            <div class="prij"><span class="lab" data-t="bh_r2">Btw af te dragen</span><span class="waarde">€ 3.940</span></div>
+            <div class="prij"><span class="lab" data-t="bh_r3">Opzij voor de IB</span><span class="waarde">€ 2.310</span></div>
+            <div class="prij"><span class="lab" data-t="bh_r4">Buffer op schema</span><span class="waarde groen" data-t="bh_r4v">Ja</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="aiband op">
+      <div class="kop-a">
+        <div class="label" style="color:var(--mint); margin-bottom:14px" data-t="ai_label">AI die meewerkt</div>
+        <h2 data-t="ai_h2">De computer doet het typewerk</h2>
+        <p data-t="ai_p">Op de plekken waar je normaal het langst zit te tikken, doet Storvo het voorwerk. Jij kijkt het na en klikt akkoord.</p>
+      </div>
+      <div class="aigrid">
+        <div class="aikaart"><div class="aic"><svg class="i"><use href="#w-doc"/></svg></div><h3 data-t="ai1_h">Advertenties schrijven</h3><p data-t="ai1_p">Titel en tekst voor een refurbished toestel, per kanaal de juiste toon.</p></div>
+        <div class="aikaart"><div class="aic"><svg class="i"><use href="#w-euro"/></svg></div><h3 data-t="ai2_h">Facturen lezen</h3><p data-t="ai2_p">Bedrag, btw, leverancier en datum uit een foto of pdf gehaald.</p></div>
+        <div class="aikaart"><div class="aic"><svg class="i"><use href="#w-message"/></svg></div><h3 data-t="ai3_h">Mail sorteren</h3><p data-t="ai3_p">Je postvak deelt zichzelf op in klantvragen, bestellingen en spam.</p></div>
+        <div class="aikaart"><div class="aic"><svg class="i"><use href="#w-photo"/></svg></div><h3 data-t="ai4_h">Foto's netmaken</h3><p data-t="ai4_p">Scherm rechttrekken en een strakke achtergrond op elke productfoto.</p></div>
+        <div class="aikaart"><div class="aic"><svg class="i"><use href="#w-tag"/></svg></div><h3 data-t="ai5_h">Prijs adviseren</h3><p data-t="ai5_p">Een richtprijs uit je eigen historie plus de marktschatting.</p></div>
+        <div class="aikaart"><div class="aic"><svg class="i"><use href="#w-brain"/></svg></div><h3 data-t="ai6_h">Hulp-assistent</h3><p data-t="ai6_p">Een bot rechtsonder die je naar de juiste pagina brengt en je vraag beantwoordt.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="integraties">
+  <div class="wrap">
+    <div class="kop op">
+      <div class="tag" data-t="int_tag">Koppelingen</div>
+      <h2 data-t="int_h2">Werkt samen met wat je al gebruikt</h2>
+      <p data-t="int_p">Storvo staat niet op zichzelf. Je webshop, je pin, je boekhouding en je berichten aan de klant zijn allemaal gekoppeld.</p>
+    </div>
+    <div class="merken op">
+      <span class="merkje"><span class="stip" style="background:#95BF47"></span>Shopify<small data-t="int_shopify">Webshop</small></span>
+      <span class="merkje"><span class="stip" style="background:#00707C"></span>Clover<small data-t="int_clover">Pin &amp; kassa</small></span>
+      <span class="merkje"><span class="stip" style="background:#0C64C4"></span>Moneybird<small data-t="int_moneybird">Boekhouding</small></span>
+      <span class="merkje"><span class="stip" style="background:#25D366"></span>WhatsApp<small data-t="int_whatsapp">Klantberichten</small></span>
+      <span class="merkje"><span class="stip" style="background:#635BFF"></span>Stripe<small data-t="int_stripe">Betalen</small></span>
+      <span class="merkje"><span class="stip" style="background:#EA5B0C"></span>PostNL<small data-t="int_postnl">Pakketten</small></span>
     </div>
   </div>
 </section>
@@ -639,34 +876,47 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
   </div>
 </section>
 
+<section id="verhaal">
+  <div class="wrap">
+    <div class="verhaal op">
+      <div class="foto">S</div>
+      <div>
+        <div class="q" data-t="vh_q">"Ik werd zelf gek van een kassasysteem, een boekhoudpakket en drie schriften naast elkaar. Daarom is Storvo één systeem geworden, gemaakt voor hoe een reparatiewinkel echt werkt."</div>
+        <div class="wie" data-t="vh_wie">Gebouwd door een winkelier, samen met winkeliers. Korte teksten, één ding per scherm, en werk dat vanzelf bewaard blijft, ook fijn als je met ADHD of dyslexie werkt.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="prijzen">
   <div class="wrap">
     <div class="kop op">
       <div class="tag" data-t="p_tag">Prijzen</div>
       <h2 data-t="p_h2">Eerlijke prijs, geen verrassingen</h2>
-      <p data-t="p_p">Alle bedragen per maand, exclusief btw. Eerst 30 dagen gratis proberen, daarna maandelijks opzegbaar.</p>
+      <p data-t="p_p">Alle bedragen per maand, exclusief btw. Eerst 30 dagen gratis proberen, daarna maandelijks opzegbaar. De refurbish-werkbank is een losse module die je erbij kunt zetten.</p>
     </div>
     <div class="prijzen">
       <div class="p op">
         <div class="pn">Start</div><div class="pd" data-t="p1_d">Voor de eenmanszaak</div>
         <div class="pp">€ 19,95<span data-t="p_mnd">/mnd</span></div>
-        <ul data-t="p1_ul"><li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li></ul>
+        <ul data-t="p1_ul"><li>Kassa, voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Facturen &amp; offertes</li><li>Tot 2 medewerkers</li></ul>
         <a href="/proberen" class="btn lijn" data-t="p_cta">30 dagen gratis proberen</a>
       </div>
       <div class="p pop op">
         <div class="badge" data-t="p_badge">Meest gekozen</div>
         <div class="pn">Pro</div><div class="pd" data-t="p2_d">Voor de winkel die groeit</div>
         <div class="pp">€ 44,95<span data-t="p_mnd">/mnd</span></div>
-        <ul data-t="p2_ul"><li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li></ul>
+        <ul data-t="p2_ul"><li>Alles van Start</li><li>Webshop-koppeling met Shopify</li><li>Automatische WhatsApp &amp; mail</li><li>Boekhouding &amp; btw-rapport</li><li>Eigen huisstijl · tot 8 medewerkers</li></ul>
         <a href="/proberen" class="btn" data-t="p_cta">30 dagen gratis proberen</a>
       </div>
       <div class="p op">
         <div class="pn">Enterprise</div><div class="pd" data-t="p3_d">Voor meerdere vestigingen</div>
         <div class="pp">€ 79,95<span data-t="p_mnd">/mnd</span></div>
-        <ul data-t="p3_ul"><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>Hulp bij het overzetten van je gegevens</li></ul>
+        <ul data-t="p3_ul"><li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Rooster &amp; personeel</li><li>Klantportaal &amp; partner-dashboard</li><li>Voorrang bij support &amp; hulp bij overzetten</li></ul>
         <a href="/proberen" class="btn lijn" data-t="p_cta">30 dagen gratis proberen</a>
       </div>
     </div>
+    <p class="op" style="text-align:center; margin-top:28px; font-size:14.5px; color:var(--muted)" data-t="p_module">De refurbish-werkbank is een losse module bovenop elk pakket. Vraag ernaar bij je proefperiode.</p>
   </div>
 </section>
 
@@ -679,9 +929,12 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
     <div class="faq">
       <details class="v op"><summary data-t="q1_s">Kan ik mijn huidige voorraad overzetten?</summary><p data-t="q1_p">Ja. Je kunt losse producten aanmaken, maar sneller gaat het met "snel toevoegen": kies een producttype, scan per telefoonmodel de barcode en het staat erin. Honderden hoesjes of screenprotectors heb je zo ingevoerd.</p></details>
       <details class="v op"><summary data-t="q2_s">Werkt het met mijn barcodescanner?</summary><p data-t="q2_p">Vrijwel elke USB- of bluetoothscanner werkt, omdat die zich gedraagt als toetsenbord. Je hoeft niets te installeren: scan gewoon, waar je ook bent in de app.</p></details>
-      <details class="v op"><summary data-t="q3_s">Hoe krijgt mijn klant de statusberichten?</summary><p data-t="q3_p">Via e-mail of sms, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.</p></details>
+      <details class="v op"><summary data-t="q3_s">Hoe krijgt mijn klant de statusberichten?</summary><p data-t="q3_p">Via WhatsApp of e-mail, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.</p></details>
       <details class="v op"><summary data-t="q4_s">Kan ik mijn eigen huisstijl gebruiken?</summary><p data-t="q4_p">Ja, vanaf het Pro-pakket. Logo uploaden, kleuren instellen met hexcode, en zowel de app als de klantpagina nemen dat over.</p></details>
       <details class="v op"><summary data-t="q5_s">Wat gebeurt er met mijn gegevens als ik stop?</summary><p data-t="q5_p">Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.</p></details>
+      <details class="v op"><summary data-t="q7_s">Kan ik ook laptops opkopen en refurbishen?</summary><p data-t="q7_p">Ja, met de refurbish-werkbank. Je voegt een opgekocht toestel toe, loopt het controle-stappenpad door, meet de accu, doet upgrades uit je voorraad, maakt foto's en laat de AI de advertentie schrijven. Daarna zet je het met één knop op je webshop of in de winkel.</p></details>
+      <details class="v op"><summary data-t="q8_s">Werkt het samen met mijn webshop?</summary><p data-t="q8_p">Met Shopify, ja. Je koppelt hem in een paar minuten via de instellingen. Een toestel zet je met één knop online, en balie en webshop delen dezelfde voorraad, dus je verkoopt nooit iets dubbel.</p></details>
+      <details class="v op"><summary data-t="q9_s">Doet Storvo ook mijn boekhouding?</summary><p data-t="q9_p">Het neemt het grootste deel uit handen: facturen en offertes maken, inkopen inlezen met de AI-factuurlezer, koppelen met Moneybird, en een rapport met je btw per kwartaal en een IB-indicatie. Je accountant houd je, maar je bent er veel minder tijd aan kwijt.</p></details>
       <details class="v op"><summary data-t="q6_s">Zitten er kosten aan het opstarten?</summary><p data-t="q6_p">Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.</p></details>
     </div>
   </div>
@@ -704,12 +957,15 @@ a:focus-visible,button:focus-visible{outline:3px solid rgba(11,91,82,.35); outli
       <div class="fmerk">
         <div class="merk"><span class="mk" style="width:32px;height:32px"><svg viewBox="0 0 400 400" aria-hidden="true" style="width:32px;height:32px"><rect x="28" y="28" width="156" height="156" rx="40" fill="#0B5B52"/><rect x="216" y="28" width="156" height="156" rx="40" fill="#6A9C93"/><rect x="28" y="216" width="156" height="156" rx="40" fill="#A7C3BD"/><path d="M244 304 L284 344 L360 244" fill="none" stroke="#0B5B52" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="wm" style="font-size:21px">storvo</span></div>
         <div class="tag" data-t="tagline">Alles geregeld.</div>
-        <p data-t="f_over">Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.</p>
+        <p data-t="f_over">Alles-in-één software voor telefoon- en laptopreparatiewinkels. Balie, reparaties, refurbish, webshop en boekhouding in één systeem.</p>
       </div>
       <div>
         <h4 data-t="f_k_product">Product</h4>
         <ul>
           <li><a href="#functies" data-t="nav_functies">Functies</a></li>
+          <li><a href="#werkbank" data-t="nav_werkbank">Werkbank</a></li>
+          <li><a href="#webshop" data-t="nav_webshop">Webshop</a></li>
+          <li><a href="#boekhouding" data-t="nav_boekhouding">Boekhouding</a></li>
           <li><a href="#prijzen" data-t="nav_prijzen">Prijzen</a></li>
           <li><a href="#vragen" data-t="f_vragen">Veelgestelde vragen</a></li>
           <li><a href="/app/" data-t="f_inloggen">Inloggen</a></li>
@@ -998,12 +1254,12 @@ document.querySelectorAll('.functies, .prijzen, .stappen, .vragenlijst').forEach
 /* ---------- taal NL / EN ---------- */
 const VERTALINGEN={
 nl:{
-  title:'Storvo · Voorraad &amp; reparaties voor telefoonwinkels',
-  nav_functies:'Functies', nav_werkwijze:'Hoe het werkt', nav_prijzen:'Prijzen', nav_vragen:'Vragen',
+  title:'Storvo · Alles-in-één software voor reparatie- en refurbishwinkels',
+  nav_functies:'Functies', nav_werkbank:'Werkbank', nav_webshop:'Webshop', nav_boekhouding:'Boekhouding', nav_werkwijze:'Hoe het werkt', nav_prijzen:'Prijzen', nav_vragen:'Vragen',
   nav_login:'Inloggen', nav_try:'Gratis proberen',
-  hero_pill:'<b>Nieuw</b> Je klant volgt de reparatie live mee',
-  hero_h1:'Je hele winkel in <span class="grad">één overzicht</span>',
-  hero_lead:'Voorraad scannen, reparaties volgen, klanten op de hoogte houden en precies zien wat je verdient. Gemaakt voor telefoonwinkels, samen met telefoonwinkels.',
+  hero_pill:'<b>Nieuw</b> Een complete refurbish-werkbank, van inkoop tot webshop',
+  hero_h1:'Je hele winkel in <span class="grad">één systeem</span>',
+  hero_lead:'Balie, reparaties, refurbish-werkbank, webshop én boekhouding in één app. Gemaakt voor telefoon- en laptopreparatiewinkels, samen met de winkels zelf. In het Nederlands, zonder gedoe.',
   hero_cta1:'30 dagen gratis proberen', hero_cta2:'Bekijk hoe het werkt',
   hero_note:'Geen creditcard nodig. Binnen tien minuten ingericht.',
   mock_actie:'Nieuwe reparatie',
@@ -1024,8 +1280,50 @@ nl:{
   demo_berichtuit:'Bericht naar de klant verstuurd',
   mock_dash:'Vandaag', mock_scan:'Voorraad', mock_diensten:'Diensten', mock_rep:'Reparaties', mock_prod:'Rapporten', mock_best:'Bestellingen',
   mock_omzet:'Omzet', mock_winst:'Marge deze week', mock_rep2:'Reparaties open', mock_tebestellen:'Lage voorraad', mock_grafiek:'Omzet deze week',
-  f_tag:'Functies', f_h2:'Alles wat je nodig hebt, niets wat je afleidt',
-  f_p:'Eén systeem voor je voorraad, je reparaties en je cijfers, in plaats van drie schriften en een spreadsheet.',
+  f_tag:'Alles-in-één', f_h2:'Je hele winkel, in acht onderdelen',
+  f_p:'Van de balie tot de werkbank, van je webshop tot je boekhouding. Eén systeem in het Nederlands, in plaats van een kassasysteem, een boekhoudpakket en drie schriften ernaast.',
+  pil1_h:'Aan de balie', pil1_p:'Kassa die aanvoelt als een kassa: scannen of zoeken, afrekenen met pin, contant of allebei, btw en korting automatisch, en een nette bon.',
+  pil2_h:'Reparaties', pil2_p:'Aannemen met een eigen nummer, een pijplijn-bord met één volgende stap per kaart, een richtprijs uit de database en een klantpagina die live meeloopt.',
+  pil3_h:'Voorraad &amp; bestellen', pil3_p:'Winkel- en magazijnvoorraad, scannen met je telefoon, een bestellijst die zichzelf vult onder het minimum en de leverancierscatalogus die je formulier invult.',
+  pil4_h:'Refurbish-werkbank', pil4_p:'De hele lijn voor opgekochte laptops en telefoons: controle-stappenpad, accutest, upgrade uit voorraad, foto\'s, advertentie en marge per partij.', pil4_m:'Bekijk de werkbank',
+  pil5_h:'Webshop &amp; online', pil5_p:'Koppel je Shopify en zet een toestel met één knop online. Balie en webshop delen één voorraad, dus je verkoopt nooit iets dubbel. Met inruil en groothandel-bundels.', pil5_m:'Bekijk de webshop-koppeling',
+  pil6_h:'Cijfers &amp; boekhouding', pil6_p:'Facturen en offertes, inkopen met een AI-factuurlezer, koppeling met Moneybird, en een rapport met btw per kwartaal, een IB-indicatie en je buffers.', pil6_m:'Bekijk de boekhouding',
+  pil7_h:'Team &amp; personeel', pil7_p:'Iedereen een eigen pincode en rechten per pagina, uren en loon, een rooster met beschikbaarheid en automatische herinneringen. Alles staat op naam.',
+  pil8_h:'Klant &amp; communicatie', pil8_p:'Automatische WhatsApp en mail bij elke stap, een mailbox met AI-sortering, en een klantportaal voor bedrijven waarvan je IT opkoopt.',
+  wb_tag:'Refurbish-werkbank', wb_h2:'De enige met een complete werkbank voor refurbished',
+  wb_p:'Koop je laptops en telefoons op om weer te verkopen? Storvo loopt met je mee van doos tot webshop, zodat elk toestel dezelfde controle en dezelfde nette advertentie krijgt.',
+  wb_l1:'Vast controle-stappenpad<span>Start, hardware, upgrade, Windows, specs en staat, met een aparte checklist per soort toestel.</span>',
+  wb_l2:'Accutest en zelftest op het toestel zelf<span>Plak één commando en de accu, het toetsenbord, het scherm en de webcam worden gemeten.</span>',
+  wb_l3:'Foto\'s en advertentie in jouw stijl<span>Zes-foto\'s-flow, scherm rechttrekken, een strakke achtergrond en een advertentietekst die de AI schrijft.</span>',
+  wb_l4:'Marge per partij<span>Zie per ingekochte batch je investering, je omzet en je winst. Losse toestellen of hele bundels.</span>',
+  wb_pv_sub:'Controle · stap 5 van 6', wb_s1:'Start &amp; herkenning', wb_s2:'Hardware getest', wb_s3:'Upgrade: 16GB uit voorraad', wb_s4:'Windows opnieuw gezet', wb_s5:'Specs &amp; accu (94%)', wb_s6:'Staat bepalen → online',
+  ws_tag:'Webshop &amp; online', ws_h2:'Balie en webshop delen één voorraad',
+  ws_p:'Koppel je eigen Shopify in een paar minuten. Zet een toestel met één knop online, met foto\'s, tekst en voorraad erbij. Verkoop je aan de balie, dan gaat het meteen offline. Nooit meer twee klanten voor hetzelfde toestel.',
+  ws_l1:'Eén knop naar je webshop<span>Foto\'s, advertentietekst en voorraad gaan in één keer mee naar Shopify.</span>',
+  ws_l2:'Nooit dubbel verkocht<span>Verkocht is binnen een minuut overal weg, aan de balie én online.</span>',
+  ws_l3:'Inruil via je webshop<span>De klant biedt zijn oude toestel aan en krijgt meteen een eerlijk bod.</span>',
+  ws_l4:'Groothandel-bundels<span>Verkoop een hele partij laptops als bundel op een aparte groothandels-shop.</span>',
+  ws_pv_t:'iPhone 13 · 128GB', ws_pv_sub:'Eén voorraad, twee plekken', ws_c1:'In de winkel', ws_c2:'Op je webshop', ws_r1:'Voorraad', ws_r2:'Verkoopprijs', ws_r3:'Verkocht aan de balie', ws_r3v:'→ direct offline',
+  bh_tag:'Cijfers &amp; boekhouding', bh_h2:'Je boekhouding loopt gewoon mee',
+  bh_p:'Facturen en offertes maak je in Storvo zelf. Een inkoopfactuur fotografeer je en de AI vult bedrag, btw en leverancier in. En je rapport laat zien wat je opzij moet zetten voor de Belastingdienst.',
+  bh_l1:'AI-factuurlezer<span>Upload een factuur, de AI leest bedrag, btw, leverancier en datum en zet hem klaar.</span>',
+  bh_l2:'Koppeling met Moneybird<span>Zet een inkoop met één druk als inkoopfactuur in je boekhouding, met pdf.</span>',
+  bh_l3:'Btw per kwartaal en een IB-indicatie<span>Inclusief MKB-vrijstelling, zelfstandigenaftrek en een buffer-advies.</span>',
+  bh_l4:'Facturen &amp; offertes<span>Maak ze in je eigen huisstijl en verstuur ze direct.</span>',
+  bh_pv_t:'Rapport', bh_pv_sub:'Derde kwartaal', bh_r1:'Omzet', bh_r2:'Btw af te dragen', bh_r3:'Opzij voor de IB', bh_r4:'Buffer op schema', bh_r4v:'Ja',
+  ai_label:'AI die meewerkt', ai_h2:'De computer doet het typewerk',
+  ai_p:'Op de plekken waar je normaal het langst zit te tikken, doet Storvo het voorwerk. Jij kijkt het na en klikt akkoord.',
+  ai1_h:'Advertenties schrijven', ai1_p:'Titel en tekst voor een refurbished toestel, per kanaal de juiste toon.',
+  ai2_h:'Facturen lezen', ai2_p:'Bedrag, btw, leverancier en datum uit een foto of pdf gehaald.',
+  ai3_h:'Mail sorteren', ai3_p:'Je postvak deelt zichzelf op in klantvragen, bestellingen en spam.',
+  ai4_h:'Foto\'s netmaken', ai4_p:'Scherm rechttrekken en een strakke achtergrond op elke productfoto.',
+  ai5_h:'Prijs adviseren', ai5_p:'Een richtprijs uit je eigen historie plus de marktschatting.',
+  ai6_h:'Hulp-assistent', ai6_p:'Een bot rechtsonder die je naar de juiste pagina brengt en je vraag beantwoordt.',
+  int_tag:'Koppelingen', int_h2:'Werkt samen met wat je al gebruikt',
+  int_p:'Storvo staat niet op zichzelf. Je webshop, je pin, je boekhouding en je berichten aan de klant zijn allemaal gekoppeld.',
+  int_shopify:'Webshop', int_clover:'Pin &amp; kassa', int_moneybird:'Boekhouding', int_whatsapp:'Klantberichten', int_stripe:'Betalen', int_postnl:'Pakketten',
+  vh_q:'"Ik werd zelf gek van een kassasysteem, een boekhoudpakket en drie schriften naast elkaar. Daarom is Storvo één systeem geworden, gemaakt voor hoe een reparatiewinkel echt werkt."',
+  vh_wie:'Gebouwd door een winkelier, samen met winkeliers. Korte teksten, één ding per scherm, en werk dat vanzelf bewaard blijft, ook fijn als je met ADHD of dyslexie werkt.',
   f1_h:'Scannen dat gewoon werkt', f1_p:'Scan waar je ook bent in de app. Er verschijnt meteen een venster om in of uit te boeken. Staat een barcode nog niet in het systeem, dan maak je het product direct aan.',
   f2_h:'Reparaties van begin tot eind', f2_p:'Van aanmelden tot ophalen, met een eigen reparatienummer, onderdelen, winstberekening en een tijdlijn die je klant live kan volgen.',
   f3_h:'Klanten automatisch bijpraten', f3_p:'Bij elke stap gaat er een bericht uit. Onderdelen besteld, reparatie gestart, klaar om op te halen. Dat scheelt telefoontjes.',
@@ -1043,22 +1341,26 @@ nl:{
   p_p:'Alle bedragen per maand, exclusief btw. Eerst 30 dagen gratis proberen, daarna maandelijks opzegbaar.',
   p_mnd:'/mnd', p_cta:'30 dagen gratis proberen', p_badge:'Meest gekozen',
   p1_d:'Voor de eenmanszaak',
-  p1_ul:'<li>Voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Tot 2 medewerkers</li><li>1 vestiging</li>',
+  p1_ul:'<li>Kassa, voorraad &amp; scannen</li><li>Reparaties met klantpagina</li><li>Bestellijst en leveringen</li><li>Facturen &amp; offertes</li><li>Tot 2 medewerkers</li>',
   p2_d:'Voor de winkel die groeit',
-  p2_ul:'<li>Alles van Start</li><li>Dashboard met winst per categorie</li><li>Automatische klantberichten</li><li>Eigen logo en kleuren</li><li>Tot 8 medewerkers</li>',
+  p2_ul:'<li>Alles van Start</li><li>Webshop-koppeling met Shopify</li><li>Automatische WhatsApp &amp; mail</li><li>Boekhouding &amp; btw-rapport</li><li>Eigen huisstijl · tot 8 medewerkers</li>',
   p3_d:'Voor meerdere vestigingen',
-  p3_ul:'<li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Cijfers per vestiging</li><li>Voorrang bij support</li><li>Hulp bij het overzetten van je gegevens</li>',
+  p3_ul:'<li>Alles van Pro</li><li>Onbeperkt vestigingen en teams</li><li>Rooster &amp; personeel</li><li>Klantportaal &amp; partner-dashboard</li><li>Voorrang bij support &amp; hulp bij overzetten</li>',
+  p_module:'De refurbish-werkbank is een losse module bovenop elk pakket. Vraag ernaar bij je proefperiode.',
   q_tag:'Vragen', q_h2:'Goed om te weten',
   q1_s:'Kan ik mijn huidige voorraad overzetten?', q1_p:'Ja. Je kunt losse producten aanmaken, maar sneller gaat het met "snel toevoegen": kies een producttype, scan per telefoonmodel de barcode en het staat erin. Honderden hoesjes of screenprotectors heb je zo ingevoerd.',
   q2_s:'Werkt het met mijn barcodescanner?', q2_p:'Vrijwel elke USB- of bluetoothscanner werkt, omdat die zich gedraagt als toetsenbord. Je hoeft niets te installeren: scan gewoon, waar je ook bent in de app.',
-  q3_s:'Hoe krijgt mijn klant de statusberichten?', q3_p:'Via e-mail of sms, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.',
+  q3_s:'Hoe krijgt mijn klant de statusberichten?', q3_p:'Via WhatsApp of e-mail, met een link naar een pagina in jouw huisstijl waarop de klant de voortgang live volgt. Je bepaalt zelf per klant of er bericht wordt gestuurd.',
   q4_s:'Kan ik mijn eigen huisstijl gebruiken?', q4_p:'Ja, vanaf het Pro-pakket. Logo uploaden, kleuren instellen met hexcode, en zowel de app als de klantpagina nemen dat over.',
   q5_s:'Wat gebeurt er met mijn gegevens als ik stop?', q5_p:'Je kunt op elk moment een volledige back-up downloaden. Zeg je op, dan blijft je data nog 30 dagen beschikbaar zodat je alles kunt exporteren.',
   q6_s:'Zitten er kosten aan het opstarten?', q6_p:'Nee. Geen opstartkosten en geen jaarcontract. Je betaalt per maand en zegt op wanneer je wilt.',
+  q7_s:'Kan ik ook laptops opkopen en refurbishen?', q7_p:'Ja, met de refurbish-werkbank. Je voegt een opgekocht toestel toe, loopt het controle-stappenpad door, meet de accu, doet upgrades uit je voorraad, maakt foto\'s en laat de AI de advertentie schrijven. Daarna zet je het met één knop op je webshop of in de winkel.',
+  q8_s:'Werkt het samen met mijn webshop?', q8_p:'Met Shopify, ja. Je koppelt hem in een paar minuten via de instellingen. Een toestel zet je met één knop online, en balie en webshop delen dezelfde voorraad, dus je verkoopt nooit iets dubbel.',
+  q9_s:'Doet Storvo ook mijn boekhouding?', q9_p:'Het neemt het grootste deel uit handen: facturen en offertes maken, inkopen inlezen met de AI-factuurlezer, koppelen met Moneybird, en een rapport met je btw per kwartaal en een IB-indicatie. Je accountant houd je, maar je bent er veel minder tijd aan kwijt.',
   cta_label:'Alles geregeld', tagline:'Alles geregeld.',
   cta_h2:'Klaar om je winkel rustiger te maken?', cta_p:'Probeer het 30 dagen gratis. Bevalt het niet, dan stop je zonder gedoe.',
   cta_btn:'Start je proefperiode',
-  f_over:'Voorraad, reparaties en klantberichten voor telefoonwinkels. Eén systeem, geen gedoe.',
+  f_over:'Alles-in-één software voor telefoon- en laptopreparatiewinkels. Balie, reparaties, refurbish, webshop en boekhouding in één systeem.',
   f_k_product:'Product', f_k_support:'Support', f_k_juridisch:'Juridisch',
   f_vragen:'Veelgestelde vragen', f_inloggen:'Inloggen', f_contact:'Contact',
   f_proef:'Proefperiode aanvragen', f_voorwaarden:'Algemene voorwaarden',
@@ -1066,12 +1368,12 @@ nl:{
   f_adres:'Ericssonstraat 2a, 5121 ML Rijen (geen bezoekadres)'
 },
 en:{
-  title:'Storvo · Inventory &amp; repairs for phone shops',
-  nav_functies:'Features', nav_werkwijze:'How it works', nav_prijzen:'Pricing', nav_vragen:'FAQ',
+  title:'Storvo · All-in-one software for repair and refurbish shops',
+  nav_functies:'Features', nav_werkbank:'Workbench', nav_webshop:'Web shop', nav_boekhouding:'Bookkeeping', nav_werkwijze:'How it works', nav_prijzen:'Pricing', nav_vragen:'FAQ',
   nav_login:'Log in', nav_try:'Try for free',
-  hero_pill:'<b>New</b> Your customer follows the repair live',
-  hero_h1:'Your whole shop in <span class="grad">one overview</span>',
-  hero_lead:'Scan inventory, track repairs, keep customers informed and see exactly what you earn. Built for phone shops, together with phone shops.',
+  hero_pill:'<b>New</b> A complete refurbish workbench, from buy-in to web shop',
+  hero_h1:'Your whole shop in <span class="grad">one system</span>',
+  hero_lead:'Counter, repairs, refurbish workbench, web shop and bookkeeping in one app. Built for phone and laptop repair shops, together with the shops themselves. No hassle.',
   hero_cta1:'Try free for 30 days', hero_cta2:'See how it works',
   hero_note:'No credit card required. Set up in ten minutes.',
   mock_actie:'New repair',
@@ -1092,8 +1394,50 @@ en:{
   demo_berichtuit:'Message sent to the customer',
   mock_dash:'Today', mock_scan:'Stock', mock_diensten:'Services', mock_rep:'Repairs', mock_prod:'Reports', mock_best:'Orders',
   mock_omzet:'Revenue', mock_winst:'Margin this week', mock_rep2:'Repairs open', mock_tebestellen:'Low stock', mock_grafiek:'Revenue this week',
-  f_tag:'Features', f_h2:'Everything you need, nothing that distracts',
-  f_p:'One system for your inventory, repairs and numbers, instead of three notebooks and a spreadsheet.',
+  f_tag:'All-in-one', f_h2:'Your whole shop, in eight parts',
+  f_p:'From the counter to the workbench, from your web shop to your bookkeeping. One system, instead of a point-of-sale, an accounting package and three notebooks on the side.',
+  pil1_h:'At the counter', pil1_p:'A till that feels like a till: scan or search, check out by card, cash or both, VAT and discounts automatic, and a clean receipt.',
+  pil2_h:'Repairs', pil2_p:'Check in with its own number, a pipeline board with one next step per card, a suggested price from the database and a customer page that follows along live.',
+  pil3_h:'Stock &amp; ordering', pil3_p:'Shop and warehouse stock, scanning with your phone, an order list that fills itself below the minimum, and the supplier catalogue that fills in your form.',
+  pil4_h:'Refurbish workbench', pil4_p:'The full line for bought-in laptops and phones: inspection flow, battery test, upgrades from stock, photos, listing and margin per batch.', pil4_m:'See the workbench',
+  pil5_h:'Web shop &amp; online', pil5_p:'Connect your Shopify and put a device online with one button. Counter and web shop share one stock, so you never sell anything twice. With trade-in and wholesale bundles.', pil5_m:'See the web shop link',
+  pil6_h:'Numbers &amp; bookkeeping', pil6_p:'Invoices and quotes, purchases with an AI invoice reader, a Moneybird link, and a report with VAT per quarter, an income-tax estimate and your buffers.', pil6_m:'See the bookkeeping',
+  pil7_h:'Team &amp; staff', pil7_p:'Everyone their own PIN and permissions per page, hours and wages, a schedule with availability and automatic reminders. Everything is on the record.',
+  pil8_h:'Customer &amp; comms', pil8_p:'Automatic WhatsApp and email at every step, an inbox with AI sorting, and a customer portal for businesses whose IT you buy up.',
+  wb_tag:'Refurbish workbench', wb_h2:'The only one with a complete workbench for refurbished',
+  wb_p:'Buying up laptops and phones to sell on? Storvo walks with you from box to web shop, so every device gets the same inspection and the same clean listing.',
+  wb_l1:'A fixed inspection flow<span>Start, hardware, upgrade, Windows, specs and condition, with a separate checklist per device type.</span>',
+  wb_l2:'Battery and self-test on the device itself<span>Paste one command and the battery, keyboard, screen and webcam are measured.</span>',
+  wb_l3:'Photos and listing in your style<span>A six-photo flow, screen straightening, a clean background and a listing the AI writes.</span>',
+  wb_l4:'Margin per batch<span>See your investment, revenue and profit per bought-in batch. Single devices or whole bundles.</span>',
+  wb_pv_sub:'Inspection · step 5 of 6', wb_s1:'Start &amp; recognition', wb_s2:'Hardware tested', wb_s3:'Upgrade: 16GB from stock', wb_s4:'Windows reinstalled', wb_s5:'Specs &amp; battery (94%)', wb_s6:'Set condition → online',
+  ws_tag:'Web shop &amp; online', ws_h2:'Counter and web shop share one stock',
+  ws_p:'Connect your own Shopify in a few minutes. Put a device online with one button, with photos, text and stock. Sell it at the counter and it goes offline right away. Never two customers for the same device again.',
+  ws_l1:'One button to your web shop<span>Photos, listing text and stock all go to Shopify at once.</span>',
+  ws_l2:'Never sold twice<span>Sold is gone everywhere within a minute, at the counter and online.</span>',
+  ws_l3:'Trade-in via your web shop<span>The customer offers their old device and gets a fair bid right away.</span>',
+  ws_l4:'Wholesale bundles<span>Sell a whole batch of laptops as a bundle on a separate wholesale shop.</span>',
+  ws_pv_t:'iPhone 13 · 128GB', ws_pv_sub:'One stock, two places', ws_c1:'In the shop', ws_c2:'On your web shop', ws_r1:'Stock', ws_r2:'Sale price', ws_r3:'Sold at the counter', ws_r3v:'→ offline instantly',
+  bh_tag:'Numbers &amp; bookkeeping', bh_h2:'Your bookkeeping just keeps up',
+  bh_p:'You make invoices and quotes in Storvo itself. Photograph a purchase invoice and the AI fills in the amount, VAT and supplier. And your report shows what to set aside for the tax office.',
+  bh_l1:'AI invoice reader<span>Upload an invoice and the AI reads the amount, VAT, supplier and date and sets it up.</span>',
+  bh_l2:'Moneybird link<span>Push a purchase into your bookkeeping as a purchase invoice with one click, with pdf.</span>',
+  bh_l3:'VAT per quarter and an income-tax estimate<span>Including allowances, self-employed deduction and a buffer suggestion.</span>',
+  bh_l4:'Invoices &amp; quotes<span>Make them in your own branding and send them straight away.</span>',
+  bh_pv_t:'Report', bh_pv_sub:'Third quarter', bh_r1:'Revenue', bh_r2:'VAT to pay', bh_r3:'Set aside for income tax', bh_r4:'Buffer on track', bh_r4v:'Yes',
+  ai_label:'AI that pitches in', ai_h2:'The computer does the typing',
+  ai_p:'In the places where you normally spend the longest typing, Storvo does the groundwork. You check it and click approve.',
+  ai1_h:'Writing listings', ai1_p:'Title and text for a refurbished device, the right tone per channel.',
+  ai2_h:'Reading invoices', ai2_p:'Amount, VAT, supplier and date pulled from a photo or pdf.',
+  ai3_h:'Sorting mail', ai3_p:'Your inbox splits itself into customer questions, orders and spam.',
+  ai4_h:'Cleaning up photos', ai4_p:'Screen straightening and a clean background on every product photo.',
+  ai5_h:'Suggesting a price', ai5_p:'A guide price from your own history plus the market estimate.',
+  ai6_h:'Help assistant', ai6_p:'A bot in the corner that takes you to the right page and answers your question.',
+  int_tag:'Integrations', int_h2:'Works with what you already use',
+  int_p:'Storvo does not stand alone. Your web shop, your card terminal, your bookkeeping and your customer messages are all connected.',
+  int_shopify:'Web shop', int_clover:'Card &amp; till', int_moneybird:'Bookkeeping', int_whatsapp:'Customer messages', int_stripe:'Payments', int_postnl:'Parcels',
+  vh_q:'"I went mad myself juggling a point-of-sale, an accounting package and three notebooks. That is why Storvo became one system, built for how a repair shop really works."',
+  vh_wie:'Built by a shopkeeper, together with shopkeepers. Short text, one thing per screen, and work that saves itself, which also helps if you work with ADHD or dyslexia.',
   f1_h:'Scanning that just works', f1_p:'Scan from anywhere in the app. A window pops up right away to book stock in or out. If a barcode is not in the system yet, you create the product on the spot.',
   f2_h:'Repairs from start to finish', f2_p:'From check-in to pickup, with its own repair number, parts, profit calculation and a timeline your customer can follow live.',
   f3_h:'Customers updated automatically', f3_p:'A message goes out at every step. Parts ordered, repair started, ready for pickup. That saves phone calls.',
@@ -1111,22 +1455,26 @@ en:{
   p_p:'All amounts per month, excluding VAT. Try free for 30 days first, then cancel monthly.',
   p_mnd:'/mo', p_cta:'Try free for 30 days', p_badge:'Most popular',
   p1_d:'For the one-person shop',
-  p1_ul:'<li>Inventory &amp; scanning</li><li>Repairs with customer page</li><li>Order list and deliveries</li><li>Up to 2 employees</li><li>1 location</li>',
+  p1_ul:'<li>Till, stock &amp; scanning</li><li>Repairs with customer page</li><li>Order list and deliveries</li><li>Invoices &amp; quotes</li><li>Up to 2 employees</li>',
   p2_d:'For the growing shop',
-  p2_ul:'<li>Everything in Start</li><li>Dashboard with profit per category</li><li>Automatic customer messages</li><li>Your own logo and colours</li><li>Up to 8 employees</li>',
+  p2_ul:'<li>Everything in Start</li><li>Web shop link with Shopify</li><li>Automatic WhatsApp &amp; email</li><li>Bookkeeping &amp; VAT report</li><li>Your own branding · up to 8 employees</li>',
   p3_d:'For multiple locations',
-  p3_ul:'<li>Everything in Pro</li><li>Unlimited locations and teams</li><li>Numbers per location</li><li>Priority support</li><li>Help migrating your data</li>',
+  p3_ul:'<li>Everything in Pro</li><li>Unlimited locations and teams</li><li>Schedule &amp; staff</li><li>Customer portal &amp; partner dashboard</li><li>Priority support &amp; migration help</li>',
+  p_module:'The refurbish workbench is a separate module on top of any plan. Just ask about it during your trial.',
   q_tag:'FAQ', q_h2:'Good to know',
   q1_s:'Can I transfer my current inventory?', q1_p:'Yes. You can create individual products, but "quick add"is faster: pick a product type, scan the barcode per phone model and it is in. Hundreds of cases or screen protectors are entered in no time.',
   q2_s:'Does it work with my barcode scanner?', q2_p:'Almost every USB or Bluetooth scanner works, because it behaves like a keyboard. Nothing to install: just scan, wherever you are in the app.',
-  q3_s:'How does my customer get status updates?', q3_p:'By email or text, with a link to a page in your branding where the customer follows the progress live. You decide per customer whether messages are sent.',
+  q3_s:'How does my customer get status updates?', q3_p:'By WhatsApp or email, with a link to a page in your branding where the customer follows the progress live. You decide per customer whether messages are sent.',
   q4_s:'Can I use my own branding?', q4_p:'Yes, from the Pro plan. Upload your logo, set colours with a hex code, and both the app and the customer page take it over.',
   q5_s:'What happens to my data if I stop?', q5_p:'You can download a full backup at any time. If you cancel, your data stays available for 30 days so you can export everything.',
   q6_s:'Are there any setup costs?', q6_p:'No. No setup costs and no annual contract. You pay per month and cancel whenever you want.',
+  q7_s:'Can I also buy up and refurbish laptops?', q7_p:'Yes, with the refurbish workbench. You add a bought-in device, walk through the inspection flow, measure the battery, do upgrades from your stock, take photos and let the AI write the listing. Then you put it on your web shop or in the shop with one button.',
+  q8_s:'Does it work with my web shop?', q8_p:'With Shopify, yes. You connect it in a few minutes via the settings. You put a device online with one button, and counter and web shop share the same stock, so you never sell anything twice.',
+  q9_s:'Does Storvo do my bookkeeping too?', q9_p:'It takes most of it off your hands: making invoices and quotes, reading purchases with the AI invoice reader, linking to Moneybird, and a report with your VAT per quarter and an income-tax estimate. You keep your accountant, but spend far less time on it.',
   cta_label:'All taken care of', tagline:'All taken care of.',
   cta_h2:'Ready to make your shop calmer?', cta_p:'Try it free for 30 days. Not happy? Then you stop without any hassle.',
   cta_btn:'Start your free trial',
-  f_over:'Inventory, repairs and customer updates for phone shops. One system, no hassle.',
+  f_over:'All-in-one software for phone and laptop repair shops. Counter, repairs, refurbish, web shop and bookkeeping in one system.',
   f_k_product:'Product', f_k_support:'Support', f_k_juridisch:'Legal',
   f_vragen:'Frequently asked questions', f_inloggen:'Log in', f_contact:'Contact',
   f_proef:'Request a trial', f_voorwaarden:'Terms and conditions',
