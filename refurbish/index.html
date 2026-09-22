@@ -2786,7 +2786,7 @@ function ctrVraag(vraag, opties, sleutel){
       oninput="ctrNotitie(${JSON.stringify(k).replace(/"/g,'&quot;')}, this.value)">`:''}
   </div>`;
 }
-function ctrNotitie(sleutel, tekst){ ctr.notities[sleutel]=String(tekst||'').slice(0,120); }
+function ctrNotitie(sleutel, tekst){ ctr.notities[sleutel]=String(tekst||'').slice(0,120); sessieBewaar(); }
 function kleurVan(opt){
   if(['Ja','Goed','Als nieuw','Gaaf','Stevig','Vrij','Schoon'].includes(opt)) return 'goed';
   if(['Ontbreekt','Onbekend',NA_WINDOWS].includes(opt)) return 'mist';
@@ -3619,6 +3619,7 @@ function ctrSpecKies(sleutel, waarde){
    springt de knop eronder aan en uit terwijl je nog bezig bent. */
 function ctrSpecTyp(sleutel, waarde){
   ctr.specs[sleutel]=String(waarde||'');
+  sessieBewaar();   /* meteen onthouden, zodat een spec niet mist bij sluiten/herladen */
   const vak=document.getElementById('ctrPagina');
   if(!vak) return;
   prof().specVelden.forEach(v=>{
@@ -4162,6 +4163,15 @@ async function ctrSlopen(knop){
   const goed=Object.keys(ctr.delen).filter(k=>ctr.delen[k]);
   ctrVeldBewaar();
   await bezig(knop, async()=>{
+    /* Eerst het toestel op 'repurpose' zetten en die opslag controleren; pas daarna de
+       onderdelen op de plank. Mislukt de statusupdate, dan stoppen we hier met een
+       eerlijke fout en zijn er nog geen dubbele onderdelen aangemaakt bij een nieuwe poging. */
+    const {error:uErr}=await sb.from('refurbish_apparaten').update({
+      status:'repurpose', checklist:ctrChecklist(), goede_delen:goed,
+      notitie:ctr.notitie||null,
+      stap:'af', bijgewerkt_op:new Date().toISOString()
+    }).eq('id',a.id);
+    if(uErr) throw new Error('Opslaan mislukt');
     if(goed.length){
       const rijen=goed.map(n=>({
         team_id:account.team_id,
@@ -4169,13 +4179,8 @@ async function ctrSlopen(knop){
         soort:n, van_apparaat:a.id, status:'voorraad'
       }));
       const {error}=await sb.from('refurbish_onderdelen').insert(rijen);
-      if(error) throw new Error('Opslaan mislukt');
+      if(error) throw new Error('Toestel is afgeschreven, maar de onderdelen opslaan mislukte');
     }
-    await sb.from('refurbish_apparaten').update({
-      status:'repurpose', checklist:ctrChecklist(), goede_delen:goed,
-      notitie:ctr.notitie||null,
-      stap:'af', bijgewerkt_op:new Date().toISOString()
-    }).eq('id',a.id);
 
     ctr=null; await allesLaden(); showTab('donoren');
     toast(goed.length?goed.length+' onderdelen naar de plank':'Apparaat afgeschreven', true);
@@ -4642,11 +4647,11 @@ function tekenOnline(){
 
           <div class="veldkop"><label>Titel</label>
             ${onl.titel?`<button class="btn ghost small" onclick="onlKopieer('onl_titel', this)">Kopiëren</button>`:''}</div>
-          <input id="onl_titel" value="${esc(onl.titel)}" placeholder="Wordt geschreven zodra je op de knop drukt">
+          <input id="onl_titel" value="${esc(onl.titel)}" onchange="onlBewaarVelden()" placeholder="Wordt geschreven zodra je op de knop drukt">
 
           <div class="veldkop"><label>Tekst</label>
             ${onl.tekst?`<button class="btn ghost small" onclick="onlKopieer('onl_tekst', this)">Kopiëren</button>`:''}</div>
-          <textarea id="onl_tekst" rows="14" placeholder="Volgt het sjabloon">${esc(onl.tekst)}</textarea>
+          <textarea id="onl_tekst" rows="14" onchange="onlBewaarVelden()" placeholder="Volgt het sjabloon">${esc(onl.tekst)}</textarea>
 
           ${(onl.zoekwoorden||[]).length?`<div style="margin-top:12px">
             <div class="hkkop">Zoekwoorden</div>
@@ -8132,9 +8137,9 @@ function renderBundelDetail(){
       <h2><svg class="i"><use href="#i-sparkles"/></svg>Advertentie</h2>
       <p class="muted klein" style="margin-bottom:12px">Deze titel, tekst en foto's komen op de tweede webshop als een advertentie voor de hele bundel.</p>
       <label>Titel</label>
-      <input id="vb_titel" value="${esc(v.titel||'')}" placeholder="${esc(v.nummer||'Bundel laptops')}">
+      <input id="vb_titel" value="${esc(v.titel||'')}" onchange="vbAdVeld('${v.id}')" placeholder="${esc(v.nummer||'Bundel laptops')}">
       <label style="margin-top:10px;display:block">Omschrijving</label>
-      <textarea id="vb_oms" rows="5" placeholder="Beschrijf de bundel: aantal, merken, staat, wat de koper krijgt.">${esc(v.omschrijving||'')}</textarea>
+      <textarea id="vb_oms" rows="5" onchange="vbAdVeld('${v.id}')" placeholder="Beschrijf de bundel: aantal, merken, staat, wat de koper krijgt.">${esc(v.omschrijving||'')}</textarea>
       <div class="row" style="gap:8px;margin-top:10px">
         <button class="btn actie small" onclick="vbAdOpslaan('${v.id}', this)">Advertentie bewaren</button>
         <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Foto's toevoegen<input type="file" accept="image/*,.heic,.heif" multiple hidden onchange="vbFotoUpload('${v.id}', this)"></label>
@@ -8348,6 +8353,16 @@ async function web2Loskoppel(){
   catch(e){ toast(e.message,'fout'); }
 }
 
+/* Bundel-advertentie meteen onthouden zodra je een veld verlaat: naar het in-geheugen
+   object (zodat een re-render door een laptop erbij scannen de tekst niet weggooit) en
+   best-effort naar de database. De knop 'Advertentie bewaren' blijft voor de bevestiging. */
+function vbAdVeld(id){
+  const v=vbundels.find(x=>x.id===id); if(!v) return;
+  const t=document.getElementById('vb_titel'), o=document.getElementById('vb_oms');
+  v.titel=(t&&t.value.trim())||null; v.omschrijving=(o&&o.value.trim())||null;
+  sb.from('refurbish_voorraad_batches').update({titel:v.titel, omschrijving:v.omschrijving}).eq('id',id)
+    .then(({error})=>{ if(error) console.error('bundel-advertentie opslaan:', error); });
+}
 async function vbAdOpslaan(id, knop){
   const titel=(document.getElementById('vb_titel').value||'').trim()||null;
   const oms=(document.getElementById('vb_oms').value||'').trim()||null;

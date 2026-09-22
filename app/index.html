@@ -3911,7 +3911,11 @@ function schoneState(){
   return s;
 }
 function betaalNaam(b){ return b==='pin'?'pin':b==='cash'?'cash met bon':b==='cash_zb'?'cash zonder bon':'onbekend'; }
-function save(){ localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); }
+/* _vuil = er is getypt in een gegevensveld dat nog niet is vastgelegd. Wordt gezet bij
+   elke toetsaanslag (zie de input-listener onderaan de sync) en gewist zodra er iets
+   wordt opgeslagen. Voedt de "niet-opgeslagen wijzigingen"-waarschuwing bij afsluiten. */
+let _vuil=false;
+function save(){ _vuil=false; localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); }
 /* Alles opnieuw tekenen, bijvoorbeeld na binnenkomende wijzigingen van een collega. */
 function tekenAlles(){
   try{
@@ -10999,7 +11003,11 @@ async function bstVerzenden(id, knop){
     const j=await res.json().catch(()=>({}));
     if(!res.ok||!j.ok) throw new Error(j.error||'Verzenden mislukte');
     x.verzonden=true; x.status='verzonden';
-    await sb.from('webshop_bestellingen').update({verzonden:true, status:'verzonden', bijgewerkt_op:new Date().toISOString()}).eq('id', id);
+    /* Shopify heeft de zending al bevestigd; deze rij is alleen de lokale spiegeling.
+       Mislukt hij, dan zet de ORDERS_FULFILLED-webhook hem later alsnog goed — daarom
+       loggen we het maar draaien we de status niet terug. */
+    const {error:bErr}=await sb.from('webshop_bestellingen').update({verzonden:true, status:'verzonden', bijgewerkt_op:new Date().toISOString()}).eq('id', id);
+    if(bErr) console.error('verzendstatus lokaal opslaan:', bErr);
     toast('Gemarkeerd als verzonden', true);
     renderBestellingen(); if(typeof bstBadge==='function') bstBadge();
   }catch(e){ toast(e.message||'Verzenden mislukte','fout'); }
@@ -12357,6 +12365,21 @@ function syncFlush(){
 }
 addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') syncFlush(); });
 addEventListener('pagehide', syncFlush);
+
+/* Vangnet tegen dataverlies: markeer 'vuil' zodra je in een gegevensveld typt, en
+   waarschuw als je het tabblad sluit of ververst terwijl er nog iets openstaat. Zoek- en
+   filtervelden tellen niet mee. Elke opslag (save() of een formulier-opslaan) zet 'schoon'.
+   Zo hangt niets af van "heb ik op Opslaan gedrukt?": je krijgt altijd nog een waarschuwing. */
+document.addEventListener('input', function(e){
+  const t=e.target; if(!t||!t.tagName) return;
+  if(t.tagName!=='TEXTAREA' && t.tagName!=='INPUT') return;
+  if(t.tagName==='INPUT' && /^(search|checkbox|radio|range|color|file|button|submit)$/.test(t.type||'')) return;
+  if(t.closest && t.closest('.zoekvak, .zoek, [data-zoek], .filter, .zoekvak input')) return;
+  _vuil=true;
+}, true);
+addEventListener('beforeunload', function(e){
+  if(_vuil){ e.preventDefault(); e.returnValue=''; return ''; }
+});
 
 /* Regelmatig kijken of een collega iets heeft gewijzigd. */
 setInterval(()=>{ if(account && navigator.onLine && !syncBezig) syncHaalOp().then(ok=>{ if(ok) tekenAlles(); }); }, 45000);
@@ -13909,7 +13932,7 @@ async function hwStilBewaar(){
   const inHw=hwData.find(x=>x.id===hwOpen.id); if(inHw && inHw!==hwOpen) Object.assign(inHw, rij);
   const {error}=await sb.from('hardware').update(rij).eq('id',hwOpen.id);
   if(error){ console.error('hardware auto-opslaan:', error); }
-  else hwDirty=false;
+  else { hwDirty=false; _vuil=false; }
   return {error};
 }
 function hwStilPlan(){
@@ -13933,7 +13956,7 @@ async function hwOpslaan(knop){
   }
   if(knop){ knop.disabled=false; knop.textContent=oud; }
   if(fout){ console.error('hardware opslaan:',fout); toast('Opslaan mislukt','fout'); return; }
-  hwDirty=false;
+  hwDirty=false; _vuil=false;
   /* Btw-regime en plek ook op het gekoppelde refurbish-toestel bijwerken: de
      batchcijfers en het refurbish-label lezen die rij, niet de hardware-rij.
      Zonder deze spiegeling zou een wijziging aan de balie daar onzichtbaar
