@@ -69,7 +69,8 @@ Deno.serve(async (req) => {
   const url = openbaar?.publicUrl || null;
 
   const { error } = await admin.from("partner_fotos").insert({
-    code, partner_id: sleutel.partner_id, product_id: sleutel.product_id, url,
+    code, partner_id: sleutel.partner_id, product_id: sleutel.product_id,
+    hardware_id: sleutel.hardware_id ?? null, url,
   });
   if (error) { console.error("partner foto vastleggen", error); return fout("De foto is opgeslagen maar niet vastgelegd", 500); }
 

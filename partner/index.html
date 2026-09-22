@@ -468,13 +468,21 @@ async function reconcileFotos(){
   if (ALLEENLEZEN || !PARTNER_ID) return;   // bekijk-modus mag partner_fotos niet lezen (RLS)
   try {
     const { data } = await sb.from('partner_fotos')
-      .select('url, product_id').eq('partner_id', PARTNER_ID).order('aangemaakt_op');
+      .select('url, product_id, hardware_id').eq('partner_id', PARTNER_ID).order('aangemaakt_op');
     if (!data || !data.length) return;
-    const perProduct = {};
-    data.forEach(r=>{ if (r.url && r.product_id){ (perProduct[r.product_id] = perProduct[r.product_id] || []).push(r.url); } });
+    /* Twee sleutels: product_id (blob-id) en hardware_id (stabiel). Een product-id wisselt als
+       partner-sync een verdwenen toestel opnieuw aanmaakt; hardware_id blijft gelijk. We matchen
+       op allebei, zodat QR-foto's ook na zo'n her-toewijzing bij hun toestel blijven. */
+    const perProduct = {}, perHardware = {};
+    data.forEach(r=>{
+      if (!r.url) return;
+      if (r.product_id) (perProduct[r.product_id] = perProduct[r.product_id] || []).push(r.url);
+      if (r.hardware_id) (perHardware[r.hardware_id] = perHardware[r.hardware_id] || []).push(r.url);
+    });
     let veranderd = false;
     S.products.forEach(p=>{
-      const urls = perProduct[p.id]; if (!urls) return;
+      const urls = (perProduct[p.id] || []).concat(p.hardware_id ? (perHardware[p.hardware_id] || []) : []);
+      if (!urls.length) return;
       if (!Array.isArray(p.fotos)) p.fotos = [];
       urls.forEach(u=>{ if (!_fotoVerwijderd.has(u) && !p.fotos.includes(u)){ p.fotos.push(u); veranderd = true; } });
     });
@@ -1534,6 +1542,7 @@ async function pFotoQr(pid){
     const code = Math.random().toString(36).slice(2,8).toUpperCase();
     const { error } = await sb.from('partner_fotocodes').insert({
       code, partner_id: PARTNER_ID, product_id: pid,
+      hardware_id: p.hardware_id || null,   // stabiele sleutel: foto's blijven bij het toestel na een her-toewijzing
       vervalt: new Date(Date.now()+30*60000).toISOString()
     });
     if (error) throw error;

@@ -76,6 +76,25 @@ const code=new URLSearchParams(location.search).get('c');
 let wachtrij=[];   // {src, verstuurd} — lokaal verzameld, pas versturen op de knop
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* De wachtrij overleeft een tab-herstart. iOS gooit een achtergrond-tab onder geheugendruk
+   weg; zonder dit waren verzamelde-maar-niet-verstuurde foto's dan kwijt. We bewaren de
+   wachtrij per code in IndexedDB (localStorage is te klein voor meerdere foto's). */
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    let r; try{ r=indexedDB.open('storvo-foto',1); }catch(e){ return rej(e); }
+    r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('wachtrij'); }catch(e){} };
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function bewaarWachtrij(){
+  if(!code) return;
+  try{ const db=await idbOpen(); await new Promise((res,rej)=>{ const tx=db.transaction('wachtrij','readwrite'); tx.objectStore('wachtrij').put(wachtrij, code); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }catch(e){}
+}
+async function haalWachtrij(){
+  if(!code) return null;
+  try{ const db=await idbOpen(); return await new Promise((res)=>{ const rq=db.transaction('wachtrij','readonly').objectStore('wachtrij').get(code); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>res(null); }); }catch(e){ return null; }
+}
+
 function toast(bericht, soort){
   const c=document.getElementById('toasts');
   const t=document.createElement('div'); t.className='toast '+(soort||''); t.textContent=bericht;
@@ -111,6 +130,8 @@ async function start(){
     const uit=await praat({actie:'kijken'});
     document.getElementById('watIsHet').innerHTML='<b>'+esc((uit.product&&uit.product.model)||'Toestel')+'</b> — maak hieronder de foto\'s.';
     document.getElementById('werk').hidden=false;
+    const bewaard=await haalWachtrij();   // een eerdere sessie herstellen als de tab was weggegooid
+    if(Array.isArray(bewaard) && bewaard.length){ wachtrij=bewaard; tekenRooster(); }
   }catch(e){ stop('Dit werkt niet meer', e.message); }
 }
 
@@ -124,6 +145,7 @@ document.getElementById('camera').addEventListener('change', async e=>{
   }
   knop.disabled=false;
   tekenRooster();
+  bewaarWachtrij();   // meteen vastleggen zodat een tab-herstart de foto's niet wist
 });
 
 function tekenThumbs(){
@@ -145,10 +167,11 @@ async function verstuurAlles(){
   let gelukt=0;
   for(let i=0;i<teDoen.length;i++){
     vk.textContent='Versturen... '+(i+1)+'/'+teDoen.length;
-    try{ await praat({foto:teDoen[i].src}); teDoen[i].verstuurd=true; gelukt++; tekenThumbs(); }
+    try{ await praat({foto:teDoen[i].src}); teDoen[i].verstuurd=true; gelukt++; tekenThumbs(); bewaarWachtrij(); }
     catch(err){ toast(err.message,'fout'); }
   }
   tekenRooster();
+  bewaarWachtrij();
   if(gelukt) toast(gelukt+' foto'+(gelukt===1?'':'s')+' verstuurd. Ze staan nu op de pc.', 'ok');
 }
 
