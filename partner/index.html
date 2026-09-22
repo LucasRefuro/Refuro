@@ -1289,6 +1289,11 @@ function rProduct(id){
     '<div class="checkrow"><input type="checkbox" id="e_mp"'+(p.mp?' checked':'')+'> <span>Marktplaats</span>' +
       (p.mp?' <span class="mini">('+daysSince(p.mpDatum)+'d online)</span> <label style="display:inline;font-weight:400"><input type="checkbox" id="e_mpoff"'+(p.adsOffline.mp?' checked':'')+'> offline gehaald</label> <button class="btn gray sm" onclick="replaats(\''+p.id+'\',\'mp\')"> vandaag opnieuw geplaatst</button>':'') + '</div>' +
     '</div>';
+  /* marktprijs: vergelijkbare particuliere Marktplaats-advertenties + scherp voorstel */
+  html += '<div class="card"><b style="font-size:14px">Marktprijs</b>' +
+    '<div class="mini" style="margin:6px 0 10px">Vergelijkbare toestellen van particulieren op Marktplaats (zonder winkels), met een scherpe vraagprijs: net onder de mediaan. Pas de zoekterm gerust aan.</div>' +
+    '<div class="copyrow"><input type="text" id="mpq" value="'+esc(mpQueryP(p))+'"><button class="btn sm" onclick="mpZoekP(\''+p.id+'\')">Zoeken</button></div>' +
+    '<div id="mpuit" style="margin-top:12px"></div></div>';
   /* foto's */
   html += '<div class="card"><b style="font-size:14px">Foto\'s</b><div style="margin-top:10px">' +
     '<button class="btn sm" onclick="pFotoCam(\''+p.id+'\')">Foto maken</button> ' +
@@ -1347,6 +1352,53 @@ function saveProduct(pid, silent){
   });
   save();
   if (!silent){ toast(' Opgeslagen'); render(); }
+}
+
+/* ============ marktprijs (Marktplaats, particulieren) ============ */
+function mpQueryP(p){
+  const delen = [p.model].filter(Boolean);
+  if (p.type!=='laptop' && p.specs && p.specs.opslag) delen.push(String(p.specs.opslag).replace(/\s+/g,''));
+  return delen.join(' ').trim();
+}
+async function mpZoekP(pid){
+  const q = ((f('mpq')||{}).value||'').trim();
+  const uit = f('mpuit'); if (!uit) return;
+  if (q.length<2){ uit.innerHTML='<div class="mini">Vul een zoekterm in.</div>'; return; }
+  uit.innerHTML = '<div class="mini">Bezig met zoeken op Marktplaats...</div>';
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Je bent uitgelogd');
+    const p = S.products.find(x=>x.id===pid);
+    const res = await fetch(SUPABASE_URL + '/functions/v1/marktprijs', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body: JSON.stringify({ query:q, categorie:(p && p.type==='laptop')?'322':'' })
+    });
+    const j = await res.json().catch(()=>({}));
+    if (!res.ok || !j.ok) throw new Error(j.error||'Zoeken mislukt');
+    uit.innerHTML = mpResultaatP(pid, j);
+  } catch(e){ uit.innerHTML = '<div class="mini" style="color:var(--red)">'+esc(e.message)+'</div>'; }
+}
+function mpResultaatP(pid, j){
+  if (!j.aantal) return '<div class="mini">Geen particuliere advertenties gevonden voor deze zoekterm. Probeer een kortere of andere term.</div>';
+  const ads = (j.advertenties||[]).map(ad =>
+    '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border)">' +
+    '<b style="min-width:56px">'+eur(ad.prijs)+'</b>' +
+    '<div style="flex:1;min-width:0">' + (ad.url?'<a href="'+esc(ad.url)+'" target="_blank" rel="noopener">'+esc(ad.titel)+'</a>':esc(ad.titel)) +
+    '<div class="mini">'+esc(ad.verkoper)+(ad.datum?' &middot; '+esc(ad.datum):'')+'</div></div></div>').join('');
+  const kop = (j.voorstel!=null)
+    ? '<div class="notice green" style="margin-bottom:10px"><b style="font-size:18px">Voorstel: '+eur(j.voorstel)+'</b>' +
+      '<div class="mini" style="margin:4px 0 10px">'+j.aantal+' particuliere advertenties &middot; mediaan '+eur(j.mediaan)+' &middot; '+eur(j.min)+' tot '+eur(j.max)+'. Net onder de markt.</div>' +
+      '<button class="btn green sm" onclick="mpNeemPrijsP(\''+pid+'\','+j.voorstel+')">Gebruik '+eur(j.voorstel)+' als vraagprijs</button></div>'
+    : '<div class="mini" style="margin-bottom:6px">Maar '+j.aantal+' particuliere advertentie(s) gevonden - te weinig voor een betrouwbaar voorstel. Beoordeel zelf hieronder.</div>';
+  return kop + '<div style="max-height:280px;overflow-y:auto">'+ads+'</div>';
+}
+function mpNeemPrijsP(pid, prijs){
+  const inp = f('e_prijs'); if (inp) inp.value = prijs;
+  else { const p = S.products.find(x=>x.id===pid); if (p) p.vraagprijs = Number(prijs)||0; }
+  pendingLocalChange = true;
+  saveProduct(pid);     // leest het formulier (incl. de nieuwe prijs), bewaart en herrendert
+  pushRemote();         // meteen naar de server
 }
 function pFoto(pid){
   const p = S.products.find(x=>x.id===pid);
