@@ -7140,7 +7140,9 @@ let mailOpstelCtx=null;
 function mailOpstellen(vooraf){
   vooraf=vooraf||{}; mailOpstelCtx=vooraf;
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='mailOpstelOverlay';
-  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  /* Naast de popup klikken sluit hem; maar niet zomaar als er al tekst staat, anders
+     ben je een lang getypt (of door AI geschreven) concept in één klik kwijt. */
+  ov.onclick=e=>{ if(e.target===ov){ const t=document.getElementById('opstelTekst'); if(!t||!t.value.trim()||confirm('Concept sluiten? De getypte tekst gaat verloren.')) ov.remove(); } };
   ov.innerHTML=`<div class="popup" style="width:min(760px,96vw); max-height:92vh; overflow:auto">
     <h3>${vooraf.bericht_id?'Antwoorden':'Nieuwe mail'}</h3>
     <div style="margin-bottom:10px"><label>Aan</label><input id="opstelAan" type="email" placeholder="naam@voorbeeld.nl" value="${esc(vooraf.aan||'')}"></div>
@@ -17043,8 +17045,13 @@ function tijdKort(t){
   const d=new Date(t);
   return d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
 }
+let repDetailNu=null;
 function repDetail(id){
   const r=state.reparaties.find(r=>r.id===id); if(!r) return;
+  /* Was ditzelfde reparatiedetail al open (bijv. je verandert de garantie of markeert een
+     probleem opgelost), bewaar dan een half getypte opmerking en zet hem na het herbouwen
+     terug, zodat hij niet ongemerkt verdwijnt. */
+  const _ntBewaard = (repDetailNu===id) ? ((document.getElementById('nt_tekst')||{}).value||'') : '';
   sluitPopup();
   const volgorde=repStappen(r);
   const huidigIdx=volgorde.indexOf(r.status);
@@ -17111,6 +17118,8 @@ function repDetail(id){
   </div>`;
   ov.addEventListener('click',e=>{ if(e.target===ov) sluitPopup(); });
   document.body.appendChild(ov);
+  repDetailNu=id;
+  if(_ntBewaard){ const _nte=document.getElementById('nt_tekst'); if(_nte) _nte.value=_ntBewaard; }
   laadVerzonden(r.nr);
 }
 function snelNotitie(t){ const el=document.getElementById('nt_tekst'); if(el){ el.value=t; el.focus(); } }
@@ -17123,6 +17132,7 @@ function voegNotitie(id, klantZichtbaar, probleem){
   save();
   toast((probleem?'Probleem genoteerd: ':'Opmerking opgeslagen: ')+tekst, !probleem);
   if(klantZichtbaar && r.notify) toast('Vergeet niet de klant te informeren (/)');
+  if(el) el.value='';   // opmerking is opgeslagen; leeg het veld zodat hij niet dubbel terugkomt
   repDetail(id);
   renderReparaties(); updateBadge();
 }
