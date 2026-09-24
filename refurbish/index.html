@@ -4622,7 +4622,10 @@ async function naarVoorraad(a){
   const {data, error}=await sb.from('hardware').insert({
     team_id:account.team_id,
     merk:a.merk, model:a.model, categorie:a.categorie,
-    serienummer:a.serienummer, specs:a.specs||{},
+    /* Kleur mee in de specs, want de hardware-rij heeft geen kleur-kolom en de webshop-sleutel
+       (voor de grade-varianten) leest specs.Kleur. Zo groeperen refurbish en de push op dezelfde
+       sleutel; zonder dit zou een telefoon van een andere kleur op één advertentie belanden. */
+    serienummer:a.serienummer, specs:Object.assign({}, a.specs||{}, a.kleur?{Kleur:a.kleur}:{}),
     staat:a.grade||'B', inkoop:Number(a.inkoop)||0,
     verkoop:null, garantie:12,
     herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,

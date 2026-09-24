@@ -344,6 +344,41 @@ export function staatCode(staat: string) {
   return s === "A" ? "uitstekend" : s === "B" ? "zeer_goed" : s === "C" ? "prima" : "";
 }
 
+/* ── grade-varianten ──
+   De drie grades als varianten op één advertentie. De naam (optiewaarde) is wat het
+   thema toont; de grade-kiezer leidt de code ook uit de naam af ("Zeer goed" -> zeer_goed),
+   dus de naam is genoeg. */
+export const GRADE_LETTERS = ["A", "B", "C"];
+export const GRADE_NAAM: Record<string, string> = { A: "Uitstekend", B: "Zeer goed", C: "Prima" };
+export function gradeLetter(staat: unknown) {
+  const s = String(staat ?? "B").toUpperCase();
+  return (s === "A" || s === "B" || s === "C") ? s : "B";
+}
+
+/* Verhouding tussen de grades (anker Zeer goed/B); vanuit één ingevulde grade de andere twee
+   schatten. MOET gelijk zijn aan gradeSchatting() in refurbish/index.html. */
+export const GRADE_RATIO: Record<string, number> = { A: 1.12, B: 1.0, C: 0.88 };
+export function gradeSchat(anker: string, prijs: number) {
+  const r = GRADE_RATIO[anker] || 1;
+  const basis = (Number(prijs) || 0) / r;
+  return { A: Math.round(basis * GRADE_RATIO.A), B: Math.round(basis * GRADE_RATIO.B), C: Math.round(basis * GRADE_RATIO.C) } as Record<string, number>;
+}
+
+/* De webshop-sleutel: de identiteit van één advertentie = merk + model + kleur + de bepalende
+   specs (telefoon/tablet: opslag; laptop/desktop: processor + geheugen + opslag). MOET gelijk
+   zijn aan webshopSleutel() in refurbish/index.html, anders groeperen de kanten niet gelijk.
+   hardware heeft geen kleur-kolom; de kleur reist mee in specs.Kleur (uit de controle). */
+export function webshopSleutel(h: any) {
+  const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
+  const kleur = h.kleur || sp.Kleur || "";
+  const cat = h.categorie || "Laptop";
+  const deel: any[] = [h.merk, h.model, kleur];
+  if (cat === "Telefoon" || cat === "Tablet") deel.push(sp.Opslag);
+  else if (cat === "Laptop" || cat === "Desktop") deel.push(sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag);
+  else deel.push(sp.Opslag);
+  return deel.filter(Boolean).map((s: any) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).join("_");
+}
+
 // "Wat wij zagen": eerst de conditie-items die de winkelier bij de controle zelf
 // heeft ingevuld (Behuizing, Scherm, Toetsenbord, Scharnieren), anders een vaste
 // zin per grade. Zo staat er altijd iets echts, niet alleen "grade A".

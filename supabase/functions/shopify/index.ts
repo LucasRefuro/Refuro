@@ -13,7 +13,8 @@
 
 import {
   admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
-  bouwProductMetafields, winkelvoorraadMetafield, staatCode,
+  bouwProductMetafields,
+  webshopSleutel, gradeLetter, gradeSchat, GRADE_LETTERS, GRADE_NAAM,
 } from "../_gedeeld/shopify.ts";
 
 /* De categorie-collecties van het thema zijn HANDMATIG (geen slimme regels op
@@ -64,11 +65,6 @@ function beschrijving(h: any) {
     h.serienummer && toonSerie ? `<p class="serie"><small>Serienummer ${h.serienummer}</small></p>` : "",
   ].filter(Boolean).join("\n");
 }
-
-/* Een toestel is altijd één stuk met één uitvoering. Shopify wil toch een
-   optie hebben; die heet dan "Titel" met één waarde, precies zoals Shopify het
-   zelf doet bij een product zonder varianten. */
-const ENIGE_OPTIE = { optionName: "Title", name: "Default Title" };
 
 function fotosVan(h: any) {
   const lijst = Array.isArray(h.fotos) ? h.fotos.filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
@@ -134,6 +130,128 @@ function gebruikTags(h: any): string[] {
   return [...t];
 }
 
+/* ── één advertentie synchroniseren ──
+   Het hart van de grade-varianten: alle beschikbare exemplaren van dezelfde uitvoering (sleutel)
+   staan op ÉÉN Shopify-product met drie grade-varianten (Uitstekend/Zeer goed/Prima). De prijs per
+   grade komt uit webshop_grade_prijzen (of geschat), de voorraad per grade is het aantal onverkochte
+   exemplaren van die grade. Zo wordt een tweede exemplaar geen nieuwe advertentie maar voorraad +1,
+   en verschijnt een grade die je nog niet had zodra er een binnenkomt. Zijn er geen exemplaren meer,
+   dan gaat het product weg. Bron van waarheid: de tabel webshop_producten (sleutel -> product + de
+   variant-id's per grade), zodat de webhook een verkochte variant kan terugvertalen. */
+async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string) {
+  const { data: exemplaren } = await admin.from("hardware")
+    .select("*").eq("team_id", teamId).eq("status", "voorraad").eq("kanalen->shopify->>sleutel", sleutel);
+  const beschikbaar: any[] = exemplaren || [];
+  const reg = (await admin.from("webshop_producten").select("*").eq("team_id", teamId).eq("sleutel", sleutel).maybeSingle()).data;
+
+  // Geen exemplaren meer: het product weg en de registratie op.
+  if (!beschikbaar.length) {
+    if (reg?.product_id) {
+      try {
+        await graphql(k, `mutation($input: ProductDeleteInput!){ productDelete(input: $input){ deletedProductId userErrors { field message } } }`, { input: { id: reg.product_id } });
+      } catch (_e) { /* al weg is prima */ }
+    }
+    await admin.from("webshop_producten").delete().eq("team_id", teamId).eq("sleutel", sleutel);
+    return { leeg: true } as any;
+  }
+
+  const perGrade: Record<string, any[]> = { A: [], B: [], C: [] };
+  for (const e of beschikbaar) (perGrade[gradeLetter(e.staat)] || (perGrade[gradeLetter(e.staat)] = [])).push(e);
+
+  // Representatief exemplaar: het oudste beschikbare (voor titel, tekst, foto's, staat-toelichting).
+  const rep = beschikbaar.slice().sort((a, b) => String(a.aangemaakt_op || "").localeCompare(String(b.aangemaakt_op || "")))[0];
+
+  // Grade-prijzen uit de tabel; ontbrekende grades schatten we uit het representatieve exemplaar.
+  const { data: gpRij } = await admin.from("webshop_grade_prijzen")
+    .select("prijs_a, prijs_b, prijs_c").eq("team_id", teamId).eq("sleutel", sleutel).maybeSingle();
+  const prijzen: Record<string, number | null> = gpRij ? { A: gpRij.prijs_a, B: gpRij.prijs_b, C: gpRij.prijs_c } : { A: null, B: null, C: null };
+  const geschat = gradeSchat(gradeLetter(rep.staat), Number(rep.verkoop) || 0);
+  for (const g of GRADE_LETTERS) if (prijzen[g] == null) prijzen[g] = geschat[g];
+
+  const inWinkel = (await Promise.all(beschikbaar.map((e: any) => ligtInWinkel(e.locatie_id)))).some(Boolean);
+  const nieuwprijs = rep.nieuwprijs != null && rep.nieuwprijs !== "" ? Number(rep.nieuwprijs) : null;
+  const bestaandeVar: Record<string, string> = (reg?.varianten && typeof reg.varianten === "object") ? reg.varianten : {};
+
+  const variants = GRADE_LETTERS.map((g) => {
+    const prijs = prijzen[g] != null ? Number(prijzen[g]) : 0;
+    const aantal = (perGrade[g] || []).length;
+    const vergelijk = nieuwprijs != null && nieuwprijs > prijs ? String(nieuwprijs) : undefined;
+    const v: any = {
+      optionValues: [{ optionName: "Staat", name: GRADE_NAAM[g] }],
+      price: String(prijs),
+      ...(vergelijk ? { compareAtPrice: vergelijk } : {}),
+      sku: (sleutel + "-" + g).slice(0, 100),
+      inventoryPolicy: "DENY",
+      ...(k.locatie_id ? { inventoryQuantities: [{ locationId: k.locatie_id, name: "available", quantity: aantal }] } : {}),
+    };
+    if (bestaandeVar[g]) v.id = bestaandeVar[g];
+    return v;
+  });
+
+  const titel = rep.titel || [rep.merk, rep.model].filter(Boolean).join(" ");
+  const controle = await controleBij(rep.id);
+  const invoer: any = {
+    title: titel,
+    descriptionHtml: beschrijving(rep),
+    vendor: rep.merk || "Storvo",
+    productType: rep.categorie || "Laptop",
+    status: "ACTIVE",
+    tags: ["refurbished", rep.code || "", ...gebruikTags(rep)].filter(Boolean),
+    metafields: bouwProductMetafields(rep, controle, inWinkel),
+    productOptions: [{ name: "Staat", values: GRADE_LETTERS.map((g) => ({ name: GRADE_NAAM[g] })) }],
+    variants,
+  };
+  if (reg?.product_id) invoer.id = reg.product_id;
+  const files = fotosVan(rep);
+  if (files.length && !reg) invoer.files = files;
+
+  const uit = await graphql(k, `
+    mutation($input: ProductSetInput!) {
+      productSet(input: $input, synchronous: true) {
+        product { id handle title onlineStoreUrl
+          variants(first: 10) { nodes { id selectedOptions { name value } } } }
+        userErrors { field message }
+      }
+    }`, { input: invoer });
+  const p = letOp(uit?.productSet, "Het bijwerken op de webshop").product;
+  if (!p?.id) throw new Error("Shopify gaf geen product terug");
+
+  const naamNaarGrade: Record<string, string> = { "Uitstekend": "A", "Zeer goed": "B", "Prima": "C" };
+  const variantIds: Record<string, string> = {};
+  for (const vn of (p?.variants?.nodes || [])) {
+    const staatW = (vn.selectedOptions || []).find((o: any) => o.name === "Staat")?.value || "";
+    const g = naamNaarGrade[staatW];
+    if (g) variantIds[g] = vn.id;
+  }
+
+  let zichtbaar = false;
+  if (k.publicatie_id) {
+    const pub = await graphql(k, `mutation($id: ID!, $input: [PublicationInput!]!){ publishablePublish(id: $id, input: $input){ userErrors { field message } } }`, { id: p.id, input: [{ publicationId: k.publicatie_id }] });
+    letOp(pub?.publishablePublish, "Het zichtbaar maken in de webshop");
+    zichtbaar = true;
+  }
+  const collecties = await inCollectiesZetten(k, p.id, rep);
+
+  const nummer = String(p.id).split("/").pop();
+  const url = p.onlineStoreUrl || (p.handle ? `https://${k.domein}/products/${p.handle}` : null);
+  const beheer = `https://${k.domein}/admin/products/${nummer}`;
+  await admin.from("webshop_producten").upsert({
+    team_id: teamId, sleutel, product_id: p.id, varianten: variantIds,
+    handle: p.handle || null, url, beheer, categorie: rep.categorie || null, bijgewerkt_op: new Date().toISOString(),
+  }, { onConflict: "team_id,sleutel" });
+
+  // Elk beschikbaar exemplaar koppelen aan het product + zijn grade-variant, zodat de webhook
+  // een verkochte variant kan terugvertalen naar een echt toestel.
+  for (const e of beschikbaar) {
+    const eg = gradeLetter(e.staat);
+    const ek = (e.kanalen && typeof e.kanalen === "object") ? { ...e.kanalen } : {};
+    ek.shopify = { id: p.id, nummer, variant: variantIds[eg] || null, grade: eg, sleutel, url, beheer, zichtbaar, collecties, sinds: (ek.shopify && ek.shopify.sinds) || new Date().toISOString() };
+    await admin.from("hardware").update({ kanalen: ek, bijgewerkt_op: new Date().toISOString() }).eq("id", e.id);
+  }
+
+  return { leeg: false, product_id: p.id, nummer, url, beheer, zichtbaar, collecties, variantIds } as any;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -193,96 +311,16 @@ Deno.serve(async (req) => {
   try {
     if (actie === "online") {
       if (h.verkoop == null) return fout("Vul eerst een vraagprijs in");
-      const titel = h.titel || [h.merk, h.model].filter(Boolean).join(" ");
-      const bestaand = kanalen.shopify?.id || null;
-      const inWinkel = await ligtInWinkel(h.locatie_id);
-      const controle = await controleBij(id);
-
-      // De doorstreepprijs alleen als de nieuwprijs echt hoger is; anders weigert
-      // Shopify hem, of toont het thema een korting van nul.
-      const nieuwprijs = h.nieuwprijs != null && h.nieuwprijs !== "" ? Number(h.nieuwprijs) : null;
-      const vergelijk = nieuwprijs != null && nieuwprijs > Number(h.verkoop) ? String(nieuwprijs) : undefined;
-
-      /* productSet doet in één keer wat vroeger vier aanroepen kostte: het
-         product, de variant, de prijs en de voorraad. Dat scheelt niet alleen
-         tijd; het scheelt vooral half-aangemaakte producten als er onderweg
-         iets misgaat. */
-      const invoer: any = {
-        title: titel,
-        descriptionHtml: beschrijving(h),
-        vendor: h.merk || "Storvo",
-        productType: h.categorie || "Laptop",
-        status: "ACTIVE",
-        tags: ["refurbished", (staatCode(h.staat) ? "staat-" + staatCode(h.staat).replace(/_/g, "-") : ""), h.code || "", ...gebruikTags(h)].filter(Boolean),
-        metafields: bouwProductMetafields(h, controle, inWinkel),
-        productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
-        variants: [{
-          price: String(h.verkoop),
-          ...(vergelijk ? { compareAtPrice: vergelijk } : {}),
-          sku: h.code || h.serienummer || undefined,
-          inventoryPolicy: "DENY",
-          optionValues: [ENIGE_OPTIE],
-          ...(k.locatie_id ? {
-            inventoryQuantities: [{ locationId: k.locatie_id, name: "available", quantity: 1 }],
-          } : {}),
-        }],
-      };
-      if (bestaand) invoer.id = bestaand;
-
-      const files = fotosVan(h);
-      if (files.length && !bestaand) invoer.files = files;
-
-      const uit = await graphql(k, `
-        mutation($input: ProductSetInput!) {
-          productSet(input: $input, synchronous: true) {
-            product { id handle title onlineStoreUrl
-              variants(first: 1) { nodes { id } } }
-            userErrors { field message }
-          }
-        }`, { input: invoer });
-      const p = letOp(uit?.productSet, "Het aanmaken op de webshop").product;
-      if (!p?.id) throw new Error("Shopify gaf geen product terug");
-      const variant = p?.variants?.nodes?.[0]?.id || null;
-
-      /* Aanmaken is niet hetzelfde als zichtbaar zijn. Zonder deze stap staat
-         het toestel keurig in je Shopify-beheer en ziet geen enkele klant het.
-         Dat is de fout die je pas ontdekt als iemand vraagt waar die laptop
-         nou staat. */
-      let zichtbaar = false;
-      if (k.publicatie_id) {
-        const pub = await graphql(k, `
-          mutation($id: ID!, $input: [PublicationInput!]!) {
-            publishablePublish(id: $id, input: $input) {
-              userErrors { field message }
-            }
-          }`, { id: p.id, input: [{ publicationId: k.publicatie_id }] });
-        letOp(pub?.publishablePublish, "Het zichtbaar maken in de webshop");
-        zichtbaar = true;
-      }
-
-      /* In de juiste categorie-collectie zetten, want die zijn handmatig en vullen
-         zich niet vanzelf. Zonder dit staat het toestel wel online maar in geen enkele
-         categorie. Niet fataal als het mislukt: het toestel is dan nog wel te vinden. */
-      const collecties = await inCollectiesZetten(k, p.id, h);
-
-      const nummer = String(p.id).split("/").pop();
-      kanalen.shopify = {
-        id: p.id,
-        nummer,
-        variant,
-        url: p.onlineStoreUrl || (p.handle ? `https://${k.domein}/products/${p.handle}` : null),
-        beheer: `https://${k.domein}/admin/products/${nummer}`,
-        zichtbaar,
-        collecties,
-        sinds: new Date().toISOString(),
-      };
-      await admin.from("hardware").update({
-        kanalen, bijgewerkt_op: new Date().toISOString(),
-      }).eq("id", id);
-
+      const sleutel = webshopSleutel(h);
+      const gLetter = gradeLetter(h.staat);
+      // Dit exemplaar koppelen aan de sleutel/grade, zodat de synchronisatie het meerekent.
+      kanalen.shopify = { ...(kanalen.shopify || {}), sleutel, grade: gLetter };
+      await admin.from("hardware").update({ kanalen, bijgewerkt_op: new Date().toISOString() }).eq("id", id);
+      const r = await synchroniseerAdvertentie(k, acc.team_id, sleutel);
+      const { data: verse } = await admin.from("hardware").select("kanalen").eq("id", id).maybeSingle();
       return new Response(JSON.stringify({
-        ok: true, kanalen,
-        waarschuwing: zichtbaar ? null
+        ok: true, kanalen: verse?.kanalen || kanalen,
+        waarschuwing: r.zichtbaar ? null
           : "Het toestel staat op Shopify maar is nog niet in de webshop gepubliceerd. " +
             "Kijk bij Instellingen of de koppeling het verkoopkanaal heeft gevonden.",
       }), { headers: cors });
@@ -290,58 +328,39 @@ Deno.serve(async (req) => {
 
     if (actie === "offline") {
       const s = kanalen.shopify;
-      if (s?.id) {
-        // Verwijderen in plaats van op nul zetten: een verkocht toestel komt
-        // nooit meer terug, en een lege productpagina is slechter dan geen.
-        try {
-          const uit = await graphql(k, `
-            mutation($input: ProductDeleteInput!) {
-              productDelete(input: $input) { deletedProductId userErrors { field message } }
-            }`, { input: { id: s.id } });
-          letOp(uit?.productDelete, "Het weghalen van de webshop");
-        } catch (e) {
-          // Al weg bij Shopify is geen fout: dan klopt onze administratie juist.
-          console.error("shopify verwijderen", e);
-        }
-      }
+      const sleutel = s?.sleutel || null;
+      // Oud model (van vóór de grade-varianten): één los product per toestel, geen sleutel.
+      const oudProduct = (!sleutel && s?.id) ? s.id : null;
       delete kanalen.shopify;
-      await admin.from("hardware").update({
-        kanalen, bijgewerkt_op: new Date().toISOString(),
-      }).eq("id", id);
+      await admin.from("hardware").update({ kanalen, bijgewerkt_op: new Date().toISOString() }).eq("id", id);
+      if (sleutel) {
+        // De rest van de advertentie opnieuw synchroniseren: voorraad van deze grade omlaag,
+        // of het hele product weg als dit het laatste exemplaar was.
+        try { await synchroniseerAdvertentie(k, acc.team_id, sleutel); } catch (e) { console.error("offline sync", e); }
+      } else if (oudProduct) {
+        try {
+          const uit = await graphql(k, `mutation($input: ProductDeleteInput!){ productDelete(input: $input){ deletedProductId userErrors { field message } } }`, { input: { id: oudProduct } });
+          letOp(uit?.productDelete, "Het weghalen van de webshop");
+        } catch (e) { console.error("shopify verwijderen (oud)", e); }
+      }
       return new Response(JSON.stringify({ ok: true, kanalen }), { headers: cors });
     }
 
     if (actie === "prijs") {
-      const s = kanalen.shopify;
-      if (!s?.id || !s?.variant) return fout("Dit toestel staat niet op de webshop");
-      const uit = await graphql(k, `
-        mutation($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-            productVariants { id price }
-            userErrors { field message }
-          }
-        }`, {
-        productId: s.id,
-        variants: [{ id: s.variant, price: String(h.verkoop ?? 0) }],
-      });
-      letOp(uit?.productVariantsBulkUpdate, "Het bijwerken van de prijs");
+      // De prijs is nu per grade (uit webshop_grade_prijzen). Opnieuw synchroniseren pakt de
+      // bijgewerkte grade-prijzen en de voorraad mee.
+      const sleutel = kanalen.shopify?.sleutel || webshopSleutel(h);
+      await synchroniseerAdvertentie(k, acc.team_id, sleutel);
       return new Response(JSON.stringify({ ok: true }), { headers: cors });
     }
 
     if (actie === "locatie") {
-      // Alleen de ophaal-indicator op de productpagina bijwerken nadat een toestel
-      // is verplaatst. Staat het niet online, dan is er niets te doen.
-      const s = kanalen.shopify;
-      if (!s?.id) return new Response(JSON.stringify({ ok: true, overgeslagen: true }), { headers: cors });
-      const inWinkel = await ligtInWinkel(h.locatie_id);
-      const uit = await graphql(k, `
-        mutation($mf: [MetafieldsSetInput!]!) {
-          metafieldsSet(metafields: $mf) {
-            userErrors { field message }
-          }
-        }`, { mf: [{ ownerId: s.id, ...winkelvoorraadMetafield(inWinkel) }] });
-      letOp(uit?.metafieldsSet, "Het bijwerken van de winkelvoorraad");
-      return new Response(JSON.stringify({ ok: true, winkelvoorraad: inWinkel ? 1 : 0 }), { headers: cors });
+      // Na een verplaatsing de ophaal-indicator (winkelvoorraad) bijwerken. Bij het gegroepeerde
+      // product doen we dat via een volledige synchronisatie (winkelvoorraad = ligt er één in de winkel).
+      const sleutel = kanalen.shopify?.sleutel || null;
+      if (!sleutel) return new Response(JSON.stringify({ ok: true, overgeslagen: true }), { headers: cors });
+      await synchroniseerAdvertentie(k, acc.team_id, sleutel);
+      return new Response(JSON.stringify({ ok: true }), { headers: cors });
     }
 
     return fout("Onbekende actie");
