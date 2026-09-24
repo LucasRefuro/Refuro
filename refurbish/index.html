@@ -1953,6 +1953,27 @@ async function printViaHelper(pngBase64, opts){
 function toestelNaam(a){
   return [a.merk,a.model].filter(Boolean).join(' ')+(a.kleur?' - '+a.kleur:'');
 }
+/* De webshop-sleutel: de identiteit van één advertentie = merk + model + kleur + de
+   bepalende specs (telefoon/tablet: opslag; laptop/desktop: processor + geheugen + opslag).
+   Zelfde sleutel = zelfde advertentie; de grade is de variant erbinnen. Wordt straks ook in
+   de push gebruikt om te groeperen, dus hier centraal. */
+function webshopSleutel(a){
+  const sp=a.specs||{};
+  const kleur=a.kleur||sp.Kleur||'';
+  const cat=a.categorie||'Laptop';
+  const deel=[a.merk, a.model, kleur];
+  if(cat==='Telefoon'||cat==='Tablet') deel.push(sp.Opslag);
+  else if(cat==='Laptop'||cat==='Desktop') deel.push(sp.Processor||sp.Chip, sp.Geheugen||sp.Werkgeheugen, sp.Opslag);
+  else deel.push(sp.Opslag);
+  return deel.filter(Boolean).map(s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')).join('_');
+}
+/* Verhouding tussen de grades (anker = Zeer goed / B): Uitstekend iets duurder, Prima iets
+   goedkoper. Vanuit één ingevulde grade schatten we de andere twee, in hele euro's. */
+const GRADE_RATIO={A:1.12, B:1.0, C:0.88};
+function gradeSchatting(ankerGrade, ankerPrijs){
+  const r=GRADE_RATIO[ankerGrade]||1; const basis=(Number(ankerPrijs)||0)/r;
+  return { a:Math.round(basis*GRADE_RATIO.A), b:Math.round(basis*GRADE_RATIO.B), c:Math.round(basis*GRADE_RATIO.C) };
+}
 function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
   const woorden=String(tekst||'').split(/\s+/); let regel='', regels=0;
   for(let i=0;i<woorden.length;i++){
@@ -5036,6 +5057,14 @@ async function fotosLaden(a){
   const {data:eerder}=await sb.from('hardware')
     .select('verkoop').ilike('model', a.model).not('verkoop','is',null).limit(20);
   onl.eerderePrijzen=(eerder||[]).map(r=>Number(r.verkoop)).filter(n=>n>0);
+  /* De eerder opgeslagen grade-prijzen voor dit model+uitvoering (de webshop-advertentie).
+     Zijn die er, dan vullen we ze voor; anders schatten we ze uit de vraagprijs. */
+  try{
+    onl.sleutel=webshopSleutel(a);
+    const {data:gp}=await sb.from('webshop_grade_prijzen')
+      .select('prijs_a,prijs_b,prijs_c').eq('team_id',account.team_id).eq('sleutel',onl.sleutel).maybeSingle();
+    onl.gradePrijzen = gp ? {A:gp.prijs_a, B:gp.prijs_b, C:gp.prijs_c} : null;
+  }catch(e){ onl.gradePrijzen=null; }
   tekenOnline();
 }
 
@@ -5207,6 +5236,19 @@ function tekenOnline(){
               <option value="nee"${!onl.marge?' selected':''}>Normale btw (21%)</option>
             </select></div>
           </div>
+
+          <div style="margin-top:16px">
+            <div class="veldkop"><label>Grade-prijzen (webshop)</label>
+              <button type="button" class="btn ghost small" onclick="gradeSchat()">Schat uit vraagprijs</button></div>
+            <p class="muted klein" style="margin:2px 0 8px">De prijs per grade op de advertentie. Vul de grade in die je hebt (de vraagprijs), dan schat ik de andere twee. Aanpassen mag; Opslaan onthoudt het voor dit model.</p>
+            <div class="grid">
+              <div><label>Uitstekend</label><input id="gp_A" type="number" step="1" value="${gpVal('A')}" onchange="gradePrijsVeld()"></div>
+              <div><label>Zeer goed</label><input id="gp_B" type="number" step="1" value="${gpVal('B')}" onchange="gradePrijsVeld()"></div>
+              <div><label>Prima</label><input id="gp_C" type="number" step="1" value="${gpVal('C')}" onchange="gradePrijsVeld()"></div>
+            </div>
+            <button type="button" class="btn ghost small" style="margin-top:10px" onclick="gradePrijsOpslaan(this)">Grade-prijzen opslaan</button>
+          </div>
+
           <button class="btn ghost small" style="margin-top:14px" onclick="prijskaartTonen()">
             <svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>
         </div>
@@ -5270,6 +5312,42 @@ function onlVeld(){
   if(mg) onl.marge = mg.value==='ja';
   const np=document.getElementById('onl_nieuwprijs');
   if(np) onl.nieuwprijs = np.value===''?null:Math.round(Number(np.value)*100)/100;
+}
+
+/* ── grade-prijzen (webshop) ──
+   De prijs per grade voor deze advertentie (model+uitvoering). Standaard geschat uit de
+   vraagprijs (de grade die je hebt is het anker), aan te passen en op te slaan per model.
+   Fase 2 gebruikt deze prijzen straks voor de grade-varianten op de webshop. */
+function gpVal(g){
+  if(onl && onl.gradePrijzen){ const v=onl.gradePrijzen[g]; if(v!=null&&v!=='') return v; }
+  const dg=(onl&&onl.staat)||'B', p=onl&&onl.prijs;
+  if(p!=null&&p!==''){ const s=gradeSchatting(dg,p); return {A:s.a,B:s.b,C:s.c}[g]; }
+  return '';
+}
+function gradePrijsVeld(){
+  const lees=id=>{ const e=document.getElementById(id); return (e&&e.value!=='')?Math.round(Number(e.value)):null; };
+  onl.gradePrijzen={ A:lees('gp_A'), B:lees('gp_B'), C:lees('gp_C') };
+}
+function gradeSchat(){
+  onlBewaarVelden();
+  if(onl.prijs==null||onl.prijs===''){ toast('Vul eerst de vraagprijs in','let-op'); const p=document.getElementById('onl_prijs'); if(p) p.focus(); return; }
+  const s=gradeSchatting(onl.staat||'B', onl.prijs);
+  const zet=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v; };
+  zet('gp_A',s.a); zet('gp_B',s.b); zet('gp_C',s.c);
+  onl.gradePrijzen={A:s.a,B:s.b,C:s.c};
+  toast('Geschat vanuit de vraagprijs', true);
+}
+async function gradePrijsOpslaan(knop){
+  onlBewaarVelden(); gradePrijsVeld();
+  const gp=onl.gradePrijzen||{};
+  if(gp.A==null && gp.B==null && gp.C==null){ toast('Vul minstens één grade-prijs in','let-op'); return; }
+  await bezig(knop, async()=>{
+    const rij={ team_id:account.team_id, sleutel:onl.sleutel||webshopSleutel(onl.a), categorie:onl.a.categorie||null,
+      naam:toestelNaam(onl.a), prijs_a:gp.A, prijs_b:gp.B, prijs_c:gp.C, bijgewerkt_op:new Date().toISOString() };
+    const {error}=await sb.from('webshop_grade_prijzen').upsert(rij, {onConflict:'team_id,sleutel'});
+    if(error) throw new Error('Opslaan mislukt');
+    toast('Grade-prijzen opgeslagen voor dit model', true);
+  });
 }
 
 /* Een prijsvoorstel op basis van wat jij zelf eerder voor hetzelfde model
