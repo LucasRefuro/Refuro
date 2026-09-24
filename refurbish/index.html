@@ -2530,7 +2530,7 @@ function tekenApparaat(){
 
         <div class="card">
           <h2><svg class="i"><use href="#i-cpu"/></svg>Extra onderdelen${(a.extra_kosten||[]).length?` <span class="muted">(${euro(batExtraSom(a))})</span>`:''}</h2>
-          <p class="muted klein" style="margin-bottom:10px">Zit er bij het testen geen ram of ssd in, of moest je iets repareren? Zet het hier. Het bedrag komt bij de inkoop van dit toestel${a.batch_id?' en bij de extra investering van de batch':''}.</p>
+          <p class="muted klein" style="margin-bottom:10px">Zit er bij het testen geen ram of ssd in, of moest je iets repareren? Zet het hier. Kies iets uit je voorraad, of laat "Los onderdeel" staan en typ zelf een naam en bedrag. Het bedrag komt bij de inkoop van dit toestel${a.batch_id?' en bij de extra investering van de batch':''}.</p>
           ${(a.extra_kosten||[]).length?`<table><tbody>${(a.extra_kosten||[]).map((k,i)=>
             `<tr><td>${esc(batSoortNaam(k.soort))}${k.omschrijving?` <span class="muted klein">${esc(k.omschrijving)}</span>`:''}</td>
                  <td class="num">${euro(Number(k.bedrag)||0)}</td>
@@ -2549,7 +2549,7 @@ function tekenApparaat(){
             </select>
             <input id="ex_bedrag" type="number" step="0.01" min="0" style="max-width:120px" placeholder="Kosten in euro">
             <input id="ex_aantal" type="number" min="1" value="1" style="max-width:80px" title="Aantal" placeholder="Aantal">
-            <input id="ex_oms" placeholder="Omschrijving (mag leeg)" style="min-width:140px; flex:1">
+            <input id="ex_oms" placeholder="Naam onderdeel" style="min-width:140px; flex:1">
             <button class="btn" onclick="batExtraToevoegen('${a.id}', this)">Toevoegen</button>
           </div>
         </div>
@@ -4462,9 +4462,39 @@ function repOpen(a){
       <input id="r_bestel_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
       <button class="btn ghost small" onclick="deelBestellen('${a.id}')">Op de bestellijst</button>
     </div>
+
+    <div class="clkop">Zelf een onderdeel toevoegen</div>
+    <p class="muted klein" style="margin:0 0 8px">Een onderdeel dat je zelf gebruikt, niet van de plank en niet te bestellen. Het bedrag telt mee in de inkoop van dit toestel.${(a.extra_kosten||[]).length?' Al toegevoegd: '+euro(batExtraSom(a))+'.':''}</p>
+    <div class="row">
+      <input id="r_hm_naam" placeholder="Naam onderdeel" style="flex:1; min-width:160px">
+      <input id="r_hm_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
+      <button class="btn ghost small" onclick="repHandmatig('${a.id}')">Toevoegen</button>
+    </div>
   `, [
     {tekst:'Reparatie klaar', klasse:'actie', doe:(k)=>repKlaar(k,a.id)}
   ], 'groot');
+}
+/* Een onderdeel dat de winkelier bij de reparatie zelf toevoegt: naam + inkoopprijs.
+   Zelfde spoor als "Extra onderdelen" op de productpagina (extra_kosten), zodat het bedrag
+   bij de inkoop van het toestel komt en straks de marge klopt. Geen voorraad-afboeking,
+   want dit komt niet van de plank. */
+async function repHandmatig(apparaatId){
+  const a=apparaten.find(x=>x.id===apparaatId); if(!a) return;
+  const naam=(v('r_hm_naam')||'').trim();
+  const prijs=Math.round((Number(v('r_hm_prijs'))||0)*100)/100;
+  if(!naam){ toast('Vul de naam van het onderdeel in','let-op'); return; }
+  if(!prijs){ toast('Vul de inkoopprijs in','let-op'); return; }
+  const lijst=(Array.isArray(a.extra_kosten)?a.extra_kosten:[]).slice().concat([{soort:'reparatie', bedrag:prijs, omschrijving:naam, voorraad_id:null}]);
+  const nieuweInkoop=Math.round(((Number(a.inkoop)||0)+prijs)*100)/100;
+  const {error}=await sb.from('refurbish_apparaten')
+    .update({extra_kosten:lijst, inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',apparaatId);
+  if(error){ toast('Opslaan mislukt','fout'); return; }
+  // Ligt hij al in de winkelvoorraad, dan dezelfde inkoop naar de hardware-rij (marge).
+  if(a.hardware_id){ try{ await sb.from('hardware').update({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',a.hardware_id); }catch(_e){} }
+  a.extra_kosten=lijst; a.inkoop=nieuweInkoop;
+  await allesLaden();
+  const na=apparaten.find(x=>x.id===apparaatId); if(na) repOpen(na);
+  toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
 }
 
 async function deelToewijzen(apparaatId){
@@ -4501,6 +4531,8 @@ async function repKlaar(knop, id){
      bestellijst gezet? Waarschuw, anders gooi je die invoer ongemerkt weg. */
   const _rb=((document.getElementById('r_bestel')||{}).value||'').trim();
   if(_rb && !confirm('Je hebt "'+_rb+'" ingevuld bij een onderdeel dat je nodig hebt, maar nog niet op de bestellijst gezet. Toch afronden en dat weggooien?')) return;
+  const _hm=((document.getElementById('r_hm_naam')||{}).value||'').trim();
+  if(_hm && !confirm('Je hebt "'+_hm+'" ingevuld bij "zelf een onderdeel toevoegen", maar nog niet op Toevoegen geklikt. Toch afronden en dat weggooien?')) return;
   await bezig(knop, async()=>{
     const a=apparaten.find(x=>x.id===id);
     const {error}=await sb.from('refurbish_apparaten')
@@ -6690,6 +6722,11 @@ function exVoorraadKies(){
     if(soort) soort.value=['ssd','ram','accu','lader','reparatie','anders'].includes(o.soort)?o.soort:'anders';
     if(bedrag) bedrag.value=Number(o.prijs)||0;
     if(oms) oms.value=o.naam;
+  }else{
+    // Terug naar "Los onderdeel": velden leegmaken zodat je meteen zelf kunt typen.
+    if(soort) soort.value='anders';
+    if(bedrag) bedrag.value='';
+    if(oms){ oms.value=''; oms.focus(); }
   }
 }
 
