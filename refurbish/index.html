@@ -846,6 +846,21 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <label>Waar leg je ze neer</label>
           <div class="lockiezer" id="t_loc_kiezer"></div>
         </div>
+
+        <!-- Bewijs van inkoop. Optioneel, maar handig voor je administratie en voor de
+             margeregeling: een factuur, of een inkoopverklaring bij een contante inkoop
+             van een particulier. We houden de keuze vast en zetten het bewijs ná het
+             toevoegen op alle zojuist toegevoegde toestellen (dan is er pas een id). -->
+        <div style="margin-top:18px">
+          <label>Bewijs van inkoop</label>
+          <p class="muted klein" style="margin:2px 0 10px">Bewaar hoe je het inkocht. Mag ook leeg blijven.</p>
+          <div class="row" id="t_bewijs_knoppen">
+            <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-note"/></svg>Factuur uploaden<input type="file" accept="application/pdf,image/*" hidden onchange="bewijsFactuurKies(this)"></label>
+            <button type="button" class="btn ghost small" onclick="bewijsVerklaringOpen()"><svg class="i s"><use href="#i-note"/></svg>Inkoopverklaring maken</button>
+          </div>
+          <div class="row" id="t_bewijs_status" style="margin-top:8px" hidden></div>
+        </div>
+
         <div class="row" style="margin-top:18px">
           <button class="btn actie" onclick="toevoegen(this)"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen en labels maken</button>
           <span class="muted klein" id="modelHint"></span>
@@ -1652,6 +1667,63 @@ function modelHint(){
     : 'Nieuw model. Bij de controle vullen we de specificaties aan.';
 }
 
+/* Bewijs van inkoop dat bij de eerstvolgende Toevoegen-actie hoort. We uploaden pas
+   ná het insert (dan is er een toestel-id voor het opslagpad), zodat we geen losse
+   bestanden overhouden als je uiteindelijk toch niet toevoegt.
+   {soort:'factuur', bestand} of {soort:'verklaring', naam, adres, bedrag, handtekening}. */
+let nieuwBewijs=null;
+function bewijsFactuurKies(invoer){
+  const f=(invoer.files||[])[0]; if(invoer) invoer.value='';
+  if(!f) return;
+  if(f.size>15*1024*1024){ toast('Bestand te groot (max 15 MB)','let-op'); return; }
+  nieuwBewijs={soort:'factuur', bestand:f, naam:f.name};
+  bewijsStatusTeken();
+}
+function bewijsVerklaringOpen(){
+  const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
+  const bedrag=Math.round((Number(v('t_inkoop'))||0)*aantal*100)/100;
+  verklaringVenster({naam:'', adres:'', bedrag:(bedrag>0?bedrag:'')}, (d)=>{
+    nieuwBewijs={soort:'verklaring', naam:d.naam, adres:d.adres, bedrag:d.bedrag, handtekening:d.handtekening};
+    sluit(); bewijsStatusTeken();
+  });
+}
+function bewijsStatusTeken(){
+  const el=document.getElementById('t_bewijs_status'); if(!el) return;
+  if(!nieuwBewijs){ el.hidden=true; el.innerHTML=''; return; }
+  const wat = nieuwBewijs.soort==='factuur'
+    ? 'Factuur gekozen: '+esc(nieuwBewijs.naam)
+    : 'Inkoopverklaring klaar'+(nieuwBewijs.naam?' · '+esc(nieuwBewijs.naam):'');
+  el.hidden=false;
+  el.innerHTML='<span class="muted klein" style="align-self:center">'+wat+'</span>'+
+    '<button type="button" class="btn ghost small" onclick="bewijsWissen()">Wissen</button>';
+}
+function bewijsWissen(){ nieuwBewijs=null; bewijsStatusTeken(); }
+/* Het gekozen bewijs op alle zojuist toegevoegde toestellen zetten. Eén bestand in de
+   privé-bucket, waar alle toestellen van deze inkoop naar wijzen (ze horen bij elkaar). */
+async function bewijsToepassen(bewijs, rijen, ctx){
+  const ids=(rijen||[]).map(r=>r.id); if(!ids.length) return;
+  const basis=account.team_id+'/apparaat/'+ids[0]+'/';
+  let patch=null;
+  if(bewijs.soort==='factuur'){
+    const ext=((bewijs.bestand.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,''))||'pdf';
+    const pad=basis+'factuur-'+Date.now()+'.'+ext;
+    const {error}=await sb.storage.from('inkoopfacturen').upload(pad, bewijs.bestand, {contentType:bewijs.bestand.type||'application/octet-stream'});
+    if(error) throw new Error('upload');
+    patch={ factuur_url:pad };
+  }else{
+    const goederen=(ctx.aantal>1?ctx.aantal+' × ':'')+([ctx.merk,ctx.model].filter(Boolean).join(' ')||'toestel');
+    const png=await verklaringPng({code:'', verwacht:null, betaalwijze:null},
+      {naam:bewijs.naam, adres:bewijs.adres, bedrag:bewijs.bedrag, handtekening:bewijs.handtekening, goederen});
+    const blob=await (await fetch(png)).blob();
+    const pad=basis+'inkoopverklaring-'+Date.now()+'.png';
+    const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
+    if(error) throw new Error('upload');
+    patch={ verkoper_naam:bewijs.naam, verkoper_adres:bewijs.adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
+  }
+  await sb.from('refurbish_apparaten').update(patch).in('id', ids);
+  (apparaten||[]).forEach(a=>{ if(ids.includes(a.id)) Object.assign(a, patch); });
+}
+
 async function toevoegen(knop){
   const {merk, model}=splitsModel(v('t_model'));
   if(!model){ toast('Vul merk en model in','let-op'); return; }
@@ -1699,6 +1771,14 @@ async function toevoegen(knop){
     await sb.rpc('model_onthouden', {
       merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}
     });
+
+    // Het inkoopbewijs dat bij deze toevoeging hoort op alle nieuwe toestellen zetten.
+    // Pas hier, want nu bestaan de id's; alle toestellen van deze inkoop delen één bewijs.
+    if(nieuwBewijs && (data||[]).length){
+      try{ await bewijsToepassen(nieuwBewijs, data, {merk, model, aantal}); }
+      catch(_e){ toast('Toestellen toegevoegd, maar het inkoopbewijs opslaan lukte niet','let-op'); }
+      nieuwBewijs=null; bewijsStatusTeken();
+    }
 
     await allesLaden();   // eerst laden zodat de nieuwe toestellen in de lijst staan
     // Meteen naar de labelprinter, geen tussenscherm. Lukt printen niet (geen printhulp), dan
@@ -2223,6 +2303,51 @@ async function apparaatBatchZetten(id, val){
   tekenApparaat(); if(typeof tekenBatches==='function') tekenBatches();
 }
 
+/* Inkoopbewijs op een los toestel: een factuur uploaden of een inkoopverklaring maken.
+   Hergebruikt de privé-bucket en de verklaring-renderer. De oude factuur laten we bij
+   vervangen staan: bij een toevoeging-met-aantal wijzen meer toestellen naar hetzelfde
+   bestand, en weghalen zou het bewijs bij de andere toestellen breken. */
+async function appFactuurUpload(id, invoer){
+  const f=(invoer.files||[])[0]; if(invoer) invoer.value='';
+  if(!f) return;
+  if(f.size>15*1024*1024){ toast('Bestand te groot (max 15 MB)','let-op'); return; }
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  toast('Factuur uploaden…');
+  const ext=((f.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,''))||'pdf';
+  const pad=account.team_id+'/apparaat/'+id+'/factuur-'+Date.now()+'.'+ext;
+  const {error}=await sb.storage.from('inkoopfacturen').upload(pad, f, {contentType:f.type||'application/octet-stream'});
+  if(error){ toast('Uploaden mislukt','fout'); return; }
+  const {error:e2}=await sb.from('refurbish_apparaten').update({factuur_url:pad}).eq('id',id);
+  if(e2){ toast('Opslaan mislukt','fout'); return; }
+  a.factuur_url=pad;
+  toast('Factuur toegevoegd', true); tekenApparaat();
+}
+function appVerklaringOpen(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  verklaringVenster({naam:a.verkoper_naam||'', adres:a.verkoper_adres||'', bedrag:(a.inkoop!=null?a.inkoop:'')}, async(d, kn)=>{
+    await bezig(kn, async()=>{
+      const goederen=[a.merk,a.model].filter(Boolean).join(' ')||'toestel';
+      const png=await verklaringPng({code:a.code||'', verwacht:null, betaalwijze:null},
+        {naam:d.naam, adres:d.adres, bedrag:d.bedrag, handtekening:d.handtekening, goederen});
+      const blob=await (await fetch(png)).blob();
+      const pad=account.team_id+'/apparaat/'+id+'/inkoopverklaring-'+Date.now()+'.png';
+      const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
+      if(error) throw new Error('Opslaan mislukt');
+      const patch={ verkoper_naam:d.naam, verkoper_adres:d.adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
+      const {error:e2}=await sb.from('refurbish_apparaten').update(patch).eq('id',id);
+      if(e2) throw new Error('Opslaan mislukt');
+      Object.assign(a, patch);
+      sluit(); tekenApparaat();
+      toast('Inkoopverklaring opgeslagen', true);
+    });
+  });
+}
+function appBewijsBekijk(id, welk){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const pad = welk==='factuur' ? a.factuur_url : a.handtekening_url;
+  if(pad) batBekijkDoc(pad);
+}
+
 /* Een toestel dat al op voorraad staat maar een fout blijkt te hebben, terug de
    controle in sturen. Het gaat van de webshop, het portaal en uit een eventuele
    bundel af (het hoort in behandeling nergens meer te koop te staan), de status
@@ -2364,6 +2489,27 @@ function tekenApparaat(){
             <option value="">Geen batch</option>
             ${batches.map(b=>`<option value="${b.id}"${a.batch_id===b.id?' selected':''}>${esc(batLabel(b))}</option>`).join('')}
           </select>
+        </div>
+
+        <div class="card">
+          <h2><svg class="i"><use href="#i-note"/></svg>Inkoopbewijs</h2>
+          <p class="muted klein" style="margin-bottom:10px">Factuur of inkoopverklaring van deze inkoop. Handig voor je administratie en de margeregeling.</p>
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px">
+            <span>Factuur${a.factuur_url?'':' <span class="muted klein">— nog geen</span>'}</span>
+            <span class="row" style="gap:6px">
+              ${a.factuur_url
+                ? `<button class="btn ghost small" onclick="appBewijsBekijk('${a.id}','factuur')">Bekijken</button><label class="btn ghost small" style="cursor:pointer">Vervangen<input type="file" accept="application/pdf,image/*" hidden onchange="appFactuurUpload('${a.id}', this)"></label>`
+                : `<label class="btn ghost small" style="cursor:pointer">Toevoegen<input type="file" accept="application/pdf,image/*" hidden onchange="appFactuurUpload('${a.id}', this)"></label>`}
+            </span>
+          </div>
+          <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+            <span>Inkoopverklaring${a.handtekening_url?(a.verkoper_naam?' <span class="muted klein">— '+esc(a.verkoper_naam)+'</span>':''):' <span class="muted klein">— nog geen</span>'}</span>
+            <span class="row" style="gap:6px">
+              ${a.handtekening_url
+                ? `<button class="btn ghost small" onclick="appBewijsBekijk('${a.id}','verklaring')">Bekijken</button><button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Opnieuw</button>`
+                : `<button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Maken</button>`}
+            </span>
+          </div>
         </div>
 
         <div class="card">
@@ -7760,18 +7906,49 @@ let vklCtx=null, vklTekent=false, vklLeeg=true;
 function batVerklaringOpen(id){
   const b=batches.find(x=>x.id===id); if(!b) return;
   const cap=Number(b.aantal)||0;
+  verklaringVenster(
+    {naam:b.verkoper_naam||'', adres:b.verkoper_adres||'', bedrag:(b.inkoopprijs!=null?b.inkoopprijs:'')},
+    async(d, kn)=>{
+      await bezig(kn, async()=>{
+        const png=await verklaringPng({code:b.code||b.nummer||'', verwacht:b.verwacht, betaalwijze:b.betaalwijze},
+          {naam:d.naam, adres:d.adres, aantal:cap, bedrag:d.bedrag, handtekening:d.handtekening});
+        const blob=await (await fetch(png)).blob();
+        const pad=batDocPad(id,'inkoopverklaring','png');
+        const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
+        if(error) throw new Error('Opslaan mislukt');
+        const oud=b.handtekening_url;
+        const patch={ verkoper_naam:d.naam, verkoper_adres:d.adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
+        const {error:e2}=await sb.from('refurbish_batches').update(patch).eq('id',id);
+        if(e2) throw new Error('Opslaan mislukt');
+        Object.assign(b, patch);
+        if(oud) try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
+        sluit(); renderBatchDetail();
+        toast('Inkoopverklaring opgeslagen', true);
+      });
+    }
+  );
+}
+/* De inkoopverklaring-invoer, los van waar hij heen gaat. Naam, adres, bedrag en een
+   handtekening. Bij "Klaar" krijg je {naam,adres,bedrag,handtekening} terug via onKlaar;
+   opslaan doet de aanroeper (een batch, een los toestel of een nieuwe toevoeging). Het
+   aantal komt uit de context, dus dat hoeft de winkelier hier niet nog eens te tikken. */
+function verklaringVenster(prefill, onKlaar){
   venster('Inkoopverklaring', `
     <p class="muted klein" style="margin-bottom:12px">Voor een contante inkoop bij een particulier: vul de gegevens in en laat de verkoper hieronder tekenen. Je bewaart het als bewijs voor je eigen inkoopadministratie.</p>
     <div class="grid">
-      <div style="grid-column:1/-1"><label>Naam verkoper *</label><input id="vkl_naam" value="${esc(b.verkoper_naam||'')}" placeholder="voor- en achternaam"></div>
-      <div style="grid-column:1/-1"><label>Adres verkoper</label><input id="vkl_adres" value="${esc(b.verkoper_adres||'')}" placeholder="straat, postcode, plaats"></div>
-      <div><label>Aantal toestellen</label><input id="vkl_aantal" type="number" min="0" value="${cap||''}" placeholder="0"></div>
-      <div><label>Totaalbedrag (€)</label><input id="vkl_bedrag" type="number" step="0.01" min="0" value="${b.inkoopprijs!=null?b.inkoopprijs:''}" placeholder="0,00"></div>
+      <div style="grid-column:1/-1"><label>Naam verkoper *</label><input id="vkl_naam" value="${esc(prefill.naam||'')}" placeholder="voor- en achternaam"></div>
+      <div style="grid-column:1/-1"><label>Adres verkoper</label><input id="vkl_adres" value="${esc(prefill.adres||'')}" placeholder="straat, postcode, plaats"></div>
+      <div><label>Totaalbedrag (€)</label><input id="vkl_bedrag" type="number" step="0.01" min="0" value="${(prefill.bedrag!=null&&prefill.bedrag!=='')?prefill.bedrag:''}" placeholder="0,00"></div>
     </div>
     <div class="veldkop"><label>Handtekening verkoper *</label></div>
     <div class="vklwrap"><canvas id="vklCanvas" class="vklpad"></canvas></div>
     <div class="row" style="justify-content:flex-end; margin-top:6px"><button class="btn ghost small" onclick="vklWis()">Wissen</button></div>
-  `, [{tekst:'Onderteken en bewaar', klasse:'actie', doe:(kn)=>batVerklaringOpslaan(kn, id)}], 'groot');
+  `, [{tekst:'Klaar', klasse:'actie', doe:(kn)=>{
+    const naam=v('vkl_naam'); if(!naam){ toast('Vul de naam van de verkoper in','let-op'); return; }
+    if(vklLeeg){ toast('Laat de verkoper eerst tekenen','let-op'); return; }
+    const d={ naam, adres:v('vkl_adres')||'', bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100, handtekening:document.getElementById('vklCanvas').toDataURL('image/png') };
+    onKlaar(d, kn);
+  }}], 'groot');
   setTimeout(vklInit, 60);
 }
 function vklInit(){
@@ -7786,32 +7963,9 @@ function vklInit(){
   c.onpointerup=c.onpointercancel=()=>{ vklTekent=false; };
 }
 function vklWis(){ const c=document.getElementById('vklCanvas'); if(c&&vklCtx){ vklCtx.clearRect(0,0,c.width,c.height); vklLeeg=true; } }
-async function batVerklaringOpslaan(knop, id){
-  const b=batches.find(x=>x.id===id); if(!b) return;
-  const naam=v('vkl_naam'); if(!naam){ toast('Vul de naam van de verkoper in','let-op'); return; }
-  if(vklLeeg){ toast('Laat de verkoper eerst tekenen','let-op'); return; }
-  const adres=v('vkl_adres');
-  const aantal=Math.round(Number(v('vkl_aantal'))||0);
-  const bedrag=Math.round((Number(v('vkl_bedrag'))||0)*100)/100;
-  const handtekening=document.getElementById('vklCanvas').toDataURL('image/png');
-  await bezig(knop, async()=>{
-    const png=await verklaringPng(b, {naam, adres, aantal, bedrag, handtekening});
-    const blob=await (await fetch(png)).blob();
-    const pad=batDocPad(id,'inkoopverklaring','png');
-    const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
-    if(error) throw new Error('Opslaan mislukt');
-    const oud=b.handtekening_url;
-    const patch={ verkoper_naam:naam, verkoper_adres:adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
-    const {error:e2}=await sb.from('refurbish_batches').update(patch).eq('id',id);
-    if(e2) throw new Error('Opslaan mislukt');
-    Object.assign(b, patch);
-    if(oud) try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
-    sluit(); renderBatchDetail();
-    toast('Inkoopverklaring opgeslagen', true);
-  });
-}
 /* De verklaring als nette staande afbeelding: kop, koper, batch, verkoper, goederen, bedrag,
-   een korte verklaringstekst en de handtekening. */
+   een korte verklaringstekst en de handtekening. b mag een lichte {code,verwacht,betaalwijze}
+   zijn (los toestel: code leeg). d.goederen overschrijft de standaard goederen-regel. */
 async function verklaringPng(b, d){
   const W=1000, H=1400, m=64;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -7819,14 +7973,16 @@ async function verklaringPng(b, d){
   let y=m;
   x.font='800 46px Arial'; x.fillText('Inkoopverklaring', m, y); y+=64;
   const koper=(instel&&(instel.bedrijfsnaam||instel.bedrijf||instel.naam||instel.scherm_naam))||'';
+  const bcode=b.code||b.nummer||'';
   x.font='400 22px Arial'; x.fillStyle='#5B6663';
-  x.fillText('Batch '+(b.code||b.nummer||'')+(koper?'  ·  Koper: '+koper:''), m, y); y+=30;
+  const kopregel=(bcode?'Batch '+bcode:'')+((bcode&&koper)?'  ·  ':'')+(koper?'Koper: '+koper:'');
+  if(kopregel){ x.fillText(kopregel, m, y); y+=30; }
   x.fillText('Datum: '+new Date().toLocaleDateString('nl-NL'), m, y); y+=46;
   x.strokeStyle='#ECEAE4'; x.lineWidth=2; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=34;
   const regel=(kop,val)=>{ x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText(kop, m, y); x.font='400 24px Arial'; x.fillStyle='#17201E'; x.fillText(val||'-', m, y+26); y+=76; };
   regel('Verkoper', d.naam);
   if(d.adres) regel('Adres', d.adres);
-  regel('Goederen', (d.aantal||0)+' toestel'+((d.aantal===1)?'':'len')+(b.verwacht?' ('+verwachtTekst(b.verwacht)+')':''));
+  regel('Goederen', d.goederen || ((d.aantal||0)+' toestel'+((d.aantal===1)?'':'len')+(b.verwacht?' ('+verwachtTekst(b.verwacht)+')':'')));
   regel('Bedrag', euro(d.bedrag)+(b.betaalwijze?'  ·  '+betaalTekst(b.betaalwijze):'  ·  contant'));
   y+=6; x.strokeStyle='#ECEAE4'; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=28;
   x.font='400 21px Arial'; x.fillStyle='#17201E';
