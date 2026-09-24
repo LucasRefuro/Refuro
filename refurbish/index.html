@@ -1516,7 +1516,7 @@ function tabel(rijen, sleutel){
          als je met handschoenen aan achter een tafel vol laptops staat. */
       const bat=batches.find(x=>x.id===a.batch_id);
       return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
-        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>${bat?` <span class="batpil">${esc(bat.code||bat.nummer||'batch')}</span>`:''}
+        <td><b>${esc(toestelNaam(a))}</b>${bat?` <span class="batpil">${esc(bat.code||bat.nummer||'batch')}</span>`:''}
             <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}</div></td>
         <td class="mono">${esc(a.code||'—')}</td>
         <td class="mono">${esc(a.serienummer||'—')}</td>
@@ -1829,7 +1829,7 @@ function tekenVandaag(){
       <thead><tr><th>Nummer</th><th>Apparaat</th><th>Ligt in</th><th>Status</th><th></th></tr></thead>
       <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
         <td class="mono">${esc(a.code||'—')}</td>
-        <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+        <td><b>${esc(toestelNaam(a))}</b>
             <div class="muted klein">${esc(a.categorie||'')}</div></td>
         <td>${locNaam(a.locatie_id)?`<span class="locpil">${esc(locNaam(a.locatie_id))}</span>`:'<span class="muted klein">—</span>'}</td>
         <td><span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span></td>
@@ -1905,7 +1905,7 @@ function labelHtml(a){
       <span class="etstatus">${esc(STATUS_KORT[a.status]||a.status)}</span>
       ${a.grade && a.status!=='repurpose' ? `<span class="etgrade">${esc(a.grade)}</span>` : ''}
     </div>
-    <div class="etnaam">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
+    <div class="etnaam">${esc(toestelNaam(a))}</div>
     ${a.plek?`<div class="etplek">Plek: ${esc(a.plek)}</div>`:''}
     <div class="etregels">${regels.map(r=>`<div>${esc(r)}</div>`).join('')}</div>
     ${a.notitie?`<div class="etnotitie">${esc(a.notitie)}</div>`:''}
@@ -1946,6 +1946,12 @@ async function printViaHelper(pngBase64, opts){
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'printen mislukt');
   return j;
+}
+/* De naam van een toestel zoals we die aan de winkelier en de klant tonen: merk model,
+   en bij telefoons de kleur erachter. Eén plek, zodat de kleur overal meekomt (lijsten,
+   detail, prijskaartje). Niet gebruiken in invoervelden of zoekopdrachten. */
+function toestelNaam(a){
+  return [a.merk,a.model].filter(Boolean).join(' ')+(a.kleur?' - '+a.kleur:'');
 }
 function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
   const woorden=String(tekst||'').split(/\s+/); let regel='', regels=0;
@@ -2163,7 +2169,7 @@ function prijskaartHtml(bron){
   if(a.nieuwe_accu) garanties.push('Batterij in nieuwstaat');
   garanties.push('Direct klaar voor gebruik');
   return `<div class="speckaart">
-    <div class="sk-titel">${esc([a.merk,a.model].filter(Boolean).join(' '))}</div>
+    <div class="sk-titel">${esc(toestelNaam(a))}</div>
     ${sub?`<div class="sk-sub">${esc(sub)}</div>`:''}
     <div class="sk-midden">
       <div class="sk-band">Specificaties</div>
@@ -2248,7 +2254,7 @@ function appVerplaats(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
   const nu=locNaam(plekVan(a));
   venster('Verplaatsen', `
-    <p class="pv">${esc([a.merk,a.model].filter(Boolean).join(' '))}
+    <p class="pv">${esc(toestelNaam(a))}
       ligt nu ${nu?'in <b>'+esc(nu)+'</b>':'nergens geregistreerd'}.</p>
     <label>Waar gaat hij heen</label>
     <select id="vp_loc">${locaties.map(l=>
@@ -2472,9 +2478,9 @@ function tekenApparaat(){
       <div>
         <div class="kruimel">
           <a onclick="showTab('werkbank')">Werkbank</a> ›
-          <span>${esc([a.merk,a.model].filter(Boolean).join(' '))}</span>
+          <span>${esc(toestelNaam(a))}</span>
         </div>
-        <h1>${esc([a.merk,a.model].filter(Boolean).join(' '))}</h1>
+        <h1>${esc(toestelNaam(a))}</h1>
       </div>
       <div class="row">
         <span class="st ${a.status}">${esc(STATUS[a.status]||a.status)}</span>
@@ -2940,7 +2946,7 @@ function ctrTeken(){
           <a onclick="showTab('controle')">Te controleren</a> ›
           <span>${esc(a.code||'')}</span>
         </div>
-        <h1>${esc([a.merk,a.model].filter(Boolean).join(' '))}</h1>
+        <h1>${esc(toestelNaam(a))}</h1>
       </div>
       <div class="row">
         ${(ctr.pad||[]).length
@@ -4460,7 +4466,7 @@ function repOpen(a){
   const nodig=(a.defecten||[]);
   const beschikbaar=onderdelen.filter(o=>o.status==='voorraad');
   const toegewezen=onderdelen.filter(o=>o.voor_apparaat===a.id);
-  venster('Reparatie: '+esc([a.merk,a.model].filter(Boolean).join(' ')), `
+  venster('Reparatie: '+esc(toestelNaam(a)), `
     <p class="pv">Dit kwam uit de controle. Wijs een onderdeel van de plank toe, of zet het op de bestellijst.</p>
 
     <div class="clkop">Wat er mis is</div>
@@ -4727,7 +4733,7 @@ function tekenVoorraad(){
           const url=webshopUrl(a);
           return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
           <td class="mono">${esc(a.code||'—')}</td>
-          <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b>
+          <td><b>${esc(toestelNaam(a))}</b>
               <div class="muted klein">${esc(Object.values(a.specs||{}).slice(0,3).join(' · ')||a.categorie||'')}</div></td>
           <td>${a.grade?`<span class="gradepil">${esc(a.grade)}</span>`:'—'}</td>
           <td>${plekPil(a)}${a.plek?`<div class="muted klein">${esc(a.plek)}</div>`:''}</td>
@@ -4780,7 +4786,7 @@ function vrNaarPartner(id){
   const a=apparaten.find(x=>x.id===id); const h=hardwareVan(a); if(!a||!h){ toast('Dit toestel staat nog niet in de winkelvoorraad','let-op'); return; }
   if(!partnersData.length){ toast('Nog geen partners. Maak er eerst een aan bij Partners.','let-op'); return; }
   venster('Toewijzen aan partner', `
-    <p class="pv">Wijs <b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b> toe aan een partner. Alleen die partner ziet het in zijn dashboard. De winstverdeling stel je later in.</p>
+    <p class="pv">Wijs <b>${esc(toestelNaam(a))}</b> toe aan een partner. Alleen die partner ziet het in zijn dashboard. De winstverdeling stel je later in.</p>
     <div class="grid">
       <div><label>Partner</label><select id="tp_partner">${partnersData.map(p=>`<option value="${esc(p.id)}">${esc(p.naam||'Partner')}</option>`).join('')}</select></div>
     </div>
@@ -5054,7 +5060,7 @@ function tekenOnline(){
         <div class="kruimel"><a onclick="showTab('voorraad')">Voorraad</a> › <span>${esc(a.code||'')}</span></div>
         <h1>Online zetten</h1>
       </div>
-      <span class="gradepil">${esc([a.merk,a.model].filter(Boolean).join(' '))}</span>
+      <span class="gradepil">${esc(toestelNaam(a))}</span>
     </div>
 
     <div class="tweekolom">
@@ -6297,7 +6303,7 @@ function tekenDonoren(){
         <thead><tr><th>Nummer</th><th>Apparaat</th><th>Eruit gehaald</th><th>Binnen</th></tr></thead>
         <tbody>${rijen.map(a=>`<tr class="klikbaar" onclick="appPagina('${a.id}')">
           <td class="mono">${esc(a.code||'—')}</td>
-          <td><b>${esc([a.merk,a.model].filter(Boolean).join(' '))}</b></td>
+          <td><b>${esc(toestelNaam(a))}</b></td>
           <td>${(a.goede_delen||[]).length
             ? `<div class="delenrij">${(a.goede_delen||[]).map(d=>`<span class="deelpil">${esc(d)}</span>`).join('')}</div>`
             : '<span class="muted klein">niets bruikbaars</span>'}</td>
