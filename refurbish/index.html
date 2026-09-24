@@ -832,6 +832,13 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         <label>Wat voor apparaat</label>
         <div class="soortkiezer" id="t_cat_kiezer"></div>
 
+        <!-- Kleur alvast bij het inkopen, vooral voor telefoons. Los veld zodat een model
+             niet per kleur een aparte modelnaam wordt; komt ook op de sticker. -->
+        <div id="t_kleur_wrap" hidden style="margin-top:18px">
+          <label>Kleur</label>
+          <input id="t_kleur" placeholder="Bijvoorbeeld: Zwart" autocomplete="off">
+        </div>
+
         <div class="grid" style="margin-top:18px">
           <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
@@ -1557,6 +1564,10 @@ function tekenSoorten(){
     <button type="button" class="soortknop${s.n===soortNu?' aan':''}" onclick="soortKies('${s.n}')">
       <svg class="i"><use href="#${s.i}"/></svg><span>${s.n}</span>
     </button>`).join('');
+  // Kleurveld alleen bij telefoons; bij een ander soort verbergen we het én wissen we
+  // de waarde, zodat er geen kleur van een vorige telefoon blijft plakken.
+  const kw=document.getElementById('t_kleur_wrap');
+  if(kw){ const aan=(soortNu==='Telefoon'); kw.hidden=!aan; if(!aan){ const ki=document.getElementById('t_kleur'); if(ki) ki.value=''; } }
 }
 function soortKies(n){ soortNu=n; tekenSoorten(); modelHint(); }
 
@@ -1738,6 +1749,7 @@ async function toevoegen(knop){
       rijen.push({
         team_id:account.team_id,
         merk:merk||null, model, categorie:cat,
+        kleur:(cat==='Telefoon' && v('t_kleur'))?v('t_kleur'):null,
         inkoop:Number(v('t_inkoop'))||0,
         leverancier:v('t_lev')||null,
         batch_id:batKeuze,
@@ -1789,6 +1801,7 @@ async function toevoegen(knop){
     if(geprint){
       try{ await sb.from('refurbish_apparaten').update({gelabeld:true}).in('id',ids); (apparaten||[]).forEach(a=>{ if(ids.includes(a.id)) a.gelabeld=true; }); }catch(_e){}
     }
+    const ki=document.getElementById('t_kleur'); if(ki) ki.value='';   // kleur niet mee naar het volgende toestel
     const waar=locNaam(locKeuze);
     toast((aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd')+(waar?' · '+waar:'')+(geprint?' · label geprint':''), true);
   });
@@ -2002,7 +2015,7 @@ async function deviceLabelPng(a){
   ctx.font='800 '+Math.round(3.1*dpmm)+'px Arial';
   y=labelWrap(ctx, String(a.code||''), pad, y, txtW, Math.round(3.6*dpmm), 1);
   y+=Math.round(0.6*dpmm);
-  const mm=[a.merk,a.model].filter(Boolean).join(' ');
+  const mm=[a.merk,a.model].filter(Boolean).join(' ')+(a.kleur?' - '+a.kleur:'');
   if(mm){ ctx.font='800 '+Math.round(3.5*dpmm)+'px Arial'; y=labelWrap(ctx, mm, pad, y, txtW, Math.round(4.0*dpmm), 2); }
   if(grade && a.status!=='repurpose'){
     y+=Math.round(0.4*dpmm);
@@ -2247,6 +2260,7 @@ function appNaamWijzig(id){
       <input id="nw_model" autocomplete="off" value="${esc([a.merk,a.model].filter(Boolean).join(' '))}" placeholder="bijv. HP ZBook 15">
     </div>
     <div><label>Wat voor apparaat</label><select id="nw_cat">${cats.map(c=>`<option value="${c}"${c===(a.categorie||'Laptop')?' selected':''}>${c}</option>`).join('')}</select></div>
+    <div style="margin-top:12px"><label>Kleur</label><input id="nw_kleur" autocomplete="off" value="${esc(a.kleur||'')}" placeholder="Bijvoorbeeld: Zwart"></div>
   `, [{tekst:'Opslaan', klasse:'actie', doe:(k)=>appNaamOpslaan(k, id)}]);
 }
 async function appNaamOpslaan(knop, id){
@@ -2254,11 +2268,12 @@ async function appNaamOpslaan(knop, id){
   const {merk, model}=splitsModel(v('nw_model'));
   if(!model){ toast('Vul merk en model in','let-op'); return; }
   const cat=(document.getElementById('nw_cat')||{}).value||a.categorie||'Laptop';
+  const kleur=(v('nw_kleur')||'').trim()||null;
   await bezig(knop, async()=>{
     const {error}=await sb.from('refurbish_apparaten')
-      .update({merk:merk||null, model, categorie:cat, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+      .update({merk:merk||null, model, categorie:cat, kleur, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw new Error('Opslaan mislukt');
-    a.merk=merk||null; a.model=model; a.categorie=cat;
+    a.merk=merk||null; a.model=model; a.categorie=cat; a.kleur=kleur;
     try{ await sb.rpc('model_onthouden', {merk_in:merk||'Onbekend', model_in:model, categorie_in:cat, specs_in:{}}); }catch(_e){}
     sluit(); tekenApparaat();
     toast('Naam bijgewerkt', true);
@@ -2443,6 +2458,7 @@ function tekenApparaat(){
 
     <div class="feiten">
       ${feit('Nummer', a.code||'—', true)}
+      ${a.kleur?feit('Kleur', a.kleur):''}
       ${feit('Grade', a.grade||'—')}
       ${feit('Accu', a.nieuwe_accu?'nieuw (100%)':(a.accu?a.accu+'%':'—'))}
       ${feit('Ligt in', locNaam(plekVan(a))||'nog niet bepaald')}
@@ -4443,6 +4459,7 @@ function repOpen(a){
     <div class="clkop">Bestellen</div>
     <div class="row">
       <input id="r_bestel" placeholder="Welk onderdeel heb je nodig?" style="flex:1; min-width:200px">
+      <input id="r_bestel_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
       <button class="btn ghost small" onclick="deelBestellen('${a.id}')">Op de bestellijst</button>
     </div>
   `, [
@@ -4469,8 +4486,9 @@ async function deelInbouwen(id){
 }
 async function deelBestellen(apparaatId){
   const naam=v('r_bestel'); if(!naam){ toast('Vul in wat je nodig hebt','let-op'); return; }
+  const prijs=Math.round((Number(v('r_bestel_prijs'))||0)*100)/100;
   const {error}=await sb.from('refurbish_onderdelen').insert({
-    team_id:account.team_id, naam, status:'te_bestellen', voor_apparaat:apparaatId
+    team_id:account.team_id, naam, status:'te_bestellen', voor_apparaat:apparaatId, prijs:prijs||null
   });
   if(error){ toast('Opslaan mislukt','fout'); return; }
   await allesLaden(); sluit();
@@ -6681,13 +6699,14 @@ function tekenBestellen(){
   const nodig=onderdelen.filter(o=>o.status==='te_bestellen');
   document.getElementById('bestelLijst').innerHTML=nodig.length
     ? `<div class="tabelrol"><table>
-        <thead><tr><th style="width:40px"></th><th>Onderdeel</th><th>Voor welk apparaat</th><th></th></tr></thead>
+        <thead><tr><th style="width:40px"></th><th>Onderdeel</th><th>Voor welk apparaat</th><th class="num">Inkoop</th><th></th></tr></thead>
         <tbody>${nodig.map(o=>{
           const voor=apparaten.find(a=>a.id===o.voor_apparaat);
           return `<tr>
             <td><input type="checkbox" class="bestelvink" value="${o.id}"></td>
             <td><b>${esc(o.naam)}</b></td>
             <td class="muted klein">${voor?esc([voor.merk,voor.model].filter(Boolean).join(' ')):'—'}</td>
+            <td class="num">${o.prijs!=null?euro(o.prijs):'—'}</td>
             <td class="num"><button class="btn ghost small" onclick="deelWeg('${o.id}')">Weg</button></td>
           </tr>`;
         }).join('')}</tbody></table></div>`
