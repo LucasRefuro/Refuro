@@ -25,22 +25,18 @@ function fout(bericht: string, code = 400) {
 
 // Het sjabloon dat een winkel krijgt als hij er zelf geen heeft ingesteld.
 // De haakjes worden door de AI ingevuld; de rest blijft letterlijk staan.
-const STANDAARD_SJABLOON = `{merk} {model} — {kernpunt}
+//
+// Dit is bewust ALLEEN het verhaaltje: de specificaties, de staat, de garantie en
+// de doosinhoud staan op de productpagina al in eigen blokken (metafields). Zetten
+// we ze hier ook neer, dan staat alles dubbel. Dus geen speclijst en geen
+// "wat je krijgt"-rijtje in de tekst; wel een sterk, concreet verkoopverhaal.
+const STANDAARD_SJABLOON = `{pakkende openingszin van maximaal 12 woorden: waarom dit toestel de moeite waard is}
 
-{intro van twee zinnen: wat is dit voor apparaat en voor wie is het geschikt}
+{alinea van twee tot drie zinnen: wat voor apparaat dit is en voor wie het ideaal is, met een of twee concrete voorbeelden uit het dagelijks gebruik}
 
-Specificaties
-{specificaties als lijstje met streepjes}
+{alinea van twee tot drie zinnen: wat juist dit model fijn maakt — noem een paar echte sterke punten van {merk} {model}, in gewone taal en zonder de hele speclijst te herhalen}
 
-Staat
-{eerlijke beschrijving van de staat, hoort bij grade {grade}}
-
-Wat je krijgt
-- Getest en schoon geïnstalleerd met Windows
-- {garantie} maanden garantie
-- Oplader inbegrepen
-
-{afsluiter van één zin, zonder uitroeptekens}`;
+{een zin over refurbished bij dit toestel: nagekeken, getest en met garantie, eerlijk over de staat ({grade})}`;
 
 const STAAT: Record<string, string> = {
   A: "als nieuw, nauwelijks gebruikssporen",
@@ -97,7 +93,11 @@ Deno.serve(async (req) => {
     ? `Dit is voor Marktplaats. Hou het wat losser en korter dan voor een webshop,
        en schrijf de titel zoals mensen zoeken: merk, model, en de belangrijkste
        specificaties. Geen opsommingen met opmaak, gewoon regels tekst.`
-    : `Dit is voor de webshop. Netjes opgebouwd, met de specificaties als lijstje.`;
+    : `Dit is voor de webshop-productpagina. De specificaties, de staat, de garantie en
+       de doosinhoud staan daar AL in eigen blokken op de pagina. Herhaal die dus NIET
+       als lijstje in de tekst. Schrijf puur het verkoopverhaal: korte, scanbare alinea's
+       (geen streepjes-opsomming), professioneel en zelfverzekerd, in de heldere,
+       behulpzame stijl van een grote refurbished-webshop zoals Coolblue of Amac.`;
 
   const prompt = `Schrijf een advertentie voor een tweedehands apparaat.
 
@@ -118,9 +118,21 @@ ${sjabloon}
 
 ${kanaalUitleg}
 
-Toon: ${toon}. Schrijf in het Nederlands, voor een particuliere koper. Geen
-superlatieven, geen uitroeptekens, geen verkooppraat. Wees eerlijk over de
-staat: wat je verzwijgt komt terug als retour.
+Toon: ${toon}. Schrijf in het Nederlands, voor een particuliere koper.
+Professioneel en concreet, niet plat: leg uit wat de koper eraan heeft, met echte
+voorbeelden uit het dagelijks gebruik. Geen holle superlatieven, geen uitroeptekens,
+geen "koop nu"-praat. Wees eerlijk over de staat: wat je verzwijgt komt terug als retour.
+
+Belangrijk over de inhoud:
+- Schrijf voor de juiste categorie. Dit is een ${a.categorie || "Laptop"}. Noem alleen
+  dingen die bij dít soort toestel passen (dus geen Windows of oplader bij een telefoon).
+- Je mag algemene, algemeen bekende eigenschappen van ${a.merk || ""} ${a.model} gebruiken
+  die voor elk exemplaar van dit model gelden (bijvoorbeeld schermtype, chip, camera,
+  5G, materiaal, bijzondere functies), ook als ze hierboven niet als specificatie staan.
+- Verzin NOOIT exemplaar-specifieke feiten. De staat (grade ${a.grade || "B"}), het
+  accupercentage, de opslag en een eventuele bijzonderheid komen alleen uit de gegevens
+  hierboven; die zijn leidend en verander je niet.
+- Herhaal de specificatielijst niet; die staat al apart op de pagina.
 
 Antwoord uitsluitend met JSON:
 {"titel":"...","tekst":"...","zoekwoorden":["...","..."]}
