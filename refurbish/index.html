@@ -2554,7 +2554,7 @@ function tekenApparaat(){
             <span>Inkoopverklaring${a.handtekening_url?(a.verkoper_naam?' <span class="muted klein">— '+esc(a.verkoper_naam)+'</span>':''):' <span class="muted klein">— nog geen</span>'}</span>
             <span class="row" style="gap:6px">
               ${a.handtekening_url
-                ? `<button class="btn ghost small" onclick="appBewijsBekijk('${a.id}','verklaring')">Bekijken</button><button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Opnieuw</button>`
+                ? `<button class="btn ghost small" onclick="appBewijsBekijk('${a.id}','verklaring')">Bekijken</button><button class="btn ghost small" onclick="verklaringDownload('${a.id}', this)">Download PDF</button><button class="btn ghost small" onclick="verklaringMoneybird('${a.id}', this)">Naar Moneybird</button><button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Opnieuw</button>`
                 : `<button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Maken</button>`}
             </span>
           </div>
@@ -8063,13 +8063,22 @@ async function verklaringPng(b, d){
   const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H); x.fillStyle='#17201E'; x.textBaseline='top';
   let y=m;
   x.font='800 46px Arial'; x.fillText('Inkoopverklaring', m, y); y+=64;
-  const koper=(instel&&(instel.bedrijfsnaam||instel.bedrijf||instel.naam||instel.scherm_naam))||'';
+  const koperG = (typeof koperGegevens==='function') ? (await koperGegevens()) : {};
+  const koperNaam = koperG.naam || (instel&&(instel.bedrijfsnaam||instel.bedrijf||instel.naam||instel.scherm_naam)) || '';
+  const koperAdres = [koperG.adres, [koperG.pc,koperG.plaats].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const koperExtra = [koperG.kvk?('KVK '+koperG.kvk):'', koperG.btw?('BTW '+koperG.btw):''].filter(Boolean).join('  ·  ');
   const bcode=b.code||b.nummer||'';
   x.font='400 22px Arial'; x.fillStyle='#5B6663';
-  const kopregel=(bcode?'Batch '+bcode:'')+((bcode&&koper)?'  ·  ':'')+(koper?'Koper: '+koper:'');
-  if(kopregel){ x.fillText(kopregel, m, y); y+=30; }
-  x.fillText('Datum: '+new Date().toLocaleDateString('nl-NL'), m, y); y+=46;
-  x.strokeStyle='#ECEAE4'; x.lineWidth=2; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=34;
+  x.fillText((bcode?'Batch '+bcode+'  ·  ':'')+'Datum: '+new Date().toLocaleDateString('nl-NL'), m, y); y+=44;
+  x.strokeStyle='#ECEAE4'; x.lineWidth=2; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=30;
+  // Koper (jouw bedrijf), zodat de verklaring een compleet inkoopdocument is.
+  x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Koper', m, y);
+  x.font='400 24px Arial'; x.fillStyle='#17201E'; x.fillText(koperNaam||'-', m, y+26);
+  let ky=y+60;
+  if(koperAdres){ x.font='400 20px Arial'; x.fillStyle='#5B6663'; x.fillText(koperAdres, m, ky); ky+=28; }
+  if(koperExtra){ x.font='400 20px Arial'; x.fillStyle='#5B6663'; x.fillText(koperExtra, m, ky); ky+=28; }
+  y=ky+14;
+  x.strokeStyle='#ECEAE4'; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=30;
   const regel=(kop,val)=>{ x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText(kop, m, y); x.font='400 24px Arial'; x.fillStyle='#17201E'; x.fillText(val||'-', m, y+26); y+=76; };
   regel('Verkoper', d.naam);
   if(d.adres) regel('Adres', d.adres);
@@ -8082,6 +8091,73 @@ async function verklaringPng(b, d){
   x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Handtekening verkoper', m, y); y+=30;
   await new Promise(res=>{ const img=new Image(); img.onload=()=>{ const w=Math.min(W-2*m, 420), h=w*(img.height/img.width||0.4); x.drawImage(img, m, y, w, h); res(); }; img.onerror=()=>res(); img.src=d.handtekening; });
   return c.toDataURL('image/png');
+}
+
+/* De koper-gegevens (jouw bedrijf) voor de inkoopverklaring: naam, adres, KVK, BTW. Die staan
+   in de factuurgegevens van de winkelapp (winkeldata-blob, sleutel bedrijf), niet in refurbish.
+   We halen ze één keer op en bewaren ze. Leeg? Dan valt de verklaring terug op de bedrijfsnaam. */
+let _koperGeg=null;
+async function koperGegevens(){
+  if(_koperGeg) return _koperGeg;
+  try{
+    const {data}=await sb.from('winkeldata').select('data').eq('team_id',account.team_id).maybeSingle();
+    _koperGeg=(data&&data.data&&data.data.bedrijf)||{};
+  }catch(e){ _koperGeg={}; }
+  return _koperGeg;
+}
+/* Een verklaring-PNG in een A4-PDF, netjes gecentreerd met behoud van verhouding. */
+async function verklaringPdfDoc(pngDataUrl){
+  await laadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('beeld')); i.src=pngDataUrl; });
+  const doc=new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const mm=14, maxW=210-2*mm, maxH=297-2*mm;
+  let w=maxW, h=w*(img.height/img.width);
+  if(h>maxH){ h=maxH; w=h*(img.width/img.height); }
+  doc.addImage(pngDataUrl, 'PNG', (210-w)/2, mm, w, h);
+  return doc;
+}
+/* Haalt de opgeslagen verklaring-PNG op en maakt er een A4-PDF-doc van. */
+async function verklaringPdfVan(id){
+  const a=apparaten.find(x=>x.id===id); if(!a||!a.handtekening_url) return null;
+  const {data,error}=await sb.storage.from('inkoopfacturen').createSignedUrl(a.handtekening_url,300);
+  if(error||!data) return null;
+  const blob=await (await fetch(data.signedUrl)).blob();
+  const dataUrl=await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+  return await verklaringPdfDoc(dataUrl);
+}
+async function verklaringDownload(id, knop){
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Even…'; }
+  try{
+    const doc=await verklaringPdfVan(id);
+    if(!doc) throw new Error('laden');
+    const a=apparaten.find(x=>x.id===id)||{};
+    doc.save(('inkoopverklaring '+(a.verkoper_naam||toestelNaam(a))).replace(/[^\w -]+/g,'').trim()+'.pdf');
+  }catch(e){ toast(/beeld|laden/.test(String(e&&e.message))?'Kon de verklaring niet laden':'Het maken van de PDF mislukte','fout'); }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+}
+/* De verklaring als inkoopfactuur (0% btw / margeregeling) met de PDF als bijlage in Moneybird. */
+async function verklaringMoneybird(id, knop){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  await bezig(knop, async()=>{
+    const doc=await verklaringPdfVan(id);
+    if(!doc) throw new Error('Kon de verklaring niet laden');
+    const pdf=doc.output('datauristring');
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/moneybird',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({ actie:'inkoop',
+        bedrag:Number(a.inkoop)||0, btw:0,
+        wat:'Inkoop '+toestelNaam(a),
+        datum:String(a.verklaring_op||new Date().toISOString()).slice(0,10),
+        leverancier:a.verkoper_naam||'Particuliere verkoper',
+        reference:'Inkoopverklaring'+(a.code?' '+a.code:''),
+        pdf })
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Moneybird weigerde de inkoopfactuur');
+    toast('In Moneybird gezet als inkoopfactuur', true);
+  });
 }
 
 async function batVerwijder(id){
