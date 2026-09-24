@@ -402,7 +402,11 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   // spec-chips en de spec-tabel vullen. We zetten alleen wat er is, dus een
   // telefoon (Opslag) en een laptop (Processor/Geheugen/...) vullen elk het hunne.
   if (sp.Processor) out.push(mfText("cpu", sp.Processor));
+  // Bij een telefoon heet de processor "Chip" en het geheugen "Werkgeheugen"; die
+  // gaan in dezelfde metafields, zodat het thema ze in dezelfde rijen toont.
+  else if (sp.Chip) out.push(mfText("cpu", sp.Chip));
   if (sp.Geheugen) out.push(mfText("ram", sp.Geheugen));
+  else if (sp.Werkgeheugen) out.push(mfText("ram", sp.Werkgeheugen));
   if (sp.Opslag) out.push(mfText("opslag", sp.Opslag));
   // Het scherm: laptop en telefoon hebben "Scherm"; een monitor beschrijft het
   // met losse velden (maat, paneel, resolutie, verversing). Die plakken we tot
@@ -415,6 +419,13 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (sp.Poorten) out.push(mfText("poorten", sp.Poorten));
   if (sp.Gewicht) out.push(mfText("gewicht", sp.Gewicht));
   if (sp.Bouwjaar) out.push(mfText("bouwjaar", sp.Bouwjaar));
+  // Telefoon-specifieke feiten (van de model-opzoeker), zodat de spec-pagina van een
+  // telefoon net zo goed gevuld is als die van een laptop.
+  if (sp.Camera) out.push(mfText("camera", sp.Camera));
+  if (sp.Netwerk) out.push(mfText("netwerk", sp.Netwerk));
+  if (sp.Materiaal) out.push(mfText("materiaal", sp.Materiaal));
+  if (sp.Waterbestendig) out.push(mfText("waterbestendig", sp.Waterbestendig));
+  if (sp.SIM) out.push(mfText("sim", sp.SIM));
   // De extra uitrusting uit de controle (SPEC_EXTRA): schermtype is een keuze, de rest
   // ja/nee. Zo wordt de speclijst op de webshop compleet in plaats van vijf regels.
   if (sp.Schermtype) out.push(mfText("schermtype", sp.Schermtype));

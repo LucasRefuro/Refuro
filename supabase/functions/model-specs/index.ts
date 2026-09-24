@@ -32,16 +32,26 @@ function fout(bericht: string, code = 400) {
 // verkeerd antwoord niet van alles bijzetten.
 const VELDEN = ["Processor", "Geheugen", "Opslag", "Scherm", "Videokaart", "Touchscreen", "Bouwjaar"];
 
+// Telefoons en tablets: vaste modelfeiten in plaats van "uitvoeringen" per onderdeel.
+// Zo vult de spec-pagina van de webshop zich met chip, scherm, camera, 5G, materiaal enz.
+const VELDEN_TEL = ["Chip", "Werkgeheugen", "Opslag", "Scherm", "Camera", "Netwerk", "Besturingssysteem", "Materiaal", "Waterbestendig", "SIM", "Bouwjaar", "Gewicht"];
+
 // Per onderdeel alles wat er voor dit model verkocht is. Van een zakelijke
 // laptop bestaan tien processors en vier schermen; welke er voor je staat weet
 // je pas als Windows draait. Eén "meest voorkomende uitvoering" is dan precies
 // het verkeerde antwoord.
 const KEUZEVELDEN = ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm"];
+// Bij een telefoon verschilt eigenlijk alleen de opslag (kleur vragen we apart).
+const KEUZEVELDEN_TEL = ["Opslag"];
 
-function optiesOpschonen(rauw: any) {
+function telefoonSoort(categorie: string) {
+  return /telefoon|tablet|smartphone|phone/i.test(categorie);
+}
+
+function optiesOpschonen(rauw: any, keuze: string[]) {
   const uit: Record<string, string[]> = {};
   if (!rauw || typeof rauw !== "object") return uit;
-  for (const veld of KEUZEVELDEN) {
+  for (const veld of keuze) {
     const lijst = Array.isArray(rauw[veld]) ? rauw[veld] : [];
     const schoon: string[] = [];
     for (const w of lijst) {
@@ -58,10 +68,10 @@ function optiesOpschonen(rauw: any) {
   return uit;
 }
 
-function opschonen(rauw: any) {
+function opschonen(rauw: any, velden: string[]) {
   const uit: Record<string, string> = {};
   if (!rauw || typeof rauw !== "object") return uit;
-  for (const veld of VELDEN) {
+  for (const veld of velden) {
     const w = rauw[veld];
     if (w == null) continue;
     const t = String(w).trim();
@@ -93,6 +103,10 @@ Deno.serve(async (req) => {
   const categorie = String(lijf?.categorie || "Laptop").trim().slice(0, 40);
   if (!model) return fout("Vul eerst een model in");
 
+  const tel = telefoonSoort(categorie);
+  const velden = tel ? VELDEN_TEL : VELDEN;
+  const keuze = tel ? KEUZEVELDEN_TEL : KEUZEVELDEN;
+
   // 1. Staat het er al?
   const { data: bekend } = await admin.from("hardware_modellen")
     .select("merk, model, categorie, specs, varianten, opties")
@@ -115,7 +129,39 @@ Deno.serve(async (req) => {
   const sleutel = Deno.env.get("ANTHROPIC_API_KEY");
   if (!sleutel) return fout("Dit model staat nog niet in de lijst", 404);
 
-  const prompt = `Welke uitvoeringen bestaan er van dit apparaat?
+  const prompt = tel
+    ? `Geef de volledige specificaties van deze telefoon of tablet, zoals ze op een
+productpagina van een refurbished-webshop staan.
+
+Merk: ${merk || "onbekend"}
+Model: ${model}
+Soort: ${categorie}
+
+Dit zijn vaste, publieke modelfeiten (ze gelden voor elk exemplaar van dit model).
+Vul alles in wat je zeker weet; laat een veld leeg als je het niet zeker weet, verzin niets.
+
+- Chip: de processor/chipset, bijvoorbeeld "A14 Bionic" of "Snapdragon 888"
+- Werkgeheugen: het RAM, bijvoorbeeld "4 GB"
+- Opslag: de opslagvarianten die van dit model bestaan (dat is het keuzeveld)
+- Scherm: maat, type en resolutie in één regel, bijvoorbeeld "6,1 inch OLED, 2532 x 1170"
+- Camera: de achtercamera('s) en de frontcamera, bijvoorbeeld "Dubbel 12 MP, front 12 MP"
+- Netwerk: "5G" of "4G"
+- Besturingssysteem: bijvoorbeeld "iOS 14 (bij te werken)" of "Android 11"
+- Materiaal: bijvoorbeeld "Aluminium en glas"
+- Waterbestendig: de IP-rating, bijvoorbeeld "IP68" of "Nee"
+- SIM: bijvoorbeeld "Nano-SIM en eSIM"
+- Bouwjaar: het jaar van uitbrengen
+- Gewicht: bijvoorbeeld "164 g"
+
+Geef in "specs" de vaste feiten, en in "opties" alleen de opslagvarianten.
+
+Antwoord uitsluitend met JSON:
+{"merk":"...","model":"...",
+ "specs":{"Chip":"...","Werkgeheugen":"...","Opslag":"...","Scherm":"...","Camera":"...","Netwerk":"...","Besturingssysteem":"...","Materiaal":"...","Waterbestendig":"...","SIM":"...","Bouwjaar":"...","Gewicht":"..."},
+ "opties":{"Opslag":["64 GB","128 GB","256 GB"]}}
+
+Corrigeer een typefout in het model als je zeker weet welk apparaat bedoeld wordt.`
+    : `Welke uitvoeringen bestaan er van dit apparaat?
 
 Merk: ${merk || "onbekend"}
 Model: ${model}
@@ -168,12 +214,12 @@ apparaat bedoeld wordt.`;
     if (!m) throw new Error("Er kwam geen bruikbaar antwoord terug");
     const j = JSON.parse(m[0]);
 
-    const specs = opschonen(j.specs);
-    const opties = optiesOpschonen(j.opties);
+    const specs = opschonen(j.specs, velden);
+    const opties = optiesOpschonen(j.opties, keuze);
 
     // Wat als startpunt is gekozen hoort ook in de lijst te staan, anders staat
     // het veld ingevuld met iets wat je niet kunt aanklikken.
-    for (const veld of KEUZEVELDEN) {
+    for (const veld of keuze) {
       const w = specs[veld];
       if (!w) continue;
       if (!opties[veld]) opties[veld] = [];

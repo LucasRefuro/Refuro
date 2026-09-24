@@ -4283,10 +4283,13 @@ async function specsZoeken(knop){
     const sp=uit.specs||{};
     ctr.opties = (uit.opties && typeof uit.opties==='object') ? uit.opties : {};
     ctr.varianten = Array.isArray(uit.varianten) ? uit.varianten : (ctr.varianten||[]);
-    /* Wat je al had ingevuld blijft staan; alleen lege velden krijgen het
-       voorstel. Anders gooit één klik je eigen uitgelezen waarden weg. */
-    prof().specVelden.forEach(v=>{
-      if(!String(ctr.specs[v.sleutel]||'').trim() && sp[v.sleutel]) ctr.specs[v.sleutel]=sp[v.sleutel];
+    /* Wat je al had ingevuld blijft staan; alleen lege velden krijgen het voorstel.
+       We nemen ALLE opgehaalde specs over, niet alleen de velden op het controleformulier:
+       bij een telefoon komt er zo veel meer binnen (chip, scherm, camera, 5G, materiaal…)
+       dan Opslag/Kleur/IMEI, zodat de spec-pagina van de webshop goed gevuld raakt. Die
+       extra feiten staan niet als los invulveld maar reizen wel mee naar de webshop. */
+    Object.keys(sp).forEach(k=>{
+      if(!String(ctr.specs[k]||'').trim() && sp[k]) ctr.specs[k]=sp[k];
     });
     if(String(sp['Touchscreen']||'').toLowerCase()==='ja') ctr.specs['Touchscreen']='ja';
 
