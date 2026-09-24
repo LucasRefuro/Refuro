@@ -2183,9 +2183,35 @@ function prijskaartHtml(bron){
 /* Eén plek die het kaart-venster tekent, zodat de print-id maar één keer bestaat. */
 function prijskaartVenster(bron){
   venster('Prijskaartje', `
-    <p class="pv">Print dit A6-kaartje en leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
+    <p class="pv">Open het kaartje als PDF en print het op A6. Leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
     <div class="prijskaart-vel" id="prijsVel">${prijskaartHtml(bron)}</div>
-  `, [{tekst:'Printen', klasse:'actie', doe:()=>window.print()}], 'groot');
+  `, [{tekst:'Openen als PDF', klasse:'actie', doe:(kn)=>prijskaartPdf(bron, kn)}], 'groot');
+}
+/* Het prijskaartje als PDF in een nieuw tabblad openen (of downloaden als de pop-up
+   geblokkeerd is), zodat je het vanuit de PDF-viewer print. window.print() gaf in Safari
+   verkleurde kaartjes; dit is dezelfde betrouwbare weg als de A6-kaart in de winkelapp. */
+async function prijskaartPdf(bron, knop){
+  // Het tabblad meteen tijdens de klik openen, anders ziet Safari het niet als klik en
+  // blokkeert het de pop-up.
+  const win=window.open('', '_blank');
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Even…'; }
+  try{
+    await laadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await laadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const el=document.querySelector('#prijsVel .speckaart');
+    if(!el) throw new Error('geen kaart');
+    const cv=await window.html2canvas(el, {scale:3, backgroundColor:'#ffffff', useCORS:true});
+    const doc=new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a6'});
+    doc.addImage(cv.toDataURL('image/png'), 'PNG', 0, 0, 105, 148);
+    const a=(bron&&bron.a)||{};
+    const naam=('prijskaartje '+[a.merk,a.model].filter(Boolean).join(' ')).replace(/[^\w -]+/g,'').trim()||'prijskaartje';
+    const url=doc.output('bloburl');
+    if(win){ win.location.href=url; } else { doc.save(naam+'.pdf'); toast('Kaartje gedownload. Open het en print op A6.', true); }
+  }catch(e){
+    if(win) win.close();
+    toast(/niet laden/.test(String(e&&e.message))?'Kon de PDF-maker niet laden. Check je internet.':'Het maken van de PDF mislukte','fout');
+  }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
 }
 
 function prijskaartTonen(){
