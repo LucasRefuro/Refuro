@@ -177,6 +177,11 @@ tr.klikbaar{cursor:pointer;}
 .tabelscroll thead th{position:sticky; top:0; background:var(--card); z-index:1; padding-top:10px; box-shadow:inset 0 -1px 0 var(--border);}
 .tabelpager{display:flex; align-items:center; justify-content:center; gap:16px; margin-top:14px;}
 .tabelbalk{display:flex; justify-content:flex-end; margin-bottom:10px;}
+/* Het gedeelde lijst-menu: de sorteerknoppen als pil-groep, met het merk-filter ernaast. */
+.lijstbalk{margin-bottom:12px; flex-wrap:wrap; gap:6px; vertical-align:middle;}
+.lijstmerk{width:auto; min-width:130px; border:none; background:var(--card); border-radius:var(--pil);
+  padding:8px 14px; font-size:13.5px; font-weight:600; color:var(--tekst);
+  box-shadow:0 1px 4px rgba(23,32,30,.06); margin-left:6px;}
 
   /* ---------- batches: partij-overzicht ---------- */
   .batpil{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:var(--pil);
@@ -1427,7 +1432,12 @@ document.querySelectorAll('aside nav button[data-tab]').forEach(b=>
 function zoekterm(){ const e=document.getElementById('zoek'); return (e?e.value:'').trim().toLowerCase(); }
 function past(a){
   const q=zoekterm(); if(!q) return true;
-  return [a.merk,a.model,a.serienummer].filter(Boolean).join(' ').toLowerCase().includes(q);
+  /* Zoeken op merk, model, serienummer, het A-nummer (code) en de batch. Meerdere
+     woorden: alle woorden moeten voorkomen, zodat "apple a0080" of "hp batch3" werkt. */
+  const bat=batches.find(x=>x.id===a.batch_id);
+  const hooi=[a.merk,a.model,a.serienummer,a.code,a.kleur, bat&&(bat.code||bat.nummer)]
+    .filter(Boolean).join(' ').toLowerCase();
+  return q.split(/\s+/).every(w=>hooi.includes(w));
 }
 
 function tekenAlles(){
@@ -1476,25 +1486,43 @@ function tabelBlader(sleutel, delta){
 /* Volgorde van de lange lijsten: op merk (om terug te vinden), laatst toegevoegd (wat
    net binnenkwam), of nieuwste model eerst (op processorgeneratie, i5-11xx voor i5-8xxx).
    Elke lijst onthoudt zijn eigen keuze; standaard op merk. */
-let tabelSort={};
-const TABEL_SORT_LABEL={merk:'Op merk', nieuw:'Laatst toegevoegd', gen:'Nieuwste model'};
-function tabelSorteer(sleutel){
-  const huidig = tabelSort[sleutel]||'merk';
-  tabelSort[sleutel] = huidig==='merk' ? 'nieuw' : huidig==='nieuw' ? 'gen' : 'merk';
-  tabelPag[sleutel]=0;
-  const fn={werkbank:tekenWerkbank, controle:tekenControle, reparatie:tekenReparatie}[sleutel];
+/* Gedeeld zoek/filter-menu voor de lange lijsten (werkbank, controle, reparatie, voorraad):
+   overal dezelfde sorteeropties en hetzelfde merk-filter. Elke lijst onthoudt zijn eigen keuze;
+   standaard laatst toegevoegd. "Beste eerst" = de beste grade eerst, dan het nieuwste model. */
+let lijstSort={}, lijstMerk={};
+const LIJST_SORT=[{k:'nieuw',n:'Laatst toegevoegd'},{k:'merk',n:'Op merk'},{k:'beste',n:'Beste eerst'}];
+function lijstHerteken(sleutel){
+  const fn={werkbank:tekenWerkbank, controle:tekenControle, reparatie:tekenReparatie, voorraad:tekenVoorraad}[sleutel];
   if(fn) fn();
 }
-function tabelSorteerLijst(rijen, modus){
+function lijstZetSort(sleutel,k){ lijstSort[sleutel]=k; tabelPag[sleutel]=0; lijstHerteken(sleutel); }
+function lijstZetMerk(sleutel,v){ lijstMerk[sleutel]=v; tabelPag[sleutel]=0; lijstHerteken(sleutel); }
+function besteRang(a){ const g={A:0,B:1,C:2}[String(a.grade||'').toUpperCase()]; return g==null?3:g; }
+function lijstSorteerLijst(rijen, modus){
   const bij=a=>new Date(a.aangemaakt_op||0).getTime();
   if(modus==='nieuw') return rijen.slice().sort((a,b)=> bij(b)-bij(a));
-  if(modus==='gen')   return rijen.slice().sort((a,b)=> (cpuGen(b.specs)-cpuGen(a.specs)) || (bij(b)-bij(a)));
-  return rijen.slice().sort(apparaatSorteer);
+  if(modus==='beste') return rijen.slice().sort((a,b)=> (besteRang(a)-besteRang(b)) || (cpuGen(b.specs)-cpuGen(a.specs)) || (bij(b)-bij(a)));
+  return rijen.slice().sort(apparaatSorteer);   // op merk
+}
+/* Merk-filter + sortering toepassen en de balk (sorteerknoppen + merk-keuze) teruggeven. Het
+   merk-dropdown vult zich uit de merken die in díé lijst zitten. */
+function lijstToepassen(sleutel, rijen){
+  const merken=[...new Set(rijen.map(a=>a.merk).filter(Boolean))].sort((a,b)=>natCmp(a,b));
+  if(lijstMerk[sleutel] && !merken.includes(lijstMerk[sleutel])) lijstMerk[sleutel]='';
+  const gefilterd = lijstMerk[sleutel] ? rijen.filter(a=>a.merk===lijstMerk[sleutel]) : rijen;
+  const modus=lijstSort[sleutel]||'nieuw';
+  const balk=`<div class="periodesel lijstbalk">
+    ${LIJST_SORT.map(s=>`<button class="${modus===s.k?'active':''}" onclick="lijstZetSort('${sleutel}','${s.k}')">${s.n}</button>`).join('')}
+    <select class="lijstmerk" onchange="lijstZetMerk('${sleutel}', this.value)" title="Alleen dit merk tonen">
+      <option value="">Alle merken</option>
+      ${merken.map(m=>`<option value="${esc(m)}"${lijstMerk[sleutel]===m?' selected':''}>${esc(m)}</option>`).join('')}
+    </select>
+  </div>`;
+  return { rijen:lijstSorteerLijst(gefilterd, modus), balk };
 }
 function tabel(rijen, sleutel){
   sleutel=sleutel||'werkbank';
-  const modus=tabelSort[sleutel]||'merk';
-  rijen=tabelSorteerLijst(rijen, modus);
+  const toe=lijstToepassen(sleutel, rijen); rijen=toe.rijen;
   const totaal=rijen.length;
   const paginas=Math.max(1, Math.ceil(totaal/TABEL_PER));
   let p=Math.min(Math.max(0, tabelPag[sleutel]||0), paginas-1); tabelPag[sleutel]=p;
@@ -1506,10 +1534,7 @@ function tabel(rijen, sleutel){
         <button class="btn ghost small" ${p>=paginas-1?'disabled':''} onclick="tabelBlader('${sleutel}',1)">Volgende</button>
       </div>`
     : '';
-  const sorteerbalk=`<div class="tabelbalk">
-      <button class="vrsorteer active" onclick="tabelSorteer('${sleutel}')" title="Wisselt de volgorde: op merk, laatst toegevoegd, nieuwste model">${TABEL_SORT_LABEL[modus]}</button>
-    </div>`;
-  return sorteerbalk+`<div class="tabelrol tabelscroll"><table>
+  return toe.balk+`<div class="tabelrol tabelscroll"><table>
     <thead><tr><th>Apparaat</th><th>Nummer</th><th>Serienummer</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
     <tbody>${zicht.map(a=>{
       /* De hele regel is de knop. Je zoekt niet eerst een klein knopje op
@@ -4665,12 +4690,10 @@ async function naarVoorraad(a){
    je; sommige winkels hebben er drie en sommige zeven.                       */
 
 let vrFilterNu='alles';
-/* De sorteerknop heeft drie standen. Standaard 'merk', zodat de laptops netjes
-   op merk, model en generatie onder elkaar staan (makkelijk terugvinden). De
-   andere twee: slechtste eerst (verkoop die eerst voor ze waarde verliezen) en
-   nieuwste eerst. */
-let vrSort='merk';
-const VR_SORT_LABEL={merk:'Op merk', grade:'Slechtste eerst', nieuw:'Nieuwste eerst'};
+/* Sorteren en het merk-filter lopen nu via het gedeelde lijst-menu (lijstToepassen,
+   sleutel 'voorraad'), zodat de voorraad hetzelfde zoek/filter-menu heeft als de
+   werkbank en de controle- en reparatielijst. De locatie- en online-knoppen blijven
+   voorraad-eigen. */
 
 /* Natuurlijke sortering: "G2" vóór "G10", en alle "840"-modellen bij elkaar. */
 function natCmp(a, b){
@@ -4710,7 +4733,7 @@ function vrRijen(){
     !(a.status==='overgedragen' && !a.hardware_id) && !isVerkocht(a));
 }
 
-function tekenVoorraadFilters(){
+function tekenVoorraadFilters(extraBalk){
   const el=document.getElementById('voorraadFilter'); if(!el) return;
   const rijen=vrRijen();
   const knoppen=[{f:'alles', n:'Alles', t:rijen.length}]
@@ -4721,15 +4744,12 @@ function tekenVoorraadFilters(){
   el.innerHTML=knoppen.map(k=>`
     <button class="${vrFilterNu===k.f?'active':''}" onclick="vrFilter('${k.f}')">
       ${esc(k.n)}${k.t?` <span class="filtertel">${k.t}</span>`:''}</button>`).join('')
-    + `<button class="vrsorteer active" onclick="vrSorteer()" title="Wisselt de sortering: op merk, slechtste eerst, nieuwste eerst">
-        ${VR_SORT_LABEL[vrSort]}</button>`;
+    + (extraBalk||'');
 }
 function vrFilter(f){ vrFilterNu=f; tekenVoorraad(); }
-function vrSorteer(){ vrSort = vrSort==='merk'?'grade' : vrSort==='grade'?'nieuw' : 'merk'; tekenVoorraad(); }
 
 function tekenVoorraad(){
-  tekenVoorraadFilters();
-  const el=document.getElementById('voorraadLijst'); if(!el) return;
+  const el=document.getElementById('voorraadLijst'); if(!el){ tekenVoorraadFilters(); return; }
   let rijen=vrRijen();
   if(vrFilterNu.startsWith('loc:')) rijen=rijen.filter(a=>plekVan(a)===vrFilterNu.slice(4));
   if(vrFilterNu==='offline')        rijen=rijen.filter(a=>!staatOnline(a));
@@ -4746,12 +4766,11 @@ function tekenVoorraad(){
   }
 
   rijen=rijen.filter(past);
-  /* Een kopie sorteren, niet de bronlijst: anders schuift de volgorde ook in de
-     werkbank en de tellingen door elkaar. */
-  if(vrSort==='merk')       rijen=rijen.slice().sort(apparaatSorteer);
-  else if(vrSort==='grade') rijen=rijen.slice().sort((a,b)=>gradeRang(a)-gradeRang(b));
-  /* 'nieuw' = de bronvolgorde, die staat al op nieuwste eerst. */
-  el.innerHTML=rijen.length
+  /* Het gedeelde menu: merk-filter + sortering (Laatst toegevoegd / Op merk / Beste eerst),
+     en de balk (sorteerknoppen + merk-keuze) achter de locatie-knoppen. */
+  const toe=lijstToepassen('voorraad', rijen); rijen=toe.rijen;
+  tekenVoorraadFilters();
+  el.innerHTML=toe.balk + (rijen.length
     ? `<div class="tabelrol"><table>
         <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Ligt in</th>
           <th class="num">Vraagprijs</th><th>Webshop</th><th></th></tr></thead>
@@ -4781,7 +4800,7 @@ function tekenVoorraad(){
               : `<button class="btn oranje small" onclick="event.stopPropagation(); onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`}`}</div></td>
         </tr>`;}).join('')}</tbody></table></div>`
     : leeg('i-shop', vrFilterNu==='alles'?'Nog niets op voorraad':'Niets in deze lijst',
-        'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.');
+        'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.'));
 }
 
 /* Een toestel uit de voorraad zichtbaar maken op de pagina "Online zetten" van het
