@@ -944,15 +944,25 @@ function accuBatWindows(){
      laat maar de rest gewoon doorgaat. */
   const ps = String.raw`$ErrorActionPreference='SilentlyContinue'
 try{ [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 }catch{}
-$accu=$null
+$accu=$null; $accuStatus=''; $accuReden=''; $cyc=$null
 try{
   $rep="$env:TEMP\storvo-accu.xml"
   powercfg /batteryreport /output $rep /xml | Out-Null
   $raw = Get-Content $rep -Raw
   $md = [regex]::Match($raw,'<DesignCapacity>(\d+)</DesignCapacity>')
   $mf = [regex]::Match($raw,'<FullChargeCapacity>(\d+)</FullChargeCapacity>')
-  if($md.Success -and $mf.Success -and [double]$md.Groups[1].Value -gt 0){ $accu=[int][math]::Round(([double]$mf.Groups[1].Value/[double]$md.Groups[1].Value)*100) }
-}catch{}
+  $mc = [regex]::Match($raw,'<CycleCount>(\d+)</CycleCount>')
+  if($mc.Success){ $cyc=[int]$mc.Groups[1].Value }
+  if($md.Success -and $mf.Success -and [double]$md.Groups[1].Value -gt 0 -and [double]$mf.Groups[1].Value -gt 0){
+    $d=[double]$md.Groups[1].Value; $f=[double]$mf.Groups[1].Value
+    # Volle lading kleiner dan ontwerp = een echte, meetbare slijtage. Alleen dan een
+    # percentage doorsturen. Meldt de laptop de volle lading GELIJK aan (of groter dan)
+    # de ontwerpcapaciteit, dan heeft de firmware de slijtage niet bijgehouden: dat is
+    # geen echte 100%, dus sturen we geen getal maar zeggen we dat het niet te meten was.
+    if($f -lt $d){ $accu=[int][math]::Round(($f/$d)*100) }
+    else { $accuStatus='onmeetbaar'; $accuReden='De laptop meldt de accu als vol: de volle lading is gelijk aan de ontwerpcapaciteit, dus de echte slijtage is niet te meten. Vul de conditie met de hand in, of vink een nieuwe accu aan.' }
+  } else { $accuStatus='onmeetbaar'; $accuReden='Geen bruikbare accugegevens in het rapport. Vul de conditie met de hand in.' }
+}catch{ $accuStatus='onmeetbaar'; $accuReden='Het accurapport kon niet gemaakt worden. Vul de conditie met de hand in.' }
 $g=$null
 try{
   $cs = Get-CimInstance Win32_ComputerSystem
@@ -1046,7 +1056,11 @@ try{
   $g = @{ merk=$merk; model=$model; serienummer=$serie; mpn=$mpn; specs=@{ Processor=$cpu; Geheugen="$ram GB"; Opslag=$opslag; Videokaart=$gpu; Scherm=$scherm; Windows=$win } }
 }catch{}
 $body=@{ code='${C}' }
-if($accu -ne $null){ $body.resultaat=@{ accu=$accu } }
+$res=@{}
+if($accu -ne $null){ $res.accu=$accu }
+elseif($accuStatus){ $res.accu_status=$accuStatus; $res.accu_reden=$accuReden }
+if($cyc -ne $null){ $res.accu_cycli=$cyc }
+if($res.Count -gt 0){ $body.resultaat=$res }
 if($g){ $body.gegevens=$g }
 try{
   Invoke-RestMethod -Method Post -Uri '${F}' -Headers @{ apikey='${K}' } -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6) | Out-Null
@@ -1098,13 +1112,21 @@ function accuStartPoll(){
       const r=j&&j.ok&&j.resultaat;
       const heeftAccu = r && typeof r.accu==='number';
       const heeftGeg = r && r.gegevens && typeof r.gegevens==='object';
-      if(heeftAccu || heeftGeg){
+      /* De laptop kon de accuslijtage niet betrouwbaar meten (volle lading = ontwerp).
+         Dan komt er geen percentage maar een melding: die tonen we, in plaats van
+         eindeloos te wachten of stilletjes 100% te laten staan. */
+      const onmeetbaar = r && r.accu_status==='onmeetbaar';
+      const cycli = r && typeof r.accu_cycli==='number' ? r.accu_cycli : null;
+      if(heeftAccu || heeftGeg || onmeetbaar){
         if(heeftAccu){ accuWaarde=String(r.accu); const inp=document.getElementById('accuveldL'); if(inp) inp.value=accuWaarde; }
         const st=document.getElementById('astatus');
-        if(st){ st.className='astatus klaar'; st.hidden=false;
-          st.textContent = heeftAccu
-            ? ('Accu '+r.accu+'% opgehaald. Haal de uitslag op de pc op.')
-            : 'Gegevens opgehaald. Haal de uitslag op de pc op.'; }
+        if(st){ st.hidden=false;
+          if(heeftAccu){ st.className='astatus klaar';
+            st.textContent='Accu '+r.accu+'% opgehaald.'+(cycli!=null?(' '+cycli+' laadcycli.'):'')+' Haal de uitslag op de pc op.'; }
+          else if(onmeetbaar){ st.className='astatus wacht';
+            st.textContent=(r.accu_reden||'De accuconditie kon niet betrouwbaar gemeten worden.')+(cycli!=null?(' Laadcycli: '+cycli+'.'):'')+' De specs zijn wel opgehaald.'; }
+          else { st.className='astatus klaar'; st.textContent='Gegevens opgehaald. Haal de uitslag op de pc op.'; }
+        }
         if(heeftGeg) accuToonGegevens(r.gegevens);
         clearInterval(accuPoll); accuPoll=null;
         return;

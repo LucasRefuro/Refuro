@@ -80,15 +80,29 @@ Deno.serve(async (req) => {
     const w = binnen[k];
     if (w === "ok" || w === "fout") schoon[k] = w;
   }
-  // De accu-conditie is een getal 0-100.
+  const tekst = (v: unknown, max = 80) => { const s = String(v ?? "").trim(); return s ? s.slice(0, max) : ""; };
+
+  // De accu-conditie is een getal 0-100. Een echte meting wist een eerdere 'onmeetbaar'.
   const accuRuw = binnen.accu;
   if (typeof accuRuw === "number" && Number.isInteger(accuRuw) && accuRuw >= 0 && accuRuw <= 100) {
     schoon.accu = accuRuw;
+    schoon.accu_status = null; schoon.accu_reden = null;
+  } else if (binnen.accu_status === "onmeetbaar") {
+    // De laptop meldde de accu als vol (volle lading = ontwerpcapaciteit): geen
+    // betrouwbaar getal. Een status met korte uitleg, zodat de winkelier het ziet in
+    // plaats van dat er stilletjes een valse 100% ingevuld wordt.
+    schoon.accu_status = "onmeetbaar";
+    schoon.accu_reden = tekst(binnen.accu_reden, 240) || "De accuconditie kon niet betrouwbaar gemeten worden.";
+  }
+  // Laadcycli: een geheel getal. Ook nuttig als de conditie 100% lijkt, want veel
+  // laadcycli verraden dan alsnog een versleten accu.
+  const cycRuw = binnen.accu_cycli;
+  if (typeof cycRuw === "number" && Number.isInteger(cycRuw) && cycRuw >= 0 && cycRuw <= 100000) {
+    schoon.accu_cycli = cycRuw;
   }
 
   // Systeemgegevens die de laptop zelf ophaalt (merk, model, serienummer, specs).
   // We saneren streng: alleen bekende sleutels, korte tekst. Geen persoonsgegevens.
-  const tekst = (v: unknown, max = 80) => { const s = String(v ?? "").trim(); return s ? s.slice(0, max) : ""; };
   const gIn = (lijf?.gegevens && typeof lijf.gegevens === "object") ? lijf.gegevens : null;
   if (gIn) {
     const g: Record<string, unknown> = {};

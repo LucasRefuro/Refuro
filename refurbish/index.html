@@ -3953,10 +3953,14 @@ function accuAdviesHtml(){
       </label>
     </div>`;
   if(ctr.accu!=='' && !isNaN(w)) return '<div class="accugoed">Prima, dat is boven de grens.</div>';
+  /* Geen getal, maar de meting kon de accu niet betrouwbaar lezen: dat zeggen we hier,
+     zodat er nooit een valse 100% op de sticker of webshop belandt. */
+  if(ctr.accuOnmeetbaar) return `<div class="accuwaarschuwing"><div><b>Accu niet automatisch te meten.</b> ${esc(ctr.accuOnmeetbaar)}</div></div>`;
   return '';
 }
 function ctrAccu(waarde){
   ctr.accu=String(waarde||'').trim();
+  if(ctr.accu!=='') ctr.accuOnmeetbaar='';   // zelf een waarde gezet: melding weg
   const grens=Number(instel.accu_min)||85;
   const w=Number(ctr.accu);
   const laag=ctr.accu!=='' && !isNaN(w) && w<grens;
@@ -4067,11 +4071,24 @@ async function testOphalen(knop, stil){
     /* De accu-conditie uit de test: alleen invullen als er nog geen getal staat,
        zodat een met de hand ingevoerde meting niet stil wordt overschreven. */
     if(typeof uit.accu==='number'){
+      ctr.accuOnmeetbaar='';
       if(!ctr.accu){
         ctr.accu=String(uit.accu); n++;
         const inp=document.getElementById('c_accu'); if(inp) inp.value=ctr.accu;
         const vak=document.getElementById('accuAdvies'); if(vak) vak.innerHTML=accuAdviesHtml();
       } else if(String(ctr.accu)!==String(uit.accu)){ behouden++; }
+    } else if(uit.accu_status==='onmeetbaar' && !ctr.accu){
+      /* De laptop meldde de accu als vol: er is geen betrouwbaar percentage. Niet
+         stilletjes 100% invullen (dat was de klacht) maar leeg laten en het zeggen.
+         De winkelier meet met de hand of vinkt een nieuwe accu. De laadcycli, als de
+         laptop die gaf, zetten we vast als notitie: ook bij 100% verraadt een hoog
+         aantal cycli een versleten accu. */
+      ctr.accuOnmeetbaar = uit.accu_reden || 'De accuconditie kon niet betrouwbaar gemeten worden. Meet met de hand of vink een nieuwe accu.';
+      if(typeof uit.accu_cycli==='number' && !ctr.accuNotitie){
+        ctr.accuNotitie = uit.accu_cycli+' laadcycli';
+        const ni=document.getElementById('c_accu_notitie'); if(ni) ni.value=ctr.accuNotitie;
+      }
+      const vak=document.getElementById('accuAdvies'); if(vak) vak.innerHTML=accuAdviesHtml();
     }
     /* Systeemgegevens die de laptop zelf ophaalde (via het uitlees-bestand): specs en
        merk/model/serienummer. Alleen lege velden invullen, nooit iets stil overschrijven
@@ -4110,6 +4127,7 @@ async function testOphalen(knop, stil){
     ctrTeken();
     toast(n+' '+(n===1?'onderdeel':'onderdelen')+' ingevuld uit de test'
       + (behouden ? ' · '+behouden+' met de hand gezet, behouden' : ''), true);
+    if(ctr.accuOnmeetbaar) toast('Accu niet automatisch te meten. Vul hem met de hand in of vink een nieuwe accu.','let-op');
   });
 }
 /* Een nieuwe accu telt als 100% en is geen reden meer om te vervangen. Bij
@@ -4118,6 +4136,7 @@ async function testOphalen(knop, stil){
    te hertekenen, zodat je cursor niet wegspringt. */
 function ctrNieuweAccu(aan){
   ctr.nieuweAccu=!!aan;
+  if(aan) ctr.accuOnmeetbaar='';   // nieuwe accu gekozen: de meet-melding is niet meer nodig
   const inp=document.getElementById('c_accu');
   const vak=document.getElementById('accuAdvies');
   if(aan){
