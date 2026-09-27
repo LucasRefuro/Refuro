@@ -361,6 +361,8 @@ tr.klikbaar{cursor:pointer;}
 .veldkop .btn{padding:5px 12px; font-size:12px;}
 textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 
+.fotobezig{margin:2px 0 14px; font-size:13.5px; font-weight:600; color:var(--muted);}
+.fotohint{margin:2px 0 14px; padding:12px 14px; border-radius:var(--radius-s); background:var(--amber-soft); color:var(--amber-tekst); font-size:13.5px; line-height:1.5;}
 .fotorooster{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
 .fotovak{position:relative; border:1.5px dashed var(--border); border-radius:14px; overflow:hidden;
   background:var(--soft-2);}
@@ -5066,7 +5068,8 @@ function onlineZetten(id){
   fotosLaden(a);
 }
 
-async function fotosLaden(a){
+const autoFotoGeprobeerd = new Set();
+async function fotosLaden(a, geenAuto){
   /* De modelnaam gaat in een PostgREST .or()-filter; daar zijn komma's scheidingstekens
      en haakjes groeperingstekens. Modelnamen als 'MacBook Pro (Retina, 15-inch, 2015)'
      braken de query anders. Quoten leest de waarde letterlijk; zonder model laten we
@@ -5106,7 +5109,47 @@ async function fotosLaden(a){
       .select('prijs_a,prijs_b,prijs_c').eq('team_id',account.team_id).eq('sleutel',onl.sleutel).maybeSingle();
     onl.gradePrijzen = gp ? {A:gp.prijs_a, B:gp.prijs_b, C:gp.prijs_c} : null;
   }catch(e){ onl.gradePrijzen=null; }
+  /* Nog geen foto's? Dan proberen we ze bij het openen automatisch bij de fabrikant
+     (Icecat) op te halen. geenAuto voorkomt dat een herla-actie dat opnieuw aftrapt. */
+  if(!geenAuto) fotosAutomatischMisschien(a);
   tekenOnline();
+}
+
+/* Bij het openen van "online zetten" zonder foto's halen we automatisch de
+   fabrieksfoto's van dit model op bij Icecat (server-side, met de sterkste sleutel:
+   de artikelcode/MPN uit de uitlezing, anders merk plus model). Lukt het, dan staan
+   de foto's er meteen; lukt het niet, dan valt de winkelier terug op een telefoonfoto
+   (dat dwingt onlPubliceren af: nooit zonder foto de webshop op). Per model, per sessie
+   hooguit één keer: een gevonden set wordt bewaard en door elk volgend zelfde model
+   hergebruikt, dus daarna is opnieuw proberen niet meer nodig. */
+async function fotosAutomatischMisschien(a){
+  if(!a || !a.merk || !a.model) return;
+  if((onl.fotos||[]).length) return;                 // er zijn al foto's
+  const sl=(a.merk+'|'+a.model).toLowerCase();
+  if(autoFotoGeprobeerd.has(sl)) return;              // deze sessie al geprobeerd
+  autoFotoGeprobeerd.add(sl);
+  onl.fotosBezig=true; tekenOnline();
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'automatisch', merk:a.merk, model:a.model, categorie:a.categorie||'',
+        productcode:(a.specs&&a.specs.Artikelcode)||'', ean:(a.specs&&(a.specs.EAN||a.specs.GTIN))||''})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!onl || !onl.a || onl.a.id!==a.id) return;     // ondertussen weggenavigeerd
+    onl.fotosBezig=false;
+    if(res.ok && uit.ok && uit.opgeslagen){
+      await fotosLaden(a, true);                       // herladen, niet opnieuw proberen
+      toast(uit.opgeslagen+' fabrieksfoto'+(uit.opgeslagen===1?'':'s')+' opgehaald voor dit model', true);
+    }else{
+      tekenOnline();                                   // toont de vangnet-hint (maak een telefoonfoto)
+    }
+  }catch(e){
+    if(onl && onl.a && onl.a.id===a.id){ onl.fotosBezig=false; tekenOnline(); }
+  }
 }
 
 function fotoUrl(pad){
@@ -5170,6 +5213,8 @@ function tekenOnline(){
         <div class="card">
           <h2><svg class="i"><use href="#i-camera"/></svg>Foto's <span class="muted klein">${compleet} van ${AANZICHTEN.length}</span></h2>
           <p class="muted klein" style="margin-bottom:14px">Altijd dezelfde zes aanzichten. Niet de kwaliteit van één foto maakt een advertentie professioneel, maar dat ze bij elkaar horen.</p>
+          ${onl.fotosBezig?`<div class="fotobezig">Fabrieksfoto's van dit model ophalen&hellip;</div>`:''}
+          ${(!onl.fotosBezig && compleet===0)?`<div class="fotohint">Nog geen foto's voor dit model. Maak er hieronder een paar met de telefoon; zonder foto's gaat het toestel niet op de webshop.</div>`:''}
 
           <div class="fotorooster">${AANZICHTEN.concat(EXTRAS).map(v=>{
             const f=perAanzicht[v.id];
