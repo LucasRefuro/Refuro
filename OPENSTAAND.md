@@ -24,10 +24,16 @@ repo `refuro-webshop`.
       `uitgelicht` (echte foto/titel/prijs, klikbaar), plus een schakelaar "Uitlichten" in
       Storvo die die tag meestuurt. Storvo overschrijft de tags bij elke push, dus met de
       hand taggen in Shopify houdt geen stand. (Thema-kant half klaar, nog niet gecommit.)
-- [ ] **Upsell op de productpagina.** Onder de 12-maanden-garantie een kort upsell-blok
-      (stijl Thuisbezorgd) met 4 keuzes: sleeve, bluetooth-muis, McAfee, Office Professional
-      Plus. Die 4 als losse Shopify-producten; in het thema te kiezen (product-pickers) en
-      mee te bestellen. Hergebruikt het bestaande upsell-mechanisme (nieuwe accu).
+- [ ] **Upsell (productpagina + winkelwagen).** Onder de 12-maanden-garantie een kort
+      upsell-blok (stijl Thuisbezorgd) met 4 keuzes: sleeve, bluetooth-muis, McAfee, Office
+      Professional Plus. Die 4 als losse Shopify-producten, in het thema te kiezen. Ook als
+      cross-sell in het winkelwagen-venster EN op de winkelwagen-pagina. Hergebruikt het
+      bestaande upsell-mechanisme (nieuwe accu).
+- [ ] **Winkelwagen opschonen.** Sluitknop = alleen het kruisje (geen extra cirkel/blauw
+      rondje). Het totaal/afreken-blok is druk, meer witruimte aan de zijkanten. De
+      "Winkelwagen bekijken"-link heeft een lange oranje lijn eronder. En de regel toont
+      "Uitstekend · [lange interne SKU]" als platte tekst; maak daar nette tags van (grade
+      als tag) en haal de lange SKU weg.
 
 ### Bugs / kwaliteit
 - [ ] **Foto-ophaal grijpt soms een merklogo i.p.v. een productfoto.** Bij de Dell Latitude
