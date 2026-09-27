@@ -152,9 +152,13 @@ async function zoekIcecat(
 
   const pogingen: { soort: "gtin" | "code"; waarde: string }[] = [];
   if (ean) pogingen.push({ soort: "gtin", waarde: ean });
-  if (productcode) {
-    pogingen.push({ soort: "code", waarde: productcode });
-    if (productcode.toUpperCase() !== productcode) pogingen.push({ soort: "code", waarde: productcode.toUpperCase() });
+  // De artikelcode kan meerdere kandidaten bevatten (met puntkomma), als backup: de
+  // uitlezing levert er per merk een paar (bv. HP-productnummer, Lenovo-machinetype,
+  // moederbordcode). Elk apart proberen, zodat als de ene niet in de catalogus staat
+  // de andere alsnog een treffer geeft.
+  for (const pc of productcode.split(/[;,]/).map((s) => s.trim()).filter(Boolean)) {
+    pogingen.push({ soort: "code", waarde: pc });
+    if (pc.toUpperCase() !== pc) pogingen.push({ soort: "code", waarde: pc.toUpperCase() });
   }
   for (const c of [model, model.replace(/\s+/g, ""), model.replace(/\s+/g, "-"), model.toUpperCase()]) {
     if (c) pogingen.push({ soort: "code", waarde: c });

@@ -1001,11 +1001,18 @@ try{
   if($merk -and $model.ToLower().StartsWith(($merk.ToLower()+' '))){ $model = $model.Substring($merk.Length).Trim() }
   $model = [regex]::Replace($model, '\b(\S+)\s+\1\b', '$1')
   $serie = "$((Get-CimInstance Win32_BIOS).SerialNumber)".Trim()
-  # ARTIKELCODE voor de fotocatalogus: HP-productnummer (SystemSKUNumber, # eraf), val
-  # terug op de moederbord-modelcode (Asus/Acer) als de SKU generiek is.
-  $mpn = "$($cs.SystemSKUNumber)"; if($mpn){ $mpn = ($mpn -split '#')[0].Trim() }
-  if(-not $mpn -or $mpn -match $gen -or $mpn -match 'System SKU'){ $mpn = "$($bb.Product)".Trim() }
-  if($mpn -match $gen){ $mpn='' }
+  # ARTIKELCODE(s) voor de fotocatalogus: MEERDERE kandidaten als backup, want geen
+  # enkele bron klopt voor elk merk. HP: SystemSKUNumber (# eraf). Lenovo: het
+  # machinetype in Win32_ComputerSystem.Model. Asus/Acer: de moederbord-modelcode.
+  # We sturen ze met puntkomma's; de fotozoeker probeert ze om de beurt, zodat als
+  # de ene niet in de catalogus staat, de andere alsnog een treffer geeft.
+  $sku = "$($cs.SystemSKUNumber)"; if($sku){ $sku = ($sku -split '#')[0].Trim() }
+  $codes = @()
+  foreach($c in @($sku, "$($cs.Model)".Trim(), "$($bb.Product)".Trim())){
+    $c = "$c".Trim()
+    if($c -and ($c -notmatch $gen) -and ($c -notmatch 'System SKU') -and ($codes -notcontains $c)){ $codes += $c }
+  }
+  $mpn = ($codes -join ';')
   $cpu = "$((Get-CimInstance Win32_Processor | Select-Object -First 1).Name)"
   if($cpu){ $cpu = ($cpu -replace '\(R\)','' -replace '\(TM\)','' -replace '\(tm\)','' -replace ' CPU','' -replace '@.*$','' -replace '\s+',' ').Trim() }
   # GEHEUGEN: de echt geplaatste modules optellen (Win32_PhysicalMemory), niet het

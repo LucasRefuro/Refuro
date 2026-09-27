@@ -106,7 +106,9 @@ Deno.serve(async (req) => {
   const gIn = (lijf?.gegevens && typeof lijf.gegevens === "object") ? lijf.gegevens : null;
   if (gIn) {
     const g: Record<string, unknown> = {};
-    for (const k of ["merk", "model", "serienummer", "mpn"]) { const s = tekst(gIn[k]); if (s) g[k] = s; }
+    for (const k of ["merk", "model", "serienummer"]) { const s = tekst(gIn[k]); if (s) g[k] = s; }
+    // De mpn kan meerdere kandidaat-codes bevatten (met puntkomma) als backup, dus ruimer.
+    { const s = tekst(gIn.mpn, 200); if (s) g.mpn = s; }
     if (gIn.specs && typeof gIn.specs === "object") {
       const sp: Record<string, string> = {};
       for (const k of ["Processor", "Geheugen", "Opslag", "Videokaart", "Scherm", "Windows"]) { const s = tekst(gIn.specs[k]); if (s) sp[k] = s; }
