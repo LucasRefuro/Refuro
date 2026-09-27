@@ -18,6 +18,23 @@ repo `refuro-webshop`.
       download, geen SmartScreen, geen administrator). Goedgekeurd, nog niet gebouwd.
 - [ ] **Lijst springt naar boven bij invullen.** Pinpoint nodig: welk scherm en veld.
 
+### Webshop (thema)
+- [ ] **Uitgelicht product in het mega-menu.** Nu vaste placeholder-tekst ("Deal van de
+      week"). Bouwen: thema (`snippets/mega-vast.liquid`) toont het product met de tag
+      `uitgelicht` (echte foto/titel/prijs, klikbaar), plus een schakelaar "Uitlichten" in
+      Storvo die die tag meestuurt. Storvo overschrijft de tags bij elke push, dus met de
+      hand taggen in Shopify houdt geen stand. (Thema-kant half klaar, nog niet gecommit.)
+- [ ] **Upsell op de productpagina.** Onder de 12-maanden-garantie een kort upsell-blok
+      (stijl Thuisbezorgd) met 4 keuzes: sleeve, bluetooth-muis, McAfee, Office Professional
+      Plus. Die 4 als losse Shopify-producten; in het thema te kiezen (product-pickers) en
+      mee te bestellen. Hergebruikt het bestaande upsell-mechanisme (nieuwe accu).
+
+### Bugs / kwaliteit
+- [ ] **Foto-ophaal grijpt soms een merklogo i.p.v. een productfoto.** Bij de Dell Latitude
+      3520 (gangbaar model) kwam het Dell-logo als hoofdfoto. Icecat gaf een logo/merkbeeld
+      terug. Fix: logo's/merkbeelden uit de Icecat-resultaten filteren (edge `productfotos`);
+      Dell-dekking is sowieso mager. Belangrijk, want dit is een veelverkocht model.
+
 ### Grade-varianten afmaken (webshop)
 - [ ] **Fase 3, de webhook.** Een verkochte grade moet het juiste onverkochte exemplaar
       op verkocht zetten en de advertentie opnieuw synchroniseren. Nu nog 1 product = 1
