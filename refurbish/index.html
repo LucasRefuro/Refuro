@@ -5100,18 +5100,42 @@ async function fotosLaden(a, geenAuto){
               (e)=>console.error('hoofdfoto vastleggen:', e));
     }
   }
-  /* Wat vroeg je eerder voor hetzelfde model? Dat is het beste prijsanker dat
-     er is, beter dan welke schatting ook. */
+  /* Wat vroeg je eerder voor hetzelfde model, en heb je er al een advertentie voor
+     geschreven? Dat is het beste prijsanker en scheelt opnieuw typen. */
   const {data:eerder}=await sb.from('hardware')
-    .select('verkoop').ilike('model', a.model).not('verkoop','is',null).limit(20);
+    .select('verkoop, titel, omschrijving, nieuwprijs, garantie').ilike('model', a.model)
+    .order('bijgewerkt_op',{ascending:false}).limit(20);
   onl.eerderePrijzen=(eerder||[]).map(r=>Number(r.verkoop)).filter(n=>n>0);
-  /* De eerder opgeslagen grade-prijzen voor dit model+uitvoering (de webshop-advertentie).
-     Zijn die er, dan vullen we ze voor; anders schatten we ze uit de vraagprijs. */
+  const eerdereAd=(eerder||[]).find(r=>String(r.titel||'').trim() || String(r.omschrijving||'').trim());
+  /* De opgeslagen advertentie + grade-prijzen van dit model (webshop_grade_prijzen).
+     Terugzetten zodat aanpassen niet met een leeg scherm begint en een volgend
+     exemplaar de oude advertentie hergebruikt. Eerst uit de model-opslag, anders uit
+     een eerder online gezet exemplaar van hetzelfde model. Maar één keer (onl._adGeladen),
+     zodat een hertekening (bv. na foto's laden) je eigen wijzigingen niet terugdraait. */
   try{
     onl.sleutel=webshopSleutel(a);
     const {data:gp}=await sb.from('webshop_grade_prijzen')
-      .select('prijs_a,prijs_b,prijs_c').eq('team_id',account.team_id).eq('sleutel',onl.sleutel).maybeSingle();
+      .select('*').eq('team_id',account.team_id).eq('sleutel',onl.sleutel).maybeSingle();
     onl.gradePrijzen = gp ? {A:gp.prijs_a, B:gp.prijs_b, C:gp.prijs_c} : null;
+    if(!onl._adGeladen){
+      onl._adGeladen=true;
+      const titel=(gp&&gp.titel) || (eerdereAd&&eerdereAd.titel) || '';
+      const tekst=(gp&&gp.tekst) || (eerdereAd&&eerdereAd.omschrijving) || '';
+      const zoek=(gp&&Array.isArray(gp.zoekwoorden)) ? gp.zoekwoorden : [];
+      const nwp=(gp&&gp.nieuwprijs!=null) ? gp.nieuwprijs : (eerdereAd&&eerdereAd.nieuwprijs!=null?eerdereAd.nieuwprijs:null);
+      const gar=(gp&&gp.garantie!=null) ? gp.garantie : (eerdereAd&&eerdereAd.garantie!=null?eerdereAd.garantie:null);
+      if(!onl.titel && titel) onl.titel=titel;
+      if(!onl.tekst && tekst) onl.tekst=tekst;
+      if((!onl.zoekwoorden||!onl.zoekwoorden.length) && zoek.length) onl.zoekwoorden=zoek;
+      if(onl.nieuwprijs==null && nwp!=null) onl.nieuwprijs=nwp;
+      if(gar!=null) onl.garantie=gar;
+      /* Vraagprijs = de grade-prijs die bij dit exemplaar hoort (de grade die je hebt). */
+      if(onl.prijs==null && onl.gradePrijzen){
+        const gl=(onl.staat||a.grade||'B').toUpperCase();
+        const pgp=onl.gradePrijzen[gl];
+        if(pgp!=null && pgp!=='') onl.prijs=Number(pgp);
+      }
+    }
   }catch(e){ onl.gradePrijzen=null; }
   /* Nog geen foto's? Dan proberen we ze bij het openen automatisch bij de fabrikant
      (Icecat) op te halen. geenAuto voorkomt dat een herla-actie dat opnieuw aftrapt. */
@@ -5427,16 +5451,30 @@ function gradeSchat(){
   onl.gradePrijzen={A:s.a,B:s.b,C:s.c};
   toast('Geschat vanuit de vraagprijs', true);
 }
+/* De advertentie van dit model als rij voor webshop_grade_prijzen. Zo blijven titel,
+   tekst, zoekwoorden, prijzen, nieuwprijs en garantie per model bewaard en pakt een
+   volgend exemplaar dezelfde advertentie erbij. */
+function onlAdRij(){
+  const gp=onl.gradePrijzen||{};
+  return { team_id:account.team_id, sleutel:onl.sleutel||webshopSleutel(onl.a), categorie:onl.a.categorie||null,
+    naam:toestelNaam(onl.a), prijs_a:gp.A??null, prijs_b:gp.B??null, prijs_c:gp.C??null,
+    titel:onl.titel||null, tekst:onl.tekst||null,
+    zoekwoorden:(onl.zoekwoorden&&onl.zoekwoorden.length)?onl.zoekwoorden:null,
+    nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
+    garantie:onl.garantie!=null?Number(onl.garantie):null,
+    bijgewerkt_op:new Date().toISOString() };
+}
+async function onlAdBewaren(){
+  const {error}=await sb.from('webshop_grade_prijzen').upsert(onlAdRij(), {onConflict:'team_id,sleutel'});
+  if(error) throw new Error('Opslaan mislukt');
+}
 async function gradePrijsOpslaan(knop){
   onlBewaarVelden(); gradePrijsVeld();
   const gp=onl.gradePrijzen||{};
   if(gp.A==null && gp.B==null && gp.C==null){ toast('Vul minstens één grade-prijs in','let-op'); return; }
   await bezig(knop, async()=>{
-    const rij={ team_id:account.team_id, sleutel:onl.sleutel||webshopSleutel(onl.a), categorie:onl.a.categorie||null,
-      naam:toestelNaam(onl.a), prijs_a:gp.A, prijs_b:gp.B, prijs_c:gp.C, bijgewerkt_op:new Date().toISOString() };
-    const {error}=await sb.from('webshop_grade_prijzen').upsert(rij, {onConflict:'team_id,sleutel'});
-    if(error) throw new Error('Opslaan mislukt');
-    toast('Grade-prijzen opgeslagen voor dit model', true);
+    await onlAdBewaren();
+    toast('Advertentie en prijzen opgeslagen voor dit model', true);
   });
 }
 
@@ -5738,6 +5776,11 @@ async function onlPubliceren(knop){
     await sb.from('refurbish_apparaten')
       .update({marge:!!onl.marge, nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
         bijgewerkt_op:new Date().toISOString()}).eq('id', a.id);
+
+    /* De advertentie (titel, tekst, zoekwoorden, prijzen, nieuwprijs, garantie) per model
+       bewaren, zodat je hem later kunt aanpassen zonder opnieuw te typen en een volgend
+       exemplaar de oude advertentie hergebruikt. Best-effort: mag de publicatie niet breken. */
+    try{ await onlAdBewaren(); }catch(_e){}
 
     /* En dan echt online. Zonder deze stap staat er "gepubliceerd" terwijl er
        niets op de webshop is gebeurd, en dat is precies het soort halve
