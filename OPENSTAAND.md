@@ -5,6 +5,53 @@ er niet in staat is af.
 
 ---
 
+## Nu openstaand — refurbish + webshop (27 september 2026)
+
+Bijgehouden zodat de Storvo-chat en de refuro.nl-webshop-chat vanuit dezelfde lijst
+werken en elkaar niet in de weg zitten. Dezelfde lijst staat als `WERKLIJST.md` in de
+repo `refuro-webshop`.
+
+### Nog te bouwen (code)
+- [ ] **Meer specs in de spec-tabel.** De laptop-specopzoeker (edge `model-specs`) haalt
+      nu 7 velden; uitbreiden met besturingssysteem, gewicht, materiaal, aansluitingen.
+- [ ] **Uitlezen waterdicht:** een `irm | iex`-regel om in PowerShell te plakken (geen
+      download, geen SmartScreen, geen administrator). Goedgekeurd, nog niet gebouwd.
+- [ ] **Lijst springt naar boven bij invullen.** Pinpoint nodig: welk scherm en veld.
+
+### Grade-varianten afmaken (webshop)
+- [ ] **Fase 3, de webhook.** Een verkochte grade moet het juiste onverkochte exemplaar
+      op verkocht zetten en de advertentie opnieuw synchroniseren. Nu nog 1 product = 1
+      toestel; hier kan geld misgaan bij een verkoop. Eerst dit.
+- [ ] **Fase 4.** Per grade eigen staat-toelichting/accu + in het thema automatisch de
+      op-voorraad grade selecteren.
+
+### Testen
+- [ ] **Grade-varianten tegen de live shop:** tweede exemplaar van dezelfde uitvoering =
+      voorraad +1, geen nieuwe advertentie.
+
+### Jouw actie (code is klaar)
+- [ ] **Bestaande producten opnieuw online zetten** -> net artikelnummer (A0016), OS-rij,
+      conditietekst zonder streepje verschijnen (zitten al in shopify-edge v25).
+- [ ] **Oude advertenties met verzonnen tekst opnieuw laten schrijven** (bv. de Dell met
+      "Face ID"). Nieuwe worden goed, oude niet vanzelf.
+- [ ] **(Optioneel) Eigen `ICECAT_GEBRUIKER`** zetten i.p.v. de gedeelde open-gebruiker
+      (`openIcecat-live`), voor meer merken en minder kans op limieten.
+
+### Bekende beperkingen / klein
+- Apple-toestellen zitten niet in de gratis Icecat -> vallen terug op de telefoonfoto (bewust).
+- Diagnose-logregels in de foto-functie (edge `productfotos`) mogen later weg.
+
+### Al gedaan en live deze sessie (ter info, niet opnieuw doen)
+- Accu: geen valse 100% meer; de meting meldt het als de slijtage niet betrouwbaar te meten is.
+- Foto's automatisch via Icecat + e-mail valt terug op de open-gebruiker + backup-codes per merk.
+- Advertentie: titel = merk/model/basisspecs met "|", tekst zonder verzonnen functies of AI-clichés.
+- Thema (live op refuro.nl): kaartfoto's volledig + blauw weg, prijs bij uitverkochte grades,
+  lang artikelnummer weg.
+- shopify-edge v25: net artikelnummer, OS-rij gevuld, conditietekst zonder streepje.
+- Advertentie per model bewaard en hergebruikt bij online zetten (webshop_grade_prijzen uitgebreid).
+
+---
+
 ## 1. Eerst dit, anders werkt de webshopkoppeling niet
 
 De code staat er en is uitgerold. Er ontbreken alleen nog drie instellingen, en
