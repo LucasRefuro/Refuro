@@ -46,6 +46,17 @@ function aanzichtVan(nr: number) {
 // rest vult de overige aanzichten. Zo wordt de sterkste Icecat-foto de hoofdfoto.
 const OPSLAG_VOLGORDE = ["open", "dicht", "toetsenbord", "links", "rechts", "onderkant"];
 
+// Icecat wil een geldige gebruikersNAAM in de URL, geen e-mail. Zet een winkel per
+// ongeluk zijn e-mail (of niets) als ICECAT_GEBRUIKER, dan valt de aanroep terug op de
+// publieke open-gebruiker van Icecat. Die dekt de open merken (HP, Dell, Lenovo, ...);
+// een eigen account zetten mag altijd en gaat dan voor. Zonder deze terugval kreeg je
+// "the Icecat user is unknown" en dus nul foto's.
+const OPEN_ICECAT = "openIcecat-live";
+function icecatGebruiker(): string {
+  const g = (Deno.env.get("ICECAT_GEBRUIKER") || "").trim();
+  return (!g || g.includes("@")) ? OPEN_ICECAT : g;
+}
+
 // Een fabrieksfoto opslaan. Bron kan zijn: een gevonden Icecat-foto, een geplakte
 // fabrikantslink, of een upload (base64). De browser mag niet rechtstreeks bij een
 // externe CDN (CORS blokkeert dat), dus doet de server het.
@@ -157,7 +168,7 @@ async function zoekIcecat(
       `&Language=nl${sleutel}&Content=Gallery,GeneralInfo`;
     try {
       const res = await fetch(adres, { headers: { "Accept": "application/json" } });
-      if (!res.ok) continue;
+      if (!res.ok) { console.log("icecat http", pg.soort, pg.waarde, res.status); continue; }
       const uit = await res.json();
       const galerij = uit?.data?.Gallery;
       if (!Array.isArray(galerij) || !galerij.length) continue;
@@ -197,25 +208,25 @@ async function zoekIcecat(
 async function automatisch(lijf: any, teamId: string) {
   const merk = String(lijf?.merk || "").trim();
   const model = String(lijf?.model || "").trim();
+  const productcode = String(lijf?.productcode || "").trim();
+  const ean = String(lijf?.ean || lijf?.gtin || "").replace(/\D/g, "");
+  console.log("automatisch: start", JSON.stringify({ merk, model, mpn: productcode || null, ean: ean || null }));
+
   if (!merk || !model) {
+    console.log("automatisch: geen-model");
     return new Response(JSON.stringify({ ok: true, opgeslagen: 0, reden: "geen-model" }), { headers: cors });
   }
 
-  const gebruiker = Deno.env.get("ICECAT_GEBRUIKER");
-  if (!gebruiker) {
-    return new Response(JSON.stringify({ ok: true, opgeslagen: 0, reden: "geen-account" }), { headers: cors });
-  }
+  const gebruiker = icecatGebruiker();
+  console.log("automatisch: icecat-gebruiker", gebruiker === OPEN_ICECAT ? "(open standaard)" : "(eigen account)");
 
   // Welke aanzichten heeft dit model al als fabrieksfoto? Die niet nog eens opslaan.
   const { data: best } = await admin.from("refurbish_fotos")
     .select("aanzicht").eq("team_id", teamId).is("apparaat_id", null).ilike("model", model);
   const bezet = new Set((best || []).map((r: any) => r.aanzicht));
 
-  const gevonden = await zoekIcecat(gebruiker, {
-    merk, model,
-    ean: String(lijf?.ean || lijf?.gtin || ""),
-    productcode: String(lijf?.productcode || ""),
-  });
+  const gevonden = await zoekIcecat(gebruiker, { merk, model, ean, productcode });
+  console.log("automatisch: icecat gaf", gevonden.fotos.length, "foto's, match op", gevonden.gevonden);
   if (!gevonden.fotos.length) {
     return new Response(JSON.stringify({ ok: true, opgeslagen: 0, reden: "niet-gevonden" }), { headers: cors });
   }
@@ -233,6 +244,7 @@ async function automatisch(lijf: any, teamId: string) {
       console.error("automatisch bewaren", (e as Error)?.message);
     }
   }
+  console.log("automatisch: opgeslagen", opgeslagen);
   return new Response(JSON.stringify({ ok: true, opgeslagen, bron: "icecat", titel: gevonden.titel }), { headers: cors });
 }
 
@@ -265,12 +277,8 @@ Deno.serve(async (req) => {
   // Automatisch zoeken én opslaan. Zonder Icecat-account degradeert dit stil.
   if (lijf?.actie === "automatisch") return await automatisch(lijf, acc.team_id);
 
-  // Vanaf hier is het alleen zóeken (foto's teruggeven, niet opslaan); daar is het
-  // Icecat-account voor nodig.
-  const gebruiker = Deno.env.get("ICECAT_GEBRUIKER");
-  if (!gebruiker) {
-    return fout("De fotocatalogus is nog niet gekoppeld. Maak een gratis account op icecat.biz en zet de gebruikersnaam in Supabase.", 503);
-  }
+  // Vanaf hier is het alleen zóeken (foto's teruggeven, niet opslaan).
+  const gebruiker = icecatGebruiker();
 
   const merk = String(lijf?.merk || "").trim();
   const model = String(lijf?.model || "").trim();
