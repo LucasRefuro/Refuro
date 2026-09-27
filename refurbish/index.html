@@ -4685,6 +4685,10 @@ async function naarVoorraad(a){
     locatie_id:a.locatie_id||null,
     plek:a.plek||null,
     nieuwe_accu:!!a.nieuwe_accu,
+    /* Accu% per exemplaar mee op de hardware-rij, zodat de webshop-push en de webhook de
+       conditie per grade-front kunnen tonen/roteren zonder de werkbank-tabel te joinen.
+       Nieuwe accu telt als 100%; anders de gemeten waarde (null = niet gemeten -> 'onbekend'). */
+    accu: a.nieuwe_accu ? 100 : (a.accu!=null && a.accu!=='' ? Number(a.accu) : null),
     marge:margeVan(a),
     fotos:fotoUrls,
     kanalen:{winkel:true}
