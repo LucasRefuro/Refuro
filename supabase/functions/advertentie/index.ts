@@ -30,13 +30,13 @@ function fout(bericht: string, code = 400) {
 // de doosinhoud staan op de productpagina al in eigen blokken (metafields). Zetten
 // we ze hier ook neer, dan staat alles dubbel. Dus geen speclijst en geen
 // "wat je krijgt"-rijtje in de tekst; wel een sterk, concreet verkoopverhaal.
-const STANDAARD_SJABLOON = `{pakkende openingszin van maximaal 12 woorden: waarom dit toestel de moeite waard is}
+const STANDAARD_SJABLOON = `{openingszin van maximaal 12 woorden: voor wie deze {categorie} handig is}
 
-{alinea van twee tot drie zinnen: wat voor apparaat dit is en voor wie het ideaal is, met een of twee concrete voorbeelden uit het dagelijks gebruik}
+{alinea van twee tot drie zinnen: wat je met dit toestel in het dagelijks gebruik kunt, uitgelegd vanuit de bekende specificaties. Wat betekenen de processor, het geheugen en de opslag voor de koper}
 
-{alinea van twee tot drie zinnen: wat juist dit model fijn maakt — noem een paar echte sterke punten van {merk} {model}, in gewone taal en zonder de hele speclijst te herhalen}
+{alinea van twee tot drie zinnen: waar dit toestel goed voor is en waar minder, eerlijk en in gewone taal}
 
-{een zin over refurbished bij dit toestel: nagekeken, getest en met garantie, eerlijk over de staat ({grade})}`;
+{een zin over refurbished: nagekeken en getest, met garantie, en eerlijk over de staat ({grade})}`;
 
 const STAAT: Record<string, string> = {
   A: "als nieuw, nauwelijks gebruikssporen",
@@ -109,8 +109,8 @@ ${a.accu ? `Accucapaciteit: ${a.accu}% van nieuw` : ""}
 ${a.notitie ? `Bijzonderheid: ${a.notitie}` : ""}
 ${specregels ? "Specificaties:\n" + specregels : "Geen specificaties bekend."}
 
-Hou je exact aan dit sjabloon. Alles tussen accolades vervang je; de rest laat
-je letterlijk staan, inclusief de koppen en de volgorde.
+Hou je aan de opbouw van dit sjabloon. Alles tussen accolades vervang je door
+echt lopende tekst; de lege regels tussen de alinea's houd je aan.
 
 --- sjabloon ---
 ${sjabloon}
@@ -126,19 +126,27 @@ geen "koop nu"-praat. Wees eerlijk over de staat: wat je verzwijgt komt terug al
 Belangrijk over de inhoud:
 - Schrijf voor de juiste categorie. Dit is een ${a.categorie || "Laptop"}. Noem alleen
   dingen die bij dít soort toestel passen (dus geen Windows of oplader bij een telefoon).
-- Je mag algemene, algemeen bekende eigenschappen van ${a.merk || ""} ${a.model} gebruiken
-  die voor elk exemplaar van dit model gelden (bijvoorbeeld schermtype, chip, camera,
-  5G, materiaal, bijzondere functies), ook als ze hierboven niet als specificatie staan.
+- Baseer de tekst op de specificaties hierboven en leg uit wat die betekenen voor de
+  koper. Noem GEEN eigenschappen die je niet zeker weet: verzin geen beveiliging (geen
+  Face ID, geen vingerafdruk), geen poorten, geen toetsenbordverlichting, geen 5G,
+  tenzij het letterlijk bij de specificaties hierboven staat. Face ID bestaat alleen
+  bij Apple; noem dat dus nooit bij een ander merk.
 - Verzin NOOIT exemplaar-specifieke feiten. De staat (grade ${a.grade || "B"}), het
   accupercentage, de opslag en een eventuele bijzonderheid komen alleen uit de gegevens
   hierboven; die zijn leidend en verander je niet.
-- Herhaal de specificatielijst niet; die staat al apart op de pagina.
+- Herhaal de specificatielijst niet als opsomming; die staat al apart op de pagina.
+- Schrijf als een echte verkoper, niet als AI. Vermijd holle vulzinnen en clichés;
+  gebruik niet: "zonder omhaal", "zonder onnodige ballast", "meer dan voldoende",
+  "of je nu ... of ...", "in een notendop", "het beste van twee werelden",
+  "ontworpen voor wie". Korte, gewone zinnen.
 
 Antwoord uitsluitend met JSON:
 {"titel":"...","tekst":"...","zoekwoorden":["...","..."]}
 
-De titel is maximaal 70 tekens en bevat merk, model en de belangrijkste
-specificaties.`;
+De titel bevat ALLEEN het merk, het model en de belangrijkste specificaties (bij een
+laptop: processor, geheugen, opslag), in die volgorde, gescheiden met " | ". Geen
+staat, geen "als nieuw", geen verkoopwoorden, geen streepjes of komma-opsomming.
+Voorbeeld: "HP ProBook 450 G8 | Ryzen 5 | 16GB | 256GB SSD". Maximaal 80 tekens.`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
