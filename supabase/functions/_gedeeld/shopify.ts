@@ -398,9 +398,9 @@ export function staatToelichting(h: any, refurbish: any) {
       .filter((x: any) => x && x.a && CONDITIE.includes(String(x.v || "").toLowerCase()))
       .map((x: any) => { const v = String(x.v || ""); return v.charAt(0).toUpperCase() + v.slice(1) + ": " + String(x.a).toLowerCase(); });
     const uniek = [...new Set(items)];
-    if (uniek.length) delen.push("Wat ons opviel — " + uniek.join(". ") + ".");
+    if (uniek.length) delen.push(uniek.join(". ") + ".");
   }
-  delen.push("Volledig nagekeken en getest door ons eigen team, en klaar voor gebruik.");
+  delen.push("Elk toestel wordt bij ons nagekeken en getest.");
   return delen.join(" ");
 }
 
@@ -427,6 +427,9 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   const out: any[] = [];
   out.push(winkelvoorraadMetafield(inWinkel));
   out.push(mfInt("nieuwe_accu", h.nieuwe_accu ? 1 : 0));
+  // Een net, kort artikelnummer voor op de productpagina (het toestelnummer, bv. A0016),
+  // niet de lange interne sleutel.
+  if (h.code) out.push(mfText("artikelnummer", String(h.code)));
 
   const code = staatCode(h.staat);
   if (code) out.push(mfText("staat", code));
@@ -450,6 +453,8 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (scherm) out.push(mfText("scherm", scherm));
   if (sp.Videokaart) out.push(mfText("gpu", sp.Videokaart));
   if (sp.Besturingssysteem) out.push(mfText("os", sp.Besturingssysteem));
+  // De uitlezing zet de Windows-editie onder 'Windows'; die is anders de os-rij misgelopen.
+  else if (sp.Windows) out.push(mfText("os", sp.Windows));
   if (sp.Toetsenbord) out.push(mfText("toetsenbord", sp.Toetsenbord));
   if (sp.Poorten) out.push(mfText("poorten", sp.Poorten));
   if (sp.Gewicht) out.push(mfText("gewicht", sp.Gewicht));
