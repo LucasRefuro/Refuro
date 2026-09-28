@@ -30,7 +30,10 @@ function fout(bericht: string, code = 400) {
 
 // Alleen deze velden slaan we op. Zo blijft de lijst overzichtelijk en kan een
 // verkeerd antwoord niet van alles bijzetten.
-const VELDEN = ["Processor", "Geheugen", "Opslag", "Scherm", "Videokaart", "Touchscreen", "Bouwjaar"];
+// Gewicht/Materiaal/Poorten zijn vaste modelfeiten (geen uitvoering) en vullen de
+// spec-tabel van de webshop verder aan. Het besturingssysteem laten we bewust weg:
+// dat komt uit de Windows-uitlezing (de echte editie), niet uit een modelfeit.
+const VELDEN = ["Processor", "Geheugen", "Opslag", "Scherm", "Videokaart", "Touchscreen", "Bouwjaar", "Gewicht", "Materiaal", "Poorten"];
 
 // Telefoons en tablets: vaste modelfeiten in plaats van "uitvoeringen" per onderdeel.
 // Zo vult de spec-pagina van de webshop zich met chip, scherm, camera, 5G, materiaal enz.
@@ -181,11 +184,17 @@ Liever een lijst te lang dan te kort: een uitvoering die er niet bij staat kan
 hij niet aanklikken. Maar verzin niets. Weet je van een onderdeel niets zeker,
 laat die lijst dan leeg.
 
-Geef daarnaast in "specs" de meest voorkomende uitvoering, als startpunt.
+Geef daarnaast in "specs" de meest voorkomende uitvoering als startpunt, plus deze
+vaste modelfeiten (die gelden voor elk exemplaar van dit model):
+- Gewicht: bijvoorbeeld "1,4 kg"
+- Materiaal: de behuizing, bijvoorbeeld "Aluminium" of "Kunststof"
+- Poorten: de aansluitingen in één regel, bijvoorbeeld "2x USB-A, USB-C, HDMI, 3,5 mm"
+
+Het besturingssysteem hoef je NIET te geven; dat lezen we later van de laptop zelf af.
 
 Antwoord uitsluitend met JSON:
 {"merk":"...","model":"...",
- "specs":{"Processor":"...","Geheugen":"...","Opslag":"...","Scherm":"...","Videokaart":"...","Touchscreen":"ja of nee","Bouwjaar":"..."},
+ "specs":{"Processor":"...","Geheugen":"...","Opslag":"...","Scherm":"...","Videokaart":"...","Touchscreen":"ja of nee","Bouwjaar":"...","Gewicht":"...","Materiaal":"...","Poorten":"..."},
  "opties":{"Processor":["...","..."],"Geheugen":["...","..."],"Opslag":["...","..."],"Videokaart":["...","..."],"Scherm":["...","..."]}}
 
 Schrijf het geheugen als "16 GB", de opslag als "512 GB SSD" en het scherm als
