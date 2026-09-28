@@ -177,10 +177,24 @@ async function zoekIcecat(
       const galerij = uit?.data?.Gallery;
       if (!Array.isArray(galerij) || !galerij.length) continue;
 
+      // Icecat zet soms ALLEEN een merklogo in de galerij (Type "BrandLogo", pad
+      // /img/brand/), zonder echte productfoto. Dat is geen foto van het toestel: eruit
+      // filteren, anders komt het merklogo als hoofdfoto op de advertentie (gebeurde bij
+      // een Dell Latitude 3520). Blijft er niets over, dan gaan we door naar de volgende
+      // poging en uiteindelijk naar de telefoonfoto.
+      const echt = galerij.filter((g: any) => {
+        const type = String(g?.Type || "").toLowerCase();
+        const pic = String(g?.Pic || g?.Pic500x500 || g?.LowPic || "");
+        if (type.includes("logo")) return false;
+        if (/\/img\/brand\//i.test(pic)) return false;
+        return true;
+      });
+      if (!echt.length) continue;
+
       // Icecat geeft de hoofdfoto met IsMain=Y en een prioriteit No (lager = eerder);
       // de array-volgorde zelf is niet gegarandeerd. Daarop sorteren zodat de hoofdfoto
       // vooraan staat. HighPic bestaat niet in deze Gallery; Pic500x500 wel.
-      const gesorteerd = [...galerij].sort((a: any, b: any) => {
+      const gesorteerd = echt.sort((a: any, b: any) => {
         const am = (a?.IsMain === "Y" || a?.IsMain === true) ? 0 : 1;
         const bm = (b?.IsMain === "Y" || b?.IsMain === true) ? 0 : 1;
         if (am !== bm) return am - bm;

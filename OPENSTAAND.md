@@ -36,10 +36,11 @@ repo `refuro-webshop`.
       als tag) en haal de lange SKU weg.
 
 ### Bugs / kwaliteit
-- [ ] **Foto-ophaal grijpt soms een merklogo i.p.v. een productfoto.** Bij de Dell Latitude
-      3520 (gangbaar model) kwam het Dell-logo als hoofdfoto. Icecat gaf een logo/merkbeeld
-      terug. Fix: logo's/merkbeelden uit de Icecat-resultaten filteren (edge `productfotos`);
-      Dell-dekking is sowieso mager. Belangrijk, want dit is een veelverkocht model.
+- [x] **Foto-ophaal grijpt soms een merklogo i.p.v. een productfoto.** OPGELOST (28 sep).
+      Icecat gaf voor de Dell Latitude 3520 alleen een merklogo terug (`Type: BrandLogo`, pad
+      `/img/brand/`). Edge `productfotos` v23 filtert die er nu uit; blijft er niets over, dan
+      telefoonfoto. De al opgeslagen logo-foto van de 3520 is verwijderd. Let op: Dell-dekking
+      in de gratis Icecat blijft mager, dus veel Dells vallen sowieso terug op de telefoonfoto.
 
 ### Grade-varianten afmaken (webshop)
 - [ ] **Fase 3, de webhook.** Een verkochte grade moet het juiste onverkochte exemplaar
