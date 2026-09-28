@@ -2710,6 +2710,11 @@
     <h2><svg class="i"><use href="#i-cart"/></svg>Bijbestellen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
     <div id="bstLijst">Bezig met laden…</div>
   </div>
+  <div class="card breed" id="rsvKaart">
+    <h2><svg class="i"><use href="#i-cart"/></svg>Reserveringen<span class="muted klein" id="rsvTelling" style="margin-left:8px"></span></h2>
+    <p class="muted klein" style="margin:-4px 0 10px">Toestellen die online zijn vastgezet en in de winkel betaald worden.</p>
+    <div id="rsvLijst">Bezig met laden…</div>
+  </div>
 </section>
 
 <!-- INRUIL: aanvragen die via de webshop binnenkomen, los van Shopify. Ze komen
@@ -4055,7 +4060,7 @@ function showTab(t){
   if(t==='catalogus') catOpen();
   if(t==='voorraad') renderVoorraad();
   if(t==='hardware') hwLaad();
-  if(t==='webshop') bstLaad();
+  if(t==='webshop'){ bstLaad(); rsvLaad(); }
   if(t==='inruil') inrLaad();
   if(t==='aanvragen') renderAanvragen();
   if(t==='kassa') renderKassa();
@@ -11244,6 +11249,119 @@ async function inrStatus(id,status){
   if(error){ toast('Bijwerken mislukt','fout'); return; }
   const x=inrData.find(a=>a.id===id); if(x){ x.status=status; x.gezien=true; }
   renderInruil(); inrBadge();
+}
+
+/* ---------- reserveringen (betaal in de winkel) ----------
+
+   Een klant zet op de webshop een toestel vast zonder te betalen (edge
+   'reservering'). Het exemplaar staat dan op status 'gereserveerd' en is uit de
+   webshop gehaald, zodat niemand het dubbel koopt. Hier reken je het af zodra de
+   klant het komt ophalen (dan wordt het toestel verkocht), of je annuleert het
+   (dan komt het weer online). Verlopen reserveringen geeft de edge bij het laden
+   vanzelf vrij, zodat een toestel niet eeuwig vast blijft staan.
+
+   De lijst leest de tabel rechtstreeks (RLS via my_team_id); de acties lopen via
+   de edge met service_role, zodat de voorraad en de Shopify-telling op één plek
+   server-side kloppen en er geen blob-race ontstaat.                            */
+let rsvData=[];
+
+async function rsvLaad(stil){
+  if(!account) return;
+  const vak=document.getElementById('rsvLijst');
+  if(vak && !stil) vak.innerHTML='Bezig met laden…';
+  // Eerst verlopen reserveringen vrijgeven (het toestel komt dan weer online).
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session) await fetch(SUPABASE_URL+'/functions/v1/reservering',{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'verval'})});
+  }catch(e){ /* niet erg: de lijst laadt sowieso */ }
+  const {data,error}=await sb.from('webshop_reserveringen').select('*')
+    .order('aangemaakt_op',{ascending:false}).limit(200);
+  if(error){ if(vak) vak.innerHTML='<p class="muted">Kon de reserveringen niet laden.</p>'; return; }
+  rsvData=data||[];
+  renderReserveringen();
+}
+
+function rsvStatusNaam(x){
+  if(x.status==='afgerekend')  return 'Afgerekend';
+  if(x.status==='geannuleerd') return 'Geannuleerd';
+  if(x.status==='vervallen')   return 'Vervallen';
+  return 'Open';
+}
+function rsvStatusKlasse(x){
+  if(x.status==='afgerekend') return 'betaald';
+  if(x.status==='geannuleerd'||x.status==='vervallen') return 'geannuleerd';
+  return 'open';
+}
+
+function renderReserveringen(){
+  const vak=document.getElementById('rsvLijst'); if(!vak) return;
+  const open=rsvData.filter(x=>x.status==='open');
+  const tel=document.getElementById('rsvTelling');
+  if(tel) tel.textContent=open.length?'('+open.length+')':'';
+  // Open bovenaan, daarna de laatste afgehandelde ter controle.
+  const rijen=open.concat(rsvData.filter(x=>x.status!=='open').slice(0,20));
+  if(!rijen.length){
+    vak.innerHTML=`<p class="muted">${rsvData.length
+      ? 'Niets in deze lijst.'
+      : 'Nog geen reserveringen. Zodra iemand op de webshop een toestel reserveert, staat het hier.'}</p>`;
+    return;
+  }
+  vak.innerHTML=rijen.map(x=>{
+    const isOpen=x.status==='open';
+    const verval=x.vervalt_op?new Date(x.vervalt_op):null;
+    return `<div class="bstrij${isOpen?' nieuw':''}">
+      <div class="bstkop">
+        ${isOpen?'<span class="bstnieuwvlag">Open</span>':''}
+        <span class="bstnr">${esc(x.toestel||'—')}</span>
+        <span class="bstklant">${esc(x.naam||'')}${x.telefoon?' · '+esc(x.telefoon):''}</span>
+        <span class="bstbedrag">${x.prijs!=null?euro(x.prijs):'—'}</span>
+      </div>
+      <div class="inr-details">
+        ${x.email?`<div><span>E-mail</span><a href="mailto:${esc(x.email)}">${esc(x.email)}</a></div>`:''}
+        ${x.telefoon?`<div><span>Telefoon</span>${esc(x.telefoon)}</div>`:''}
+        ${verval&&isOpen?`<div><span>Vasthouden tot</span>${verval.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})}</div>`:''}
+      </div>
+      <div class="bstvoet">
+        <span class="bststatus ${rsvStatusKlasse(x)}">${esc(rsvStatusNaam(x))}</span>
+        <span class="muted klein">${x.aangemaakt_op
+          ? new Date(x.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})
+          : ''}</span>
+        <span style="margin-left:auto"></span>
+        ${isOpen?`<button class="btn small" onclick="rsvAfrekenen('${x.id}','pin',this)"><svg class="i s"><use href="#i-check"/></svg>Afgerekend met pin</button>`:''}
+        ${isOpen?`<button class="btn small" onclick="rsvAfrekenen('${x.id}','cash',this)">Contant</button>`:''}
+        ${isOpen?`<button class="btn ghost small" onclick="rsvAnnuleren('${x.id}',this)">Annuleren</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function rsvEdge(payload, knop, bezigTekst){
+  const oud=knop?knop.textContent:'';
+  if(knop){ knop.disabled=true; knop.textContent=bezigTekst||'Bezig…'; }
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+    const res=await fetch(SUPABASE_URL+'/functions/v1/reservering',{method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify(payload)});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok||!j.ok) throw new Error(j.error||'Mislukt');
+    return true;
+  }catch(e){ toast(e.message||'Mislukt','fout'); return false; }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
+}
+
+async function rsvAfrekenen(id, betaal, knop){
+  const okd=await rsvEdge({actie:'afrekenen', id:id, betaal:betaal}, knop, 'Afrekenen…');
+  if(okd){ toast('Afgerekend en verkocht', true); rsvLaad(true); if(typeof hwLaad==='function') hwLaad(); }
+}
+
+async function rsvAnnuleren(id, knop){
+  if(!confirm('Reservering annuleren? Het toestel komt dan weer online in de webshop.')) return;
+  const okd=await rsvEdge({actie:'annuleren', id:id}, knop, 'Annuleren…');
+  if(okd){ toast('Geannuleerd, toestel weer online', true); rsvLaad(true); if(typeof hwLaad==='function') hwLaad(); }
 }
 
 /* ---------- de webshop koppelen ----------

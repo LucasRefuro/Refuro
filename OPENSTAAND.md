@@ -17,6 +17,27 @@ repo `refuro-webshop`.
 - [ ] **Uitlezen waterdicht:** een `irm | iex`-regel om in PowerShell te plakken (geen
       download, geen SmartScreen, geen administrator). Goedgekeurd, nog niet gebouwd.
 - [ ] **Lijst springt naar boven bij invullen.** Pinpoint nodig: welk scherm en veld.
+- [ ] **Donorlaptop: onderdelen oogsten.** Als bij de controle blijkt dat een laptop een
+      defect heeft (al vanaf 1 defect, en zeker bij meerdere), na stap 2 (Hardware) een
+      keuze tonen: "Maak er een donorlaptop van". Dan een lijst met aanvinkbare onderdelen,
+      alles wat in een laptop kan zitten. Wat je aanvinkt komt stuk voor stuk op de
+      onderdelenlijst (koppelt aan de bestaande onderdelen/sloop-flow van de refurbish-app).
+      Uitgezochte onderdelenlijst om te tonen, gegroepeerd:
+      - Scherm: LCD/LED-paneel, touchscreen-digitizer (bij touch), schermkabel (eDP/flatcable),
+        scharnieren, deksel (A-cover), schermrand/bezel (B-cover), webcam, microfoon,
+        wifi-antennes (lopen door het scherm), helderheidssensor.
+      - Moederbord en rekenwerk: moederbord, processor (CPU, vaak gesoldeerd), RAM (SO-DIMM),
+        SSD (M.2 NVMe of SATA), 2.5"-schijf (HDD/SSD), wifi/bluetooth-kaart (M.2),
+        WWAN/4G-kaart (optioneel), CMOS/RTC-batterij, BIOS-chip.
+      - Energie en koeling: accu, oplaadpoort/DC-jack, ventilator, heatpipe/koelblok,
+        laadadapter (los erbij).
+      - Invoer: toetsenbord, touchpad, aan/uit-knop, vingerafdruklezer, trackpoint (ThinkPad).
+      - Behuizing: palmrest (C-cover), bodemplaat (D-cover), rubber voetjes, schroef/montageset.
+      - Poorten en audio: I/O-board (los poortenprintje), USB/USB-C, HDMI/DisplayPort,
+        audio-jack, SD-kaartlezer, ethernet-poort (RJ45), luidsprekers.
+      - Kabels: accukabel, touchpadkabel, luidsprekerkabel, I/O-flatcable, antennekabels.
+      Nog te kiezen: welke onderdelen standaard aangevinkt staan, en hoe prijs/voorraad per
+      geoogst onderdeel wordt gezet. Later hetzelfde voor telefoon en tablet als donor.
 
 ### Webshop (thema)
 - [ ] **Uitgelicht product in het mega-menu.** Nu vaste placeholder-tekst ("Deal van de
@@ -35,7 +56,30 @@ repo `refuro-webshop`.
       "Uitstekend · [lange interne SKU]" als platte tekst; maak daar nette tags van (grade
       als tag) en haal de lange SKU weg.
 
+### Ophaal-flow (adres overslaan + betalen of reserveren)
+- [x] **1. Adres overslaan + nu betalen = Shopify "Lokaal afhalen".** GEDAAN (28 sep).
+      Aangezet voor de locatie (hernoemd naar "Refuro Rijen", adres Hoofdstraat 7a ingevuld,
+      Nederlands ophaalbericht). Getest op de live checkout: "Afhalen" slaat het bezorgadres
+      over, ophaalpunt Refuro Rijen, gratis, daarna online betalen. Bleef eerder leeg omdat
+      de locatie geen adres had.
+- [x] **2. Reserveren (betaal in de winkel).** GEBOUWD (28 sep), wacht op push + test.
+      Tabel `webshop_reserveringen` + `hardware.status='gereserveerd'`, edge `reservering`
+      (reserveer/afrekenen/annuleren/verval, verify_jwt uit), webshop-knop op de productpagina,
+      en een Reserveringen-kaart op de Webshop-tab in de winkelapp (afrekenen pin/contant +
+      annuleren, ruimt verlopen op). Reserveren zet het toestel op gereserveerd (valt uit de
+      grade-telling) en zet de Shopify-voorraad meteen -1, dus geen dubbelverkoop. Afwijspaden
+      van de edge getest, `thema geldig`, `npm test` groen. Nog te doen: theme push + Storvo
+      live, dan end-to-end testen. Optioneel: kasboek-regel bij afrekenen (nu telt de verkoop
+      via hardware.verkocht) + `RESERVERING_DAGEN`/`RESERVERING_NAAR` in Supabase.
+- [ ] **Productpagina + winkelmandje eerlijk maken** over de ophaal-keuze (nu toont het
+      winkelmandje er niks over; definitieve keuze valt pas bij het afrekenen).
+
 ### Bugs / kwaliteit
+- [ ] **Telefoons/iPhones krijgen geen automatische foto's.** De auto-ophaal (edge
+      `productfotos` via Icecat) dekt Apple en veel telefoons niet in de gratis Icecat, dus de
+      fotokaart blijft leeg en je moet met de hand fotograferen. Fotobron zoeken die telefoons
+      wel dekt (GSMArena-render, leverancierfeed, of eigen model-fotobank), zodat een iPhone
+      net als een laptop vanzelf foto's krijgt.
 - [x] **Foto-ophaal grijpt soms een merklogo i.p.v. een productfoto.** OPGELOST (28 sep).
       Icecat gaf voor de Dell Latitude 3520 alleen een merklogo terug (`Type: BrandLogo`, pad
       `/img/brand/`). Edge `productfotos` v23 filtert die er nu uit; blijft er niets over, dan
@@ -64,6 +108,16 @@ repo `refuro-webshop`.
 ### Bekende beperkingen / klein
 - Apple-toestellen zitten niet in de gratis Icecat -> vallen terug op de telefoonfoto (bewust).
 - Diagnose-logregels in de foto-functie (edge `productfotos`) mogen later weg.
+
+### Klaar op schijf webshop, wacht op `shopify theme push` (28 sep)
+- **"Ophalen" was niet aanklikbaar** op de productpagina. Oorzaak: de metafield
+  `winkelvoorraad` wordt nog niet gevuld (0), waardoor de ophaal-optie `disabled` rendert.
+  Opgelost in het thema: ophalen is altijd te kiezen (elk toestel ligt fysiek in de winkel);
+  `winkelvoorraad` stuurt alleen nog de uitleg-tekst. Verder gehard: leverkeuze-handler
+  vóór de variant-JSON gebonden (keuze wordt ook bij één variant op de bestelling gezet) +
+  CSS-vangnet `:has(input:checked)`.
+- **Galerijfoto's volledig en even groot in het vak** (`object-fit:contain`, `padding:8%`,
+  vast 4:3-vak), zodat liggende laptop- en staande telefoonfoto's allebei volledig passen.
 
 ### Al gedaan en live deze sessie (ter info, niet opnieuw doen)
 - Accu: geen valse 100% meer; de meting meldt het als de slijtage niet betrouwbaar te meten is.
