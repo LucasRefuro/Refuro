@@ -98,7 +98,7 @@ async function wieBelt(req: Request) {
 
 const TEAM = Deno.env.get("RESERVERING_TEAM_ID") || Deno.env.get("INRUIL_TEAM_ID") ||
   "ce975142-a7d9-4fb2-9cb5-9cc1fe1d7f65";
-const VERVAL_DAGEN = Number(Deno.env.get("RESERVERING_DAGEN") || "5");
+const VERVAL_DAGEN = Number(Deno.env.get("RESERVERING_DAGEN") || "3");
 
 const cors = {
   "Access-Control-Allow-Origin": Deno.env.get("RESERVERING_ORIGIN") || Deno.env.get("INRUIL_ORIGIN") || "*",

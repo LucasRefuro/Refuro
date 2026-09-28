@@ -64,8 +64,10 @@ repo `refuro-webshop`.
       de locatie geen adres had.
 - [x] **2. Reserveren (betaal in de winkel).** GEBOUWD (28 sep), wacht op push + test.
       Tabel `webshop_reserveringen` + `hardware.status='gereserveerd'`, edge `reservering`
-      (reserveer/afrekenen/annuleren/verval, verify_jwt uit), webshop-knop op de productpagina,
-      en een Reserveringen-kaart op de Webshop-tab in de winkelapp (afrekenen pin/contant +
+      (reserveer/afrekenen/annuleren/verval, verify_jwt uit, vervaltijd 3 dagen), op de
+      productpagina een klein reserveer-linkje bij "Ophalen in Refuro Rijen" dat een pop-up
+      met het formulier opent (geen losse knop, velden niet los op de pagina), en een
+      Reserveringen-kaart op de Webshop-tab in de winkelapp (afrekenen pin/contant +
       annuleren, ruimt verlopen op). Reserveren zet het toestel op gereserveerd (valt uit de
       grade-telling) en zet de Shopify-voorraad meteen -1, dus geen dubbelverkoop. Afwijspaden
       van de edge getest, `thema geldig`, `npm test` groen. Nog te doen: theme push + Storvo
