@@ -5455,7 +5455,16 @@ function gradeSchat(){
    tekst, zoekwoorden, prijzen, nieuwprijs en garantie per model bewaard en pakt een
    volgend exemplaar dezelfde advertentie erbij. */
 function onlAdRij(){
-  const gp=onl.gradePrijzen||{};
+  let gp=onl.gradePrijzen;
+  /* Niets in de grade-velden gezet maar wel een vraagprijs? Dan de schatting vastleggen
+     (de grade die je hebt is het anker). Anders bleef de model-opslag op null staan en
+     begon een volgend exemplaar van dit model met lege grade-prijzen. */
+  if((!gp || (gp.A==null && gp.B==null && gp.C==null)) && onl.prijs!=null && onl.prijs!==''){
+    const s=gradeSchatting(onl.staat||onl.a.grade||'B', onl.prijs);
+    gp={A:s.a, B:s.b, C:s.c};
+    onl.gradePrijzen=gp;
+  }
+  gp=gp||{};
   return { team_id:account.team_id, sleutel:onl.sleutel||webshopSleutel(onl.a), categorie:onl.a.categorie||null,
     naam:toestelNaam(onl.a), prijs_a:gp.A??null, prijs_b:gp.B??null, prijs_c:gp.C??null,
     titel:onl.titel||null, tekst:onl.tekst||null,
