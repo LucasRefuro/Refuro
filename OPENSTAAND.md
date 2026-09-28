@@ -12,8 +12,12 @@ werken en elkaar niet in de weg zitten. Dezelfde lijst staat als `WERKLIJST.md` 
 repo `refuro-webshop`.
 
 ### Nog te bouwen (code)
-- [ ] **Meer specs in de spec-tabel.** De laptop-specopzoeker (edge `model-specs`) haalt
-      nu 7 velden; uitbreiden met besturingssysteem, gewicht, materiaal, aansluitingen.
+- [x] **Meer specs in de spec-tabel.** GEDAAN (28 sep). `model-specs` v20 levert voor laptops
+      nu ook Gewicht, Materiaal en Poorten; die reizen via de refurbish-opslag naar de
+      metafields (bestonden al) en de webshop-spectabel. Besturingssysteem bewust weggelaten
+      (os-rij komt uit de Windows-uitlezing). Kanttekening: al eerder opgezochte modellen in
+      `hardware_modellen` houden hun oude specs (cache); alleen nieuwe modellen krijgen de 3
+      extra velden. Telefoon-"Poorten" (laadpoort) nog optioneel toe te voegen.
 - [ ] **Uitlezen waterdicht:** een `irm | iex`-regel om in PowerShell te plakken (geen
       download, geen SmartScreen, geen administrator). Goedgekeurd, nog niet gebouwd.
 - [ ] **Lijst springt naar boven bij invullen.** Pinpoint nodig: welk scherm en veld.
