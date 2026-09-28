@@ -131,28 +131,41 @@ function euro(n: unknown): string {
 }
 
 /* ── Shopify-voorraad van één grade-variant op het juiste aantal zetten ──
-   We zetten de absolute waarde (het echte aantal onverkochte exemplaren van die
-   grade), niet een delta. Zo kan het nooit uit de pas gaan lopen met de bron van
-   waarheid, precies zoals de volledige sync het ook doet. */
-async function inventoryItemVan(k: { domein: string; token: string }, variantGid: string) {
-  const d = await graphql(k, `query($id:ID!){ productVariant(id:$id){ inventoryItem{ id } } }`, { id: variantGid });
-  return d?.productVariant?.inventoryItem?.id || null;
+   Deze API-versie eist changeFromQuantity (de waarde die je verwacht). We lezen
+   dus eerst de huidige "available" op de winkel-locatie en zetten hem dan op het
+   echte aantal onverkochte exemplaren van die grade. Absoluut zetten (niet een
+   delta) is zelfcorrigerend: het kan niet uit de pas gaan lopen met de bron van
+   waarheid. Best effort: een fout hier houdt de actie niet tegen; de volledige
+   sync corrigeert later alsnog. */
+async function inventoryNiveauVan(k: any, variantGid: string) {
+  const d = await graphql(k, `query($id:ID!,$loc:ID!){
+    productVariant(id:$id){ inventoryItem{ id inventoryLevel(locationId:$loc){ quantities(names:["available"]){ name quantity } } } }
+  }`, { id: variantGid, loc: k.locatie_id });
+  const item = d?.productVariant?.inventoryItem;
+  if (!item?.id) return null;
+  const q = (item.inventoryLevel?.quantities || []).find((x: any) => x?.name === "available");
+  return { itemId: item.id as string, huidig: q ? Number(q.quantity) : 0 };
 }
-async function zetShopifyVoorraad(k: any, variantGid: string, aantal: number) {
+async function zetShopifyVoorraad(k: any, variantGid: string, doelAantal: number) {
   if (!k?.locatie_id) return; // geen locatie bekend: de volgende volledige sync zet het recht
-  const item = await inventoryItemVan(k, variantGid);
-  if (!item) return;
-  await graphql(k, `
-    mutation($input: InventorySetQuantitiesInput!){
-      inventorySetQuantities(input: $input){ userErrors { field message } }
+  const niv = await inventoryNiveauVan(k, variantGid);
+  if (!niv) return;
+  const doel = Math.max(0, Math.round(doelAantal));
+  if (niv.huidig === doel) return; // al goed, niets te doen
+  // De @idempotent-directive met unieke sleutel is sinds 2026-04 verplicht.
+  const uit = await graphql(k, `
+    mutation($input: InventorySetQuantitiesInput!, $key: String!){
+      inventorySetQuantities(input: $input) @idempotent(key: $key){ userErrors { field message } }
     }`, {
     input: {
       name: "available",
       reason: "correction",
-      ignoreCompareQuantity: true,
-      quantities: [{ inventoryItemId: item, locationId: k.locatie_id, quantity: Math.max(0, Math.round(aantal)) }],
+      quantities: [{ inventoryItemId: niv.itemId, locationId: k.locatie_id, quantity: doel, changeFromQuantity: niv.huidig }],
     },
+    key: crypto.randomUUID(),
   });
+  const f = uit?.inventorySetQuantities?.userErrors || [];
+  if (f.length) console.error("voorraad zetten", f.map((e: any) => e.message).join(" · "));
 }
 async function telVoorraad(teamId: string, variantGid: string) {
   const { count } = await admin.from("hardware")
@@ -161,7 +174,7 @@ async function telVoorraad(teamId: string, variantGid: string) {
     .eq("kanalen->shopify->>variant", variantGid);
   return count ?? 0;
 }
-// De grade-variant weer op de echte voorraad zetten (na annuleren/vervallen).
+// De grade-variant op de echte voorraad zetten (na reserveren/annuleren/vervallen).
 async function herstelShopifyVoorraad(teamId: string, variantGid: string) {
   try {
     const k = await koppelingVan(teamId);
@@ -291,7 +304,8 @@ async function reserveer(lijf: Record<string, unknown>, req: Request) {
     return fout("Reserveren mislukte, probeer het zo nog eens.", 500);
   }
 
-  // Shopify-voorraad van deze grade op het nieuwe (lagere) aantal zetten.
+  // De webshop-voorraad van deze grade op het nieuwe (lagere) aantal zetten,
+  // zodat niemand het gereserveerde toestel nog online koopt.
   await herstelShopifyVoorraad(TEAM, variantGid);
 
   const taal = knip(lijf.taal, 5).toLowerCase().startsWith("en") ? "en" : "nl";
@@ -358,7 +372,7 @@ async function verval(acc: any) {
   const { data: verlopen } = await admin.from("webshop_reserveringen")
     .select("*").eq("team_id", acc.team_id).eq("status", "open").lt("vervalt_op", nu);
   const lijst = (verlopen || []) as any[];
-  const variantenTeHerstellen = new Set<string>();
+  const varianten = new Set<string>();
   for (const r of lijst) {
     if (r.hardware_id) {
       await admin.from("hardware").update({ status: "voorraad", bijgewerkt_op: new Date().toISOString() })
@@ -367,9 +381,10 @@ async function verval(acc: any) {
     await admin.from("webshop_reserveringen").update({
       status: "vervallen", afgehandeld_op: nu, bijgewerkt_op: nu,
     }).eq("id", r.id);
-    if (r.variant_id) variantenTeHerstellen.add(r.variant_id);
+    if (r.variant_id) varianten.add(r.variant_id);
   }
-  for (const v of variantenTeHerstellen) await herstelShopifyVoorraad(acc.team_id, v);
+  // Absoluut zetten op het echte aantal, dus één keer per variant is genoeg.
+  for (const v of varianten) await herstelShopifyVoorraad(acc.team_id, v);
   return ok({ vervallen: lijst.length });
 }
 
