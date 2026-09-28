@@ -359,9 +359,14 @@ export function gradeLetter(staat: unknown) {
    schatten. MOET gelijk zijn aan gradeSchatting() in refurbish/index.html. */
 export const GRADE_RATIO: Record<string, number> = { A: 1.12, B: 1.0, C: 0.88 };
 export function gradeSchat(anker: string, prijs: number) {
+  const p = Number(prijs) || 0;
   const r = GRADE_RATIO[anker] || 1;
-  const basis = (Number(prijs) || 0) / r;
-  return { A: Math.round(basis * GRADE_RATIO.A), B: Math.round(basis * GRADE_RATIO.B), C: Math.round(basis * GRADE_RATIO.C) } as Record<string, number>;
+  const basis = p / r;
+  // De centen van de vraagprijs aanhouden (bv .95), gelijk aan gradeSchatting() in
+  // refurbish/index.html, zodat A/B/C nette prijzen worden i.p.v. hele euro's.
+  const centen = Math.round((p - Math.floor(p)) * 100) / 100;
+  const net = (x: number) => Math.floor(x) + centen;
+  return { A: net(basis * GRADE_RATIO.A), B: net(basis * GRADE_RATIO.B), C: net(basis * GRADE_RATIO.C) } as Record<string, number>;
 }
 
 /* De webshop-sleutel: de identiteit van één advertentie = merk + model + kleur + de bepalende

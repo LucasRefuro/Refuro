@@ -1998,8 +1998,14 @@ function webshopSleutel(a){
    goedkoper. Vanuit één ingevulde grade schatten we de andere twee, in hele euro's. */
 const GRADE_RATIO={A:1.12, B:1.0, C:0.88};
 function gradeSchatting(ankerGrade, ankerPrijs){
-  const r=GRADE_RATIO[ankerGrade]||1; const basis=(Number(ankerPrijs)||0)/r;
-  return { a:Math.round(basis*GRADE_RATIO.A), b:Math.round(basis*GRADE_RATIO.B), c:Math.round(basis*GRADE_RATIO.C) };
+  const p=Number(ankerPrijs)||0;
+  const r=GRADE_RATIO[ankerGrade]||1; const basis=p/r;
+  /* De grade die je hebt = precies de vraagprijs; de andere twee volgen uit de verhouding.
+     De centen van de vraagprijs houden we aan (bv .95), zodat je nette prijzen krijgt
+     (279,95 -> 249,95 -> 219,95) in plaats van afgerond op hele euro's (280/250/220). */
+  const centen=Math.round((p-Math.floor(p))*100)/100;
+  const net=(x)=>Math.floor(x)+centen;
+  return { a:net(basis*GRADE_RATIO.A), b:net(basis*GRADE_RATIO.B), c:net(basis*GRADE_RATIO.C) };
 }
 function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
   const woorden=String(tekst||'').split(/\s+/); let regel='', regels=0;
@@ -5313,7 +5319,7 @@ function tekenOnline(){
           <label>Vraagprijs</label>
           <div class="row">
             <input id="onl_prijs" type="number" step="0.01" value="${onl.prijs!=null?onl.prijs:''}"
-              placeholder="Bijvoorbeeld 349" style="flex:1; min-width:120px" onchange="onlVeld()">
+              placeholder="Bijvoorbeeld 349" style="flex:1; min-width:120px" onchange="onlVraagprijs()">
             <button class="btn ghost small" onclick="onlPrijsvoorstel(this)">
               <svg class="i s"><use href="#i-sparkles"/></svg>Voorstel</button>
           </div>
@@ -5338,7 +5344,7 @@ function tekenOnline(){
             onl.prijs?' · winst '+euro((Number(onl.prijs)||0)-(Number(onl.a.inkoop)||0)):''}</p>`:''}
 
           <div class="grid" style="margin-top:14px">
-            <div><label>Grade</label><select id="onl_staat" onchange="onlVeld()">
+            <div><label>Grade</label><select id="onl_staat" onchange="onlVraagprijs()">
               <option value="A"${(onl.staat||onl.a.grade)==='A'?' selected':''}>A · als nieuw</option>
               <option value="B"${(onl.staat||onl.a.grade||'B')==='B'?' selected':''}>B · gebruikt</option>
               <option value="C"${(onl.staat||onl.a.grade)==='C'?' selected':''}>C · zichtbare sporen</option>
@@ -5439,8 +5445,20 @@ function gpVal(g){
   return '';
 }
 function gradePrijsVeld(){
-  const lees=id=>{ const e=document.getElementById(id); return (e&&e.value!=='')?Math.round(Number(e.value)):null; };
+  const lees=id=>{ const e=document.getElementById(id); return (e&&e.value!=='')?Math.round(Number(e.value)*100)/100:null; };
   onl.gradePrijzen={ A:lees('gp_A'), B:lees('gp_B'), C:lees('gp_C') };
+}
+/* De vraagprijs is het anker: verandert hij (of de grade), dan volgen de grade-prijzen
+   mee. Zo blijven ze niet op oude opgeslagen waarden staan. Een handmatige aanpassing
+   in een grade-veld blijft staan tot je de vraagprijs weer wijzigt. */
+function onlVraagprijs(){
+  onlVeld();
+  if(onl.prijs!=null && onl.prijs!==''){
+    const s=gradeSchatting(onl.staat||(onl.a&&onl.a.grade)||'B', onl.prijs);
+    onl.gradePrijzen={A:s.a, B:s.b, C:s.c};
+    const zet=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v; };
+    zet('gp_A',s.a); zet('gp_B',s.b); zet('gp_C',s.c);
+  }
 }
 function gradeSchat(){
   onlBewaarVelden();
@@ -5507,7 +5525,13 @@ async function onlPrijsvoorstel(knop){
     const uit=await res.json().catch(()=>({}));
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Het advies lukte niet');
     onl.advies=uit;
-    if(uit.advies) onl.prijs=uit.advies;
+    if(uit.advies){
+      onl.prijs=uit.advies;
+      // De grade-prijzen volgen het nieuwe voorstel (de grade die je hebt is het anker),
+      // zodat ze niet op oude opgeslagen waarden blijven staan.
+      const s=gradeSchatting(onl.staat||(onl.a&&onl.a.grade)||'B', onl.prijs);
+      onl.gradePrijzen={A:s.a, B:s.b, C:s.c};
+    }
     onl.prijsBron=uit.uitleg||'';
     tekenOnline();
   });
