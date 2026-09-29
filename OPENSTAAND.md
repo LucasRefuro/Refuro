@@ -105,9 +105,12 @@ repo `refuro-webshop`.
       in de gratis Icecat blijft mager, dus veel Dells vallen sowieso terug op de telefoonfoto.
 
 ### Grade-varianten afmaken (webshop)
-- [ ] **Fase 3, de webhook.** Een verkochte grade moet het juiste onverkochte exemplaar
-      op verkocht zetten en de advertentie opnieuw synchroniseren. Nu nog 1 product = 1
-      toestel; hier kan geld misgaan bij een verkoop. Eerst dit.
+- [x] **Fase 3, de webhook.** GEDAAN (29 sep, edge `shopify-webhook` v21). Een verkochte grade
+      bindt nu het juiste onverkochte exemplaar per VARIANT (oudste eerst, FIFO), niet meer op
+      product-id (waardoor bij grades het verkeerde of geen toestel op verkocht ging). Idempotent
+      over de losse created/paid/fulfilled-meldingen; de variant wordt meebewaard zodat annulering
+      het juiste toestel terugzet. Aanrader: één echte grade-aankoop doen om te bevestigen dat het
+      juiste exemplaar bindt.
 - [ ] **Fase 4.** Per grade eigen staat-toelichting/accu + in het thema automatisch de
       op-voorraad grade selecteren.
 
