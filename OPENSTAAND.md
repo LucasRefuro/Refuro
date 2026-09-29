@@ -21,12 +21,14 @@ repo `refuro-webshop`.
 - [ ] **Uitlezen waterdicht:** een `irm | iex`-regel om in PowerShell te plakken (geen
       download, geen SmartScreen, geen administrator). Goedgekeurd, nog niet gebouwd.
 - [ ] **Lijst springt naar boven bij invullen.** Pinpoint nodig: welk scherm en veld.
-- [ ] **Donorlaptop: onderdelen oogsten.** Als bij de controle blijkt dat een laptop een
-      defect heeft (al vanaf 1 defect, en zeker bij meerdere), na stap 2 (Hardware) een
-      keuze tonen: "Maak er een donorlaptop van". Dan een lijst met aanvinkbare onderdelen,
-      alles wat in een laptop kan zitten. Wat je aanvinkt komt stuk voor stuk op de
-      onderdelenlijst (koppelt aan de bestaande onderdelen/sloop-flow van de refurbish-app).
-      Uitgezochte onderdelenlijst om te tonen, gegroepeerd:
+- [x] **Donorlaptop: onderdelen oogsten.** GEDAAN (29 sep). Vanaf het eerste hardwaredefect
+      (op de hardware- en de na-Windows-stap) verschijnt de knop "Maak er een donorlaptop van",
+      die naar de sloopstap springt (reversibel, Terug werkt). De laptop-sloopdelen zijn nu de
+      volledige gegroepeerde lijst (zie hieronder); elk vinkje wordt al een losse regel op de
+      onderdelenplank (`refurbish_onderdelen`, deed `ctrSlopen` al). Alleen laptop (profiel-vlag
+      `donorKnop`); telefoon/tablet later. Twee keuzes voorlopig zo gezet, nog te bevestigen:
+      niets staat vooraf aangevinkt, en een geoogst onderdeel krijgt geen inkoopprijs (prijs
+      kun je later op de onderdelenlijst zetten). De getoonde, gegroepeerde lijst:
       - Scherm: LCD/LED-paneel, touchscreen-digitizer (bij touch), schermkabel (eDP/flatcable),
         scharnieren, deksel (A-cover), schermrand/bezel (B-cover), webcam, microfoon,
         wifi-antennes (lopen door het scherm), helderheidssensor.
@@ -40,8 +42,8 @@ repo `refuro-webshop`.
       - Poorten en audio: I/O-board (los poortenprintje), USB/USB-C, HDMI/DisplayPort,
         audio-jack, SD-kaartlezer, ethernet-poort (RJ45), luidsprekers.
       - Kabels: accukabel, touchpadkabel, luidsprekerkabel, I/O-flatcable, antennekabels.
-      Nog te kiezen: welke onderdelen standaard aangevinkt staan, en hoe prijs/voorraad per
-      geoogst onderdeel wordt gezet. Later hetzelfde voor telefoon en tablet als donor.
+      Voorlopig gekozen (te bevestigen): niets vooraf aangevinkt, en geen inkoopprijs per
+      geoogst onderdeel. Later hetzelfde voor telefoon en tablet als donor.
 
 ### Webshop (thema)
 - [ ] **Uitgelicht product in het mega-menu.** Nu vaste placeholder-tekst ("Deal van de
