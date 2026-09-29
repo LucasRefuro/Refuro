@@ -37,7 +37,7 @@ const VELDEN = ["Processor", "Geheugen", "Opslag", "Scherm", "Videokaart", "Touc
 
 // Telefoons en tablets: vaste modelfeiten in plaats van "uitvoeringen" per onderdeel.
 // Zo vult de spec-pagina van de webshop zich met chip, scherm, camera, 5G, materiaal enz.
-const VELDEN_TEL = ["Chip", "Werkgeheugen", "Opslag", "Scherm", "Camera", "Netwerk", "Besturingssysteem", "Materiaal", "Waterbestendig", "SIM", "Bouwjaar", "Gewicht"];
+const VELDEN_TEL = ["Chip", "Werkgeheugen", "Opslag", "Scherm", "Camera", "Netwerk", "Besturingssysteem", "Materiaal", "Waterbestendig", "SIM", "Bouwjaar", "Gewicht", "Poorten"];
 
 // Per onderdeel alles wat er voor dit model verkocht is. Van een zakelijke
 // laptop bestaan tien processors en vier schermen; welke er voor je staat weet
@@ -155,12 +155,13 @@ Vul alles in wat je zeker weet; laat een veld leeg als je het niet zeker weet, v
 - SIM: bijvoorbeeld "Nano-SIM en eSIM"
 - Bouwjaar: het jaar van uitbrengen
 - Gewicht: bijvoorbeeld "164 g"
+- Poorten: de laadaansluiting, bijvoorbeeld "USB-C" of "Lightning"
 
 Geef in "specs" de vaste feiten, en in "opties" alleen de opslagvarianten.
 
 Antwoord uitsluitend met JSON:
 {"merk":"...","model":"...",
- "specs":{"Chip":"...","Werkgeheugen":"...","Opslag":"...","Scherm":"...","Camera":"...","Netwerk":"...","Besturingssysteem":"...","Materiaal":"...","Waterbestendig":"...","SIM":"...","Bouwjaar":"...","Gewicht":"..."},
+ "specs":{"Chip":"...","Werkgeheugen":"...","Opslag":"...","Scherm":"...","Camera":"...","Netwerk":"...","Besturingssysteem":"...","Materiaal":"...","Waterbestendig":"...","SIM":"...","Bouwjaar":"...","Gewicht":"...","Poorten":"..."},
  "opties":{"Opslag":["64 GB","128 GB","256 GB"]}}
 
 Corrigeer een typefout in het model als je zeker weet welk apparaat bedoeld wordt.`
