@@ -11553,8 +11553,36 @@ function cloverVoorraadGewijzigd(p){
    aansloeg heeft geen product-match en wordt overgeslagen, dus niks telt dubbel. We
    onthouden per bon dat hij verwerkt is in state.cloverVerwerkt (meegesynct), en gebruiken
    een stabiele verkoop-id, zodat verwerken op twee apparaten samenvalt i.p.v. dubbel boekt. */
+/* Herkent een Clover-regel als een refurbished toestel: match op artikelnummer/barcode/sku
+   tegen de hardwarelijst. Zo kunnen we een toestelverkoop op de pin met de juiste marge-btw
+   boeken in plaats van 21% over de hele prijs, en het toestel op verkocht zetten. */
+function cloverToestel(code, sku){
+  if(typeof hwData==='undefined' || !hwData.length) return null;
+  const c = code!=null ? String(code).trim().toUpperCase() : null;
+  const s = sku!=null  ? String(sku).trim().toUpperCase()  : null;
+  if(!c && !s) return null;
+  return hwData.find(h=>{
+    const hc = String(h.code||'').trim().toUpperCase();
+    const hb = String(h.barcode||'').trim().toUpperCase();
+    return (c && ((hc && hc===c) || (hb && hb===c))) || (s && ((hc && hc===s) || (hb && hb===s)));
+  }) || null;
+}
+/* Een toestel dat via de Clover-terminal verkocht is op verkocht zetten. Exact zoals de
+   balieverkoop (hwBoekMandje): hardware-status, marge naar de controle, partner-dashboard uit
+   en van de webshop af. De .eq('status','voorraad') maakt het veilig als er tegelijk in Storvo
+   iets gebeurt. */
+async function cloverToestelVerkocht(h){
+  try{
+    await sb.from('hardware').update({status:'verkocht', verkocht_op:new Date().toISOString(), verkocht_via:'winkel', verkocht_betaal:'pin', marge:(h.marge!==false), bijgewerkt_op:new Date().toISOString()}).eq('id', h.id).eq('status','voorraad');
+    sb.from('refurbish_apparaten').update({marge:(h.marge!==false), bijgewerkt_op:new Date().toISOString()}).eq('hardware_id', h.id).then(({error})=>{ if(error) console.error('marge syncen (clover):', error); });
+    if(h.kanalen && h.kanalen.partner){ const {data:{session}}=await sb.auth.getSession(); if(session) await fetch(SUPABASE_URL+'/functions/v1/partner-beheer',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({actie:'dashboard_uit', hardware_id:h.id})}); }
+    if(typeof hwOnline==='function' && hwOnline(h) && typeof hwShopify==='function') hwShopify(h.id,'offline');
+  }catch(e){ console.error('clover toestel verkocht', e); }
+}
 async function cloverBestellingenVerwerken(){
   if(!account || !state.cloverGekoppeld) return;
+  // De toestellenlijst nodig om een pinverkoop van een toestel als marge te herkennen.
+  if(typeof hwData!=='undefined' && !hwData.length && typeof hwLaad==='function' && (typeof mag!=='function' || mag('hardware'))){ try{ await hwLaad(true); }catch(e){} }
   let bonnen;
   try{ const r=await sb.from('clover_bestellingen').select('clover_order_id,bedrag,betaald,regels,besteld_op,historisch').order('aangemaakt_op',{ascending:true}); bonnen=r.data||[]; }
   catch(e){ return; }
@@ -11592,12 +11620,32 @@ async function cloverBestellingenVerwerken(){
     let matchBedrag=0; const restNamen=[];
     regels.forEach((r,idx)=>{
       const code=r.code!=null?String(r.code):null, sku=r.sku!=null?String(r.sku):null;
-      const p=(state.producten||[]).find(pp=> (code && String(pp.barcode)===code) || (sku && pp.sku && String(pp.sku)===sku));
       const aantal=Math.max(1, Math.floor(Number(r.aantal)||1));
+      const id='clv_'+oid+'_'+idx;
+
+      /* Eerst: is dit een refurbished toestel? Dan boeken met marge-btw (btw over de winst,
+         niet 21% over de hele prijs) en het toestel op verkocht zetten. Staat het al op
+         verkocht (in Storvo aangeslagen), dan tellen we het niet nog eens. */
+      const dev=cloverToestel(code, sku);
+      if(dev){
+        const prijs=(r.prijs!=null?Number(r.prijs):null)||Number(dev.verkoop)||0;
+        matchBedrag+=prijs*aantal;
+        if(bestaand.has(id)) return;                 // deze regel al geboekt
+        if(dev.status==='verkocht') return;          // al in Storvo (of eerder) verkocht: niet dubbel
+        dev.status='verkocht';                        // lokaal meteen, zodat niets 'm nog eens pakt
+        boek({id, t:(bon.besteld_op?new Date(bon.besteld_op).getTime():Date.now()),
+          naam:(dev.titel||dev.naam||[dev.merk,dev.model].filter(Boolean).join(' ')||'Toestel'),
+          verkoop:prijs*aantal, inkoop:(Number(dev.inkoop)||0)*aantal, aantal, betaal:'pin',
+          marge:(dev.marge!==false), cat:(typeof vasteCat==='function'?vasteCat('Hardware').id:null),
+          door:'Clover-terminal', hardware:dev.id, cloverOrder:oid});
+        cloverToestelVerkocht(dev);
+        return;
+      }
+
+      const p=(state.producten||[]).find(pp=> (code && String(pp.barcode)===code) || (sku && pp.sku && String(pp.sku)===sku));
       if(!p){ if(r&&r.naam) restNamen.push(r.naam); return; }
       const prijs=(r.prijs!=null?Number(r.prijs):null)||p.verkoop||0;
       matchBedrag+=prijs*aantal;
-      const id='clv_'+oid+'_'+idx;
       if(bestaand.has(id)) return;                 // al geboekt: niet nóg eens de voorraad eraf
       haalUitVoorraad(p, aantal);
       if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);

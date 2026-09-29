@@ -81,6 +81,16 @@ repo `refuro-webshop`.
       winkelmandje er niks over; definitieve keuze valt pas bij het afrekenen).
 
 ### Bugs / kwaliteit
+- [x] **Clover pin: 0% vs 21% btw (marge) voor toestellen.** GEDAAN (29 sep). De Clover-
+      verkoopsync (`cloverBestellingenVerwerken`) matcht een bon-regel nu ook tegen de
+      toestellen (`hwData`, op artikelnummer/barcode/sku). Match op voorraad -> boeken met
+      marge-btw + inkoop en het toestel op verkocht (net als de balie, `cloverToestelVerkocht`);
+      match op al-verkocht -> overslaan (geen dubbeltelling). Losse producten blijven 21%.
+      RESIDU: verkoop je een toestel op Clover als LOS bedrag (zonder artikelnummer/barcode op
+      de bon), dan kan de software het niet als toestel herkennen -> boekt als 21% over de hele
+      prijs, en bij een dubbele aanslag (ook in Storvo) telt het dubbel. Oplossing: toestellen
+      als artikel in Clover zetten of altijd in Storvo aanslaan (Clover alleen de pin). Verifieer
+      met 1 echte Clover-toestelverkoop dat de btw in het Rapport als marge verschijnt.
 - [ ] **Telefoons/iPhones krijgen geen automatische foto's.** De auto-ophaal (edge
       `productfotos` via Icecat) dekt Apple en veel telefoons niet in de gratis Icecat, dus de
       fotokaart blijft leeg en je moet met de hand fotograferen. Fotobron zoeken die telefoons
