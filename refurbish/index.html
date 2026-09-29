@@ -2897,9 +2897,55 @@ function prof(){ return CATEGORIE_PROFIEL[ctrCat()] || CATEGORIE_PROFIEL.Laptop;
 function ctrVolgende(){ const s=prof().stappen; return s[s.indexOf(ctr.stap)+1]; }
 
 /* De onderdelen die de moeite waard zijn om te bewaren als een apparaat wordt
-   gesloopt. */
-const SLOOPDELEN=['Scherm','Toetsenbord','Accu','Moederbord','Geheugen','Opslag',
-                  'Laadpoort','Luidsprekers','Wifi-kaart','Behuizing','Koeler','Webcam'];
+   gesloopt. Voor de laptop de volledige lijst, per plek gegroepeerd: alles wat er
+   in een laptop kan zitten. Je vinkt aan wat nog goed is; elk vinkje wordt een
+   losse regel op de onderdelenplank (zie ctrSlopen). De andere categorieën houden
+   hun eigen, kortere lijst als platte reeks namen; sloopGroepen() maakt van allebei
+   hetzelfde. De haakjes zijn alleen een hint op het scherm en komen niet in de naam
+   of de soort terecht, anders zou de plank-per-soort onnodig versnipperen. */
+const SLOOPDELEN=[
+  {kop:'Scherm', delen:[
+    {naam:'LCD/LED-paneel'}, {naam:'Touchscreen-digitizer', hint:'bij touch'},
+    {naam:'Schermkabel', hint:'eDP/flatcable'}, {naam:'Scharnieren'},
+    {naam:'Deksel', hint:'A-cover'}, {naam:'Schermrand', hint:'B-cover/bezel'},
+    {naam:'Webcam'}, {naam:'Microfoon'}, {naam:'Wifi-antennes'}, {naam:'Helderheidssensor'}
+  ]},
+  {kop:'Moederbord en rekenwerk', delen:[
+    {naam:'Moederbord'}, {naam:'Processor', hint:'CPU, vaak gesoldeerd'},
+    {naam:'RAM', hint:'SO-DIMM'}, {naam:'SSD', hint:'M.2 NVMe of SATA'},
+    {naam:'2,5-inch schijf', hint:'HDD of SSD'}, {naam:'Wifi/bluetooth-kaart', hint:'M.2'},
+    {naam:'WWAN/4G-kaart'}, {naam:'CMOS/RTC-batterij'}, {naam:'BIOS-chip'}
+  ]},
+  {kop:'Energie en koeling', delen:[
+    {naam:'Accu'}, {naam:'Oplaadpoort', hint:'DC-jack'}, {naam:'Ventilator'},
+    {naam:'Heatpipe of koelblok'}, {naam:'Laadadapter', hint:'los erbij'}
+  ]},
+  {kop:'Invoer', delen:[
+    {naam:'Toetsenbord'}, {naam:'Touchpad'}, {naam:'Aan/uit-knop'},
+    {naam:'Vingerafdruklezer'}, {naam:'Trackpoint', hint:'ThinkPad'}
+  ]},
+  {kop:'Behuizing', delen:[
+    {naam:'Palmrest', hint:'C-cover'}, {naam:'Bodemplaat', hint:'D-cover'},
+    {naam:'Rubber voetjes'}, {naam:'Schroef- en montageset'}
+  ]},
+  {kop:'Poorten en audio', delen:[
+    {naam:'I/O-board', hint:'los poortenprintje'}, {naam:'USB- of USB-C-poort'},
+    {naam:'HDMI of DisplayPort'}, {naam:'Audio-jack'}, {naam:'SD-kaartlezer'},
+    {naam:'Ethernet-poort', hint:'RJ45'}, {naam:'Luidsprekers'}
+  ]},
+  {kop:'Kabels', delen:[
+    {naam:'Accukabel'}, {naam:'Touchpadkabel'}, {naam:'Luidsprekerkabel'},
+    {naam:'I/O-flatcable'}, {naam:'Antennekabels'}
+  ]}
+];
+/* De sloopdelen komen in twee vormen: een platte reeks namen (telefoon, tablet)
+   of groepen met een kop (laptop). Dit maakt er altijd groepen van, zodat de
+   sloopstap maar één manier van tekenen kent. */
+function sloopGroepen(p){
+  const sd=((p||prof()).sloopdelen)||[];
+  if(sd.length && sd[0] && typeof sd[0]==='object' && Array.isArray(sd[0].delen)) return sd;
+  return [{kop:'', delen:sd.map(n=>({naam:n}))}];
+}
 
 let ctr=null;   /* alles van de lopende controle staat hierin */
 
@@ -3294,8 +3340,9 @@ const CTR_STAPPEN={
 
       <div class="clkop">Notitie</div>
       ${ctrNotitieVeld()}`;
-  }, knoppen:()=>ctrVoorWindows().every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Door naar de upgrade', klasse:'actie', auto:true, doe:()=>ctrGa('upgrade')}] : [] },
+  }, knoppen:()=>(ctrVoorWindows().every(q=>ctr.antwoord[q.v])
+      ? [{tekst:'Door naar de upgrade', klasse:'actie', auto:true, doe:()=>ctrGa('upgrade')}] : []
+    ).concat(ctrDonorKnop()) },
 
   /* Ram en ssd erbij vóór Windows. Je kiest uit je voorraad; wat je pakt gaat
      daar van de teller af en telt mee in de inkoop van dit toestel. Niets nodig?
@@ -3365,9 +3412,9 @@ const CTR_STAPPEN={
     const klaar = ctr.antwoord['windowsgoed']==='Ja' && ctr.antwoord['drivers']==='Ja'
                && na.every(q=>ctr.antwoord[q.v]);
     const later={tekst:'Nog niet klaar, later verder', klasse:'', doe:(k)=>ctrInstalleren(k)};
-    return klaar
+    return (klaar
       ? [{tekst:'Door naar de specificaties', klasse:'actie', auto:true, doe:()=>ctrGa('specs')}, later]
-      : [later];
+      : [later]).concat(ctrDonorKnop());
   }},
 
   specs:{ balk:'specs', inhoud:()=>{
@@ -3479,14 +3526,16 @@ const CTR_STAPPEN={
       ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
 
   slopen:{ balk:'klaar', inhoud:()=>`
-    <h2><svg class="i"><use href="#i-recycle"/></svg>Leeghalen</h2>
-    <p class="pv">Hij gaat niet meer aan. Vink aan wat er nog wél goed is; dat gaat naar de onderdelenvoorraad en komt op het label te staan.</p>
-    <div class="deelrooster">${prof().sloopdelen.map((d,i)=>`
-      <label class="deelrij">
-        <input type="checkbox" id="sl_${i}" data-naam="${esc(d)}" ${ctr.delen[d]?'checked':''}
-          onchange="ctrDeel(${JSON.stringify(d).replace(/"/g,'&quot;')}, this.checked)">
-        <span>${esc(d)}</span>
-      </label>`).join('')}</div>
+    <h2><svg class="i"><use href="#i-recycle"/></svg>Leeghalen voor onderdelen</h2>
+    <p class="pv">Vink aan wat er nog wél goed is en de moeite waard om te bewaren. Elk vinkje wordt een los onderdeel op de plank en komt op het label.</p>
+    ${sloopGroepen(prof()).map(g=>`
+      ${g.kop?`<div class="clkop">${esc(g.kop)}</div>`:''}
+      <div class="deelrooster">${g.delen.map(d=>`
+        <label class="deelrij">
+          <input type="checkbox" ${ctr.delen[d.naam]?'checked':''}
+            onchange="ctrDeel(${JSON.stringify(d.naam).replace(/"/g,'&quot;')}, this.checked)">
+          <span>${esc(d.naam)}${d.hint?` <span class="muted klein">(${esc(d.hint)})</span>`:''}</span>
+        </label>`).join('')}</div>`).join('')}
     <div class="clkop">Notitie</div>
     ${ctrNotitieVeld()}
     <div class="tip" style="margin-top:14px">${Object.keys(ctr.delen).filter(k=>ctr.delen[k]).length
@@ -3532,7 +3581,7 @@ const CATEGORIE_PROFIEL={
   Laptop:{
     hardware:HARDWARE_CHECKS, visueel:VISUEEL, grades:GRADES,
     specVelden:SPEC_VELDEN, specExtra:SPEC_EXTRA, specVragen:SPEC_VRAGEN,
-    sloopdelen:SLOOPDELEN,
+    sloopdelen:SLOOPDELEN, donorKnop:true,
     /* De volle stappen-keten (nawindows zit in de Windows-balk maar is een eigen
        stap). De balk hierboven toont zeven segmenten; nawindows valt onder Windows. */
     stappen:['start','hardware','upgrade','windows','nawindows','specs','visueel','klaar'],
@@ -4405,6 +4454,25 @@ function ctrDefecten(){
   if(sd && (ctr.punten[sd.vlak]||{}).l===sd.optie) uit.push({vraag:sd.vraag, deel:sd.vlak});
   return uit;
 }
+
+/* Aantal hardware-checks dat nu al op 'Nee' staat: dat is het aantal hardwaredefecten
+   dat je tijdens de controle ziet. Vanaf één defect bieden we (bij de laptop) aan om
+   er een donor van te maken, zodat een niet-rendabele laptop leeggehaald kan worden in
+   plaats van gerepareerd. */
+function ctrHardwareDefect(){ return prof().hardware.filter(q=>ctr.antwoord[q.v]==='Nee').length; }
+
+/* De knop "Maak er een donorlaptop van", alleen als het profiel dat aanbiedt en er al
+   minstens één hardwaredefect is. Als losse knop-lijst zodat de stappen hem er met concat
+   bij kunnen zetten naast hun eigen doorknop; leeg als het niet van toepassing is. */
+function ctrDonorKnop(){
+  return (prof().donorKnop && ctrHardwareDefect()>0)
+    ? [{tekst:'Maak er een donorlaptop van', klasse:'ghost', doe:()=>ctrDonor()}] : [];
+}
+/* Vanuit de hardware-stap naar de sloopstap: een laptop met een defect die je niet gaat
+   repareren maar leeghaalt. Reversibel: ctrGa zet 'hardware' op het pad, dus de Terug-knop
+   brengt je gewoon weer bij de controle. De sloopstap zelf boekt de aangevinkte onderdelen
+   op de plank (ctrSlopen). */
+function ctrDonor(){ if(ctr) ctrGa('slopen'); }
 
 /* De keuze "zichtbaar in partner-dashboard" bij de laatste controlestap. In ctr
    bewaren, niet alleen in de DOM: de stap tekent zichzelf opnieuw bij elke klik en
