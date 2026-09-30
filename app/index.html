@@ -203,7 +203,8 @@
   .logrij .logtop{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
   .logrij .lognaam{min-width:0; color:var(--text);}
   .logrij .logprijs{flex:none; white-space:nowrap; color:var(--text);}
-  .logrij .logmeta{display:block; font-size:11.5px; color:var(--muted-l); margin-top:2px;}
+  .logrij .logmeta{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-size:11.5px; color:var(--muted-l); margin-top:3px;}
+  .logrij .logacts{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   /* Verwachte-leveringen-regel: naam links, wanneer + knop rechts; op een smal scherm
      wipt het rechterblok onder de naam (flex-wrap) zodat niets buiten beeld valt. Geen
      tabel meer, want die liep op de telefoon rechts uit beeld met de knop erbij. */
@@ -280,6 +281,16 @@
   .prog{height:6px; background:var(--border); border-radius:4px; overflow:hidden; min-width:70px;}
   .prog i{display:block; height:100%; background:var(--green); border-radius:4px; transition:width .4s;}
   .prog.rood i{background:var(--red);}
+  /* Lopende reparaties op het dashboard als gestapelde, aantikbare regel i.p.v. een
+     tabel van vijf kolommen die op de telefoon rechts uit beeld liep (actie-tekst en
+     knop vielen weg). De hele regel opent de reparatie. */
+  .repdashrij{display:flex; flex-direction:column; gap:7px; padding:11px 0; border-bottom:1px solid var(--soft-2); cursor:pointer;}
+  .repdashrij:last-child{border-bottom:none;}
+  .rd-top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .rd-titel{min-width:0; font-size:14px;}
+  .rd-onder{display:flex; justify-content:space-between; gap:10px; font-size:12.5px; flex-wrap:wrap;}
+  .rd-actie{color:var(--muted); text-align:right; margin-left:auto;}
+  .rd-actie.urgent{color:var(--oranje); font-weight:600;}
 
   /* notities */
   .notitie{background:var(--bg); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:13px;}
@@ -1717,6 +1728,9 @@
     .chart{height:150px;} .chart .bars{height:112px;}
     .zoekvak input{font-size:16px;}   /* onder de 16px zoomt iOS het scherm in */
     input,select,textarea{font-size:16px;}
+    /* Deze class-selectors winnen van de regel hierboven (hogere specificiteit) en
+       stonden nog op <16px, waardoor iOS bij focus toch inzoomde. Gelijkgetrokken. */
+    .repzoek input, .hwpop textarea, .tijdrij input, .loginbox input{font-size:16px;}
   }
 
   /* ---------- iconen: Lucide, één lijngewicht, ronde uiteinden ---------- */
@@ -6224,14 +6238,14 @@ function renderRepDash(){
   document.getElementById('repDashTelling').textContent = lopend.length
     ? '('+lopend.length+' lopend'+(urgent?', '+urgent+' actie nodig':'')+')' : '';
   document.getElementById('repDash').innerHTML = lopend.length
-    ? '<table><tbody>'+lopend.map(r=>{
+    ? lopend.map(r=>{
         const a=repActie(r);
-        return `<tr><td><b>${esc(r.nr)}</b> ${esc(r.toestel)} ${esc(r.type)}<br><span class="muted" style="font-size:11px">${esc(r.klant.naam)}</span></td>`+
-        `<td><span class="chip ${r.status}">${REP_STATUS[r.status].label}</span></td>`+
-        `<td style="min-width:110px"><div class="prog ${heeftProbleem(r)?'rood':''}"><i style="width:${repProgressie(r)}%"></i></div></td>`+
-        `<td style="font-size:12.5px; ${a.urgent?'color:var(--oranje); font-weight:600':'color:var(--muted)'}">${a.tekst}</td>`+
-        `<td style="text-align:right"><button class="btn small ghost" onclick="showTab('reparaties'); repDetail(${r.id})" title="Details"><svg class="i s"><use href="#i-search"/></svg></button></td></tr>`;
-      }).join('')+'</tbody></table>'
+        return `<div class="repdashrij" onclick="showTab('reparaties'); repDetail(${r.id})">
+          <div class="rd-top"><span class="rd-titel"><b>${esc(r.nr)}</b> ${esc(r.toestel)} ${esc(r.type)}</span><span class="chip ${r.status}">${REP_STATUS[r.status].label}</span></div>
+          <div class="rd-onder"><span class="muted">${esc(r.klant.naam)}</span><span class="rd-actie ${a.urgent?'urgent':''}">${esc(a.tekst)}</span></div>
+          <div class="prog ${heeftProbleem(r)?'rood':''}"><i style="width:${repProgressie(r)}%"></i></div>
+        </div>`;
+      }).join('')
     : '<p class="muted">Geen lopende reparaties.</p>';
 }
 function renderCatWinst(b,vb){
@@ -6421,9 +6435,13 @@ function renderVerkopen(){
   if(totEl) totEl.textContent = rijen.length ? (rijen.length+' verkoop'+(rijen.length===1?'':'en')+' · totaal '+euro(tot)) : '';
   lijst.innerHTML = rijen.length ? rijen.map(v=>{
     const d=new Date(v.t);
-    const bet='<span class="muted">'+esc(betaalNaam(v.betaal))+'</span>';
-    return `<div>${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)} <b>${euro(v.verkoop)}</b> ${bet}${v.door?' <span class="muted">· '+esc(v.door)+'</span>':''} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-  }).join('') : ('<div class="muted">Geen verkopen gevonden'+(q?' voor "'+esc(q)+'"':' in deze periode')+'.</div>');
+    const tijd=d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    const meta=[betaalNaam(v.betaal), v.door].filter(Boolean).map(esc).join(' · ');
+    return `<div class="logrij">
+      <span class="logtop"><span class="lognaam">${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)}</span><b class="logprijs">${euro(v.verkoop)}</b></span>
+      <span class="logmeta">${meta}${meta?' · ':''}${esc(tijd)}</span>
+    </div>`;
+  }).join('') : ('<div class="logrij muted">Geen verkopen gevonden'+(q?' voor "'+esc(q)+'"':' in deze periode')+'.</div>');
 }
 
 /* ── Inkopen-registratie ──
@@ -7510,8 +7528,15 @@ function renderInkopen(){
     const fac = v.factuur_pad
       ? '<button class="btn ghost small" onclick="inkoopDetail(\''+v.id+'\')"><svg class="i s"><use href="#i-clipboard"/></svg>Bekijk factuur</button>'
       : '<span class="muted klein" title="Geen factuur bij deze inkoop">geen factuur</span>';
-    return `<div><b>${euro(v.bedrag)}</b> ${esc(v.wat)}${v.leverancier?' <span class="muted">· '+esc(v.leverancier)+'</span>':''} <span class="muted">· ${v.soort==='kosten'?'kosten':'voorraad'} · btw ${Number(v.btw)||0}%</span> <span style="float:right; display:inline-flex; gap:10px; align-items:center">${fac}${mb}<span class="muted">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span><button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span></div>`;
-  }).join('') : '<div class="muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
+    const datum=d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    return `<div class="logrij">
+      <span class="logtop"><span class="lognaam"><b>${euro(v.bedrag)}</b> ${esc(v.wat)}</span></span>
+      <span class="logmeta">
+        <span>${v.leverancier?esc(v.leverancier)+' · ':''}${v.soort==='kosten'?'kosten':'voorraad'} · btw ${Number(v.btw)||0}% · ${datum}</span>
+        <span class="logacts">${fac}${mb}<button class="btn small ghost icoknop" title="Weghalen" onclick="inkoopWeg('${v.id}')"><svg class="i s"><use href="#i-trash"/></svg></button></span>
+      </span>
+    </div>`;
+  }).join('') : '<div class="logrij muted">Nog geen inkopen in deze periode. Voeg er hierboven een toe.</div>';
 }
 function inkoopVoorbelastingInPeriode(van, tot){
   return (state.inkopen||[]).reduce((s,v)=>{ if(v.concept!==true && (v.t||0)>=van && (v.t||0)<tot) s+=inkoopBtwBedrag(v); return s; },0);
@@ -8944,8 +8969,12 @@ function renderScanLog(){
       ? `<input type="number" min="1" value="${n}" onchange="wijzigAantal(${l.id},this.value)" title="Aantal aanpassen (bijv. bestelling van 20 stuks)" style="width:58px; padding:3px 6px; margin:0 6px; text-align:center">×`
       : (n>1?' <b>'+n+'×</b>':'');
     const vrd=l.pid?` (voorraad: ${l.v})`:'';
-    return `<div class="${l.ongedaan?'ongedaan':''}">${l.m==='in'?'IN':'UIT'}${aant} ${esc(l.naam)}${vrd}${undo} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-  }).join('') || '<div>Nog geen scans.</div>';
+    const tijd=d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="logrij ${l.ongedaan?'ongedaan':''}">
+      <span class="logtop"><span class="lognaam"><b>${l.m==='in'?'IN':'UIT'}</b>${aant} ${esc(l.naam)}${vrd}</span></span>
+      <span class="logmeta"><span>${esc(tijd)}</span>${undo}</span>
+    </div>`;
+  }).join('') || '<div class="logrij">Nog geen scans.</div>';
 }
 function wijzigAantal(logId,val){
   const l=state.log.find(x=>x.id===logId);
