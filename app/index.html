@@ -1620,6 +1620,22 @@
     th,td{padding:12px 12px; white-space:nowrap;}
     td:first-child{padding-left:2px;}
     th:last-child,td:last-child{padding-right:2px;}
+    /* Responsieve tabel: op de telefoon stapelt elke rij tot een kaartje met per cel
+       een label ervoor, in plaats van een brede tabel die je zijwaarts moet schuiven.
+       Alleen mobiel; op desktop blijft het een gewone tabel. Zet class="resptab" op de
+       <table> en geef elke <td> een data-label (behalve de titelcel .celtitel). */
+    table.resptab{font-size:14px;}
+    table.resptab, table.resptab tbody{display:block; width:100%;}
+    table.resptab thead{display:none;}
+    table.resptab tr{display:block; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:8px 14px; margin-bottom:10px;}
+    table.resptab td{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:6px 0; border:none; border-bottom:1px solid var(--soft-2); white-space:normal; text-align:right;}
+    table.resptab td:last-child{border-bottom:none;}
+    table.resptab td::before{content:attr(data-label); font-weight:600; color:var(--muted); text-align:left; flex:0 0 auto; white-space:nowrap;}
+    table.resptab td.celtitel{display:block; text-align:left; font-weight:700; font-size:15.5px; padding:4px 0 9px; border-bottom:1px solid var(--border); margin-bottom:3px; white-space:normal;}
+    table.resptab td.celtitel::before{content:none;}
+    table.resptab td.celkies{justify-content:flex-start; gap:8px; border-bottom:1px solid var(--border);}
+    table.resptab td input{margin:0;}
+    table.resptab td input.num{width:auto; max-width:120px; text-align:right;}
 
     /* De grafiek: minder staafjes tegelijk is beter dan alles piepklein. */
     .chart .lbl{font-size:9px;}
@@ -2539,8 +2555,8 @@
       <button class="btn small ghost" onclick="prodSelectieWissen()">Selectie wissen</button>
     </div>
     <div style="overflow-x:auto">
-    <table>
-      <thead><tr><th style="width:34px"><input type="checkbox" id="prodAlle" onclick="prodSelectAlle(this.checked)" title="Alles selecteren"></th><th>Barcode</th><th>Naam</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
+    <table class="resptab">
+      <thead><tr><th style="width:34px"><input type="checkbox" id="prodAlle" onclick="prodSelectAlle(this.checked)" title="Alles selecteren"></th><th>Naam</th><th>Barcode</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
     </div>
@@ -9180,18 +9196,19 @@ function renderProducten(){
     .sort((a,b)=>a.naam.localeCompare(b.naam));
   prodZichtbaar=zichtbaar.map(p=>p.id);
   const rows=zichtbaar
-    .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.barcode)}</td><td>${esc(p.naam)}`+
+    .map(p=>`<tr><td class="celkies" data-label="Kies"><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td class="celtitel">${esc(p.naam)}`+
       `${isUitlopend(p)?' <span class="tag" style="background:var(--amber-soft);color:var(--amber-tekst)">loopt uit</span>':''}`+
       `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}`+
       `${state.cloverGekoppeld?(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id?' <span class="tag" style="background:var(--green-soft);color:var(--green-tekst)" title="Staat in Clover">in Clover</span>':' <span class="tag muted" title="Nog niet naar Clover gestuurd">niet in Clover</span>'):''}</td>`+
-      `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
-      `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
-      `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
-      `<td class="num${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
-      `<td class="num"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
-      `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
-      `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
-      `<td class="num"><button class="btn small ghost icoknop rijmeer" title="Acties" onclick="prodMenu(event,${p.id})">⋯</button></td></tr>`).join('');
+      `<td data-label="Barcode">${esc(p.barcode)}</td>`+
+      `<td data-label="Merk">${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
+      `<td data-label="Categorie"><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
+      `<td class="num" data-label="Inkoop">${euro(p.inkoop)}</td><td class="num" data-label="Verkoop">${euro(p.verkoop)}</td>`+
+      `<td class="num${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}" data-label="Winkel"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
+      `<td class="num" data-label="Min. winkel"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
+      `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}" data-label="Over"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
+      `<td class="num" data-label="Min. over"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
+      `<td class="num" data-label="Acties"><button class="btn small ghost icoknop rijmeer" title="Acties" onclick="prodMenu(event,${p.id})">⋯</button></td></tr>`).join('');
   document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="12" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
   prodSelectieBalk();
   vulMerkenLijst();
