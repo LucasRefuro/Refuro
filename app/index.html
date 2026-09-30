@@ -197,6 +197,21 @@
   #scanFeedback.err, #vkFeedback.err{display:block; background:#fdeaea; color:#8f2626;}
   .loglist{font-size:12.5px; color:var(--muted); max-height:260px; overflow:auto;}
   .loglist div{padding:6px 0; border-bottom:1px solid var(--border);}
+  /* Een verkoopregel: naam+prijs op de eerste regel (prijs blijft rechtsboven, ook als
+     de naam over twee regels loopt), betaalwijze en tijd eronder. Geen float meer, want
+     dat liet de tijd bij een lange naam naar de tweede regel springen en scheef staan. */
+  .logrij .logtop{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .logrij .lognaam{min-width:0; color:var(--text);}
+  .logrij .logprijs{flex:none; white-space:nowrap; color:var(--text);}
+  .logrij .logmeta{display:block; font-size:11.5px; color:var(--muted-l); margin-top:2px;}
+  /* Verwachte-leveringen-regel: naam links, wanneer + knop rechts; op een smal scherm
+     wipt het rechterblok onder de naam (flex-wrap) zodat niets buiten beeld valt. Geen
+     tabel meer, want die liep op de telefoon rechts uit beeld met de knop erbij. */
+  .levrij{display:flex; justify-content:space-between; align-items:center; gap:10px 12px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--soft-2);}
+  .levrij:last-child{border-bottom:none;}
+  .levinfo{flex:1 1 150px; min-width:0;}
+  .levactie{display:flex; align-items:center; gap:10px; flex:none; margin-left:auto;}
+  .levwanneer{font-size:12.5px; color:var(--muted); white-space:nowrap;}
 
   .snelrij input{max-width:220px;}
   .loglist .ongedaan{opacity:.45; text-decoration:line-through;}
@@ -6311,10 +6326,16 @@ function renderLeveringen(){
     .sort((a,b)=>verwachteLevering(a.besteldOp)-verwachteLevering(b.besteldOp));
   const reps=(state.reparaties||[]).filter(r=>r.status==='besteld' && r.besteldOp);
   const rijen=
-    items.map(p=>`<tr id="lev${p.id}"><td>${esc(p.naam)}</td><td class="num">${teBestellen(p)} st.</td><td style="text-align:right">${leverTekst(p.besteldOp)}</td><td style="text-align:right"><button class="btn small" style="background:var(--green)" onclick="levBinnen(${p.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></td></tr>`)
-    .concat(reps.map(r=>`<tr id="levr${r.id}"><td><svg class="i s"><use href="#i-wrench"/></svg> <b>${esc(r.nr)}</b> ${esc(r.toestel)} ${esc(r.type)} <span class="muted">(${esc(r.klant.naam)})</span></td><td class="num">${r.onderdelen.filter(o=>!o.uitVoorraad).length||1} ond.</td><td style="text-align:right">${repLeverTekst(r.besteldOp)}</td><td style="text-align:right"><button class="btn small" style="background:var(--green)" onclick="repBinnenViaDash(${r.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></td></tr>`));
+    items.map(p=>`<div class="levrij" id="lev${p.id}">
+      <div class="levinfo"><b>${esc(p.naam)}</b> <span class="muted">· ${teBestellen(p)} st.</span></div>
+      <div class="levactie"><span class="levwanneer">${leverTekst(p.besteldOp)}</span><button class="btn small" style="background:var(--green)" onclick="levBinnen(${p.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></div>
+    </div>`)
+    .concat(reps.map(r=>`<div class="levrij" id="levr${r.id}">
+      <div class="levinfo"><svg class="i s"><use href="#i-wrench"/></svg> <b>${esc(r.nr)}</b> ${esc(r.toestel)} ${esc(r.type)} <span class="muted">(${esc(r.klant.naam)}) · ${r.onderdelen.filter(o=>!o.uitVoorraad).length||1} ond.</span></div>
+      <div class="levactie"><span class="levwanneer">${repLeverTekst(r.besteldOp)}</span><button class="btn small" style="background:var(--green)" onclick="repBinnenViaDash(${r.id})"><svg class="i s"><use href="#i-package"/></svg>Binnen</button></div>
+    </div>`));
   document.getElementById('leveringen').innerHTML = rijen.length
-    ? '<table><tbody>'+rijen.join('')+'</tbody></table>'
+    ? rijen.join('')
     : '<p class="muted">Geen openstaande bestellingen.</p>';
 }
 function repBinnenViaDash(id){
@@ -6328,7 +6349,7 @@ function repBinnenViaDash(id){
   if(r.notify && (r.klant.email||r.klant.tel)) toast('Laat het de klant weten via Reparaties.');
   const row=document.getElementById('levr'+id);
   if(row){
-    row.querySelectorAll('td').forEach(td=>td.style.opacity=0);
+    row.style.transition='opacity .4s'; row.style.opacity=0;
     setTimeout(()=>renderDashboard(), 450);
   }else renderDashboard();
   updateBadge();
@@ -6345,7 +6366,7 @@ function levBinnen(id){
   toast('Levering binnen: +'+n+'× '+p.naam+' · in de overvoorraad ('+achter+' achter)'+(tekort>0?' · nog '+tekort+' bijhangen':''), true);
   const row=document.getElementById('lev'+id);
   if(row){
-    row.querySelectorAll('td').forEach(td=>td.style.opacity=0);
+    row.style.transition='opacity .4s'; row.style.opacity=0;
     setTimeout(()=>renderDashboard(), 450);
   }else{
     renderDashboard();
@@ -6354,9 +6375,13 @@ function levBinnen(id){
 function renderVerkoopLog(){
   document.getElementById('verkoopLog').innerHTML = state.verkopen.slice(0,25).map(v=>{
     const d=new Date(v.t);
-    const bet='<span class="muted">'+esc(betaalNaam(v.betaal))+'</span>';
-    return `<div>${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)} <b>${euro(v.verkoop)}</b> ${bet}${v.door?' <span class="muted">· '+esc(v.door)+'</span>':''} <span style="float:right">${d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-  }).join('') || '<div>Nog geen verkopen. Verkopen doe je op de Verkoop-pagina.</div>';
+    const tijd=d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    const meta=[betaalNaam(v.betaal), v.door].filter(Boolean).map(esc).join(' · ');
+    return `<div class="logrij">
+      <span class="logtop"><span class="lognaam">${(v.aantal||1)>1?'<b>'+v.aantal+'×</b> ':''}${esc(v.naam)}</span><b class="logprijs">${euro(v.verkoop)}</b></span>
+      <span class="logmeta">${meta}${meta?' · ':''}${esc(tijd)}</span>
+    </div>`;
+  }).join('') || '<div class="logrij">Nog geen verkopen. Verkopen doe je op de Verkoop-pagina.</div>';
 }
 
 /* ── Verkopen-overzicht ──
@@ -12125,6 +12150,7 @@ const MOB={
   voorraad:    {naam:'Voorraad',     ico:'i-package'},
   hardware:    {naam:'Hardware',     ico:'i-laptop'},
   aanvragen:   {naam:'Aanvragen',    ico:'i-clipboard'},
+  rooster:     {naam:'Rooster',      ico:'i-clock'},
   kassa:       {naam:'Kassa',        ico:'i-cash'},
   bestellen:   {naam:'Bestellen',    ico:'i-cart'},
   diensten:    {naam:'Diensten',     ico:'i-tool'},
@@ -12145,7 +12171,11 @@ function huidigeTab(){
 /* De vier vaste onderbalk-knoppen: de eerste vier uit deze voorkeurslijst die
    de rol mag zien. De rest zit achter Meer, zodat de balk rustig blijft en niet
    alle vijftien pagina's laat schuiven. */
-const MOB_CORE=['dashboard','verkoop','reparaties','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop','inruil'];
+/* Rooster staat bewust op plek 4, vóór kassa: voor de eigenaar en beheerders (die
+   dashboard zien) schuift kassa daardoor naar Meer, want die rekenen meestal op de
+   Clover-pin af. Een medewerker heeft geen dashboard, houdt dus een slot over en ziet
+   rooster én kassa allebei. */
+const MOB_CORE=['dashboard','verkoop','reparaties','rooster','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop','inruil'];
 function mobCore(){ return MOB_CORE.filter(t=>mag(t)).slice(0,4); }
 
 function mobTel(t){
@@ -12153,6 +12183,7 @@ function mobTel(t){
   if(t==='aanvragen') return (typeof aanvLopend==='function')?aanvLopend().length:0;
   if(t==='voorraad') return (typeof bijvulLijst==='function')?bijvulLijst().length:0;
   if(t==='bestellen') return (typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0;
+  if(t==='rooster') return (typeof roosterMagInplannen==='function' && roosterMagInplannen() && keurWacht)?(keurWacht.aantal||0):0;
   return 0;
 }
 
@@ -12165,7 +12196,7 @@ const MOB_MEERLABEL=Object.assign({}, MOB, {
   rapport:{naam:'Rapport',ico:'i-chart'},
   partners:{naam:'Partners',ico:'i-link'}
 });
-const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
+const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','rooster','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
 const MOB_ALLES_BEHEER=['uren','vastelasten','pakketten','rapport','team','partners','instellingen'];
 
 function tekenOnderbalk(){
