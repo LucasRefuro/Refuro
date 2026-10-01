@@ -1633,7 +1633,8 @@
     table.resptab td::before{content:attr(data-label); font-weight:600; color:var(--muted); text-align:left; flex:0 0 auto; white-space:nowrap;}
     table.resptab td.celtitel{display:block; text-align:left; font-weight:700; font-size:15.5px; padding:4px 0 9px; border-bottom:1px solid var(--border); margin-bottom:3px; white-space:normal;}
     table.resptab td.celtitel::before{content:none;}
-    table.resptab td.celkies{justify-content:flex-start; gap:8px; border-bottom:1px solid var(--border);}
+    /* Cellen zonder kop (selectievakje, actieknoppen) links uitlijnen i.p.v. rechts. */
+    table.resptab td:not([data-label]):not(.celtitel){justify-content:flex-start; gap:8px;}
     table.resptab td input{margin:0;}
     table.resptab td input.num{width:auto; max-width:120px; text-align:right;}
 
@@ -2555,7 +2556,7 @@
       <button class="btn small ghost" onclick="prodSelectieWissen()">Selectie wissen</button>
     </div>
     <div style="overflow-x:auto">
-    <table class="resptab">
+    <table>
       <thead><tr><th style="width:34px"><input type="checkbox" id="prodAlle" onclick="prodSelectAlle(this.checked)" title="Alles selecteren"></th><th>Naam</th><th>Barcode</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
@@ -9196,19 +9197,19 @@ function renderProducten(){
     .sort((a,b)=>a.naam.localeCompare(b.naam));
   prodZichtbaar=zichtbaar.map(p=>p.id);
   const rows=zichtbaar
-    .map(p=>`<tr><td class="celkies" data-label="Kies"><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td class="celtitel">${esc(p.naam)}`+
+    .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.naam)}`+
       `${isUitlopend(p)?' <span class="tag" style="background:var(--amber-soft);color:var(--amber-tekst)">loopt uit</span>':''}`+
       `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}`+
       `${state.cloverGekoppeld?(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id?' <span class="tag" style="background:var(--green-soft);color:var(--green-tekst)" title="Staat in Clover">in Clover</span>':' <span class="tag muted" title="Nog niet naar Clover gestuurd">niet in Clover</span>'):''}</td>`+
-      `<td data-label="Barcode">${esc(p.barcode)}</td>`+
-      `<td data-label="Merk">${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
-      `<td data-label="Categorie"><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
-      `<td class="num" data-label="Inkoop">${euro(p.inkoop)}</td><td class="num" data-label="Verkoop">${euro(p.verkoop)}</td>`+
-      `<td class="num${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}" data-label="Winkel"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
-      `<td class="num" data-label="Min. winkel"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
-      `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}" data-label="Over"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
-      `<td class="num" data-label="Min. over"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
-      `<td class="num" data-label="Acties"><button class="btn small ghost icoknop rijmeer" title="Acties" onclick="prodMenu(event,${p.id})">⋯</button></td></tr>`).join('');
+      `<td>${esc(p.barcode)}</td>`+
+      `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
+      `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
+      `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
+      `<td class="num${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
+      `<td class="num"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
+      `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
+      `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
+      `<td class="num"><button class="btn small ghost icoknop rijmeer" title="Acties" onclick="prodMenu(event,${p.id})">⋯</button></td></tr>`).join('');
   document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="12" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
   prodSelectieBalk();
   vulMerkenLijst();
@@ -12344,9 +12345,59 @@ function rolTabellen(){
   });
 }
 
+/* Brede tabellen leesbaar maken op de telefoon. Elke tabel in main met een kop van
+   vijf kolommen of meer krijgt de klasse 'resptab'; dan stapelt hij op smal scherm tot
+   kaartjes (zie de CSS). Per cel zetten we een data-label uit de kolomkop, zodat je op
+   de kaart "Verkoop  € 12,00" ziet in plaats van een los getal. De eerste kolom met een
+   kop wordt de titel (vet, zonder label), meestal de naam of het nummer. Smalle tabellen
+   (minder dan vijf kolommen) laten we met rust; die passen gewoon.
+
+   Waarom in JS en niet per tabel met de hand: zo geldt het in één keer voor alle
+   tabellen, ook de tientallen die in JS worden opgebouwd, en het blijft kloppen na een
+   her-render (de observer hieronder draait het opnieuw). */
+function tabelLabels(root){
+  (root||document).querySelectorAll('main table').forEach(tab=>{
+    const ths=tab.tHead ? [...tab.tHead.querySelectorAll('th')] : [];
+    if(ths.length<5) return;
+    const koppen=ths.map(th=>th.textContent.trim());
+    let titelIdx=koppen.findIndex(k=>k!=='');
+    if(titelIdx<0) titelIdx=0;
+    tab.classList.add('resptab');
+    tab.querySelectorAll('tbody tr').forEach(tr=>{
+      const tds=tr.children;
+      if(tds.length<=1) return;                 // lege-staat rij met colspan
+      for(let i=0;i<tds.length;i++){
+        const td=tds[i];
+        if(td.dataset.l) continue;              // al verwerkt
+        td.dataset.l='1';
+        if(i===titelIdx) td.classList.add('celtitel');
+        else if(koppen[i]) td.setAttribute('data-label', koppen[i]);
+      }
+    });
+  });
+}
 function mobielBijwerken(){
   rolTabellen();
+  tabelLabels();
   tekenOnderbalk();
+}
+/* Her-renders (zoeken, filteren, periodewissel) vervangen tbody-inhoud zonder showTab,
+   dus zonder mobielBijwerken. Deze observer vangt dat op: hij draait rolTabellen +
+   tabelLabels opnieuw, ontkoppeld tijdens het werk zodat zijn eigen aanpassingen geen
+   nieuwe ronde uitlokken. Gedebounced zodat een grote render niet honderd keer triggert. */
+let _tabTimer=null, _tabObs=null;
+function tabelObserver(){
+  const doel=document.querySelector('main'); if(!doel || _tabObs) return;
+  _tabObs=new MutationObserver(()=>{
+    clearTimeout(_tabTimer);
+    _tabTimer=setTimeout(()=>{
+      if(!_tabObs) return;
+      _tabObs.disconnect();
+      try{ rolTabellen(); tabelLabels(); }catch(e){}
+      _tabObs.observe(doel, {childList:true, subtree:true});
+    }, 120);
+  });
+  _tabObs.observe(doel, {childList:true, subtree:true});
 }
 
 function pasRechtenToe(){
@@ -19119,6 +19170,8 @@ renderScanLog(); updateBadge(); renderDashboard();
 document.getElementById('onderBalk').hidden=false;
 tekenOnderbalk();
 rolTabellen();
+tabelLabels();
+tabelObserver();
 kopVolgen();
 
 /* Terug uit Stripe: even laten weten hoe het is afgelopen. */
