@@ -1635,6 +1635,11 @@
     table.resptab td.celtitel::before{content:none;}
     /* Cellen zonder kop (selectievakje, actieknoppen) links uitlijnen i.p.v. rechts. */
     table.resptab td:not([data-label]):not(.celtitel){justify-content:flex-start; gap:8px;}
+    /* Groepskop (leverancier, dag): een volle regel zonder kaart, niet als kaartje. */
+    table.resptab tr.resprij-vol{background:transparent; border:none; border-radius:0; padding:16px 2px 4px; margin:0;}
+    table.resptab tr.resprij-vol td{display:block; border:none; padding:0; text-align:left; font-weight:700; font-size:14px;}
+    table.resptab tr.resprij-vol td:empty{display:none;}
+    table.resptab tr.resprij-vol td::before{content:none;}
     table.resptab td input{margin:0;}
     table.resptab td input.num{width:auto; max-width:120px; text-align:right;}
 
@@ -12364,14 +12369,14 @@ function tabelLabels(root){
     if(titelIdx<0) titelIdx=0;
     tab.classList.add('resptab');
     tab.querySelectorAll('tbody tr').forEach(tr=>{
+      if(tr.dataset.l) return; tr.dataset.l='1';   // per rij één keer; her-render maakt nieuwe rijen
       const tds=tr.children;
-      if(tds.length<=1) return;                 // lege-staat rij met colspan
+      if(tds.length<=1) return;                     // lege-staat rij (één cel over alles)
+      // Een groepskop (leverancier, dag) met een colspan: toon als volle regel, geen labels.
+      if([...tds].some(td=>td.colSpan>1)){ tr.classList.add('resprij-vol'); return; }
       for(let i=0;i<tds.length;i++){
-        const td=tds[i];
-        if(td.dataset.l) continue;              // al verwerkt
-        td.dataset.l='1';
-        if(i===titelIdx) td.classList.add('celtitel');
-        else if(koppen[i]) td.setAttribute('data-label', koppen[i]);
+        if(i===titelIdx) tds[i].classList.add('celtitel');
+        else if(koppen[i]) tds[i].setAttribute('data-label', koppen[i]);
       }
     });
   });
