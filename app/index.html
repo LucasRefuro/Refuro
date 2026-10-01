@@ -503,7 +503,7 @@
   .cmdrij code{flex:1; min-width:200px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; word-break:break-all; color:var(--text);}
   .strooktabel{width:100%; border-collapse:collapse; margin-top:8px;}
   .strooktabel td{padding:8px 4px; border-bottom:1px solid var(--border); font-size:13.5px;}
-  .strooktabel td.num{text-align:right; white-space:nowrap;}
+  .strooktabel td.num{text-align:right;}
   .strooktabel .strooktot td{border-bottom:none; border-top:2px solid var(--border); padding-top:10px;}
   @media print{
     body > *{visibility:hidden;}
@@ -1617,7 +1617,11 @@
        dan houdt de rest te weinig ruimte over en wordt het onleesbaar klein.
        Liever de hele regel in één beweging langs je duim.                   */
     table{font-size:13.5px;}
-    th,td{padding:12px 12px; white-space:nowrap;}
+    th,td{padding:12px 12px;}
+    /* nowrap alleen voor gewone (scrollbare) tabellen in main, zodat je ze in één beweging
+       langs je duim leest. NIET voor kaart-tabellen (die stapelen) en NIET voor tabellen in
+       pop-ups (loonstrook, inkoop-detail): die moeten juist afbreken i.p.v. uit beeld lopen. */
+    main table:not(.resptab) th, main table:not(.resptab) td{white-space:nowrap;}
     td:first-child{padding-left:2px;}
     th:last-child,td:last-child{padding-right:2px;}
     /* Responsieve tabel: op de telefoon stapelt elke rij tot een kaartje met per cel
@@ -8220,7 +8224,7 @@ function renderMandje(){
   if(!el) return;
   if(!mandje.length){ el.innerHTML='<div class="muted">Nog niets. Scan iets, zoek een product, of tik een blokje aan.</div>'; if(voet) voet.hidden=true; const k=document.getElementById('vkKorting'); if(k) k.value=0; return; }
   el.innerHTML='<div style="overflow-x:auto"><table><tbody>'+mandje.map(m=>
-    `<tr><td><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk${m.hwId?' · los toestel':(m.repId?' · reparatie':'')}</span></td>`+
+    `<tr><td style="white-space:normal"><span data-onvertaald>${esc(m.naam)}</span><br><span class="muted">${euro(m.verkoopStuk)} per stuk${m.hwId?' · los toestel':(m.repId?' · reparatie':'')}</span></td>`+
     `<td class="num" style="white-space:nowrap">`+((m.hwId||m.repId)?'<b>1</b>':`<button class="btn small ghost icoknop" title="Minder" onclick="mandjeAantal(${m.id},-1)">−</button> <b>${m.aantal}</b> <button class="btn small ghost icoknop" title="Meer" onclick="mandjeAantal(${m.id},1)">+</button>`)+`</td>`+
     `<td class="num"><b>${euro(m.verkoopStuk*m.aantal)}</b></td>`+
     `<td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="mandjeWeg(${m.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`
