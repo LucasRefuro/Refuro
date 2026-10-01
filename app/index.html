@@ -12337,7 +12337,7 @@ function kopVolgen(){
 /* Elke tabel krijgt zijn eigen schuifbak. Zonder dat trekt één te brede
    tabel de hele pagina scheef en kun je het scherm heen en weer slepen.    */
 function rolTabellen(){
-  document.querySelectorAll('main table').forEach(t=>{
+  document.querySelectorAll('main table, .overlay table').forEach(t=>{
     const p=t.parentElement;
     if(p && p.classList.contains('tabelrol')) return;
     if(p && p.getAttribute('style') && /overflow-x/.test(p.getAttribute('style'))){
@@ -12361,7 +12361,7 @@ function rolTabellen(){
    tabellen, ook de tientallen die in JS worden opgebouwd, en het blijft kloppen na een
    her-render (de observer hieronder draait het opnieuw). */
 function tabelLabels(root){
-  (root||document).querySelectorAll('main table').forEach(tab=>{
+  (root||document).querySelectorAll('main table, .overlay table').forEach(tab=>{
     const ths=tab.tHead ? [...tab.tHead.querySelectorAll('th')] : [];
     if(ths.length<5) return;
     const koppen=ths.map(th=>th.textContent.trim());
@@ -12392,7 +12392,10 @@ function mobielBijwerken(){
    nieuwe ronde uitlokken. Gedebounced zodat een grote render niet honderd keer triggert. */
 let _tabTimer=null, _tabObs=null;
 function tabelObserver(){
-  const doel=document.querySelector('main'); if(!doel || _tabObs) return;
+  /* Op body, niet op main: zo vangt hij ook tabellen in pop-ups (die worden in de body
+     gezet, buiten main). Gedebounced en ontkoppeld tijdens het werk; tabelLabels/rolTabellen
+     slaan al verwerkte tabellen over, dus een extra ronde kost vrijwel niets. */
+  const doel=document.body; if(!doel || _tabObs) return;
   _tabObs=new MutationObserver(()=>{
     clearTimeout(_tabTimer);
     _tabTimer=setTimeout(()=>{
