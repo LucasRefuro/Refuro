@@ -1655,6 +1655,11 @@
     .undoBtn{min-height:40px;}
     .rklabel{min-width:40px; min-height:40px; padding:8px;}
     .uitstalknop{min-height:36px; padding:8px 12px;}
+    /* Inkoop-/mail-detail: op de telefoon eerst het bedrag + de knoppen, dan pas de
+       factuur-preview (korter), zodat je niet langs een schermvullende PDF hoeft te
+       scrollen om te bevestigen. */
+    .detinfo{order:1;} .detpdf{order:2;}
+    .detpdf iframe, .detpdf img{max-height:46vh;}
 
     /* De grafiek: minder staafjes tegelijk is beter dan alles piepklein. */
     .chart .lbl{font-size:9px;}
@@ -6553,8 +6558,8 @@ async function inkoopDetail(id){
   ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <h3>Inkoop</h3>
     <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap">
-      <div style="flex:2; min-width:280px"><div id="inkPdf" class="muted">Factuur laden…</div></div>
-      <div style="flex:1; min-width:200px">
+      <div class="detpdf" style="flex:2; min-width:280px"><div id="inkPdf" class="muted">Factuur laden…</div></div>
+      <div class="detinfo" style="flex:1; min-width:200px">
         <div style="font-size:24px; font-weight:800">${euro(v.bedrag)}</div>
         <div class="muted klein" style="margin:2px 0 12px">incl. btw ${Number(v.btw)||0}%</div>
         <table class="strooktabel"><tbody>
@@ -6690,8 +6695,8 @@ async function mailConceptDetail(id){
   ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <h3>Factuur uit e-mail</h3>
     <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap">
-      <div style="flex:2; min-width:280px"><div id="mailPdf" class="muted">Factuur laden…</div></div>
-      <div style="flex:1; min-width:200px">
+      <div class="detpdf" style="flex:2; min-width:280px"><div id="mailPdf" class="muted">Factuur laden…</div></div>
+      <div class="detinfo" style="flex:1; min-width:200px">
         <div style="font-size:24px; font-weight:800">${euro(v.bedrag)}</div>
         <div class="muted klein" style="margin:2px 0 12px">incl. btw ${Number(v.btw)||0}%</div>
         <table class="strooktabel"><tbody>
