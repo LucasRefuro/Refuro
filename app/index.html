@@ -66,7 +66,7 @@
   .pnlvak .pnlweg{position:absolute; top:7px; right:7px; width:22px; height:22px; border:none; border-radius:50%; background:var(--soft); color:var(--muted); cursor:pointer; font-size:14px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; opacity:.55; transition:opacity .12s, background .12s, color .12s;}
   .pnlvak:hover .pnlweg, .pnlvak:focus-within .pnlweg{opacity:1;}
   .pnlvak .pnlweg:hover{background:var(--red-soft); color:var(--red-tekst); opacity:1;}
-  .popup.pnlpop{width:min(880px,96vw); max-height:92vh; overflow-y:auto;}
+  .popup.pnlpop{width:min(880px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow-y:auto;}
   .pnlsectie{font-family:'Sora',sans-serif; font-weight:800; font-size:15px; margin:24px 0 12px; display:flex; align-items:center; gap:10px; letter-spacing:-.01em;}
   .pnlsectie .telw{font-weight:700; font-size:11px; color:var(--green-tekst); background:var(--green-soft); padding:3px 9px; border-radius:var(--pil);}
   .pnlgrid{grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:10px;}
@@ -301,7 +301,7 @@
   /* Instellingen hoort onderaan: je gebruikt het zelden en het hoort niet
      tussen het dagelijkse werk te staan. */
   .onderin{margin-top:auto; padding-top:14px; border-top:1.5px solid var(--border);}
-  .popup.groot{width:min(680px,94vw); max-height:88vh; overflow:auto;}
+  .popup.groot{width:min(680px,94vw); max-height:min(88vh,calc(100dvh - 32px)); overflow:auto;}
   .logoImg{width:38px; height:38px; border-radius:10px; object-fit:cover;}
   /* login & gebruiker */
   #loginScherm,#authScherm{position:fixed; inset:0; background:var(--navy); z-index:200; display:flex;
@@ -681,7 +681,7 @@
   /* de pakketkeuze */
   /* Twee klassen in plaats van één, anders wint de bredere .popup-regel
      verderop in dit blad en wordt dit scherm 460px breed. */
-  .popup.pakketpop{width:min(980px,96vw); max-height:92vh; overflow-y:auto;}
+  .popup.pakketpop{width:min(980px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow-y:auto;}
   .pakketpop h3{font-family:'Sora',sans-serif; font-size:25px; font-weight:800;
     letter-spacing:-.02em; margin-bottom:8px;}
   .pakketpop > .pv{font-size:15px; line-height:1.7; margin-bottom:24px; max-width:74ch;}
@@ -1371,7 +1371,7 @@
   .hgnaam{flex:1; min-width:0; font-weight:600; font-size:14px;}
   .hgaantal{font-family:'Sora',sans-serif; font-weight:700; font-size:17px; color:var(--oranje); flex:none;}
   @media(max-width:560px){
-    .hangpop{width:100%; max-height:92vh;}
+    .hangpop{width:100%; max-height:min(92vh,calc(100dvh - 32px));}
     .hangkop{flex-direction:column; gap:10px;}
     .hangrij{flex-wrap:wrap; gap:9px;}
     .hgnaam{flex-basis:100%;}
@@ -1883,7 +1883,7 @@
   .rondvoet{display:flex; align-items:center; justify-content:space-between; gap:10px;}
 
   @media(max-width:860px){
-    .onbvenster{width:100%; max-height:92vh;}
+    .onbvenster{width:100%; max-height:min(92vh,calc(100dvh - 32px));}
     .onbkop{padding:18px 20px 0;} .onbinhoud{padding:18px 20px 22px;}
     .onbinhoud h2{font-size:19px;}
     .onbvoet{flex-direction:column-reverse; align-items:stretch;}
@@ -6537,7 +6537,7 @@ async function inkoopDetail(id){
   const verbonden = state.moneybird && state.moneybird.verbonden;
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='inkDetailOverlay';
   ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:92vh; overflow:auto">
+  ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <h3>Inkoop</h3>
     <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap">
       <div style="flex:2; min-width:280px"><div id="inkPdf" class="muted">Factuur laden…</div></div>
@@ -6674,7 +6674,7 @@ async function mailConceptDetail(id){
   const isImg=/\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(v.factuur_pad||'');
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='inkDetailOverlay';
   ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:92vh; overflow:auto">
+  ov.innerHTML=`<div class="popup" style="width:min(1000px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <h3>Factuur uit e-mail</h3>
     <div class="row" style="gap:20px; align-items:flex-start; flex-wrap:wrap">
       <div style="flex:2; min-width:280px"><div id="mailPdf" class="muted">Factuur laden…</div></div>
@@ -7212,7 +7212,7 @@ async function mailOpen(id){
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='mailLeesOverlay';
   ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const catOpties=mailCats.map(c=>`<option value="${c.id}" ${String(c.id)===String(b.categorie_id)?'selected':''}>${esc(c.naam)}</option>`).join('');
-  ov.innerHTML=`<div class="popup" style="width:min(820px,96vw); max-height:92vh; overflow:auto">
+  ov.innerHTML=`<div class="popup" style="width:min(820px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <div class="row" style="justify-content:space-between; align-items:flex-start; gap:10px">
       <h3 style="margin:0">${esc(b.onderwerp||'(geen onderwerp)')}</h3>
       <button class="btn ghost small icoknop" onclick="document.getElementById('mailLeesOverlay').remove()"><svg class="i s"><use href="#i-left"/></svg></button>
@@ -7310,7 +7310,7 @@ function mailOpstellen(vooraf){
   /* Naast de popup klikken sluit hem; maar niet zomaar als er al tekst staat, anders
      ben je een lang getypt (of door AI geschreven) concept in één klik kwijt. */
   ov.onclick=e=>{ if(e.target===ov){ const t=document.getElementById('opstelTekst'); if(!t||!t.value.trim()||confirm('Concept sluiten? De getypte tekst gaat verloren.')) ov.remove(); } };
-  ov.innerHTML=`<div class="popup" style="width:min(760px,96vw); max-height:92vh; overflow:auto">
+  ov.innerHTML=`<div class="popup" style="width:min(760px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <h3>${vooraf.bericht_id?'Antwoorden':'Nieuwe mail'}</h3>
     <div style="margin-bottom:10px"><label>Aan</label><input id="opstelAan" type="email" placeholder="naam@voorbeeld.nl" value="${esc(vooraf.aan||'')}"></div>
     <div style="margin-bottom:10px"><label>Onderwerp</label><input id="opstelOnder" value="${esc(vooraf.onderwerp||'')}"></div>
