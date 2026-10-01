@@ -1613,6 +1613,9 @@
       -webkit-mask-image:linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
     }
     .tabelrol::-webkit-scrollbar{display:none;}
+    /* Een kaart-tabel (resptab) stapelt en schuift niet, dus de rand-fade en de negatieve
+       marges van de scrollbak zijn daar storend. Uitzetten als de bak zo'n tabel bevat. */
+    .tabelrol:has(> table.resptab){margin:0; padding:0; mask-image:none; -webkit-mask-image:none;}
     /* Alles schuift samen mee. De eerste kolom vastzetten leek handig, maar
        dan houdt de rest te weinig ruimte over en wordt het onleesbaar klein.
        Liever de hele regel in één beweging langs je duim.                   */
