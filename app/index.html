@@ -141,6 +141,19 @@
   .hubtegel .tt b{font-size:15px; font-weight:700;}
   .hubtegel .tt span{font-size:12px; color:var(--muted); line-height:1.35;}
   .hubtegel .badge{position:absolute; top:10px; right:12px;}
+  /* Rustig dashboard (Simpel-modus): de volle inhoud (.dash-vol) weg, de hub tonen. */
+  #tab-dashboard.simpel .dash-vol{display:none !important;}
+  #tab-dashboard:not(.simpel) #dashSimpel{display:none;}
+  #dashSimpel{display:flex; flex-direction:column; gap:16px; margin-top:4px;}
+  .simpelwinst{background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:18px 20px; box-shadow:var(--schaduw);}
+  .simpelwinst .l{display:block; font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);}
+  .simpelwinst .v{display:block; font-size:34px; font-weight:800; color:var(--green-tekst); margin-top:4px; font-family:'Sora',sans-serif;}
+  .simpeltaken{background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:14px 18px; box-shadow:var(--schaduw);}
+  .simpeltaken .l{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:6px;}
+  .simpeltaken a{display:flex; align-items:center; gap:10px; padding:11px 0; border-top:1px solid var(--soft-2); font-weight:600; cursor:pointer; color:var(--text);}
+  .simpeltaken a:first-of-type{border-top:none;}
+  .simpeltaken a .i{width:18px; height:18px; color:var(--oranje); flex:none;}
+  .simpeltaken .rust{color:var(--muted); font-weight:500;}
   /* Mailomgeving: gekleurde categorie-mapjes als horizontale balk boven de inbox, zodat het
      hoofdmenu links intact blijft en de lijst de volle breedte krijgt. */
   .mailchips{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px;}
@@ -2258,25 +2271,34 @@
 <section id="tab-dashboard">
   <div class="pagehead">
     <h1>Dashboard</h1>
-    <div class="row" style="align-items:center">
-      <div class="periodesel" id="periodeSel">
-        <button data-p="dag" class="active">Vandaag</button>
-        <button data-p="week">7 dagen</button>
-        <button data-p="maand">30 dagen</button>
-        <button data-p="alles">Alles</button>
+    <div class="row" style="align-items:center; gap:12px; flex-wrap:wrap">
+      <div class="periodesel" id="dashModusSel">
+        <button data-s="simpel" class="active" onclick="dashModus(true)">Simpel</button>
+        <button data-s="vol" onclick="dashModus(false)">Alles</button>
       </div>
-      <div class="dagnav">
-        <button class="pijl" onclick="dagStap(-1)" title="Vorige dag"><svg class="i s"><use href="#i-left"/></svg></button>
-        <input type="date" id="dagPick" onchange="kiesDag(this.value)">
-        <button class="pijl" onclick="dagStap(1)" title="Volgende dag"><svg class="i s"><use href="#i-right"/></svg></button>
+      <div class="row dash-vol" style="align-items:center; gap:10px">
+        <div class="periodesel" id="periodeSel">
+          <button data-p="dag" class="active">Vandaag</button>
+          <button data-p="week">7 dagen</button>
+          <button data-p="maand">30 dagen</button>
+          <button data-p="alles">Alles</button>
+        </div>
+        <div class="dagnav">
+          <button class="pijl" onclick="dagStap(-1)" title="Vorige dag"><svg class="i s"><use href="#i-left"/></svg></button>
+          <input type="date" id="dagPick" onchange="kiesDag(this.value)">
+          <button class="pijl" onclick="dagStap(1)" title="Volgende dag"><svg class="i s"><use href="#i-right"/></svg></button>
+        </div>
       </div>
     </div>
   </div>
-  <div class="kpis" id="kpiRow"></div>
-  <button class="btn ghost small" id="dashMeerKnop" onclick="dashMeerToggle()" style="margin:2px 0 16px"><svg class="i s"><use href="#i-chart"/></svg><span id="dashMeerLabel">Meer cijfers tonen</span></button>
-  <div class="kpis" id="kpiRow2" data-dashmeer hidden></div>
-  <div class="kpis" id="kpiRow3" data-dashmeer hidden></div>
-  <div class="modules">
+  <!-- Rustig dashboard: alleen wat je doet. De volle versie (cijfers, grafiek) staat
+       achter de schakelaar 'Alles' en is gemarkeerd met .dash-vol. -->
+  <div id="dashSimpel"></div>
+  <div class="kpis dash-vol" id="kpiRow"></div>
+  <button class="btn ghost small dash-vol" id="dashMeerKnop" onclick="dashMeerToggle()" style="margin:2px 0 16px"><svg class="i s"><use href="#i-chart"/></svg><span id="dashMeerLabel">Meer cijfers tonen</span></button>
+  <div class="kpis dash-vol" id="kpiRow2" data-dashmeer hidden></div>
+  <div class="kpis dash-vol" id="kpiRow3" data-dashmeer hidden></div>
+  <div class="modules dash-vol">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Taken en planning</h2>
     <div class="row" style="margin-bottom:12px">
@@ -6248,6 +6270,56 @@ function renderDashboard(){
   renderDashRooster();
   renderChart(); renderLeveringen(); renderVerkoopLog();
   dashMeerSync();
+  dashModusToon();
+}
+
+/* ── Rustig dashboard (Simpel-modus) ──
+   Standaard een kalm scherm met alleen wat je doet: de winst van vandaag, wat er moet
+   gebeuren, en grote knoppen naar je dagelijkse acties. De volle versie (cijfers, grafiek,
+   categorieën) staat achter de schakelaar 'Alles' en blijft gewoon beschikbaar. De keuze
+   wordt per toestel onthouden; standaard simpel, want daar was het dashboard te druk. */
+function dashSimpelAan(){ try{ return localStorage.getItem('storvo_simpel')!=='0'; }catch(e){ return true; } }
+function dashModus(simpel){
+  try{ localStorage.setItem('storvo_simpel', simpel?'1':'0'); }catch(e){}
+  dashModusToon();
+}
+function dashModusToon(){
+  const sec=document.getElementById('tab-dashboard'); if(!sec) return;
+  const simpel=dashSimpelAan();
+  sec.classList.toggle('simpel', simpel);
+  const sel=document.getElementById('dashModusSel');
+  if(sel) sel.querySelectorAll('button').forEach(b=>b.classList.toggle('active', (b.dataset.s==='simpel')===simpel));
+  if(simpel) renderDashSimpel();
+}
+function renderDashSimpel(){
+  const el=document.getElementById('dashSimpel'); if(!el) return;
+  // Winst van vandaag, uit dezelfde bron als de cijfers hierboven.
+  const d0=new Date(); d0.setHours(0,0,0,0); const van=d0.getTime();
+  const winst=(typeof winstIn==='function')?winstIn(van, van+86400000):0;
+  // Wat moet er gebeuren: reparaties die actie nodig hebben + wat je vandaag moet bestellen.
+  const reps=(typeof repTeDoen==='function')?repTeDoen():[];
+  const actie=reps.filter(r=>repActie(r).urgent).length;
+  const bestel=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0;
+  let taken='';
+  if(actie) taken+=`<a onclick="showTab('reparaties')"><svg class="i"><use href="#i-wrench"/></svg>${actie} reparatie${actie===1?'':'s'} ${actie===1?'heeft':'hebben'} actie nodig</a>`;
+  if(bestel) taken+=`<a onclick="showTab('bestellen')"><svg class="i"><use href="#i-cart"/></svg>${bestel} ding${bestel===1?'':'en'} vandaag bestellen</a>`;
+  if(!taken) taken='<span class="rust">Niks dringends. Mooi.</span>';
+  // De acties die jij het meest doet. Werkbank = laptops toevoegen, controleren, online
+  // zetten en kaartjes uitdraaien (dat zit allemaal in de refurbish-werkbank).
+  const tegel=(doe,ico,titel,sub)=>`<button class="hubtegel" onclick="${doe}"><svg class="i"><use href="#${ico}"/></svg><span class="tt"><b>${titel}</b><span>${sub}</span></span></button>`;
+  const tegels=[
+    tegel("showTab('verkoop')", 'i-receipt', 'Verkopen', 'Scan of kies, en reken af'),
+    tegel("showTab('kassa')", 'i-cash', 'Kassa', 'Kas tellen en invoeren'),
+    tegel("showTab('reparaties')", 'i-wrench', 'Reparaties', 'Aanmelden en volgen'),
+    tegel("showTab('aanvragen')", 'i-clipboard', 'Aanvragen', 'Offertes en opdrachten'),
+    tegel("showTab('inruil')", 'i-recycle', 'Inruil en inname', 'Toestellen opkopen'),
+    tegel("startNieuwProduct()", 'i-plus', 'Product toevoegen', 'In de voorraad'),
+    tegel("location.href='/refurbish/'", 'i-laptop', 'Werkbank', 'Laptops, online zetten, kaartjes'),
+  ].join('');
+  el.innerHTML=
+    `<div class="simpelwinst"><span class="l">Winst vandaag</span><span class="v">${euro(winst)}</span></div>`+
+    `<div class="simpeltaken"><div class="l">Wat moet er gebeuren</div>${taken}</div>`+
+    `<div class="hubgrid">${tegels}</div>`;
 }
 /* Het dashboard opent rustig: alleen de eerste rij cijfers. De extra rijen (marge
    en voorraad, en het resultaat met loon en vaste lasten) staan achter een knop.
