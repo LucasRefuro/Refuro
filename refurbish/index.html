@@ -2037,6 +2037,7 @@ function labelRegels(a){
   if(accu) vast.push(accu);
   const os = specs.Windows || specs.Besturingssysteem || specs.OS;
   if(os) vast.push(String(os));
+  if(a.doos) vast.push('Met doos');
   if(a.notitie) vast.push(a.notitie);
   return specRegels.slice(0, Math.max(3, 8-vast.length)).concat(vast);
 }
@@ -2113,6 +2114,27 @@ async function deviceLabelPng(a){
   octx.drawImage(c, 0,0,W,Hc, 0,0,W,Hc);
   return { data:out.toDataURL('image/png').split(',')[1], hoogte:Math.round(Hc/dpmm) };
 }
+/* Een extra, kort dooslabel: een groot nummer dat overeenkomt met het toestel, zodat de
+   doos en het toestel in de opslag aan elkaar gekoppeld blijven. Smal (kort op de rol):
+   "DOOS", het nummer groot, het model klein eronder. */
+async function boxLabelPng(a){
+  const {breedte}=labelInstelling();
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm);
+  const Hmax=Math.round(60*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top'; ctx.fillStyle='#000';
+  let y=pad;
+  ctx.font='700 '+Math.round(2.5*dpmm)+'px Arial'; ctx.fillText('DOOS', pad, y); y+=Math.round(3.2*dpmm);
+  ctx.font='800 '+Math.round(7.5*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(a.code||''), pad, y, W-2*pad, Math.round(8.0*dpmm), 1);
+  const mm=[a.merk,a.model].filter(Boolean).join(' ')+(a.kleur?' - '+a.kleur:'');
+  if(mm){ y+=Math.round(0.6*dpmm); ctx.font='500 '+Math.round(2.6*dpmm)+'px Arial'; y=labelWrap(ctx, mm, pad, y, W-2*pad, Math.round(3.2*dpmm), 2); }
+  const Hc=Math.min(Hmax, y+pad);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c,0,0,W,Hc,0,0,W,Hc);
+  return { data:out.toDataURL('image/png').split(',')[1], hoogte:Math.round(Hc/dpmm) };
+}
 async function qzPrintDeviceLabels(ids, stil){
   const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
   if(!lijst.length){ if(!stil) toast('Geen apparaten om te printen','let-op'); return false; }
@@ -2121,6 +2143,8 @@ async function qzPrintDeviceLabels(ids, stil){
     for(const a of lijst){
       const {data}=await deviceLabelPng(a);
       await printViaHelper(data, {label:breedte, red:tweekleuren});
+      // Doos erbij: meteen een extra genummerd dooslabel voor op de doos.
+      if(a.doos){ const box=await boxLabelPng(a); await printViaHelper(box.data, {label:breedte, red:tweekleuren}); }
     }
     if(!stil) toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
     return true;
@@ -2966,7 +2990,7 @@ function appOpen(id){
     specs:Object.assign({}, a.specs||{}),
     accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
     nieuweAccu:!!a.nieuwe_accu, accuNotitie:a.accu_notitie||'',
-    notitie:a.notitie||'', extraReparatie:'', opties:{},
+    notitie:a.notitie||'', extraReparatie:'', opties:{}, doos:!!a.doos,
     /* Het pad tot hier uit het profiel halen, niet de vaste laptoplijst: een
        desktop heeft er een blokkers-stap voor, die anders uit de tijdlijn en de
        terugknop wegvalt. Tot en met de Windows-stap, want daarna land je op
@@ -3501,6 +3525,10 @@ const CTR_STAPPEN={
               onclick="ctrPunt(${JSON.stringify(v.t).replace(/"/g,'&quot;')}, ${JSON.stringify(o.l).replace(/"/g,'&quot;')}, ${o.p})">${esc(o.l)}</button>`).join('')}
           </div>
         </div>`).join('')}
+      ${prof().vraagDoos ? `<label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
+        <input type="checkbox" id="ctr_doos" ${ctr.doos?'checked':''} onchange="ctrDoosToggle(this)">
+        <span>Doos erbij <span class="muted klein" style="font-weight:400">komt op de sticker, plus een extra genummerd dooslabel voor op de doos</span></span>
+      </label>` : ''}
       ${ctrCompleet() ? `<div class="gradevak">
         <div class="gradeletter">${gradeVan(punten)}</div>
         <div>
@@ -3658,6 +3686,7 @@ const CATEGORIE_PROFIEL={
       {sleutel:'Kleur',  id:'c_kleur',  hint:'Zwart'},
       {sleutel:'IMEI',   id:'c_imei',   hint:'15 cijfers, via *#06#'}
     ],
+    vraagDoos:true,
     specExtra:[
       {s:'eSIM',            id:'ce_esim',    type:'ja'},
       {s:'Dual-sim',        id:'ce_dual',    type:'ja'},
@@ -3721,6 +3750,7 @@ const CATEGORIE_PROFIEL={
       {sleutel:'Kleur',  id:'c_kleur',  hint:'Zilver'},
       {sleutel:'IMEI',   id:'c_imei',   hint:'Bij cellular, via *#06#'}
     ],
+    vraagDoos:true,
     specExtra:[
       {s:'Cellular (sim)',        id:'ce_cell',  type:'ja'},
       {s:'Pen-ondersteuning',     id:'ce_pen',   type:'ja'},
@@ -3878,6 +3908,7 @@ const CATEGORIE_PROFIEL={
       {sleutel:'Type',    id:'c_type',    hint:'Bijvoorbeeld smartwatch'},
       {sleutel:'Kenmerk', id:'c_kenmerk', hint:'Maat, kleur, model'}
     ],
+    vraagDoos:true,
     specExtra:[],
     specVragen:{},
     sloopdelen:['Behuizing','Accu','Moederbord','Scherm']
@@ -4480,6 +4511,9 @@ function ctrDonor(){ if(ctr) ctrGa('slopen'); }
    sluiten elkaar uit: een toestel kan niet én in je eigen dashboard staan én bij een
    externe partner liggen. */
 function ctrDashboardToggle(el){ if(!ctr) return; ctr.naarDashboard = !!el.checked; if(el.checked) ctr.naarPartner=null; ctrTeken(); }
+/* Doos erbij (telefoon/tablet/watch): alleen onthouden, geen hertekening (dat zou de
+   staat-stap herladen en je plek kwijtmaken). Komt op de sticker + een dooslabel. */
+function ctrDoosToggle(el){ if(ctr) ctr.doos = !!el.checked; }
 function ctrPartnerToggle(id, el){
   if(!ctr) return;
   if(el.checked){ ctr.naarPartner = id; ctr.naarDashboard = false; }   // enkelvoudig: kiest deze partner
@@ -4503,6 +4537,7 @@ async function ctrAfronden(knop){
       status, checklist:ctrChecklist(), specs, grade, punten,
       defecten:defecten.map(d=>d.vraag),
       accu:Number(ctr.accu)||null, nieuwe_accu:!!ctr.nieuweAccu, accu_notitie:ctr.accuNotitie||null, notitie:ctr.notitie||null,
+      doos:!!ctr.doos,
       stap:'af', bijgewerkt_op:new Date().toISOString()
     }).eq('id',a.id);
     if(error) throw new Error('Opslaan mislukt');
