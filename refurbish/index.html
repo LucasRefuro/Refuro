@@ -8337,22 +8337,39 @@ function batVerklaringOpen(id){
    aantal komt uit de context, dus dat hoeft de winkelier hier niet nog eens te tikken. */
 function verklaringVenster(prefill, onKlaar){
   venster('Inkoopverklaring', `
-    <p class="muted klein" style="margin-bottom:12px">Voor een contante inkoop bij een particulier: vul de gegevens in en laat de verkoper hieronder tekenen. Je bewaart het als bewijs voor je eigen inkoopadministratie.</p>
+    <p class="muted klein" style="margin-bottom:12px">Voor een contante inkoop bij een particulier. Vul de gegevens in en laat de verkoper <b>op het scherm</b> tekenen, of druk op <b>Printen om te tekenen</b> en laat op papier tekenen. Je bewaart het als bewijs voor je eigen inkoopadministratie.</p>
     <div class="grid">
       <div style="grid-column:1/-1"><label>Naam verkoper *</label><input id="vkl_naam" value="${esc(prefill.naam||'')}" placeholder="voor- en achternaam"></div>
       <div style="grid-column:1/-1"><label>Adres verkoper</label><input id="vkl_adres" value="${esc(prefill.adres||'')}" placeholder="straat, postcode, plaats"></div>
       <div><label>Totaalbedrag (€)</label><input id="vkl_bedrag" type="number" step="0.01" min="0" value="${(prefill.bedrag!=null&&prefill.bedrag!=='')?prefill.bedrag:''}" placeholder="0,00"></div>
     </div>
-    <div class="veldkop"><label>Handtekening verkoper *</label></div>
+    <div class="veldkop"><label>Handtekening verkoper <span class="muted">(op scherm, of laat leeg en teken op papier)</span></label></div>
     <div class="vklwrap"><canvas id="vklCanvas" class="vklpad"></canvas></div>
-    <div class="row" style="justify-content:flex-end; margin-top:6px"><button class="btn ghost small" onclick="vklWis()">Wissen</button></div>
+    <div class="row" style="justify-content:space-between; margin-top:6px">
+      <button type="button" class="btn ghost small" onclick="verklaringPrintNu()"><svg class="i s"><use href="#i-print"/></svg>Printen om te tekenen</button>
+      <button type="button" class="btn ghost small" onclick="vklWis()">Wissen</button>
+    </div>
   `, [{tekst:'Klaar', klasse:'actie', doe:(kn)=>{
     const naam=v('vkl_naam'); if(!naam){ toast('Vul de naam van de verkoper in','let-op'); return; }
-    if(vklLeeg){ toast('Laat de verkoper eerst tekenen','let-op'); return; }
-    const d={ naam, adres:v('vkl_adres')||'', bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100, handtekening:document.getElementById('vklCanvas').toDataURL('image/png') };
+    const d={ naam, adres:v('vkl_adres')||'', bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100, handtekening: vklLeeg ? null : document.getElementById('vklCanvas').toDataURL('image/png') };
     onKlaar(d, kn);
   }}], 'groot');
   setTimeout(vklInit, 60);
+}
+/* De verklaring nu meteen afdrukken om op papier te laten tekenen. Gebruikt dezelfde
+   opmaak als de opgeslagen verklaring; zonder schermhandtekening tekent verklaringPng
+   een lege handtekeningregel. Vereist geen toestel, dus het kan aan de balie voordat
+   je het toestel toevoegt. */
+async function verklaringPrintNu(){
+  const naam=v('vkl_naam'); if(!naam){ toast('Vul eerst de naam van de verkoper in','let-op'); return; }
+  const d={ naam, adres:v('vkl_adres')||'', bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100,
+    handtekening: vklLeeg ? null : document.getElementById('vklCanvas').toDataURL('image/png') };
+  try{
+    const png=await verklaringPng({code:'', verwacht:null, betaalwijze:null}, d);
+    const doc=await verklaringPdfDoc(png);
+    doc.save(('inkoopverklaring '+naam).replace(/[^\w -]+/g,'').trim()+'.pdf');
+    toast('Verklaring klaar om te printen', true);
+  }catch(e){ toast('Het maken van de PDF mislukte','fout'); }
 }
 function vklInit(){
   const c=document.getElementById('vklCanvas'); if(!c) return;
@@ -8400,8 +8417,19 @@ async function verklaringPng(b, d){
   x.font='400 21px Arial'; x.fillStyle='#17201E';
   const verkl='De verkoper verklaart de bovengenoemde goederen te verkopen aan de koper, hier rechtmatig eigenaar van te zijn, en het bovengenoemde bedrag te hebben ontvangen.';
   y=labelWrap(x, verkl, m, y, W-2*m, 30, 4)+18;
-  x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Handtekening verkoper', m, y); y+=30;
-  await new Promise(res=>{ const img=new Image(); img.onload=()=>{ const w=Math.min(W-2*m, 420), h=w*(img.height/img.width||0.4); x.drawImage(img, m, y, w, h); res(); }; img.onerror=()=>res(); img.src=d.handtekening; });
+  x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Handtekening verkoper', m, y); y+=34;
+  if(d.handtekening){
+    await new Promise(res=>{ const img=new Image(); img.onload=()=>{ const w=Math.min(W-2*m, 420), h=w*(img.height/img.width||0.4); x.drawImage(img, m, y, w, h); res(); }; img.onerror=()=>res(); img.src=d.handtekening; });
+  }else{
+    // Geen schermhandtekening: lege regels om op papier te tekenen (handtekening + datum).
+    y+=52;
+    x.strokeStyle='#17201E'; x.lineWidth=2;
+    x.beginPath(); x.moveTo(m, y); x.lineTo(m+420, y); x.stroke();
+    x.beginPath(); x.moveTo(W-m-240, y); x.lineTo(W-m, y); x.stroke();
+    x.font='400 18px Arial'; x.fillStyle='#5B6663';
+    x.fillText('Handtekening', m, y+12);
+    x.fillText('Datum', W-m-240, y+12);
+  }
   return c.toDataURL('image/png');
 }
 
@@ -9315,6 +9343,9 @@ async function vbAfhalenVanRest(a){
 /* Een gescand label opent meteen het juiste apparaat. */
 function uitAdres(){
   const p=new URLSearchParams(location.search);
+  // Inname vanaf de winkel-kant: open meteen Toevoegen (daar vul je toestel + bedrag in
+  // en maak je de inkoopverklaring). Zo is "inname op de inruil-pagina" één tik naar hier.
+  if(p.get('inname')){ if(typeof showTab==='function') showTab('toevoegen'); return; }
   const batchId=p.get('batch'), nr=p.get('nr');
   if(batchId && nr){ batSlotInvullen(batchId, Number(nr)); return; }   // genummerd batch-label
   if(batchId && batches.find(x=>x.id===batchId)){ showTab('batches'); batOpen(batchId); return; }  // batch-sticker
