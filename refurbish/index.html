@@ -846,6 +846,16 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <input id="t_kleur" placeholder="Bijvoorbeeld: Zwart" autocomplete="off">
         </div>
 
+        <!-- Doos erbij, al bij de inname (telefoon/tablet/watch). Komt op de sticker en
+             levert een extra genummerd dooslabel. Je kunt het later bij de controle nog
+             aanpassen. -->
+        <div id="t_doos_wrap" hidden style="margin-top:18px">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600; margin:0">
+            <input type="checkbox" id="t_doos"> Doos erbij
+          </label>
+          <p class="muted klein" style="margin:4px 0 0">Komt op de sticker, plus een extra genummerd dooslabel voor op de doos.</p>
+        </div>
+
         <div class="grid" style="margin-top:18px">
           <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
@@ -1595,6 +1605,9 @@ function tekenSoorten(){
   // de waarde, zodat er geen kleur van een vorige telefoon blijft plakken.
   const kw=document.getElementById('t_kleur_wrap');
   if(kw){ const aan=(soortNu==='Telefoon'); kw.hidden=!aan; if(!aan){ const ki=document.getElementById('t_kleur'); if(ki) ki.value=''; } }
+  // Doos-vraag bij de categorieën die een doos hebben (telefoon/tablet/watch=Overig).
+  const dw=document.getElementById('t_doos_wrap');
+  if(dw){ const aan=!!((CATEGORIE_PROFIEL[soortNu]||{}).vraagDoos); dw.hidden=!aan; if(!aan){ const di=document.getElementById('t_doos'); if(di) di.checked=false; } }
 }
 function soortKies(n){ soortNu=n; tekenSoorten(); modelHint(); }
 
@@ -1767,6 +1780,7 @@ async function toevoegen(knop){
   if(!model){ toast('Vul merk en model in','let-op'); return; }
   const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
   const cat=soortNu;
+  const doos = !!((CATEGORIE_PROFIEL[cat]||{}).vraagDoos) && !!((document.getElementById('t_doos')||{}).checked);
   const batKeuze=(document.getElementById('t_batch')||{}).value||null;
   const bekend=modellen.find(m=>m.model.toLowerCase()===model.toLowerCase());
 
@@ -1793,6 +1807,7 @@ async function toevoegen(knop){
         specs: {},
         locatie_id: locKeuze||null,
         aangemaakt_door: account.id,
+        doos: doos,
         status:'te_controleren'
       });
     }
