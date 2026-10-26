@@ -1763,6 +1763,11 @@
   .mobmeer-kop{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
     color:var(--muted); margin:16px 4px 9px;}
   .mobmeer-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .mobmeer-beheer summary{display:flex; align-items:center; justify-content:space-between; cursor:pointer; list-style:none;}
+  .mobmeer-beheer summary::-webkit-details-marker{display:none;}
+  .mobmeer-beheer summary .i{width:18px; height:18px; color:var(--muted-l); transition:transform .15s;}
+  .mobmeer-beheer[open] summary .i{transform:rotate(90deg);}
+  .mobmeer-beheer[open] .mobmeer-grid{margin-top:9px;}
   .mobmeer-tegel{display:flex; align-items:center; gap:11px; padding:15px 14px; border:1.5px solid var(--border);
     border-radius:14px; background:var(--card); font-family:inherit; font-size:14px; font-weight:600;
     color:var(--tekst); cursor:pointer; text-align:left; position:relative; min-width:0;}
@@ -12387,12 +12392,27 @@ function mobMeerTegels(lijst, kop){
       ${n?`<span class="tel">${n>99?'99+':n}</span>`:''}</button>`;
   }).join('')+`</div>`;
 }
+/* De beheer-pagina's (uren, rapport, facturen, team...) gebruik je zelden. Die vouwen we
+   standaard dicht, zodat het Meer-menu rustig opent met alleen je dagelijkse dingen; één
+   tik op "Beheer" klapt ze open. */
+function mobMeerBeheer(){
+  const core=mobCore(); const nu=huidigeTab();
+  const items=MOB_ALLES_BEHEER.filter(t=>mag(t) && !core.includes(t));
+  if(!items.length) return '';
+  const tegels=items.map(t=>{
+    const m=MOB_MEERLABEL[t]||{naam:t,ico:'i-layers'}; const n=mobTel(t);
+    return `<button class="mobmeer-tegel ${t===nu?'actief':''}" onclick="mobMeerKies('${t}')">
+      <svg class="i"><use href="#${m.ico}"/></svg><span>${esc(m.naam)}</span>
+      ${n?`<span class="tel">${n>99?'99+':n}</span>`:''}</button>`;
+  }).join('');
+  return `<details class="mobmeer-beheer"><summary class="mobmeer-kop">Beheer<svg class="i s"><use href="#i-right"/></svg></summary><div class="mobmeer-grid">${tegels}</div></details>`;
+}
 function mobMeerOpen(){
   const vel=document.getElementById('mobMeer'); if(!vel) return;
   vel.innerHTML=`<div class="mobmeer-vel">
     <div class="mobmeer-greep"></div>
     ${mobMeerTegels(MOB_ALLES_DAG,"Pagina's")}
-    ${mobMeerTegels(MOB_ALLES_BEHEER,'Beheer')}
+    ${mobMeerBeheer()}
   </div>`;
   vel.hidden=false;
 }
