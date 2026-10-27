@@ -4,6 +4,11 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
@@ -59,6 +64,9 @@ setTimeout(async()=>{
   const d=w.document;
   ok('app start zonder fout', fouten.length===0);
   if(fouten.length) console.log('   ', fouten.slice(0,2).join(' | '));
+  /* Externe scripts (qrcode voor de labels) laden niet in jsdom. Zonder dit wachtte
+     elke labelprint eeuwig, en stopte deze test stilletjes halverwege. */
+  w.eval("laadScript=()=>Promise.reject(new Error('geen scripts in de test'))");
 
   // ── hele regel klikbaar ──
   const regel=d.querySelector('#wbLijst tr.klikbaar');
@@ -103,7 +111,7 @@ setTimeout(async()=>{
   ok('toetsenbord staat hier niet meer', !/Werkt het toetsenbord/.test(tekst()));
   ok('geen accuveld in de hardwarestap', !d.getElementById('c_accu'));
   ok('notitieveld in de hardwarestap', !!d.getElementById('c_notitie'));
-  ok('nog niet door zonder antwoorden', !knop('Door naar de upgrade'));
+  ok('nog niet door zonder antwoorden', !knop('Door naar ram en ssd'));
 
   const vragen=()=>[...d.querySelectorAll('#ctrPagina .clrij')];
   ok('de twee vragen staan nog open', vragen().every(r=>r.dataset.open==='1'));
@@ -114,8 +122,8 @@ setTimeout(async()=>{
   w.eval("ctrKies(ctrVoorWindows()[1].v, 'Nee')");
   ok('bij nee komt er een veld voor de uitleg', !!d.querySelector('#ctrPagina [data-vraagveld]'));
   w.eval("ctrKies(ctrVoorWindows()[1].v, 'Ja')");
-  ok('nu door naar de upgrade', !!knop('Door naar de upgrade'));
-  knop('Door naar de upgrade').click();
+  ok('nu door naar de upgrade', !!knop('Door naar ram en ssd'));
+  knop('Door naar ram en ssd').click();
 
   // ── upgrade: mag leeg, gewoon door ──
   ok('upgradestap', /Ram en ssd/.test(tekst()));
@@ -129,13 +137,16 @@ setTimeout(async()=>{
   ok('er is nog steeds een controle open', w.eval('!!ctr'));
   ok('terug kan naar Windows', !!terug());
 
-  // ── de rest van de hardware staat nu hier ──
-  ok('toetsenbord staat nu bij het nakijken', /Werkt het toetsenbord/.test(tekst()));
-  ok('accuveld staat nu bij het nakijken', !!d.getElementById('c_accu'));
+  // ── eerst Windows en de stuurprogramma's, dan pas de rest van de hardware ──
+  ok('nog geen toetsenbord zolang Windows niet bevestigd is', !/Werkt het toetsenbord/.test(tekst()));
+  ok('nog geen accuveld zolang Windows niet bevestigd is', !d.getElementById('c_accu'));
   w.eval("ctrKies('windowsgoed','Ja')");
   ok('vraagt daarna naar de stuurprogramma\'s', /stuurprogramma/.test(tekst()));
   ok('nog niet door zonder de checks', !knop('Door naar de specificaties'));
-  w.eval("ctrKies('drivers','Ja'); ctrNaWindows().forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken()");
+  w.eval("ctrKies('drivers','Ja')");
+  ok('toetsenbord staat nu bij het nakijken', /Werkt het toetsenbord/.test(tekst()));
+  ok('accuveld staat nu bij het nakijken', !!d.getElementById('c_accu'));
+  w.eval("ctrNaWindows().forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken()");
   ok('nu wel door', !!knop('Door naar de specificaties'));
   ok('knop later verder blijft staan', !!knop('later verder'));
   knop('Door naar de specificaties').click();

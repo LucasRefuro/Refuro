@@ -1,6 +1,11 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 // Paden vanaf dit bestand, zodat de tests ook vanuit de hoofdmap draaien.
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;

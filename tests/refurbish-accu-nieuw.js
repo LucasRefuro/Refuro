@@ -2,6 +2,11 @@
 // advies weg, en een accu uit de onderdelenvoorraad zet de vlag automatisch. Het
 // label toont "nieuw" in plaats van een percentage.
 const {JSDOM}=require('jsdom'); const fs=require('fs'); const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 const bron=path.join(__dirname,'..','refurbish/index.html');
 const MOCK=`<script>
 window.__geschreven=[];
@@ -25,7 +30,7 @@ setTimeout(async()=>{
     apparaten=[{id:'a1', code:'A1', merk:'Dell', model:'X', categorie:'Laptop', specs:{},
       status:'te_controleren', inkoop:100, accu:70, nieuwe_accu:false, extra_kosten:[],
       checklist:[], defecten:[], goede_delen:[], aangemaakt_op:new Date().toISOString()}];
-    appOpen('a1'); ctrGa('nawindows'); ctrAccu('70');`);
+    appOpen('a1'); ctr.antwoord.windowsgoed='Ja'; ctr.antwoord.drivers='Ja'; ctrGa('nawindows'); ctrAccu('70');`);
   w.eval("ctrAccuVervangen(true)");
   ok('accuVervangen aan bij 70 onder 85', w.eval("ctr.accuVervangen")===true);
   w.eval("ctrNieuweAccu(true)");

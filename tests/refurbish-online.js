@@ -2,6 +2,11 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
@@ -129,10 +134,10 @@ setTimeout(async()=>{
   ok('qr getoond', /qrbeeld/.test(pag()));
   ok('code leesbaar erbij', pag().includes(code[2].code));
 
-  // ── sjabloon: het beheren zit nu centraal in de winkelapp; hier alleen dat het
-  //    standaardsjabloon bestaat en dat een gezet sjabloon actief is voor de advertenties ──
-  ok('standaardsjabloon beschikbaar', /Specificaties/.test(w.eval('STANDAARD_SJABLOON')));
-  w.eval("instel.ad_sjabloon=STANDAARD_SJABLOON; instel.ad_toon='kort en zakelijk'");
+  // ── sjabloon: het beheren zit centraal in de winkelapp; de werkbank leest het alleen.
+  //    De oude invulvelden en hun functies zijn weg (wees-code zonder scherm). ──
+  ok('geen wees-code meer voor het sjabloon', w.eval("typeof STANDAARD_SJABLOON==='undefined' && typeof sjabloonOpslaan==='undefined'"));
+  w.eval("instel.ad_sjabloon='Specificaties\\n{specificaties}'; instel.ad_toon='kort en zakelijk'");
   ok('sjabloon actief', /Specificaties/.test(w.eval('instel.ad_sjabloon')));
 
   // ── prijs in de zijkolom, geen popup meer ──
@@ -177,9 +182,12 @@ setTimeout(async()=>{
   await w.eval('locToevoegen(document.createElement("button"))');
   const loc=w.__geschreven.find(g=>g[0]==='hardware_locaties' && g[1]==='insert');
   ok('locatie toegevoegd', !!loc && loc[2].naam==='Vitrine voor');
-  await w.eval('scanInstelling(true)');
+  // Het inscannen zet je in Storvo; hier volgt de werkbank alleen die instelling.
+  w.eval('instel.inscannen=true');
+  // Opslaan van de beeldscherm-achtergrond schrijft de hele rij en laat de rest staan.
+  await w.eval('schermOpslaan(document.createElement("button"))');
   const sc=w.__geschreven.filter(g=>g[0]==='refurbish_instellingen').pop();
-  ok('inscannen aangezet', !!sc && sc[2].inscannen===true);
+  ok('inscannen blijft staan bij opslaan', !!sc && sc[2].inscannen===true);
   ok('accugrens blijft staan', !!sc && sc[2].accu_min===80);
 
   // Inscannen aan en nog geen plek gekozen: dan telt hij nog niet mee.
@@ -203,7 +211,7 @@ setTimeout(async()=>{
   ok('met een plek ligt hij gewoon in de voorraad', hw4[2].status==='voorraad');
   ok('op de gekozen plek', hw4[2].locatie_id==='l1');
 
-  await w.eval('scanInstelling(false)');
+  w.eval('instel.inscannen=false');
   w.eval("apparaten[0].status='klaar'; apparaten[0].locatie_id='l1'; onlineZetten('a1')");
   await new Promise(r=>setTimeout(r,60));
   d().getElementById('onl_prijs').value='349';

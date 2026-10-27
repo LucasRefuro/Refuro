@@ -2,6 +2,11 @@
 // in een controle dan op dezelfde stap met je antwoorden. Bewaard in localStorage
 // per gebruiker, hersteld bij het opstarten.
 const {JSDOM}=require('jsdom'); const fs=require('fs'); const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 const bron=path.join(__dirname,'..','refurbish/index.html');
 const MOCK=`<script>
 const _leeg={select(){return this;},order(){return this;},limit(){return this;},eq(){return this;},

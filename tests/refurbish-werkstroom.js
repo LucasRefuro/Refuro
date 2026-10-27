@@ -2,6 +2,11 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
@@ -89,14 +94,16 @@ setTimeout(async()=>{
   ok('badge bestellen', d.getElementById('bBestel').textContent==='1');
 
   // eigen checklistvraag komt terug bij Windows nakijken; de touchscreenvraag bij de specs
-  w.eval("appOpen('a1'); ctrGa('nawindows')");
+  w.eval("appOpen('a1'); ctr.antwoord.windowsgoed='Ja'; ctr.antwoord.drivers='Ja'; ctrGa('nawindows')");
   ok('eigen controle in het pad', /dockingpoort/.test(d.getElementById('ctrPagina').innerHTML));
   w.eval("ctrGa('specs')");
   ok('touchscreenvraag bij een touchscreen', /touchscreen overal/.test(d.getElementById('ctrPagina').innerHTML));
 
-  // reparatiescherm
+  // reparatie: een eigen pagina, geen venster meer
   w.eval("ctr=null; sluit(); appOpen('a2')");
-  const rep=d.getElementById('venster').innerHTML;
+  ok('reparatie is geen venster meer', !d.getElementById('venster'));
+  ok('reparatiepagina staat open', !d.getElementById('tab-repareren').hidden);
+  const rep=d.getElementById('repPagina').innerHTML;
   ok('reparatiescherm opent', /Wat er mis is/.test(rep));
   ok('defect getoond', /toetsenbord/i.test(rep));
   ok('onderdeel van de plank aanbieden', /Toetsenbord EliteBook/.test(rep));

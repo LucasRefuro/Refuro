@@ -253,6 +253,52 @@ tr.klikbaar{cursor:pointer;}
 .acts{display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;}
 .acts .btn{flex:1; min-width:150px;}
 
+/* ---------- Simpel en Alles ----------
+   Eén keuze voor de hele software, met dezelfde sleutel als de winkelapp: wat je
+   daar kiest geldt hier ook. In Simpel staat alleen wat je voor het dagelijkse werk
+   nodig hebt. Wat met .uitgebreid getagd is komt pas in Alles terug. Er verdwijnt
+   niets, het staat alleen niet meer in je dagelijkse blik. */
+body.simpel .uitgebreid{display:none !important;}
+.modussel{display:flex; width:100%; margin-bottom:10px;}
+.modussel button{flex:1;}
+/* Zelden nodige velden blijven in hun eigen scherm, achter een uitklapper. In Simpel
+   dicht, in Alles open. Zo hoef je bijna nooit te wisselen voor één losse optie. */
+details.meeropties{margin-top:16px; border-top:1.5px solid var(--border); padding-top:12px;}
+details.meeropties>summary{cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:9px;
+  font-size:13.5px; font-weight:700; color:var(--groen); padding:4px 0;}
+details.meeropties>summary::-webkit-details-marker{display:none;}
+details.meeropties>summary::before{content:''; width:7px; height:7px; border-right:2px solid currentColor;
+  border-bottom:2px solid currentColor; transform:rotate(-45deg); transition:transform .15s;}
+details.meeropties[open]>summary::before{transform:rotate(45deg);}
+details.meeropties>summary .muted{font-weight:500;}
+.meerinhoud{margin-top:12px;}
+/* Het rijmenu: één hoofdknop in beeld, de rest achter "Meer". Een details-element,
+   dus het werkt ook zonder dat er javascript hoeft te luisteren. */
+.rijmenu{position:relative; display:inline-block;}
+.rijmenu>summary{list-style:none;}
+.rijmenu>summary::-webkit-details-marker{display:none;}
+.rijmenu-lijst{position:absolute; right:0; top:calc(100% + 6px); z-index:30; min-width:240px;
+  background:var(--card); border:1.5px solid var(--border); border-radius:16px; box-shadow:var(--schaduw-l);
+  padding:6px; display:flex; flex-direction:column; gap:2px;}
+.rijmenu-lijst button,.rijmenu-lijst a,.rijmenu-lijst label{display:flex; align-items:center; gap:10px; width:100%;
+  text-align:left; background:none; border:none; padding:10px 12px; border-radius:10px; margin:0;
+  font-family:inherit; font-size:14px; font-weight:600; color:var(--tekst); cursor:pointer; text-decoration:none;}
+.rijmenu-lijst button:hover,.rijmenu-lijst a:hover,.rijmenu-lijst label:hover{background:var(--soft-2);}
+.rijmenu-lijst .gevaar{color:var(--red-tekst);}
+.rijmenu-lijst hr{border:none; border-top:1px solid var(--border); margin:4px 6px;}
+/* Een KPI die je kunt aanklikken gaat naar zijn lijst. Zelfde kaart, maar een knop. */
+.kpi.klik{border:none; text-align:left; font-family:inherit; color:inherit; cursor:pointer; width:100%; transition:.15s;}
+.kpi.klik:hover{box-shadow:var(--schaduw-l); transform:translateY(-1px);}
+.kpi.klik:focus-visible{outline:none; box-shadow:0 0 0 4px rgba(11,91,82,.16);}
+.subtabs{margin-bottom:18px;}
+.subtabs .badge{margin-left:7px; background:var(--oranje); color:#fff; font-size:11px; font-weight:800;
+  padding:1px 7px; border-radius:var(--pil);}
+.btwregel{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px;
+  font-size:13.5px; color:var(--muted);}
+/* Het vak onder de keuze plank/bestellen/zelf: altijd even hoog genoeg voor één rij,
+   zodat de pagina niet springt als je van keuze wisselt. */
+.repbron{min-height:46px;}
+
 /* ---------- de apparaatpagina ---------- */
 .kruimel{font-size:12.5px; color:var(--muted-l); margin-bottom:4px;}
 .kruimel a{cursor:pointer; text-decoration:none;}
@@ -633,7 +679,9 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   aside nav{flex-direction:row;}
   aside nav button{white-space:nowrap; padding:10px 15px;}
   .logo{padding:0 14px 0 4px;}
-  .onderin{margin-top:0; padding-top:0; border-top:none;}
+  .onderin{margin-top:0; padding-top:0; border-top:none; display:flex; align-items:center; gap:8px;}
+  .modussel{width:auto; margin:0;}
+  .onderin .terug,.onderin .portaallink{width:auto; margin:0; white-space:nowrap;}
   main{margin-left:0;}
   .topbar{padding:12px 16px;}
   .binnen{padding:20px 16px 60px;}
@@ -734,14 +782,20 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <button data-tab="reparatie"><svg class="i"><use href="#i-wrench"/></svg> Te repareren<span class="badge" id="bRep" hidden>0</span></button>
     <button data-tab="voorraad"><svg class="i"><use href="#i-shop"/></svg> Voorraad<span class="badge" id="bKlaar" hidden>0</span></button>
     <button data-tab="batches"><svg class="i"><use href="#i-box"/></svg> Batches</button>
-    <button data-tab="bundels"><svg class="i"><use href="#i-tag"/></svg> Bundels</button>
-    <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen<span class="badge" id="bVrd" hidden>0</span></button>
-    <button data-tab="bestellen"><svg class="i"><use href="#i-cart"/></svg> Bestellen<span class="badge" id="bBestel" hidden>0</span></button>
-    <button data-tab="donoren"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
-    <button data-tab="partners" id="navPartners" hidden><svg class="i"><use href="#i-globe"/></svg> Partners</button>
+    <!-- Onderdelen en Bestellen waren twee knoppen voor één werk: de bestellijst vult de
+         plank. Nu één ingang met drie tabbladen bovenin de pagina. -->
+    <button data-tab="onderdelen"><svg class="i"><use href="#i-cpu"/></svg> Onderdelen<span class="badge" id="bOnd" hidden>0</span></button>
+    <!-- Alleen in Alles: werk dat je niet elke dag doet. -->
+    <button data-tab="bundels" class="uitgebreid"><svg class="i"><use href="#i-tag"/></svg> Bundels</button>
+    <button data-tab="donoren" class="uitgebreid"><svg class="i"><use href="#i-recycle"/></svg> Donoren</button>
+    <button data-tab="partners" id="navPartners" class="uitgebreid" hidden><svg class="i"><use href="#i-globe"/></svg> Partners</button>
     <button data-tab="checklists"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
   </nav>
   <div class="onderin">
+    <div class="periodesel modussel" id="modusSel" role="group" aria-label="Weergave">
+      <button type="button" data-m="simpel" onclick="zetModus(true)">Simpel</button>
+      <button type="button" data-m="alles" onclick="zetModus(false)">Alles</button>
+    </div>
     <a class="portaallink" id="portaalLink" href="/portaalbeheer/" hidden><svg class="i"><use href="#i-users"/></svg> <span id="portaalNaam">Klantportaal</span></a>
     <a class="terug" href="/app/"><svg class="i s"><use href="#i-left"/></svg> Terug naar de winkel</a>
   </div>
@@ -857,10 +911,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
         </div>
 
         <div class="grid" style="margin-top:18px">
-          <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
           <div><label>Aantal</label><input id="t_aantal" type="number" min="1" max="50" value="1"></div>
-          <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
-          <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
         </div>
 
         <!-- Waar de doos heen gaat. Vul je dit hier in, dan hoeft niemand later
@@ -871,19 +922,34 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
           <div class="lockiezer" id="t_loc_kiezer"></div>
         </div>
 
-        <!-- Bewijs van inkoop. Optioneel, maar handig voor je administratie en voor de
-             margeregeling: een factuur, of een inkoopverklaring bij een contante inkoop
-             van een particulier. We houden de keuze vast en zetten het bewijs ná het
-             toevoegen op alle zojuist toegevoegde toestellen (dan is er pas een id). -->
-        <div style="margin-top:18px">
-          <label>Bewijs van inkoop</label>
-          <p class="muted klein" style="margin:2px 0 10px">Bewaar hoe je het inkocht. Mag ook leeg blijven.</p>
-          <div class="row" id="t_bewijs_knoppen">
-            <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-note"/></svg>Factuur uploaden<input type="file" accept="application/pdf,image/*" hidden onchange="bewijsFactuurKies(this)"></label>
-            <button type="button" class="btn ghost small" onclick="bewijsVerklaringOpen()"><svg class="i s"><use href="#i-note"/></svg>Inkoopverklaring maken</button>
+        <!-- De inkoopadministratie. Maar twee velden zijn echt nodig (model en soort);
+             batch, prijs, leverancier en bewijs slaat een kleine zaak vaak over, en dan
+             hoort het niet het halve formulier te vullen. Bij een inname (?inname=1) en
+             zodra er een bewijs klaarstaat gaat dit blok vanzelf open (data-open), want
+             dan hoort de inkoopverklaring er juist bij. -->
+        <details class="meeropties" id="t_inkoop_meer" data-sleutel="toevoegen_inkoop">
+          <summary>Inkoopgegevens <span class="muted">optioneel</span></summary>
+          <div class="meerinhoud">
+            <div class="grid">
+              <div><label>Batch</label><select id="t_batch" onchange="batVulInkoop()"><option value="">Geen batch</option></select></div>
+              <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
+              <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
+            </div>
+
+            <!-- Bewijs van inkoop: een factuur, of een inkoopverklaring bij een contante
+                 inkoop van een particulier. We houden de keuze vast en zetten het bewijs ná
+                 het toevoegen op alle zojuist toegevoegde toestellen (dan is er pas een id). -->
+            <div style="margin-top:18px">
+              <label>Bewijs van inkoop</label>
+              <p class="muted klein" style="margin:2px 0 10px">Een factuur, of een inkoopverklaring als je van een particulier koopt.</p>
+              <div class="row" id="t_bewijs_knoppen">
+                <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-note"/></svg>Factuur uploaden<input type="file" accept="application/pdf,image/*" hidden onchange="bewijsFactuurKies(this)"></label>
+                <button type="button" class="btn ghost small" onclick="bewijsVerklaringOpen()"><svg class="i s"><use href="#i-note"/></svg>Inkoopverklaring maken</button>
+              </div>
+              <div class="row" id="t_bewijs_status" style="margin-top:8px" hidden></div>
+            </div>
           </div>
-          <div class="row" id="t_bewijs_status" style="margin-top:8px" hidden></div>
-        </div>
+        </details>
 
         <div class="row" style="margin-top:18px">
           <button class="btn actie" onclick="toevoegen(this)"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen en labels maken</button>
@@ -901,7 +967,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <section id="tab-controle" hidden>
       <div class="pagehead"><h1>Te controleren</h1></div>
       <div class="card">
-        <p class="muted" style="margin-bottom:16px; max-width:80ch">Scan het label op het apparaat, of klik op een regel. De checklist wordt samengesteld uit de categorie, het model en de specificaties die bekend zijn.</p>
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Scan het label of klik op een regel. De vragen passen zich aan het toestel aan.</p>
         <div id="ctrLijst"></div>
       </div>
     </section>
@@ -912,6 +978,14 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       <div class="card">
         <div id="repLijst"></div>
       </div>
+    </section>
+
+    <!-- ── de reparatie ──
+         Een eigen pagina, net als de controle en de apparaatpagina. Hier sta je minuten
+         met een schroevendraaier naast je; een venster dat je per ongeluk wegklikt was
+         precies het verkeerde scherm daarvoor. -->
+    <section id="tab-repareren" hidden>
+      <div id="repPagina"></div>
     </section>
 
     <!-- ── apparaatpagina ──
@@ -958,52 +1032,67 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <section id="tab-donoren" hidden>
       <div class="pagehead"><h1>Donoren</h1></div>
       <div class="card">
-        <p class="muted" style="margin-bottom:16px; max-width:80ch">Apparaten die niet meer aangaan en zijn leeggehaald. Ze blijven hier staan zodat je kunt terugzien waar een onderdeel vandaan kwam.</p>
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Toestellen die niet meer aangaan en zijn leeggehaald. Zo zie je waar een onderdeel vandaan kwam.</p>
         <div id="donorLijst"></div>
       </div>
     </section>
 
-    <!-- ── onderdelen ── -->
+    <!-- ── onderdelen ──
+         Eén ingang met drie tabbladen; Bestellen was een losse pagina, maar de bestellijst
+         vult de plank, dus het is één werk. "Onderdelen" betekende hier ook twee dingen
+         door elkaar. Nu heet het wat het is:
+           Ingekocht = wat je in partij koopt (ssd, ram, laders), met een teller en een minimum;
+           Per stuk  = losse onderdelen, uit een sloop-toestel of los gekocht voor een reparatie. -->
     <section id="tab-onderdelen" hidden>
       <div class="pagehead">
         <h1>Onderdelen</h1>
         <div class="row" style="gap:8px">
-          <button class="btn actie" onclick="vrdNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Voorraad toevoegen</button>
-          <button class="btn ghost" onclick="deelNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Los onderdeel</button>
+          <button class="btn actie" data-ondknop="voorraad" onclick="vrdNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Partij toevoegen</button>
+          <button class="btn ghost" data-ondknop="voorraad" onclick="deelNieuw()"><svg class="i s"><use href="#i-plus"/></svg>Los onderdeel</button>
+          <button class="btn actie" data-ondknop="bestellen" onclick="orderMaken()" hidden><svg class="i s"><use href="#i-cart"/></svg>Inkooporder maken</button>
         </div>
       </div>
-      <div class="card">
-        <h2><svg class="i"><use href="#i-cpu"/></svg>Voorraad <span class="muted klein" id="vrdTelling"></span></h2>
-        <p class="muted klein" style="margin-bottom:14px">Onderdelen die je in partij inkoopt: ssd, ram, laders. Bij een toestel kies je ze uit deze voorraad, dan gaan ze er hier vanaf. Zet een minimum, dan zie je wanneer je moet bijbestellen.</p>
-        <div id="vrdLijst"></div>
+      <div class="periodesel subtabs" id="ondTabs">
+        <button data-ond="voorraad" class="active" onclick="ondKies('voorraad')">Voorraad</button>
+        <button data-ond="bestellen" onclick="ondKies('bestellen')">Te bestellen<span class="badge" id="bBestel" hidden>0</span></button>
+        <button data-ond="orders" onclick="ondKies('orders')">Bestellingen</button>
       </div>
-      <div class="card">
-        <h2><svg class="i"><use href="#i-recycle"/></svg>Uit apparaten gehaald</h2>
-        <div class="periodesel" id="deelWeergave" style="margin-bottom:14px">
-          <button data-w="soort" class="active">Per soort</button>
-          <button data-w="stuk">Per stuk</button>
-        </div>
-        <div id="deelLijst"></div>
-      </div>
-    </section>
 
-    <!-- ── bestellen ── -->
-    <section id="tab-bestellen" hidden>
-      <div class="pagehead">
-        <h1>Bestellen</h1>
-        <button class="btn actie" onclick="orderMaken()"><svg class="i"><use href="#i-cart"/></svg>Inkooporder maken</button>
+      <div data-ondpaneel="voorraad">
+        <div class="card">
+          <h2><svg class="i"><use href="#i-cpu"/></svg>Ingekocht <span class="muted klein" id="vrdTelling"></span></h2>
+          <p class="muted klein" style="margin-bottom:14px">Wat je in partij koopt: ssd, ram, laders. Pak je er een voor een toestel, dan gaat de teller omlaag.</p>
+          <div id="vrdLijst"></div>
+        </div>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-recycle"/></svg>Per stuk</h2>
+          <p class="muted klein" style="margin-bottom:14px">Losse onderdelen: uit een sloop-toestel gehaald, of los gekocht voor een reparatie.</p>
+          <div class="periodesel" id="deelWeergave" style="margin-bottom:14px">
+            <button data-w="soort" class="active">Per soort</button>
+            <button data-w="stuk">Alle stuks</button>
+          </div>
+          <div id="deelLijst"></div>
+        </div>
       </div>
-      <div class="card">
-        <h2><svg class="i"><use href="#i-cart"/></svg>Nog te bestellen</h2>
-        <div id="bestelLijst"></div>
+
+      <div data-ondpaneel="bestellen" hidden>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-wrench"/></svg>Voor een reparatie</h2>
+          <p class="muted klein" style="margin-bottom:14px">Vink aan wat je bij één leverancier bestelt en maak er een inkooporder van.</p>
+          <div id="bestelLijst"></div>
+        </div>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-cpu"/></svg>Ingekocht onder het minimum</h2>
+          <div id="vrdBestelLijst"></div>
+        </div>
       </div>
-      <div class="card">
-        <h2><svg class="i"><use href="#i-cpu"/></svg>Voorraad onder minimum</h2>
-        <div id="vrdBestelLijst"></div>
-      </div>
-      <div class="card">
-        <h2><svg class="i"><use href="#i-box"/></svg>Lopende inkooporders</h2>
-        <div id="orderLijst"></div>
+
+      <div data-ondpaneel="orders" hidden>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-box"/></svg>Onderweg</h2>
+          <p class="muted klein" style="margin-bottom:14px">Komt een bestelling binnen, klik dan op Ontvangen. Je print de labels en ze gaan op de plank.</p>
+          <div id="orderLijst"></div>
+        </div>
       </div>
     </section>
 
@@ -1012,12 +1101,12 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       <div class="pagehead"><h1>Partners</h1></div>
       <div class="card">
         <h2><svg class="i"><use href="#i-globe"/></svg>Hoe het werkt</h2>
-        <p class="muted" style="max-width:80ch; margin-bottom:18px">Een partner is een bevriende doorverkoper met een eigen dashboard. Jij nodigt hem hieronder uit met een eigen login. Daarna wijs je laptops aan hem toe vanuit de voorraad. Hij ziet alleen zijn eigen toestellen, niets van jouw winkel, en per laptop verdelen jullie de winst.</p>
+        <p class="muted" style="max-width:80ch; margin-bottom:18px">Een partner is een doorverkoper met een eigen dashboard. Je geeft hem een login en wijst laptops aan hem toe. Hij ziet alleen zijn eigen toestellen. Per laptop verdelen jullie de winst.</p>
         <a class="btn ghost" href="/partner/" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-globe"/></svg>Open het partner-dashboard</a>
       </div>
       <div class="card">
         <h2><svg class="i"><use href="#i-plus"/></svg>Nieuwe partner uitnodigen</h2>
-        <p class="muted" style="margin-bottom:14px; max-width:80ch">Je kiest een begin-wachtwoord dat je aan je partner doorgeeft. Hij logt daarmee in en kan het later zelf wijzigen.</p>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Kies een begin-wachtwoord en geef het door. Hij kan het later zelf wijzigen.</p>
         <div class="grid">
           <div><label>Naam</label><input id="pt_naam" placeholder="Naam van je partner"></div>
           <div><label>E-mail (wordt zijn login)</label><input id="pt_email" type="email" placeholder="partner@email.nl"></div>
@@ -1044,7 +1133,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
            (dat zou gaan afwijken), maar een directe ingang naar dat ene scherm. -->
       <div class="card" id="navGebruikersKaart" hidden>
         <h2><svg class="i"><use href="#i-users"/></svg>Gebruikers, rechten en uurloon</h2>
-        <p class="muted" style="margin-bottom:14px; max-width:80ch">Nieuwe mensen aanmaken, hun rol en welke pagina's ze zien wijzigen, en het uurtarief invullen doe je op één centrale plek in Storvo. Wat je daar instelt geldt meteen voor alle omgevingen, ook hier.</p>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Mensen, rollen en uurtarief regel je op één plek in Storvo. Dat geldt meteen ook hier.</p>
         <a class="btn actie" href="/app/?tab=team" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-users"/></svg>Gebruikers beheren</a>
       </div>
 
@@ -1054,13 +1143,13 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
            achtergrond) zijn visuele werkbank-schermen en blijven hier. -->
       <div class="card">
         <h2><svg class="i"><use href="#i-settings"/></svg>Algemene instellingen staan in Storvo</h2>
-        <p class="muted" style="margin-bottom:14px; max-width:80ch">Het advertentie-sjabloon, het inscannen en de accu-grens beheer je nu centraal in Storvo, onder <b>Instellingen → Refurbishen</b>. Zo staat alles op één plek. De locaties, checklists en beeldscherm-achtergrond hieronder horen bij de werkbank en blijven hier.</p>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Het advertentie-sjabloon, het inscannen en de accu-grens staan in Storvo, onder <b>Instellingen, Refurbishen</b>. Hieronder staat alleen wat bij de werkbank hoort.</p>
         <a class="btn actie" href="/app/?tab=instellingen" style="display:inline-flex; align-items:center; gap:8px"><svg class="i s"><use href="#i-settings"/></svg>Open de instellingen in Storvo</a>
       </div>
 
       <div class="card">
         <h2><svg class="i"><use href="#i-shop"/></svg>Locaties</h2>
-        <p class="muted" style="margin-bottom:14px; max-width:80ch">Waar kunnen toestellen liggen. Bij het inscannen kies je er een; daarna zie je in Storvo waar iets ligt.</p>
+        <p class="muted" style="margin-bottom:14px; max-width:80ch">Waar toestellen kunnen liggen. Zo zie je in Storvo waar iets ligt.</p>
         <div id="locLijst"></div>
         <div class="row" style="margin-top:14px">
           <input id="loc_naam" placeholder="Bijvoorbeeld: Vitrine voor, Magazijn achter" style="flex:1; min-width:200px">
@@ -1074,10 +1163,11 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
       </div>
 
       <!-- De achtergrond die op elk beeldscherm komt te staan. Eén keer
-           instellen; de maat is het enige wat per toestel verschilt. -->
-      <div class="card">
+           instellen; de maat is het enige wat per toestel verschilt. Daarom in Alles:
+           je komt er na de eerste keer bijna nooit meer. -->
+      <div class="card uitgebreid">
         <h2><svg class="i"><use href="#i-camera"/></svg>Achtergrond op het beeldscherm</h2>
-        <p class="muted" style="margin-bottom:16px; max-width:80ch">Dit komt op de foto van elk toestel te staan, met linksboven de schermmaat van dat toestel. Zo lijken al je advertenties op elkaar, en dat is precies waarom een webshop er betrouwbaar uitziet.</p>
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Komt op de foto van elk toestel, met de schermmaat linksboven. Zo lijken al je advertenties op elkaar.</p>
         <div class="schermvak">
           <div class="schermproef"><canvas id="schermProef"></canvas>
             <div class="muted klein" style="margin-top:8px">Voorbeeld met 15,6 inch</div></div>
@@ -1131,7 +1221,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 
       <div class="card">
         <h2><svg class="i"><use href="#i-check"/></svg>Checklists</h2>
-        <p class="muted" style="margin-bottom:16px; max-width:80ch">Een checklist hangt aan een categorie, en eventueel aan één model. Laat je het model leeg, dan geldt hij voor alles in die categorie. Bij een controle worden beide lijsten achter elkaar gezet. De accu-grens zelf staat bij de centrale instellingen in Storvo.</p>
+        <p class="muted" style="margin-bottom:16px; max-width:80ch">Eigen vragen voor de controle. Per categorie, of alleen voor één model.</p>
         <div id="clLijst"></div>
       </div>
     </section>
@@ -1192,6 +1282,8 @@ let web2Stand=null, web2Geladen=false, web2Bezig=false;   // koppeling met de tw
 let voorraaddelen=[];
 let instel={accu_min:85};
 let tab='werkbank';
+let opendReparatie=null;     // het toestel op de reparatiepagina
+let ondTab='voorraad';       // welk tabblad van Onderdelen open staat
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const euro=n=>'€ '+(Number(n)||0).toLocaleString('nl-NL',{minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1205,6 +1297,89 @@ function toast(bericht, soort){
   c.appendChild(t);
   setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3200);
 }
+
+/* ═══════════════ Simpel en Alles ═══════════════
+   Eén keuze voor de hele software, dezelfde sleutel als de winkelapp ('0' is Alles,
+   al het andere Simpel, standaard Simpel). Het werk gebeurt in de opmaak: blokken met
+   .uitgebreid verdwijnen in Simpel, en uitklappers met .meeropties staan in Alles
+   vanzelf open. Daardoor hoeft een wissel bijna niets te hertekenen, en blijft wat je
+   aan het typen was gewoon staan. */
+function modusSimpel(){ try{ return localStorage.getItem('storvo_simpel')!=='0'; }catch(e){ return true; } }
+function modusToon(){
+  const s=modusSimpel();
+  document.body.classList.toggle('simpel', s);
+  document.querySelectorAll('#modusSel button').forEach(b=>b.classList.toggle('active', (b.dataset.m==='simpel')===s));
+}
+function zetModus(simpel){
+  try{ localStorage.setItem('storvo_simpel', simpel?'1':'0'); }catch(e){}
+  meerOpen.clear();
+  modusToon();
+  meerToepassen();
+  /* Sommige schermen kiezen in javascript wat ze tonen (welke hoofdknop, welke
+     kolom). Die tekenen we opnieuw, maar niet als er iemand in een veld zit te
+     typen: dan wint de invoer, en de rest volgt bij de volgende herteken. */
+  const f=document.activeElement;
+  if(!(f && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName))) tekenAlles();
+  toast(simpel?'Simpel: alleen wat je dagelijks nodig hebt':'Alles: alle opties staan erbij', true);
+}
+/* Wat iemand zelf open- of dichtklapte onthouden we per uitklapper (data-sleutel),
+   zolang de pagina open is. Anders klapt elk hertekenen hem weer dicht terwijl je
+   er net in werkte. Een uitklapper met data-open staat altijd open: daar staat iets
+   in wat je moet zien, zoals een gekozen bewijs of een ingevulde waarde. */
+const meerOpen=new Map();
+function meerStandaard(d){ return !modusSimpel() || d.hasAttribute('data-open'); }
+function meerToepassen(root){
+  (root||document).querySelectorAll('details.meeropties').forEach(d=>{
+    const k=d.dataset.sleutel;
+    const open = (k && meerOpen.has(k)) ? meerOpen.get(k) : meerStandaard(d);
+    if(d.open!==open) d.open=open;
+  });
+}
+/* toggle bubbelt niet, dus vangen we hem onderweg naar beneden (capture). Een
+   toggle die we zelf veroorzaakten valt samen met de standaard en wordt dus niet
+   als eigen keuze bewaard. */
+document.addEventListener('toggle', e=>{
+  const d=e.target;
+  if(!d || !d.matches || !d.matches('details.meeropties') || !d.dataset.sleutel) return;
+  if(d.open===meerStandaard(d)) meerOpen.delete(d.dataset.sleutel);
+  else meerOpen.set(d.dataset.sleutel, d.open);
+}, true);
+/* Elke nieuw getekende uitklapper meteen goed zetten, waar hij ook vandaan komt.
+   Zo hoeft geen enkele tekenfunctie eraan te denken. */
+if(typeof MutationObserver==='function'){
+  new MutationObserver(muts=>{
+    for(const m of muts) for(const n of m.addedNodes){
+      if(n.nodeType===1 && (n.matches('details.meeropties') || n.querySelector('details.meeropties'))){ meerToepassen(); return; }
+    }
+  }).observe(document.body, {childList:true, subtree:true});
+}
+/* Een open rijmenu klapt dicht zodra je ergens anders klikt, of een keuze maakt. */
+document.addEventListener('click', e=>{
+  document.querySelectorAll('details.rijmenu[open]').forEach(m=>{
+    if(!m.contains(e.target) || e.target.closest('.rijmenu-lijst button, .rijmenu-lijst a')) m.open=false;
+  });
+});
+/* Het lijstje zit vaak in een tabel met een scrollrand, en zou daar worden afgeknipt.
+   Daarom zetten we het bij openen vast op het scherm, onder de knop (of erboven als
+   er onder geen ruimte is). Scrol je, dan klapt het dicht in plaats van te zweven. */
+document.addEventListener('toggle', e=>{
+  const m=e.target;
+  if(!m || !m.matches || !m.matches('details.rijmenu') || !m.open) return;
+  const lijst=m.querySelector('.rijmenu-lijst'), knop=m.querySelector('summary');
+  if(!lijst || !knop || !knop.getBoundingClientRect) return;
+  const r=knop.getBoundingClientRect();
+  lijst.style.position='fixed'; lijst.style.right='auto';
+  const breed=lijst.offsetWidth||240, hoog=lijst.offsetHeight||0;
+  const links=Math.max(8, Math.min(window.innerWidth-breed-8, r.right-breed));
+  let boven=r.bottom+6;
+  if(boven+hoog>window.innerHeight-8) boven=Math.max(8, r.top-6-hoog);
+  lijst.style.left=links+'px'; lijst.style.top=boven+'px';
+}, true);
+window.addEventListener('scroll', ()=>{
+  document.querySelectorAll('details.rijmenu[open]').forEach(m=>m.open=false);
+}, {passive:true, capture:true});
+modusToon();
+meerToepassen();
 
 /* Zolang een toestel op de werkbank staat zegt de status wat er moet gebeuren.
    Zodra hij de controle heeft gehaald is dat niet meer interessant: dan telt
@@ -1233,7 +1408,9 @@ function sessieSleutel(){ return 'refu_sessie_'+((account&&account.team_id)||'x'
 function sessieBewaar(){
   if(!account) return;
   try{
-    const s={tab};
+    /* Bij een open reparatie of apparaatpagina ook welk toestel, anders landt een
+       herlaad op een leeg scherm. */
+    const s={tab, rep:opendReparatie||null, app:opendApparaat||null, ond:ondTab};
     /* Alleen een lopende controle onthouden we (te controleren of installeren);
        slopen en repareren open je zo weer, en die hebben geen half getypt scherm. */
     if(ctr && ctr.a && (ctr.a.status==='te_controleren' || ctr.a.status==='installeren')){
@@ -1328,8 +1505,12 @@ async function start(){
      verborgen voor een medewerker, ook als die per ongeluk zou zijn aangevinkt. */
   const magTabs=refToegestaan();
   document.querySelectorAll('aside nav button[data-tab]').forEach(b=>{
-    if(!magTabs.includes(b.dataset.tab)) b.hidden=true;
+    /* Onderdelen is ook de ingang naar Bestellen: wie alleen dat mag, ziet de knop ook. */
+    const mag = magTabs.includes(b.dataset.tab) || (b.dataset.tab==='onderdelen' && magTabs.includes('bestellen'));
+    if(!mag) b.hidden=true;
   });
+  /* Binnen Onderdelen alleen de tabbladen tonen die deze gebruiker mag zien. */
+  document.querySelectorAll('#ondTabs button').forEach(b=>{ if(!ondMag(b.dataset.ond)) b.hidden=true; });
   merkTekenen();
   tekenSoorten();
   /* Vóór het laden uitlezen: allesLaden tekent het scherm en dat overschrijft de
@@ -1354,8 +1535,21 @@ async function start(){
   /* Kon de controle niet hersteld worden, dan niet op een leeg detailscherm landen
      maar op de lijst. */
   if(doelTab==='controleren' && !ctr) doelTab='controle';
-  /* Landt hij op een pagina die hij niet (meer) mag zien, dan de eerste die wel mag. */
-  if(!magTabs.includes(doelTab) && doelTab!=='controleren') doelTab=magTabs[0]||'werkbank';
+  /* Een open reparatie en een open apparaatpagina komen terug zolang het toestel er
+     nog is (en bij de reparatie: nog te repareren valt). Anders de lijst. */
+  if(doelTab==='repareren'){
+    const a=bewaard && apparaten.find(x=>x.id===bewaard.rep);
+    if(a && a.status==='te_repareren') opendReparatie=a.id; else doelTab='reparatie';
+  }
+  if(doelTab==='apparaat'){
+    const a=bewaard && apparaten.find(x=>x.id===bewaard.app);
+    if(a) opendApparaat=a.id; else doelTab='werkbank';
+  }
+  if(bewaard && bewaard.ond && ondMag(bewaard.ond)) ondTab=bewaard.ond;
+  /* Landt hij op een pagina die hij niet (meer) mag zien, dan de eerste die wel mag.
+     De detailschermen staan niet in REF_PAGINAS; die hebben hun eigen check hierboven. */
+  const intern=['controleren','repareren','apparaat'];
+  if(!magTabs.includes(doelTab) && !intern.includes(doelTab) && !(doelTab==='onderdelen' && magTabs.includes('bestellen'))) doelTab=magTabs[0]||'werkbank';
   showTab(doelTab);
 }
 
@@ -1419,14 +1613,22 @@ async function allesLaden(){
   tekenAlles();
 }
 
+/* De schermen zonder eigen knop in de zijbalk laten hun ouder oplichten, zodat je
+   ook diep in een reparatie ziet waar je bent. */
+const TAB_OUDER={repareren:'reparatie', controleren:'controle', online:'voorraad'};
 function showTab(t){
+  /* Bestellen is een tabblad van Onderdelen geworden. Oude links, bewaarde sessies en
+     de rechten (ref_bestellen) blijven werken: die landen gewoon op dat tabblad. */
+  if(t==='bestellen'){ ondTab='bestellen'; t='onderdelen'; }
   /* Backstop: een verborgen tab kun je niet aanklikken, maar mocht een pagina toch
      via code worden opgeroepen zonder recht, dan wijken we uit naar de eerste die mag.
      Interne schermen (zoals 'controleren') staan niet in REF_PAGINAS en gaan gewoon door. */
-  if(account && REF_PAGINAS.includes(t) && !magPagina(t)){ t=refToegestaan()[0]||'werkbank'; }
+  if(account && REF_PAGINAS.includes(t) && !magPagina(t) && !(t==='onderdelen' && magPagina('bestellen'))){ t=refToegestaan()[0]||'werkbank'; }
   tab=t;
+  if(t==='onderdelen') ondKies(ondTab, true);
+  const navTab=TAB_OUDER[t]||t;
   let actief=null;
-  document.querySelectorAll('aside nav button').forEach(b=>{ const aan=b.dataset.tab===t; b.classList.toggle('active', aan); if(aan) actief=b; });
+  document.querySelectorAll('aside nav button').forEach(b=>{ const aan=b.dataset.tab===navTab; b.classList.toggle('active', aan); if(aan) actief=b; });
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   tekenAlles();
   window.scrollTo(0,0);
@@ -1455,7 +1657,7 @@ function past(a){
 function tekenAlles(){
   tekenWerkbank(); tekenVandaag(); tekenControle(); tekenReparatie();
   tekenVoorraad(); tekenOnline(); tekenDonoren(); tekenOnderdelen(); tekenBestellen();
-  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenBadges(); tekenBatches(); tekenBundels(); tekenVoorraaddelen();
+  tekenChecklists(); tekenApparaat(); ctrTeken(); tekenRepPagina(); tekenBadges(); tekenBatches(); tekenBundels(); tekenVoorraaddelen();
   if(tab==='partners') renderPartners();
 }
 function tekenBadges(){
@@ -1463,7 +1665,11 @@ function tekenBadges(){
     e.textContent=n; e.hidden=!n; };
   zet('bControle', apparaten.filter(a=>a.status==='te_controleren'||a.status==='installeren').length);
   zet('bRep',      apparaten.filter(a=>a.status==='te_repareren').length);
-  zet('bBestel',   onderdelen.filter(o=>o.status==='te_bestellen').length);
+  /* Te bestellen = wat een reparatie nodig heeft plus ingekochte voorraad onder het
+     minimum. Eén getal, op het tabblad én op de knop in de zijbalk. */
+  const bestel=onderdelen.filter(o=>o.status==='te_bestellen').length + voorraaddelen.filter(vrdLaag).length;
+  zet('bBestel',   bestel);
+  zet('bOnd',      bestel);
   zet('bKlaar',    vrRijen().filter(a=>!staatOnline(a)).length);
 }
 
@@ -1473,11 +1679,14 @@ function tekenWerkbank(){
   const bezig=apparaten.filter(a=>!OP_VOORRAAD.includes(a.status));
   const k=document.getElementById('wbKpis');
   const tel=s=>apparaten.filter(a=>a.status===s).length;
+  /* Een getal waar je op wilt klikken brengt je naar die lijst. De eerste is deze
+     pagina zelf, die blijft dus een gewoon vlak. */
+  const klik=(doel,label,waarde)=>`<button type="button" class="kpi klik" onclick="showTab('${doel}')"><div class="l">${label}</div><div class="v">${waarde}</div></button>`;
   k.innerHTML=
     `<div class="kpi"><div class="l">In behandeling</div><div class="v">${bezig.length}</div></div>`+
-    `<div class="kpi"><div class="l">Te controleren</div><div class="v">${tel('te_controleren')}</div></div>`+
-    `<div class="kpi"><div class="l">Te repareren</div><div class="v">${tel('te_repareren')}</div></div>`+
-    `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${vrRijen().length}</div></div>`;
+    klik('controle','Te controleren', apparaten.filter(a=>a.status==='te_controleren'||a.status==='installeren').length)+
+    klik('reparatie','Te repareren', tel('te_repareren'))+
+    klik('voorraad','Op voorraad', vrRijen().length);
 
   const rijen=bezig.filter(past);
   document.getElementById('wbLijst').innerHTML=rijen.length
@@ -1547,16 +1756,18 @@ function tabel(rijen, sleutel){
       </div>`
     : '';
   return toe.balk+`<div class="tabelrol tabelscroll"><table>
-    <thead><tr><th>Apparaat</th><th>Nummer</th><th>Serienummer</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
+    <thead><tr><th>Apparaat</th><th>Nummer</th><th>Ligt in</th><th>Status</th><th>Binnen</th><th></th></tr></thead>
     <tbody>${zicht.map(a=>{
       /* De hele regel is de knop. Je zoekt niet eerst een klein knopje op
-         als je met handschoenen aan achter een tafel vol laptops staat. */
+         als je met handschoenen aan achter een tafel vol laptops staat.
+         Waar hij ligt zegt op de werkvloer meer dan een serienummer, dat bij
+         binnenkomst meestal nog leeg was. Zoeken op serienummer blijft werken. */
       const bat=batches.find(x=>x.id===a.batch_id);
       return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
         <td><b>${esc(toestelNaam(a))}</b>${bat?` <span class="batpil">${esc(bat.code||bat.nummer||'batch')}</span>`:''}
             <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}</div></td>
         <td class="mono">${esc(a.code||'—')}</td>
-        <td class="mono">${esc(a.serienummer||'—')}</td>
+        <td>${locNaam(plekVan(a))?`<span class="locpil">${esc(locNaam(plekVan(a)))}</span>`:'<span class="muted klein">—</span>'}</td>
         <td>${a.status==='installeren' && a.stap==='installeren'
           ? `<span class="st installeren draait"><span class="stipje" aria-hidden="true"></span>Bezig met installeren</span>`
           : `<span class="st ${a.status}">${esc(a.status==='installeren'
@@ -1622,7 +1833,7 @@ function tekenLocKiezer(){
   if(!locaties.length){
     locKeuze=null;
     el.innerHTML=`<p class="muted klein" style="margin:0">Nog geen locaties.
-      <a onclick="showTab('instellingen')" style="cursor:pointer; text-decoration:underline">Voeg ze toe bij Instellingen</a>,
+      <a onclick="showTab('checklists')" style="cursor:pointer; text-decoration:underline">Voeg ze toe bij Instellingen</a>,
       dan kun je hier kiezen waar de doos heen gaat.</p>`;
     return;
   }
@@ -1723,6 +1934,9 @@ function modelHint(){
    bestanden overhouden als je uiteindelijk toch niet toevoegt.
    {soort:'factuur', bestand} of {soort:'verklaring', naam, adres, bedrag, handtekening}. */
 let nieuwBewijs=null;
+/* Kom je binnen via "Inname starten" in de winkel (?inname=1), dan hoort de
+   inkoopverklaring er juist bij en staan de inkoopgegevens open. */
+let innameOpen=false;
 function bewijsFactuurKies(invoer){
   const f=(invoer.files||[])[0]; if(invoer) invoer.value='';
   if(!f) return;
@@ -1740,6 +1954,15 @@ function bewijsVerklaringOpen(){
 }
 function bewijsStatusTeken(){
   const el=document.getElementById('t_bewijs_status'); if(!el) return;
+  /* Staat er een bewijs klaar, dan blijft de uitklapper open, ook als je naar Simpel
+     wisselt: anders zie je niet meer dat het meegaat bij het toevoegen. */
+  const meer=document.getElementById('t_inkoop_meer');
+  if(meer){
+    const moet=!!nieuwBewijs || innameOpen;
+    meer.toggleAttribute('data-open', moet);
+    if(moet) meerOpen.delete(meer.dataset.sleutel);   // een eerder dichtklappen wint hier niet
+    meerToepassen(meer.parentNode);
+  }
   if(!nieuwBewijs){ el.hidden=true; el.innerHTML=''; return; }
   const wat = nieuwBewijs.soort==='factuur'
     ? 'Factuur gekozen: '+esc(nieuwBewijs.naam)
@@ -1880,7 +2103,7 @@ function tekenVandaag(){
       </tr>`).join('')}</tbody></table></div>
     <div class="row" style="margin-top:14px">
       <button class="btn ghost small" onclick="labelsTonen(${JSON.stringify(rijen.map(r=>r.id)).replace(/"/g,'&quot;')})">
-        <svg class="i s"><use href="#i-print"/></svg>Alle laptops van vandaag</button></div>`;
+        <svg class="i s"><use href="#i-print"/></svg>Alle labels van vandaag</button></div>`;
 }
 
 /* ═══════════════ labels ═══════════════
@@ -2170,7 +2393,7 @@ function labelsTonen(ids){
     .map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
   if(!lijst.length){ toast('Geen apparaten om een label van te maken','let-op'); return; }
   venster('Labels ('+lijst.length+')', `
-    <p class="pv">Print op je labelprinter (stil, geen printvenster) en plak een label op elk apparaat. Scan je hem later, dan opent meteen het juiste apparaat. Geen labelprinter? Kies "Op A4-vel".</p>
+    <p class="pv">Print en plak een label op elk toestel. Scan je hem later, dan opent het juiste toestel. Geen labelprinter? Kies "Op A4-vel".</p>
     <div class="labelvel" id="labelVel">${lijst.map(labelHtml).join('')}</div>
   `, [
     {tekst:'Op labelprinter', klasse:'actie', doe:()=>qzPrintDeviceLabels(lijst.map(a=>a.id))},
@@ -2498,7 +2721,7 @@ async function appOpnieuwTesten(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
   const h=hardwareVan(a);
   if(h && h.partner_id){ toast('Dit toestel is aan een partner toegewezen. Haal het eerst terug voor je opnieuw test.','let-op'); return; }
-  if(!confirm('Dit toestel terug naar Te controleren zetten om opnieuw te testen? Het gaat van de webshop, het portaal en uit een eventuele bundel af. Zodra de controle weer slaagt komt het vanzelf terug op voorraad.')) return;
+  if(!await bevestig('Hij gaat terug naar Te controleren, en van de webshop, het portaal en uit een bundel af. Slaagt de controle weer, dan komt hij vanzelf terug op voorraad.', {kop:'Opnieuw testen?', ja:'Opnieuw testen'})) return;
   const bundelWas=a.voorraad_batch_id;
   if(h){
     try{
@@ -2528,10 +2751,11 @@ async function appNaarReparatie(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
   const h=hardwareVan(a);
   if(h && h.partner_id){ toast('Dit toestel is aan een partner toegewezen. Haal het eerst terug voor je het naar reparatie zet.','let-op'); return; }
-  const reden=prompt('Waarom naar reparatie? Bijvoorbeeld: nieuwe accu, scherm vervangen.');
+  /* Eén venster in plaats van twee: de reden én de waarschuwing samen. */
+  const reden=await vraagTekst('Naar reparatie', 'Wat moet er gebeuren? Hij gaat van de webshop, het portaal en uit een bundel af.',
+    {placeholder:'Bijvoorbeeld: nieuwe accu, scherm vervangen', ja:'Naar reparatie'});
   if(reden===null) return;
   const r=(reden||'').trim();
-  if(!confirm('Dit toestel naar Te repareren zetten? Het gaat van de webshop, het portaal en uit een eventuele bundel af.')) return;
   const bundelWas=a.voorraad_batch_id;
   if(h){
     try{
@@ -2565,6 +2789,12 @@ function tekenApparaat(){
   const specs=a.specs||{};
   const specrijen=Object.entries(specs).filter(([,w])=>String(w||'').trim());
   const hw=hardwareVan(a);
+  const voorraad=OP_VOORRAAD.includes(a.status);
+  /* Eén hoofdknop met de volgende stap voor dit toestel, daarnaast de printknop die je
+     het vaakst nodig hebt, en de rest onder Meer. Dat waren er tien naast elkaar.
+     De kaarten met inkoopadministratie (batch, bewijs, extra onderdelen, marktprijs)
+     staan in Simpel alleen als er al iets in staat; leeg zijn ze werk voor Alles. */
+  const leegUit=gevuld=>gevuld?'':' uitgebreid';
 
   el.innerHTML=`
     <div class="pagehead">
@@ -2588,29 +2818,26 @@ function tekenApparaat(){
       ${feit('Accu', a.nieuwe_accu?'nieuw (100%)':(a.accu?a.accu+'%':'—'))}
       ${feit('Ligt in', locNaam(plekVan(a))||'nog niet bepaald')}
       ${feit('Plek', a.plek||'—')}
-      ${feit('Leverancier', a.leverancier||'—')}
-      ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}))}
-      ${feit('Toegevoegd door', ledNaam(a.aangemaakt_door)||'—')}
+      ${feit('Leverancier', a.leverancier||'—', false, 'uitgebreid')}
+      ${feit('Binnengekomen', new Date(a.aangemaakt_op).toLocaleString('nl-NL',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}), false, 'uitgebreid')}
+      ${feit('Toegevoegd door', ledNaam(a.aangemaakt_door)||'—', false, 'uitgebreid')}
       ${feit('Inkoopprijs', a.inkoop?euro(a.inkoop):'—')}
     </div>
 
     <div class="row" style="margin:0 0 22px">
-      ${a.status==='te_controleren'
-        ? `<button class="btn actie" onclick="appOpen('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Controle starten</button>`:''}
-      ${a.status==='installeren'
-        ? `<button class="btn actie" onclick="appOpen('${a.id}')"><svg class="i s"><use href="#i-windows"/></svg>Controle hervatten</button>`:''}
-      ${a.status==='te_repareren'
-        ? `<button class="btn actie" onclick="repOpen(apparaten.find(x=>x.id==='${a.id}'))"><svg class="i s"><use href="#i-wrench"/></svg>Reparatie openen</button>`:''}
-      ${OP_VOORRAAD.includes(a.status) ? (staatOnline(a)
-        ? `<button class="btn ghost" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Advertentie aanpassen</button>`
-        : `<button class="btn oranje" onclick="onlineZetten('${a.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`):''}
-      ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appOpnieuwTesten('${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Opnieuw testen</button>`:''}
-      ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="appNaarReparatie('${a.id}')"><svg class="i s"><use href="#i-wrench"/></svg>Naar reparatie</button>`:''}
-      ${locaties.length?`<button class="btn ghost" onclick="appVerplaats('${a.id}')"><svg class="i s"><use href="#i-arrow"/></svg>Verplaatsen</button>`:''}
-      <button class="btn ghost" onclick="appNaamWijzig('${a.id}')"><svg class="i s"><use href="#i-note"/></svg>Naam wijzigen</button>
-      <button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>
-      ${OP_VOORRAAD.includes(a.status)?`<button class="btn ghost" onclick="prijskaartVoor('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>`:''}
-      <button class="btn ghost" onclick="appWeg('${a.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+      ${appHoofdknop(a)}
+      ${voorraad
+        ? `<button class="btn ghost" onclick="prijskaartVoor('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>`
+        : `<button class="btn ghost" onclick="labelsTonen('${a.id}')"><svg class="i s"><use href="#i-print"/></svg>Label opnieuw printen</button>`}
+      ${rijMenu([
+        voorraad && {tekst:'Label opnieuw printen', ico:'i-print', doe:`labelsTonen('${a.id}')`},
+        locaties.length && {tekst:'Verplaatsen', ico:'i-arrow', doe:`appVerplaats('${a.id}')`},
+        {tekst:'Naam wijzigen', ico:'i-note', doe:`appNaamWijzig('${a.id}')`},
+        voorraad && {tekst:'Opnieuw testen', ico:'i-check', doe:`appOpnieuwTesten('${a.id}')`},
+        voorraad && {tekst:'Naar reparatie', ico:'i-wrench', doe:`appNaarReparatie('${a.id}')`},
+        {scheiding:true},
+        {tekst:'Verwijderen', ico:'i-trash', gevaar:true, doe:`appWeg('${a.id}')`}
+      ], 'Meer')}
     </div>
 
     <div class="tweekolom">
@@ -2623,20 +2850,20 @@ function tekenApparaat(){
             : '<p class="muted klein">Nog niets bekend. De specificaties worden ingevuld bij de controle.</p>'}
         </div>
 
-        <div class="card">
+        <div class="card${leegUit(a.batch_id)}">
           <h2><svg class="i"><use href="#i-box"/></svg>Batch</h2>
-          <p class="muted klein" style="margin-bottom:10px">Koppel dit toestel aan een ingekochte partij, of haal het eruit. Het telt dan mee in de cijfers van die batch.</p>
+          <p class="muted klein" style="margin-bottom:10px">Bij welke ingekochte partij hoort hij. Hij telt mee in de cijfers van die batch.</p>
           <select onchange="apparaatBatchZetten('${a.id}', this.value)">
             <option value="">Geen batch</option>
             ${batches.map(b=>`<option value="${b.id}"${a.batch_id===b.id?' selected':''}>${esc(batLabel(b))}</option>`).join('')}
           </select>
         </div>
 
-        <div class="card">
+        <div class="card${leegUit(a.factuur_url||a.handtekening_url)}">
           <h2><svg class="i"><use href="#i-note"/></svg>Inkoopbewijs</h2>
-          <p class="muted klein" style="margin-bottom:10px">Factuur of inkoopverklaring van deze inkoop. Handig voor je administratie en de margeregeling.</p>
+          <p class="muted klein" style="margin-bottom:10px">Factuur of inkoopverklaring van deze inkoop.</p>
           <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px">
-            <span>Factuur${a.factuur_url?'':' <span class="muted klein">— nog geen</span>'}</span>
+            <span>Factuur${a.factuur_url?'':' <span class="muted klein">nog geen</span>'}</span>
             <span class="row" style="gap:6px">
               ${a.factuur_url
                 ? `<button class="btn ghost small" onclick="appBewijsBekijk('${a.id}','factuur')">Bekijken</button><label class="btn ghost small" style="cursor:pointer">Vervangen<input type="file" accept="application/pdf,image/*" hidden onchange="appFactuurUpload('${a.id}', this)"></label>`
@@ -2644,7 +2871,7 @@ function tekenApparaat(){
             </span>
           </div>
           <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
-            <span>Inkoopverklaring${a.handtekening_url?(a.verkoper_naam?' <span class="muted klein">— '+esc(a.verkoper_naam)+'</span>':''):' <span class="muted klein">— nog geen</span>'}</span>
+            <span>Inkoopverklaring${a.handtekening_url?(a.verkoper_naam?' <span class="muted klein">van '+esc(a.verkoper_naam)+'</span>':''):' <span class="muted klein">nog geen</span>'}</span>
             <span class="row" style="gap:6px">
               ${a.handtekening_url
                 ? `<button class="btn ghost small" onclick="appBewijsBekijk('${a.id}','verklaring')">Bekijken</button><button class="btn ghost small" onclick="verklaringDownload('${a.id}', this)">Download PDF</button><button class="btn ghost small" onclick="verklaringMoneybird('${a.id}', this)">Naar Moneybird</button><button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Opnieuw</button>`
@@ -2653,9 +2880,9 @@ function tekenApparaat(){
           </div>
         </div>
 
-        <div class="card">
+        <div class="card${leegUit((a.extra_kosten||[]).length)}">
           <h2><svg class="i"><use href="#i-cpu"/></svg>Extra onderdelen${(a.extra_kosten||[]).length?` <span class="muted">(${euro(batExtraSom(a))})</span>`:''}</h2>
-          <p class="muted klein" style="margin-bottom:10px">Zit er bij het testen geen ram of ssd in, of moest je iets repareren? Zet het hier. Kies iets uit je voorraad, of laat "Los onderdeel" staan en typ zelf een naam en bedrag. Het bedrag komt bij de inkoop van dit toestel${a.batch_id?' en bij de extra investering van de batch':''}.</p>
+          <p class="muted klein" style="margin-bottom:10px">Ram, ssd of een reparatie die je erin stopte. Kies uit je voorraad, of typ zelf een naam en bedrag. Het telt mee in de inkoop van dit toestel${a.batch_id?' en van de batch':''}.</p>
           ${(a.extra_kosten||[]).length?`<table><tbody>${(a.extra_kosten||[]).map((k,i)=>
             `<tr><td>${esc(batSoortNaam(k.soort))}${k.omschrijving?` <span class="muted klein">${esc(k.omschrijving)}</span>`:''}</td>
                  <td class="num">${euro(Number(k.bedrag)||0)}</td>
@@ -2691,7 +2918,7 @@ function tekenApparaat(){
 
         <div class="card">
           <h2><svg class="i"><use href="#i-shop"/></svg>Plek</h2>
-          <p class="muted klein" style="margin-bottom:10px">Waar hij op de stelling ligt. Komt op het label en in de voorraadlijst te staan, zodat je hem zo terugvindt.</p>
+          <p class="muted klein" style="margin-bottom:10px">Waar hij op de stelling ligt. Komt op het label en in de voorraadlijst.</p>
           <div class="row">
             <input id="pg_plek" maxlength="40" value="${esc(a.plek||'')}"
               placeholder="Bijvoorbeeld: Kast 2, plank 4" style="flex:1; min-width:200px">
@@ -2719,9 +2946,9 @@ function tekenApparaat(){
           <div class="delenrij">${(a.goede_delen||[]).map(d=>`<span class="deelpil">${esc(d)}</span>`).join('')}</div>
         </div>` : ''}
 
-        ${hw ? `<div class="card" id="mpKaart">
+        ${hw ? `<div class="card uitgebreid" id="mpKaart">
           <h2><svg class="i"><use href="#i-search"/></svg>Marktprijs</h2>
-          <p class="muted klein" style="margin-bottom:12px">Zoekt vergelijkbare toestellen van particulieren op Marktplaats (zonder winkels) en stelt een scherpe vraagprijs voor: net onder de mediaan. Pas de zoekterm gerust aan.</p>
+          <p class="muted klein" style="margin-bottom:12px">Zoekt hetzelfde toestel bij particulieren op Marktplaats en stelt een scherpe vraagprijs voor.</p>
           <div class="row" style="gap:8px; align-items:stretch">
             <input id="mp_query" value="${esc(mpQuery(a))}" placeholder="Merk en model" style="flex:1; min-width:0">
             <button class="btn actie" onclick="mpZoek('${a.id}')" style="white-space:nowrap"><svg class="i s"><use href="#i-search"/></svg>Zoeken</button>
@@ -2731,7 +2958,7 @@ function tekenApparaat(){
 
         <div class="card">
           <h2><svg class="i"><use href="#i-camera"/></svg>Foto's</h2>
-          <p class="muted klein" style="margin-bottom:12px">Fotografeer dit toestel met je telefoon; de foto's komen hier meteen te staan en gaan mee als je hem online zet.</p>
+          <p class="muted klein" style="margin-bottom:12px">Fotografeer hem met je telefoon. De foto's gaan mee als je hem online zet.</p>
           <div id="detailFotos" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px"><span class="muted klein">Laden…</span></div>
           <button class="btn actie" onclick="detailFotoQr('${a.id}')"><svg class="i s"><use href="#i-qr"/></svg>Scan met telefoon</button>
         </div>
@@ -2751,14 +2978,14 @@ function tekenApparaat(){
 
         ${hw && heeftPartner && partnersData.length ? `<div class="card">
           <h2><svg class="i"><use href="#i-globe"/></svg>Partner</h2>
-          <p class="muted klein" style="margin-bottom:12px">Vink aan bij wie dit toestel hoort. Alleen die partner ziet het in zijn dashboard. Haal je het weer weg, dan krijgt hij automatisch een e-mail en een melding.</p>
+          <p class="muted klein" style="margin-bottom:12px">Vink aan bij wie hij hoort. Alleen die partner ziet hem. Haal je hem weg, dan krijgt de partner bericht.</p>
           <div style="display:flex; flex-direction:column; gap:6px">
             ${partnersData.map(p=>`<label style="display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:12px; cursor:pointer; font-weight:600; border:1.5px solid var(--border)${hw.partner_id===p.id?'; background:var(--green-soft); border-color:var(--green-tekst)':''}">
               <input type="checkbox" ${hw.partner_id===p.id?'checked':''} onchange="hwPartnerVink('${a.id}','${p.id}', this)">
               <span>${esc(p.naam||'Partner')}</span>
             </label>`).join('')}
           </div>
-        </div>` : (hw && !heeftPartner ? `<div class="card">
+        </div>` : (hw && !heeftPartner ? `<div class="card uitgebreid">
           <h2><svg class="i"><use href="#i-globe"/></svg>Partner</h2>
           <p class="muted klein">Je hebt nog geen partners. Maak er een aan bij <a onclick="showTab('partners')" style="cursor:pointer;text-decoration:underline">Partners</a> om laptops toe te wijzen.</p>
         </div>` : '')}
@@ -2767,9 +2994,34 @@ function tekenApparaat(){
   detailFotosLaden(a.id);
 }
 
-function feit(naam, waarde, mono){
-  return `<div class="feit"><div class="fl">${esc(naam)}</div>
+function feit(naam, waarde, mono, klasse){
+  return `<div class="feit${klasse?' '+klasse:''}"><div class="fl">${esc(naam)}</div>
     <div class="fw${mono?' mono':''}">${esc(waarde)}</div></div>`;
+}
+/* Een "Meer"-knop met een lijstje acties eronder. items: {tekst, doe (onclick-code),
+   ico, gevaar} of {scheiding:true}. Lege items (false/null) vallen weg, zodat je
+   per status gewoon kunt schrijven: voorraad && {...}. */
+function rijMenu(items, label){
+  const lijst=(items||[]).filter(Boolean);
+  if(!lijst.length) return '';
+  return `<details class="rijmenu">
+    <summary class="btn ghost${label?'':' small'}">${esc(label||'Meer')}</summary>
+    <div class="rijmenu-lijst">${lijst.map(i=>i.scheiding ? '<hr>'
+      : `<button type="button"${i.gevaar?' class="gevaar"':''} onclick="${i.doe}">${i.ico?`<svg class="i s"><use href="#${i.ico}"/></svg>`:''}${esc(i.tekst)}</button>`).join('')}</div>
+  </details>`;
+}
+/* De logische volgende stap voor een toestel, als de ene grote knop bovenaan zijn
+   pagina. Oranje betekent: hier moet nog iets mee. */
+function appHoofdknop(a){
+  const k=(klasse, ico, tekst, doe)=>`<button class="btn ${klasse}" onclick="${doe}"><svg class="i s"><use href="#${ico}"/></svg>${tekst}</button>`;
+  if(a.status==='te_controleren') return k('actie','i-check','Controle starten',`appOpen('${a.id}')`);
+  if(a.status==='installeren')    return k('actie','i-windows','Controle hervatten',`appOpen('${a.id}')`);
+  if(a.status==='te_repareren')   return k('actie','i-wrench','Reparatie openen',`appOpen('${a.id}')`);
+  if(a.status==='repurpose')      return k('actie','i-recycle','Leeghalen',`appOpen('${a.id}')`);
+  if(OP_VOORRAAD.includes(a.status)) return staatOnline(a)
+    ? k('ghost','i-globe','Advertentie aanpassen',`onlineZetten('${a.id}')`)
+    : k('oranje','i-globe','Online zetten',`onlineZetten('${a.id}')`);
+  return '';
 }
 function hardwareVan(a){
   return a.hardware_id ? (hardwares.find(h=>h.id===a.hardware_id)||null) : null;
@@ -2827,7 +3079,7 @@ async function plekOpslaan(id, knop){
 }
 
 async function appWeg(id){
-  if(!confirm('Dit apparaat helemaal verwijderen?')) return;
+  if(!await bevestig('Dit toestel helemaal verwijderen? Dat kan niet ongedaan.', {kop:'Verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await sb.from('refurbish_apparaten').delete().eq('id',id);
   await allesLaden(); showTab('werkbank'); toast('Verwijderd', true);
 }
@@ -3031,7 +3283,7 @@ function appOpen(id){
 const CTR_BALK=[
   {id:'start',    naam:'Start',    uitleg:'Gaat hij aan'},
   {id:'hardware', naam:'Hardware', uitleg:'Scherm en opladen'},
-  {id:'upgrade',  naam:'Upgrade',  uitleg:'Ram en ssd'},
+  {id:'upgrade',  naam:'Ram en ssd',  uitleg:'Als het nodig is'},
   {id:'windows',  naam:'Windows',  uitleg:'Installeren'},
   {id:'specs',    naam:'Specs',    uitleg:'Uitlezen'},
   {id:'visueel',  naam:'Staat',    uitleg:'Grade bepalen'},
@@ -3113,6 +3365,9 @@ function ctrTeken(){
   el.querySelectorAll('[data-knop]').forEach(b=>{
     b.onclick=()=>knoppen[Number(b.dataset.knop)].doe(b);
   });
+  /* De uitklappers nu al goed zetten, niet pas als de observer langskomt: een veld
+     in een dichte uitklapper kan geen focus krijgen. */
+  meerToepassen(el);
 
   if(hadFocus){
     const terug=document.getElementById(hadFocus.id);
@@ -3380,7 +3635,7 @@ const CTR_STAPPEN={
       <div class="clkop">Notitie</div>
       ${ctrNotitieVeld()}`;
   }, knoppen:()=>(ctrVoorWindows().every(q=>ctr.antwoord[q.v])
-      ? [{tekst:'Door naar de upgrade', klasse:'actie', auto:true, doe:()=>ctrGa('upgrade')}] : []
+      ? [{tekst:'Door naar ram en ssd', klasse:'actie', auto:true, doe:()=>ctrGa('upgrade')}] : []
     ).concat(ctrDonorKnop()) },
 
   /* Ram en ssd erbij vóór Windows. Je kiest uit je voorraad; wat je pakt gaat
@@ -3391,7 +3646,7 @@ const CTR_STAPPEN={
     const opties=voorraaddelen.filter(o=>(Number(o.aantal)||0)>0);
     return `
       <h2><svg class="i"><use href="#i-cpu"/></svg>Ram en ssd</h2>
-      <p class="pv">Zet er geheugen of opslag bij als dat nodig is. Kies uit je voorraad, dan klopt de kostprijs vanzelf.</p>
+      <p class="pv">Zet er geheugen of opslag bij als dat nodig is. Kies uit je voorraad, dan klopt de kostprijs vanzelf. <b>Niets nodig? Klik door.</b></p>
       ${extra.length?`<div class="tabelrol"><table><tbody>${extra.map((k,i)=>`
         <tr><td>${esc(batSoortNaam(k.soort))}${k.omschrijving?' <span class="muted klein">'+esc(k.omschrijving)+'</span>':''}</td>
             <td class="num">${euro(Number(k.bedrag)||0)}</td>
@@ -3412,7 +3667,7 @@ const CTR_STAPPEN={
      onder Te controleren met de stand 'installeren'. */
   windows:{ balk:'windows', inhoud:()=>`
     <h2><svg class="i"><use href="#i-windows"/></svg>Windows installeren</h2>
-    <p class="pv">Zet de installatie aan en blijf erbij. Zodra hij draait ga je door met nakijken en uitlezen. Wil je hem toch even wegleggen omdat het lang duurt, dan kan dat met de tweede knop.</p>
+    <p class="pv">Zet de installatie aan. Draait hij, ga dan door met nakijken. Duurt het lang, leg hem dan weg met de tweede knop.</p>
     <ol class="stappenlijst">
       <li>Start op vanaf de installatiestick</li>
       <li>Verwijder de bestaande partities en installeer schoon</li>
@@ -3429,9 +3684,13 @@ const CTR_STAPPEN={
   nawindows:{ balk:'windows', inhoud:()=>{
     const na=ctrNaWindows();
     const open=na.filter(q=>!ctr.antwoord[q.v]).length;
+    /* Eerst Windows en de stuurprogramma's, dan pas de rest. Zo staan er niet twintig
+       vragen tegelijk in beeld, en test je geen toetsenbord op een installatie die
+       nog niet af is. Eén ding tegelijk, net als de rest van de controle. */
+    const windowsKlaar = ctr.antwoord['windowsgoed']==='Ja' && ctr.antwoord['drivers']==='Ja';
     return `
       <h2><svg class="i"><use href="#i-windows"/></svg>Windows nakijken</h2>
-      <p class="pv">Windows draait, dus nu de rest. Eerst even bevestigen dat de installatie echt is gelukt.</p>
+      <p class="pv">${windowsKlaar ? 'Windows staat goed. Nu de rest van de hardware.' : 'Eerst even bevestigen dat de installatie echt is gelukt.'}</p>
       ${ctrVraag('Is Windows geïnstalleerd en start hij op?', ['Ja','Nee'], 'windowsgoed')}
       ${ctr.antwoord['windowsgoed']==='Ja'
         ? ctrVraag('Staan alle stuurprogramma\'s erop, zonder uitroeptekens in Apparaatbeheer?', ['Ja','Nee'], 'drivers')
@@ -3441,11 +3700,13 @@ const CTR_STAPPEN={
       ${ctr.antwoord['drivers']==='Nee'
         ? '<div class="tip">Zet de ontbrekende stuurprogramma\'s erop. Een ontbrekende wifi- of chipsetdriver is precies wat een koper de dag erna belt.</div>' : ''}
 
+      ${windowsKlaar ? `
       <div class="clkop">Werkt alles${open?' · nog '+open+' te doen':''}</div>
       ${prof().hardware.some(q=>q.test) ? ctrTestApp() : ''}
       ${na.map(q=>ctrVraag(q.v, q.a||['Ja','Nee'])).join('')}
 
-      ${prof().heeftAccu!==false ? `<div class="clkop">Accu</div>${ctrAccublok()}` : ''}`;
+      ${prof().heeftAccu!==false ? `<div class="clkop">Accu</div>${ctrAccublok()}` : ''}`
+      : '<p class="muted klein" style="margin-top:14px">Daarna komen de rest van de hardware en de accu.</p>'}`;
   }, knoppen:()=>{
     const na=ctrNaWindows();
     const klaar = ctr.antwoord['windowsgoed']==='Ja' && ctr.antwoord['drivers']==='Ja'
@@ -3461,7 +3722,7 @@ const CTR_STAPPEN={
     const werk=ctrSpecVragen();
     return `
       <h2><svg class="i"><use href="#i-cpu"/></svg>Wat erin zit</h2>
-      <p class="pv">${esc(prof().specsTekst||'Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.')}</p>
+      <p class="pv">${esc(prof().specsTekst||'Windows draait, dus nu lees je uit wat erin zit. Zoek de uitvoeringen op en klik aan wat je op het scherm ziet.')}</p>
       ${(prof().hardware.some(q=>q.test) && !prof().stappen.includes('test')) ? ctrTestApp() : ''}
       <div class="row" style="margin-bottom:14px">
         <button class="btn actie small" onclick="specsZoeken(this)">
@@ -3527,6 +3788,8 @@ const CTR_STAPPEN={
   }, knoppen:()=>prof().hardware.concat(ctrEigenVragen()).every(q=>ctr.antwoord[q.v])
       ? [{tekst:'Door naar de specificaties', klasse:'actie', auto:true, doe:()=>ctrGa(ctrVolgende())}] : [] },
 
+  /* De partner-keuzes zijn werk voor een paar winkels: in Simpel weg, tenzij je er al
+     een keuze in maakte, want die moet je dan wel zien. */
   visueel:{ balk:'visueel', inhoud:()=>{
     const punten=ctrPunten();
     return `
@@ -3551,20 +3814,22 @@ const CTR_STAPPEN={
           <div class="muted klein">${esc((prof().grades.find(g=>g.g===gradeVan(punten))||{}).uitleg||'')} · ${punten} strafpunt${punten===1?'':'en'}</div>
         </div>
       </div>
-      ${heeftPartner?`<label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
+      ${heeftPartner?`<div class="${(ctr.naarDashboard||ctr.naarPartner)?'':'uitgebreid'}">
+      <label style="display:flex; align-items:center; gap:11px; margin-top:14px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw); cursor:pointer; font-weight:600">
         <input type="checkbox" id="ctr_dashboard" ${ctr.naarDashboard?'checked':''} onchange="ctrDashboardToggle(this)">
-        <span>Zichtbaar maken in partner-dashboard <span class="muted klein" style="font-weight:400">— zodra hij goedgekeurd is, staat hij bij Online zetten in je dashboard</span></span>
+        <span>Zichtbaar maken in partner-dashboard <span class="muted klein" style="font-weight:400">Staat na goedkeuring bij Online zetten in je dashboard</span></span>
       </label>
       ${partnersData.length?`<div style="margin-top:12px; padding:13px 15px; background:var(--card); border-radius:var(--radius-s); box-shadow:var(--schaduw)">
         <div style="font-weight:600">Of geef hem meteen aan een partner</div>
-        <div class="muted klein" style="margin:2px 0 10px">Alleen die partner ziet het toestel in zijn dashboard. Haal je het later terug, dan krijgt hij vanzelf bericht.</div>
+        <div class="muted klein" style="margin:2px 0 10px">Alleen die partner ziet het toestel. Haal je het terug, dan krijgt hij bericht.</div>
         <div style="display:flex; flex-direction:column; gap:6px">
           ${partnersData.map(p=>`<label style="display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:12px; cursor:pointer; font-weight:600${ctr.naarPartner===p.id?'; background:var(--green-soft)':''}">
             <input type="checkbox" ${ctr.naarPartner===p.id?'checked':''} onchange="ctrPartnerToggle('${p.id}', this)">
             <span>${esc(p.naam||'Partner')}</span>
           </label>`).join('')}
         </div>
-      </div>`:''}`:''}` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
+      </div>`:''}</div>`:''}
+      ${ctrExtraRepVeld()}` : '<p class="muted klein" style="margin-top:12px">Kies overal iets, dan rekent hij de grade uit.</p>'}`;
   }, knoppen:()=>ctrCompleet()
       ? [{tekst:'Controle afronden', klasse:'actie', doe:(k)=>ctrAfronden(k)}] : [] },
 
@@ -3635,7 +3900,7 @@ const CATEGORIE_PROFIEL={
     startNee:'nietaan',
     startDoor:'Door naar de hardware',
     nietaanDoor:'Gelukt, door naar de hardware',
-    specsTekst:'Windows draait, dus nu kun je uitlezen wat er werkelijk in zit. Zoek het model op; dan krijg je per onderdeel alle uitvoeringen die van dit model bestaan en klik je aan wat je op het scherm ziet staan.',
+    specsTekst:'Windows draait, dus nu lees je uit wat erin zit. Zoek de uitvoeringen op en klik aan wat je op het scherm ziet.',
     schermDefect:{vlak:'Scherm', optie:'Barst of vlek', vraag:'Barst of vlek in het scherm'}
   },
 
@@ -3794,7 +4059,7 @@ const CATEGORIE_PROFIEL={
       {id:'start',    naam:'Start',    uitleg:'Komt hij door de POST'},
       {id:'blokkers', naam:'Sloten',   uitleg:'BIOS en Computrace'},
       {id:'hardware', naam:'Hardware', uitleg:'Beeld en poorten'},
-      {id:'upgrade',  naam:'Upgrade',  uitleg:'Ram en ssd'},
+      {id:'upgrade',  naam:'Ram en ssd',  uitleg:'Als het nodig is'},
       {id:'windows',  naam:'Windows',  uitleg:'Installeren'},
       {id:'specs',    naam:'Specs',    uitleg:'Uitlezen'},
       {id:'visueel',  naam:'Staat',    uitleg:'Grade bepalen'},
@@ -4035,7 +4300,7 @@ function ctrAccublok(){
     </label>
     <label style="margin-top:12px">Notitie bij de accu</label>
     <input id="c_accu_notitie" value="${esc(ctr.accuNotitie||'')}" maxlength="60" placeholder="bijv. accu in slechte staat" oninput="ctrAccuNotitie(this.value)" style="width:100%">
-    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Het percentage en de notitie komen op het label te staan; dat scheelt de koper een vraag. Zet je een nieuwe accu, vink dat dan aan: hij telt dan als 100%. De accu meet je mee in de toestel-test hieronder; het percentage komt vanzelf hier terug.</p>
+    <p class="muted klein" style="margin-top:8px">Mag leeg blijven. Het percentage komt op het label. Nieuwe accu erin? Vink het aan, dan telt hij als 100%. De toestel-test hieronder vult het percentage vanzelf in.</p>
   </div>`;
 }
 /* Het advies onder het accuveld staat apart, zodat het live kan meelopen zonder
@@ -4263,13 +4528,20 @@ function ctrNotitieVeld(){
       placeholder="Bijvoorbeeld: kleine deuk linksachter" oninput="ctrNotitieTel()">
     <span class="tekens ${over<10?'krap':''}" id="notitieTel">${over}</span>
   </div>
-  <p class="muted klein">Komt op het label te staan, dus hou het kort.</p>
-  <div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:12px">
-    <label style="font-weight:700; display:block; margin-bottom:6px">Zelf naar reparatie zetten</label>
-    <input id="c_extra_rep" maxlength="80" value="${esc(ctr.extraReparatie||'')}"
-      placeholder="Bijv. nieuwe accu, scherm vervangen" oninput="ctrExtraReparatie(this.value)" style="width:100%">
-    <p class="muted klein" style="margin-top:6px">Vul iets in als dit toestel toch naar Te repareren moet, ook al is de test verder goed. Bijvoorbeeld een accu die je wilt vervangen of een ander mankement. Laat leeg om gewoon naar de voorraad te gaan.</p>
-  </div>`;
+  <p class="muted klein">Komt op het label te staan, dus hou het kort.</p>`;
+}
+/* "Toch naar reparatie" stond eerst onder elke notitie, ook bij het slopen, en las
+   dan als een tweede notitieveld. Het hoort bij het afronden: de grade staat, en dan
+   kies je of hij naar de voorraad gaat of eerst naar de werkbank. */
+function ctrExtraRepVeld(){
+  return `<details class="meeropties" data-sleutel="ctr_extrarep_${esc(ctr.a.id)}"${(ctr.extraReparatie||'').trim()?' data-open':''}>
+    <summary>Toch eerst naar reparatie?</summary>
+    <div class="meerinhoud">
+      <input id="c_extra_rep" maxlength="80" value="${esc(ctr.extraReparatie||'')}"
+        placeholder="Bijvoorbeeld: nieuwe accu, scherm vervangen" oninput="ctrExtraReparatie(this.value)">
+      <p class="muted klein" style="margin-top:6px">Vul in wat er moet gebeuren. Dan gaat hij naar Te repareren in plaats van naar de voorraad. Leeg laten als alles goed is.</p>
+    </div>
+  </details>`;
 }
 function ctrExtraReparatie(v){ ctr.extraReparatie=String(v||'').slice(0,80); sessieBewaar(); }
 function ctrNotitieTel(){
@@ -4656,50 +4928,128 @@ function tekenReparatie(){
     : leeg('i-wrench','Niets te repareren','Alles wat kapot was is hersteld.');
 }
 
+/* De reparatie is een eigen pagina, net als de controle. Vanuit elke plek (de lijst,
+   de apparaatpagina, een gescand label) kom je hier via repOpen. */
+let repBron=null;          // welke manier van een onderdeel toevoegen open staat
+let repPaginaVoor=null;    // voor welk toestel de pagina het laatst getekend is
 function repOpen(a){
-  const nodig=(a.defecten||[]);
-  const beschikbaar=onderdelen.filter(o=>o.status==='voorraad');
-  const toegewezen=onderdelen.filter(o=>o.voor_apparaat===a.id);
-  venster('Reparatie: '+esc(toestelNaam(a)), `
-    <p class="pv">Dit kwam uit de controle. Wijs een onderdeel van de plank toe, of zet het op de bestellijst.</p>
-
-    <div class="clkop">Wat er mis is</div>
-    ${nodig.length ? nodig.map(d=>`<div class="clrij"><div class="clvraag">${esc(d)}</div></div>`).join('')
-                   : '<p class="muted klein">Geen defecten genoteerd bij de controle.</p>'}
-
-    <div class="clkop">Onderdelen voor dit apparaat</div>
-    ${toegewezen.length ? toegewezen.map(o=>`
-      <div class="clrij"><div class="row">
-        <b>${esc(o.naam)}</b><span class="st ${o.status}">${esc(DEEL_STATUS[o.status]||o.status)}</span>
-        <span style="margin-left:auto"></span>
-        ${o.status==='voorraad'?`<button class="btn small" onclick="deelInbouwen('${o.id}')">Ingebouwd</button>`:''}
-      </div></div>`).join('') : '<p class="muted klein">Nog niets toegewezen.</p>'}
-
-    <div class="clkop">Van de plank pakken</div>
-    ${beschikbaar.length ? `<select id="r_deel">
-        ${beschikbaar.map(o=>`<option value="${o.id}">${esc(o.naam)}${o.soort?' · '+esc(o.soort):''}</option>`).join('')}
-      </select>
-      <button class="btn ghost small" style="margin-top:10px" onclick="deelToewijzen('${a.id}')">Toewijzen aan dit apparaat</button>`
-    : '<p class="muted klein">Niets op de plank.</p>'}
-
-    <div class="clkop">Bestellen</div>
-    <div class="row">
-      <input id="r_bestel" placeholder="Welk onderdeel heb je nodig?" style="flex:1; min-width:200px">
-      <input id="r_bestel_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
-      <button class="btn ghost small" onclick="deelBestellen('${a.id}')">Op de bestellijst</button>
-    </div>
-
-    <div class="clkop">Zelf een onderdeel toevoegen</div>
-    <p class="muted klein" style="margin:0 0 8px">Een onderdeel dat je zelf gebruikt, niet van de plank en niet te bestellen. Het bedrag telt mee in de inkoop van dit toestel.${(a.extra_kosten||[]).length?' Al toegevoegd: '+euro(batExtraSom(a))+'.':''}</p>
-    <div class="row">
-      <input id="r_hm_naam" placeholder="Naam onderdeel" style="flex:1; min-width:160px">
-      <input id="r_hm_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
-      <button class="btn ghost small" onclick="repHandmatig('${a.id}')">Toevoegen</button>
-    </div>
-  `, [
-    {tekst:'Reparatie klaar', klasse:'actie', doe:(k)=>repKlaar(k,a.id)}
-  ], 'groot');
+  if(!a) return;
+  if(opendReparatie!==a.id) repBron=null;
+  opendReparatie=a.id;
+  sluit();
+  showTab('repareren');
 }
+/* Drie manieren om aan een onderdeel te komen: van de plank, bestellen, of iets wat je
+   zelf al kocht. Die stonden onder elkaar met elk hun eigen velden; nu kies je er één,
+   en zie je alleen de velden die daarbij horen. */
+function repBronKies(b){
+  repBron=b; tekenRepPagina();
+  const e=document.querySelector('#repPagina .repbron input, #repPagina .repbron select');
+  if(e) e.focus();
+}
+function tekenRepPagina(){
+  const el=document.getElementById('repPagina'); if(!el) return;
+  if(tab!=='repareren') return;
+  const a=apparaten.find(x=>x.id===opendReparatie);
+  if(!a){ el.innerHTML=leeg('i-wrench','Geen reparatie open','Kies een toestel bij Te repareren.'); return; }
+
+  /* Hertekenen mag je getypte onderdeel niet weggooien. Zelfde toestel: velden en
+     focus terug. Na een geslaagde actie maakt de actie zijn eigen veld zelf leeg. */
+  const velden=['r_deel','r_bestel','r_bestel_prijs','r_hm_naam','r_hm_prijs'];
+  const bewaard={};
+  if(repPaginaVoor===a.id) velden.forEach(id=>{ const e=document.getElementById(id); if(e) bewaard[id]=e.value; });
+  const was=document.activeElement;
+  const focusId=(was && was.id && el.contains(was)) ? was.id : null;
+  const rol=window.scrollY;
+
+  const nodig=(a.defecten||[]);
+  /* Alleen wat los op de plank ligt. Een onderdeel dat al voor een ander toestel
+     klaarligt bieden we hier niet nog eens aan. */
+  const beschikbaar=onderdelen.filter(o=>o.status==='voorraad' && !o.voor_apparaat);
+  const toegewezen=onderdelen.filter(o=>o.voor_apparaat===a.id && o.status!=='gebruikt');
+  const ingebouwd=onderdelen.filter(o=>o.voor_apparaat===a.id && o.status==='gebruikt');
+  const extra=Array.isArray(a.extra_kosten)?a.extra_kosten:[];
+  const wacht=toegewezen.filter(o=>o.status==='te_bestellen'||o.status==='besteld');
+  const bron=repBron || (beschikbaar.length ? 'plank' : 'bestellen');
+
+  const bronInhoud = bron==='plank'
+    ? (beschikbaar.length
+        ? `<select id="r_deel">${beschikbaar.map(o=>`<option value="${o.id}">${esc(o.naam)}${o.soort?' · '+esc(o.soort):''}</option>`).join('')}</select>
+           <button class="btn ghost small" style="margin-top:10px" onclick="deelToewijzen('${a.id}')">Toewijzen aan dit toestel</button>`
+        : `<p class="muted klein">Niets op de plank. <a onclick="repBronKies('bestellen')" style="cursor:pointer; text-decoration:underline">Bestel het</a>.</p>`)
+    : bron==='bestellen'
+    ? `<div class="row">
+         <input id="r_bestel" placeholder="Welk onderdeel heb je nodig?" style="flex:1; min-width:200px">
+         <input id="r_bestel_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
+         <button class="btn ghost small" onclick="deelBestellen('${a.id}')">Op de bestellijst</button>
+       </div>
+       <p class="muted klein" style="margin-top:8px">Er komt een sticker "onderdeel besteld" op het toestel.</p>`
+    : `<div class="row">
+         <input id="r_hm_naam" placeholder="Naam onderdeel" style="flex:1; min-width:160px">
+         <input id="r_hm_prijs" type="number" step="0.01" min="0" placeholder="Inkoopprijs" style="max-width:130px">
+         <button class="btn ghost small" onclick="repHandmatig('${a.id}')">Toevoegen</button>
+       </div>
+       <p class="muted klein" style="margin-top:8px">Iets wat je al had of los kocht. Het bedrag telt mee in de inkoop van dit toestel.</p>`;
+
+  el.innerHTML=`
+    <div class="pagehead">
+      <div>
+        <div class="kruimel"><a onclick="showTab('reparatie')">Te repareren</a> › <span>${esc(a.code||'')}</span></div>
+        <h1>${esc(toestelNaam(a))}</h1>
+      </div>
+      <button class="btn ghost" onclick="appPagina('${a.id}')"><svg class="i s"><use href="#i-laptop"/></svg>Alles over dit toestel</button>
+    </div>
+
+    <div class="tweekolom">
+      <div>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-wrench"/></svg>Wat er mis is</h2>
+          ${nodig.length ? nodig.map(d=>`<div class="clrij"><div class="clvraag">${esc(d)}</div></div>`).join('')
+                         : '<p class="muted klein">Geen defecten genoteerd bij de controle.</p>'}
+        </div>
+
+        <div class="card">
+          <h2><svg class="i"><use href="#i-cpu"/></svg>Onderdelen voor dit toestel</h2>
+          ${(toegewezen.length||ingebouwd.length||extra.length) ? `
+            ${toegewezen.map(o=>`<div class="clrij"><div class="row">
+              <b>${esc(o.naam)}</b><span class="st ${o.status}">${esc(DEEL_STATUS[o.status]||o.status)}</span>
+              <span style="margin-left:auto"></span>
+              ${o.status==='voorraad'?`<button class="btn small" onclick="deelInbouwen('${o.id}')">Ingebouwd</button>`:''}
+            </div></div>`).join('')}
+            ${ingebouwd.map(o=>`<div class="clrij"><div class="row"><b>${esc(o.naam)}</b><span class="st gebruikt">Ingebouwd</span></div></div>`).join('')}
+            ${extra.map(k=>`<div class="clrij"><div class="row"><b>${esc(k.omschrijving||batSoortNaam(k.soort))}</b>
+              <span style="margin-left:auto" class="muted klein">${euro(Number(k.bedrag)||0)}</span></div></div>`).join('')}`
+            : '<p class="muted klein">Nog niets. Voeg hieronder een onderdeel toe.</p>'}
+
+          <div class="hkkop" style="margin-top:20px">Onderdeel erbij</div>
+          <div class="periodesel" style="margin-bottom:14px">
+            <button class="${bron==='plank'?'active':''}" onclick="repBronKies('plank')">Van de plank${beschikbaar.length?' ('+beschikbaar.length+')':''}</button>
+            <button class="${bron==='bestellen'?'active':''}" onclick="repBronKies('bestellen')">Bestellen</button>
+            <button class="${bron==='zelf'?'active':''}" onclick="repBronKies('zelf')">Zelf gekocht</button>
+          </div>
+          <div class="repbron">${bronInhoud}</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2><svg class="i"><use href="#i-check"/></svg>Klaar?</h2>
+          ${wacht.length?`<p class="tip">Er wacht nog op: ${esc(wacht.map(o=>o.naam).join(', '))}.</p>`:''}
+          <p class="muted klein" style="margin-bottom:14px">Alles hersteld? Dan gaat hij op voorraad en krijgt hij een nieuwe sticker.</p>
+          <button class="btn actie" style="width:100%" onclick="repKlaar(this,'${a.id}')"><svg class="i s"><use href="#i-check"/></svg>Reparatie klaar</button>
+        </div>
+      </div>
+    </div>`;
+
+  repPaginaVoor=a.id;
+  Object.entries(bewaard).forEach(([id,w])=>{ const e=document.getElementById(id); if(e && w) e.value=w; });
+  if(focusId){ const e=document.getElementById(focusId); if(e) e.focus({preventScroll:true}); }
+  if(Math.abs(window.scrollY-rol)>2) window.scrollTo({top:rol});
+}
+/* Na een geslaagde actie het bijbehorende veld leegmaken, anders zet het hertekenen
+   je vorige invoer er weer in. */
+function repVeldLeeg(...ids){ ids.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; }); }
+
 /* Een onderdeel dat de winkelier bij de reparatie zelf toevoegt: naam + inkoopprijs.
    Zelfde spoor als "Extra onderdelen" op de productpagina (extra_kosten), zodat het bedrag
    bij de inkoop van het toestel komt en straks de marge klopt. Geen voorraad-afboeking,
@@ -4718,8 +5068,8 @@ async function repHandmatig(apparaatId){
   // Ligt hij al in de winkelvoorraad, dan dezelfde inkoop naar de hardware-rij (marge).
   if(a.hardware_id){ try{ await sb.from('hardware').update({inkoop:nieuweInkoop, bijgewerkt_op:new Date().toISOString()}).eq('id',a.hardware_id); }catch(_e){} }
   a.extra_kosten=lijst; a.inkoop=nieuweInkoop;
+  repVeldLeeg('r_hm_naam','r_hm_prijs');
   await allesLaden();
-  const na=apparaten.find(x=>x.id===apparaatId); if(na) repOpen(na);
   toast('Onderdeel toegevoegd, telt mee in de inkoop', true);
 }
 
@@ -4728,16 +5078,13 @@ async function deelToewijzen(apparaatId){
   const {error}=await sb.from('refurbish_onderdelen')
     .update({voor_apparaat:apparaatId}).eq('id',id);
   if(error){ toast('Toewijzen mislukt','fout'); return; }
-  await allesLaden(); sluit();
-  const a=apparaten.find(x=>x.id===apparaatId); if(a) repOpen(a);
+  await allesLaden();
   toast('Toegewezen', true);
 }
 async function deelInbouwen(id){
-  const o=onderdelen.find(x=>x.id===id);
   const {error}=await sb.from('refurbish_onderdelen').update({status:'gebruikt'}).eq('id',id);
   if(error){ toast('Bijwerken mislukt','fout'); return; }
-  await allesLaden(); sluit();
-  const a=apparaten.find(x=>x.id===(o&&o.voor_apparaat)); if(a) repOpen(a);
+  await allesLaden();
   toast('Ingebouwd en van de plank af', true);
 }
 async function deelBestellen(apparaatId){
@@ -4747,26 +5094,31 @@ async function deelBestellen(apparaatId){
     team_id:account.team_id, naam, status:'te_bestellen', voor_apparaat:apparaatId, prijs:prijs||null
   });
   if(error){ toast('Opslaan mislukt','fout'); return; }
-  await allesLaden(); sluit();
+  repVeldLeeg('r_bestel','r_bestel_prijs');
+  await allesLaden();
   try{ await qzPrintDeviceLabels(apparaatId, true); }catch(_e){}   // sticker "onderdeel besteld"
-  const a=apparaten.find(x=>x.id===apparaatId); if(a) repOpen(a);
   toast('Op de bestellijst gezet', true);
 }
 async function repKlaar(knop, id){
-  /* Staat er nog een onderdeel in "Welk onderdeel heb je nodig?" maar is het niet op de
-     bestellijst gezet? Waarschuw, anders gooi je die invoer ongemerkt weg. */
+  /* Staat er nog een onderdeel getypt maar niet toegevoegd? Waarschuw, anders gooi je
+     die invoer ongemerkt weg. */
   const _rb=((document.getElementById('r_bestel')||{}).value||'').trim();
-  if(_rb && !confirm('Je hebt "'+_rb+'" ingevuld bij een onderdeel dat je nodig hebt, maar nog niet op de bestellijst gezet. Toch afronden en dat weggooien?')) return;
+  if(_rb && !await bevestig('Je typte "'+_rb+'" bij Bestellen, maar zette het nog niet op de bestellijst. Toch afronden?', {ja:'Toch afronden'})) return;
   const _hm=((document.getElementById('r_hm_naam')||{}).value||'').trim();
-  if(_hm && !confirm('Je hebt "'+_hm+'" ingevuld bij "zelf een onderdeel toevoegen", maar nog niet op Toevoegen geklikt. Toch afronden en dat weggooien?')) return;
+  if(_hm && !await bevestig('Je typte "'+_hm+'" bij Zelf gekocht, maar klikte nog niet op Toevoegen. Toch afronden?', {ja:'Toch afronden'})) return;
   await bezig(knop, async()=>{
     const a=apparaten.find(x=>x.id===id);
     const {error}=await sb.from('refurbish_apparaten')
       .update({status:'klaar', bijgewerkt_op:new Date().toISOString()}).eq('id',id);
     if(error) throw new Error('Bijwerken mislukt');
     if(a) await naarVoorraad(a);
-    sluit(); await allesLaden();
+    repVeldLeeg('r_bestel','r_hm_naam');
+    opendReparatie=null;
+    await allesLaden();
     try{ await qzPrintDeviceLabels(id, true); }catch(_e){}   // sticker "hersteld / op voorraad"
+    /* Hersteld is op voorraad, en de volgende stap is hem online zetten. Die knop
+       staat bovenaan de apparaatpagina, dus daar landen we. */
+    appPagina(id);
     toast('Gerepareerd en op voorraad', true);
   });
 }
@@ -5005,7 +5357,7 @@ async function vrToewijzen(knop, hardwareId){
 }
 async function vrTerughalen(id, knop){
   const a=apparaten.find(x=>x.id===id); const h=hardwareVan(a); if(!h) return;
-  if(!confirm('Dit toestel terughalen van de partner? Het komt terug in je voorraad.')) return;
+  if(!await bevestig('Dit toestel terughalen van de partner? Het komt terug in je voorraad.', {kop:'Terughalen?', ja:'Terughalen'})) return;
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
   try{
     const {data:{session}}=await sb.auth.getSession();
@@ -5086,7 +5438,7 @@ function mpResultaat(id, j){
          <div class="klein" style="margin:4px 0 12px; opacity:.85">${j.aantal} particuliere advertenties · mediaan ${euro(j.mediaan)} · van ${euro(j.min)} tot ${euro(j.max)}. Wij zetten hem net onder de markt.</div>
          <button class="btn actie" onclick="mpNeemPrijs('${id}', ${j.voorstel})">Gebruik ${euro(j.voorstel)} als vraagprijs</button>
        </div>`
-    : `<p class="muted klein" style="margin-bottom:6px">Maar ${j.aantal} particuliere advertentie(s) gevonden — te weinig voor een betrouwbaar voorstel. Beoordeel zelf op basis van hieronder.</p>`;
+    : `<p class="muted klein" style="margin-bottom:6px">Maar ${j.aantal} particuliere advertentie${j.aantal===1?'':'s'} gevonden. Te weinig voor een goed voorstel; kijk zelf hieronder.</p>`;
   return kop + '<div style="max-height:300px; overflow-y:auto">'+ads+'</div>';
 }
 async function mpNeemPrijs(id, prijs){
@@ -5321,6 +5673,11 @@ function tekenOnline(){
      foto ziet en niet willekeurig de modelfoto. */
   fotos.forEach(f=>{ const h=perAanzicht[f.aanzicht]; if(!h || (!h.apparaat_id && f.apparaat_id)) perAanzicht[f.aanzicht]=f; });
   const compleet=AANZICHTEN.filter(v=>perAanzicht[v.id]).length;
+  /* In Simpel staat alleen wat je voor één advertentie doet: tekst, foto's, vraagprijs,
+     grade en publiceren. Nieuwprijs, garantie en btw staan onder Details (met de
+     waarden in de kop), de grade-prijzen onder Meer prijsopties. De fabrieksfoto's
+     gelden voor het hele model; heeft het model nog geen foto, dan staat dat blok
+     open, want dan is het precies wat je nu moet doen. */
 
   el.innerHTML=`
     <div class="pagehead">
@@ -5335,7 +5692,7 @@ function tekenOnline(){
       <div>
         <div class="card">
           <h2><svg class="i"><use href="#i-sparkles"/></svg>De advertentie</h2>
-          <p class="muted klein" style="margin-bottom:14px">Volgt het sjabloon dat je bij Checklists hebt ingesteld, zodat al je advertenties op elkaar lijken.</p>
+          <p class="muted klein" style="margin-bottom:14px">Volgt je sjabloon uit Storvo, zodat al je advertenties op elkaar lijken.</p>
 
           <div class="periodesel" style="margin-bottom:14px">
             ${KANALEN.filter(k=>k.id!=='winkel').map(k=>`
@@ -5364,7 +5721,7 @@ function tekenOnline(){
 
         <div class="card">
           <h2><svg class="i"><use href="#i-camera"/></svg>Foto's <span class="muted klein">${compleet} van ${AANZICHTEN.length}</span></h2>
-          <p class="muted klein" style="margin-bottom:14px">Altijd dezelfde zes aanzichten. Niet de kwaliteit van één foto maakt een advertentie professioneel, maar dat ze bij elkaar horen.</p>
+          <p class="muted klein" style="margin-bottom:14px">Altijd dezelfde zes aanzichten, zodat je advertenties bij elkaar horen.</p>
           ${onl.fotosBezig?`<div class="fotobezig">Fabrieksfoto's van dit model ophalen&hellip;</div>`:''}
           ${(!onl.fotosBezig && compleet===0)?`<div class="fotohint">Nog geen foto's voor dit model. Maak er hieronder een paar met de telefoon; zonder foto's gaat het toestel niet op de webshop.</div>`:''}
 
@@ -5405,8 +5762,10 @@ function tekenOnline(){
             </label>
           </div>
 
-          <div class="hkkop" style="margin-top:18px">Fabrieksfoto's voor het hele model</div>
-          <div class="row" style="margin-top:8px">
+          <details class="meeropties" data-sleutel="onl_fabriek"${(compleet===0 || (onl.gevonden||[]).length)?' data-open':''}>
+          <summary>Fabrieksfoto's voor het hele model</summary>
+          <div class="meerinhoud">
+          <div class="row">
             <button class="btn ghost small" onclick="fotoZoekOnline(this)">
               <svg class="i s"><use href="#i-search"/></svg>Zoek foto's online</button>
             <label class="btn ghost small" style="cursor:pointer">
@@ -5416,11 +5775,11 @@ function tekenOnline(){
             <input id="onl_fablink" placeholder="plak hier een link of een gekopieerde foto" onpaste="fotoPlak(event)" style="flex:1; min-width:170px">
             <button class="btn ghost small" onclick="fotoModelLink(this)">Ophalen</button>
           </div>
-          <p class="muted klein" style="margin-top:8px">Deze foto's gelden voor het <b>hele model</b>: één keer vullen, en elk volgend toestel van dit model krijgt ze vanzelf. Klik "Zoek foto's online", kopieer een strakke productfoto (rechtermuisknop, afbeelding kopiëren) en plak hem hierboven. Werkt voor elk merk, ook Apple.</p>
+          <p class="muted klein" style="margin-top:8px">Eén keer vullen, dan krijgt elk volgend toestel van dit model ze vanzelf. Zoek online, kopieer een productfoto en plak hem hierboven.</p>
 
           ${(onl.gevonden||[]).length?`<div style="margin-top:18px">
             <div class="hkkop">Gevonden bij de fabrikant</div>
-            <p class="muted klein" style="margin-bottom:10px">Foto's van dit model, niet van dit exemplaar. Prima voor de webshop; op Marktplaats wil een koper ook het echte apparaat zien.</p>
+            <p class="muted klein" style="margin-bottom:10px">Van dit model, niet van dit exemplaar. Goed voor de webshop.</p>
             <div class="fotorooster">${onl.gevonden.map((f,i)=>`
               <div class="fotovak">
                 <img src="${esc(f.klein||f.url)}" alt="" loading="lazy">
@@ -5428,6 +5787,8 @@ function tekenOnline(){
                   onclick="fotoOvernemen(${i})">Overnemen</button>
               </div>`).join('')}</div>
           </div>`:''}
+          </div>
+          </details>
         </div>
       </div>
 
@@ -5441,9 +5802,6 @@ function tekenOnline(){
             <button class="btn ghost small" onclick="onlPrijsvoorstel(this)">
               <svg class="i s"><use href="#i-sparkles"/></svg>Voorstel</button>
           </div>
-          <label style="margin-top:12px">Nieuwprijs (optioneel, toont de korting op het kaartje)</label>
-          <input id="onl_nieuwprijs" type="number" step="0.01" value="${onl.nieuwprijs!=null?onl.nieuwprijs:''}"
-            placeholder="Bijvoorbeeld 899" onchange="onlVeld()">
           ${onl.prijsBron?`<p class="muted klein" style="margin-top:8px">${esc(onl.prijsBron)}</p>`:''}
           ${onl.advies?`<div class="adviesvak">
             ${onl.advies.markt&&onl.advies.markt.laag?`<div class="adviesband">
@@ -5461,33 +5819,46 @@ function tekenOnline(){
           ${onl.a.inkoop?`<p class="muted klein" style="margin-top:6px">Ingekocht voor ${euro(onl.a.inkoop)}${
             onl.prijs?' · winst '+euro((Number(onl.prijs)||0)-(Number(onl.a.inkoop)||0)):''}</p>`:''}
 
-          <div class="grid" style="margin-top:14px">
-            <div><label>Grade</label><select id="onl_staat" onchange="onlVraagprijs()">
+          <div style="margin-top:14px"><label>Grade</label><select id="onl_staat" onchange="onlVraagprijs()">
               <option value="A"${(onl.staat||onl.a.grade)==='A'?' selected':''}>A · als nieuw</option>
               <option value="B"${(onl.staat||onl.a.grade||'B')==='B'?' selected':''}>B · gebruikt</option>
               <option value="C"${(onl.staat||onl.a.grade)==='C'?' selected':''}>C · zichtbare sporen</option>
             </select></div>
-            <div><label>Garantie (maanden)</label>
-              <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:12}" onchange="onlVeld()"></div>
-            <div><label>Btw</label><select id="onl_marge" onchange="onlVeld()">
-              <option value="ja"${onl.marge?' selected':''}>Margeregeling</option>
-              <option value="nee"${!onl.marge?' selected':''}>Normale btw (21%)</option>
-            </select></div>
-          </div>
 
-          <div style="margin-top:16px">
-            <div class="veldkop"><label>Grade-prijzen (webshop)</label>
-              <button type="button" class="btn ghost small" onclick="gradeSchat()">Schat uit vraagprijs</button></div>
-            <p class="muted klein" style="margin:2px 0 8px">De prijs per grade op de advertentie. Vul de grade in die je hebt (de vraagprijs), dan schat ik de andere twee. Aanpassen mag; Opslaan onthoudt het voor dit model.</p>
-            <div class="grid">
-              <div><label>Uitstekend</label><input id="gp_A" type="number" step="1" value="${gpVal('A')}" onchange="gradePrijsVeld()"></div>
-              <div><label>Zeer goed</label><input id="gp_B" type="number" step="1" value="${gpVal('B')}" onchange="gradePrijsVeld()"></div>
-              <div><label>Prima</label><input id="gp_C" type="number" step="1" value="${gpVal('C')}" onchange="gradePrijsVeld()"></div>
+          <details class="meeropties" data-sleutel="onl_details"${onl.nieuwprijs!=null?' data-open':''}>
+            <summary>Details <span class="muted" id="onlDetailsSam">${esc(onlDetailsSamenvatting())}</span></summary>
+            <div class="meerinhoud">
+              <label>Nieuwprijs <span class="muted klein">toont de korting op het kaartje</span></label>
+              <input id="onl_nieuwprijs" type="number" step="0.01" value="${onl.nieuwprijs!=null?onl.nieuwprijs:''}"
+                placeholder="Bijvoorbeeld 899" onchange="onlVeld()">
+              <div class="grid" style="margin-top:12px">
+                <div><label>Garantie (maanden)</label>
+                  <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:12}" onchange="onlVeld()"></div>
+                <div><label>Btw</label><select id="onl_marge" onchange="onlVeld()">
+                  <option value="ja"${onl.marge?' selected':''}>Margeregeling</option>
+                  <option value="nee"${!onl.marge?' selected':''}>Normale btw (21%)</option>
+                </select></div>
+              </div>
+              <p class="muted klein" style="margin-top:8px">${esc(onlBtwBron(a))}</p>
             </div>
-            <button type="button" class="btn ghost small" style="margin-top:10px" onclick="gradePrijsOpslaan(this)">Grade-prijzen opslaan</button>
-          </div>
+          </details>
 
-          <button class="btn ghost small" style="margin-top:14px" onclick="prijskaartTonen()">
+          <details class="meeropties" data-sleutel="onl_gradeprijzen">
+            <summary>Meer prijsopties <span class="muted">prijs per grade op de webshop</span></summary>
+            <div class="meerinhoud">
+              <div class="veldkop" style="margin-top:0"><label>Grade-prijzen</label>
+                <button type="button" class="btn ghost small" onclick="gradeSchat()">Schat uit vraagprijs</button></div>
+              <p class="muted klein" style="margin:2px 0 8px">Je vraagprijs is het anker; de andere twee grades schat ik. Opslaan onthoudt het voor dit model.</p>
+              <div class="grid">
+                <div><label>Uitstekend</label><input id="gp_A" type="number" step="1" value="${gpVal('A')}" onchange="gradePrijsVeld()"></div>
+                <div><label>Zeer goed</label><input id="gp_B" type="number" step="1" value="${gpVal('B')}" onchange="gradePrijsVeld()"></div>
+                <div><label>Prima</label><input id="gp_C" type="number" step="1" value="${gpVal('C')}" onchange="gradePrijsVeld()"></div>
+              </div>
+              <button type="button" class="btn ghost small" style="margin-top:10px" onclick="gradePrijsOpslaan(this)">Grade-prijzen opslaan</button>
+            </div>
+          </details>
+
+          <button class="btn ghost small" style="margin-top:16px" onclick="prijskaartTonen()">
             <svg class="i s"><use href="#i-print"/></svg>Prijskaartje printen</button>
         </div>
 
@@ -5550,6 +5921,30 @@ function onlVeld(){
   if(mg) onl.marge = mg.value==='ja';
   const np=document.getElementById('onl_nieuwprijs');
   if(np) onl.nieuwprijs = np.value===''?null:Math.round(Number(np.value)*100)/100;
+  const sam=document.getElementById('onlDetailsSam');
+  if(sam) sam.textContent=onlDetailsSamenvatting();
+}
+/* De kop van de dichte Details-uitklapper zegt wat erin staat, zodat je in Simpel
+   ziet welke garantie en welke btw meegaan zonder hem open te klappen. */
+function onlDetailsSamenvatting(){
+  if(!onl) return '';
+  const g=onl.garantie!=null?onl.garantie:12;
+  return [g+' maanden garantie', onl.marge?'margeregeling':'btw 21%', onl.nieuwprijs!=null?'nieuwprijs '+euro(onl.nieuwprijs):'']
+    .filter(Boolean).join(' · ');
+}
+/* ── de btw: één bron van waarheid ──
+   De btw stond op drie plekken (toestel, batch, online zetten) en niemand wist meer
+   welke won. De keuze: de BATCH is de bron. Hoe je een partij inkocht bepaalt of de
+   margeregeling mag (van een particulier of met een margefactuur wel, met een gewone
+   btw-factuur niet), en dat geldt voor de hele partij. Een toestel erft dat
+   (margeVan). Hier bij Online zetten kun je per toestel afwijken, maar dat is een
+   uitzondering: het staat onder Details en we zeggen erbij waar de waarde vandaan
+   komt. Zonder batch geldt de margeregeling, het gewone geval bij tweedehands. */
+function onlBtwBron(a){
+  if(a.marge!=null) return 'Je koos dit eerder zelf voor dit toestel.';
+  const b=a.batch_id?batches.find(x=>x.id===a.batch_id):null;
+  if(b) return 'Volgt batch '+batLabel(b)+'. Alleen wijzigen als dit toestel anders is ingekocht.';
+  return 'Geen batch, dus de margeregeling. Alleen wijzigen als je hem met een btw-factuur kocht.';
 }
 
 /* ── grade-prijzen (webshop) ──
@@ -5923,9 +6318,16 @@ async function onlPubliceren(knop){
     if(error) throw new Error('Publiceren mislukt: '+error.message);
 
     /* De btw-keuze en de nieuwprijs horen ook op het toestel zelf: de
-       batchcijfers en een latere heropening lezen die, niet de hardware-rij. */
+       batchcijfers en een latere heropening lezen die, niet de hardware-rij.
+       Maar alleen als eigen keuze als hij afwijkt van de batch (de bron, zie
+       onlBtwBron). Gelijk aan de batch blijft hij null: dan volgt het toestel de
+       batch, ook als je die later aanpast. Vroeger werd hier altijd een vaste
+       waarde gezet, en daarna deed een wijziging aan de batch niets meer. */
+    const bat=a.batch_id?batches.find(x=>x.id===a.batch_id):null;
+    const geerfd=bat?!!bat.marge:true;
+    const eigenMarge=(!!onl.marge===geerfd)?null:!!onl.marge;
     await sb.from('refurbish_apparaten')
-      .update({marge:!!onl.marge, nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
+      .update({marge:eigenMarge, nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
         bijgewerkt_op:new Date().toISOString()}).eq('id', a.id);
 
     /* De advertentie (titel, tekst, zoekwoorden, prijzen, nieuwprijs, garantie) per model
@@ -6759,7 +7161,7 @@ async function deelOpslaan(knop){
   });
 }
 async function deelWeg(id){
-  if(!confirm('Dit onderdeel verwijderen?')) return;
+  if(!await bevestig('Dit onderdeel verwijderen?', {kop:'Verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await sb.from('refurbish_onderdelen').delete().eq('id',id);
   await allesLaden(); toast('Verwijderd', true);
 }
@@ -6787,8 +7189,7 @@ function vrdSync(lots){
 
 function tekenVoorraaddelen(){
   const laagLijst=voorraaddelen.filter(vrdLaag);
-  const bv=document.getElementById('bVrd');
-  if(bv){ bv.textContent=laagLijst.length; bv.hidden=!laagLijst.length; }
+  tekenBadges();   // de teller van Te bestellen telt de lege bakken mee
 
   const bestelEl=document.getElementById('vrdBestelLijst');
   if(bestelEl){
@@ -6896,7 +7297,7 @@ async function vrdLabel(id){
   let qrUrl='';
   try{ await laadScript('/app/qrcode.min.js'); const qr=qrcode(0,'M'); qr.addData(vrdQrInhoud(o)); qr.make(); qrUrl=qr.createDataURL(6,0); }catch(_e){}
   venster('Label', `
-    <p class="pv">Print op je labelprinter (stil, geen printvenster) en plak het op de bak. Pak je er later een, scan dan de QR-code, dan boek je meteen een van de voorraad af. Geen labelprinter? Kies "Op A4-vel".</p>
+    <p class="pv">Plak het op de bak. Pak je er een, scan dan de QR-code: dan gaat er meteen een van de voorraad af. Geen labelprinter? Kies "Op A4-vel".</p>
     <div class="labelvel" id="vrdLabelVel">${vrdLabelHtml(o, qrUrl)}</div>
   `, [
     {tekst:'Op labelprinter', klasse:'actie', doe:()=>vrdLabelPrint(o.id)},
@@ -6908,6 +7309,7 @@ async function vrdLabel(id){
 function vrdGebruik(id){
   const o=voorraaddelen.find(x=>x.id===id);
   if(!o){ toast('Dit onderdeel ken ik niet','let-op'); return; }
+  ondTab='voorraad';
   if(typeof showTab==='function') showTab('onderdelen');
   venster('Onderdeel gebruiken', `<div class="pv">
       <div style="font-size:18px; font-weight:800; margin-bottom:2px">${esc(o.naam)}</div>
@@ -7101,7 +7503,11 @@ async function vrdLotWeg(id, index){
   if(o2) vrdForm(o2); else sluit();
 }
 async function vrdWeg(id){
-  if(!confirm('Deze voorraadregel verwijderen?')) return;
+  /* De vraag komt in de plaats van het bewerkvenster; zeg je nee, dan sta je weer
+     in dat bewerkvenster in plaats van nergens. */
+  if(!await bevestig('Dit product en al zijn partijen verwijderen?', {kop:'Verwijderen?', ja:'Verwijderen', gevaar:true})){
+    const o=voorraaddelen.find(x=>x.id===id); if(o) vrdForm(o); return;
+  }
   const {error}=await sb.from('refurbish_voorraad').delete().eq('id',id);
   if(error){ toast('Mislukt','fout'); return; }
   sluit(); await allesLaden(); toast('Verwijderd', true);
@@ -7127,7 +7533,24 @@ function exVoorraadKies(){
   }
 }
 
-/* ═══════════════ bestellen ═══════════════ */
+/* ═══════════════ bestellen ═══════════════
+   Een tabblad van Onderdelen: Voorraad (wat er ligt), Te bestellen (wat er moet
+   komen) en Bestellingen (wat onderweg is). De rechten blijven zoals ze waren:
+   ref_onderdelen voor de voorraad, ref_bestellen voor de andere twee. */
+function ondMag(t){
+  if(!account) return true;
+  return t==='voorraad' ? magPagina('onderdelen') : magPagina('bestellen');
+}
+function ondKies(t, stil){
+  if(!['voorraad','bestellen','orders'].includes(t)) t='voorraad';
+  /* Mag je dit tabblad niet zien, dan het eerste dat wel mag. */
+  if(!ondMag(t)) t=['voorraad','bestellen','orders'].find(ondMag)||'voorraad';
+  ondTab=t;
+  document.querySelectorAll('#ondTabs button').forEach(b=>b.classList.toggle('active', b.dataset.ond===t));
+  document.querySelectorAll('[data-ondpaneel]').forEach(p=>p.hidden=(p.dataset.ondpaneel!==t));
+  document.querySelectorAll('[data-ondknop]').forEach(k=>k.hidden=(k.dataset.ondknop!==t));
+  if(!stil) sessieBewaar();
+}
 
 function tekenBestellen(){
   const nodig=onderdelen.filter(o=>o.status==='te_bestellen');
@@ -7190,7 +7613,7 @@ async function orderOpslaan(knop, ids){
 async function orderOntvangen(id){
   const deel=onderdelen.filter(o=>o.order_id===id);
   venster('Bestelling ontvangen', `
-    <p class="pv">${deel.length} onderdeel${deel.length===1?'':'en'} binnengekomen. Print de labels op je labelprinter (stil, geen printvenster), plak ze erop en bevestig dan. De QR opent het toestel waar het onderdeel voor is.</p>
+    <p class="pv">${deel.length} onderdeel${deel.length===1?'':'en'} binnengekomen. Print de labels, plak ze erop en bevestig. De QR opent het toestel waar het onderdeel voor is.</p>
     <div class="labelvel">${deel.map(o=>`
       <div class="label">
         <img src="${labelUrl(o.voor_apparaat||o.id)}" alt="" loading="lazy">
@@ -7213,16 +7636,12 @@ async function orderKlaar(knop, id){
 
 /* ═══════════════ checklists ═══════════════ */
 
+/* Het sjabloon, het inscannen en de accu-grens zijn verhuisd naar Storvo (Instellingen,
+   Refurbishen). De velden en functies die ze hier vulden en opsloegen stonden er nog,
+   zonder scherm erbij; dat soort wees-code is precies waar een stille fout in sluipt.
+   De waarden zelf lezen we nog wel (instel), want de werkbank gebruikt ze. */
 function tekenChecklists(){
-  const acc=document.getElementById('in_accu');
-  if(acc && document.activeElement!==acc) acc.value=Number(instel.accu_min)||85;
-  const sc=document.getElementById('in_scan');
-  if(sc) sc.checked=!!instel.inscannen;
   tekenLocaties();
-  const sj=document.getElementById('in_sjabloon');
-  if(sj && document.activeElement!==sj) sj.value=instel.ad_sjabloon||'';
-  const tn=document.getElementById('in_toon');
-  if(tn && document.activeElement!==tn) tn.value=instel.ad_toon||'zakelijk en eerlijk';
   schermVelden();
   document.getElementById('clLijst').innerHTML=checklists.length
     ? checklists.map(c=>`
@@ -7275,58 +7694,10 @@ async function locToevoegen(knop){
   });
 }
 async function locWeg(id){
-  if(!confirm('Deze locatie verwijderen?')) return;
+  if(!await bevestig('Deze locatie verwijderen?', {kop:'Verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await sb.from('hardware_locaties').delete().eq('id',id);
   await locatiesLaden(); toast('Verwijderd', true);
 }
-async function scanInstelling(aan){
-  const {error}=await sb.from('refurbish_instellingen').upsert({
-    team_id:account.team_id, inscannen:!!aan,
-    accu_min:Number(instel.accu_min)||85,
-    ad_sjabloon:instel.ad_sjabloon||null,
-    ad_toon:instel.ad_toon||'zakelijk en eerlijk',
-    bijgewerkt_op:new Date().toISOString()
-  });
-  if(error){ toast('Opslaan mislukt','fout'); return; }
-  instel.inscannen=!!aan;
-  toast(aan?'Toestellen moeten voortaan ingescand worden':'Toestellen tellen meteen mee', true);
-}
-
-const STANDAARD_SJABLOON=`{merk} {model} — {kernpunt}
-
-{intro van twee zinnen: wat is dit voor apparaat en voor wie is het geschikt}
-
-Specificaties
-{specificaties als lijstje met streepjes}
-
-Staat
-{eerlijke beschrijving van de staat, hoort bij grade {grade}}
-
-Wat je krijgt
-- Getest en schoon geïnstalleerd met Windows
-- {garantie} maanden garantie
-- Oplader inbegrepen
-
-{afsluiter van één zin, zonder uitroeptekens}`;
-
-function sjabloonStandaard(){
-  const e=document.getElementById('in_sjabloon');
-  if(e) e.value=STANDAARD_SJABLOON;
-}
-async function sjabloonOpslaan(knop){
-  const sj=document.getElementById('in_sjabloon').value.trim();
-  const toon=document.getElementById('in_toon').value.trim();
-  await bezig(knop, async()=>{
-    const {error}=await sb.from('refurbish_instellingen').upsert({
-      team_id:account.team_id, ad_sjabloon:sj||null,
-      ad_toon:toon||'zakelijk en eerlijk', bijgewerkt_op:new Date().toISOString()
-    });
-    if(error) throw new Error('Opslaan mislukt');
-    instel.ad_sjabloon=sj||null; instel.ad_toon=toon||'zakelijk en eerlijk';
-    toast('Sjabloon opgeslagen', true);
-  });
-}
-
 /* ── de achtergrond instellen ──
    Het voorbeeld tekent met dezelfde functie als de echte foto, dus wat je
    hier ziet is wat er straks op het scherm van de laptop staat. */
@@ -7443,16 +7814,6 @@ function schermStandaard(){
   toast('Terug op de standaardkleuren. Vergeet niet op te slaan.','let-op');
 }
 
-async function instelOpslaan(knop){
-  const e=document.getElementById('in_accu');
-  const w=Math.max(0, Math.min(100, Number(e.value)||0));
-  await bezig(knop, async()=>{
-    instel.accu_min=w;
-    await schermBewaren();
-    toast('Grens staat op '+w+'%', true);
-  });
-}
-
 function clNieuw(){
   venster('Checklist maken', `
     <div class="grid">
@@ -7483,7 +7844,7 @@ async function clOpslaan(knop){
   });
 }
 async function clWeg(id){
-  if(!confirm('Deze checklist verwijderen?')) return;
+  if(!await bevestig('Deze checklist verwijderen?', {kop:'Verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await sb.from('refurbish_checklists').delete().eq('id',id);
   await allesLaden(); toast('Verwijderd', true);
 }
@@ -7516,6 +7877,54 @@ function venster(kop, inhoud, knoppen, klasse){
   rij.appendChild(sl);
 }
 function sluit(){ const o=document.getElementById('venster'); if(o) o.remove(); }
+
+/* Een eigen ja/nee-venster in plaats van confirm(). Dat van het besturingssysteem
+   ziet er op elke computer anders uit, valt buiten de huisstijl, en op een iPad weet
+   je niet waar het vandaan komt. Geeft een belofte: true bij ja, false bij Annuleren,
+   een klik ernaast of als er een ander venster overheen komt. */
+function bevestig(vraag, o){
+  o=o||{};
+  return new Promise(res=>{
+    let klaar=false;
+    const kies=w=>{ if(klaar) return; klaar=true; if(document.getElementById('venster')===ov) sluit(); res(w); };
+    venster(esc(o.kop||'Zeker weten?'), `<p class="pv">${esc(vraag)}</p>`,
+      [{tekst:o.ja||'Ja', klasse:o.gevaar?'rood':'actie', doe:()=>kies(true)}]);
+    const ov=document.getElementById('venster');
+    vensterNee(ov, ()=>kies(false), o.nee);
+  });
+}
+/* Hetzelfde voor prompt(): een vraag met één invoerveld. Geeft de tekst terug, of
+   null als je annuleert. Enter in het veld is hetzelfde als de hoofdknop. */
+function vraagTekst(kop, uitleg, o){
+  o=o||{};
+  return new Promise(res=>{
+    let klaar=false;
+    const kies=w=>{ if(klaar) return; klaar=true; if(document.getElementById('venster')===ov) sluit(); res(w); };
+    venster(esc(kop), `${uitleg?`<p class="pv">${esc(uitleg)}</p>`:''}
+      <input id="vraagInvoer" type="${o.type==='password'?'password':'text'}" value="${esc(o.waarde||'')}" placeholder="${esc(o.placeholder||'')}" autocomplete="off">`,
+      [{tekst:o.ja||'Opslaan', klasse:'actie', doe:()=>kies(document.getElementById('vraagInvoer').value)}]);
+    const ov=document.getElementById('venster');
+    vensterNee(ov, ()=>kies(null), o.nee);
+    const inp=document.getElementById('vraagInvoer');
+    if(inp){
+      inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); kies(inp.value); } });
+      try{ inp.focus(); }catch(e){}
+    }
+  });
+}
+/* De Sluiten-knop en een klik op de achtergrond betekenen hier "nee". En wordt het
+   venster door iets anders weggehaald, dan ook: anders blijft de vraag eeuwig hangen. */
+function vensterNee(ov, nee, tekst){
+  if(!ov) return nee();
+  const knoppen=ov.querySelectorAll('#vensterKnoppen .btn');
+  const sl=knoppen[knoppen.length-1];
+  if(sl){ sl.textContent=tekst||'Annuleren'; sl.onclick=nee; }
+  ov.onclick=e=>{ if(e.target===ov) nee(); };
+  if(typeof MutationObserver==='function'){
+    const mo=new MutationObserver(()=>{ if(!ov.isConnected){ mo.disconnect(); nee(); } });
+    mo.observe(document.body, {childList:true});
+  }
+}
 
 async function bezig(knop, doe){
   const oud=knop?knop.textContent:'';
@@ -7800,6 +8209,9 @@ function tekenBatches(){
 function batOpen(id){ batHuidig=id; tekenBatches(); window.scrollTo(0,0); }
 function batTerug(){ batHuidig=null; tekenBatches(); }
 
+/* In Simpel toont een partij wat je dagelijks wilt weten: wat je erin stak, wat hij
+   opleverde en wat er nog ligt, plus de toestellen en de documenten. De btw-indicatie,
+   de omzet-uitsplitsing, de bundels en een lege kostenlijst zijn boekhoudwerk voor Alles. */
 function renderBatchDetail(){
   const vak=document.getElementById('batDetailVak'); if(!vak) return;
   const b=batches.find(x=>x.id===batHuidig); if(!b){ batTerug(); return; }
@@ -7848,10 +8260,13 @@ function renderBatchDetail(){
     <div class="pagehead">
       <button class="btn ghost" onclick="batTerug()"><svg class="i s"><use href="#i-left"/></svg>Alle batches</button>
       <div class="row" style="gap:8px">
-        ${lijstSleutel?`<button class="btn ghost" onclick="lijstVenster('batch','${b.id}')"><svg class="i s"><use href="#i-print"/></svg>Lijst voor koper</button>`:''}
-        <button class="btn ghost" onclick="batExport('${b.id}')"><svg class="i s"><use href="#i-print"/></svg>Exporteren</button>
         <button class="btn ghost" onclick="batBewerk('${b.id}')"><svg class="i s"><use href="#i-note"/></svg>Bewerken</button>
-        <button class="btn ghost" onclick="batVerwijder('${b.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>
+        ${rijMenu([
+          lijstSleutel && {tekst:'Lijst voor koper', ico:'i-print', doe:`lijstVenster('batch','${b.id}')`},
+          {tekst:'Exporteren', ico:'i-print', doe:`batExport('${b.id}')`},
+          {scheiding:true},
+          {tekst:'Verwijderen', ico:'i-trash', gevaar:true, doe:`batVerwijder('${b.id}')`}
+        ], 'Meer')}
       </div>
     </div>
 
@@ -7862,22 +8277,22 @@ function renderBatchDetail(){
       <div class="kpis" style="margin-top:18px">
         <div class="kpi"><div class="l">Investering</div><div class="v">${euro(c.investering)}</div>
           <div class="muted klein" style="margin-top:6px">aankoop ${euro(c.devBasis)}${c.deviceExtras?' · onderdelen '+euro(c.deviceExtras):''}${c.batchKosten?' · partijkosten '+euro(c.batchKosten):''}</div></div>
-        <div class="kpi"><div class="l">Extra investering</div><div class="v">${euro(c.extraInvestering)}</div>
+        <div class="kpi uitgebreid"><div class="l">Extra investering</div><div class="v">${euro(c.extraInvestering)}</div>
           <div class="muted klein" style="margin-top:6px">onderdelen en losse kosten</div></div>
-        <div class="kpi"><div class="l">Omzet</div><div class="v">${euro(c.omzet)}</div>
+        <div class="kpi uitgebreid"><div class="l">Omzet</div><div class="v">${euro(c.omzet)}</div>
           <div class="muted klein" style="margin-top:6px">met bon ${euro(c.omzetBon)} · zonder bon ${euro(c.omzetZb)}</div></div>
         <div class="kpi"><div class="l">Winst</div><div class="v ${c.winst>=0?'batwinst':'batverlies'}">${euro(c.winst)}</div>
           <div class="muted klein" style="margin-top:6px">${c.verkocht} van ${c.aantal} verkocht</div></div>
         <div class="kpi"><div class="l">Nog te verkopen</div><div class="v">${euro(c.teKoopWaarde)}</div>
           <div class="muted klein" style="margin-top:6px">${c.teKoop} ${c.teKoop===1?'toestel':'toestellen'}</div></div>
-        <div class="kpi"><div class="l">Btw-indicatie</div><div class="v">${euro(c.btw)}</div>
+        <div class="kpi uitgebreid"><div class="l">Btw-indicatie</div><div class="v">${euro(c.btw)}</div>
           <div class="muted klein" style="margin-top:6px">${c.margeGemengd?'gemengd, per toestel gerekend':(b.marge?'marge, over de winst':'over de omzet')}</div></div>
       </div>
     </div>
 
     <div class="card">
       <h2><svg class="i"><use href="#i-note"/></svg>Inkoop-documenten</h2>
-      <p class="muted klein" style="margin-bottom:10px">Bewaar de factuur of bon, en maak bij een contante inkoop bij een particulier een ondertekende inkoopverklaring. Privé, alleen voor jouw team.</p>
+      <p class="muted klein" style="margin-bottom:10px">De factuur of bon, of een ondertekende inkoopverklaring als je contant van een particulier koopt. Alleen jouw team ziet dit.</p>
       <div class="row" style="gap:10px; flex-wrap:wrap">
         ${b.factuur_url
           ? `<button class="btn ghost small" onclick="batFactuurBekijk('${b.id}')">Factuur bekijken</button><label class="btn ghost small" style="cursor:pointer">Vervangen<input type="file" accept="application/pdf,image/*" hidden onchange="batFactuurUpload('${b.id}', this)"></label><button class="btn ghost small" onclick="batFactuurWeg('${b.id}')">Verwijderen</button>`
@@ -7905,7 +8320,7 @@ function renderBatchDetail(){
         :'<p class="muted">Nog geen toestellen. Voeg ze toe bij Toevoegen en koppel ze hier, of gebruik de knop hierboven.</p>'}
     </div>
 
-    ${inBundel.length?`<div class="card">
+    ${inBundel.length?`<div class="card uitgebreid">
       <h2><svg class="i"><use href="#i-tag"/></svg>Al in een bundel <span class="muted">(${inBundel.length})</span></h2>
       <p class="muted klein" style="margin-bottom:8px">Deze laptops uit deze partij staan al in een verkoop-bundel voor de tweede webshop.</p>
       <div class="tabelrol"><table>
@@ -7921,9 +8336,9 @@ function renderBatchDetail(){
         }).join('')}</tbody></table></div>
     </div>`:''}
 
-    <div class="card">
+    <div class="card${extraRijen.length?'':' uitgebreid'}">
       <h2><svg class="i"><use href="#i-wrench"/></svg>Extra investering${onderdelen?` <span class="muted">(${onderdelen})</span>`:''}</h2>
-      <p class="muted klein" style="margin-bottom:8px">Wat er extra in ging: onderdelen die je bij het testen op een toestel zette, en losse kosten voor de hele partij.</p>
+      <p class="muted klein" style="margin-bottom:8px">Onderdelen die je bij het testen op een toestel zette, en losse kosten voor de hele partij.</p>
       ${extraRijen.length?`<div class="tabelrol"><table>
         <thead><tr><th>Wat</th><th>Waarvoor</th><th class="num">Bedrag</th><th></th></tr></thead>
         <tbody>${extraRijen.join('')}</tbody></table></div>`
@@ -8013,11 +8428,11 @@ function batLabels(id){
   let chips='';
   for(let n=1;n<=cap;n++){
     const kl = ingevuld.has(n)?'ingevuld':(n<=tot?'geprint':'');
-    const tt = ingevuld.has(n)?'Ingevuld — open toestel':(n<=tot?'Opnieuw printen':'Printen');
+    const tt = ingevuld.has(n)?'Ingevuld, open toestel':(n<=tot?'Opnieuw printen':'Printen');
     chips += `<button class="slotchip ${kl}" onclick="batSlotKlik('${id}',${n})" title="${tt}">${String(n).padStart(pad2,'0')}</button>`;
   }
   venster('Labels · '+esc(batLabel(b)), `
-    <p class="pv">Genummerde labels voor deze partij (${cap} stuks). Print ze per stuk, per 50 of allemaal, plak ze op de toestellen, en scan er later een om hem in te vullen. Geen inkoopprijs of model op de sticker.</p>
+    <p class="pv">Genummerde labels voor deze partij (${cap} stuks). Print ze, plak ze op de toestellen en scan er later een om hem in te vullen. Er staat geen prijs of model op.</p>
     <p class="muted klein" style="margin-bottom:2px">Inkoop ${euro(batPerStuk(b))} per stuk${b.leverancier?' · '+esc(b.leverancier):''} · binnengekomen als ${esc(cond)}</p>
     <p class="muted klein"><b>${tot}</b> van ${cap} geprint · <b>${ingevuld.size}</b> ingevuld</p>
     <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:12px">
@@ -8278,7 +8693,7 @@ function batForm(b){
       <div><label>Aantal in de partij</label><input id="bf_aantal" type="number" min="0" step="1" value="${b&&b.aantal!=null?b.aantal:''}" placeholder="0" oninput="batRekenStuk()"></div>
       <div><label>Prijs per stuk</label><input id="bf_perstuk" type="number" step="0.01" min="0" value="${b&&b.inkoopprijs&&b.aantal?Math.round((Number(b.inkoopprijs)/Number(b.aantal))*100)/100:''}" placeholder="0,00" oninput="batRekenTotaal()"></div>
     </div>
-    <p class="muted klein" style="margin-top:6px">Vul de totale aankoopwaarde en het aantal in, dan komt de prijs per stuk er vanzelf uit. Of andersom. Bij een nieuw toestel in deze batch wordt die prijs per stuk automatisch als inkoop ingevuld.</p>
+    <p class="muted klein" style="margin-top:6px">Vul het totaal en het aantal in, dan rekent hij de prijs per stuk uit. Of andersom. Een nieuw toestel in deze batch krijgt die prijs als inkoop.</p>
     <div class="veldkop"><label>Notitie</label></div>
     <textarea id="bf_notitie" rows="2" placeholder="bijv. factuurnummer">${b?esc(b.notitie||''):''}</textarea>`;
   venster(b?'Batch bewerken':'Nieuwe batch', inhoud, [
@@ -8345,7 +8760,7 @@ function batFactuurBekijk(id){ const b=batches.find(x=>x.id===id); if(b&&b.factu
 function batVerklaringBekijk(id){ const b=batches.find(x=>x.id===id); if(b&&b.handtekening_url) batBekijkDoc(b.handtekening_url); }
 async function batFactuurWeg(id){
   const b=batches.find(x=>x.id===id); if(!b||!b.factuur_url) return;
-  if(!confirm('De factuur verwijderen?')) return;
+  if(!await bevestig('De factuur verwijderen?', {kop:'Verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   const oud=b.factuur_url;
   await sb.from('refurbish_batches').update({factuur_url:null}).eq('id',id);
   b.factuur_url=null;
@@ -8555,7 +8970,7 @@ async function batVerwijder(id){
   const vraag=c.aantal
     ? 'Deze batch verwijderen? De '+c.aantal+' toestellen blijven bestaan, ze horen daarna bij geen partij meer.'
     : 'Deze batch verwijderen?';
-  if(!confirm(vraag)) return;
+  if(!await bevestig(vraag, {kop:'Batch verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   /* Eerst de toestellen loskoppelen, dan de partij weg. Zo maakt het niet uit
      hoe de sleutel in de database is ingesteld. */
   await sb.from('refurbish_apparaten').update({batch_id:null}).eq('batch_id',id);
@@ -8693,7 +9108,7 @@ function lijstKnoppen(soort){
 async function lijstLinkKopieren(knop, soort, id, merk){
   const url=lijstAdres(soort, id||null, merk||null, 'html');
   try{ await navigator.clipboard.writeText(url); knop.textContent='Gekopieerd'; }
-  catch(e){ prompt('Kopieer deze link:', url); }
+  catch(e){ venster('Kopieer deze link', `<p class="pv">Kopiëren lukte niet vanzelf. Selecteer de link en kopieer hem.</p><input id="lijstLinkVeld" readonly value="${esc(url)}" onfocus="this.select()">`, []); }
 }
 
 async function kpLaden(){
@@ -9209,7 +9624,7 @@ async function vbScanToevoegen(apparaatId){
 
 async function vbVerwijder(id){
   const c=vbCijfers(id);
-  if(!confirm('Deze bundel verwijderen? De '+c.aantal+' '+(c.aantal===1?'laptop blijft':'laptops blijven')+' gewoon op voorraad staan.')) return;
+  if(!await bevestig('Deze bundel verwijderen? De '+c.aantal+' '+(c.aantal===1?'laptop blijft':'laptops blijven')+' gewoon op voorraad.', {kop:'Bundel verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   const {error}=await sb.from('refurbish_voorraad_batches').delete().eq('id',id);
   if(error){ toast('Verwijderen mislukt','fout'); return; }
   apparaten.forEach(a=>{ if(a.voorraad_batch_id===id) a.voorraad_batch_id=null; });
@@ -9276,7 +9691,7 @@ async function web2Koppel(knop){
   });
 }
 async function web2Loskoppel(){
-  if(!confirm('De tweede webshop loskoppelen? Bundels die er online staan blijven op Shopify staan tot je ze daar weghaalt.')) return;
+  if(!await bevestig('De tweede webshop loskoppelen? Bundels die er online staan blijven op Shopify tot je ze daar weghaalt.', {kop:'Loskoppelen?', ja:'Loskoppelen', gevaar:true})) return;
   try{ await web2Roep({actie:'loskoppelen'}); web2Stand={gekoppeld:false}; tekenBundels(); toast('Losgekoppeld', true); }
   catch(e){ toast(e.message,'fout'); }
 }
@@ -9368,7 +9783,7 @@ async function web2BundelOnline(id, knop){
   });
 }
 async function web2BundelOffline(id, knop){
-  if(!confirm('De bundel offline halen van de tweede webshop?')) return;
+  if(!await bevestig('De bundel offline halen van de tweede webshop?', {kop:'Offline halen?', ja:'Offline halen'})) return;
   await bezig(knop, async()=>{
     await web2Roep({actie:'bundel_offline', bundel_id:id});
     const v=vbundels.find(x=>x.id===id); if(v){ v.status='concept'; v.shopify=null; }
@@ -9395,7 +9810,7 @@ function uitAdres(){
   const p=new URLSearchParams(location.search);
   // Inname vanaf de winkel-kant: open meteen Toevoegen (daar vul je toestel + bedrag in
   // en maak je de inkoopverklaring). Zo is "inname op de inruil-pagina" één tik naar hier.
-  if(p.get('inname')){ if(typeof showTab==='function') showTab('toevoegen'); return; }
+  if(p.get('inname')){ innameOpen=true; bewijsStatusTeken(); if(typeof showTab==='function') showTab('toevoegen'); return; }
   const batchId=p.get('batch'), nr=p.get('nr');
   if(batchId && nr){ batSlotInvullen(batchId, Number(nr)); return; }   // genummerd batch-label
   if(batchId && batches.find(x=>x.id===batchId)){ showTab('batches'); batOpen(batchId); return; }  // batch-sticker
@@ -9482,11 +9897,14 @@ async function renderPartners(){
   const telling={}; (hw||[]).forEach(r=>{ if(r.partner_id) telling[r.partner_id]=(telling[r.partner_id]||0)+1; });
   box.innerHTML=`<div class="tabelrol"><table><thead><tr><th>Partner</th><th class="num">Toegewezen laptops</th><th></th></tr></thead><tbody>${
     partners.map(p=>`<tr><td><b>${esc(p.naam||'Partner')}</b></td><td class="num">${telling[p.id]||0}</td>`+
-      `<td class="num"><span style="display:inline-flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">`+
+      `<td class="num"><span style="display:inline-flex;gap:8px;justify-content:flex-end;align-items:center">`+
         `<button class="btn ghost small" onclick="partnerOpen('${p.id}')"><svg class="i s"><use href="#i-globe"/></svg>Openen</button>`+
-        `<button class="btn ghost small" onclick="partnerNaamWijzig('${p.id}')">Naam</button>`+
-        `<button class="btn ghost small" onclick="partnerNieuwWw('${p.id}')">Nieuw wachtwoord</button>`+
-        `<button class="btn ghost small" style="color:var(--red)" onclick="partnerVerwijder('${p.id}')">Verwijderen</button>`+
+        rijMenu([
+          {tekst:'Naam wijzigen', ico:'i-note', doe:`partnerNaamWijzig('${p.id}')`},
+          {tekst:'Nieuw wachtwoord', ico:'i-users', doe:`partnerNieuwWw('${p.id}')`},
+          {scheiding:true},
+          {tekst:'Verwijderen', ico:'i-trash', gevaar:true, doe:`partnerVerwijder('${p.id}')`}
+        ])+
       `</span></td></tr>`).join('')
   }</tbody></table></div>`;
 }
@@ -9506,22 +9924,36 @@ async function partnerActie(body, okMsg){
   }catch(e){ toast(e.message,'fout'); return null; }
 }
 async function partnerNaamWijzig(id){
-  const naam=window.prompt('Nieuwe naam voor deze partner:');
+  const p=(partnersData||[]).find(x=>x.id===id);
+  const naam=await vraagTekst('Naam wijzigen', '', {waarde:(p&&p.naam)||'', placeholder:'Naam van je partner', ja:'Opslaan'});
   if(naam===null) return;
   if(!naam.trim()){ toast('Vul een naam in','let-op'); return; }
   await partnerActie({actie:'partner_bijwerken', partner_id:id, naam:naam.trim()}, 'Naam bijgewerkt');
 }
-async function partnerNieuwWw(id){
-  const ww=window.prompt('Nieuw begin-wachtwoord (minstens 8 tekens):');
-  if(ww===null) return;
+/* Wachtwoord en "per mail sturen" in één venster; dat waren twee losse vragen van
+   het besturingssysteem achter elkaar. */
+function partnerNieuwWw(id){
+  venster('Nieuw wachtwoord', `<p class="pv">Minstens 8 tekens. Hij kan het daarna zelf wijzigen.</p>
+    <input id="pw_nieuw" type="text" autocomplete="off" placeholder="Nieuw begin-wachtwoord">
+    <label class="schakelrij" style="margin-top:14px"><input type="checkbox" id="pw_mail" checked>
+      <div><div class="knaam">Per e-mail naar de partner sturen</div><div class="kuit">Anders geef je het zelf door.</div></div></label>`,
+    [{tekst:'Wachtwoord wijzigen', klasse:'actie', doe:(kn)=>partnerNieuwWwOpslaan(kn, id)}]);
+  const e=document.getElementById('pw_nieuw'); if(e) e.focus();
+}
+async function partnerNieuwWwOpslaan(knop, id){
+  const ww=(document.getElementById('pw_nieuw')||{}).value||'';
+  const mailen=!!(document.getElementById('pw_mail')||{}).checked;
   if(ww.length<8){ toast('Minstens 8 tekens','let-op'); return; }
-  const mailen=window.confirm('Het nieuwe wachtwoord per e-mail naar de partner sturen?');
-  const j=await partnerActie({actie:'partner_wachtwoord', partner_id:id, wachtwoord:ww, mailen}, null);
-  if(j) toast(mailen ? (j.gemaild ? 'Wachtwoord gewijzigd en gemaild' : 'Wachtwoord gewijzigd. Mail niet gelukt, geef het zelf door.') : 'Wachtwoord gewijzigd', true);
+  await bezig(knop, async()=>{
+    const j=await partnerActie({actie:'partner_wachtwoord', partner_id:id, wachtwoord:ww, mailen}, null);
+    if(!j) return;
+    sluit();
+    toast(mailen ? (j.gemaild ? 'Wachtwoord gewijzigd en gemaild' : 'Wachtwoord gewijzigd. Mailen lukte niet, geef het zelf door.') : 'Wachtwoord gewijzigd', true);
+  });
 }
 function partnerOpen(id){ window.open('/partner/?bekijk='+encodeURIComponent(id), '_blank', 'noopener'); }
 async function partnerVerwijder(id){
-  if(!confirm('Deze partner verwijderen? Dit kan niet ongedaan gemaakt worden. Het kan alleen als er geen laptops meer aan hem toegewezen zijn.')) return;
+  if(!await bevestig('Deze partner verwijderen? Dat kan niet ongedaan. Het lukt alleen als er geen laptops meer aan hem hangen.', {kop:'Partner verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await partnerActie({actie:'partner_verwijder', partner_id:id}, 'Partner verwijderd');
 }
 async function partnerAanmaken(knop){

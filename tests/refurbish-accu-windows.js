@@ -4,6 +4,11 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
+
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
@@ -60,6 +65,9 @@ const terug=()=>[...d().querySelectorAll('#ctrPagina .pagehead button')]
 setTimeout(async()=>{
   ok('app start zonder fout', fouten.length===0);
   if(fouten.length) console.log('   ', fouten.slice(0,2).join(' | '));
+  /* Externe scripts (qrcode voor de labels) laden niet in jsdom. Zonder dit wachtte
+     elke labelprint eeuwig, en stopte deze test stilletjes halverwege. */
+  w.eval("laadScript=()=>Promise.reject(new Error('geen scripts in de test'))");
 
   // ── instelling voor de accugrens ──
   ok('instelling geladen', w.eval('instel.accu_min')===80);
@@ -73,12 +81,14 @@ setTimeout(async()=>{
   knop('Door naar de hardware').click();
   ok('geen accuveld in de hardwarestap', !d().getElementById('c_accu'));
   w.eval("ctrVoorWindows().forEach(q=>ctr.antwoord[q.v]='Ja'); ctrTeken()");
-  knop('Door naar de upgrade').click();
+  knop('Door naar ram en ssd').click();
   knop('Door naar Windows').click();
   knop('Windows draait, verder').click();
   ok('windows nakijken', /Windows nakijken/.test(tekst()));
 
-  // ── de accu staat nu bij het nakijken ──
+  // ── de accu staat bij het nakijken, zodra Windows en de drivers goed zijn ──
+  ok('eerst nog geen accuveld', !d().getElementById('c_accu'));
+  w.eval("ctrKies('windowsgoed','Ja'); ctrKies('drivers','Ja')");
   ok('accuveld staat nu hier', !!d().getElementById('c_accu'));
   ok('grens genoemd bij het veld', /grens staat op 85%/.test(tekst()));
   ok('toetsenbord staat hier ook', /Werkt het toetsenbord/.test(tekst()));
