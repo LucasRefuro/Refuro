@@ -18,7 +18,7 @@ npm test
 
 | Bestand | Wat het nakijkt |
 |---|---|
-| `winkelapp.js` | Hardwarepagina: lijst, filters, marge, kanalen, het bewerkvenster |
+| `winkelapp.js` | Hardwarepagina, Simpel of Alles, het reparatiebord, automatisch opslaan van een toestel, de Uren-pagina |
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
 | `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
 | `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen |
@@ -44,6 +44,8 @@ soort fout dat nooit een foutmelding geeft:
 - een kleur die in dít bestand anders heet, zodat het veld geen achtergrond krijgt
 - keuzelijsten en aankruisvakken van het besturingssysteem in plaats van de onze
 - een link naar een nieuw tabblad zonder `rel="noopener"`
+- een `uitgebreid`- of `alleensimpel`-blok terwijl de regel die hem verbergt
+  ontbreekt; dan ziet Simpel er precies zo uit als Alles
 
 Alle drie de schermen worden ook echt geladen, om te zien of ze zonder klagen
 opstarten.
@@ -52,3 +54,13 @@ Twee uitzonderingen staan er expres in. `bestelvink` en `logoImg` zijn klassen
 die alleen bestaan om ze met javascript terug te vinden; die horen geen stijl te
 hebben. En bij `fbTekst`, `camera` en `handcode` staat dezelfde id meerdere keren
 in de bron, maar in takken van hetzelfde scherm die elkaar uitsluiten.
+
+## Een test die halverwege stopt
+
+Elke test eindigt met `process.exit`. Wacht hij ergens op een belofte die nooit
+oplost (in jsdom bijvoorbeeld een script dat niet laadt), dan liep node vroeger
+gewoon leeg met code 0: halve test, toch groen. Dat gebeurde echt bij twee
+refurbish-tests. Daarom staat bovenin elke asynchrone test een `beforeExit`-wacht
+die dat als fout telt. Zet die er ook in als je een nieuwe test schrijft.
+`clover-sync.js` heeft hem niet: die is synchroon en eindigt zonder `process.exit`.
+

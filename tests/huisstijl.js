@@ -8,6 +8,10 @@
 const fs=require('fs');
 const path=require('path');
 const {JSDOM}=require('jsdom');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c,uitleg)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c){ fout++; if(uitleg) console.log('     '+uitleg); } };
@@ -79,6 +83,20 @@ for(const p of PAGINAS){
       if(k && !gestyled.has(k) && !HAAKJES.has(k)) zonder.add(k);
     }
   ok(p+': elke klasse heeft een stijl', !zonder.size, [...zonder].join(', '));
+
+  // ── Simpel of Alles: een tag zonder verbergregel verbergt niets ──
+  // De tag staat vaak in een template-string met ${...}, die de controle hierboven
+  // overslaat. Daarom hier los: komt "uitgebreid" of "alleensimpel" als klasse voor,
+  // dan moet de regel die hem laat verdwijnen er ook echt staan. Anders ziet Simpel
+  // er precies zo uit als Alles en merkt niemand het.
+  const css1=css.replace(/\s+/g,' ');
+  const gebruikt=k=>new RegExp('class="[^"]*\\b'+k+'\\b').test(html) || new RegExp("classList\\.(add|toggle)\\('"+k+"'").test(js);
+  if(gebruikt('uitgebreid'))
+    ok(p+': Simpel verbergt .uitgebreid', /body\.simpel \.uitgebreid ?\{ ?display ?: ?none/.test(css1));
+  if(gebruikt('alleensimpel'))
+    ok(p+': Alles verbergt .alleensimpel', /body:not\(\.simpel\) \.alleensimpel ?\{ ?display ?: ?none/.test(css1));
+  if(gebruikt('uitgebreid') || gebruikt('alleensimpel'))
+    ok(p+': er is een schakelaar voor Simpel of Alles', /function\s+zetModus\s*\(/.test(js) && /function\s+modusSimpel\s*\(/.test(js));
 
   // ── een icoon dat naar een symbool wijst dat niet bestaat, rendert leeg (geen fout) ──
   const iconGezet=new Set();

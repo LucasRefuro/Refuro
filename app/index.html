@@ -133,6 +133,10 @@
   .hubgroep{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:22px 0 10px;}
   .hubgroep:first-child,.hubsectie:first-child .hubgroep{margin-top:0;}
   .hubgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;}
+  /* "Af en toe" in de Meer-hub: een groepskop die je open tikt, zelfde letter als .hubgroep. */
+  details.hubaf{margin-top:22px; padding-top:10px;}
+  details.hubaf > summary{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:4px 2px;}
+  details.hubaf[open] > summary{margin-bottom:10px;}
   .hubtegel{display:flex; align-items:center; gap:13px; padding:15px 16px; border:1.5px solid var(--border); border-radius:14px; background:var(--card); cursor:pointer; text-align:left; font:inherit; color:var(--text); position:relative; transition:border-color .12s, transform .12s, box-shadow .12s;}
   .hubtegel:hover{border-color:var(--oranje); transform:translateY(-1px); box-shadow:var(--schaduw-l);}
   .hubtegel:focus-visible{outline:none; border-color:var(--oranje); box-shadow:0 0 0 3px var(--mint);}
@@ -141,9 +145,43 @@
   .hubtegel .tt b{font-size:15px; font-weight:700;}
   .hubtegel .tt span{font-size:12px; color:var(--muted); line-height:1.35;}
   .hubtegel .badge{position:absolute; top:10px; right:12px;}
-  /* Rustig dashboard (Simpel-modus): de volle inhoud (.dash-vol) weg, de hub tonen. */
-  #tab-dashboard.simpel .dash-vol{display:none !important;}
-  #tab-dashboard:not(.simpel) #dashSimpel{display:none;}
+  /* ═══ Simpel of Alles ═══
+     Een keuze voor de hele app (en de werkbank, zelfde sleutel): in Simpel verdwijnt
+     alles met .uitgebreid, in Alles komt het terug. We taggen blokken in plaats van
+     schermen te herbouwen, zodat er niets kwijt kan raken. De naam is bewust geen
+     .vol: .kassaldo.vol bestaat al voor "kassa te vol", en die waarschuwing mag nooit
+     stilletjes verdwijnen. .alleensimpel is het omgekeerde: een korte versie die je
+     alleen in Simpel nodig hebt. */
+  body.simpel .uitgebreid{display:none !important;}
+  body:not(.simpel) .alleensimpel{display:none !important;}
+  body:not(.simpel) #dashSimpel{display:none;}
+  /* Zeldzame velden in context: in Simpel dicht achter "Meer opties", in Alles open. */
+  details.meeropties{margin-top:12px; border-top:1.5px dashed var(--border); padding-top:4px;}
+  details.meeropties > summary{display:inline-flex; align-items:center; gap:7px; cursor:pointer; list-style:none;
+    font-size:13px; font-weight:700; color:var(--muted); padding:8px 2px; user-select:none;}
+  details.meeropties > summary::-webkit-details-marker{display:none;}
+  details.meeropties > summary::before{content:''; width:7px; height:7px; border-right:2px solid currentColor;
+    border-bottom:2px solid currentColor; transform:rotate(-45deg); transition:transform .15s; margin-right:2px;}
+  details.meeropties[open] > summary::before{transform:rotate(45deg);}
+  details.meeropties > summary:hover{color:var(--text);}
+  details.meeropties > summary:focus-visible{outline:none; color:var(--text); box-shadow:0 0 0 3px var(--mint); border-radius:8px;}
+  details.meeropties[open] > summary{margin-bottom:6px;}
+  /* Een hele kaart die je open tikt: de summary is dan de kaarttitel, zonder streep. */
+  details.kaartuitklap{margin-top:0; border-top:none; padding-top:0;}
+  /* Een onderwerp binnen een instellingenpaneel: een kop die je open tikt. */
+  details.instsectie{margin-top:14px;}
+  details.instsectie > summary{font-size:14.5px; color:var(--text); padding:10px 2px;}
+  details.instsectie > summary .i{color:var(--oranje);}
+  .rapfiscaal{display:flex; flex-direction:column; gap:26px; margin-top:14px;}
+  /* Een kaart binnen een uitgeklapte kaart (pakketdiensten): geen tweede schaduw. */
+  details.kaartuitklap .card{box-shadow:none; margin:14px 0 0;}
+  .rapfiscaal > div:not(:empty) + div:not(:empty){border-top:1.5px solid var(--border); padding-top:22px;}
+  details.kaartuitklap > summary{font-size:16px; color:var(--text); padding:2px 0;}
+  details.kaartuitklap > summary .i{width:20px; height:20px; color:var(--oranje);}
+  .modussel button{flex:1;}
+  .zijmodus{padding:0 2px 12px;}
+  .zijmodus .periodesel{display:flex;}
+  .modusuitleg{font-size:12px; color:var(--muted); margin:6px 2px 0; line-height:1.4;}
   #dashSimpel{display:flex; flex-direction:column; gap:16px; margin-top:4px;}
   .simpelwinst{background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:18px 20px; box-shadow:var(--schaduw);}
   .simpelwinst .l{display:block; font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);}
@@ -652,11 +690,6 @@
   .pagchip input{position:absolute; opacity:0; width:0; height:0;}
   .pagchip span{display:inline-block; padding:8px 14px; border:1.5px solid var(--border); border-radius:var(--pil); font-size:13px; font-weight:600; color:var(--muted); transition:.14s; text-transform:none; letter-spacing:normal;}
   .pagchip input:checked + span{background:var(--green-soft); border-color:var(--green-tekst); color:var(--green-tekst);}
-  .meerpaginas{margin-top:22px; border:1px solid var(--border); border-radius:14px; padding:12px 16px;}
-  .meerpaginas summary{cursor:pointer; font-weight:700; font-size:13px; color:var(--muted); list-style:none;}
-  .meerpaginas summary::-webkit-details-marker{display:none;}
-  .meerpaginas summary::before{content:'+'; display:inline-block; width:16px; font-weight:800; color:var(--muted-l);}
-  .meerpaginas[open] summary::before{content:'\2212';}
   .detailacts{display:flex; gap:10px; flex-wrap:wrap; margin-top:24px;}
   .gevaarzone{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:20px; padding:16px; border:1px solid #E7C9C9; border-radius:14px; background:var(--red-soft);}
   .gevaarzone b{color:var(--red-tekst);}
@@ -998,6 +1031,7 @@
   .kpi .bedrag{white-space:nowrap;}
   .kpi .kpimeta{display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;}
   .kpi .kpimeta .pct{margin-left:0; vertical-align:baseline;}
+  .kpivoet{font-size:12px; color:var(--muted); margin:-6px 2px 8px;}
   .kpi .btwhint{font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted-l);}
 
   .chart{height:210px; gap:8px; padding-top:12px;}
@@ -1083,6 +1117,9 @@
   .repbestelbanner .i{flex:none;}
   .repbord{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:12px; align-items:start; padding-bottom:8px;}
   .repkolom{min-width:0; background:var(--soft-2); border-radius:var(--radius-s); padding:12px;}
+  .repbordleeg{grid-column:1 / -1; display:flex; flex-direction:column; gap:4px; padding:26px 20px; text-align:center;
+    background:var(--soft-2); border-radius:var(--radius-s); color:var(--muted); font-size:13.5px;}
+  .repbordleeg b{color:var(--text); font-size:15px;}
   .repkolomkop{display:flex; align-items:center; gap:8px; margin:2px 4px 12px; font-family:'Sora',sans-serif; font-size:13.5px; font-weight:700; color:var(--text);}
   .repkolomkop .rkdot{width:9px; height:9px;}
   .repkoltel{margin-left:auto; font-size:12px; font-weight:700; color:var(--muted); background:var(--card); border-radius:var(--pil); padding:2px 9px; min-width:22px; text-align:center;}
@@ -1120,6 +1157,7 @@
   .catbar i{display:block; height:100%; background:var(--oranje); border-radius:4px;}
   /* "meer"-knop in een tabelregel + het uitklapmenu met acties in woorden */
   .rijmeer{font-size:18px; line-height:1; font-weight:800; letter-spacing:1px; padding:6px 12px;}
+  #cat_soorten .btn.aan{background:var(--oranje); color:#fff; border-color:var(--oranje);}
   .rijmenu{position:fixed; z-index:200; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--schaduw-l); padding:6px; min-width:196px; display:flex; flex-direction:column; gap:2px;}
   .rijmenu-item{display:flex; align-items:center; gap:11px; width:100%; text-align:left; background:none; border:none; padding:10px 12px; border-radius:9px; font-family:inherit; font-size:13.5px; font-weight:500; color:var(--text); cursor:pointer;}
   .rijmenu-item:hover{background:var(--soft-2);}
@@ -1180,6 +1218,9 @@
   @media(max-width:720px){
     .repbord{grid-auto-flow:row; grid-auto-columns:auto;}
     .repkolom{width:100%; min-width:0;}
+    /* Op de telefoon staan de kolommen onder elkaar; lege kolommen maken dat in Simpel
+       alleen maar langer. */
+    body.simpel .repkolom.leeg{display:none;}
   }
 
   /* Instellingen: gegroepeerd menu links, paneel rechts. Zeventien losse tabs
@@ -1194,12 +1235,17 @@
   .instmenu button.active{background:var(--oranje); color:#fff; font-weight:600;}
   .instmenu button.active .i{color:#fff;}
   .instpaneel{min-width:0;}
+  /* .instmenu ervoor, anders wint .instmenu button (display:flex) en staat hij ook op de computer. */
+  .instmenu .instmenuknop{display:none;}
   @media(max-width:860px){
     .instlay{grid-template-columns:1fr; gap:14px;}
     .instmenu{position:static; flex-direction:row; flex-wrap:wrap; gap:6px;}
     .instmenu .instgroep{width:100%; padding:6px 4px 0;}
     .instmenu button{width:auto; padding:7px 13px; border-radius:var(--pil); border:1.5px solid var(--border);}
     .instmenu button .i{display:none;}
+    .instmenu:not(.open) button[data-s]:not(.active), .instmenu:not(.open) .instgroep{display:none;}
+    .instmenu .instmenuknop{display:flex; width:100%; justify-content:center; background:var(--soft-2); border-color:transparent; font-weight:600;}
+    .instmenu .instmenuknop .i{display:inline-block;}
   }
 
   /* keuzevak onder het toestelveld: welke uitvoering is het? */
@@ -1353,6 +1399,9 @@
   #kasStand{font-size:13.5px; line-height:1.6;}
   #kasStand .npmelding{margin:0;}
   .kasvakken{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:20px;}
+  .urentotaal{font-size:15px; color:var(--muted);}
+  .urentotaal b{color:var(--text); font-size:18px;}
+  .kaskort{margin-top:16px; font-size:14px; font-weight:600; color:var(--muted);}
   .kasvak{background:var(--soft-2); border-radius:var(--radius-s); padding:13px 15px;}
   .kasvak span{display:block; font-size:11px; color:var(--muted-l); text-transform:uppercase;
     letter-spacing:.06em; margin-bottom:5px;}
@@ -2209,6 +2258,7 @@
   <symbol id="i-recycle" viewBox="0 0 24 24"><path d="M7 19H4.8a1.8 1.8 0 0 1-1.6-2.7L7.2 9.5"/><path d="M11 19h8.2a1.8 1.8 0 0 0 1.6-2.7l-1.2-2.1"/><path d="m14 16-3 3 3 3"/><path d="M8.3 13.6 7.2 9.5 3.1 10.6"/><path d="m9.3 5.8 1.1-1.9A1.8 1.8 0 0 1 13.5 3.9l3.9 6.8"/><path d="m13.4 9.6 4.1 1.1 1.1-4.1"/></symbol>
   <symbol id="i-laptop" viewBox="0 0 24 24"><rect width="18" height="12" x="3" y="4" rx="2"/><path d="M2 20h20"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
   <symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/></symbol>
 </svg>
 <aside>
@@ -2220,6 +2270,7 @@
     <button class="navscan" onclick="qrScanOpen()"><svg class="i"><use href="#i-scan"/></svg> Scan een label</button>
     <button data-tab="dashboard" class="active"><svg class="i"><use href="#i-chart"/></svg> Dashboard</button>
     <button data-tab="verkoop"><svg class="i"><use href="#i-receipt"/></svg> Verkoop</button>
+    <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdNavBadge" style="display:none">0</span></button>
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
     <div class="navgroep">
@@ -2231,12 +2282,17 @@
       <div class="navkop">Online</div>
       <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
       <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
-      <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     </div>
     <button data-tab="rooster"><svg class="i"><use href="#i-clock"/></svg> Rooster</button>
     <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
   </nav>
   <div class="onderin">
+    <div class="zijmodus">
+      <div class="periodesel modussel" role="group" aria-label="Weergave">
+        <button data-s="simpel" class="active" onclick="zetModus(true)">Simpel</button>
+        <button data-s="alles" onclick="zetModus(false)">Alles</button>
+      </div>
+    </div>
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
     <nav>
       <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
@@ -2277,11 +2333,11 @@
   <div class="pagehead">
     <h1>Dashboard</h1>
     <div class="row" style="align-items:center; gap:12px; flex-wrap:wrap">
-      <div class="periodesel" id="dashModusSel">
-        <button data-s="simpel" class="active" onclick="dashModus(true)">Simpel</button>
-        <button data-s="vol" onclick="dashModus(false)">Alles</button>
+      <div class="periodesel modussel" role="group" aria-label="Weergave">
+        <button data-s="simpel" class="active" onclick="zetModus(true)">Simpel</button>
+        <button data-s="alles" onclick="zetModus(false)">Alles</button>
       </div>
-      <div class="row dash-vol" style="align-items:center; gap:10px">
+      <div class="row uitgebreid" style="align-items:center; gap:10px">
         <div class="periodesel" id="periodeSel">
           <button data-p="dag" class="active">Vandaag</button>
           <button data-p="week">7 dagen</button>
@@ -2297,13 +2353,14 @@
     </div>
   </div>
   <!-- Rustig dashboard: alleen wat je doet. De volle versie (cijfers, grafiek) staat
-       achter de schakelaar 'Alles' en is gemarkeerd met .dash-vol. -->
+       achter de schakelaar 'Alles' en is gemarkeerd met .uitgebreid. -->
   <div id="dashSimpel"></div>
-  <div class="kpis dash-vol" id="kpiRow"></div>
-  <button class="btn ghost small dash-vol" id="dashMeerKnop" onclick="dashMeerToggle()" style="margin:2px 0 16px"><svg class="i s"><use href="#i-chart"/></svg><span id="dashMeerLabel">Meer cijfers tonen</span></button>
-  <div class="kpis dash-vol" id="kpiRow2" data-dashmeer hidden></div>
-  <div class="kpis dash-vol" id="kpiRow3" data-dashmeer hidden></div>
-  <div class="modules dash-vol">
+  <div class="kpis uitgebreid" id="kpiRow"></div>
+  <p class="kpivoet uitgebreid">Alle bedragen incl. btw.</p>
+  <button class="btn ghost small uitgebreid" id="dashMeerKnop" onclick="dashMeerToggle()" style="margin:2px 0 16px"><svg class="i s"><use href="#i-chart"/></svg><span id="dashMeerLabel">Meer cijfers tonen</span></button>
+  <div class="kpis uitgebreid" id="kpiRow2" data-dashmeer hidden></div>
+  <div class="kpis uitgebreid" id="kpiRow3" data-dashmeer hidden></div>
+  <div class="modules uitgebreid">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Taken en planning</h2>
     <div class="row" style="margin-bottom:12px">
@@ -2372,7 +2429,7 @@
   <div class="pagehead"><h1>Inscannen</h1></div>
   <div class="modules">
   <div class="card breed">
-    <p class="muted" style="margin-bottom:12px">Voorraad erbij of eraf, zonder verkoop. Inscannen zet er één bij, uitscannen haalt er één af (bijvoorbeeld kapot, retour of correctie). Verkopen doe je op de <a onclick="showTab('verkoop')">Verkoop</a>-pagina.</p>
+    <p class="muted" style="margin-bottom:12px">Inscannen zet er één bij. Uitscannen haalt er één af, bijvoorbeeld als iets kapot is. Verkopen doe je bij <a onclick="showTab('verkoop')">Verkoop</a>.</p>
     <div class="modeToggle">
       <button class="in active" id="modeIn" onclick="setMode('in')"><svg class="i l"><use href="#i-down"/></svg> Inscannen (erbij)</button>
       <button class="uit" id="modeUit" onclick="setMode('uit')"><svg class="i l"><use href="#i-up"/></svg> Uitscannen (eraf)</button>
@@ -2383,7 +2440,7 @@
       <button class="btn ghost" onclick="showTab('nieuw')"><svg class="i s"><use href="#i-plus"/></svg>Nieuw product</button>
       <button class="btn ghost" onclick="naarSnelToevoegen()"><svg class="i s"><use href="#i-zap"/></svg>Serie inscannen</button>
     </div>
-    <p class="muted" style="margin-top:12px">Kwam er een bestelling binnen met meer stuks? Scan één keer en pas daarna het aantal aan bij Laatste scans. Een onbekende code kun je meteen aanmaken.</p>
+    <p class="muted uitgebreid" style="margin-top:12px">Meer stuks tegelijk? Scan één keer en pas het aantal aan bij Laatste scans.</p>
   </div>
   <div class="card breed">
     <h2>Laatste scans</h2>
@@ -2401,7 +2458,7 @@
   <div class="card breed">
     <input id="vkScan" class="scanbox" placeholder="Scan om te verkopen…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); vkScanVerwerk(this.value.trim()); this.value='';}">
     <div id="vkFeedback"></div>
-    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Product zoeken of nieuw product aanmaken</button>
+    <button class="btn secondary" style="margin-top:12px" onclick="hvOpen()"><svg class="i s"><use href="#i-search"/></svg>Product zoeken of iets los verkopen</button>
   </div>
   <div class="card breed" id="vkMandjeKaart">
     <h2><svg class="i"><use href="#i-cart"/></svg>Deze verkoop</h2>
@@ -2428,21 +2485,24 @@
       <h2 style="margin:0">Snel verkopen</h2>
       <button class="btn ghost small" id="vkSoortenBeheer" hidden onclick="naarCategorieInstellingen()"><svg class="i s"><use href="#i-settings"/></svg>Soorten beheren</button>
     </div>
-    <p class="muted" style="margin:10px 0 12px">Kies een soort. Je vult het model en de uitvoering in, en Storvo rekent de categorieprijs. Alles komt in 'Deze verkoop'; daarna reken je in één keer af.</p>
+    <p class="muted" style="margin:10px 0 12px">Kies een soort en vul het model in. Storvo rekent de prijs.</p>
     <div class="blokjes" id="vkBlokjes"></div>
   </div>
   <div class="card breed">
-    <h2><svg class="i"><use href="#i-tool"/></svg>Diensten en losse verkoop</h2>
-    <p class="muted" style="margin-bottom:12px">Tik een dienst aan of vul een losse verkoop in. Alles komt in 'Deze verkoop' hierboven, zodat het samen op één bon kan.</p>
+    <h2><svg class="i"><use href="#i-tool"/></svg>Diensten</h2>
+    <p class="muted" style="margin-bottom:12px">Tik een dienst aan. Hij komt bij "Deze verkoop".</p>
     <div id="dienstGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px"></div>
-    <div class="row" style="margin-top:14px; align-items:flex-end">
+    <!-- Losse verkoop kan ook via "Product zoeken of iets los verkopen" bovenaan. Deze
+         snelle rij blijft voor wie hem gewend is, maar alleen in Alles: twee ingangen
+         voor hetzelfde maakte de pagina dubbel zo druk. -->
+    <div class="row uitgebreid" style="margin-top:14px; align-items:flex-end">
       <div style="flex:2; min-width:180px"><label>Losse verkoop <span class="muted">(staat niet in het systeem)</span></label><input id="ld_naam" placeholder="bijv. simkaart knippen, kabel los"></div>
       <div><label>Prijs (€)</label><input id="ld_prijs" type="number" step="0.01" min="0"></div>
       <div><label>Kosten (€)</label><input id="ld_kosten" type="number" step="0.01" min="0" value="0"></div>
       <div><button class="btn" onclick="verkoopLos()"><svg class="i s"><use href="#i-plus"/></svg>In de verkoop</button></div>
     </div>
-    <details style="margin-top:16px">
-      <summary style="cursor:pointer; font-weight:600; color:var(--muted)">Standaarddiensten beheren</summary>
+    <details class="meeropties" data-handmatig>
+      <summary>Diensten beheren</summary>
       <div style="overflow-x:auto; margin-top:12px">
         <table>
           <thead><tr><th>Naam</th><th class="num">Prijs</th><th class="num">Kosten</th><th></th></tr></thead>
@@ -2484,7 +2544,7 @@
         <svg class="i s"><use href="#i-search"/></svg>
         <input id="repZoek" placeholder="Zoek op nummer, klant of toestel" autocomplete="off" oninput="renderReparaties()">
       </div>
-      <div class="segment" id="repWeergave">
+      <div class="segment uitgebreid" id="repWeergave">
         <button type="button" class="segknop aan" onclick="repWeergaveKies('bord')">Bord</button>
         <button type="button" class="segknop" onclick="repWeergaveKies('lijst')">Lijst</button>
       </div>
@@ -2518,12 +2578,19 @@
       <div class="grid">
         <div class="zoekveld"><label>Naam *</label><input id="r_naam" autocomplete="off" oninput="repKlantTyp()" onfocus="repKlantTyp()" onblur="setTimeout(repKlantSluit,180)"><div class="zoeklijst" id="repKlantLijst" hidden></div></div>
         <div><label>Telefoonnummer *</label><input id="r_tel"></div>
-        <div><label>E-mail (optioneel)</label><input id="r_email"></div>
-        <div><label>Op de hoogte houden?</label><select id="r_notify"><option value="1">Ja, via mail of sms</option><option value="0">Nee</option></select></div>
-        <div style="display:flex; align-items:center; gap:9px; padding-bottom:12px">
-          <input type="checkbox" id="r_inleveren"><label for="r_inleveren" style="margin:0; text-transform:none; letter-spacing:0; font-size:13.5px; font-weight:500; color:var(--text); cursor:pointer">Klant brengt het toestel later langs</label>
-        </div>
       </div>
+      <!-- Naam en telefoon is genoeg om te beginnen. De klant krijgt standaard berichtjes
+           (Op de hoogte houden staat op Ja); de rest is voor als het anders moet. -->
+      <details class="meeropties">
+        <summary>Meer opties</summary>
+        <div class="grid">
+          <div><label>E-mail (optioneel)</label><input id="r_email"></div>
+          <div><label>Op de hoogte houden?</label><select id="r_notify"><option value="1">Ja, via mail of sms</option><option value="0">Nee</option></select></div>
+          <div style="display:flex; align-items:center; gap:9px; padding-bottom:12px">
+            <input type="checkbox" id="r_inleveren"><label for="r_inleveren" style="margin:0; text-transform:none; letter-spacing:0; font-size:13.5px; font-weight:500; color:var(--text); cursor:pointer">Klant brengt het toestel later langs</label>
+          </div>
+        </div>
+      </details>
     </div>
     <div class="card">
       <h2><svg class="i"><use href="#i-phone"/></svg>Toestel en reparatie</h2>
@@ -2531,11 +2598,15 @@
         <div class="zoekveld"><label>Toestel</label><input id="r_toestel" autocomplete="off" placeholder="bijv. iPhone 14" oninput="toestelTyp(); updateZoekLinks(); toestelTeken(); prijsSuggestieDebounce(); repGarantieCheck()" onfocus="toestelTyp()" onblur="setTimeout(toestelSluit,180)" onkeydown="toestelToets(event)" onchange="toestelAanvullen()"><div class="zoeklijst" id="toestelLijst" hidden></div></div>
         <div class="zoekveld"><label>Reparatie</label><input id="r_type" autocomplete="off" placeholder="bijv. scherm, batterij, laadpoort" oninput="repTypeTyp(); checkSeal(); updateZoekLinks(); prijsSuggestieDebounce()" onfocus="repTypeTyp()" onblur="setTimeout(repTypeSluit,180)" onkeydown="repTypeToets(event)"><div class="zoeklijst" id="repTypeLijst" hidden></div></div>
         <div><label>Prijs voor klant (€)</label><input id="r_prijs" type="number" step="0.01" min="0" oninput="rekenWinst()"></div>
-        <div><label>Klaar voor <span class="muted">(datum en tijd)</span></label><input id="r_klaar" type="datetime-local"></div>
-        <div><label>Als het klaar is</label><select id="r_voorkeur"><option value="">Kies...</option><option>Zelf ophalen</option><option>Bellen</option><option>Appen</option><option>Mailen</option></select></div>
       </div>
       <div id="prijsSug" class="prijssug" hidden></div>
       <div id="toestelKeuze" hidden></div>
+      <details class="meeropties">
+        <summary>Meer opties</summary>
+      <div class="grid" style="margin-bottom:12px">
+        <div><label>Klaar voor <span class="muted">(datum en tijd)</span></label><input id="r_klaar" type="datetime-local"></div>
+        <div><label>Als het klaar is</label><select id="r_voorkeur"><option value="">Kies...</option><option>Zelf ophalen</option><option>Bellen</option><option>Appen</option><option>Mailen</option></select></div>
+      </div>
       <button type="button" class="btn ghost small" id="repPrijshulpBtn" onclick="repPrijshulpToggle()"><svg class="i s"><use href="#i-search"/></svg>Prijs opzoeken bij leveranciers</button>
       <div id="repPrijshulp" hidden style="margin-top:12px">
         <div class="row" style="margin-bottom:8px">
@@ -2544,12 +2615,14 @@
           <a class="btn ghost small" id="zoekFoneday" href="https://www.foneday.shop" target="_blank" rel="noopener"><svg class="i s"><use href="#i-search"/></svg>Voorraad foneday</a>
           <a class="btn ghost small" id="zoekMobileparts" href="https://www.mobileparts.shop" target="_blank" rel="noopener"><svg class="i s"><use href="#i-search"/></svg>Mobileparts (ex. btw)</a>
         </div>
-        <div class="warnbox"> <b>Let op: foneday en mobileparts tonen prijzen exclusief btw.</b> Pas in de checkout komt daar 21% bij. Neem je een prijs van die sites over, vink dan "ex. btw (+21%)"aan bij het onderdeel. De software rekent de btw er dan automatisch bij, zodat je winstberekening klopt. Prijzen op gsm-world.nl zijn consumentenprijzen inclusief btw.</div>
-        <p class="muted" style="margin-top:10px; line-height:1.7">gsm-world opent de pagina van het toestel zelf, want daar staan de reparatieprijzen per model. Foneday opent zijn catalogus voor precies dat toestel, want zoeken op onderdeelnamen werkt daar niet. Mobileparts opent de zoekpagina met toestel en reparatie ingevuld. Inloggen bij foneday of mobileparts doe je zelf in die tab. Automatisch zoeken naar voorraad en prijzen komt in de online versie. Sla je inloggegevens alvast op bij Instellingen, Leveranciers.</p>
+        <div class="warnbox"><b>Foneday en mobileparts tonen prijzen zonder btw.</b> Neem je zo'n prijs over, vink dan "ex. btw (+21%)" aan bij het onderdeel. Dan klopt je winst. Gsm-world toont prijzen met btw.</div>
       </div>
+      </details>
     </div>
     <div class="card breed">
       <h2><svg class="i"><use href="#i-layers"/></svg>Onderdelen en winst</h2>
+      <details class="meeropties" id="repOndMeer">
+        <summary>Onderdelen toevoegen</summary>
       <div id="r_ondLijst"></div>
       <div class="row" style="margin-top:8px">
         <div style="flex:2; min-width:220px"><label>Onderdeel</label><input id="r_ondNaam" list="ondList" placeholder="bijv. Scherm iPhone 14 (incell)" oninput="ondVoorraadHint()"><datalist id="ondList"></datalist></div>
@@ -2558,6 +2631,7 @@
         <div><button class="btn secondary" onclick="voegRepOndToe()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
       </div>
       <div id="ondHint" class="muted"></div>
+      </details>
       <div id="sealHint"></div>
       <div style="margin-top:14px; font-size:15px">Kosten onderdelen: <b id="wKosten">€ 0,00</b> &nbsp;·&nbsp; Winst: <b id="wWinst" style="color:var(--green)">€ 0,00</b></div>
     </div>
@@ -2610,7 +2684,10 @@
     </div>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th style="width:34px"><input type="checkbox" id="prodAlle" onclick="prodSelectAlle(this.checked)" title="Alles selecteren"></th><th>Naam</th><th>Barcode</th><th>Merk</th><th>Categorie</th><th class="num">Inkoop</th><th class="num">Verkoop</th><th class="num">Winkel</th><th class="num">Min. winkel</th><th class="num">Over</th><th class="num">Min. over</th><th></th></tr></thead>
+      <!-- In Simpel: naam, categorie, prijs en één voorraadcel. Barcode, merk, inkoop, de
+           minima en het direct-in-de-tabel-bewerken zijn er in Alles. Zo is het geen
+           spreadsheet meer van twaalf kolommen. -->
+      <thead><tr><th class="uitgebreid" style="width:34px"><input type="checkbox" id="prodAlle" onclick="prodSelectAlle(this.checked)" title="Alles selecteren"></th><th>Naam</th><th class="uitgebreid">Barcode</th><th class="uitgebreid">Merk</th><th>Categorie</th><th class="num uitgebreid">Inkoop</th><th class="num">Verkoop</th><th class="num alleensimpel">Voorraad</th><th class="num uitgebreid">Winkel</th><th class="num uitgebreid">Min. winkel</th><th class="num uitgebreid">Over</th><th class="num uitgebreid">Min. over</th><th></th></tr></thead>
       <tbody id="prodBody"></tbody>
     </table>
     </div>
@@ -2651,24 +2728,29 @@
     <div class="grid" style="margin-bottom:12px">
       <div><label>Barcode <span class="muted">(optioneel)</span></label><div style="display:flex; gap:6px"><input id="f_barcode" style="flex:1; min-width:0" placeholder="Scan, typ, of laat leeg" autocomplete="off" oninput="barcodeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault(); barcodeOpzoeken();}"><button type="button" class="btn ghost small" onclick="eigenBarcodeInForm()" title="Eigen barcode aanmaken"><svg class="i s"><use href="#i-plus"/></svg>Eigen code</button><button type="button" class="btn ghost small" onclick="wisBarcode()" title="Barcode leegmaken"><svg class="i s"><use href="#i-trash"/></svg></button></div><div id="barcodeHint" class="barcodehint" hidden></div><input type="hidden" id="f_foto"></div>
       <div class="zoekveld"><label>Naam</label><input id="f_naam" placeholder="Typ of scan; kies uit de catalogus" autocomplete="off" oninput="naamZoek()" onfocus="naamZoek()" onblur="setTimeout(naamSluit,180)" onkeydown="naamToets(event)"><div class="zoeklijst" id="naamLijst" hidden></div></div>
-      <div><label>Merk</label><input id="f_merk" placeholder="bijv. Apple, Samsung" list="merkenList"><datalist id="merkenList"></datalist></div>
-      <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
-      <div><label>Leverancier</label><input id="f_leverancier" placeholder="bijv. Foneday, MondiParts" list="levsList" autocomplete="off"><datalist id="levsList"></datalist></div>
       <div><label>Categorie</label><select id="f_cat" onchange="vulStandaard()"></select></div>
-    </div>
-    <div class="grid" style="margin-bottom:16px">
-      <div><label>Inkoopprijs (€)</label><input id="f_inkoop" type="number" step="0.01" min="0"></div>
       <div><label>Verkoopprijs (€)</label><input id="f_verkoop" type="number" step="0.01" min="0"></div>
-      <div><label>Actuele winkelvoorraad <span class="muted">(hangt nu)</span></label><input id="f_voorraad" type="number" step="1" min="0" value="0"></div>
-      <div><label>Min. winkelvoorraad</label><input id="f_schap" type="number" step="1" min="0"></div>
-      <div><label>Actuele overvoorraad <span class="muted">(ligt achter)</span></label><input id="f_min" type="number" step="1" min="0" value="0"></div>
-      <div><label>Min. overvoorraad</label><input id="f_bestel" type="number" step="1" min="0"></div>
+      <div><label>In de winkel <span class="muted">(hangt nu)</span></label><input id="f_voorraad" type="number" step="1" min="0" value="0"></div>
     </div>
+    <!-- Een product in vier velden. De categorie vult inkoop en de minima al slim voor;
+         wie wil afwijken of de leverancier wil vastleggen, klapt dit open. -->
+    <details class="meeropties" id="npMeer" style="margin-bottom:16px">
+      <summary>Meer opties</summary>
+      <div class="grid">
+        <div><label>Inkoopprijs (€)</label><input id="f_inkoop" type="number" step="0.01" min="0"></div>
+        <div><label>Merk</label><input id="f_merk" placeholder="bijv. Apple, Samsung" list="merkenList"><datalist id="merkenList"></datalist></div>
+        <div><label>Artikelcode <span class="muted">(van de leverancier)</span></label><input id="f_sku" placeholder="bijv. XSS-12345"></div>
+        <div><label>Leverancier</label><input id="f_leverancier" placeholder="bijv. Foneday, MondiParts" list="levsList" autocomplete="off"><datalist id="levsList"></datalist></div>
+        <div><label>Min. in de winkel</label><input id="f_schap" type="number" step="1" min="0"></div>
+        <div><label>Achter <span class="muted">(ligt nu in het magazijn)</span></label><input id="f_min" type="number" step="1" min="0" value="0"></div>
+        <div><label>Min. achter</label><input id="f_bestel" type="number" step="1" min="0"></div>
+      </div>
+    </details>
     <div class="row">
       <button class="btn actie" id="formOpslaan" onclick="opslaanProduct()">Product toevoegen</button>
       <button class="btn ghost" onclick="resetForm()">Leegmaken</button>
     </div>
-    <p class="muted" style="margin-top:10px">Meerdere modellen van dezelfde serie, bijvoorbeeld van MondiParts of NovaNL? Met Serie inscannen leg je de serie een keer vast en scan je alleen nog per model. <a href="#" onclick="naarSnelToevoegen(); return false;">Naar Serie inscannen</a></p>
+    <p class="muted uitgebreid" style="margin-top:10px">Een hele serie van dezelfde leverancier? <a href="#" onclick="naarSnelToevoegen(); return false;">Gebruik Serie inscannen</a>.</p>
   </div>
 </section>
 
@@ -2683,9 +2765,13 @@
   </div>
 
   <div id="aanv-overzicht">
+    <!-- Het totaal van alles wat nog moet komen: handig bij het bestellen, maar in Simpel
+         dicht zodat de lopende aanvragen bovenaan staan. -->
     <div class="card breed" id="aanvTotaalKaart" hidden>
-      <h2><svg class="i"><use href="#i-cart"/></svg>Nog te halen <span class="muted">(alles wat nog moet komen, over alle aanvragen)</span></h2>
-      <div id="aanvTotaalLijst"></div>
+      <details class="meeropties kaartuitklap">
+        <summary><svg class="i"><use href="#i-cart"/></svg>Nog te halen, over alle aanvragen</summary>
+        <div id="aanvTotaalLijst"></div>
+      </details>
     </div>
     <div class="card breed">
       <h2><svg class="i"><use href="#i-clipboard"/></svg>Lopende aanvragen <span class="muted" id="aanvTelling"></span></h2>
@@ -2704,15 +2790,20 @@
       <div class="grid">
         <div><label>Naam *</label><input id="a_naam" placeholder="Voor- en achternaam"></div>
         <div><label>Telefoonnummer *</label><input id="a_tel" placeholder="06 12345678"></div>
-        <div><label>E-mailadres</label><input id="a_email" type="email" placeholder="klant@voorbeeld.nl"></div>
-        <div><label>Op de hoogte houden</label><select id="a_notify" onchange="aanvUitleg()"><option value="1">Ja, Storvo stuurt bericht</option><option value="0">Nee, ik bel zelf</option></select></div>
       </div>
-      <div id="aanvBerUitleg"></div>
+      <details class="meeropties">
+        <summary>Meer opties</summary>
+        <div class="grid">
+          <div><label>E-mailadres</label><input id="a_email" type="email" placeholder="klant@voorbeeld.nl"></div>
+          <div><label>Op de hoogte houden</label><select id="a_notify" onchange="aanvUitleg()"><option value="1">Ja, Storvo stuurt bericht</option><option value="0">Nee, ik bel zelf</option></select></div>
+        </div>
+        <div id="aanvBerUitleg"></div>
+      </details>
     </div>
 
     <div class="card breed">
       <h2><svg class="i"><use href="#i-package"/></svg>Wat wil de klant?</h2>
-      <p class="muted" style="margin-bottom:14px">Voeg één of meer producten toe. Klik na elk product op "Product toevoegen".</p>
+      <p class="muted" style="margin-bottom:14px">Kies een product en klik op "Product toevoegen". Meer producten kan ook.</p>
       <div class="zoekveld" id="aanvZoekveld">
         <label>Product</label>
         <input id="a_wat" autocomplete="off" placeholder="Typ of kies uit je eigen producten"
@@ -2721,19 +2812,28 @@
       </div>
       <div id="aanvKoppel"></div>
       <div class="grid" style="margin-top:12px">
-        <div><label>Categorie <span class="muted">(wat is het)</span></label><select id="a_cat"></select></div>
         <div><label>Aantal</label><input id="a_aantal" type="number" step="1" min="1" value="1" oninput="aanvReken()"></div>
         <div><label>Verkoopprijs (€) <span class="muted">per stuk</span></label><input id="a_verkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
-        <div><label>Inkoop (€) <span class="muted">per stuk, optioneel</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
       </div>
+      <!-- Categorie en inkoop worden ingevuld als je een eigen product kiest; zelf invullen
+           is alleen nodig voor de winstcijfers. -->
+      <details class="meeropties">
+        <summary>Categorie en inkoop</summary>
+        <div class="grid">
+          <div><label>Categorie <span class="muted">(wat is het)</span></label><select id="a_cat"></select></div>
+          <div><label>Inkoop (€) <span class="muted">per stuk, optioneel</span></label><input id="a_inkoop" type="number" step="0.01" min="0" oninput="aanvReken()"></div>
+        </div>
+      </details>
       <div class="row" style="margin-top:12px">
         <button class="btn secondary" onclick="aanvRegelToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Product toevoegen</button>
       </div>
       <div id="aanvRegelLijst" style="margin-top:14px"></div>
 
       <hr style="border:none; border-top:1px solid var(--border); margin:18px 0">
+      <!-- Aanbetaling is één ding; in Simpel alleen het bedrag. Het percentage (standaard
+           uit Instellingen) rekent het bedrag uit en staat in Alles ernaast. -->
       <div class="veldrij">
-        <div><label>Aanbetaling (%)</label><input id="a_pct" type="number" step="1" min="0" max="100" oninput="aanvReken('pct')"></div>
+        <div class="uitgebreid"><label>Aanbetaling (%)</label><input id="a_pct" type="number" step="1" min="0" max="100" oninput="aanvReken('pct')"></div>
         <div><label>Aanbetaling (€)</label><input id="a_aanbet" type="number" step="0.01" min="0" oninput="aanvReken('bedrag')"></div>
         <div><label>Betaalt de aanbetaling met</label>
           <select id="a_betaal">
@@ -2748,7 +2848,7 @@
         <button class="btn actie" onclick="maakAanvraag()"><svg class="i"><use href="#i-check"/></svg>Aanvraag aanmaken</button>
         <button class="btn ghost" onclick="resetAanvraag()">Leegmaken</button>
       </div>
-      <p class="muted" style="margin-top:12px">De aanbetaling staat standaard op <b id="aanvStdMarge">50</b>%, aan te passen bij Instellingen. Per aanvraag mag je er altijd van afwijken.</p>
+      <p class="muted uitgebreid" style="margin-top:12px">De aanbetaling staat standaard op <b id="aanvStdMarge">50</b>%. Dat pas je aan bij Instellingen.</p>
     </div>
     </div>
   </div>
@@ -2763,28 +2863,32 @@
     <h2><svg class="i"><use href="#i-cash"/></svg>In de lade</h2>
     <div class="kassaldo" id="kasSaldo">€ 0,00</div>
     <div id="kasStand"></div>
-    <div class="kasvakken" id="kasVandaag"></div>
+    <div class="kasvakken uitgebreid" id="kasVandaag"></div>
+    <div class="kaskort alleensimpel" id="kasVandaagKort"></div>
   </div>
 
+  <!-- Tellen is wat je elke dag doet, dus dat staat bovenaan in een eigen kaart. Geld
+       erin of eruit (wisselgeld, naar de kluis) doe je af en toe: daaronder, uitklapbaar. -->
   <div class="card">
-    <h2><svg class="i"><use href="#i-euro"/></svg>Geld erin of eruit</h2>
-    <div class="row" style="margin-bottom:12px">
-      <div style="flex:1; min-width:120px"><label>Bedrag (€)</label><input id="kas_bedrag" type="number" step="0.01" min="0" placeholder="0,00"></div>
-      <div style="flex:2; min-width:180px"><label>Waarvoor <span class="muted">(optioneel)</span></label><input id="kas_tekst" placeholder="bijv. wisselgeld gehaald"></div>
-    </div>
-    <div class="row">
-      <button class="btn" onclick="kasInvoer('in')"><svg class="i s"><use href="#i-down"/></svg>Erin</button>
-      <button class="btn ghost" onclick="kasInvoer('uit')"><svg class="i s"><use href="#i-up"/></svg>Eruit</button>
-      <button class="btn ghost" onclick="kasInvoer('kluis')"><svg class="i s"><use href="#i-lock"/></svg>Naar de kluis</button>
-    </div>
-    <hr style="border:none; border-top:1px solid var(--border); margin:22px 0">
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Kassa tellen</h2>
-    <p class="muted" style="margin-bottom:12px">Tel wat er echt in de lade zit. Storvo boekt het verschil weg, zodat het saldo weer klopt. Je ziet altijd terug dát er een verschil was.</p>
+    <p class="muted" style="margin-bottom:12px">Tel wat er in de lade zit. Storvo zet het verschil recht.</p>
     <div class="row">
       <div style="flex:1; min-width:140px"><label>Geteld bedrag (€)</label><input id="kas_geteld" type="number" step="0.01" min="0" placeholder="0,00"
         onkeydown="if(event.key==='Enter'){event.preventDefault(); kasTellen();}"></div>
-      <div style="display:flex; align-items:flex-end"><button class="btn actie" onclick="kasTellen()">Verschil wegboeken</button></div>
+      <div style="display:flex; align-items:flex-end"><button class="btn actie" onclick="kasTellen()">Telling opslaan</button></div>
     </div>
+    <details class="meeropties">
+      <summary>Geld erin of eruit</summary>
+      <div class="row" style="margin-bottom:12px">
+        <div style="flex:1; min-width:120px"><label>Bedrag (€)</label><input id="kas_bedrag" type="number" step="0.01" min="0" placeholder="0,00"></div>
+        <div style="flex:2; min-width:180px"><label>Waarvoor <span class="muted">(optioneel)</span></label><input id="kas_tekst" placeholder="bijv. wisselgeld gehaald"></div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="kasInvoer('in')"><svg class="i s"><use href="#i-down"/></svg>Erin</button>
+        <button class="btn ghost" onclick="kasInvoer('uit')"><svg class="i s"><use href="#i-up"/></svg>Eruit</button>
+        <button class="btn ghost" onclick="kasInvoer('kluis')"><svg class="i s"><use href="#i-lock"/></svg>Naar de kluis</button>
+      </div>
+    </details>
   </div>
   </div>
 
@@ -2809,9 +2913,9 @@
       <button data-f="toestellen">Met een toestel</button>
     </div>
   </div>
-  <div class="kpis" id="bstKpis"></div>
+  <div class="kpis uitgebreid" id="bstKpis"></div>
   <div class="card breed">
-    <h2><svg class="i"><use href="#i-cart"/></svg>Bijbestellen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
+    <h2><svg class="i"><use href="#i-cart"/></svg>Bestellingen<span class="muted klein" id="bstTelling" style="margin-left:8px"></span></h2>
     <div id="bstLijst">Bezig met laden…</div>
   </div>
   <div class="card breed" id="rsvKaart">
@@ -2834,10 +2938,10 @@
   </div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-plus"/></svg>Inname aan de balie</h2>
-    <p class="muted" style="margin-bottom:12px; max-width:78ch">Koopt een klant een toestel bij je in? Start een inname: vul het toestel en het bedrag in, maak de inkoopverklaring (op het scherm, of geprint om op papier te laten tekenen), en het toestel staat meteen klaar in de werkbank om te controleren.</p>
+    <p class="muted" style="margin-bottom:12px; max-width:78ch">Koop je een toestel van een klant? Vul het toestel en het bedrag in en laat de verklaring tekenen. Het toestel staat daarna klaar in de werkbank.</p>
     <a class="btn actie" href="/refurbish/?inname=1" target="_blank" rel="noopener"><svg class="i s"><use href="#i-recycle"/></svg>Inname starten</a>
   </div>
-  <div class="kpis" id="inrKpis"></div>
+  <div class="kpis uitgebreid" id="inrKpis"></div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-recycle"/></svg>Aanvragen<span class="muted klein" id="inrTelling" style="margin-left:8px"></span></h2>
     <div id="inrLijst">Bezig met laden…</div>
@@ -2885,13 +2989,13 @@
 
   <div class="card">
     <h2><svg class="i"><use href="#i-up"/></svg>Bijhangen in de winkel <span class="muted" id="bijvulTelling"></span></h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Deze producten liggen achter maar hangen niet, of niet genoeg, in de winkel. Wat een klant niet ziet hangen koopt hij niet. Hang bij en druk op de knop; Storvo verplaatst het dan van achter naar de winkel.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Dit ligt achter, maar hangt niet in de winkel. Hang het op en druk op de knop.</p>
     <div id="bijvulLijst"></div>
   </div>
 
   <div class="card">
     <h2><svg class="i"><use href="#i-scan"/></svg>Voorraad tellen</h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Loop je winkel langs en tel wat er echt is. Scan de barcode, vul in hoeveel er hangen en hoeveel er achter liggen, en druk op Enter. De cursor springt vanzelf naar het volgende product. Wat je niet telt blijft ongemoeid.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Scan een product en vul in hoeveel er hangen en achter liggen. Enter gaat door naar het volgende.</p>
     <div class="row" style="margin-bottom:14px">
       <div style="flex:2; min-width:200px"><label>Scan of typ de barcode</label><input id="nm_code" placeholder="Scan barcode…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); nulZoek();}"></div>
       <div style="display:flex; align-items:flex-end"><button class="btn ghost" onclick="nulZoek()">Zoeken</button></div>
@@ -2911,7 +3015,7 @@
     <h2><svg class="i"><use href="#i-cart"/></svg>Urgent bestellen <span class="muted">(handmatig)</span></h2>
     <div class="row" style="margin-bottom:12px">
       <div style="flex:2; min-width:180px"><label>Wat</label><input id="u_naam" placeholder="bijv. iPhone 15 scherm" autocomplete="off" onkeydown="if(event.key==='Enter')voegUrgentToe()"></div>
-      <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="u_lev" list="levsList" placeholder="bijv. Foneday" autocomplete="off"></div>
+      <div class="uitgebreid" style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="u_lev" list="levsList" placeholder="bijv. Foneday" autocomplete="off"></div>
       <div style="min-width:90px"><label>Aantal</label><input id="u_aantal" type="number" min="1" step="1" value="1"></div>
       <div style="display:flex; align-items:flex-end"><button class="btn actie" onclick="voegUrgentToe()"><svg class="i s"><use href="#i-plus"/></svg>Zet erbij</button></div>
     </div>
@@ -2922,23 +3026,28 @@
     <h2>Te bestellen <span class="muted">(voorraad ≤ minimum)</span></h2>
     <div style="overflow-x:auto">
     <table>
-      <thead><tr><th></th><th>Naam</th><th>Merk</th><th>Code</th><th class="num">Over</th><th class="num">Min. over</th><th class="num">Te bestellen</th><th>Verwachte levering</th></tr></thead>
+      <!-- In Simpel: vinkje, naam, code om te kopiëren en hoeveel. Merk, de tellingen en
+           de leverdatum zijn er in Alles. -->
+      <thead><tr><th></th><th>Naam</th><th class="uitgebreid">Merk</th><th>Code</th><th class="num uitgebreid">Over</th><th class="num uitgebreid">Min. over</th><th class="num">Te bestellen</th><th class="uitgebreid">Verwachte levering</th></tr></thead>
       <tbody id="bestelBody"></tbody>
     </table>
     </div>
-    <p class="muted" style="margin-top:10px">Klik op een code om hem te kopiëren en in het zoekvak van de webshop te plakken. Staat er een artikelcode van de leverancier bij het product, dan gebruikt Storvo die; anders de streepjescode. Met de knop bovenaan krijg je de hele lijst in één keer, met aantal en naam erbij.</p>
-    <p class="muted" style="margin-top:10px">Vink aan wanneer je bestelt. Vóór 17:00 besteld betekent morgen binnen, daarna overmorgen. De verwachte leverdatum staat hier en op het dashboard, handig om aan klanten door te geven. Zodra de levering is ingescand en de voorraad boven het minimum komt, verdwijnt de regel.</p>
+    <p class="muted" style="margin-top:10px">Tik op een code om hem te kopiëren. Vink aan als je besteld hebt. De regel verdwijnt als de levering is ingescand.</p>
   </div>
   <div class="card" id="bijbestelKaart" hidden>
     <h2><svg class="i"><use href="#i-cart"/></svg>Verkocht via de blokjes, nog bijbestellen</h2>
     <div id="bijbestelLijst"></div>
-    <p class="muted" style="margin-top:10px">Elke verkoop via een categorie-blokje telt hier op. Vink af zodra je hebt besteld; de teller gaat dan weer op nul.</p>
+    <p class="muted" style="margin-top:10px">Vink af als je besteld hebt. De teller gaat dan op nul.</p>
   </div>
 </section>
 
 <!-- UREN -->
 <section id="tab-uren"hidden>
-  <div class="pagehead"><h1>Uren</h1></div>
+  <!-- Uren en rooster horen bij elkaar: wat je plant en wat je werkte. Een knop ertussen,
+       zodat je niet via het menu hoeft te zoeken. -->
+  <div class="pagehead"><h1>Uren</h1>
+    <button class="btn ghost" id="urenNaarRooster" hidden onclick="showTab('rooster')"><svg class="i s"><use href="#i-clock"/></svg>Naar het rooster</button>
+  </div>
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-clock"/></svg>Uren invullen</h2>
@@ -2968,7 +3077,9 @@
 <!-- PERSONEEL -->
 <!-- ROOSTER -->
 <section id="tab-rooster"hidden>
-  <div class="pagehead"><h1>Rooster</h1></div>
+  <div class="pagehead"><h1>Rooster</h1>
+    <button class="btn ghost" id="roosterNaarUren" hidden onclick="showTab('uren')"><svg class="i s"><use href="#i-clock"/></svg>Naar de uren</button>
+  </div>
   <div class="modules">
   <div class="card breed">
     <div class="roosterbalk">
@@ -3015,30 +3126,38 @@
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-cart"/></svg>Inkoop toevoegen</h2>
-    <p class="muted" style="margin-bottom:12px">Leg vast wat je inkoopt. Kies <b>Voorraad</b> voor spullen die je doorverkoopt (hoesjes, onderdelen, partijen laptops): die verlagen je winst pas bij de verkoop, niet nu. Kies <b>Kosten</b> voor directe kosten (verpakking, gereedschap): die gaan meteen van je winst af. De btw-voorbelasting claim je bij beide meteen. Bedragen inclusief btw.</p>
-    <div style="margin-bottom:12px">
-      <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-upload"/></svg>Factuur uitlezen (PDF of foto)<input type="file" accept="application/pdf,image/*" hidden onchange="factuurUitlezen(this)"></label>
-      <label class="btn ghost small" style="cursor:pointer; margin-left:8px"><svg class="i s"><use href="#i-upload"/></svg>Meerdere tegelijk<input type="file" accept="application/pdf,image/*" multiple hidden onchange="factuurenBatch(this)"></label>
-      <span id="ink_factuurNaam" class="muted klein" style="margin-left:8px">Lees een factuur uit; Storvo vult het formulier in en bewaart de factuur. "Meerdere tegelijk" zet ze als concept in "Te bevestigen".</span>
+    <!-- Eén grote knop: een foto of PDF van de bon vult het formulier zelf. Zelf typen,
+         meerdere tegelijk, e-mail en Moneybird zijn de uitzondering en staan eronder. -->
+    <p class="muted" style="margin-bottom:12px">Maak een foto van je bon of kies een PDF. Storvo vult de rest in.</p>
+    <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+      <label class="btn actie" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Foto of PDF van de bon<input type="file" accept="application/pdf,image/*" hidden onchange="factuurUitlezen(this)"></label>
+      <span id="ink_factuurNaam" class="muted klein"></span>
     </div>
     <div id="ink_factuurPreview" hidden style="margin-bottom:14px"></div>
-    <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
-      <div style="min-width:140px"><label>Datum</label><input id="ink_datum" type="date"></div>
-      <div style="flex:2; min-width:160px"><label>Wat</label><input id="ink_wat" placeholder="bijv. 20× hoesjes" autocomplete="off"></div>
-      <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="ink_lev" placeholder="bijv. Foneday" list="levsList" autocomplete="off"></div>
-      <div style="min-width:200px"><label>Soort</label><select id="ink_soort"><option value="voorraad">Voorraad (verrekend bij verkoop)</option><option value="kosten">Kosten (direct van de winst)</option></select></div>
-      <div style="min-width:120px"><label>Bedrag (€) incl. btw</label><input id="ink_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
-      <div style="min-width:100px"><label>Btw</label><select id="ink_btw"><option value="21">21%</option><option value="9">9%</option><option value="0">0%</option></select></div>
-      <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
-    </div>
-    <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px">
-      <button class="btn ghost small" onclick="haalFacturenUitMail(this)"><svg class="i s"><use href="#i-download"/></svg>Haal facturen op uit e-mail</button>
-      <span class="muted klein" style="margin-left:8px">Storvo kijkt je mailbox na en zet nieuwe facturen als concept in "Te bevestigen". Dit gebeurt ook elke dag vanzelf.</span>
-    </div>
-    <div style="margin-top:10px">
-      <button class="btn ghost small" onclick="moneybirdTest(this)"><svg class="i s"><use href="#i-link"/></svg>Test Moneybird-verbinding</button>
-      <span class="muted klein" style="margin-left:8px">Verbonden? Dan staat er per inkoop een knop "Naar Moneybird" om hem als inkoopfactuur in je boekhouding te zetten.</span>
-    </div>
+    <details class="meeropties" id="inkHand">
+      <summary>Of zelf invullen</summary>
+      <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+        <div style="min-width:140px"><label>Datum</label><input id="ink_datum" type="date"></div>
+        <div style="flex:2; min-width:160px"><label>Wat</label><input id="ink_wat" placeholder="bijv. 20× hoesjes" autocomplete="off"></div>
+        <div style="flex:1; min-width:140px"><label>Leverancier <span class="muted">(optioneel)</span></label><input id="ink_lev" placeholder="bijv. Foneday" list="levsList" autocomplete="off"></div>
+        <div style="min-width:120px"><label>Bedrag (€) incl. btw</label><input id="ink_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
+        <div style="min-width:200px"><label>Soort</label><select id="ink_soort"><option value="voorraad">Voorraad, om door te verkopen</option><option value="kosten">Kosten voor de zaak</option></select></div>
+        <div class="uitgebreid" style="min-width:100px"><label>Btw</label><select id="ink_btw"><option value="21">21%</option><option value="9">9%</option><option value="0">0%</option></select></div>
+        <div><button class="btn actie" onclick="inkoopToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
+      </div>
+      <p class="muted klein" style="margin-top:10px">Voorraad (hoesjes, onderdelen, laptops) telt pas mee als je het verkoopt. Kosten (verpakking, gereedschap) gaan meteen van je winst af.</p>
+    </details>
+    <details class="meeropties" data-handmatig>
+      <summary>Meer manieren</summary>
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:flex-start">
+        <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-upload"/></svg>Meerdere bonnen tegelijk<input type="file" accept="application/pdf,image/*" multiple hidden onchange="factuurenBatch(this)"></label>
+        <span class="muted klein">Ze komen klaar te staan bij "Te bevestigen".</span>
+        <button class="btn ghost small" onclick="haalFacturenUitMail(this)"><svg class="i s"><use href="#i-download"/></svg>Facturen ophalen uit e-mail</button>
+        <span class="muted klein">Dit gebeurt ook elke dag vanzelf.</span>
+        <button class="btn ghost small" onclick="moneybirdTest(this)"><svg class="i s"><use href="#i-link"/></svg>Moneybird testen</button>
+        <span class="muted klein">Werkt het, dan kun je elke inkoop naar Moneybird sturen.</span>
+      </div>
+    </details>
   </div>
   <div class="card breed" id="inkopenConceptKaart" hidden>
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Te bevestigen <span class="muted klein" id="inkopenConceptTel"></span></h2>
@@ -3095,23 +3214,27 @@
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-tag"/></svg>Labels printen</h2>
-    <p class="muted" style="margin-bottom:12px">Print prijs- en productstickers rechtstreeks op je Brother QL-800, zonder printvenster. Hiervoor draait een klein hulpprogramma op deze Mac (dat start automatisch mee) en is de printer via USB aangesloten. Werkt in Safari en Chrome. Deze instellingen gelden voor dit apparaat.</p>
+    <p class="muted" style="margin-bottom:12px">Stickers gaan direct naar je Brother QL-800, zonder printvenster.</p>
     <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet getest. Klik op "Verbinding testen".</div>
-    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
-      <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
-      <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
-      <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
-      <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
-    </div>
-    <div class="acts2" style="margin-top:14px">
+    <div class="acts2">
       <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinding testen</button>
       <button class="btn actie" onclick="labelTest(this)"><svg class="i s"><use href="#i-tag"/></svg>Test label printen</button>
     </div>
-    <p class="muted klein" style="margin-top:14px">Doorlopende rol (bijv. DK-22251, 62 mm): zet breedte 62 en hoogte bijvoorbeeld 30. Heb je een zwart/rood-rol (DK-22251)? Laat "Zwart/rood-rol" aan staan, anders knippert de printer rood.</p>
+    <!-- Formaat en rol stel je één keer in, daarna nooit meer. -->
+    <details class="meeropties">
+      <summary>Formaat en rol</summary>
+      <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
+        <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
+        <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
+        <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
+        <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
+      </div>
+      <p class="muted klein" style="margin-top:12px">Rol van 62 mm: breedte 62, hoogte bijvoorbeeld 30. Zwart/rood-rol? Laat dat vinkje aan, anders knippert de printer rood. Dit geldt voor dit apparaat.</p>
+    </details>
   </div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-tag"/></svg>Losse sticker</h2>
-    <p class="muted" style="margin-bottom:14px">Print snel een sticker voor iets wat niet in je voorraad staat. Vul een naam in, en eventueel een prijs en een barcode. Er wordt niets aan je producten toegevoegd.</p>
+    <p class="muted" style="margin-bottom:14px">Een sticker voor iets dat niet in je voorraad staat. Er komt niets bij je producten.</p>
     <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
       <div style="flex:1; min-width:200px"><label>Naam op de sticker</label><input id="ls_naam" placeholder="bijv. Gebruikte oplader" onkeydown="if(event.key==='Enter'){event.preventDefault(); losseStickerPrint(this);}"></div>
       <div style="min-width:120px"><label>Prijs <span class="muted">(mag leeg)</span></label><input id="ls_prijs" type="number" min="0" step="0.01" placeholder="0,00"></div>
@@ -3124,8 +3247,11 @@
       <button class="btn actie" onclick="losseStickerPrint(this)"><svg class="i s"><use href="#i-tag"/></svg>Sticker printen</button>
     </div>
   </div>
+  <!-- Installeren doe je één keer per computer. Daarom dicht, ook in Alles. -->
   <div class="card breed">
-    <h2><svg class="i"><use href="#i-laptop"/></svg>Printer op een andere Mac instellen</h2>
+    <details class="meeropties kaartuitklap" data-handmatig>
+      <summary><svg class="i"><use href="#i-laptop"/></svg>Nog een printer toevoegen</summary>
+    <h2 style="margin-top:14px"><svg class="i"><use href="#i-laptop"/></svg>Op een Mac</h2>
     <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando, óók op een compleet kale Mac waar nog niets op staat. Het installeert zelf alles wat nodig is (Apple-tools, Homebrew en de rest). Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
     <ol class="setupstappen">
       <li>Open op die Mac <b>Terminal</b> (Cmd+spatie, typ "Terminal", Enter).</li>
@@ -3136,9 +3262,7 @@
       <button class="btn ghost small" onclick="kopieerPrintSetup(this)"><svg class="i s"><use href="#i-clipboard"/></svg>Kopieer</button>
     </div>
     <div class="infobox" style="margin-top:16px"><b>Daarna nog bij de printer:</b> zet <b>Editor Lite uit</b> (houd de Editor-Lite-knop op de printer ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat, anders ziet de Mac hem als USB-stick), zorg dat de zwart/rode DK-22251-rol erin zit, en print daarna gewoon vanuit storvo.app.</div>
-  </div>
-  <div class="card breed">
-    <h2><svg class="i"><use href="#i-laptop"/></svg>Printer op een Windows-pc instellen</h2>
+    <h2 style="margin-top:26px"><svg class="i"><use href="#i-laptop"/></svg>Op een Windows-pc</h2>
     <p class="muted" style="margin-bottom:14px; max-width:80ch">Op Windows werkt het via de gewone Brother-driver. Download de installer, dubbelklik hem en klik door de stappen. Hij zet alles klaar en start voortaan vanzelf mee bij het aanzetten van de pc. Werkt in Edge en Chrome.</p>
     <ol class="setupstappen">
       <li>Installeer eerst de <b>Brother QL-800 driver</b> van de site van Brother, als dat nog niet is gebeurd.</li>
@@ -3148,7 +3272,8 @@
     <div class="acts2" style="margin-top:14px">
       <a class="btn actie" href="https://github.com/LucasRefuro/Refuro/releases/download/printhulp/storvo-printhulp-setup.exe" target="_blank" rel="noopener"><svg class="i s"><use href="#i-download"/></svg>Download voor Windows</a>
     </div>
-    <div class="infobox" style="margin-top:16px">Gebruik je Firefox op deze pc? Na de installatie werkt het meestal ook, zolang Firefox de Windows-certificaten vertrouwt. Lukt het printen daar niet, zeg het dan, dan zet ik dat recht.</div>
+    <div class="infobox" style="margin-top:16px">Gebruik je Firefox? Dat werkt meestal ook. Lukt printen daar niet, gebruik dan Edge of Chrome.</div>
+    </details>
   </div>
   </div>
 </section>
@@ -3173,12 +3298,12 @@
   <div class="modules">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-euro"/></svg>Vaste last toevoegen</h2>
-    <p class="muted" style="margin-bottom:12px">Kosten die elke maand of elk jaar terugkomen, zoals huur, verzekering of software. Ze worden van je resultaat afgehaald.</p>
+    <p class="muted" style="margin-bottom:12px">Huur, verzekering, software: wat elke maand of elk jaar terugkomt.</p>
     <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
       <div style="flex:2; min-width:180px"><label>Wat</label><input id="vl_naam" placeholder="bijv. Huur pand" autocomplete="off"></div>
       <div style="min-width:130px"><label>Bedrag (€)</label><input id="vl_bedrag" type="number" step="0.01" min="0" placeholder="0"></div>
       <div style="min-width:140px"><label>Hoe vaak</label><select id="vl_periode"><option value="maand">Per maand</option><option value="jaar">Per jaar</option></select></div>
-      <div style="flex:1; min-width:150px"><label>Soort <span class="muted">(optioneel)</span></label><input id="vl_cat" placeholder="bijv. Pand" autocomplete="off"></div>
+      <div class="uitgebreid" style="flex:1; min-width:150px"><label>Soort <span class="muted">(optioneel)</span></label><input id="vl_cat" placeholder="bijv. Pand" autocomplete="off"></div>
       <div><button class="btn actie" onclick="vlToevoegen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button></div>
     </div>
   </div>
@@ -3211,17 +3336,27 @@
   <div class="card breed">
     <h2 style="margin-bottom:4px">Resultaat <span class="muted" id="rapBereikTekst"></span></h2>
     <div id="rapResultaat"></div>
-    <p class="muted klein" style="margin-top:12px">De resultaatbedragen zijn inclusief btw. Hieronder de btw-afdracht, de belasting-indicatie, je buffers, de balans en een prognose. De inkoop telt mee op het moment dat een product verkocht wordt.</p>
+    <p class="muted klein" style="margin-top:12px">Bedragen incl. btw. Inkoop telt mee op het moment dat iets verkocht wordt.</p>
   </div>
   <div class="card breed">
     <h2 style="margin-bottom:4px"><svg class="i"><use href="#i-chart"/></svg>Winst per categorie <span class="muted" id="rapCatBereikTekst"></span></h2>
     <div id="rapCategorie"></div>
-    <p class="muted klein" style="margin-top:10px">Alles wat je verkoopt telt mee: producten, reparaties, hardware, diensten en PostNL. Winst is de verkoopprijs min de inkoop (allebei inclusief btw).</p>
+    <p class="muted klein" style="margin-top:10px">Verkoopprijs min inkoop, voor alles wat je verkoopt.</p>
   </div>
-  <div class="card breed"><div id="rapBelasting"></div></div>
-  <div class="card breed"><div id="rapBuffers"></div></div>
-  <div class="card breed"><div id="rapBalans"></div></div>
-  <div class="card breed"><div id="rapPrognose"></div></div>
+  <!-- Belasting, buffers, balans en prognose: vier kaarten boekhouding die je een paar
+       keer per jaar bekijkt. Samen achter één uitklapper, in Simpel dicht. Zo begint
+       het rapport met wat je overhoudt in plaats van met belastingschijven. -->
+  <div class="card breed">
+    <details class="meeropties kaartuitklap" id="rapFiscaal">
+      <summary><svg class="i"><use href="#i-euro"/></svg>Belasting, buffers en balans</summary>
+      <div class="rapfiscaal">
+        <div id="rapBelasting"></div>
+        <div id="rapBuffers"></div>
+        <div id="rapBalans"></div>
+        <div id="rapPrognose"></div>
+      </div>
+    </details>
+  </div>
   </div>
 </section>
 
@@ -3248,27 +3383,34 @@
 <section id="tab-meer"hidden>
   <div class="pagehead"><h1>Meer</h1></div>
   <div class="modules"><div class="card breed">
+    <!-- Drie groepen: wat je elke week gebruikt staat open; "Af en toe" zit in Simpel
+         dicht en gaat in Alles vanzelf open (details.meeropties). -->
     <div class="hubsectie">
-      <div class="hubgroep">Administratie</div>
+      <div class="hubgroep">Geld</div>
       <div class="hubgrid">
-        <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Uren van het team en de loonkosten</span></span></button>
-        <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Terugkerende kosten per maand of jaar</span></span></button>
-        <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alle verkopen, per dag of week, zoeken op naam of bedrag</span></span></button>
-        <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Wat je inkoopt vastleggen, voor de btw-voorbelasting en investering</span></span></button>
-        <button class="hubtegel" data-tab="pakketten" onclick="showTab('pakketten')"><svg class="i"><use href="#i-truck"/></svg><span class="tt"><b>Pakketdiensten</b><span>Wat je verdient aan PostNL, Vinted en DHL: aannemen en uitgeven</span></span></button>
-        <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Omzet, kosten en je resultaat</span></span></button>
+        <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alles wat je verkocht hebt, per dag</span></span></button>
+        <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Maak een foto van je bon</span></span></button>
+        <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Wat je overhoudt</span></span></button>
+        <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Gewerkte uren en loon</span></span></button>
       </div>
     </div>
     <div class="hubsectie">
       <div class="hubgroep">Winkel</div>
       <div class="hubgrid">
-        <button class="hubtegel" onclick="qrScanOpen()"><svg class="i"><use href="#i-scan"/></svg><span class="tt"><b>Scannen</b><span>Scan een label met je telefoon en open meteen dat toestel of product</span></span></button>
-        <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak met AI-sortering, antwoorden en opstellen</span></span></button>
-        <button class="hubtegel" data-tab="labelprinter" onclick="showTab('labelprinter')"><svg class="i"><use href="#i-tag"/></svg><span class="tt"><b>Labelprinter</b><span>Prijs- en productstickers direct printen, zonder printvenster</span></span></button>
-        <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Gebruikers, rollen en toegang</span></span></button>
-        <button class="hubtegel" data-tab="partners" onclick="showTab('partners')"><svg class="i"><use href="#i-link"/></svg><span class="tt"><b>Partners</b><span>Toestellen die een partner voor je verkoopt</span></span></button>
+        <button class="hubtegel" onclick="qrScanOpen()"><svg class="i"><use href="#i-scan"/></svg><span class="tt"><b>Scannen</b><span>Scan een label en open het toestel</span></span></button>
+        <button class="hubtegel" data-tab="labelprinter" onclick="showTab('labelprinter')"><svg class="i"><use href="#i-tag"/></svg><span class="tt"><b>Labelprinter</b><span>Stickers printen</span></span></button>
+        <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak</span></span></button>
+        <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Wie mag wat</span></span></button>
       </div>
     </div>
+    <details class="hubsectie meeropties hubaf">
+      <summary>Af en toe</summary>
+      <div class="hubgrid">
+        <button class="hubtegel" data-tab="vastelasten" onclick="showTab('vastelasten')"><svg class="i"><use href="#i-euro"/></svg><span class="tt"><b>Vaste lasten</b><span>Huur, abonnementen, verzekering</span></span></button>
+        <button class="hubtegel" data-tab="pakketten" onclick="showTab('pakketten')"><svg class="i"><use href="#i-truck"/></svg><span class="tt"><b>Pakketdiensten</b><span>Wat je verdient aan PostNL en DHL</span></span></button>
+        <button class="hubtegel" data-tab="partners" onclick="showTab('partners')"><svg class="i"><use href="#i-link"/></svg><span class="tt"><b>Partners</b><span>Toestellen die een ander voor je verkoopt</span></span></button>
+      </div>
+    </details>
   </div></div>
 </section>
 
@@ -3276,74 +3418,12 @@
 <section id="tab-team"hidden>
   <div class="pagehead">
     <h1>Team</h1>
-    <div class="periodesel" id="teamTabs">
-      <button data-s="accounts" class="active">Gebruikers</button>
-    </div>
   </div>
 
-  <div id="team-mw" class="modules" hidden>
-    <div class="card breed">
-      <h2>Medewerkers</h2>
-      <div style="overflow-x:auto">
-      <table>
-        <thead><tr><th>Naam</th><th>Rol</th><th>Team</th><th>Pincode</th><th class="num">Uurtarief (€)</th><th>Actief</th><th></th></tr></thead>
-        <tbody id="mwBody"></tbody>
-      </table>
-      </div>
-      <div class="row" style="margin-top:14px">
-        <div style="flex:2; min-width:160px"><label>Naam</label><input id="mw_naam" placeholder="bijv. Sara"></div>
-        <div><label>Rol</label><select id="mw_rol"><option value="medewerker">Medewerker</option><option value="beheerder">Beheerder</option><option value="eigenaar">Eigenaar</option></select></div>
-        <div><label>Team</label><select id="mw_team"></select></div>
-        <div><label>Pincode (4 cijfers)</label><input id="mw_pin" maxlength="4" inputmode="numeric" placeholder="1234"></div>
-        <div style="min-width:110px"><label>Uurtarief (€)</label><input id="mw_tarief" type="number" step="0.01" min="0" placeholder="0"></div>
-        <div><button class="btn" onclick="voegMwToe()">Toevoegen</button></div>
-      </div>
-      <div class="infobox" style="margin-top:14px"><b>Rollen:</b> <b>Eigenaar</b> ziet en doet alles (incl. omzet, instellingen en team). <b>Beheerder</b> ziet alles behalve het team- en huisstijlbeheer. <b>Medewerker</b> kan scannen, verkopen en reparaties doen, maar ziet geen omzetcijfers of instellingen.</div>
-    </div>
-    <div class="card breed">
-      <h2><svg class="i"><use href="#i-lock"/></svg>Vergrendeling</h2>
-      <div class="row" style="align-items:center">
-        <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer"><input type="checkbox" id="lockToggle" onchange="zetVergrendeling(this.checked)"> Vraag om pincode bij openen van de app</label>
-        <button class="btn ghost small" onclick="uitloggen()"><svg class="i s"><use href="#i-lock"/></svg>Nu vergrendelen</button>
-      </div>
-      <p class="muted" style="margin-top:8px">Handig als meerdere mensen dezelfde computer gebruiken: iedere verkoop en reparatie wordt op naam geregistreerd.</p>
-    </div>
-  </div>
-
-  <div id="team-teams"hidden>
-    <div class="card">
-      <h2>Teams / vestigingen</h2>
-      <div style="overflow-x:auto">
-      <table>
-        <thead><tr><th>Naam</th><th class="num">Medewerkers</th><th></th></tr></thead>
-        <tbody id="teamBody"></tbody>
-      </table>
-      </div>
-      <div class="row" style="margin-top:14px">
-        <div style="flex:1; min-width:200px"><label>Nieuw team</label><input id="tm_naam" placeholder="bijv. Winkel Centrum" onkeydown="if(event.key==='Enter')voegTeamToe()"></div>
-        <div><button class="btn" onclick="voegTeamToe()">Toevoegen</button></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="team-prestaties"hidden>
-    <div class="card">
-      <h2><svg class="i"><use href="#i-chart"/></svg>Prestaties per medewerker <span class="muted" id="prestPeriode"></span></h2>
-      <div class="periodesel" id="prestSel" style="margin-bottom:14px">
-        <button data-p="dag" class="active">Vandaag</button>
-        <button data-p="week">7 dagen</button>
-        <button data-p="maand">30 dagen</button>
-        <button data-p="alles">Alles</button>
-      </div>
-      <div style="overflow-x:auto">
-      <table>
-        <thead><tr><th>Medewerker</th><th>Team</th><th class="num">Verkopen</th><th class="num">Omzet</th><th class="num">Winst</th><th class="num">Reparaties</th></tr></thead>
-        <tbody id="prestBody"></tbody>
-      </table>
-      </div>
-    </div>
-  </div>
-
+  <!-- Hier stonden de oude medewerkers-tabel, vestigingen en prestaties per medewerker.
+       Die waren al lang niet meer te bereiken (de tabbalk had alleen Gebruikers) maar
+       werden nog wel gevuld. Het team loopt via accounts. De oude lijst state.medewerkers
+       bestaat alleen nog voor het lokale inlogscherm zonder account. -->
   <div id="team-accounts">
     <!-- Lijst van gebruikers. Klik er een om alles op een eigen pagina in te stellen. -->
     <div id="teamLijstView" class="modules">
@@ -3415,13 +3495,16 @@
   </div>
 
   <div class="instlay">
+    <!-- Volgorde zoals je het nodig hebt: eerst je zaak en hoe de app eruitziet, dan
+         verkoop en klantcontact, het assortiment pas daarna. Het scherm opende eerst op
+         Serie inscannen, iets wat je bijna nooit doet. -->
     <nav class="instmenu" id="instTabs" aria-label="Instellingen">
-      <div class="instgroep">Assortiment</div>
-      <button data-s="snel" class="active"><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</button>
-      <button data-s="types"><svg class="i"><use href="#i-tag"/></svg>Producttypes</button>
-      <button data-s="modellen"><svg class="i"><use href="#i-phone"/></svg>Modellen</button>
-      <button data-s="cats"><svg class="i"><use href="#i-layers"/></svg>Categorieën</button>
-      <button data-s="voorraad"><svg class="i"><use href="#i-box"/></svg>Voorraad</button>
+      <button type="button" class="instmenuknop" onclick="instMenuWissel()"><svg class="i s"><use href="#i-layers"/></svg>Andere instelling kiezen</button>
+      <div class="instgroep">Je zaak</div>
+      <button data-s="bedrijf" class="active"><svg class="i"><use href="#i-shop"/></svg>Bedrijf</button>
+      <button data-s="paginas"><svg class="i"><use href="#i-edit"/></svg>Pagina's en weergave</button>
+      <button data-s="huisstijl"><svg class="i"><use href="#i-palette"/></svg>Huisstijl</button>
+      <button data-s="abonnement"><svg class="i"><use href="#i-card"/></svg>Abonnement</button>
       <div class="instgroep">Verkoop en kanalen</div>
       <button data-s="kassa"><svg class="i"><use href="#i-cash"/></svg>Kassa</button>
       <button data-s="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
@@ -3430,16 +3513,17 @@
       <button data-s="factuur"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
       <button data-s="leveranciers"><svg class="i"><use href="#i-truck"/></svg>Leveranciers</button>
       <div class="instgroep">Klantcontact</div>
-      <button data-s="bedrijf"><svg class="i"><use href="#i-shop"/></svg>Bedrijf</button>
       <button data-s="klantpagina"><svg class="i"><use href="#i-globe"/></svg>Klantpagina</button>
       <button data-s="berichten"><svg class="i"><use href="#i-message"/></svg>Berichten</button>
+      <div class="instgroep">Assortiment</div>
+      <button data-s="cats"><svg class="i"><use href="#i-layers"/></svg>Categorieën</button>
+      <button data-s="voorraad"><svg class="i"><use href="#i-box"/></svg>Voorraad</button>
+      <button data-s="snel"><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</button>
+      <button data-s="types"><svg class="i"><use href="#i-tag"/></svg>Producttypes</button>
+      <button data-s="modellen"><svg class="i"><use href="#i-phone"/></svg>Modellen</button>
       <div class="instgroep">Werkbank</div>
       <button data-s="refurbish"><svg class="i"><use href="#i-recycle"/></svg>Refurbishen</button>
-      <div class="instgroep">Uiterlijk</div>
-      <button data-s="huisstijl"><svg class="i"><use href="#i-palette"/></svg>Huisstijl</button>
-      <button data-s="paginas"><svg class="i"><use href="#i-edit"/></svg>Pagina's</button>
-      <div class="instgroep">Account</div>
-      <button data-s="abonnement"><svg class="i"><use href="#i-card"/></svg>Abonnement</button>
+      <div class="instgroep">Overig</div>
       <button data-s="backup"><svg class="i"><use href="#i-save"/></svg>Back-up</button>
       <button data-s="feedback"><svg class="i"><use href="#i-mail"/></svg>Feedback</button>
     </nav>
@@ -3450,19 +3534,24 @@
     <p class="muted" style="margin-bottom:16px">De instellingen van de werkbank, hier centraal. Wat je aanpast geldt meteen in de Refurbishen-omgeving.</p>
     <div id="refurbInstVak"><p class="muted">Laden…</p></div>
   </div>
-  <div class="card" id="inst-snel">
+  <div class="card" id="inst-snel" hidden>
     <h2><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</h2>
-    <p class="muted" style="margin-bottom:14px">Voor accessoires die je in meerdere modellen hebt en die niet uit een leveranciersfeed komen, zoals van MondiParts of NovaNL. Leg de serie een keer vast en scan dan per model het doosje. Zit een product wel in je OneStopMobile-catalogus? Neem dan Los product toevoegen; daar vult het zich vanzelf.</p>
+    <p class="muted" style="margin-bottom:14px">Eén serie in veel modellen, zoals hoesjes van MondiParts? Vul de serie één keer in en scan daarna per model het doosje.</p>
     <div class="row" id="serieVelden">
       <div style="flex:1; min-width:150px"><label>Merk</label><input id="se_merk" list="merkenList" placeholder="bijv. XSSIVE" autocomplete="off"></div>
       <div style="flex:1; min-width:150px"><label>Serie</label><input id="se_serie" placeholder="bijv. Clear case" autocomplete="off"></div>
       <div style="min-width:150px"><label>Categorie</label><select id="se_cat"></select></div>
-      <div style="min-width:130px"><label>Leverancier</label><input id="se_lev" list="serieLevs" placeholder="bijv. MondiParts" autocomplete="off"><datalist id="serieLevs"></datalist></div>
       <div style="min-width:110px"><label>Verkoop (€)</label><input id="se_verkoop" type="number" step="0.01" min="0"></div>
-      <div style="min-width:110px"><label>Inkoop (€) <span class="muted">optioneel</span></label><input id="se_inkoop" type="number" step="0.01" min="0"></div>
-      <div style="min-width:100px"><label>Min. winkel</label><input id="se_min" type="number" step="1" min="0"></div>
-      <div style="min-width:100px"><label>Min. over</label><input id="se_over" type="number" step="1" min="0"></div>
     </div>
+    <details class="meeropties">
+      <summary>Meer opties</summary>
+      <div class="row">
+        <div style="min-width:130px"><label>Leverancier</label><input id="se_lev" list="serieLevs" placeholder="bijv. MondiParts" autocomplete="off"><datalist id="serieLevs"></datalist></div>
+        <div style="min-width:110px"><label>Inkoop (€) <span class="muted">optioneel</span></label><input id="se_inkoop" type="number" step="0.01" min="0"></div>
+        <div style="min-width:100px"><label>Min. winkel</label><input id="se_min" type="number" step="1" min="0"></div>
+        <div style="min-width:100px"><label>Min. over</label><input id="se_over" type="number" step="1" min="0"></div>
+      </div>
+    </details>
     <div class="row" style="margin-top:12px">
       <button class="btn actie" onclick="serieStart()"><svg class="i s"><use href="#i-search"/></svg>Serie starten</button>
       <button class="btn ghost" onclick="startNieuwProduct()">Los product toevoegen</button>
@@ -3536,17 +3625,17 @@
 
   <div class="card" id="inst-voorraad"hidden>
     <h2><svg class="i"><use href="#i-package"/></svg>Winkel en overvoorraad</h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Van elk product horen er een paar in de winkel te hangen: de min. winkelvoorraad. Wat daarboven binnenkomt is overvoorraad en ligt achter. Zakt de winkel onder z'n minimum en ligt er nog wat achter, dan zet Storvo het op de bijvullijst. Zakt de winkel óf de overvoorraad onder z'n minimum, dan komt het op de bestellijst. Zo blijft er niets in het magazijn liggen verstoffen.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Hoeveel moet er van elk product in de winkel hangen, en hoeveel achter liggen? Hangt er te weinig, dan zegt Storvo dat je moet bijhangen. Is er van allebei te weinig, dan komt het op de bestellijst.</p>
     <div class="row">
       <div style="max-width:220px"><label>Min. winkelvoorraad (standaard)</label><input id="s_schap" type="number" min="0" step="1" onchange="slaSchapOp()"></div>
       <div style="max-width:220px"><label>Min. overvoorraad (standaard)</label><input id="s_minover" type="number" min="0" step="1" onchange="slaMinOverOp()"></div>
     </div>
-    <p class="muted" style="margin-top:10px">Dit geldt voor alle producten waarbij je niets aparts hebt ingevuld. Per product kun je er bij Producten van afwijken, bijvoorbeeld vier voor je best verkopende hoesje.</p>
+    <p class="muted" style="margin-top:10px">Dit is de standaard. Per product kun je ervan afwijken.</p>
   </div>
 
   <div class="card" id="inst-feedback"hidden>
     <h2><svg class="i"><use href="#i-message"/></svg>Feedback en reviews</h2>
-    <p class="muted" style="margin-bottom:18px; max-width:80ch">Storvo wordt gebouwd op wat winkels ons vertellen. Loop je ergens tegenaan of mis je iets, laat het weten. We lezen alles zelf en je krijgt antwoord van een mens.</p>
+    <p class="muted" style="margin-bottom:18px; max-width:80ch">Loop je ergens tegenaan of mis je iets? Laat het weten. Je krijgt antwoord van een mens.</p>
     <div class="row">
       <button class="btn actie" onclick="feedbackPopup()"><svg class="i s"><use href="#i-message"/></svg>Iets doorgeven</button>
       <button class="btn ghost" onclick="reviewPopup(false)"><svg class="i s"><use href="#i-check"/></svg>Storvo beoordelen</button>
@@ -3555,7 +3644,7 @@
 
   <div class="card" id="inst-aanvragen"hidden>
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Bestel je iets speciaal voor een klant, dan laat je hem meestal een deel vooruitbetalen. Bij 50% legt hij op een toestel van 1000 euro dus 500 euro neer, en de rest bij het ophalen. Per aanvraag kun je er altijd van afwijken.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Hoeveel betaalt een klant vooruit als je iets speciaal voor hem bestelt? Bij 50% is dat 500 euro op een toestel van 1000 euro.</p>
     <div class="row">
       <div style="max-width:220px"><label>Standaard aanbetaling (%)</label><input id="s_marge" type="number" min="0" step="1" onchange="slaMargeOp()"></div>
     </div>
@@ -3563,7 +3652,7 @@
 
   <div class="card" id="inst-kassa"hidden>
     <h2><svg class="i"><use href="#i-cash"/></svg>Kassa</h2>
-    <p class="muted" style="margin-bottom:16px; max-width:80ch">Storvo houdt bij hoeveel contant geld er in de lade zit. Kom je boven deze grens, dan krijg je een melding. Handig om te voorkomen dat er aan het eind van de week achthonderd euro in een la ligt.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:80ch">Zit er meer contant geld in de lade dan dit bedrag, dan krijg je een melding.</p>
     <div class="row">
       <div style="max-width:220px"><label>Waarschuw boven (€)</label><input id="s_kasmax" type="number" min="0" step="10" onchange="slaKasMaxOp()"></div>
     </div>
@@ -3572,18 +3661,24 @@
 
   <div class="card" id="inst-paginas"hidden>
     <h2><svg class="i"><use href="#i-layers"/></svg>Welke pagina's gebruik je?</h2>
-    <p class="muted" style="margin-bottom:18px; max-width:78ch">Zet uit wat je winkel niet doet. De pagina verdwijnt dan uit het menu voor iedereen, en er gaat niets verloren: zet je hem later weer aan, dan staat alles er nog. Dashboard en Instellingen blijven altijd staan, anders kom je hier nooit meer terug.</p>
+    <label>Weergave</label>
+    <div class="periodesel modussel" role="group" aria-label="Weergave">
+      <button data-s="simpel" class="active" onclick="zetModus(true)">Simpel</button>
+      <button data-s="alles" onclick="zetModus(false)">Alles</button>
+    </div>
+    <p class="modusuitleg" style="margin-bottom:20px; max-width:70ch">Simpel toont alleen wat je elke dag doet. Alles toont ook de cijfers en zeldzame opties. Er gaat niets verloren. Je team werkt altijd in Simpel.</p>
+    <p class="muted" style="margin-bottom:18px; max-width:78ch">Zet uit wat je winkel niet doet. De pagina verdwijnt dan voor iedereen uit het menu. Zet je hem later weer aan, dan staat alles er nog.</p>
     <div id="paginaLijst"></div>
   </div>
 
-  <div class="card" id="inst-bedrijf"hidden>
+  <div class="card" id="inst-bedrijf">
     <h2><svg class="i"><use href="#i-shop"/></svg>Bedrijfsgegevens <span class="muted">(voor klantberichten bij reparaties)</span></h2>
     <div class="grid">
       <div><label>Bedrijfsnaam</label><input id="b_naam" placeholder="Storvo" onchange="slaBedrijfOp()"></div>
       <div><label>E-mailadres (afzender)</label><input id="b_email" placeholder="info@jouwwinkel.nl" onchange="slaBedrijfOp()"></div>
       <div><label>Telefoonnummer (afzender)</label><input id="b_tel" placeholder="06 12345678" onchange="slaBedrijfOp()"></div>
     </div>
-    <p class="muted" style="margin-top:8px">Deze gegevens worden gebruikt in de statusberichten naar klanten. Berichten openen in je eigen mail-/sms-app zodat jij ze verstuurt.</p>
+    <p class="muted" style="margin-top:8px">Deze gegevens staan in de berichten naar je klanten.</p>
     <button class="btn ghost" style="margin-top:12px" onclick="toonOnboarding()"><svg class="i s"><use href="#i-shop"/></svg>Rondleiding opnieuw bekijken</button>
   </div>
 
@@ -3622,7 +3717,10 @@
       <p class="muted" style="margin-top:8px; font-size:12.5px">Achter dit adres komt het reparatienummer, bijvoorbeeld <code id="kp_voorbeeld"></code></p>
     </div>
 
-    <h2 style="font-size:14.5px; margin-top:22px"><svg class="i s"><use href="#i-palette"/></svg>Eigen uitstraling</h2>
+    <!-- Drie onderwerpen, elk uitklapbaar: dan zie je eerst waar je uit kunt kiezen in
+         plaats van één lange lap met kleuren, adres en teksten door elkaar. -->
+    <details class="meeropties instsectie">
+    <summary><svg class="i s"><use href="#i-palette"/></svg>Eigen uitstraling</summary>
     <label style="display:flex; align-items:center; gap:9px; margin-bottom:16px; text-transform:none; letter-spacing:0; font-size:14px; font-weight:500; color:var(--text); cursor:pointer">
       <input type="checkbox" id="kp_eigen" onchange="kpWisselEigen(this.checked)"> Andere kleuren dan het dashboard gebruiken
     </label>
@@ -3639,9 +3737,11 @@
         <button class="btn ghost small" onclick="kpVerwijderLogo()">Logo weghalen</button>
       </div>
     </div>
+    </details>
 
-    <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-shop"/></svg>Contact en openingstijden</h2>
-    <p class="muted" style="margin:-4px 0 14px; font-size:12.5px">Dit ziet je klant op zijn reparatiepagina. Vul hier je winkelgegevens in, niet je privé-adres.</p>
+    <details class="meeropties instsectie">
+    <summary><svg class="i s"><use href="#i-shop"/></svg>Contact en openingstijden</summary>
+    <p class="muted" style="margin:0 0 14px; font-size:12.5px">Je winkelgegevens, niet je privé-adres.</p>
     <div class="grid" style="margin-bottom:14px">
       <div><label>E-mailadres</label><input id="kp_email" type="email" placeholder="winkel@voorbeeld.nl" onchange="slaKlantpaginaOp()"></div>
       <div><label>Telefoonnummer</label><input id="kp_telefoon" placeholder="030 1234567" onchange="slaKlantpaginaOp()"></div>
@@ -3651,14 +3751,17 @@
     <div><label>Openingstijden <span class="muted">(per dag)</span></label>
       <div id="kp_tijdenEditor" class="tijdeneditor"></div>
       <input type="hidden" id="kp_tijden"></div>
-    <p class="muted" style="margin-top:8px; font-size:12.5px">Laat e-mail of telefoon leeg om je bedrijfsgegevens te gebruiken. Laat WhatsApp leeg om je telefoonnummer te gebruiken.</p>
+    <p class="muted" style="margin-top:8px; font-size:12.5px">Leeg laten? Dan gebruiken we je bedrijfsgegevens. WhatsApp leeg is je telefoonnummer.</p>
+    </details>
 
-    <h2 style="font-size:14.5px; margin-top:26px"><svg class="i s"><use href="#i-message"/></svg>Teksten op de pagina</h2>
+    <details class="meeropties instsectie">
+    <summary><svg class="i s"><use href="#i-message"/></svg>Teksten op de pagina</summary>
     <div class="grid">
       <div><label>Bij wachten op toestel</label><textarea id="kp_t_inleveren" rows="2" onchange="slaKlantpaginaOp()"></textarea></div>
       <div><label>Bij klaar om op te halen</label><textarea id="kp_t_ophalen" rows="2" onchange="slaKlantpaginaOp()"></textarea></div>
       <div><label>Boven het vragen-blok</label><textarea id="kp_t_vragen" rows="2" onchange="slaKlantpaginaOp()"></textarea></div>
     </div>
+    </details>
 
     <div class="row" style="margin-top:22px">
       <button class="btn" onclick="kpVoorbeeld()"><svg class="i s"><use href="#i-search"/></svg>Voorbeeld bekijken</button>
@@ -3681,21 +3784,21 @@
 
     <div id="ber_lijst"></div>
 
-    <div style="margin-top:26px; padding-top:22px; border-top:1px solid var(--soft-2)">
-      <h3 style="font-family:'Sora',system-ui,sans-serif; font-size:16px; margin:0 0 6px">Prijzen vergelijken</h3>
+    <!-- Prijzen vergelijken gaat niet over berichten aan de klant, maar stond hier. Nu
+         als eigen uitklap onderaan, zodat de berichten zelf het scherm zijn. -->
+    <details class="meeropties instsectie" data-handmatig style="margin-top:26px">
+      <summary>Prijzen vergelijken met andere winkels</summary>
       <p class="muted" style="font-size:13.5px; line-height:1.6; margin-bottom:14px">
-        Als je meedoet, stuurt Storvo bij elke afgerekende reparatie één regel door:
-        het toestel, het soort reparatie en het bedrag. <b>Geen klantnaam, geen
-        telefoonnummer, geen reparatienummer.</b> Zodra genoeg winkels meedoen zie je
-        bij het aanmaken van een reparatie wat er in de markt gangbaar is. Wat jij
-        rekent is nooit tot jouw winkel te herleiden: we tonen pas iets vanaf vijf
-        verschillende winkels.
+        Doe je mee, dan stuurt Storvo bij elke afgerekende reparatie het toestel, de
+        reparatie en het bedrag door. <b>Geen klantnaam, telefoonnummer of
+        reparatienummer.</b> Je ziet dan wat er in de markt gangbaar is. We tonen pas
+        iets vanaf vijf winkels, dus jouw prijs is nooit te herleiden.
       </p>
       <label style="display:flex; align-items:center; gap:9px; margin:0 0 12px; text-transform:none; letter-spacing:0; font-size:14px; font-weight:500; color:var(--text); cursor:pointer">
         <input type="checkbox" id="pd_aan" onchange="prijsDelenWissel(this.checked)"> Meedoen aan de prijsvergelijking
       </label>
       <div id="prijsDelen"></div>
-    </div>
+    </details>
   </div>
 
   <div class="card" id="inst-huisstijl"hidden>
@@ -3886,7 +3989,6 @@ let dagDatum=null;
 let chartMode='uur';
 let gebruiker=null;
 let teamLeden=[]; /* lichte kopie van de accounts-tabel (id, naam, rol) voor de Uren-pagina */
-let prestPeriode='dag';
 const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBluapP3nOsuIssqA';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
@@ -4467,11 +4569,28 @@ let urenPeriodeNu='week';
 function urenMagAlles(){ const r=gebruiker?gebruiker.rol:'eigenaar'; return r==='eigenaar'||r==='beheerder'; }
 /* Haalt een lichte kopie van de accounts op voor de Wie-keuze. Alleen nodig als je
    alle uren mag zien; een medewerker logt enkel voor zichzelf en heeft dit niet nodig. */
-async function laadTeamLeden(){
-  if(!account) return teamLeden;
-  try{ const {data}=await sb.from('accounts').select('id,naam,rol').order('created_at',{ascending:true});
-    if(data) teamLeden=data.map(l=>({id:l.id, naam:l.naam, rol:l.rol})); }catch(e){}
-  return teamLeden;
+/* Vier schermen vragen de teamleden op als de lijst nog leeg is en tekenen zich daarna
+   opnieuw. Kwam die lijst leeg terug (geen netwerk, een fout), dan vroeg het hertekenen
+   hem meteen weer op: een eindeloze lus zolang de pagina open stond. Daarom delen
+   gelijktijdige vragen één verzoek, en tekenen de schermen alleen opnieuw als er echt
+   iemand binnenkwam (zie teamLedenDanTeken). */
+let _teamLedenBezig=null;
+function laadTeamLeden(){
+  if(!account) return Promise.resolve(teamLeden);
+  if(_teamLedenBezig) return _teamLedenBezig;
+  _teamLedenBezig=(async()=>{
+    try{ const {data}=await sb.from('accounts').select('id,naam,rol').order('created_at',{ascending:true});
+      if(data) teamLeden=data.map(l=>({id:l.id, naam:l.naam, rol:l.rol})); }catch(e){}
+    _teamLedenBezig=null;
+    return teamLeden;
+  })();
+  return _teamLedenBezig;
+}
+function teamLedenDanTeken(tabId, teken){
+  laadTeamLeden().then(l=>{
+    if(!l || !l.length) return;
+    const t=document.getElementById(tabId); if(t && !t.hidden) teken();
+  });
 }
 function urenNaam(u){ if(u.medewerkerNaam) return u.medewerkerNaam; const m=teamLeden.find(x=>x.id===u.medewerker); if(m) return m.naam; if(gebruiker&&gebruiker.id===u.medewerker) return gebruiker.naam; return '?'; }
 function urenVanaf(){
@@ -4535,7 +4654,7 @@ function tekenLoonBlok(id){
 function renderPersoneel(){
   const box=document.getElementById('personeelLijst'); if(!box) return;
   if(!teamLeden.length && account){
-    laadTeamLeden().then(()=>{ const t=document.getElementById('tab-team'); if(t && !t.hidden) renderPersoneel(); });
+    teamLedenDanTeken('tab-team', renderPersoneel);
   }
   const leden = teamLeden.length ? teamLeden : (gebruiker?[{id:gebruiker.id, naam:gebruiker.naam, rol:gebruiker.rol}]:[]);
   if(!leden.length){ box.innerHTML='<p class="muted">Nog geen teamleden. Voeg ze toe bij Team.</p>'; return; }
@@ -4616,7 +4735,7 @@ function personeelMaandNav(richting){
 function renderPersoneelMaand(){
   const box=document.getElementById('personeelMaandLijst'); if(!box) return;
   if(!personeelMaandDatum){ const n=new Date(); personeelMaandDatum=new Date(n.getFullYear(), n.getMonth(), 1); }
-  if(!teamLeden.length && account){ laadTeamLeden().then(()=>{ const t=document.getElementById('tab-team'); if(t && !t.hidden) renderPersoneelMaand(); }); }
+  if(!teamLeden.length && account) teamLedenDanTeken('tab-team', renderPersoneelMaand);
   const jaar=personeelMaandDatum.getFullYear(), m0=personeelMaandDatum.getMonth();
   const lbl=document.getElementById('personeelMaandLabel');
   if(lbl) lbl.textContent=personeelMaandDatum.toLocaleDateString('nl-NL',{month:'long', year:'numeric'});
@@ -4752,6 +4871,7 @@ function roosterNav(richting){
 }
 async function renderRooster(){
   if(!roosterMaandag) roosterMaandag=roosterMaandagVan(new Date());
+  const nu=document.getElementById('roosterNaarUren'); if(nu) nu.hidden=!mag('uren');
   await laadRooster();
 }
 async function laadRooster(){
@@ -4966,26 +5086,6 @@ function keurBalkGa(){
   if(keurWacht.week){ roosterMaandag=roosterMaandagVan(new Date(keurWacht.week+'T12:00:00')); }
   showTab('rooster');
 }
-function keurPopup(){
-  if(!keurWacht.aantal || !roosterMagInplannen()) return;
-  if(document.querySelector('.overlay')) return;         // niet over een ander scherm heen
-  const k='storvo_keur_'+new Date().toISOString().slice(0,10);   // eenmaal per dag
-  if(nudgeGezien(k)) return; nudgeZet(k);
-  const namen=keurWacht.ids.map(id=>roosterNaam(id)).filter(x=>x&&x!=='?');
-  const lijst = namen.length ? esc(namen.join(', ')) : (keurWacht.aantal+' teamleden');
-  const ov=document.createElement('div'); ov.className='overlay'; ov.id='keurOverlay';
-  ov.innerHTML=`<div class="popup">
-    <h3 style="margin:0 0 8px">Rooster goedkeuren</h3>
-    <p class="pv">${lijst} ${keurWacht.aantal===1?'heeft':'hebben'} de beschikbaarheid doorgegeven. Keur het goed of stuur het terug.</p>
-    <div class="acts" style="display:flex; gap:10px; margin-top:16px">
-      <button class="btn actie" onclick="keurOverlaySluit(true)">Naar het rooster</button>
-      <button class="btn ghost" onclick="keurOverlaySluit(false)">Later</button>
-    </div>
-  </div>`;
-  ov.addEventListener('click',e=>{ if(e.target===ov) keurOverlaySluit(false); });
-  document.body.appendChild(ov);
-}
-function keurOverlaySluit(ga){ const o=document.getElementById('keurOverlay'); if(o) o.remove(); if(ga) keurBalkGa(); }
 /* Voor de medewerker: drie dagen voor een nieuwe week ingaat, en hij gaf zijn
    beschikbaarheid nog niet door, eenmaal een popup. De mail komt los daarvan. */
 async function roosterInvulPopup(){
@@ -5057,12 +5157,21 @@ async function roosterNietIngevuldPopup(){
 }
 function nietinOverlaySluit(van){ const o=document.getElementById('nietinOverlay'); if(o) o.remove(); if(van){ roosterMaandag=roosterMaandagVan(new Date(van+'T12:00:00')); showTab('rooster'); } }
 /* Bij het inloggen alles ophalen en tonen: eerst de balk, dan (met een tik vertraging
-   zodat een eventueel proefscherm voorgaat) de popups. Eén tegelijk: elke popup slaat
-   zichzelf over als er al een overlay staat. Volgorde = belangrijkste eerst. */
+   zodat een eventueel proefscherm voorgaat) hooguit één popup per dag.
+   Eerst waren het er vier over hetzelfde onderwerp: de goedkeurbalk, een goedkeur-popup,
+   "nog niet iedereen" en "geef je rooster door". De balk blijft staan zolang er iets
+   wacht, dus de goedkeur-popup erbovenop is weggehaald. De andere twee gaan alleen de
+   laatste drie dagen voor een nieuwe week, en nooit meer dan één keer op een dag. */
 async function roosterMeldingen(){
   await roosterKeurLaden();
   toonKeurBalk();
-  setTimeout(async()=>{ keurPopup(); await roosterNietIngevuldPopup(); await roosterInvulPopup(); }, 800);
+  setTimeout(async()=>{
+    const dag='storvo_rooster_por_'+new Date().toISOString().slice(0,10);
+    if(nudgeGezien(dag)) return;
+    await roosterNietIngevuldPopup();
+    if(!document.getElementById('nietinOverlay')) await roosterInvulPopup();
+    if(document.getElementById('nietinOverlay') || document.getElementById('invulOverlay')) nudgeZet(dag);
+  }, 800);
 }
 /* ═══ Het planbord: wie werkt wanneer (voor wie mag inplannen) ═══
    Beschikbaarheid is de onderlegger (wie kan), het ingedeelde rooster de uitvoer.
@@ -5075,7 +5184,9 @@ function dienstMin(van, tot, pauze){
   return Math.max(0, d-(Number(pauze)||0));
 }
 function dienstUren(x){ return dienstMin(x.van, x.tot, x.pauze_min)/60; }
-function roosterKostenZichtbaar(){ return typeof urenMagAlles==='function' ? urenMagAlles() : true; }
+/* Loonkosten op het planbord zijn voor het verdiepen: in Simpel plan je mensen, in Alles
+   zie je ook wat het kost. */
+function roosterKostenZichtbaar(){ return (typeof urenMagAlles==='function' ? urenMagAlles() : true) && !modusSimpel(); }
 function roosterOpPercentage(id){ if(typeof pCfg!=='function') return false; const c=pCfg(id); return c && c.vorm==='percentage'; }
 function roosterCelDiensten(id, ymd){ return (roosterData.diensten||[]).filter(x=>x.account_id===id && x.datum===ymd); }
 function roosterWeekUren(id){ return (roosterData.diensten||[]).filter(x=>x.account_id===id).reduce((s,x)=>s+dienstUren(x),0); }
@@ -5177,7 +5288,7 @@ function tekenRoosterBord(){
   let weekU=0, weekK=0;
   mensen.forEach(m=>{ const u=roosterWeekUren(m.id); weekU+=u; if(kostenAan && !roosterOpPercentage(m.id)) weekK+=((typeof loonTarief==='function')?loonTarief(m.id):0)*u; });
   const weekTot=`<span class="pb-weektot">${urenKort(weekU)}${kostenAan&&weekK?(' · '+euroKort(weekK)):''}</span>`;
-  const kopExtra=`<div class="pb-balk">${weekTot}<button type="button" class="btn ghost small" onclick="roosterKopieerVorige()"><svg class="i s"><use href="#i-clipboard"/></svg>Neem vorige week over</button></div>`;
+  const kopExtra=`<div class="pb-balk">${weekTot}<button type="button" class="btn ghost small uitgebreid" onclick="roosterKopieerVorige()"><svg class="i s"><use href="#i-clipboard"/></svg>Neem vorige week over</button></div>`;
 
   // ── Desktop: matrix mensen x 7 dagen ──
   const dagKop=dagen.map((d,i)=>{ const ymd=roosterYmd(d); const open=OPENINGSTIJDEN[i];
@@ -5429,12 +5540,14 @@ function renderUren(){
   const wieVak=document.getElementById('urenWieVak'), wie=document.getElementById('uren_wie');
   /* Wie-keuze uit de accounts. Als de eigenaar/beheerder de lijst nog niet heeft,
      halen we hem één keer op en tekenen daarna opnieuw. */
-  if(alles && !teamLeden.length && account){ laadTeamLeden().then(()=>{ if(!document.getElementById('tab-uren').hidden) renderUren(); }); }
+  if(alles && !teamLeden.length && account) teamLedenDanTeken('tab-uren', renderUren);
   const actief = teamLeden.length ? teamLeden : (gebruiker?[{id:gebruiker.id, naam:gebruiker.naam}]:[]);
+  /* Werk je alleen, dan is "Wie" een keuze met één antwoord: weglaten. */
   if(wie){
-    if(alles){ wie.innerHTML=actief.map(m=>`<option value="${m.id}">${esc(m.naam)}</option>`).join(''); if(wieVak) wieVak.style.display=''; }
+    if(alles){ wie.innerHTML=actief.map(m=>`<option value="${m.id}">${esc(m.naam)}</option>`).join(''); if(wieVak) wieVak.style.display=actief.length>1?'':'none'; }
     else { const self=gebruiker||actief[0]; wie.innerHTML=self?`<option value="${self.id}">${esc(self.naam)}</option>`:''; if(wieVak) wieVak.style.display='none'; }
   }
+  const nr=document.getElementById('urenNaarRooster'); if(nr) nr.hidden=!mag('rooster');
   [...document.querySelectorAll('#urenPeriode button')].forEach(b=>b.classList.toggle('active', b.dataset.up===urenPeriodeNu));
   const van=urenVanaf();
   let lijst=(state.uren||[]).filter(u=>urenDatumTijd(u)>=van);
@@ -5446,14 +5559,19 @@ function renderUren(){
   if(tot){
     const rows=Object.values(perM);
     const totUren=rows.reduce((s,r)=>s+r.uren,0), totLoon=rows.reduce((s,r)=>s+r.loon,0);
-    tot.innerHTML = rows.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Medewerker</th><th class="num">Uren</th>'+(alles?'<th class="num">Loonkosten</th>':'')+'</tr></thead><tbody>'+
+    /* Eén persoon in deze periode: een totaaltabel met één rij is dubbel op. Dan één
+       regel erboven en de lijst eronder. Pas bij meer mensen een tabel per persoon. */
+    if(rows.length===1){
+      tot.innerHTML=`<div class="urentotaal"><b>${totUren.toLocaleString('nl-NL')} uur</b>${alles?` · ${euro(totLoon)} loon`:''}</div>`;
+    }else tot.innerHTML = rows.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Medewerker</th><th class="num">Uren</th>'+(alles?'<th class="num">Loonkosten</th>':'')+'</tr></thead><tbody>'+
       rows.map(r=>`<tr><td>${esc(r.naam)}</td><td class="num">${r.uren.toLocaleString('nl-NL')}</td>`+(alles?`<td class="num">${euro(r.loon)}</td>`:'')+`</tr>`).join('')+
       `<tr style="font-weight:800"><td>Totaal</td><td class="num">${totUren.toLocaleString('nl-NL')}</td>`+(alles?`<td class="num">${euro(totLoon)}</td>`:'')+`</tr></tbody></table></div>` : '<div class="muted">Nog geen uren in deze periode.</div>';
   }
   const el=document.getElementById('urenLijst');
   if(el){
-    el.innerHTML = lijst.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Datum</th><th>Medewerker</th><th class="num">Uren</th><th>Notitie</th><th></th></tr></thead><tbody>'+
-      lijst.map(u=>`<tr><td>${esc(u.datum||'')}</td><td>${esc(urenNaam(u))}</td><td class="num">${(Number(u.uren)||0).toLocaleString('nl-NL')}</td><td><span data-onvertaald>${esc(u.notitie||'')}</span></td><td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="urenWeg(${u.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('')+'</tbody></table></div>'
+    const metWie=Object.keys(perM).length>1;
+    el.innerHTML = lijst.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Datum</th>'+(metWie?'<th>Medewerker</th>':'')+'<th class="num">Uren</th><th>Notitie</th><th></th></tr></thead><tbody>'+
+      lijst.map(u=>`<tr><td>${esc(u.datum||'')}</td>${metWie?`<td>${esc(urenNaam(u))}</td>`:''}<td class="num">${(Number(u.uren)||0).toLocaleString('nl-NL')}</td><td><span data-onvertaald>${esc(u.notitie||'')}</span></td><td class="num"><button class="btn small ghost icoknop" title="Weghalen" onclick="urenWeg(${u.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('')+'</tbody></table></div>'
       : '';
   }
   const dd=document.getElementById('uren_datum'); if(dd && !dd.value) dd.value=new Date().toISOString().slice(0,10);
@@ -5961,8 +6079,11 @@ function renderFacturen(){
     : '<div class="muted">Nog geen facturen of offertes. Maak er hierboven een.</div>';
 }
 function facLeegRegel(){ return {omschrijving:'',aantal:1,stukprijs:0,btw:21}; }
+/* Of "Meer klantgegevens" open staat. De editor wordt bij elke regel opnieuw getekend;
+   zonder dit klapte hij dan steeds weer dicht terwijl je een adres aan het typen was. */
+let facMeerOpen=false;
 function facNieuw(soort){
-  facBewerkId=null;
+  facBewerkId=null; facMeerOpen=false;
   facConcept={ soort, datum:new Date().toISOString().slice(0,10),
     klant:{naam:'',adres:'',pc:'',plaats:'',email:'',btwnr:''},
     regels:[facLeegRegel()], notitie:'' };
@@ -5970,7 +6091,7 @@ function facNieuw(soort){
 }
 function facOpen(id){
   const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
-  facBewerkId=id;
+  facBewerkId=id; facMeerOpen=false;
   facConcept=JSON.parse(JSON.stringify(f));
   if(!facConcept.klant) facConcept.klant={};
   if(!Array.isArray(facConcept.regels) || !facConcept.regels.length) facConcept.regels=[facLeegRegel()];
@@ -6004,13 +6125,18 @@ function facEditRender(){
     </div>
     <div class="grid">
       <div><label>Klantnaam</label><input id="fk_naam" value="${esc(f.klant.naam||'')}" oninput="facLees()" autocomplete="off"></div>
-      <div><label>E-mail <span class="muted">(optioneel)</span></label><input id="fk_email" value="${esc(f.klant.email||'')}" oninput="facLees()" autocomplete="off"></div>
-      <div><label>Adres <span class="muted">(optioneel)</span></label><input id="fk_adres" value="${esc(f.klant.adres||'')}" oninput="facLees()" autocomplete="off"></div>
-      <div><label>Postcode <span class="muted">(optioneel)</span></label><input id="fk_pc" value="${esc(f.klant.pc||'')}" oninput="facLees()" autocomplete="off"></div>
-      <div><label>Plaats <span class="muted">(optioneel)</span></label><input id="fk_plaats" value="${esc(f.klant.plaats||'')}" oninput="facLees()" autocomplete="off"></div>
-      <div><label>Btw-nummer klant <span class="muted">(optioneel)</span></label><input id="fk_btw" value="${esc(f.klant.btwnr||'')}" oninput="facLees()" autocomplete="off"></div>
       <div><label>Datum</label><input id="fk_datum" type="date" value="${esc(f.datum||'')}" oninput="facLees()"></div>
     </div>
+    <details class="meeropties" data-gezet="1" ${(facMeerOpen || !modusSimpel() || ['email','adres','pc','plaats','btwnr'].some(k=>f.klant[k]))?'open':''} ontoggle="facMeerOpen=this.open">
+      <summary>Meer klantgegevens</summary>
+      <div class="grid">
+        <div><label>E-mail <span class="muted">(optioneel)</span></label><input id="fk_email" value="${esc(f.klant.email||'')}" oninput="facLees()" autocomplete="off"></div>
+        <div><label>Adres <span class="muted">(optioneel)</span></label><input id="fk_adres" value="${esc(f.klant.adres||'')}" oninput="facLees()" autocomplete="off"></div>
+        <div><label>Postcode <span class="muted">(optioneel)</span></label><input id="fk_pc" value="${esc(f.klant.pc||'')}" oninput="facLees()" autocomplete="off"></div>
+        <div><label>Plaats <span class="muted">(optioneel)</span></label><input id="fk_plaats" value="${esc(f.klant.plaats||'')}" oninput="facLees()" autocomplete="off"></div>
+        <div><label>Btw-nummer klant <span class="muted">(optioneel)</span></label><input id="fk_btw" value="${esc(f.klant.btwnr||'')}" oninput="facLees()" autocomplete="off"></div>
+      </div>
+    </details>
     <div style="overflow-x:auto; margin-top:14px"><table><thead><tr><th>Omschrijving</th><th class="num">Aantal</th><th class="num">Stukprijs (excl.)</th><th>Btw</th><th class="num">Bedrag (excl.)</th><th></th></tr></thead><tbody id="facRegels">${regels}</tbody></table></div>
     <button class="btn ghost small" style="margin-top:10px" onclick="facRegelToe()"><svg class="i s"><use href="#i-plus"/></svg>Regel erbij</button>
     <div style="margin-top:10px"><label>Notitie <span class="muted">(optioneel)</span></label><input id="fk_notitie" value="${esc(f.notitie||'')}" oninput="facLees()" placeholder="bijv. betaaltermijn 14 dagen" autocomplete="off"></div>
@@ -6241,39 +6367,39 @@ function renderDashboard(){
   const s=stats(b), vs=vb?stats(vb):null;
   const marge=s.omzet>0?(s.winst/s.omzet*100):0;
   const P=k=>pctHtml(s[k], vs?vs[k]:null);
-  /* De dashboardbedragen zijn de echte bedragen die binnenkomen: incl. btw. (De
-     Rapport-pagina rekent de omzet juist naar excl. btw; daarom hier een klein
-     kaartje "incl. btw", zodat je de twee niet verwart.) */
+  /* De dashboardbedragen zijn de echte bedragen die binnenkomen: incl. btw. De
+     Rapport-pagina rekent juist excl. btw. Dat staat nu één keer onder de rij in plaats
+     van op elke tegel: zes keer "incl. btw" las als ruis. */
   const geldKpi=(label, val, k, opt)=>{
     opt=opt||{};
     return `<div class="kpi${opt.accent?' accent':''}"><div class="l">${label}</div>`+
-      `<div class="v${opt.groen?' groen':''}"><span class="bedrag">${euro(val)}</span></div>`+
-      `<div class="kpimeta"><span class="btwhint">incl. btw</span>${P(k)}</div></div>`;
+      `<div class="v${opt.groen?' groen':''}${opt.rood?' rood':''}"><span class="bedrag">${euro(val)}</span></div>`+
+      (k?`<div class="kpimeta">${P(k)}</div>`:'')+`</div>`;
   };
+  /* Vaste rij: drie getallen die je echt elke dag wilt weten. Omzet, wat je eraan
+     verdient, en wat er na loon en vaste lasten overblijft. De rest achter "Meer cijfers". */
+  const c=rapportCijfers(b);
   document.getElementById('kpiRow').innerHTML=
-    geldKpi('Totale omzet', s.omzet, 'omzet', {accent:true})+
+    geldKpi('Omzet', s.omzet, 'omzet', {accent:true})+
     geldKpi('Winst', s.winst, 'winst', {groen:true})+
-    geldKpi('Kosten (inkoop)', s.kosten, 'kosten')+
-    geldKpi('Pin en bank', s.pin, 'pin')+
-    geldKpi('Cash met bon', s.cash, 'cash')+
-    geldKpi('Cash zonder bon', s.cashzb, 'cashzb');
-  const tot=state.producten.reduce((x,p)=>x+p.voorraad,0);
+    geldKpi('Resultaat', c.resultaat, null, {groen:c.resultaat>=0, rood:c.resultaat<0});
   const waarde=state.producten.reduce((x,p)=>x+p.voorraad*p.inkoop,0);
   const laag=state.producten.filter(p=>moetBestellen(p)).length;
   document.getElementById('kpiRow2').innerHTML=
+    geldKpi('Kosten (inkoop)', s.kosten, 'kosten')+
+    geldKpi('Pin en bank', s.pin, 'pin')+
+    geldKpi('Cash met bon', s.cash, 'cash')+
+    geldKpi('Cash zonder bon', s.cashzb, 'cashzb')+
     `<div class="kpi"><div class="l">Marge</div><div class="v oranje">${marge.toFixed(1)}%</div></div>`+
     `<div class="kpi"><div class="l">Verkochte stuks</div><div class="v">${s.stuks}${P('stuks')}</div></div>`+
-    `<div class="kpi"><div class="l">Producten</div><div class="v">${state.producten.length}</div></div>`+
     `<div class="kpi"><div class="l">Voorraadwaarde</div><div class="v">${euro(waarde)}</div></div>`+
-    `<div class="kpi"><div class="l">Onder minimum</div><div class="v${laag?'oranje':''}">${laag}</div></div>`;
-  /* Het echte resultaat, met dezelfde periode als hierboven: brutowinst min loon en
-     vaste lasten. Zo zie je op je startscherm wat je overhoudt, niet alleen de omzet. */
-  const c=rapportCijfers(b);
+    `<div class="kpi"><div class="l">Onder minimum</div><div class="v${laag?' oranje':''}">${laag}</div></div>`;
+  /* Hoe het resultaat tot stand komt, met dezelfde periode: brutowinst min loon en
+     vaste lasten. */
   document.getElementById('kpiRow3').innerHTML=
     `<div class="kpi"><div class="l">Brutowinst</div><div class="v groen">${euro(c.brutowinst)}</div></div>`+
     `<div class="kpi"><div class="l">Loonkosten</div><div class="v">${euro(c.loon)}</div></div>`+
-    `<div class="kpi"><div class="l">Vaste lasten</div><div class="v">${euro(c.vast)}</div></div>`+
-    `<div class="kpi"><div class="l">Resultaat</div><div class="v ${c.resultaat>=0?'groen':'rood'}">${euro(c.resultaat)}</div></div>`;
+    `<div class="kpi"><div class="l">Vaste lasten</div><div class="v">${euro(c.vast)}</div></div>`;
   document.getElementById('dagPick').value=dagDatum||'';
   renderCatWinst(b,vb);
   renderRepDash();
@@ -6288,18 +6414,64 @@ function renderDashboard(){
    gebeuren, en grote knoppen naar je dagelijkse acties. De volle versie (cijfers, grafiek,
    categorieën) staat achter de schakelaar 'Alles' en blijft gewoon beschikbaar. De keuze
    wordt per toestel onthouden; standaard simpel, want daar was het dashboard te druk. */
-function dashSimpelAan(){ try{ return localStorage.getItem('storvo_simpel')!=='0'; }catch(e){ return true; } }
-function dashModus(simpel){
-  try{ localStorage.setItem('storvo_simpel', simpel?'1':'0'); }catch(e){}
-  dashModusToon();
-}
 function dashModusToon(){
-  const sec=document.getElementById('tab-dashboard'); if(!sec) return;
-  const simpel=dashSimpelAan();
-  sec.classList.toggle('simpel', simpel);
-  const sel=document.getElementById('dashModusSel');
-  if(sel) sel.querySelectorAll('button').forEach(b=>b.classList.toggle('active', (b.dataset.s==='simpel')===simpel));
-  if(simpel) renderDashSimpel();
+  if(modusSimpel()) renderDashSimpel();
+}
+/* ═══ SIMPEL OF ALLES (de hele app) ═══
+   Eén keuze, per toestel onthouden, standaard Simpel. De werkbank leest dezelfde
+   sleutel, dus wie hier Alles kiest ziet daar ook alles. Medewerkers krijgen geen
+   schakelaar: zij werken altijd in Simpel, de eigenaar kiest voor zichzelf. */
+function modusSimpel(){
+  if(gebruiker && gebruiker.rol==='medewerker') return true;
+  try{ return localStorage.getItem('storvo_simpel')!=='0'; }catch(e){ return true; }
+}
+function zetModus(simpel){
+  try{ localStorage.setItem('storvo_simpel', simpel?'1':'0'); }catch(e){}
+  modusToepassen();
+  if(typeof mobielBijwerken==='function') mobielBijwerken();
+  /* Alleen pagina's zonder invoerformulier opnieuw tekenen; anders ben je je half
+     ingevulde velden kwijt. De rest volgt vanzelf uit de klasse op body. */
+  const nu=(typeof huidigeTab==='function')?huidigeTab():'';
+  if(nu==='dashboard') renderDashboard();
+  else if(nu==='meer') renderMeer();
+  toast(simpel?'Simpel: alleen wat je elke dag nodig hebt':'Alles: alle pagina\'s en opties zichtbaar', true);
+}
+function modusToepassen(){
+  const simpel=modusSimpel();
+  document.body.classList.toggle('simpel', simpel);
+  document.querySelectorAll('.modussel button').forEach(b=>b.classList.toggle('active', (b.dataset.s==='simpel')===simpel));
+  document.querySelectorAll('.zijmodus').forEach(z=>{ z.hidden=!!(gebruiker && gebruiker.rol==='medewerker'); });
+  meerOptiesZet(document, true);
+}
+/* In Alles gaan de "Meer opties" vanzelf open, in Simpel dicht. Een uitklap die je
+   zelf open of dicht tikt laten we met rust tot de volgende wissel (vandaar gezet), en
+   een uitklap met data-gevuld blijft open: daar staat al iets in dat je moet zien. */
+function meerOptiesZet(root, wissel){
+  const simpel=modusSimpel();
+  (root||document).querySelectorAll('details.meeropties').forEach(d=>{
+    if(d.hasAttribute('data-handmatig')) return;   // beheerblok: alleen open als je erop tikt
+    if(d.dataset.gezet && !wissel) return;
+    d.dataset.gezet='1';
+    d.open = !simpel || d.hasAttribute('data-gevuld');
+  });
+}
+/* Na het vullen van een formulier (bewerken, concept terughalen): een uitklap waarin
+   iets staat dat afwijkt van de standaard gaat open. Anders bewerk je een reparatie
+   met een e-mailadres erin en zie je niet dat het er staat. extra(d) mag zelf ook
+   zeggen dat er iets in zit, zoals een lijst onderdelen die geen invoerveld is. */
+function meerOptiesOpenAlsGevuld(root, extra){
+  (root||document).querySelectorAll('details.meeropties').forEach(d=>{
+    const gevuld=[...d.querySelectorAll('input,select,textarea')].some(el=>{
+      if(el.type==='checkbox'||el.type==='radio') return el.checked!==el.defaultChecked;
+      if(el.tagName==='SELECT'){
+        const std=[...el.options].findIndex(o=>o.defaultSelected);
+        return el.selectedIndex!==(std<0?0:std);
+      }
+      if(el.type==='hidden') return false;
+      return el.value!=='' && el.value!==el.defaultValue;
+    }) || (extra && extra(d));
+    if(gevuld){ d.open=true; d.dataset.gezet='1'; }
+  });
 }
 function renderDashSimpel(){
   const el=document.getElementById('dashSimpel'); if(!el) return;
@@ -6310,9 +6482,22 @@ function renderDashSimpel(){
   const reps=(typeof repTeDoen==='function')?repTeDoen():[];
   const actie=reps.filter(r=>repActie(r).urgent).length;
   const bestel=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0;
+  /* De rest komt uit dezelfde tellingen als de rode bolletjes in het menu, zodat het
+     lijstje en de bolletjes het altijd met elkaar eens zijn. */
+  const aanvKlaar=(typeof aanvLopend==='function')?aanvLopend().filter(a=>a.status==='binnen').length:0;
+  const kasVol=(typeof kasTeVol==='function') && kasTeVol();
+  let webNieuw=0, inrNieuw=0;
+  try{ webNieuw=bstData.filter(x=>!x.gezien && !x.geannuleerd).length; }catch(e){}
+  try{ inrNieuw=inrData.filter(x=>!x.gezien).length; }catch(e){}
   let taken='';
   if(actie) taken+=`<a onclick="showTab('reparaties')"><svg class="i"><use href="#i-wrench"/></svg>${actie} reparatie${actie===1?'':'s'} ${actie===1?'heeft':'hebben'} actie nodig</a>`;
+  if(aanvKlaar) taken+=`<a onclick="showTab('aanvragen')"><svg class="i"><use href="#i-clipboard"/></svg>${aanvKlaar} aanvra${aanvKlaar===1?'ag ligt':'gen liggen'} klaar voor de klant</a>`;
+  if(webNieuw && mag('webshop')) taken+=`<a onclick="showTab('webshop')"><svg class="i"><use href="#i-shop"/></svg>${webNieuw} nieuwe webshopbestelling${webNieuw===1?'':'en'}</a>`;
+  if(inrNieuw && mag('inruil')) taken+=`<a onclick="showTab('inruil')"><svg class="i"><use href="#i-recycle"/></svg>${inrNieuw} nieuwe inruilaanvra${inrNieuw===1?'ag':'gen'}</a>`;
   if(bestel) taken+=`<a onclick="showTab('bestellen')"><svg class="i"><use href="#i-cart"/></svg>${bestel} ding${bestel===1?'':'en'} vandaag bestellen</a>`;
+  if(kasVol) taken+=`<a onclick="showTab('kassa')"><svg class="i"><use href="#i-cash"/></svg>Er zit te veel geld in de kassa</a>`;
+  if(typeof keurWacht!=='undefined' && keurWacht.aantal && typeof roosterMagInplannen==='function' && roosterMagInplannen())
+    taken+=`<a onclick="keurBalkGa()"><svg class="i"><use href="#i-clock"/></svg>Rooster goedkeuren: ${keurWacht.aantal} ${keurWacht.aantal===1?'teamlid wacht':'teamleden wachten'}</a>`;
   if(!taken) taken='<span class="rust">Niks dringends. Mooi.</span>';
   // De acties die jij het meest doet. Werkbank = laptops toevoegen, controleren, online
   // zetten en kaartjes uitdraaien (dat zit allemaal in de refurbish-werkbank).
@@ -6593,6 +6778,7 @@ function inkConceptHerstel(){
   if(conceptIetsIn(['ink_wat','ink_lev','ink_bedrag'])) return;
   const d=conceptLees('inkoop', 72); if(!d) return;
   conceptZet(d);
+  const ih=document.getElementById('inkHand'); if(ih){ ih.open=true; ih.dataset.gezet='1'; }
   toast('Een niet-afgemaakte inkoop is teruggezet', true);
 }
 async function inkoopToevoegen(){
@@ -6623,7 +6809,8 @@ async function inkoopToevoegen(){
   save();
   conceptWis('inkoop');   /* inkoop opgeslagen: concept-back-up weg */
   document.getElementById('ink_wat').value=''; document.getElementById('ink_bedrag').value=''; document.getElementById('ink_lev').value='';
-  const nm=document.getElementById('ink_factuurNaam'); if(nm) nm.innerHTML='Lees een factuur automatisch uit; Storvo vult het formulier hieronder in en bewaart de factuur bij de inkoop.';
+  const nm=document.getElementById('ink_factuurNaam'); if(nm) nm.innerHTML='';
+  const ih=document.getElementById('inkHand'); if(ih){ delete ih.dataset.gezet; meerOptiesZet(ih.parentNode, true); }
   const prev=document.getElementById('ink_factuurPreview'); if(prev){ if(prev.dataset.url){ try{ URL.revokeObjectURL(prev.dataset.url); }catch(e){} prev.dataset.url=''; } prev.innerHTML=''; prev.hidden=true; }
   renderInkopen();
   toast('Inkoop toegevoegd', true);
@@ -7267,10 +7454,12 @@ function tekenMailZij(){
     const stijl = aan ? `style="background:${info.zacht}; border-color:${info.hex}; color:${info.hex}"` : '';
     return `<button class="mailchip${aan?' actief':''}" ${stijl} onclick="mailKies('${c.id}')">
       <span class="dot" style="background:${info.hex}"></span>${esc(c.naam)}${ong?` <span class="tel">${ong}</span>`:''}
-      <span class="pen" onclick="event.stopPropagation(); mailCatBewerk('${c.id}')"><svg class="i s"><use href="#i-edit"/></svg></span>
+      ${aan?`<span class="pen" title="Categorie aanpassen" onclick="event.stopPropagation(); mailCatBewerk('${c.id}')"><svg class="i s"><use href="#i-edit"/></svg></span>`:''}
     </button>`;
   }).join('');
-  html+=`<button class="mailchip" onclick="mailCatBewerk('')"><svg class="i s"><use href="#i-plus"/></svg>Categorie</button>`;
+  /* Een pennetje op elke chip was een rij kleine knopjes tussen de filters. Nu alleen
+     op de categorie die je open hebt; een nieuwe categorie maken kan in Alles. */
+  html+=`<button class="mailchip uitgebreid" onclick="mailCatBewerk('')"><svg class="i s"><use href="#i-plus"/></svg>Categorie</button>`;
   el.innerHTML=html;
 }
 function mailKies(f){ mailFilter=f; mailSelectie.clear(); tekenMailZij(); tekenMailLijst(); }
@@ -7695,6 +7884,8 @@ async function factuurUitlezen(input){
   const f=(input.files||[])[0]; if(!f) return;
   if(f.size>12*1024*1024){ toast('Bestand te groot (max 12 MB)','let-op'); input.value=''; return; }
   pendingFactuur=f;
+  /* Het formulier vult zich zo meteen; dan moet je het ook zien om te controleren. */
+  const ih=document.getElementById('inkHand'); if(ih){ ih.open=true; ih.dataset.gezet='1'; }
   const nm=document.getElementById('ink_factuurNaam'); if(nm) nm.innerHTML='Factuur toegevoegd: <b>'+esc(f.name)+'</b> · wordt uitgelezen…';
   /* De factuur meteen tonen (lokaal, geen upload nodig), zodat je kunt controleren of de
      uitgelezen gegevens kloppen voordat je op Toevoegen klikt. */
@@ -7726,7 +7917,7 @@ async function factuurUitlezen(input){
       if(v.bedrag!=null && document.getElementById('ink_bedrag')) document.getElementById('ink_bedrag').value=v.bedrag;
       const sel=document.getElementById('ink_btw'); if(sel && v.btw!=null) sel.value=String([21,9,0].includes(Number(v.btw))?Number(v.btw):21);
       const nm=document.getElementById('ink_factuurNaam'); if(nm && pendingFactuur) nm.innerHTML='Factuur toegevoegd: <b>'+esc(pendingFactuur.name)+'</b> · uitgelezen, controleer en klik Toevoegen';
-      toast('Factuur uitgelezen — controleer en kies het soort', true);
+      toast('Factuur uitgelezen. Controleer en kies het soort.', true);
     }catch(e){ toast('Factuur: '+e.message,'fout'); const nm=document.getElementById('ink_factuurNaam'); if(nm && pendingFactuur) nm.innerHTML='Factuur toegevoegd: <b>'+esc(pendingFactuur.name)+'</b> · uitlezen lukte niet, vul zelf in'; }
     input.value='';
   };
@@ -8474,7 +8665,8 @@ function blokOpen(catId){
       '<div style="min-width:120px"><label>Prijs p/st (€)</label><input id="bk_prijs" type="number" min="0" step="0.01" value="'+((varr.length && varr[0].verkoop!=null)?varr[0].verkoop:(c.verkoop||0))+'" oninput="blokPrijs()"></div>'+
     '</div>'+
     (svc? '<label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer"><input type="checkbox" id="bk_svc" onchange="blokPrijs()"> '+esc(svc.label)+' (+'+euro(svc.prijs)+' per stuk)</label>' : '')+
-    '<label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer"><input type="checkbox" id="bk_bijbestel" checked> Bijbestellen (op de bestellijst zetten)</label>'+
+    /* Bijbestellen staat standaard aan; in Simpel zie je het vinkje niet, maar het telt wel. */
+    '<label class="uitgebreid" style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer"><input type="checkbox" id="bk_bijbestel" checked> Op de bestellijst zetten</label>'+
     '<div id="bk_totaal" style="font-weight:700; margin-bottom:12px"></div>'+
     '<div class="acts" style="flex-direction:row; gap:8px">'+
       '<button class="btn" style="background:var(--green)" onclick="blokVerkoop()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen aan verkoop</button>'+
@@ -8558,7 +8750,7 @@ function postnlTeken(){
         <span class="pnlprijs">${euro(t.prijs)}</span>
         ${w>0.005?`<span class="pnlwinst">winst ${euro(w)}</span>`:''}
       </button>
-      <button class="pnlweg" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
+      <button class="pnlweg uitgebreid" title="Verwijderen" onclick="postnlWeg('${t.id}')">&times;</button>
     </div>`;
   };
   /* Bewerkregel: naam, prijs voor de klant en de inkoop. Bij een vast percentage
@@ -8585,7 +8777,7 @@ function postnlTeken(){
   ov.innerHTML=`<div class="popup pnlpop">
     <div class="pnlkop">
       <h3>PostNL</h3>
-      <button type="button" class="btn ghost small" onclick="postnlBewerkToggle()"><svg class="i s"><use href="#i-edit"/></svg>${inEdit?'Klaar met aanpassen':'Prijzen aanpassen'}</button>
+      <button type="button" class="btn ghost small${(lijst.length && !inEdit)?' uitgebreid':''}" onclick="postnlBewerkToggle()"><svg class="i s"><use href="#i-edit"/></svg>${inEdit?'Klaar met aanpassen':'Prijzen aanpassen'}</button>
     </div>
     <p class="pv">${inEdit
       ? 'Prijs is wat de klant betaalt. Je winst is het verschil met de inkoop (afdracht aan PostNL). Wil je liever met een vaste vergoeding rekenen, zet dan "Vast percentage" aan: je winst is dan dat percentage van elke prijs.'
@@ -9019,8 +9211,7 @@ function catOpen(){
 }
 function catMarkeer(){
   [...document.querySelectorAll('#cat_soorten button')].forEach(b=>{
-    const aan = CAT_SOORTEN[Number(b.dataset.i)][1]===catSoort;
-    b.style.background = aan?'var(--oranje)':''; b.style.color = aan?'#fff':''; b.style.borderColor = aan?'var(--oranje)':'';
+    b.classList.toggle('aan', CAT_SOORTEN[Number(b.dataset.i)][1]===catSoort);
   });
 }
 function catSoortKies(i){ catSoort=CAT_SOORTEN[i][1]; catMarkeer(); catLaad(true); }
@@ -9305,20 +9496,21 @@ function renderProducten(){
     .sort((a,b)=>a.naam.localeCompare(b.naam));
   prodZichtbaar=zichtbaar.map(p=>p.id);
   const rows=zichtbaar
-    .map(p=>`<tr><td><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.naam)}`+
+    .map(p=>`<tr><td class="uitgebreid"><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.naam)}`+
       `${isUitlopend(p)?' <span class="tag" style="background:var(--amber-soft);color:var(--amber-tekst)">loopt uit</span>':''}`+
       `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}`+
       `${state.cloverGekoppeld?(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id?' <span class="tag" style="background:var(--green-soft);color:var(--green-tekst)" title="Staat in Clover">in Clover</span>':' <span class="tag muted" title="Nog niet naar Clover gestuurd">niet in Clover</span>'):''}</td>`+
-      `<td>${esc(p.barcode)}</td>`+
-      `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
+      `<td class="uitgebreid">${esc(p.barcode)}</td>`+
+      `<td class="uitgebreid">${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
-      `<td class="num">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
-      `<td class="num${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
-      `<td class="num"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
-      `<td class="num${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
-      `<td class="num"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
+      `<td class="num uitgebreid">${euro(p.inkoop)}</td><td class="num">${euro(p.verkoop)}</td>`+
+      `<td class="num alleensimpel${prodLaag(p)?' low':''}">${inWinkel(p)} winkel · ${overVoorraad(p)} achter</td>`+
+      `<td class="num uitgebreid${(inWinkel(p)<schapNorm(p) && !wachtNog(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${inWinkel(p)}" onchange="zetVeld(${p.id},'winkel',this.value)"></td>`+
+      `<td class="num uitgebreid"><input class="num" type="number" min="0" step="1" value="${schapNorm(p)}" onchange="zetVeld(${p.id},'schap',this.value)"></td>`+
+      `<td class="num uitgebreid${(minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p))?' low':''}"><input class="num" type="number" min="0" step="1" value="${overVoorraad(p)}" onchange="zetVeld(${p.id},'over',this.value)"></td>`+
+      `<td class="num uitgebreid"><input class="num" type="number" min="0" step="1" value="${minOverNorm(p)}" onchange="zetVeld(${p.id},'minOver',this.value)"></td>`+
       `<td class="num"><button class="btn small ghost icoknop rijmeer" title="Acties" onclick="prodMenu(event,${p.id})">⋯</button></td></tr>`).join('');
-  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="12" class="muted">Nog geen producten. Gebruik de knop Nieuw product toevoegen, of Serie inscannen bij Instellingen voor een hele serie.</td></tr>';
+  document.getElementById('prodBody').innerHTML = rows || '<tr><td colspan="13" class="muted">Nog geen producten. Voeg er een toe met Nieuw product.</td></tr>';
   prodSelectieBalk();
   vulMerkenLijst();
   const sel=document.getElementById('filterCat');
@@ -9326,18 +9518,29 @@ function renderProducten(){
   sel.innerHTML='<option value="">Alle categorieën</option>'+state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('');
   sel.value=cur;
 }
+/* Is een product (bijna) op? Zelfde regels als de rode cellen in Alles: de winkel onder
+   het schapminimum, of het magazijn op of onder zijn minimum. */
+function prodLaag(p){
+  return (inWinkel(p)<schapNorm(p) && !wachtNog(p)) || (minOverNorm(p)>0 && overVoorraad(p)<=minOverNorm(p));
+}
 /* Eén "meer"-knop per productregel opent een klein menu met de acties in woorden,
    in plaats van vier losse icoontjes waarvan je moet raden wat ze doen. */
 function prodMenu(ev, id){
-  if(ev){ ev.stopPropagation(); }
-  sluitRijMenu();
-  const items=[
+  toonRijMenu(ev, [
     {ico:'i-tag', label:'Barcode-sticker printen', fn:function(){ printProductSticker(id); }},
     {ico:'i-plus', label:'Nieuwe eigen barcode + printen', fn:function(){ nieuweBarcodePrint(id); }},
     {ico:'i-recycle', label:'Loopt uit / vervangen', fn:function(){ uitloopOpen(id); }},
     {ico:'i-edit', label:'Bewerken', fn:function(){ bewerk(id); }},
     {ico:'i-trash', label:'Verwijderen', danger:true, fn:function(){ verwijder(id); }}
-  ];
+  ]);
+}
+/* Het ⋯-menu: één knop met de zeldzame acties eronder, zodat een scherm maar één
+   duidelijke hoofdknop heeft. Gedeeld door producten, reparaties en hardware, zodat
+   het overal hetzelfde werkt. Een item met verborgen:true laten we weg. */
+function toonRijMenu(ev, items){
+  if(ev){ ev.stopPropagation(); }
+  sluitRijMenu();
+  items=items.filter(it=>it && !it.verborgen);
   const m=document.createElement('div');
   m.className='rijmenu'; m.id='rijMenu';
   m.innerHTML=items.map(function(it,i){ return `<button type="button" class="rijmenu-item${it.danger?' danger':''}" data-i="${i}"><svg class="i s"><use href="#${it.ico}"/></svg>${esc(it.label)}</button>`; }).join('');
@@ -9393,6 +9596,8 @@ function bewerk(id){
   document.getElementById('f_min').value=overVoorraad(p);
   document.getElementById('f_bestel').value=minOverNorm(p);
   barcodeHintUpdate();
+  /* Bij bewerken wil je alles zien wat er staat. */
+  const nm=document.getElementById('npMeer'); if(nm){ nm.open=true; nm.dataset.gezet='1'; }
 }
 function verwijder(id){
   const p=state.producten.find(p=>p.id===id);
@@ -9453,6 +9658,7 @@ function resetForm(){
   document.getElementById('f_min').value=0;
   document.getElementById('f_schap').value=state.schapNorm!=null?state.schapNorm:1;
   document.getElementById('f_bestel').value=state.minOverNorm!=null?state.minOverNorm:0;
+  meerOptiesZet(document.getElementById('tab-nieuw'), true);
   vulMerkenLijst();
   vulLevsLijst();
   vulStandaard();
@@ -10456,6 +10662,7 @@ function resetAanvraag(){
   const k=document.getElementById('aanvKoppel'); if(k) k.innerHTML='';
   aanvUitleg();
   aanvReken();
+  meerOptiesZet(document.getElementById('aanv-nieuw'), true);
 }
 function maakAanvraag(){
   const naam=document.getElementById('a_naam').value.trim();
@@ -10812,6 +11019,9 @@ function renderKassa(){
     `<div class="kasvak"><span>Contant verkocht</span><b>${euro(som(r=>r.soort==='verkoop'))}</b></div>`+
     `<div class="kasvak"><span>Erin geboekt</span><b>${euro(som(r=>r.bedrag>0&&r.soort!=='verkoop'))}</b></div>`+
     `<div class="kasvak"><span>Eruit gehaald</span><b>${euro(Math.abs(som(r=>r.bedrag<0)))}</b></div>`;
+  /* In Simpel één regel in plaats van drie vakken. */
+  const kort=document.getElementById('kasVandaagKort');
+  if(kort) kort.textContent='Vandaag contant verkocht: '+euro(som(r=>r.soort==='verkoop'));
 
   const lijst=document.getElementById('kasLijst');
   if(lijst) lijst.innerHTML = kasboek().slice(0,60).map(r=>{
@@ -11056,11 +11266,11 @@ function renderBestellen(){
       return `<tr class="${p.besteld?'done':''}">`+
       `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${p.besteld?'checked':''} onchange="toggleBesteld(${p.id})"></td>`+
       `<td>${esc(p.naam)}</td>`+
-      `<td>${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
+      `<td class="uitgebreid">${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td>${c?`<button class="codeknop" title="Code kopiëren om in de webshop te plakken" onclick="kopieerCode(${p.id})"><span data-onvertaald>${esc(c)}</span><svg class="i s"><use href="#i-clipboard"/></svg></button>`:'<span class="muted">geen code</span>'}</td>`+
-      `<td class="num low">${overVoorraad(p)}</td><td class="num">${minOverNorm(p)}</td>`+
+      `<td class="num low uitgebreid">${overVoorraad(p)}</td><td class="num uitgebreid">${minOverNorm(p)}</td>`+
       `<td class="num"><b>${teBestellen(p)}</b></td>`+
-      `<td>${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
+      `<td class="uitgebreid">${p.besteld && p.besteldOp ? leverTekst(p.besteldOp) : '<span class="muted">nog niet besteld</span>'}</td></tr>`;
     }).join('')
   ).join('');
   document.getElementById('bestelBody').innerHTML = rows || '<tr><td colspan="8" class="muted">Alles is op voorraad, niets te bestellen.</td></tr>';
@@ -11158,8 +11368,12 @@ document.querySelectorAll('#aanvTabs button').forEach(b=>b.addEventListener('cli
   document.getElementById('aanv-nieuw').hidden = b.dataset.s!=='nieuw';
   if(b.dataset.s==='nieuw') resetAanvraag();
 }));
-document.querySelectorAll('#instTabs button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#instTabs button').forEach(x=>x.classList.toggle('active', x===b));
+/* Op de telefoon staat alleen de gekozen instelling in beeld; de knop erboven klapt de
+   rest open. Negentien knoppen boven elk paneel was een muur om doorheen te scrollen. */
+function instMenuWissel(){ const n=document.getElementById('instTabs'); if(n) n.classList.toggle('open'); }
+document.querySelectorAll('#instTabs button[data-s]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#instTabs button[data-s]').forEach(x=>x.classList.toggle('active', x===b));
+  const nav=document.getElementById('instTabs'); if(nav) nav.classList.remove('open');
   ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','clover','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
     const el=document.getElementById('inst-'+s); if(el) el.hidden = s!==b.dataset.s;
   });
@@ -11203,6 +11417,13 @@ function bstBadge(){
   if(!b) return;
   const n=bstData.filter(x=>!x.gezien && !x.geannuleerd).length;
   b.textContent=n; b.hidden=!n;
+  dashSimpelBijwerken();
+}
+/* De webshop- en inruilgegevens komen na het inloggen stil binnen. Staat het rustige
+   dashboard dan al open, dan het lijstje "wat moet er gebeuren" even opnieuw tekenen. */
+function dashSimpelBijwerken(){
+  const t=document.getElementById('tab-dashboard');
+  if(t && !t.hidden && modusSimpel()) renderDashSimpel();
 }
 
 function bstZichtbaar(x){
@@ -11344,6 +11565,7 @@ function inrBadge(){
   const n=inrData.filter(x=>!x.gezien).length;
   b.textContent=n; b.style.display=n?'':'none';
   b.title=n?n+' nieuwe inruilaanvraag/aanvragen':'';
+  dashSimpelBijwerken();
 }
 
 function inrZichtbaar(x){
@@ -12217,7 +12439,7 @@ async function web2Los2(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners'];
+const HUB_TABS=['uren','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners','mail','labelprinter'];
 const ROL_TABS={
   eigenaar:null,
   beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
@@ -12345,14 +12567,24 @@ function mobTel(t){
 /* Labels en iconen voor het Meer-vel. MOB dekt de dagelijkse pagina's; de
    beheerpagina's staan niet in MOB en krijgen hier hun eigen icoon. */
 const MOB_MEERLABEL=Object.assign({}, MOB, {
+  verkopen:{naam:'Verkopen',ico:'i-receipt'},
+  inkopen:{naam:'Inkopen',ico:'i-cart'},
+  rapport:{naam:'Rapport',ico:'i-chart'},
   uren:{naam:'Uren',ico:'i-clock'},
+  labelprinter:{naam:'Labelprinter',ico:'i-tag'},
+  mail:{naam:'Mail',ico:'i-mail'},
   vastelasten:{naam:'Vaste lasten',ico:'i-euro'},
   pakketten:{naam:'Pakketdiensten',ico:'i-truck'},
-  rapport:{naam:'Rapport',ico:'i-chart'},
   partners:{naam:'Partners',ico:'i-link'}
 });
 const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','rooster','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
-const MOB_ALLES_BEHEER=['uren','vastelasten','pakketten','rapport','team','partners','instellingen'];
+/* Verkopen, inkopen, mail en labelprinter stonden hier eerst niet in. Op de telefoon
+   waren die pagina's daardoor nergens te openen, want de Meer-pagina van de computer
+   bestaat daar niet. Houd deze lijst gelijk met de tegels op #tab-meer. */
+const MOB_ALLES_BEHEER=['verkopen','inkopen','rapport','uren','labelprinter','mail','team','vastelasten','pakketten','partners','instellingen'];
+/* In Simpel laten we de voorraad-subpagina's weg uit het Meer-vel: die open je via de
+   balk bovenin Voorraad, en zo blijft het vel kort. */
+const MOB_ALLEEN_ALLES=['voorraad','scan','bestellen'];
 
 function tekenOnderbalk(){
   const balk=document.getElementById('onderBalk');
@@ -12382,7 +12614,8 @@ function tekenOnderbalk(){
 function mobMeerTegels(lijst, kop){
   const core=mobCore();
   const nu=huidigeTab();
-  const items=lijst.filter(t=>mag(t) && !core.includes(t));
+  const simpel=modusSimpel();
+  const items=lijst.filter(t=>mag(t) && !core.includes(t) && !(simpel && MOB_ALLEEN_ALLES.includes(t) && t!==nu));
   if(!items.length) return '';
   return `<div class="mobmeer-kop">${esc(kop)}</div><div class="mobmeer-grid">`+items.map(t=>{
     const m=MOB_MEERLABEL[t]||{naam:t,ico:'i-layers'};
@@ -12405,7 +12638,9 @@ function mobMeerBeheer(){
       <svg class="i"><use href="#${m.ico}"/></svg><span>${esc(m.naam)}</span>
       ${n?`<span class="tel">${n>99?'99+':n}</span>`:''}</button>`;
   }).join('');
-  return `<details class="mobmeer-beheer"><summary class="mobmeer-kop">Beheer<svg class="i s"><use href="#i-right"/></svg></summary><div class="mobmeer-grid">${tegels}</div></details>`;
+  /* In Alles open, in Simpel dicht; zit je zelf op een beheerpagina, dan ook open. */
+  const open = !modusSimpel() || items.includes(nu);
+  return `<details class="mobmeer-beheer"${open?' open':''}><summary class="mobmeer-kop">Beheer<svg class="i s"><use href="#i-right"/></svg></summary><div class="mobmeer-grid">${tegels}</div></details>`;
 }
 function mobMeerOpen(){
   const vel=document.getElementById('mobMeer'); if(!vel) return;
@@ -12413,6 +12648,11 @@ function mobMeerOpen(){
     <div class="mobmeer-greep"></div>
     ${mobMeerTegels(MOB_ALLES_DAG,"Pagina's")}
     ${mobMeerBeheer()}
+    ${(gebruiker && gebruiker.rol==='medewerker') ? '' : `<div class="mobmeer-kop">Weergave</div>
+    <div class="periodesel modussel" role="group" aria-label="Weergave">
+      <button data-s="simpel" class="${modusSimpel()?'active':''}" onclick="zetModus(true); mobMeerOpen()">Simpel</button>
+      <button data-s="alles" class="${modusSimpel()?'':'active'}" onclick="zetModus(false); mobMeerOpen()">Alles</button>
+    </div>`}
   </div>`;
   vel.hidden=false;
 }
@@ -12519,7 +12759,7 @@ function tabelObserver(){
     _tabTimer=setTimeout(()=>{
       if(!_tabObs) return;
       _tabObs.disconnect();
-      try{ rolTabellen(); tabelLabels(); }catch(e){}
+      try{ rolTabellen(); tabelLabels(); meerOptiesZet(document); }catch(e){}
       _tabObs.observe(doel, {childList:true, subtree:true});
     }, 120);
   });
@@ -12550,6 +12790,8 @@ function pasRechtenToe(){
   }
   const zicht=document.querySelector('main section[id^="tab-"]:not([hidden])');
   if(zicht && !mag(zicht.id.replace('tab-',''))) showTab(mag('dashboard')?'dashboard':'scan');
+  /* Na inloggen weten we pas of dit een medewerker is (die altijd Simpel heeft). */
+  modusToepassen();
   mobielBijwerken();
 }
 function toonLogin(){
@@ -13689,7 +13931,7 @@ async function hwLaad(stil){
   try{ const {data:pn}=await sb.from('partners').select('id,naam').neq('id', (gebruiker&&gebruiker.id)||'').order('naam'); hwPartners=pn||[]; }catch(e){}
   /* Teamlijst nodig om 'toegevoegd door' als naam te tonen; hertekenen zodra hij
      binnen is als hij nog niet geladen was (bv. bij direct openen van Hardware). */
-  if(!teamLeden.length){ laadTeamLeden().then(()=>{ if(!document.getElementById('tab-hardware').hidden) renderHardware(); }); }
+  if(!teamLeden.length) teamLedenDanTeken('tab-hardware', renderHardware);
   hwLocFilters();
   renderHardware();
 }
@@ -13886,7 +14128,7 @@ function renderHardware(){
   const k=document.getElementById('hwKpis');
   if(k) k.innerHTML=
     `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${opVoorraad.length}</div></div>`+
-    `<div class="kpi"><div class="l">Ingekocht voor</div><div class="v">${euro(waarde)}</div></div>`+
+    `<div class="kpi uitgebreid"><div class="l">Ingekocht voor</div><div class="v">${euro(waarde)}</div></div>`+
     `<div class="kpi"><div class="l">Staat online</div><div class="v">${online}</div></div>`+
     `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`+
     (onderweg.length?`<div class="kpi hwattentie"><div class="l">Nog inscannen</div><div class="v">${onderweg.length}</div></div>`:'');
@@ -13910,16 +14152,16 @@ function renderHardware(){
     </div>
     <table>
     <thead><tr>
-      <th style="width:34px"><input type="checkbox" id="hwAlle" onclick="hwSelectAlle(this.checked)" title="Alles selecteren"></th>
+      <th class="uitgebreid" style="width:34px"><input type="checkbox" id="hwAlle" onclick="hwSelectAlle(this.checked)" title="Alles selecteren"></th>
       <th>Toestel</th><th>Nummer</th><th>Grade</th><th>Waar</th>
-      <th class="num">Inkoop</th><th class="num">Vraagprijs</th><th class="num">Marge</th>
-      <th>Te koop op</th><th>Dagen</th><th></th>
+      <th class="num uitgebreid">Inkoop</th><th class="num">Vraagprijs</th><th class="num uitgebreid">Marge</th>
+      <th class="uitgebreid">Te koop op</th><th class="uitgebreid">Dagen</th><th></th>
     </tr></thead>
     <tbody>${rijen.map(h=>{
       const m=hwMarge(h);
       const d=hwDagen(h);
       return `<tr class="klikrij" onclick="hwRijKlik(event,'${h.id}')">
-        <td><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
+        <td class="uitgebreid"><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
         <td><div class="hwrij">${hwThumbHtml(h)}<div style="min-width:0">
             <b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
             ${hwSpecsKort(h)?`<div class="muted klein">${esc(hwSpecsKort(h))}</div>`:(h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:'')}
@@ -13930,13 +14172,13 @@ function renderHardware(){
           ? '<span class="onderweg">Nog niet ingescand</span>'
           : (hwLocatieNaam(h)?`<span class="locpil">${esc(hwLocatieNaam(h))}</span>`:'<span class="muted">—</span>')}
           ${h.status!=='onderweg' && h.status!=='verkocht'
-            ? `<div class="uitstalrij">${h.plek?`<span class="muted klein">${esc(h.plek)}</span>`:''}<button class="uitstalknop ${h.uitstalling==='achter'?'achter':(h.uitstalling==='uitgestald'?'uit':'')}" onclick="hwUitstalToggle('${h.id}', event)">${h.uitstalling==='achter'?'Achter':(h.uitstalling==='uitgestald'?'Uitgestald':'Waar ligt hij?')}</button></div>`
+            ? `<div class="uitstalrij uitgebreid">${h.plek?`<span class="muted klein">${esc(h.plek)}</span>`:''}<button class="uitstalknop ${h.uitstalling==='achter'?'achter':(h.uitstalling==='uitgestald'?'uit':'')}" onclick="hwUitstalToggle('${h.id}', event)">${h.uitstalling==='achter'?'Achter':(h.uitstalling==='uitgestald'?'Uitgestald':'Waar ligt hij?')}</button></div>`
             : ''}</td>
-        <td class="num">${euro(h.inkoop||0)}</td>
+        <td class="num uitgebreid">${euro(h.inkoop||0)}</td>
         <td class="num">${h.verkoop!=null?euro(h.verkoop):'<span class="muted">nog niet</span>'}</td>
-        <td class="num">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
-        <td>${hwKanalen(h)}</td>
-        <td title="Toegevoegd ${esc(hwWanneer(h))}${hwWie(h)?' door '+esc(hwWie(h)):''}">${h.status==='verkocht'?'<span class="muted">verkocht</span>'
+        <td class="num uitgebreid">${m==null?'—':`<b class="${m>0?'winst':'verlies'}">${euro(m)}</b>`}</td>
+        <td class="uitgebreid">${hwKanalen(h)}</td>
+        <td class="uitgebreid" title="Toegevoegd ${esc(hwWanneer(h))}${hwWie(h)?' door '+esc(hwWie(h)):''}">${h.status==='verkocht'?'<span class="muted">verkocht</span>'
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
         <td class="num hwact">${h.status==='verkocht'?''
           : `<div class="hwacties">${h.partner_id
@@ -14071,28 +14313,25 @@ function hwVenster(h){
 
     ${h?`<div class="kpis">
       <div class="kpi"><div class="l">Nummer</div><div class="v" style="font-size:16px">${esc(h.code||h.serienummer||'—')}</div></div>
-      <div class="kpi"><div class="l">Inkoop</div><div class="v">${euro(h.inkoop||0)}</div></div>
+      <div class="kpi uitgebreid"><div class="l">Inkoop</div><div class="v">${euro(h.inkoop||0)}</div></div>
       <div class="kpi"><div class="l">Vraagprijs</div><div class="v">${h.verkoop!=null?euro(h.verkoop):'—'}</div></div>
-      <div class="kpi"><div class="l">Marge</div><div class="v ${marge!=null?(marge>=0?'groen':'rood'):''}">${marge==null?'—':euro(marge)}</div></div>
+      <div class="kpi uitgebreid"><div class="l">Marge</div><div class="v ${marge!=null?(marge>=0?'groen':'rood'):''}">${marge==null?'—':euro(marge)}</div></div>
       <div class="kpi"><div class="l">Waar</div><div class="v" style="font-size:15px">${esc(hwLocatieNaam(h)||(h.status==='onderweg'?'onderweg':'—'))}</div></div>
-      <div class="kpi"><div class="l">Dagen</div><div class="v">${h.status==='verkocht'?'verkocht':hwDagen(h)}</div></div>
+      <div class="kpi uitgebreid"><div class="l">Dagen</div><div class="v">${h.status==='verkocht'?'verkocht':hwDagen(h)}</div></div>
     </div>`:''}
 
     ${h&&h.partner_id?`<div class="infobox">Dit toestel is toegewezen aan een partner. Hij verkoopt het in zijn eigen dashboard.</div>`:''}
 
-    <div class="row" style="gap:8px; flex-wrap:wrap; margin:4px 0 18px">
+    <!-- Eén hoofdknop (verkopen), het prijskaartje ernaast omdat je dat bij elk toestel
+         doet, en de rest achter Meer. Een bestaand toestel bewaart zichzelf bij elk veld
+         dat je verlaat; alleen een nieuw toestel heeft een opslaan-knop nodig. -->
+    <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center; margin:4px 0 18px">
       ${h&&h.status!=='verkocht'
         ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
-      <button class="btn" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Opslaan</button>
+      ${h?'':`<button class="btn actie" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Toestel opslaan</button>`}
       ${h?`<button class="btn ghost" onclick="hwPrijskaart('${h.id}')"><svg class="i s"><use href="#i-tag"/></svg>Prijskaartje printen</button>`:''}
-      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
-        ? `<button class="btn ghost" onclick="hwWijsToe('${h.id}')"><svg class="i s"><use href="#i-right"/></svg>Toewijzen aan partner</button>`:''}
-      ${h&&h.status!=='verkocht'&&!h.partner_id&&account&&account.rol==='eigenaar'
-        ? (h.kanalen&&h.kanalen.partner
-          ? `<button class="btn ghost" onclick="hwDashboard('${h.id}',false,this)">Uit partner-dashboard halen</button>`
-          : `<button class="btn ghost" onclick="hwDashboard('${h.id}',true,this)">Zichtbaar in partner-dashboard</button>`):''}
-      ${h&&mag('facturen')?`<button class="btn ghost" onclick="facVanHardware('${h.id}')"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
-      ${h?`<button class="btn ghost" onclick="hwVerwijder('${h.id}')"><svg class="i s"><use href="#i-trash"/></svg>Verwijderen</button>`:''}
+      ${h?`<button class="btn ghost" onclick="hwDetailMenu(event,'${h.id}')" aria-label="Meer acties"><svg class="i s"><use href="#i-more"/></svg>Meer</button>`:''}
+      ${h?'<span class="muted klein">Wijzigingen worden vanzelf bewaard.</span>':''}
     </div>
 
     <div class="modules">
@@ -14106,30 +14345,35 @@ function hwVenster(h){
       <div class="grid">
         <div><label>Merk</label><input id="hw_merk" value="${esc((h&&h.merk)||'')}" placeholder="Dell"></div>
         <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430"></div>
-        <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
-        <div><label>Categorie</label><select id="hw_cat">
-          ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
-            `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
-        </select></div>
         <div><label>Staat</label><select id="hw_staat">
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
         </select></div>
-        <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:12}"></div>
-        <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
         <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
-        <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje"></div>
-        <div><label>Btw</label><select id="hw_marge">
-          <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
-          <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
-        </select></div>
         <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
-        <div><label>Uitstalling</label><select id="hw_uitstalling">
-          <option value=""${(!h||!h.uitstalling)?' selected':''}>Niet ingesteld</option>
-          <option value="uitgestald"${(h&&h.uitstalling==='uitgestald')?' selected':''}>Uitgestald, klant ziet het</option>
-          <option value="achter"${(h&&h.uitstalling==='achter')?' selected':''}>Achter, in de voorraad</option>
-        </select></div>
       </div>
+      <details class="meeropties">
+        <summary>Meer gegevens</summary>
+        <div class="grid">
+          <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
+          <div><label>Categorie</label><select id="hw_cat">
+            ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
+              `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
+          </select></div>
+          <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
+          <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:12}"></div>
+          <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje"></div>
+          <div><label>Btw</label><select id="hw_marge">
+            <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
+            <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
+          </select></div>
+          <div><label>Uitstalling</label><select id="hw_uitstalling">
+            <option value=""${(!h||!h.uitstalling)?' selected':''}>Niet ingesteld</option>
+            <option value="uitgestald"${(h&&h.uitstalling==='uitgestald')?' selected':''}>Uitgestald, klant ziet het</option>
+            <option value="achter"${(h&&h.uitstalling==='achter')?' selected':''}>Achter, in de voorraad</option>
+          </select></div>
+        </div>
+      </details>
     </div>
 
     ${h?`<div class="card breed">
@@ -14194,6 +14438,17 @@ function hwVenster(h){
      vaste functie-referentie). */
   d.addEventListener('change', hwStilPlan);
   if(h) hwHistorieLaden(h.id);
+}
+function hwDetailMenu(ev, id){
+  const h=hwData.find(x=>x.id===id) || hwOpen; if(!h) return;
+  const eigenaarKan = h.status!=='verkocht' && !h.partner_id && account && account.rol==='eigenaar';
+  toonRijMenu(ev, [
+    {ico:'i-right', label:'Toewijzen aan partner', fn:()=>hwWijsToe(id), verborgen:!eigenaarKan},
+    {ico:'i-link', label:(h.kanalen&&h.kanalen.partner)?'Uit partner-dashboard halen':'Zichtbaar in partner-dashboard',
+      fn:()=>hwDashboard(id, !(h.kanalen&&h.kanalen.partner), null), verborgen:!eigenaarKan},
+    {ico:'i-card', label:'Factuur maken', fn:()=>facVanHardware(id), verborgen:!mag('facturen')},
+    {ico:'i-trash', label:'Verwijderen', danger:true, fn:()=>hwVerwijder(id)}
+  ]);
 }
 function hwSluit(){
   /* Sluit zowel een los dialoog (partner toewijzen, verkopen) als de volledige
@@ -14490,11 +14745,24 @@ async function hwStilBewaar(){
   if(!hwOpen || !hwOpen.id) return {error:null};
   if(!hwVeld('hw_model')) return {error:null};        // model verplicht; nog niet compleet
   const rij=hwFormRij();
+  const oudMarge=hwOpen.marge, oudPlek=hwOpen.plek, id=hwOpen.id;
   Object.assign(hwOpen, rij);
-  const inHw=hwData.find(x=>x.id===hwOpen.id); if(inHw && inHw!==hwOpen) Object.assign(inHw, rij);
-  const {error}=await sb.from('hardware').update(rij).eq('id',hwOpen.id);
+  const inHw=hwData.find(x=>x.id===id); if(inHw && inHw!==hwOpen) Object.assign(inHw, rij);
+  const {error}=await sb.from('hardware').update(rij).eq('id',id);
   if(error){ console.error('hardware auto-opslaan:', error); }
-  else { hwDirty=false; _vuil=false; }
+  else {
+    hwDirty=false; _vuil=false;
+    /* Btw-regime en plek ook op het refurbish-toestel: de batchcijfers en het
+       refurbish-label lezen die rij. Dit deed eerst alleen de Opslaan-knop, dus wie
+       een veld wijzigde en gewoon terugging, had stilletjes twee verschillende
+       waarden. Nu het automatisch opslaan het enige pad is, hoort het hier. */
+    if(rij.marge!==oudMarge || rij.plek!==oudPlek){
+      const {error:sErr}=await sb.from('refurbish_apparaten')
+        .update({marge:rij.marge, plek:rij.plek, bijgewerkt_op:new Date().toISOString()})
+        .eq('hardware_id', id);
+      if(sErr) console.error('refurbish marge/plek syncen:', sErr);
+    }
+  }
   return {error};
 }
 function hwStilPlan(){
@@ -14507,6 +14775,7 @@ async function hwOpslaan(knop){
   const model=hwVeld('hw_model');
   if(!model){ toast('Vul in elk geval het model in','let-op'); return; }
   const rij=hwFormRij();
+  const wasBestaand=!!hwOpen;   // hwSluit hieronder maakt hwOpen leeg
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Opslaan…'; }
   let fout=null;
   if(hwOpen){
@@ -14531,7 +14800,7 @@ async function hwOpslaan(knop){
     if(sErr) console.error('refurbish marge/plek syncen:', sErr);
   }
   hwSluit(); await hwLaad(true);
-  toast(hwOpen?'Toestel bijgewerkt':'Toestel toegevoegd', true);
+  toast(wasBestaand?'Toestel bijgewerkt':'Toestel toegevoegd', true);
 }
 
 /* Het klant-prijskaartje op A6 (105 bij 148 mm), staand. We TEKENEN het op een canvas
@@ -15770,13 +16039,17 @@ function teamGebruikerOpen(id){
         <div class="omglijst">${omgToggleHtml('det'+u.id, u)}</div>
         <p class="muted klein" style="margin-top:8px">Winkel heeft iedereen. Vink aan of hij ook bij de werkbank of het partner-dashboard mag.</p>
       </div>
-      <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>${pagChipsHtml('acc'+u.id, actief)}</div>
-      ${tijdSectieHtml('acc'+u.id, 'detx'+u.id, actief, extraActiefVan(u))}
-      <div class="detailsectie"><div class="sectielabel">Welke Reloop-IT pagina's ziet hij</div>${refChipsHtml('detref'+u.id, refActiefVan(u))}
-        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hierboven toegang tot de werkbank heeft.</p></div>
-      <details class="meerpaginas"><summary>Meer pagina's (standaard volgens de rol)</summary>
-        <p class="muted klein" style="margin:10px 0">Deze extra pagina's volgen normaal de rol. Vink hier aan wat deze gebruiker apart wel of niet mag zien.</p>
-        ${extraChipsHtml('detx'+u.id, extraActiefVan(u))}</details>`;
+      <!-- De rol bepaalt al welke pagina's iemand ziet. Per pagina afwijken is voor
+           uitzonderingen, dus alles daarover onder één uitklap. -->
+      <details class="meeropties">
+        <summary>Welke pagina's precies</summary>
+        <p class="muted klein" style="margin:4px 0 0">Standaard volgt dit de rol. Vink alleen aan wat anders moet.</p>
+        <div class="detailsectie"><div class="sectielabel">Winkel</div>${pagChipsHtml('acc'+u.id, actief)}</div>
+        ${tijdSectieHtml('acc'+u.id, 'detx'+u.id, actief, extraActiefVan(u))}
+        <div class="detailsectie"><div class="sectielabel">Werkbank</div>${refChipsHtml('detref'+u.id, refActiefVan(u))}
+          <p class="muted klein" style="margin-top:8px">Geldt alleen als hij toegang tot de werkbank heeft.</p></div>
+        <div class="detailsectie"><div class="sectielabel">Extra pagina's</div>${extraChipsHtml('detx'+u.id, extraActiefVan(u))}</div>
+      </details>`;
   detail.innerHTML=`
     <button class="terugknop" onclick="teamTerug()"><svg class="i s"><use href="#i-left"/></svg>Terug naar gebruikers</button>
     <div class="card breed">
@@ -15830,15 +16103,18 @@ function teamNieuwOpen(){
       </div>
       <div class="detailsectie"><div class="sectielabel">Toegang tot omgevingen</div>
         <div class="omglijst">${omgToggleHtml('nw', null)}</div></div>
-      <div class="detailsectie"><div class="sectielabel">Welke pagina's ziet hij</div>
-        <div id="nw_pagwrap">${pagChipsHtml('nw', rolDefaultTabs(rol))}</div></div>
-      ${tijdSectieHtml('nw', 'nw', rolDefaultTabs(rol), extraActiefVan({rol}))}
-      <div class="detailsectie"><div class="sectielabel">Welke Reloop-IT pagina's ziet hij</div>
-        ${refChipsHtml('nw', REFURBISH_PAGINAS.map(([id])=>'ref_'+id))}
-        <p class="muted klein" style="margin-top:8px">Geldt alleen als hij hieronder toegang tot de werkbank heeft.</p></div>
-      <details class="meerpaginas"><summary>Meer pagina's (standaard volgens de rol)</summary>
-        <p class="muted klein" style="margin:10px 0">Deze extra pagina's volgen normaal de rol. Vink hier aan wat deze gebruiker apart wel of niet mag zien.</p>
-        <div id="nw_extrawrap">${extraChipsHtml('nw', extraActiefVan({rol}))}</div></details>
+      <details class="meeropties">
+        <summary>Welke pagina's precies</summary>
+        <p class="muted klein" style="margin:4px 0 0">Standaard volgt dit de rol. Vink alleen aan wat anders moet.</p>
+        <div class="detailsectie"><div class="sectielabel">Winkel</div>
+          <div id="nw_pagwrap">${pagChipsHtml('nw', rolDefaultTabs(rol))}</div></div>
+        ${tijdSectieHtml('nw', 'nw', rolDefaultTabs(rol), extraActiefVan({rol}))}
+        <div class="detailsectie"><div class="sectielabel">Werkbank</div>
+          ${refChipsHtml('nw', REFURBISH_PAGINAS.map(([id])=>'ref_'+id))}
+          <p class="muted klein" style="margin-top:8px">Geldt alleen als hij toegang tot de werkbank heeft.</p></div>
+        <div class="detailsectie"><div class="sectielabel">Extra pagina's</div>
+          <div id="nw_extrawrap">${extraChipsHtml('nw', extraActiefVan({rol}))}</div></div>
+      </details>
       <div class="detailacts">
         <button class="btn actie" onclick="teamUitnodigVerstuur(this)"><svg class="i s"><use href="#i-mail"/></svg>Uitnodiging versturen</button>
         <button class="btn ghost" onclick="teamUitnodigLink(this)"><svg class="i s"><use href="#i-link"/></svg>Of maak alleen een link</button>
@@ -16057,122 +16333,19 @@ async function schakel2FAUit(){
   render2FAStatus();
   toast('Twee-staps-verificatie uitgeschakeld.', true);
 }
-function zetVergrendeling(aan){
-  if(aan && !state.medewerkers.some(m=>m.pin)){
-    toast('Stel eerst een pincode in bij minstens één medewerker.', 'let-op');
-    document.getElementById('lockToggle').checked=false;
-    return;
-  }
-  state.vergrendeld=aan; save();
-  toast(aan?'Vergrendeling aan. Bij openen wordt om een pincode gevraagd.':'Vergrendeling uit', true);
-}
-function teamNaam(id){ const t=state.teams.find(t=>t.id===id); return t?t.naam:'Geen team'; }
 function renderTeam(){
   /* Ben je met de cursor in een geopend gebruikers-/uitnodigingsdetail bezig (rol,
      rechten, uurloon), dan niet hertekenen: een achtergrondsync zou anders je invoer
      en het hele detail wegvegen. */
   const _tv=document.getElementById('teamDetailView');
   if(_tv && !_tv.hidden && _tv.contains(document.activeElement)) return;
-  document.getElementById('mwBody').innerHTML=state.medewerkers.map(m=>`<tr>`+
-    `<td><input value="${esc(m.naam)}" onchange="updMw(${m.id},'naam',this.value)"></td>`+
-    `<td><select onchange="updMw(${m.id},'rol',this.value)">${['medewerker','beheerder','eigenaar'].map(r=>`<option value="${r}" ${m.rol===r?'selected':''}>${r}</option>`).join('')}</select></td>`+
-    `<td><select onchange="updMw(${m.id},'team',this.value)">${state.teams.map(t=>`<option value="${t.id}" ${t.id===m.team?'selected':''}>${esc(t.naam)}</option>`).join('')}</select></td>`+
-    `<td><input value="${esc(m.pin||'')}" maxlength="4" inputmode="numeric" placeholder="geen" style="width:80px" onchange="updMw(${m.id},'pin',this.value)"></td>`+
-    `<td class="num"><input class="num" type="number" step="0.01" min="0" style="width:90px" value="${m.uurtarief!=null?m.uurtarief:''}" placeholder="0" onchange="updMw(${m.id},'uurtarief',this.value)"></td>`+
-    `<td><input type="checkbox" style="width:20px;height:20px;accent-color:var(--oranje)" ${m.actief!==false?'checked':''} onchange="updMw(${m.id},'actief',this.checked)"></td>`+
-    `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderMw(${m.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('mw_team').innerHTML=state.teams.map(t=>`<option value="${t.id}">${esc(t.naam)}</option>`).join('');
-  document.getElementById('teamBody').innerHTML=state.teams.map(t=>`<tr>`+
-    `<td><input value="${esc(t.naam)}" onchange="updTeam(${t.id},this.value)"></td>`+
-    `<td class="num">${state.medewerkers.filter(m=>m.team===t.id).length}</td>`+
-    `<td class="num"><button class="btn small danger icoknop" title="Verwijderen" onclick="verwijderTeam(${t.id})"><svg class="i s"><use href="#i-trash"/></svg></button></td></tr>`).join('');
-  document.getElementById('lockToggle').checked=!!state.vergrendeld;
-  renderPrestaties();
   /* Bij het openen van Team altijd de lijst tonen, niet een oud detailscherm. */
   const dv=document.getElementById('teamDetailView'); if(dv){ dv.hidden=true; dv.innerHTML=''; }
   const lv=document.getElementById('teamLijstView'); if(lv) lv.hidden=false;
   renderTeamAccounts();
   teamPersoneelToon();
 }
-function updMw(id,veld,val){
-  const m=state.medewerkers.find(m=>m.id===id); if(!m) return;
-  if(veld==='pin'){ val=String(val).replace(/\D/g,'').slice(0,4); if(val && val.length<4){ toast('Pincode moet 4 cijfers zijn.'); renderTeam(); return; } }
-  if(veld==='team') val=Number(val);
-  if(veld==='uurtarief') val=Math.max(0, Number(val)||0);
-  m[veld]=val;
-  save(); renderTeam();
-  if(gebruiker && gebruiker.id===id){ gebruiker=m; pasRechtenToe(); }
-  toast('Opgeslagen', true);
-}
-function voegMwToe(){
-  const naam=document.getElementById('mw_naam').value.trim();
-  if(!naam){ toast('Vul een naam in.'); return; }
-  const pin=document.getElementById('mw_pin').value.replace(/\D/g,'');
-  if(pin && pin.length!==4){ toast('Pincode moet 4 cijfers zijn.'); return; }
-  state.medewerkers.push({id:uid(), naam, rol:document.getElementById('mw_rol').value, team:Number(document.getElementById('mw_team').value)||1, pin, uurtarief:Math.max(0, Number(document.getElementById('mw_tarief').value)||0), actief:true});
-  save();
-  document.getElementById('mw_naam').value=''; document.getElementById('mw_pin').value=''; document.getElementById('mw_tarief').value='';
-  renderTeam();
-  toast('Medewerker toegevoegd: '+naam, true);
-}
-function verwijderMw(id){
-  const m=state.medewerkers.find(m=>m.id===id);
-  if(state.medewerkers.length<=1){ toast('Er moet minstens één medewerker blijven.'); return; }
-  if(m && confirm('"'+m.naam+'"verwijderen? (verkopen op naam blijven bewaard)')){
-    state.medewerkers=state.medewerkers.filter(x=>x.id!==id);
-    save(); renderTeam();
-    toast('Medewerker verwijderd: '+m.naam);
-  }
-}
-function voegTeamToe(){
-  const naam=document.getElementById('tm_naam').value.trim();
-  if(!naam){ toast('Vul een naam in.'); return; }
-  state.teams.push({id:uid(), naam});
-  save(); document.getElementById('tm_naam').value='';
-  renderTeam();
-  toast('Team toegevoegd: '+naam, true);
-}
-function updTeam(id,val){
-  const t=state.teams.find(t=>t.id===id); if(!t) return;
-  t.naam=val; save(); renderTeam(); toast('Opgeslagen', true);
-}
-function verwijderTeam(id){
-  if(state.medewerkers.some(m=>m.team===id)){ toast('Dit team heeft nog medewerkers.'); return; }
-  if(state.teams.length<=1){ toast('Er moet minstens één team blijven.'); return; }
-  const t=state.teams.find(t=>t.id===id);
-  if(t && confirm('Team "'+t.naam+'"verwijderen?')){
-    state.teams=state.teams.filter(x=>x.id!==id);
-    save(); renderTeam(); toast('Team verwijderd');
-  }
-}
-document.querySelectorAll('#teamTabs button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#teamTabs button').forEach(x=>x.classList.toggle('active', x===b));
-  ['mw','teams','prestaties','accounts'].forEach(s=>document.getElementById('team-'+s).hidden = s!==b.dataset.s);
-  if(b.dataset.s==='accounts') renderTeamAccounts();
-}));
-document.querySelectorAll('#prestSel button').forEach(b=>b.addEventListener('click',()=>{
-  prestPeriode=b.dataset.p;
-  document.querySelectorAll('#prestSel button').forEach(x=>x.classList.toggle('active', x===b));
-  renderPrestaties();
-}));
-function renderPrestaties(){
-  const nu=Date.now();
-  let van=0;
-  if(prestPeriode==='dag'){ const d=new Date(); d.setHours(0,0,0,0); van=d.getTime(); }
-  else if(prestPeriode==='week') van=nu-7*864e5;
-  else if(prestPeriode==='maand') van=nu-30*864e5;
-  const rows=state.medewerkers.map(m=>{
-    const vk=state.verkopen.filter(v=>v.door===m.naam && v.t>=van);
-    const reps=(state.reparaties||[]).filter(r=>r.door===m.naam && r.t>=van).length;
-    return {m, aantal:vk.length, omzet:vk.reduce((s,v)=>s+v.verkoop,0), winst:vk.reduce((s,v)=>s+v.verkoop-v.inkoop,0), reps};
-  });
-  const onbekend=state.verkopen.filter(v=>!v.door && v.t>=van);
-  document.getElementById('prestBody').innerHTML=rows.map(r=>
-    `<tr><td><b>${esc(r.m.naam)}</b></td><td><span class="tag">${esc(teamNaam(r.m.team))}</span></td>`+
-    `<td class="num">${r.aantal}</td><td class="num">${euro(r.omzet)}</td>`+
-    `<td class="num" style="color:var(--green)"><b>${euro(r.winst)}</b></td><td class="num">${r.reps}</td></tr>`).join('')
-    +(onbekend.length?`<tr><td class="muted">Niet op naam</td><td class="muted">Geen team</td><td class="num">${onbekend.length}</td><td class="num">${euro(onbekend.reduce((s,v)=>s+v.verkoop,0))}</td><td class="num muted">0</td><td class="num muted">0</td></tr>`:'');
-}
+
 
 /* ---------- huisstijl (white-label) ---------- */
 /* Het Storvo-monogram: het vinkje uit het brand book. Onder 28 px alleen dit teken. */
@@ -17452,6 +17625,9 @@ function renderRepOnd(){
     const st=vr && vr.voorraad>0 ? '<span style="color:var(--green); font-weight:600">op voorraad</span>' : '<span style="color:var(--oranje); font-weight:600">bestellen</span>';
     return `<div class="ondItem"><svg class="i s"><use href="#i-layers"/></svg> ${esc(o.naam)} <b>${euro(o.inkoop)}</b> ${st}<span class="x" onclick="repOnd.splice(${i},1); renderRepOnd(); checkSeal();"></span></div>`;
   }).join('') || '<p class="muted">Nog geen onderdelen toegevoegd.</p>';
+  /* Staan er onderdelen in (ook via een prijssuggestie), dan de uitklap open: je moet
+     kunnen zien wat er meetelt in de winst. */
+  const om=document.getElementById('repOndMeer'); if(om && repOnd.length){ om.open=true; om.dataset.gezet='1'; }
   rekenWinst();
   if(typeof repConceptPlan==='function') repConceptPlan();   /* onderdelen-wijziging in het concept */
 }
@@ -17500,6 +17676,7 @@ function repConceptHerstel(){
   conceptZet(d);
   if(Array.isArray(d.__ond) && d.__ond.length){ repOnd=d.__ond.map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad})); }
   if(typeof renderRepOnd==='function') renderRepOnd();
+  meerOptiesOpenAlsGevuld(document.getElementById('rep-nieuw'));
   toast('Een niet-afgemaakte intake is teruggezet', true);
 }
 function resetRepForm(){
@@ -17518,6 +17695,9 @@ function resetRepForm(){
   const tb=document.getElementById('toestelKeuze');
   if(tb){ tb.hidden=true; tb.innerHTML=''; }
   document.getElementById('r_toestel').classList.remove('mistoestel');
+  /* Een leeg formulier begint weer zoals de modus zegt: na het bewerken van een
+     reparatie met een e-mailadres stonden de uitklappen anders nog open. */
+  meerOptiesZet(document.getElementById('rep-nieuw'), true);
   updateZoekLinks();
   repBewerkId=null;
   repBewerkModusToon(null);
@@ -17544,13 +17724,14 @@ function repBewerk(id){
   document.getElementById('r_voorkeur').value=r.voorkeur||'';
   repOnd=(r.onderdelen||[]).map(o=>({naam:o.naam, inkoop:o.inkoop, uitVoorraad:!!o.uitVoorraad}));
   renderRepOnd(); checkSeal(); rekenWinst(); updateZoekLinks();
+  meerOptiesOpenAlsGevuld(document.getElementById('rep-nieuw'), d=>d.id==='repOndMeer' && repOnd.length>0);
   repBewerkModusToon(r);
   window.scrollTo(0,0);
 }
 function repBewerkModusToon(r){
   const banner=document.getElementById('repBewerkBanner');
   if(banner){
-    if(r){ banner.hidden=false; banner.innerHTML=`<svg class="i s"><use href="#i-edit"/></svg><span>Je bewerkt reparatie <b>${esc(r.nr)}</b> — ${esc(r.klant.naam)}. Nummer en status blijven gelijk.</span> <button type="button" class="btn small ghost" onclick="repBewerkStop()">Toch een nieuwe</button>`; }
+    if(r){ banner.hidden=false; banner.innerHTML=`<svg class="i s"><use href="#i-edit"/></svg><span>Je bewerkt reparatie <b>${esc(r.nr)}</b> van ${esc(r.klant.naam)}. Nummer en status blijven gelijk.</span> <button type="button" class="btn small ghost" onclick="repBewerkStop()">Toch een nieuwe</button>`; }
     else{ banner.hidden=true; banner.innerHTML=''; }
   }
   const btn=document.getElementById('repSubmitBtn');
@@ -17760,22 +17941,21 @@ function repDetail(id){
       <button onclick="snelNotitie('Onderdeel defect, opnieuw besteld')">Opnieuw bestellen</button>
       <button onclick="snelNotitie('Reparatie niet gelukt, nader onderzoek nodig')">Reparatie mislukt</button>
     </div>
+    <!-- De opslaan-knoppen horen bij de opmerking, dus direct eronder. Ze stonden eerst
+         onderaan tussen de andere acties, ver weg van het veld waar je net typte. -->
+    <div class="betaalrow" style="margin-top:10px">
+      <button class="btn secondary" onclick="voegNotitie(${r.id},false,false)"><svg class="i s"><use href="#i-lock"/></svg>Intern opslaan</button>
+      <button class="btn secondary" onclick="voegNotitie(${r.id},true,false)"><svg class="i s"><use href="#i-user"/></svg>Ook voor klant</button>
+      <button class="btn danger" onclick="voegNotitie(${r.id},true,true)">Als probleem</button>
+    </div>
     <h3 style="font-size:14px; margin:22px 0 10px"><svg class="i s"><use href="#i-mail"/></svg> Naar de klant gestuurd</h3>
     <div id="repVerzonden"><p class="muted">Laden…</p></div>
-    <div class="acts">
-      <div class="betaalrow">
-        <button class="btn secondary" onclick="voegNotitie(${r.id},false,false)"><svg class="i s"><use href="#i-lock"/></svg>Intern opslaan</button>
-        <button class="btn secondary" onclick="voegNotitie(${r.id},true,false)"><svg class="i s"><use href="#i-user"/></svg>Ook voor klant</button>
-        <button class="btn danger" onclick="voegNotitie(${r.id},true,true)">Als probleem</button>
-      </div>
-      ${r.status==='klaar'?`<button class="btn ghost" onclick="repNaarMandje(${r.id})"><svg class="i s"><use href="#i-cart"/></svg>Bij een verkoop optellen</button>`:''}
+    <!-- Eén rij: wat je vaak doet als knop, de rest achter het ⋯-menu. -->
+    <div class="acts" style="flex-direction:row; flex-wrap:wrap; gap:8px">
+      ${r.status==='klaar'?`<button class="btn" onclick="repNaarMandje(${r.id})"><svg class="i s"><use href="#i-cart"/></svg>Bij een verkoop optellen</button>`:''}
       <button class="btn ghost" onclick="repBewerk(${r.id})"><svg class="i s"><use href="#i-edit"/></svg>Bewerken</button>
-      <button class="btn ghost" onclick="printRepLabel(${r.id})"><svg class="i s"><use href="#i-tag"/></svg>Label printen</button>
-      <button class="btn ghost" onclick="kopieerKlantLink(${r.id})"><svg class="i s"><use href="#i-clipboard"/></svg>Link kopiëren</button>
-      <button class="btn ghost" onclick="klantPagina(${r.id})"><svg class="i s"><use href="#i-link"/></svg>Klantpagina openen</button>
-      ${repLopend(r)?`<button class="btn ghost" onclick="annuleerRep(${r.id})">Reparatie annuleren</button>`:''}
-      ${mag('facturen')?`<button class="btn ghost" onclick="facVanReparatie(${r.id})"><svg class="i s"><use href="#i-card"/></svg>Maak factuur</button>`:''}
-      <button class="btn ghost" onclick="sluitPopup()">Sluiten (Esc)</button>
+      <button class="btn ghost" onclick="repDetailMenu(event, ${r.id})" aria-label="Meer acties"><svg class="i s"><use href="#i-more"/></svg>Meer</button>
+      <button class="btn ghost" style="margin-left:auto" onclick="sluitPopup()">Sluiten</button>
     </div>
   </div>`;
   ov.addEventListener('click',e=>{ if(e.target===ov) sluitPopup(); });
@@ -17783,6 +17963,16 @@ function repDetail(id){
   repDetailNu=id;
   if(_ntBewaard){ const _nte=document.getElementById('nt_tekst'); if(_nte) _nte.value=_ntBewaard; }
   laadVerzonden(r.nr);
+}
+function repDetailMenu(ev, id){
+  const r=state.reparaties.find(x=>x.id===id); if(!r) return;
+  toonRijMenu(ev, [
+    {ico:'i-tag', label:'Label printen', fn:()=>printRepLabel(id)},
+    {ico:'i-clipboard', label:'Link voor de klant kopiëren', fn:()=>kopieerKlantLink(id)},
+    {ico:'i-link', label:'Klantpagina openen', fn:()=>klantPagina(id)},
+    {ico:'i-card', label:'Factuur maken', fn:()=>facVanReparatie(id), verborgen:!mag('facturen')},
+    {ico:'i-trash', label:'Reparatie annuleren', danger:true, fn:()=>annuleerRep(id), verborgen:!repLopend(r)}
+  ]);
 }
 function snelNotitie(t){ const el=document.getElementById('nt_tekst'); if(el){ el.value=t; el.focus(); } }
 function voegNotitie(id, klantZichtbaar, probleem){
@@ -17815,7 +18005,12 @@ const REP_KOLOMMEN=[
   {key:'bezig',     titel:'Bezig'},
   {key:'klaar',     titel:'Klaar'}
 ];
-function repWeergave(){ try{ return localStorage.getItem('storvo_rep_weergave')||'lijst'; }catch(e){ return 'lijst'; } }
+/* Standaard het bord: per kaart één volgende stap, dat is het rustige scherm. De lijst
+   (acht kolommen, alle knoppen) is er voor wie wil verdiepen, en alleen in Alles. */
+function repWeergave(){
+  if(modusSimpel()) return 'bord';
+  try{ return localStorage.getItem('storvo_rep_weergave')||'bord'; }catch(e){ return 'bord'; }
+}
 function repWeergaveKies(w){ try{ localStorage.setItem('storvo_rep_weergave', w); }catch(e){} renderReparaties(); }
 /* Eén kaart op het bord: nummer, toestel, klant, de eerstvolgende stap als knop,
    en een waarschuwing als er een openstaand probleem is. */
@@ -17838,11 +18033,15 @@ function repKaartHtml(r){
 }
 function renderRepBord(lopend){
   const bord=document.getElementById('repBord'); if(!bord) return;
+  if(!lopend.length){
+    bord.innerHTML='<div class="repbordleeg"><b>Geen lopende reparaties</b><span>Een nieuwe maak je via Nieuwe reparatie.</span></div>';
+    return;
+  }
   const kols=REP_KOLOMMEN.filter(k=> k.key!=='inleveren' || lopend.some(r=>r.status==='inleveren'));
   bord.innerHTML = kols.map(k=>{
     const items=lopend.filter(r=>r.status===k.key);
     const kaarten = items.length ? items.map(repKaartHtml).join('') : '<div class="repkolomleeg">Niets</div>';
-    return `<div class="repkolom"><div class="repkolomkop"><span class="rkdot ${k.key}"></span>${k.titel}<span class="repkoltel">${items.length}</span></div>${kaarten}</div>`;
+    return `<div class="repkolom${items.length?'':' leeg'}"><div class="repkolomkop"><span class="rkdot ${k.key}"></span>${k.titel}<span class="repkoltel">${items.length}</span></div>${kaarten}</div>`;
   }).join('');
 }
 /* Eén rij in de lijstweergave (alles op een rij, met winst en alle knoppen). */
@@ -18381,18 +18580,30 @@ function renderPakketten(){
       <button type="button" class="pdmaandpijl" onclick="pakketMaandStap(1)" title="Volgende maand"><svg class="i s"><use href="#i-right"/></svg></button>
       ${isNu?'':'<button type="button" class="btn ghost small" onclick="pakketMaandNaarNu()">Naar deze maand</button>'}`;
   }
+  /* Alleen diensten die je echt gebruikt krijgen een grote kaart: een tarief boven nul,
+     of er is al eens iets ingevoerd. Een dienst met tarief nul was alleen ruis. Gebruik
+     je nog niks, dan tonen we ze allemaal, zodat je ziet wat er kan. */
+  const inGebruik=d=>d.tarieven.some(t=>Number(t.prijs)>0) || p.registraties.some(r=>r.dienst===d.key) || pakketBewerkTarief===d.key;
+  let gebruikt=p.diensten.filter(inGebruik), andere=p.diensten.filter(d=>!inGebruik(d));
+  if(!gebruikt.length){ gebruikt=p.diensten; andere=[]; }
   const kpi=document.getElementById('pakketKpi');
   if(kpi){
     kpi.innerHTML =
       `<div class="kpi accent"><div class="l">Maandtotaal</div><div class="v"><span class="bedrag">${euro(totMaand)}</span></div><div class="kpimeta"><span class="btwhint">excl. btw</span></div></div>`+
-      p.diensten.map(d=>{
+      gebruikt.map(d=>{
         const t=regsMaand.filter(r=>r.dienst===d.key).reduce((s,r)=>s+pakketOpbrengst(r),0);
         return `<div class="kpi"><div class="l">${esc(d.naam)}</div><div class="v">${euro(t)}</div></div>`;
       }).join('');
   }
   const el=document.getElementById('pakketDiensten');
-  if(el) el.innerHTML=p.diensten.map(d=>pakketDienstKaart(d, maand)).join('');
+  if(el) el.innerHTML=gebruikt.map(d=>pakketDienstKaart(d, maand)).join('')+
+    (andere.length?`<div class="card breed"><details class="meeropties kaartuitklap" data-handmatig${pakketAndereOpen?' open':''} ontoggle="pakketAndereOpen=this.open">
+      <summary><svg class="i"><use href="#i-plus"/></svg>Nog een dienst gebruiken: ${esc(andere.map(d=>d.naam).join(', '))}</summary>
+      <p class="muted klein" style="margin:10px 0 0">Zet een tarief en hij komt bovenaan te staan.</p>
+      ${andere.map(d=>pakketDienstKaart(d, maand)).join('')}
+    </details></div>`:'');
 }
+let pakketAndereOpen=false;
 function pakketDienstKaart(d, maand){
   const p=pakketData();
   const regs=p.registraties.filter(r=>r.dienst===d.key && pakketMaandKey(r.datum)===maand).sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
@@ -19299,6 +19510,9 @@ rolTabellen();
 tabelLabels();
 tabelObserver();
 kopVolgen();
+/* Meteen bij het laden, zodat de eerste aanblik al Simpel of Alles is en niet even
+   alles laat zien voor het inloggen klaar is. */
+modusToepassen();
 
 /* Terug uit Stripe: even laten weten hoe het is afgelopen. */
 (function(){

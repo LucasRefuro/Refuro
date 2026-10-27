@@ -5,6 +5,22 @@ er niet in staat is af.
 
 ---
 
+## Na het versimpelplan (27 oktober 2026)
+
+Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan bovenin
+`VERSIMPELEN-PLAN.md`. Wat er daarna nog openstaat:
+
+- [ ] **Eigen venster in plaats van `confirm()` in de winkelapp.** Nog 39 keer het
+      venster van het besturingssysteem. De werkbank heeft er al een eigen ja/nee- en
+      vraagvenster voor; dat patroon overnemen.
+- [ ] **Leveranciers-wachtwoorden versleutelen.** Ze staan nu leesbaar in de winkeldata
+      (`state.leveranciers`, gaat mee met de sync). Net als de webshoptokens server-side
+      versleuteld bewaren.
+- [ ] **Visueel nalopen.** Simpel en Alles op een echte telefoon en computer bekijken.
+      De app is te groot voor het voorbeeldvenster; alles is in jsdom gecontroleerd.
+
+---
+
 ## Nu openstaand — refurbish + webshop (27 september 2026)
 
 Bijgehouden zodat de Storvo-chat en de refuro.nl-webshop-chat vanuit dezelfde lijst

@@ -1,6 +1,10 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
+
+/* Stopt de test zonder process.exit (een belofte die nooit oplost), dan liep node
+   vroeger gewoon leeg met code 0: halve test, toch groen. Nu telt dat als fout. */
+process.on('beforeExit', ()=>{ console.log('FOUT test stopte voor het einde'); process.exit(1); });
 // Paden vanaf dit bestand, zodat de tests ook vanuit de hoofdmap draaien.
 const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
@@ -224,6 +228,51 @@ setTimeout(async()=>{
   w.eval("showTab('hardware')");
   const zicht=w.getComputedStyle(d.getElementById('tab-hardware')).display;
   ok('hardwarepagina wordt zichtbaar', zicht!=='none');
+
+  // ── Simpel of Alles ──
+  // Standaard Simpel; de keuze zit op body zodat elk .uitgebreid-blok meedoet.
+  ok('standaard Simpel', d.body.classList.contains('simpel'));
+  w.eval('zetModus(false)');
+  ok('Alles haalt de klasse weg', !d.body.classList.contains('simpel'));
+  ok('de keuze wordt onthouden', w.localStorage.getItem('storvo_simpel')==='0');
+  w.eval('zetModus(true)');
+  // Een medewerker werkt altijd in Simpel, ook als het toestel op Alles staat.
+  w.eval("localStorage.setItem('storvo_simpel','0'); gebruiker={naam:'Sara',rol:'medewerker',tabs:null}; modusToepassen();");
+  ok('medewerker altijd Simpel', d.body.classList.contains('simpel'));
+  w.eval("gebruiker=null; localStorage.setItem('storvo_simpel','1'); modusToepassen();");
+  // Op de telefoon was Inkopen nergens te openen; het Meer-vel moet hem tonen.
+  w.eval('mobMeerOpen()');
+  ok('Meer-vel op de telefoon heeft Inkopen en Labelprinter',
+     /mobMeerKies\('inkopen'\)/.test(d.getElementById('mobMeer').innerHTML)
+     && /mobMeerKies\('labelprinter'\)/.test(d.getElementById('mobMeer').innerHTML));
+  w.eval('mobMeerSluit()');
+
+  // Reparaties openen standaard op het bord, niet op de lijst van acht kolommen.
+  w.eval("try{localStorage.removeItem('storvo_rep_weergave');}catch(e){} showTab('reparaties')");
+  ok('reparaties standaard op het bord', !d.getElementById('repBord').hidden && d.getElementById('repLijstWrap').hidden);
+
+  // Een bestaand toestel bewaart zichzelf. Dat automatisch opslaan moet btw en plek ook
+  // naar het refurbish-toestel spiegelen; eerst deed alleen de Opslaan-knop dat.
+  w.eval(`showTab('hardware'); window.__geschreven.length=0;
+    hwData=[{id:'h9', merk:'HP', model:'ProBook', staat:'B', inkoop:50, verkoop:199, status:'voorraad',
+      marge:true, plek:'', kanalen:{}, aangemaakt_op:new Date().toISOString()}];
+    hwBewerk('h9');`);
+  ok('bestaand toestel heeft geen Opslaan-knop meer', !/hwOpslaan\(this\)/.test(d.getElementById('hwDetail').innerHTML));
+  const btw=d.getElementById('hw_marge'); btw.value='nee';
+  btw.dispatchEvent(new w.Event('change',{bubbles:true}));
+  await new Promise(r=>setTimeout(r,900));
+  ok('automatisch opslaan spiegelt btw naar de werkbank',
+     w.__geschreven.some(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].marge===false));
+  w.eval('hwSluit()');
+
+  // Komt de lijst teamleden leeg terug, dan vroeg de Uren-pagina hem eindeloos opnieuw op
+  // (opvragen, hertekenen, weer opvragen). Nu één keer, en geen herteken op een lege lijst.
+  w.eval(`window.__acc=0; window.__van=sb.from.bind(sb);
+    sb.from=(n)=>{ if(n==='accounts') window.__acc++; return window.__van(n); };
+    teamLeden=[]; showTab('uren');`);
+  await new Promise(r=>setTimeout(r,80));
+  ok('uren vraagt de teamleden niet eindeloos opnieuw op', w.__acc>0 && w.__acc<=2);
+  w.eval("sb.from=window.__van; showTab('dashboard')");
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nwinkelapp in orde');
   process.exit(fout?1:0);

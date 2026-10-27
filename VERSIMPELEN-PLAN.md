@@ -8,6 +8,61 @@ Dit plan is bewust kort geschreven: korte zinnen, één gedachte per regel, geen
 
 ---
 
+## Stand: uitgevoerd op 27 oktober 2026
+
+Alle fasen (0 tot en met 3) zijn gebouwd, in de winkelapp en in de werkbank.
+`npm test` groen, 900 controles. Elke pagina van de winkelapp is in Simpel en in
+Alles geopend: geen fouten, geen lege schermen.
+
+**Hoe het werkt.** Eén keuze in `localStorage` (`storvo_simpel`), gedeeld met de
+werkbank. In Simpel staat `simpel` op `body` en verdwijnt alles met `.uitgebreid`.
+Zeldzame velden staan in `<details class="meeropties">`: in Simpel dicht, in Alles
+vanzelf open, open als er al iets in staat. Een beheerblok met `data-handmatig`
+blijft altijd dicht tot je erop tikt. Medewerkers werken altijd in Simpel.
+De schakelaar staat onderin de zijbalk, op het dashboard, in het Meer-vel op de
+telefoon en bij Instellingen, Pagina's en weergave.
+
+**Bewust anders dan hierboven staat:**
+- De tagklasse heet `uitgebreid`, niet `.vol`: `.kassaldo.vol` bestaat al voor
+  "kassa te vol", en die waarschuwing zou in Simpel verdwijnen.
+- Dashboard houdt zeven tegels. Inruil en Product toevoegen horen bij het
+  dagelijkse werk dat de eigenaar zelf opnoemde.
+- "Cash met bon" en "Cash zonder bon" blijven: 17 plekken, de eigen kassawoorden.
+- Nieuw product: het scanpaneel en de barcode blijven zichtbaar, dat is de snelste
+  weg. De rest staat achter Meer opties.
+- Partners blijft zichtbaar (in de groep Af en toe), ook zonder partner: anders
+  vind je de pagina niet om je eerste partner uit te nodigen.
+- Mail wordt niet verborgen zonder mailbox: de app weet niet of er een is.
+- Rooster staat niet standaard uit: de eigenaar wilde hem juist in de onderbalk.
+- Diensten beheren blijft op Verkoop, maar dicht (`data-handmatig`).
+- Werkbank: Batches blijft in Simpel (partijen vooraf stickeren), en de tab-id
+  `tab-checklists` blijft staan.
+
+**Fouten die onderweg boven kwamen en zijn opgelost:**
+- Hardware: automatisch opslaan spiegelde btw en plek niet naar het
+  refurbish-toestel (alleen de Opslaan-knop deed dat). De knop zei na bijwerken
+  ook altijd "Toestel toegevoegd".
+- Uren, Hardware en Personeel vroegen de teamleden eindeloos opnieuw op als die
+  lijst leeg terugkwam.
+- Op de telefoon waren Verkopen, Inkopen, Mail en Labelprinter nergens te openen.
+- Kassa stond in de menugroep "Online".
+- "Onder minimum" op het dashboard kreeg de klasse `voranje`, dus nooit oranje.
+- Twee refurbish-tests stopten halverwege en gaven toch groen. Elke asynchrone test
+  heeft nu een wacht die dat als fout telt.
+- Team: drie onbereikbare schermen (oude medewerkers, vestigingen, prestaties) en
+  hun functies weggehaald. `state.medewerkers` blijft voor het lokale inlogscherm.
+- Werkbank: zie het verslag in de commit (onder andere een link naar een pagina die
+  niet bestond, en de btw-keuze die de batch overschreef).
+
+**Nog te doen (buiten dit plan):**
+- De winkelapp gebruikt nog 39 keer `confirm()` van het besturingssysteem. In de
+  werkbank zijn ze allemaal vervangen door een eigen venster.
+- Leveranciers-wachtwoorden staan onversleuteld in de winkeldata.
+- Visueel nalopen op een echte telefoon en computer: de app is te groot voor het
+  voorbeeldvenster, alles is in jsdom gecontroleerd.
+
+---
+
 ## 1. Het probleem
 
 Het dashboard en het menu van de winkelapp zijn te druk. De eigenaar gebruikt het daarom
