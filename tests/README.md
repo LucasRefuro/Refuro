@@ -18,7 +18,7 @@ npm test
 
 | Bestand | Wat het nakijkt |
 |---|---|
-| `winkelapp.js` | Hardwarepagina, Simpel of Alles, het reparatiebord, automatisch opslaan van een toestel, de Uren-pagina |
+| `winkelapp.js` | Hardwarepagina, Simpel of Alles, het reparatiebord, automatisch opslaan van een toestel, de Uren-pagina, het eigen ja/nee-venster |
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
 | `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
 | `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen |
@@ -43,6 +43,8 @@ soort fout dat nooit een foutmelding geeft:
 - een klasse in de opmaak zonder ook maar één stijlregel
 - een kleur die in dít bestand anders heet, zodat het veld geen achtergrond krijgt
 - keuzelijsten en aankruisvakken van het besturingssysteem in plaats van de onze
+- `confirm()`, `prompt()` of `alert()` in de winkelapp of de werkbank; daar is
+  een eigen venster voor (`vraagJaNee` en `vraagTekst`, op de werkbank `bevestig`)
 - een link naar een nieuw tabblad zonder `rel="noopener"`
 - een `uitgebreid`- of `alleensimpel`-blok terwijl de regel die hem verbergt
   ontbreekt; dan ziet Simpel er precies zo uit als Alles

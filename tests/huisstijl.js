@@ -128,6 +128,30 @@ for(const p of ['app/index.html','admin/index.html','refurbish/index.html']){
      /:focus[\s\S]{0,160}?box-shadow/.test(css));
 }
 
+/* ── geen vensters van het besturingssysteem ──
+   confirm(), prompt() en alert() vallen er net zo uit als een keuzelijst van het
+   systeem, en op een iPad weet je niet eens waar ze vandaan komen. De winkelapp en
+   de werkbank hebben er een eigen venster voor: vraagJaNee en vraagTekst in de
+   winkel, bevestig en vraagTekst op de werkbank. Commentaar telt niet mee, daar
+   staat juist uitgelegd waarom niet. Het commentaar wordt vervangen door evenveel
+   regeleinden, zodat het regelnummer in de melding blijft kloppen. "image/*" in
+   een accept-veld is geen commentaar: daarom moet er voor de /* niets staan. */
+console.log('\n── geen vensters van het besturingssysteem');
+for(const p of ['app/index.html','refurbish/index.html']){
+  const leeg=m=>m.replace(/[^\n]/g,'');
+  const zonderCommentaar=fs.readFileSync(bron(p),'utf8')
+    .replace(/<!--[\s\S]*?-->/g, leeg)
+    .replace(/(^|[\s;{})])\/\*[\s\S]*?\*\//g, (m,voor)=>voor+leeg(m.slice(voor.length)))
+    .replace(/(^|\s)\/\/[^\n]*/g, '$1');
+  const plekken=[];
+  zonderCommentaar.split('\n').forEach((regel,i)=>{
+    const m=regel.match(/(?<![\w$.])(?:window\.)?(confirm|prompt|alert)\s*\(/);
+    if(m) plekken.push('regel '+(i+1)+': '+m[1]+'()');
+  });
+  ok(p+': geen confirm, prompt of alert', !plekken.length,
+     plekken.slice(0,6).join(', ')+'. Gebruik het eigen venster.');
+}
+
 /* ── elke knop moet ergens heen ──
    Dit is de fout die je pas ziet als iemand erop drukt: de knop staat er, en er
    gebeurt niets omdat de functie niet bestaat. */
@@ -140,7 +164,9 @@ function handlersVan(html){
   }
   return uit;
 }
-const NIET_VAN_ONS=new Set(['event','confirm','alert','print','open','close','Number','String',
+/* confirm en alert staan hier niet meer tussen: een knop die die aanroept is ook fout
+   (zie "geen vensters van het besturingssysteem" hierboven). */
+const NIET_VAN_ONS=new Set(['event','print','open','close','Number','String',
   'parseInt','parseFloat','encodeURIComponent','setTimeout','JSON','Math','Boolean','Date','Array','Object']);
 const WOORDJES=/^(if|for|while|switch|catch|return|typeof|new|await|else|do|try|function|of|in)$/;
 

@@ -274,6 +274,56 @@ setTimeout(async()=>{
   ok('uren vraagt de teamleden niet eindeloos opnieuw op', w.__acc>0 && w.__acc<=2);
   w.eval("sb.from=window.__van; showTab('dashboard')");
 
+  // ── het eigen ja/nee-venster in plaats van confirm() ──
+  // Elke manier om het venster dicht te doen moet de vraag beantwoorden. Blijft een
+  // belofte hangen, dan loopt de functie die erop wacht nooit af en gebeurt er niets.
+  const tik=()=>new Promise(r=>setTimeout(r,0));
+  const venster=()=>d.getElementById('jaNeeVenster');
+  let antw=w.eval("vraagJaNee('Dit weggooien?', {ja:'Weggooien', gevaar:true})");
+  ok('het venster staat er', !!venster());
+  ok('de knop zegt wat er gebeurt', d.getElementById('jaNeeJa').textContent==='Weggooien');
+  ok('bij gevaar is de knop rood', d.getElementById('jaNeeJa').classList.contains('danger'));
+  ok('bij gevaar staat de cursor op Annuleren', d.activeElement===d.getElementById('jaNeeNee'));
+  d.getElementById('jaNeeJa').click();
+  ok('ja geeft true', await antw===true);
+  ok('daarna is het venster weg', !venster());
+
+  antw=w.eval("vraagJaNee('Zeker?')"); d.getElementById('jaNeeNee').click();
+  ok('Annuleren geeft false', await antw===false);
+  antw=w.eval("vraagJaNee('Zeker?')"); venster().dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  ok('ernaast klikken geeft false', await antw===false);
+  antw=w.eval("vraagJaNee('Zeker?')");
+  venster().dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape', bubbles:true}));
+  ok('Escape geeft false', await antw===false);
+  const eerste=w.eval("vraagJaNee('Eerste?')"); const tweede=w.eval("vraagJaNee('Tweede?')");
+  ok('een nieuwe vraag beantwoordt de oude met nee', await eerste===false);
+  ok('er staat er maar één', d.querySelectorAll('#jaNeeVenster').length===1);
+  d.getElementById('jaNeeJa').click(); await tweede;
+
+  antw=w.eval("vraagTekst('Naam?', '', {ja:'Opslaan'})");
+  const inv=d.getElementById('jaNeeInvoer'); inv.value='Hoesjes';
+  inv.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter', bubbles:true}));
+  ok('vraagTekst geeft de getypte tekst', await antw==='Hoesjes');
+  antw=w.eval("vraagTekst('Naam?')"); d.getElementById('jaNeeNee').click();
+  ok('vraagTekst geeft null bij Annuleren', await antw===null);
+
+  // Een echte plek: een product verwijderen gaat pas na ja.
+  w.eval("state.producten.push({id:987001, naam:'Testhoesje', barcode:'X1', cat:1, voorraad:1, winkel:1})");
+  let klaar=w.eval("verwijder(987001)"); d.getElementById('jaNeeNee').click(); await klaar;
+  ok('na Annuleren blijft het product', w.eval("state.producten.some(p=>p.id===987001)"));
+  klaar=w.eval("verwijder(987001)"); d.getElementById('jaNeeJa').click(); await klaar;
+  ok('na Verwijderen is het product weg', !w.eval("state.producten.some(p=>p.id===987001)"));
+
+  // Anders dan confirm() houdt het venster de pagina niet stil. Vervangt de sync de
+  // lijst terwijl de vraag openstaat, dan moet de wijziging op de verse lijst landen.
+  w.eval(`state.producten.push({id:987002, naam:'Kabel', barcode:'X2', cat:1, voorraad:1, winkel:1});
+    state.log.unshift({id:987003, t:Date.now(), naam:'Kabel', m:'in', v:1, aantal:3, pid:987002});`);
+  klaar=w.eval("ongedaanMaken(987003)");
+  w.eval("state.producten=JSON.parse(JSON.stringify(state.producten)); state.log=JSON.parse(JSON.stringify(state.log));");
+  d.getElementById('jaNeeJa').click(); await klaar; await tik();
+  ok('na de vraag wordt de verse lijst gewijzigd, niet een oude kopie',
+     w.eval("state.producten.find(p=>p.id===987002).voorraad===0 && state.log.find(l=>l.id===987003).ongedaan===true"));
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nwinkelapp in orde');
   process.exit(fout?1:0);
 },800);

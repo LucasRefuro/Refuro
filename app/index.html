@@ -381,6 +381,13 @@
   .proefpop .acts .btn{flex:1; min-width:180px; width:auto;}
   .proefklein{font-size:12.5px; color:var(--muted-l); margin-top:16px; line-height:1.6;}
   /* feedback en reviews */
+  /* Het ja/nee-venster. Bovenop elk ander venster, want de vraag komt vaak vanuit
+     een venster dat al openstaat (een toestel, een mail). Met z-index 100 zou hij
+     daar half achter vallen. */
+  #jaNeeVenster{z-index:1000;}
+  .jnpop .pv{white-space:pre-line;}
+  .jnpop h3 + .acts{margin-top:20px;}
+  .jnpop input{width:100%; margin-bottom:18px;}
   .fbpop{width:min(520px,94vw);}
   .fbpop h3{font-family:'Sora',sans-serif; font-size:22px; font-weight:800;
     letter-spacing:-.02em; margin-bottom:8px;}
@@ -4822,8 +4829,8 @@ function uitbetalenDoen(id, bedrag, wijze){
   toast('Uitbetaling vastgelegd ('+(wijze==='bank'?'bank':'contant')+')', true);
   renderPersoneelMaand();
 }
-function uitbetalingTerug(id){
-  if(!confirm('Uitbetaling van deze maand terugdraaien?')) return;
+async function uitbetalingTerug(id){
+  if(!await vraagJaNee('Uitbetaling van deze maand terugdraaien?', {ja:'Terugdraaien'})) return;
   const mk=maandSleutel(personeelMaandDatum);
   state.uitbetalingen=(state.uitbetalingen||[]).filter(x=>!(x.account_id===id && x.maand===mk));
   save(); toast('Uitbetaling teruggedraaid', true); renderPersoneelMaand();
@@ -5022,7 +5029,7 @@ async function roosterDoorgeven(){
 async function roosterGoedkeur(accountId, ja){
   if(!roosterMagInplannen()) return;
   let reden=null;
-  if(!ja){ reden=prompt('Waarom stuur je het terug? Dit komt in de mail naar de medewerker.'); if(reden===null) return; reden=(reden||'').trim(); }
+  if(!ja){ reden=await vraagTekst('Waarom stuur je het terug?', 'Dit komt in de mail naar de medewerker.', {ja:'Terugsturen'}); if(reden===null) return; reden=(reden||'').trim(); }
   const dagen=roosterDagen();
   const van=roosterYmd(dagen[0]), tot=roosterYmd(dagen[6]);
   const patch = ja
@@ -5657,9 +5664,9 @@ function vlUpd(id,veld,val){
   save(); renderVasteLasten();
   toast('Opgeslagen', true);
 }
-function vlWeg(id){
+async function vlWeg(id){
   const v=(state.vasteLasten||[]).find(x=>x.id===id); if(!v) return;
-  if(!confirm('"'+(v.naam||'deze vaste last')+'" verwijderen?')) return;
+  if(!await vraagJaNee('"'+(v.naam||'deze vaste last')+'" verwijderen?', {ja:'Verwijderen', gevaar:true})) return;
   state.vasteLasten=(state.vasteLasten||[]).filter(x=>x.id!==id);
   save(); renderVasteLasten();
   toast('Verwijderd');
@@ -6191,9 +6198,9 @@ function facOpslaan(print){
   toast((f.soort==='offerte'?'Offerte':'Factuur')+' opgeslagen: '+f.nummer, true);
   if(print) facPrint(f.id); else renderFacturen();
 }
-function facWeg(id){
+async function facWeg(id){
   const f=(state.facturen||[]).find(x=>x.id===id); if(!f) return;
-  if(!confirm((f.soort==='offerte'?'Offerte ':'Factuur ')+(f.nummer||'')+' verwijderen?')) return;
+  if(!await vraagJaNee(((f.soort==='offerte'?'Offerte ':'Factuur ')+(f.nummer||'')).trim()+' verwijderen?', {ja:'Verwijderen', gevaar:true})) return;
   state.facturen=(state.facturen||[]).filter(x=>x.id!==id);
   save(); renderFacturen(); toast('Verwijderd');
 }
@@ -6937,7 +6944,7 @@ async function mailConceptBevestig(id){
   const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v) return;
   const datum=/^\d{4}-\d{2}-\d{2}$/.test(String(v.datum||''))?v.datum:new Date().toISOString().slice(0,10);
   if(v.bedrag && inkoopBestaatAl({factuurnummer:v.factuurnummer, leverancier:v.leverancier, bedrag:v.bedrag, datum})){
-    if(!confirm('Deze factuur lijkt al in je inkopen te staan. Toch toevoegen?')) return;
+    if(!await vraagJaNee('Deze factuur lijkt al in je inkopen te staan.', {kop:'Toch toevoegen?', ja:'Toch toevoegen'})) return;
   }
   const isImg=/\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(v.factuur_pad||'');
   const nieuw={id:uid(), t:new Date(datum+'T12:00:00').getTime(), datum, wat:v.wat||v.leverancier||'Inkoop', leverancier:v.leverancier||'', bedrag:v.bedrag, btw:[21,9,0].includes(Number(v.btw))?Number(v.btw):21, soort:v.soort==='kosten'?'kosten':'voorraad', factuurnummer:v.factuurnummer||'', bron:'mail'};
@@ -6953,7 +6960,7 @@ async function mailConceptBevestig(id){
 }
 async function mailConceptWeg(id){
   const v=mailConcepten.find(x=>String(x.id)===String(id)); if(!v) return;
-  if(!confirm('Deze factuur weggooien? Hij verdwijnt uit "Te bevestigen".')) return;
+  if(!await vraagJaNee('Hij verdwijnt uit "Te bevestigen".', {kop:'Deze factuur weggooien?', ja:'Weggooien', gevaar:true})) return;
   try{ if(v.factuur_pad) await sb.storage.from('inkoopfacturen').remove([v.factuur_pad]); }catch(e){}
   try{ await sb.from('inkoop_concepten').delete().eq('id', v.id); }catch(e){}
   mailConcepten=mailConcepten.filter(x=>String(x.id)!==String(id));
@@ -7084,8 +7091,8 @@ function kopieerPrintSetup(knop){
   const cmd=(document.getElementById('printSetupCmd')||{}).textContent||'';
   const orig=knop.innerHTML;
   const klaar=()=>{ knop.textContent='Gekopieerd'; setTimeout(()=>{ knop.innerHTML=orig; }, 1600); };
-  try{ navigator.clipboard.writeText(cmd).then(klaar, ()=>window.prompt('Kopieer het commando:', cmd)); }
-  catch(e){ window.prompt('Kopieer het commando:', cmd); }
+  try{ navigator.clipboard.writeText(cmd).then(klaar, ()=>toonOmTeKopieren('Kopieer het commando', cmd)); }
+  catch(e){ toonOmTeKopieren('Kopieer het commando', cmd); }
 }
 function laadScript(src){
   return new Promise((res,rej)=>{
@@ -7322,10 +7329,14 @@ async function printBulkStickers(knop){
    op het doosje fout is of dubbel: je overschrijft hem met een eigen INT-code. Een
    echte streepjescode overschrijven we niet zonder te vragen. */
 async function nieuweBarcodePrint(id){
-  const p=state.producten.find(p=>String(p.id)===String(id)); if(!p) return;
+  let p=state.producten.find(p=>String(p.id)===String(id)); if(!p) return;
   const oud=String(p.barcode||'');
   const echt = oud && !oud.startsWith('INT-');
-  if(echt && !confirm('Dit product heeft barcode '+oud+'.\n\nVervangen door een eigen interne code en die printen?')) return;
+  if(echt){
+    if(!await vraagJaNee('Dit product heeft barcode '+oud+'. Het krijgt een eigen code, die je meteen print.', {kop:'Barcode vervangen?', ja:'Vervangen en printen'})) return;
+    /* opnieuw opzoeken: de sync kan de lijst vervangen hebben terwijl de vraag openstond */
+    p=state.producten.find(x=>String(x.id)===String(id)); if(!p) return;
+  }
   p.barcode=nieuweInterneBarcode();
   save(); renderProducten();
   await printProductSticker(id);
@@ -7553,7 +7564,7 @@ async function mailBulkCategorie(catId){
 }
 async function mailVerwijder(ids, sluitOverlay){
   if(!ids || !ids.length) return;
-  if(!confirm(ids.length===1?'Deze mail naar de prullenbak?':(ids.length+' mails naar de prullenbak?'))) return;
+  if(!await vraagJaNee(ids.length===1?'Deze mail naar de prullenbak?':(ids.length+' mails naar de prullenbak?'), {ja:'Naar de prullenbak', gevaar:true})) return;
   try{
     const {data:{session}}=await sb.auth.getSession();
     const res=await fetch(SUPABASE_URL+'/functions/v1/mail-actie',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify({ids})});
@@ -7601,7 +7612,7 @@ function mailOpstellen(vooraf){
   const ov=document.createElement('div'); ov.className='overlay'; ov.id='mailOpstelOverlay';
   /* Naast de popup klikken sluit hem; maar niet zomaar als er al tekst staat, anders
      ben je een lang getypt (of door AI geschreven) concept in één klik kwijt. */
-  ov.onclick=e=>{ if(e.target===ov){ const t=document.getElementById('opstelTekst'); if(!t||!t.value.trim()||confirm('Concept sluiten? De getypte tekst gaat verloren.')) ov.remove(); } };
+  ov.onclick=async e=>{ if(e.target===ov){ const t=document.getElementById('opstelTekst'); if(!t||!t.value.trim()||await vraagJaNee('De getypte tekst gaat verloren.', {kop:'Concept sluiten?', ja:'Sluiten', nee:'Verder schrijven', gevaar:true})) ov.remove(); } };
   ov.innerHTML=`<div class="popup" style="width:min(760px,96vw); max-height:min(92vh,calc(100dvh - 32px)); overflow:auto">
     <h3>${vooraf.bericht_id?'Antwoorden':'Nieuwe mail'}</h3>
     <div style="margin-bottom:10px"><label>Aan</label><input id="opstelAan" type="email" placeholder="naam@voorbeeld.nl" value="${esc(vooraf.aan||'')}"></div>
@@ -7699,7 +7710,7 @@ async function mailCatOpslaan(id){
   }catch(e){ toast('Opslaan mislukte','fout'); }
 }
 async function mailCatVerwijder(id){
-  if(!confirm('Categorie verwijderen? De mails erin blijven bestaan; ze krijgen geen categorie.')) return;
+  if(!await vraagJaNee('De mails erin blijven bestaan. Ze krijgen alleen geen categorie meer.', {kop:'Categorie verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   try{
     await sb.from('mail_categorieen').delete().eq('id',id);
     mailCats=mailCats.filter(x=>x.id!==id);
@@ -8404,7 +8415,7 @@ function hvVerkopen(){
   const aantal=Math.max(1, Math.floor(Number(document.getElementById('hvAantal').value)||1));
   const verkoopP=Math.max(0, Number(document.getElementById('hvVerkoopP').value)||0);
   const inkoopP=Math.max(0, Number(document.getElementById('hvInkoopP').value)||0);
-  if(!naam){ alert('Vul een naam in.'); return; }
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
   let p = hvProductId!=null ? state.producten.find(x=>x.id===hvProductId) : null;
   /* Staat het niet in het systeem en heb je "ook aan het systeem toevoegen" aangevinkt,
      dan maken we het nu als echt product aan (met beginvoorraad, categorie en leverancier).
@@ -8622,9 +8633,11 @@ function wisselTeken(tot){
 /* Een verkoop terugdraaien: uit de omzet halen, kasboek corrigeren (alleen bij cash
    met bon, want pin en cash-zonder-bon staan sowieso niet in de lade), voorraad
    terug voor eigen producten, en een verkocht toestel terug op voorraad. */
-function verkoopTerug(id){
-  const v=(state.verkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
-  if(!confirm('Deze verkoop terugdraaien? '+v.naam+' ('+euro(v.verkoop)+')')) return;
+async function verkoopTerug(id){
+  let v=(state.verkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
+  if(!await vraagJaNee(v.naam+' ('+euro(v.verkoop)+')', {kop:'Deze verkoop terugdraaien?', ja:'Terugdraaien', gevaar:true})) return;
+  /* opnieuw opzoeken: de sync kan de lijst vervangen hebben terwijl de vraag openstond */
+  v=(state.verkopen||[]).find(x=>String(x.id)===String(id)); if(!v) return;
   let terugP=null;
   if(v.pid!=null){ const p=state.producten.find(pp=>pp.id===v.pid); if(p){ p.voorraad=(p.voorraad||0)+(v.aantal||1); if(p.winkel!=null) p.winkel=(p.winkel||0)+(v.aantal||1); terugP=p; } }
   if(v.betaal==='cash') kasVerkoop(-(Number(v.verkoop)||0), 'cash', 'Teruggedraaid: '+v.naam);
@@ -8975,14 +8988,103 @@ function toast(msg, soort){
   while(c.children.length>4) c.firstChild.remove();
   setTimeout(sluit, soort==='fout'?6000:3600);
 }
-function ongedaanMaken(logId){
-  const l=state.log.find(x=>x.id===logId);
+
+/* ═══════════════ eigen vensters in plaats van confirm() en prompt() ═══════════════
+   Die van het besturingssysteem zien er op elke computer anders uit, vallen buiten
+   de huisstijl, en op een iPad weet je niet waar ze vandaan komen. De werkbank doet
+   het al zo (bevestig en vraagTekst daar); dit is dezelfde aanpak.
+
+   Eén verschil met confirm() om te onthouden: dat hield de hele pagina stil tot je
+   antwoordde. Dit venster niet. Intussen kan de sync een lijst in state vervangen
+   door een verse kopie. Wijzig je na het antwoord nog een product of reparatie, zoek
+   die dan ná de await opnieuw op. Anders wijzig je een oude kopie die nergens meer
+   hangt, en is je wijziging stilletjes weg.
+
+   Er staat er altijd maar één tegelijk. Komt er een nieuwe vraag, of haalt iets
+   anders het venster weg, dan telt de oude als nee. Anders blijft die belofte
+   eeuwig hangen en loopt de functie die erop wacht nooit af. */
+function jaNeeVenster(o){
+  return new Promise(res=>{
+    const oud=document.getElementById('jaNeeVenster'); if(oud) oud.remove();
+    const ov=document.createElement('div');
+    ov.className='overlay'; ov.id='jaNeeVenster';
+    const veld=o.veld
+      ? `<input id="jaNeeInvoer" type="${o.veld.type==='email'?'email':'text'}" value="${esc(o.veld.waarde||'')}"
+           placeholder="${esc(o.veld.placeholder||'')}" autocomplete="off"${o.veld.alleenLezen?' readonly':''}>`
+      : '';
+    ov.innerHTML=`<div class="popup jnpop" role="dialog" aria-modal="true">
+      <h3>${esc(o.kop)}</h3>
+      ${o.tekst?`<p class="pv">${esc(o.tekst)}</p>`:''}
+      ${veld}
+      <div class="acts">
+        <button class="btn ${o.gevaar?'danger':'actie'}" id="jaNeeJa">${esc(o.ja||'Ja')}</button>
+        ${o.nee===false?'':`<button class="btn ghost" id="jaNeeNee">${esc(o.nee||'Annuleren')}</button>`}
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    const inp=ov.querySelector('#jaNeeInvoer');
+    let klaar=false, mo=null;
+    const kies=w=>{ if(klaar) return; klaar=true; if(mo) mo.disconnect(); ov.remove(); res(w); };
+    const ja=()=>kies(inp?inp.value:true);
+    const nee=()=>kies(inp?null:false);
+    /* Zonder nee-knop (alleen "Klaar") betekent ernaast klikken gewoon klaar. */
+    const weg=o.nee===false?ja:nee;
+    ov.querySelector('#jaNeeJa').onclick=ja;
+    const neeKnop=ov.querySelector('#jaNeeNee'); if(neeKnop) neeKnop.onclick=nee;
+    ov.onclick=e=>{ if(e.target===ov) weg(); };
+    /* Toetsen blijven in het venster. Anders ziet de scanner op de pagina je getypte
+       letters aan voor een barcode en opent hij er nog een venster achteraan. */
+    ov.addEventListener('keydown', e=>{
+      e.stopPropagation();
+      if(e.key==='Escape'){ e.preventDefault(); weg(); }
+      else if(e.key==='Enter' && e.target===inp){ e.preventDefault(); ja(); }
+    });
+    if(typeof MutationObserver==='function'){
+      mo=new MutationObserver(()=>{ if(!ov.isConnected) weg(); });
+      mo.observe(document.body, {childList:true});
+    }
+    /* Bij iets wat je niet terug kunt draaien staat de cursor op Annuleren, zodat een
+       Enter uit gewoonte niets weggooit. */
+    try{
+      if(inp){ inp.focus(); if(o.veld.alleenLezen) inp.select(); }
+      else (o.gevaar&&neeKnop?neeKnop:ov.querySelector('#jaNeeJa')).focus();
+    }catch(e){}
+  });
+}
+/* Ja of nee. Zonder kop wordt de vraag zelf de kop; met kop is de vraag de uitleg
+   eronder. o.ja zegt wat er gebeurt ("Verwijderen", niet "OK"), o.gevaar maakt die
+   knop rood. Geeft true of false. */
+function vraagJaNee(tekst, o){
+  o=o||{};
+  return jaNeeVenster({kop:o.kop||tekst, tekst:o.kop?tekst:'', ja:o.ja, nee:o.nee, gevaar:o.gevaar});
+}
+/* Hetzelfde voor prompt(): een vraag met één invoerveld. Geeft de tekst terug, of
+   null als je annuleert. Enter in het veld is hetzelfde als de hoofdknop. */
+function vraagTekst(kop, uitleg, o){
+  o=o||{};
+  return jaNeeVenster({kop, tekst:uitleg, ja:o.ja||'Opslaan', nee:o.nee,
+    veld:{waarde:o.waarde, placeholder:o.placeholder, type:o.type}});
+}
+/* Als kopiëren naar het klembord niet mag (oude browser, geen https), staat de tekst
+   hier al geselecteerd. Dan is het alleen nog Cmd+C of lang drukken. */
+function toonOmTeKopieren(kop, tekst){
+  return jaNeeVenster({kop, tekst:'Kopiëren lukte niet vanzelf. De tekst staat al geselecteerd. Kopieer hem zelf.',
+    ja:'Klaar', nee:false, veld:{waarde:tekst, alleenLezen:true}});
+}
+
+async function ongedaanMaken(logId){
+  let l=state.log.find(x=>x.id===logId);
   if(!l || l.ongedaan) return;
-  const p=l.pid?state.producten.find(p=>p.id===l.pid):null;
+  let p=l.pid?state.producten.find(p=>p.id===l.pid):null;
   if(l.pid && !p){ toast('Product bestaat niet meer, kan niet terugboeken.', 'let-op'); return; }
   const n=l.aantal||1;
+  if(l.m==='in' && p.voorraad<n){
+    if(!await vraagJaNee('Er liggen er minder dan je terugboekt. De voorraad wordt dan '+(p.voorraad-n)+'.', {kop:'Toch terugboeken?', ja:'Toch terugboeken'})) return;
+    /* opnieuw opzoeken: de sync kan de lijst vervangen hebben terwijl de vraag openstond */
+    l=state.log.find(x=>x.id===logId); if(!l || l.ongedaan) return;
+    p=l.pid?state.producten.find(x=>x.id===l.pid):null; if(l.pid && !p) return;
+  }
   if(l.m==='in'){
-    if(p.voorraad<n && !confirm('Voorraad is lager dan het terug te boeken aantal. Toch terugboeken (voorraad wordt '+(p.voorraad-n)+')?')) return;
     haalUitVoorraad(p,n);
   }else{
     if(p) p.voorraad+=n;   /* terug van een verkoop komt weer achter te liggen */
@@ -9478,10 +9580,10 @@ function prodSelectieBalk(){
     alle.indeterminate = zicht>0 && zicht<prodZichtbaar.length;
   }
 }
-function verwijderBulk(){
+async function verwijderBulk(){
   const n=prodGeselecteerd.size;
   if(!n) return;
-  if(!confirm(n+' product'+(n===1?'':'en')+' verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  if(!await vraagJaNee('Dit kan niet ongedaan worden gemaakt.', {kop:n+' product'+(n===1?'':'en')+' verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   state.producten=state.producten.filter(p=>!prodGeselecteerd.has(p.id));
   prodGeselecteerd.clear();
   save(); renderProducten(); updateBadge();
@@ -9599,9 +9701,9 @@ function bewerk(id){
   /* Bij bewerken wil je alles zien wat er staat. */
   const nm=document.getElementById('npMeer'); if(nm){ nm.open=true; nm.dataset.gezet='1'; }
 }
-function verwijder(id){
+async function verwijder(id){
   const p=state.producten.find(p=>p.id===id);
-  if(p && confirm('"'+p.naam+'"verwijderen?')){
+  if(p && await vraagJaNee('"'+p.naam+'" verwijderen?', {ja:'Verwijderen', gevaar:true})){
     state.producten=state.producten.filter(x=>x.id!==id);
     save(); renderProducten(); updateBadge();
     toast('Verwijderd: '+p.naam);
@@ -9613,10 +9715,13 @@ function vulCatSelect(){
   document.getElementById('f_cat').innerHTML=state.categorieen.map(c=>`<option value="${c.id}">${esc(c.naam)}</option>`).join('')
     +'<option value="__nieuw">Nieuwe categorie toevoegen</option>';
 }
-function vulStandaard(){
+async function vulStandaard(){
   const sel=document.getElementById('f_cat');
   if(sel.value==='__nieuw'){
-    const naam=prompt('Naam van de nieuwe categorie:');
+    /* Alleen hier wordt er gewacht. Zonder nieuwe categorie loopt de functie dus in
+       één keer door, en dat moet: resetForm en het foto-lezen zetten direct na deze
+       aanroep hun eigen waarden over de standaard heen. */
+    const naam=await vraagTekst('Nieuwe categorie', '', {ja:'Toevoegen', placeholder:'Naam van de categorie'});
     if(naam && naam.trim()){
       const c={id:uid(), naam:naam.trim(), inkoop:0, verkoop:0, min:1, bestel:0};
       state.categorieen.push(c); save();
@@ -10061,20 +10166,20 @@ function npTeken(){
     <button class="btn ghost small" onclick="np.herkend=null; np.stap='doosje'; resetForm(); npTeken()">Volgend product</button>${melding}`;
 }
 
-function opslaanProduct(){
+async function opslaanProduct(){
   let barcode=document.getElementById('f_barcode').value.trim();
   const naam=document.getElementById('f_naam').value.trim();
-  if(!naam){ alert('Naam is verplicht.'); return; }
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
   /* Barcode mag leeg blijven voor een standaardproduct dat je invoert zonder
      doosje. Het krijgt dan een eigen interne code; scan je later de echte
      streepjescode, dan zet je die er via Bewerken overheen. */
   if(!barcode) barcode='INT-'+uid();
-  if(document.getElementById('f_cat').value==='__nieuw'){ alert('Kies eerst een categorie.'); return; }
+  if(document.getElementById('f_cat').value==='__nieuw'){ toast('Kies eerst een categorie','let-op'); return; }
   const dubbel=state.producten.find(p=>String(p.barcode)===String(barcode) && p.id!==editId);
   if(dubbel){
     /* Geen doodlopende melding meer: een botsende code kun je meteen vervangen door
        een eigen interne code, die je daarna op een sticker uitprint. */
-    if(confirm('Deze barcode is al van "'+dubbel.naam+'".\n\nWil je dit product een eigen interne barcode geven? Die kun je daarna zelf uitprinten.')){
+    if(await vraagJaNee('Hij is van "'+dubbel.naam+'". Geef dit product een eigen code. Die print je daarna zelf uit.', {kop:'Deze barcode bestaat al', ja:'Eigen code geven'})){
       barcode=nieuweInterneBarcode();
     } else { return; }
   }
@@ -10777,10 +10882,12 @@ function aanvBoek(id, bet){
   renderAanvragen(); updateBadge(); renderKassa(); herteken(); renderScanLog();
   toast(a.nr+' afgerekend: '+euro(rest)+' ('+betaalNaam(bet)+')', true);
 }
-function aanvAnnuleer(id){
-  const a=aanvragen().find(a=>a.id===id);
+async function aanvAnnuleer(id){
+  let a=aanvragen().find(a=>a.id===id);
   if(!a) return;
-  if(!confirm('Aanvraag '+a.nr+' annuleren?')) return;
+  if(!await vraagJaNee('Aanvraag '+a.nr+' annuleren?', {ja:'Aanvraag annuleren', nee:'Terug', gevaar:true})) return;
+  /* opnieuw opzoeken: de sync kan de lijst vervangen hebben terwijl de vraag openstond */
+  a=aanvragen().find(x=>x.id===id); if(!a) return;
   a.status='geannuleerd';
   a.tijdlijn.push({status:'geannuleerd', t:Date.now(), door:gebruiker?gebruiker.naam:null});
   save(); renderAanvragen(); updateBadge(); sluitAanvraag();
@@ -11037,12 +11144,12 @@ function renderKassa(){
   }).join('') || '<div class="muted">Nog geen kasboekingen.</div>';
 }
 
-function kasInvoer(soort){
+async function kasInvoer(soort){
   const bedrag=Number(document.getElementById('kas_bedrag').value)||0;
   const tekst=document.getElementById('kas_tekst').value.trim();
   if(bedrag<=0){ toast('Vul een bedrag in','let-op'); return; }
   if(soort!=='in' && bedrag>kasSaldo()){
-    if(!confirm('Er zit maar '+euro(kasSaldo())+' in de kassa. Toch boeken?')) return;
+    if(!await vraagJaNee('Er zit maar '+euro(kasSaldo())+' in de kassa.', {kop:'Toch boeken?', ja:'Toch boeken'})) return;
   }
   kasBoek(soort==='in'?bedrag:-bedrag, soort, tekst||KAS_SOORT[soort].label);
   document.getElementById('kas_bedrag').value='';
@@ -11768,7 +11875,7 @@ async function rsvAfrekenen(id, betaal, knop){
 }
 
 async function rsvAnnuleren(id, knop){
-  if(!confirm('Reservering annuleren? Het toestel komt dan weer online in de webshop.')) return;
+  if(!await vraagJaNee('Het toestel komt dan weer online in de webshop.', {kop:'Reservering annuleren?', ja:'Reservering annuleren', nee:'Terug', gevaar:true})) return;
   const okd=await rsvEdge({actie:'annuleren', id:id}, knop, 'Annuleren…');
   if(okd){ toast('Geannuleerd, toestel weer online', true); rsvLaad(true); if(typeof hwLaad==='function') hwLaad(); }
 }
@@ -11889,14 +11996,14 @@ async function cloverKoppel(knop){
   }
 }
 async function cloverLos(knop){
-  if(!confirm('Clover-koppeling loskoppelen? Je producten blijven gewoon in Clover staan.')) return;
+  if(!await vraagJaNee('Je producten blijven gewoon in Clover staan.', {kop:'Clover loskoppelen?', ja:'Loskoppelen', gevaar:true})) return;
   try{ await cloverCall('los',{}); state.cloverGekoppeld=false; save(); toast('Clover losgekoppeld', true); cloverStatus(); }
   catch(e){ toast(e.message,'fout'); }
 }
 /* Alles uit Clover verwijderen (schone start). Daarna halen we ook de clover-markers
    van de producten af, zodat een volgende sync alles opnieuw aanmaakt. */
 async function cloverLeeg(knop){
-  if(!confirm('Alle producten uit Clover verwijderen? Dit wist je hele Clover-assortiment; daarna sync je vanuit Storvo opnieuw. De koppeling zelf blijft.')) return;
+  if(!await vraagJaNee('Dit wist je hele Clover-assortiment. Daarna sync je vanuit Storvo opnieuw. De koppeling zelf blijft.', {kop:'Alles uit Clover verwijderen?', ja:'Alles verwijderen', gevaar:true})) return;
   const uit=document.getElementById('cloverPushUit');
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Verwijderen…';
   try{
@@ -12345,7 +12452,7 @@ async function shopNakijken(knop){
 }
 
 async function shopLos(knop){
-  if(!confirm('De webshop loskoppelen? Toestellen die nu online staan blijven op Shopify staan; die haal je daar zelf weg.')) return;
+  if(!await vraagJaNee('Toestellen die nu online staan blijven op Shopify staan. Die haal je daar zelf weg.', {kop:'De webshop loskoppelen?', ja:'Loskoppelen', gevaar:true})) return;
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
   try{
     shopStand=await shopRoep({actie:'loskoppelen'});
@@ -12430,7 +12537,7 @@ async function web2Koppelen2(knop){
   }
 }
 async function web2Los2(knop){
-  if(!confirm('De tweede webshop loskoppelen? Bundels die er online staan blijven op Shopify staan; die haal je daar zelf weg.')) return;
+  if(!await vraagJaNee('Bundels die er online staan blijven op Shopify staan. Die haal je daar zelf weg.', {kop:'De tweede webshop loskoppelen?', ja:'Loskoppelen', gevaar:true})) return;
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig…';
   try{ await web2Roep({actie:'loskoppelen'}); web2Stand={gekoppeld:false}; web2Teken(); toast('Losgekoppeld', true); }
   catch(e){ toast(e.message,'fout'); knop.disabled=false; knop.textContent=oud; }
@@ -14033,7 +14140,10 @@ async function hwFotoToevoegen(input){
 async function hwFotoVerwijder(i){
   if(!hwOpen||!Array.isArray(hwOpen.fotos)) return;
   const url=hwOpen.fotos[i]; if(url===undefined) return;
-  if(!confirm('Deze foto verwijderen?')) return;
+  if(!await vraagJaNee('Deze foto verwijderen?', {ja:'Verwijderen', gevaar:true})) return;
+  /* Intussen kan het toestel dicht zijn of opnieuw geladen. Dan klopt de plek i
+     niet meer, en zou je een andere foto weggooien. */
+  if(!hwOpen||!Array.isArray(hwOpen.fotos)||hwOpen.fotos[i]!==url) return;
   const pad=hwFotoPad(url);
   if(pad){ try{ await sb.storage.from('refurbish-fotos').remove([pad]); }catch(e){ console.error('foto wissen:',e); } }
   const urls=hwOpen.fotos.slice(); urls.splice(i,1);
@@ -14210,7 +14320,7 @@ function hwSelectieBalk(){
 async function hwBulkVerwijder(){
   const ids=[...hwGeselecteerd]; const n=ids.length;
   if(!n) return;
-  if(!confirm(n+' toestel'+(n===1?'':'len')+' verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  if(!await vraagJaNee('Dit kan niet ongedaan worden gemaakt.', {kop:n+' toestel'+(n===1?'':'len')+' verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   try{
     const online=ids.filter(id=>{ const h=hwData.find(x=>x.id===id); return h && hwOnline(h); });
     if(online.length){
@@ -14477,7 +14587,7 @@ async function hwWijsToe(id){
   // geen externe partner: sluit het eigen account uit zodat je niet aan jezelf toewijst.
   const {data:partners}=await sb.from('partners').select('id,naam').neq('id', gebruiker.id).order('naam');
   if(!partners || !partners.length){
-    if(confirm('Je hebt nog geen partner. Wil je er nu een uitnodigen?')) partnerUitnodigen();
+    if(await vraagJaNee('Wil je er nu een uitnodigen?', {kop:'Je hebt nog geen partner', ja:'Partner uitnodigen', nee:'Later'})) partnerUitnodigen();
     return;
   }
   hwSluit();
@@ -14512,7 +14622,7 @@ async function hwWijsToeDoen(id, knop){
 }
 /* Een toegewezen toestel terughalen van de partner: het komt terug in de winkelvoorraad. */
 async function hwTerughalen(id){
-  if(!confirm('Dit toestel terughalen van de partner? Het komt terug in je voorraad.')) return;
+  if(!await vraagJaNee('Het komt terug in je voorraad.', {kop:'Terughalen van de partner?', ja:'Terughalen'})) return;
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); return; }
@@ -14545,9 +14655,11 @@ async function hwDashboard(id, aan, knop){
   }catch(e){ if(knop){ knop.disabled=false; knop.textContent=oud; } toast(e.message,'fout'); }
 }
 async function partnerUitnodigen(){
-  const naam=window.prompt('Naam van je partner:'); if(!naam) return;
-  const email=window.prompt('E-mailadres van je partner (dit wordt zijn login):'); if(!email) return;
-  const ww=window.prompt('Kies een begin-wachtwoord (minstens 8 tekens). Geef dit door aan je partner; hij kan het later zelf wijzigen:'); if(!ww) return;
+  /* Drie korte vragen na elkaar, in plaats van één formulier met drie velden: één
+     ding per scherm. */
+  const naam=await vraagTekst('Partner uitnodigen', 'Hoe heet je partner?', {ja:'Verder'}); if(!naam) return;
+  const email=await vraagTekst('Partner uitnodigen', 'Wat is het e-mailadres? Daarmee logt je partner in.', {ja:'Verder', type:'email'}); if(!email) return;
+  const ww=await vraagTekst('Partner uitnodigen', 'Kies een begin-wachtwoord van minstens 8 tekens. Geef het door aan je partner. Die kan het later zelf wijzigen.', {ja:'Uitnodigen'}); if(!ww) return;
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session){ toast('Je bent uitgelogd. Log opnieuw in bij de winkel.','fout'); throw new Error('Geen sessie'); }
@@ -14601,16 +14713,16 @@ async function partnerActie(body, okMsg){
   }catch(e){ toast(e.message,'fout'); return null; }
 }
 async function partnerNaamWijzig(id){
-  const naam=window.prompt('Nieuwe naam voor deze partner:');
+  const naam=await vraagTekst('Nieuwe naam voor deze partner', '', {ja:'Opslaan'});
   if(naam===null) return;
   if(!naam.trim()){ toast('Vul een naam in','let-op'); return; }
   await partnerActie({actie:'partner_bijwerken', partner_id:id, naam:naam.trim()}, 'Naam bijgewerkt');
 }
 async function partnerNieuwWw(id){
-  const ww=window.prompt('Nieuw begin-wachtwoord (minstens 8 tekens):');
+  const ww=await vraagTekst('Nieuw begin-wachtwoord', 'Minstens 8 tekens.', {ja:'Verder'});
   if(ww===null) return;
   if(ww.length<8){ toast('Minstens 8 tekens','let-op'); return; }
-  const mailen=window.confirm('Het nieuwe wachtwoord per e-mail naar de partner sturen?');
+  const mailen=await vraagJaNee('Het nieuwe wachtwoord per e-mail naar de partner sturen?', {ja:'Mailen', nee:'Niet mailen'});
   const j=await partnerActie({actie:'partner_wachtwoord', partner_id:id, wachtwoord:ww, mailen}, null);
   if(j) toast(mailen ? (j.gemaild ? 'Wachtwoord gewijzigd en gemaild' : 'Wachtwoord gewijzigd. Mail niet gelukt, geef het zelf door.') : 'Wachtwoord gewijzigd', true);
 }
@@ -14618,7 +14730,7 @@ async function partnerNieuwWw(id){
    herkent ?bekijk=<id> en toont die partner (de RLS staat de eigenaar toe zijn rij te lezen). */
 function partnerOpen(id){ window.open('/partner/?bekijk='+encodeURIComponent(id), '_blank', 'noopener'); }
 async function partnerVerwijder(id){
-  if(!confirm('Deze partner verwijderen? Dit kan niet ongedaan gemaakt worden. Het kan alleen als er geen laptops meer aan hem toegewezen zijn.')) return;
+  if(!await vraagJaNee('Dit kan niet ongedaan gemaakt worden. Het lukt alleen als er geen laptops meer bij deze partner liggen.', {kop:'Deze partner verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await partnerActie({actie:'partner_verwijder', partner_id:id}, 'Partner verwijderd');
 }
 async function partnerAanmaken(knop){
@@ -14960,7 +15072,7 @@ async function hwPrijskaart(id){
 }
 
 async function hwVerwijder(id){
-  if(!confirm('Dit toestel helemaal verwijderen?')) return;
+  if(!await vraagJaNee('Dit toestel helemaal verwijderen?', {ja:'Verwijderen', gevaar:true})) return;
   const h=hwData.find(x=>x.id===id);
   /* Staat hij online, dan eerst van de webshop halen. Anders blijft er een
      spookproduct te koop staan terwijl het toestel uit Storvo weg is, en dat is
@@ -16134,11 +16246,13 @@ function teamNwRol(rol, btn){
 }
 function inviteLinkKopieer(token, knop){
   const link=location.origin+location.pathname+'?invite='+token;
-  try{ navigator.clipboard.writeText(link); toast('Uitnodigingslink gekopieerd', true); }
-  catch(e){ prompt('Kopieer de uitnodigingslink:', link); }
+  /* writeText geeft een belofte. Een weigering komt dus niet in de catch terecht,
+     en dan zag je vroeger "gekopieerd" terwijl er niets op het klembord stond. */
+  try{ navigator.clipboard.writeText(link).then(()=>toast('Uitnodigingslink gekopieerd', true), ()=>toonOmTeKopieren('Kopieer de uitnodigingslink', link)); }
+  catch(e){ toonOmTeKopieren('Kopieer de uitnodigingslink', link); }
 }
 async function inviteIntrekken(id, knop){
-  if(!confirm('Deze uitnodiging intrekken? De link werkt daarna niet meer.')) return;
+  if(!await vraagJaNee('De link werkt daarna niet meer.', {kop:'Uitnodiging intrekken?', ja:'Intrekken', gevaar:true})) return;
   const {error}=await sb.from('invites').delete().eq('id', id);
   if(error){ toast('Intrekken mislukte','fout'); return; }
   toast('Uitnodiging ingetrokken', true);
@@ -16227,16 +16341,16 @@ async function gebruikerOpslaan(id, knop){
   await teamActie('bijwerken', {account_id:id, rol, tabs:paginasUit('acc'+id)}, knop, null, ()=>toast('Opgeslagen', true));
 }
 async function gebruikerWachtwoord(id, naam){
-  const ww=window.prompt('Nieuw wachtwoord voor '+naam+' (minstens 8 tekens):'); if(!ww) return;
+  const ww=await vraagTekst('Nieuw wachtwoord voor '+naam, 'Minstens 8 tekens.', {ja:'Opslaan'}); if(!ww) return;
   if(ww.length<8){ toast('Minstens 8 tekens.','let-op'); return; }
   await teamActie('wachtwoord', {account_id:id, nieuw_wachtwoord:ww}, null, null, ()=>toast('Wachtwoord gewijzigd', true));
 }
 async function gebruikerVerwijder(id, naam){
-  if(!confirm('Account van '+naam+' verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  if(!await vraagJaNee('Dit kan niet ongedaan worden gemaakt.', {kop:'Account van '+naam+' verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   await teamActie('verwijderen', {account_id:id}, null, null, ()=>{ toast('Account verwijderd', true); renderTeamAccounts(); });
 }
 async function teamWachtwoordInstellen(accountId, naam){
-  const ww=window.prompt('Nieuw wachtwoord voor '+naam+' (min. 8 tekens):');
+  const ww=await vraagTekst('Nieuw wachtwoord voor '+naam, 'Minstens 8 tekens.', {ja:'Opslaan'});
   if(!ww) return;
   if(ww.length<8){ toast('Wachtwoord moet minstens 8 tekens zijn.', 'let-op'); return; }
   const {data:{session}}=await sb.auth.getSession();
@@ -16657,7 +16771,7 @@ function updType(id,veld,val){
 }
 function voegTypeToe(){
   const naam=document.getElementById('t_naam').value.trim();
-  if(!naam){ alert('Vul een naam in.'); return; }
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
   state.types.push({
     id:uid(), naam,
     cat:Number(document.getElementById('t_cat').value),
@@ -16671,9 +16785,9 @@ function voegTypeToe(){
   renderTypes();
   toast('Type toegevoegd: '+naam, true);
 }
-function verwijderType(id){
+async function verwijderType(id){
   if(state.producten.some(p=>p.typeId===id)){
-    if(!confirm('Er zijn producten van dit type. Type verwijderen? (producten blijven bestaan)')) return;
+    if(!await vraagJaNee('Er zijn producten van dit type. Die blijven gewoon bestaan.', {kop:'Type verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   }
   state.types=state.types.filter(t=>t.id!==id);
   save(); renderTypes();
@@ -16686,7 +16800,7 @@ function renderModellen(){
 function voegModelToe(){
   const naam=document.getElementById('m_naam').value.trim();
   if(!naam) return;
-  if(state.modellen.some(m=>m.naam.toLowerCase()===naam.toLowerCase())){ alert('Model bestaat al.'); return; }
+  if(state.modellen.some(m=>m.naam.toLowerCase()===naam.toLowerCase())){ toast('Dit model bestaat al','let-op'); return; }
   state.modellen.push({id:uid(), naam});
   save();
   document.getElementById('m_naam').value='';
@@ -16694,9 +16808,9 @@ function voegModelToe(){
   renderModellen();
   toast('Model toegevoegd: '+naam, true);
 }
-function verwijderModel(id){
+async function verwijderModel(id){
   if(state.producten.some(p=>p.modelId===id)){
-    if(!confirm('Er zijn producten met dit model. Model verwijderen? (producten blijven bestaan)')) return;
+    if(!await vraagJaNee('Er zijn producten met dit model. Die blijven gewoon bestaan.', {kop:'Model verwijderen?', ja:'Verwijderen', gevaar:true})) return;
   }
   state.modellen=state.modellen.filter(m=>m.id!==id);
   save(); renderModellen();
@@ -16721,7 +16835,7 @@ function updCat(id,veld,val){
 }
 function voegCatToe(){
   const naam=document.getElementById('c_naam').value.trim();
-  if(!naam){ alert('Vul een naam in.'); return; }
+  if(!naam){ toast('Vul een naam in','let-op'); return; }
   state.categorieen.push({
     id:uid(), naam,
     inkoop:Number(document.getElementById('c_inkoop').value)||0,
@@ -16736,9 +16850,9 @@ function voegCatToe(){
   renderCats();
   toast('Categorie toegevoegd: '+naam, true);
 }
-function verwijderCat(id){
-  if(state.producten.some(p=>p.cat===id)){ alert('Deze categorie is nog in gebruik door producten.'); return; }
-  if(confirm('Categorie verwijderen?')){
+async function verwijderCat(id){
+  if(state.producten.some(p=>p.cat===id)){ toast('Er zitten nog producten in deze categorie','let-op'); return; }
+  if(await vraagJaNee('Categorie verwijderen?', {ja:'Verwijderen', gevaar:true})){
     state.categorieen=state.categorieen.filter(c=>c.id!==id);
     save(); renderCats();
     toast('Categorie verwijderd');
@@ -16779,9 +16893,9 @@ function voegDienstToe(){
   renderDiensten();
   toast('Dienst toegevoegd: '+naam, true);
 }
-function verwijderDienst(id){
+async function verwijderDienst(id){
   const dn=state.diensten.find(d=>d.id===id);
-  if(dn && confirm('"'+dn.naam+'"verwijderen?')){
+  if(dn && await vraagJaNee('"'+dn.naam+'" verwijderen?', {ja:'Verwijderen', gevaar:true})){
     state.diensten=state.diensten.filter(d=>d.id!==id);
     save(); renderDiensten();
     toast('Dienst verwijderd: '+dn.naam);
@@ -18227,9 +18341,11 @@ function annuleerRepDoen(id){
   toast('Reparatie '+r.nr+' geannuleerd.', true);
   renderReparaties(); updateBadge(); herteken();
 }
-function verwijderRep(id){
-  const r=state.reparaties.find(r=>r.id===id);
-  if(r && confirm('Reparatie '+r.nr+' ('+r.klant.naam+') verwijderen?')){
+async function verwijderRep(id){
+  let r=state.reparaties.find(r=>r.id===id);
+  if(r && await vraagJaNee('Reparatie '+r.nr+' ('+r.klant.naam+') verwijderen?', {ja:'Verwijderen', gevaar:true})){
+    /* opnieuw opzoeken: de sync kan de lijst vervangen hebben terwijl de vraag openstond */
+    r=state.reparaties.find(x=>x.id===id); if(!r) return;
     // gereserveerde onderdelen terug in voorraad als nog niet afgerond
     if(r.status!=='afgerond') r.onderdelen.forEach(o=>{
       if(o.uitVoorraad){ const vr=state.onderdelen.find(x=>x.naam.toLowerCase()===o.naam.toLowerCase()); if(vr) vr.voorraad++; }
@@ -18268,9 +18384,9 @@ function voegOnderdeelToe(){
   renderOnderdelen(); vulRepDatalists();
   toast('Onderdeel toegevoegd: '+naam+' ('+euro(inkoop)+' incl. btw)', true);
 }
-function verwijderOnd(id){
+async function verwijderOnd(id){
   const o=state.onderdelen.find(o=>o.id===id);
-  if(o && confirm('"'+o.naam+'"verwijderen?')){
+  if(o && await vraagJaNee('"'+o.naam+'" verwijderen?', {ja:'Verwijderen', gevaar:true})){
     state.onderdelen=state.onderdelen.filter(x=>x.id!==id);
     save(); renderOnderdelen(); vulRepDatalists();
     toast('Onderdeel verwijderd: '+o.naam);
@@ -18289,17 +18405,17 @@ function exportData(){
 function importData(input){
   const f=input.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async()=>{
     try{
       const s=JSON.parse(r.result);
       if(!s.producten || !s.categorieen) throw 0;
-      if(confirm('Huidige data vervangen door deze back-up?')){
+      if(await vraagJaNee('Alles wat er nu in staat wordt vervangen door deze back-up.', {kop:'Back-up terugzetten?', ja:'Vervangen', gevaar:true})){
         localStorage.setItem(KEY, JSON.stringify(s));
         state=load(); save();
         renderDashboard(); updateBadge();
         toast('Back-up geïmporteerd', true);
       }
-    }catch(e){ alert('Ongeldig back-upbestand.'); }
+    }catch(e){ toast('Dit is geen geldig back-upbestand','fout'); }
     input.value='';
   };
   r.readAsText(f);
