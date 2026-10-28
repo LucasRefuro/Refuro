@@ -151,6 +151,15 @@ const storvoGeschreven=w=>w.__schrijf.filter(s=>!/^klantportaal_/.test(s[0]));
   await w.eval("toegangZetten(null,'k1',false)");
   ok('toegang weghalen', w.__schrijf.some(s=>s[0]==='klantportaal_gebruikers' && s[2] && s[2].actief===false));
 
+  console.log('\n── nieuwe lijstsleutel');
+  const sleutelGeschreven=()=>w.__schrijf.find(s=>s[0]==='klantportaal_instellingen' && s[1]==='update' && s[2] && s[2].lijst_sleutel);
+  w.eval("naarTab('instellingen')");
+  w.eval("lijstSleutelNieuw()");
+  ok('vraagt het eerst, met een rode knop', !!d.getElementById('venster') && /\bgevaar\b/.test(d.getElementById('vensterOk').className) && !sleutelGeschreven());
+  await w.eval("document.getElementById('vensterOk').click()"); await wacht(30);
+  const sl=sleutelGeschreven();
+  ok('nieuwe sleutel opgeslagen, venster dicht', sl && /^[0-9a-f]{32}$/.test(sl[2].lijst_sleutel) && !d.getElementById('venster'), JSON.stringify(sl));
+
   console.log('\n── aanbieding van de website');
   {
     const {w:w2, d:d2}=bouw(BASIS); await wacht(80);

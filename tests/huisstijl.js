@@ -130,14 +130,15 @@ for(const p of ['app/index.html','admin/index.html','refurbish/index.html']){
 
 /* ── geen vensters van het besturingssysteem ──
    confirm(), prompt() en alert() vallen er net zo uit als een keuzelijst van het
-   systeem, en op een iPad weet je niet eens waar ze vandaan komen. De winkelapp en
-   de werkbank hebben er een eigen venster voor: vraagJaNee en vraagTekst in de
-   winkel, bevestig en vraagTekst op de werkbank. Commentaar telt niet mee, daar
+   systeem, en op een iPad weet je niet eens waar ze vandaan komen. Elke pagina
+   heeft er een eigen venster voor: vraagJaNee en vraagTekst in de winkel, bevestig
+   en vraagTekst op de werkbank, een kleine vraagJaNee in het beheerpaneel en het
+   klantportaal, venster() in portaalbeheer. Commentaar telt niet mee, daar
    staat juist uitgelegd waarom niet. Het commentaar wordt vervangen door evenveel
    regeleinden, zodat het regelnummer in de melding blijft kloppen. "image/*" in
    een accept-veld is geen commentaar: daarom moet er voor de /* niets staan. */
 console.log('\n── geen vensters van het besturingssysteem');
-for(const p of ['app/index.html','refurbish/index.html']){
+for(const p of ['app/index.html','refurbish/index.html','admin/index.html','portaalbeheer/index.html','klantportaal/index.html']){
   const leeg=m=>m.replace(/[^\n]/g,'');
   const zonderCommentaar=fs.readFileSync(bron(p),'utf8')
     .replace(/<!--[\s\S]*?-->/g, leeg)

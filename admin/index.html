@@ -221,6 +221,18 @@
   .toast.weg{opacity:0; transform:translateY(12px) scale(.97); transition:.32s cubic-bezier(.4,0,.2,1);}
   @media(max-width:860px){ #toasts{left:14px; right:14px; bottom:14px; align-items:stretch;} .toast{max-width:none;} }
   @keyframes toastin{from{opacity:0; transform:translateX(30px)}to{opacity:1; transform:none}}
+  /* het ja/nee-venster: boven de meldingen, onder het inlogscherm (z-index 500) */
+  .overlay{position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:rgba(18,63,57,.44); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .popup{background:var(--card); border-radius:var(--radius); padding:30px; width:min(460px,94vw); box-shadow:var(--schaduw-l);
+    animation:popin .22s cubic-bezier(.34,1.4,.64,1);}
+  @keyframes popin{from{opacity:0; transform:scale(.94) translateY(10px)}to{opacity:1; transform:none}}
+  .popup h3{font-family:'Sora',sans-serif; font-size:20px; font-weight:800; margin-bottom:6px; letter-spacing:-.01em;}
+  .popup .pv{margin-bottom:22px; line-height:1.6; color:var(--muted); white-space:pre-line;}
+  .popup h3 + .acts{margin-top:20px;}
+  .popup .acts{display:flex; flex-direction:column; gap:10px;}
+  .popup .acts .btn{width:100%; padding:13px;}
   /* Niets mag zijwaarts schuiven. Eén te brede tabel en je kunt het hele
      paneel heen en weer trekken, met een witte rand die er niet hoort.     */
   html{overflow-x:clip;}
@@ -697,6 +709,42 @@ function toast(msg, soort){
   while(c.children.length>4) c.firstChild.remove();
   setTimeout(sluit, soort==='fout'?6000:3600);
 }
+/* Eigen ja/nee-venster in plaats van confirm(). Een kleine versie van vraagJaNee
+   uit de winkelapp: hier is alleen ja of nee nodig, geen invoerveld. Zonder kop
+   wordt de vraag zelf de kop; met kop is de vraag de uitleg eronder. o.ja zegt wat
+   er gebeurt ("Verwijderen", niet "OK"), o.gevaar maakt die knop rood. Geeft true
+   of false.
+   Er staat er maar één tegelijk. Komt er een nieuwe vraag, dan telt de oude als
+   nee. Anders blijft die belofte eeuwig hangen en loopt de functie die erop wacht
+   nooit af. */
+let jaNeeAf=null;
+function vraagJaNee(tekst, o){
+  o=o||{};
+  if(jaNeeAf) jaNeeAf(false);
+  return new Promise(res=>{
+    const ov=document.createElement('div');
+    ov.className='overlay'; ov.id='jaNeeVenster';
+    ov.innerHTML=`<div class="popup" role="dialog" aria-modal="true">
+      <h3>${esc(o.kop||tekst)}</h3>
+      ${o.kop?`<p class="pv">${esc(tekst)}</p>`:''}
+      <div class="acts">
+        <button class="btn ${o.gevaar?'danger':'actie'}" id="jaNeeJa">${esc(o.ja||'Ja')}</button>
+        <button class="btn ghost" id="jaNeeNee">${esc(o.nee||'Annuleren')}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    const kies=w=>{ if(jaNeeAf!==kies) return; jaNeeAf=null; ov.remove(); res(w); };
+    jaNeeAf=kies;
+    const neeKnop=ov.querySelector('#jaNeeNee');
+    ov.querySelector('#jaNeeJa').onclick=()=>kies(true);
+    neeKnop.onclick=()=>kies(false);
+    ov.onclick=e=>{ if(e.target===ov) kies(false); };
+    ov.addEventListener('keydown', e=>{ if(e.key==='Escape'){ e.preventDefault(); kies(false); } });
+    /* Bij iets wat je niet terug kunt draaien staat de cursor op Annuleren, zodat een
+       Enter uit gewoonte niets weggooit. */
+    try{ (o.gevaar?neeKnop:ov.querySelector('#jaNeeJa')).focus(); }catch(e){}
+  });
+}
 const STATUS_LABEL={actief:'Actief', proef:'Proefperiode', achterstallig:'Betaling mislukt', opgezegd:'Opgezegd'};
 
 async function syncKlantenVanSupabase(){
@@ -857,11 +905,11 @@ function voegKlantToe(){
   ['k_naam','k_contact','k_email'].forEach(i=>document.getElementById(i).value='');
   teken(); toast('Klant toegevoegd: '+naam);
 }
-function verwijderKlant(id){
+async function verwijderKlant(id){
   const k=state.klanten.find(k=>k.id===id);
-  if(k && confirm('"'+k.naam+'"verwijderen?')){
-    state.klanten=state.klanten.filter(x=>x.id!==id); save(); teken(); toast('Klant verwijderd');
-  }
+  if(!k) return;
+  if(!await vraagJaNee(k.naam+' gaat uit de lijst.', {kop:'Klant verwijderen?', ja:'Verwijderen', gevaar:true})) return;
+  state.klanten=state.klanten.filter(x=>x.id!==id); save(); teken(); toast('Klant verwijderd');
 }
 function tekenPlannen(){
   document.getElementById('planKaarten').innerHTML=state.plannen.map((p,i)=>
@@ -1016,7 +1064,7 @@ async function fbVerwerk(id, aan, knop){
     tekenFeedback();
   }catch(e){
     knop.disabled=false; knop.textContent=oud;
-    alert('Kon het niet opslaan: '+e.message);
+    toast('Kon het niet opslaan: '+e.message, 'fout');
   }
 }
 
@@ -1028,7 +1076,7 @@ async function fbNotitie(id, veld){
     if(r) r.notitie=was.trim()||null;
     veld.classList.add('bewaard');
     setTimeout(()=>veld.classList.remove('bewaard'), 1200);
-  }catch(e){ alert('Kon de notitie niet opslaan: '+e.message); }
+  }catch(e){ toast('Kon de notitie niet opslaan: '+e.message, 'fout'); }
 }
 
 /* ---------- bijkoopmodules per winkel ---------- */
@@ -1085,7 +1133,7 @@ async function modZet(teamId, module, vink){
     toast(vink.checked?'Module aangezet':'Module uitgezet');
   }catch(e){
     vink.checked=!vink.checked;
-    alert('Kon het niet opslaan: '+e.message);
+    toast('Kon het niet opslaan: '+e.message, 'fout');
   }
   vink.disabled=false;
 }

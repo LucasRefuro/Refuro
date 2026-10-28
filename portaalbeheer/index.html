@@ -82,6 +82,8 @@ main { flex:1; min-width:0; padding:30px 40px 80px; max-width:1400px; margin:0 a
 .btn.licht { background:#fff; color:var(--groen); border:1.5px solid rgba(15,107,75,.28); }
 .btn.licht:hover { background:var(--lblauw); }
 .btn.klein { padding:7px 14px; font-size:12.5px; }
+.btn.gevaar { background:var(--red); }
+.btn.gevaar:hover { background:var(--red-tekst); }
 label { display:block; font-family:var(--mono-f); font-size:11.5px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px; }
 input[type=text], input[type=number], input[type=email], input[type=password], input[type=search], input[type=date], input[type=url], textarea, select {
   width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:14px; font-size:14px; font-family:inherit; background:#fff; color:var(--tekst); }
@@ -203,11 +205,13 @@ async function bezig(knop, doe){
   try { await doe(); } catch(e){ console.error(e); toast(e.message || 'Er ging iets mis', 'fout'); }
   if(knop && knop.isConnected){ knop.disabled = false; knop.textContent = oud; }
 }
-function venster(kop, inhoud, knopTekst, doe){
+/* Ook voor ja of nee: dit is hier het venster in plaats van confirm(). gevaar maakt
+   de knop rood, voor iets wat je niet terug kunt draaien. */
+function venster(kop, inhoud, knopTekst, doe, gevaar){
   sluit();
   const ov = document.createElement('div'); ov.id = 'venster';
   ov.onclick = e => { if(e.target === ov) sluit(); };
-  ov.innerHTML = `<div class="vensterkaart"><h2>${esc(kop)}</h2>${inhoud}<div class="vensterknoppen"><button class="btn licht" onclick="sluit()">Annuleren</button><button class="btn actie" id="vensterOk">${esc(knopTekst)}</button></div></div>`;
+  ov.innerHTML = `<div class="vensterkaart"><h2>${esc(kop)}</h2>${inhoud}<div class="vensterknoppen"><button class="btn licht" onclick="sluit()">Annuleren</button><button class="btn ${gevaar ? 'gevaar' : 'actie'}" id="vensterOk">${esc(knopTekst)}</button></div></div>`;
   document.body.appendChild(ov);
   f('vensterOk').onclick = () => doe(f('vensterOk'));
 }
@@ -565,7 +569,7 @@ function opdrachtVerwijderen(id){
       const { error } = await sb.from('klantportaal_opdrachten').delete().eq('id', id);
       if(error) throw error;
       opdrachten = opdrachten.filter(x => x.id !== id); sluit(); opdrachtTerug(); toast('Verwijderd');
-    }));
+    }), true);
 }
 
 /* ═══════════════ organisaties ═══════════════ */
@@ -675,7 +679,7 @@ function tekenInstellingen(){
     <div class="rij" style="margin-top:14px">
       <a class="btn licht klein" href="${lijstAdres('voorraad', 'xlsx')}">Hele voorraad (Excel)</a>
       <a class="btn licht klein" href="${lijstAdres('voorraad', 'html')}" target="_blank" rel="noopener">Hele voorraad (PDF)</a>
-      <button class="btn licht klein" onclick="lijstSleutelNieuw(this)"${magBeheren ? '' : ' disabled'}>Nieuwe sleutel</button>
+      <button class="btn licht klein" onclick="lijstSleutelNieuw()"${magBeheren ? '' : ' disabled'}>Nieuwe sleutel</button>
     </div>
     <p class="uitleg" style="margin-top:10px">Een nieuwe sleutel maakt alle oude links ongeldig. Zet hem daarna ook in het Shopify-thema (Thema-instellingen, Lijsten).</p></div>` : ''}
   <div class="kaart"><h2>Contact en mail</h2><div class="velden">
@@ -718,14 +722,14 @@ function lijstAdres(soort, f, extra){
 async function lijstSleutelKopieren(knop){
   try { await navigator.clipboard.writeText(instel.lijst_sleutel); knop.textContent = 'Gekopieerd'; } catch(e){ f('inLijstSleutel').select(); }
 }
-async function lijstSleutelNieuw(knop){
-  if(!confirm('Een nieuwe sleutel maakt alle gedeelde lijstlinks ongeldig. Doorgaan?')) return;
-  const nieuw = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
-  await bezig(knop, async () => {
-    const { data, error } = await sb.from('klantportaal_instellingen').update({ lijst_sleutel:nieuw }).eq('team_id', account.team_id).select().single();
-    if(error) throw error;
-    instel = data; teken(); toast('Nieuwe sleutel gemaakt. Zet hem ook in het Shopify-thema.');
-  });
+function lijstSleutelNieuw(){
+  venster('Nieuwe sleutel maken?', '<p class="uitleg">Alle lijstlinks die je al gedeeld hebt werken dan niet meer.</p>', 'Nieuwe sleutel maken',
+    knop => bezig(knop, async () => {
+      const nieuw = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+      const { data, error } = await sb.from('klantportaal_instellingen').update({ lijst_sleutel:nieuw }).eq('team_id', account.team_id).select().single();
+      if(error) throw error;
+      instel = data; sluit(); teken(); toast('Nieuwe sleutel gemaakt. Zet hem ook in het Shopify-thema.');
+    }), true);
 }
 async function portaalAanUit(knop){
   await bezig(knop, async () => {

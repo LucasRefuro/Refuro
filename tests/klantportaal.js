@@ -69,7 +69,6 @@ async function open(opties, zoek){
   const w=dom.window, fouten=[];
   w.onerror=(m)=>fouten.push(String(m));
   w.print=()=>{ w.__geprint=(w.__geprint||0)+1; };
-  w.confirm=()=>true;
   w.scrollTo=()=>{};
   w.URL.createObjectURL=()=>'blob:x'; w.URL.revokeObjectURL=()=>{};
   await wacht(60);
@@ -197,8 +196,15 @@ const zichtbaar=(el)=>el && !el.hidden;
   await w.eval('collegaUitnodigen()'); await wacht(20);
   const u=w.__fetch.find(x=>x[1].actie==='uitnodigen')||[];
   ok('uitnodiging met rol en sessie', u[1] && u[1].email==='piet@zorggroep.nl' && u[1].rol==='beheerder', JSON.stringify(u));
-  await w.eval("collegaUit('u2')");
-  ok('toegang weghalen roept de functie aan', w.__rpc.some(([n,a])=>n==='klantportaal_collega_uit' && a.p_user==='u2'));
+  const weghalen=()=>w.__rpc.filter(([n])=>n==='klantportaal_collega_uit').length;
+  const nee=w.eval("collegaUit('u2')");
+  ok('toegang weghalen vraagt het eerst', !!d.getElementById('jaNeeVenster') && weghalen()===0);
+  ok('de ja-knop is rood en zegt wat er gebeurt', /\bgevaar\b/.test(d.getElementById('jaNeeJa').className) && d.getElementById('jaNeeJa').textContent==='Toegang weghalen');
+  d.getElementById('jaNeeNee').click(); await nee;
+  ok('annuleren: niets weggehaald, venster weg', weghalen()===0 && !d.getElementById('jaNeeVenster'));
+  const ja=w.eval("collegaUit('u2')");
+  d.getElementById('jaNeeJa').click(); await ja;
+  ok('toegang weghalen roept de functie aan', w.__rpc.some(([n,a])=>n==='klantportaal_collega_uit' && a.p_user==='u2') && !d.getElementById('jaNeeVenster'));
 
   console.log('\n── partij aanmelden (met slim bod)');
   w.eval("naarTab('aanmelden')");

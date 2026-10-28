@@ -181,6 +181,12 @@ td { padding:12px 12px 12px 0; border-bottom:1px solid var(--lijn); white-space:
 .persoon-t small { display:block; color:var(--muted); font-size:13px; overflow:hidden; text-overflow:ellipsis; }
 #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--inkt); color:#fff; padding:12px 18px; border-radius:var(--pil); font-weight:600; font-size:14px; z-index:50; max-width:92vw; }
 #toast.fout { background:var(--rood-tekst); }
+/* Het ja/nee-venster, boven de balk en de melding. */
+#jaNeeVenster { position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(16,35,27,.44); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+.vensterkaart { background:var(--card); border-radius:var(--radius); padding:28px; width:440px; max-width:100%; box-shadow:0 10px 34px rgba(16,35,27,.12); }
+.vensterkaart p { margin-top:8px; }
+.vensterknoppen { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:22px; }
+.btn.gevaar { background:var(--rood-tekst); }
 
 @media (max-width:1000px) { .raster, .twee { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:700px) {
@@ -321,6 +327,35 @@ let toastTimer = null;
 function toast(tekst, soort){
   const t = f('toast'); t.textContent = tekst; t.className = soort === 'fout' ? 'fout' : ''; t.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3600);
+}
+/* Eigen ja/nee-venster in plaats van confirm(). Dat van het besturingssysteem ziet
+   er op elke computer anders uit en valt buiten de huisstijl van de winkel. Een
+   kleine versie van vraagJaNee uit de winkelapp: zonder kop wordt de vraag zelf de
+   kop, met kop is de vraag de uitleg eronder. o.ja zegt wat er gebeurt, o.gevaar
+   maakt die knop rood. Geeft true of false.
+   Er staat er maar één tegelijk. Komt er een nieuwe vraag, dan telt de oude als
+   nee. Anders blijft die belofte eeuwig hangen en loopt de functie die erop wacht
+   nooit af. */
+let jaNeeAf = null;
+function vraagJaNee(tekst, o){
+  o = o || {};
+  if(jaNeeAf) jaNeeAf(false);
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.id = 'jaNeeVenster';
+    ov.innerHTML = `<div class="vensterkaart" role="dialog" aria-modal="true"><h3>${esc(o.kop || tekst)}</h3>${o.kop ? `<p class="muted">${esc(tekst)}</p>` : ''}
+      <div class="vensterknoppen"><button class="btn licht" id="jaNeeNee">${esc(o.nee || 'Annuleren')}</button><button class="btn${o.gevaar ? ' gevaar' : ''}" id="jaNeeJa">${esc(o.ja || 'Ja')}</button></div></div>`;
+    document.body.appendChild(ov);
+    const kies = w => { if(jaNeeAf !== kies) return; jaNeeAf = null; ov.remove(); res(w); };
+    jaNeeAf = kies;
+    const neeKnop = f('jaNeeNee');
+    f('jaNeeJa').onclick = () => kies(true);
+    neeKnop.onclick = () => kies(false);
+    ov.onclick = e => { if(e.target === ov) kies(false); };
+    ov.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.preventDefault(); kies(false); } });
+    /* Bij iets wat je niet terug kunt draaien staat de cursor op Annuleren, zodat een
+       Enter uit gewoonte niets weggooit. */
+    try { (o.gevaar ? neeKnop : f('jaNeeJa')).focus(); } catch(e){}
+  });
 }
 const ICONEN = {
   truck:'<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>',
@@ -822,7 +857,7 @@ async function collegaUitnodigen(){
   }
 }
 async function collegaUit(id){
-  if(!confirm('Deze collega kan dan niet meer inloggen. Doorgaan?')) return;
+  if(!await vraagJaNee('Deze collega kan dan niet meer inloggen.', { kop:'Toegang weghalen?', ja:'Toegang weghalen', gevaar:true })) return;
   const { data: gelukt } = await sb.rpc('klantportaal_collega_uit', { p_user:id });
   toast(gelukt ? 'Toegang weggehaald.' : 'Dat lukte niet.', gelukt ? '' : 'fout');
   collegasLaden();
