@@ -26,6 +26,7 @@ npm test
 | `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
+| `leveranciers.js` | Dat het wachtwoord van Foneday en Mobileparts nooit in de sync, in state of in de browseropslag belandt, ook niet bij de verhuizing van een oud apparaat |
 
 Die laatste bestaat vanwege een fout die er echt in zat: een element met
 `hidden` bleef gewoon staan omdat er `display:flex` op stond. In de code was

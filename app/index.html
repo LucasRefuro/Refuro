@@ -3858,16 +3858,16 @@
     <h2><svg class="i"><use href="#i-link"/></svg>Leveranciers <span class="muted">(voor automatisch zoeken)</span></h2>
     <div class="infobox" style="margin-bottom:18px"><b>Automatisch voorraad en prijzen zoeken</b> vereist de online versie van deze software. Browsers blokkeren het inloggen op andere websites vanuit een lokaal bestand. Sla je inloggegevens hier alvast op. Zodra de online versie er is, zoekt de software zelf bij foneday en mobileparts en zie je direct of een onderdeel op voorraad is. Tot die tijd openen de zoekknoppen bij een reparatie de shops met je zoekterm al ingevuld.</div>
     <div class="grid" style="margin-bottom:14px">
-      <div><label>Foneday e-mail</label><input id="lv_fd_user" autocomplete="off" onchange="slaLeveranciersOp()"></div>
-      <div><label>Foneday wachtwoord</label><input id="lv_fd_pass" type="password" autocomplete="new-password" onchange="slaLeveranciersOp()"></div>
-      <div style="display:flex; align-items:flex-end"><a class="btn ghost small" href="https://www.foneday.shop/en/customer/account/login" target="_blank" rel="noopener">Open foneday login </a></div>
+      <div><label>Foneday e-mail</label><input id="lv_fd_user" autocomplete="off" onchange="slaLeveranciersOp('foneday')"></div>
+      <div><label>Foneday wachtwoord</label><input id="lv_fd_pass" type="password" autocomplete="new-password" onchange="slaLeveranciersOp('foneday')"></div>
+      <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap"><a class="btn ghost small" href="https://www.foneday.shop/en/customer/account/login" target="_blank" rel="noopener">Open foneday login </a><button type="button" class="btn ghost small" id="lv_fd_wis" hidden onclick="lvWis('foneday')">Wissen</button></div>
     </div>
     <div class="grid" style="margin-bottom:14px">
-      <div><label>Mobileparts e-mail</label><input id="lv_mp_user" autocomplete="off" onchange="slaLeveranciersOp()"></div>
-      <div><label>Mobileparts wachtwoord</label><input id="lv_mp_pass" type="password" autocomplete="new-password" onchange="slaLeveranciersOp()"></div>
-      <div style="display:flex; align-items:flex-end"><a class="btn ghost small" href="https://www.mobileparts.shop/customer/account/login/" target="_blank" rel="noopener">Open mobileparts login </a></div>
+      <div><label>Mobileparts e-mail</label><input id="lv_mp_user" autocomplete="off" onchange="slaLeveranciersOp('mobileparts')"></div>
+      <div><label>Mobileparts wachtwoord</label><input id="lv_mp_pass" type="password" autocomplete="new-password" onchange="slaLeveranciersOp('mobileparts')"></div>
+      <div style="display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap"><a class="btn ghost small" href="https://www.mobileparts.shop/customer/account/login/" target="_blank" rel="noopener">Open mobileparts login </a><button type="button" class="btn ghost small" id="lv_mp_wis" hidden onclick="lvWis('mobileparts')">Wissen</button></div>
     </div>
-    <p class="muted"> De gegevens worden alleen lokaal in deze browser opgeslagen (onversleuteld) en worden nergens heen gestuurd. Gebruik bij twijfel een uniek wachtwoord voor deze shops.</p>
+    <p class="muted">Je wachtwoord bewaren we versleuteld. Je kunt het hier niet teruglezen. Wil je een ander? Typ het gewoon opnieuw.</p>
   </div>
 
   <div class="card" id="inst-abonnement"hidden>
@@ -11487,6 +11487,7 @@ document.querySelectorAll('#instTabs button[data-s]').forEach(b=>b.addEventListe
   if(b.dataset.s==='paginas') renderPaginas();
   if(b.dataset.s==='webshop'){ shopStatus(); web2Status(); }
   if(b.dataset.s==='clover') cloverStatus();
+  if(b.dataset.s==='leveranciers') lvLaad();
   if(b.dataset.s==='factuur') facBedrijfVul();
   if(b.dataset.s==='refurbish') renderRefurbishInst();
 }));
@@ -12988,7 +12989,11 @@ const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','l
                          konden ze op een ander apparaat "verdwenen" lijken. Nu synchroniseren ze net als
                          de rest (samenvoegen per id, bewerken wint van verwijderen). */
                       'aanvragen','inkopen','uitbetalingen','reserveringen','postnl','kasboek'];
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','leveranciers','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','cloverGekoppeld','bedrijf','kasMax','personeel'];
+/* 'leveranciers' stond hier ook in, en zo ging het wachtwoord van Foneday en
+   Mobileparts leesbaar mee in de blob. Zet hier nooit iets in wat geheim is: alles
+   in deze lijst kan iedereen in het team uitlezen. Geheimen gaan via een edge-functie
+   naar een versleutelde tabel (zie lvOverzetten en tests/leveranciers.js). */
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','cloverGekoppeld','bedrijf','kasMax','personeel'];
 
 /* Lijsten met vaste (niet-willekeurige) id's: de seed maakt op elk leeg apparaat
    categorie 1/2/3, dienst 1/2/3, postnl 1..16, team 1, enzovoort. Bij de EERSTE sync
@@ -13531,6 +13536,7 @@ async function ladAccountEnStart(session){
   voorbeeldScherm();
   reviewMoment();
   syncStart();
+  lvOverzetten();
   if(!account.onboarding_klaar) toonOnboarding();
   aboBewaking();
 }
@@ -16698,13 +16704,90 @@ async function renderAbo(){
       betaalgegevens, download je facturen en zeg je op. Wij bewaren zelf geen betaalgegevens.</p>`;
 }
 
-function slaLeveranciersOp(){
-  state.leveranciers={
-    foneday:{user:document.getElementById('lv_fd_user').value.trim(), pass:document.getElementById('lv_fd_pass').value},
-    mobileparts:{user:document.getElementById('lv_mp_user').value.trim(), pass:document.getElementById('lv_mp_pass').value}
-  };
+/* ═══ Leveranciers: inloggegevens voor Foneday en Mobileparts ═══
+   Het wachtwoord stond vroeger in state.leveranciers. Alles in state gaat via de sync
+   mee in de winkeldata-blob, dus het stond leesbaar in de cloud voor iedereen in het
+   team. Nu gaat het rechtstreeks naar de edge-functie 'leveranciers', die het
+   versleuteld bewaart (zelfde regime als de webshoptokens). De browser krijgt het
+   nooit terug, alleen of er een is. Zet het dus nooit meer in state.
+   Een leverancier erbij? Dan ook in LEVERANCIERS in die edge-functie. */
+const LV_VELDEN={
+  foneday:    {user:'lv_fd_user', pass:'lv_fd_pass', wis:'lv_fd_wis', naam:'Foneday'},
+  mobileparts:{user:'lv_mp_user', pass:'lv_mp_pass', wis:'lv_mp_wis', naam:'Mobileparts'}
+};
+let lvStand=null;   // per leverancier {gebruiker, wachtwoord:true/false} van de server; null = nog niet opgehaald
+
+async function lvCall(actie, extra){
+  const {data:{session}}=await sb.auth.getSession();
+  const res=await fetch(SUPABASE_URL+'/functions/v1/leveranciers',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+(session?session.access_token:'')},
+    body:JSON.stringify(Object.assign({actie}, extra||{}))
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok || !uit.ok) throw new Error(uit.error||'Dat lukte niet. Probeer het zo nog eens.');
+  return uit;
+}
+/* Het scherm vullen uit lvStand. Een veld waar je in staat te typen slaan we over,
+   anders wist de achtergrondsync (die de instellingen opnieuw tekent) je invoer. */
+function lvToon(){
+  const s=lvStand||{};
+  Object.keys(LV_VELDEN).forEach(lv=>{
+    const v=LV_VELDEN[lv], r=s[lv]||{};
+    const u=document.getElementById(v.user), p=document.getElementById(v.pass), wis=document.getElementById(v.wis);
+    if(u && document.activeElement!==u) u.value=r.gebruiker||'';
+    if(p && document.activeElement!==p){ p.value=''; p.placeholder=r.wachtwoord?'Opgeslagen':''; }
+    if(wis) wis.hidden=!(r.gebruiker||r.wachtwoord);
+  });
+}
+async function lvLaad(){
+  try{ lvStand=(await lvCall('status')).leveranciers||{}; }
+  catch(e){ /* zonder verbinding blijven de velden leeg; opslaan geeft dan zelf een melding */ }
+  lvToon();
+}
+async function slaLeveranciersOp(lv){
+  const v=LV_VELDEN[lv]; if(!v) return;
+  const u=document.getElementById(v.user), p=document.getElementById(v.pass);
+  const extra={leverancier:lv, gebruiker:u.value.trim()};
+  if(p.value) extra.wachtwoord=p.value;
+  try{
+    const r=await lvCall('opslaan', extra);
+    if(extra.wachtwoord && p.value===extra.wachtwoord) p.value='';
+    lvStand=Object.assign({}, lvStand, {[lv]:r.inlog});
+    lvToon();
+    toast(v.naam+' opgeslagen', true);
+  }catch(e){ toast(e.message,'fout'); }
+}
+async function lvWis(lv){
+  const v=LV_VELDEN[lv]; if(!v) return;
+  try{
+    const r=await lvCall('wis',{leverancier:lv});
+    lvStand=Object.assign({}, lvStand, {[lv]:r.inlog});
+    const p=document.getElementById(v.pass); if(p) p.value='';
+    lvToon();
+    toast(v.naam+' gewist', true);
+  }catch(e){ toast(e.message,'fout'); }
+}
+/* De eenmalige verhuizing: wat er nog in state.leveranciers staat (op dit apparaat,
+   uit de tijd dat het daar bewaard werd) naar de server, en dan hier weg. De server
+   vult alleen lege plekken, dus een oud wachtwoord op een apparaat dat lang uit stond
+   overschrijft geen nieuwer. Lukt het niet (offline), dan blijft het lokaal staan tot
+   de volgende start; de sync neemt het hoe dan ook niet meer mee. */
+async function lvOverzetten(){
+  if(state.leveranciers===undefined) return;
+  const oud=state.leveranciers||{};
+  const mee={};
+  Object.keys(LV_VELDEN).forEach(lv=>{
+    const x=oud[lv]||{};
+    if(x.user||x.pass) mee[lv]={user:String(x.user||''), pass:String(x.pass||'')};
+  });
+  if(Object.keys(mee).length){
+    try{ const r=await lvCall('overzetten',{leveranciers:mee}); lvStand=r.leveranciers||lvStand; }
+    catch(e){ return; }
+  }
+  delete state.leveranciers;
   save();
-  toast('Leveranciersgegevens opgeslagen (lokaal)', true);
+  lvToon();
 }
 function slaBedrijfOp(){
   state.instellingen={
@@ -16736,11 +16819,7 @@ function renderInstellingen(){
   renderKlantpagina();
   renderBerichten();
   renderAbo();
-  const lv=state.leveranciers||{foneday:{},mobileparts:{}};
-  document.getElementById('lv_fd_user').value=(lv.foneday&&lv.foneday.user)||'';
-  document.getElementById('lv_fd_pass').value=(lv.foneday&&lv.foneday.pass)||'';
-  document.getElementById('lv_mp_user').value=(lv.mobileparts&&lv.mobileparts.user)||'';
-  document.getElementById('lv_mp_pass').value=(lv.mobileparts&&lv.mobileparts.pass)||'';
+  lvToon();
 }
 function vulAlleModellen(){
   let n=0;

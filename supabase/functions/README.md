@@ -45,6 +45,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `scherm-hoeken` | nee | Zoekt met AI de vier hoeken van een beeldscherm in een foto |
 | `klantportaal` | ja | Inloglinks en uitnodigingen voor het klantportaal, in de huisstijl van de winkel. Controleert zelf wie er belt |
 | `imaging` | nee | Werkplaats-imaging: schiet via de FOG-API een deploy-taak in (config, test, images-sync, deploy, status) |
+| `leveranciers` | nee | Bewaart de inlog voor Foneday en Mobileparts, met het wachtwoord versleuteld. Geeft het nooit terug |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.
@@ -113,6 +114,28 @@ Raak je die sleutel kwijt, dan zijn de opgeslagen tokens onleesbaar en moet
 iedere winkel opnieuw koppelen. Verder gebeurt er niets ergs; de webshops zelf
 blijven gewoon draaien.
 
+## De inlog bij leveranciers
+
+Bij Instellingen onder **Leveranciers** vult de winkel zijn e-mail en wachtwoord
+voor Foneday en Mobileparts in. Dat wachtwoord stond tot oktober 2026 in de
+winkeldata-blob, en dus leesbaar in de cloud voor het hele team. Nu:
+
+- Het gaat vanuit de browser rechtstreeks naar `leveranciers` en staat versleuteld
+  in `leverancier_inloggegevens`, met dezelfde `KOPPELING_SLEUTEL` als de
+  webshoptokens.
+- Die tabel heeft, net als `winkel_koppelingen`, **geen policies**. Alleen de
+  service_role komt erbij.
+- De browser krijgt het wachtwoord nooit terug, ook niet versleuteld. Alleen het
+  e-mailadres en of er een wachtwoord is.
+- Een trigger op `winkeldata` haalt de sleutel `leveranciers` uit elke opslag,
+  voor het geval een tabblad met oude code nog openstaat.
+- Een apparaat dat het nog lokaal heeft, zet het bij de start één keer over
+  (actie `overzetten`). Die vult alleen lege plekken, zodat een oud apparaat geen
+  nieuwer wachtwoord terugdraait.
+
+Wijzigen mag wie bij de Instellingen kan: de eigenaar, een beheerder, of een
+teamlid aan wie de eigenaar die pagina heeft gegeven.
+
 ## Instellingen die erbij horen
 
 Deze staan in Supabase onder Project Settings → Edge Functions → Secrets.
@@ -138,7 +161,7 @@ Zet ze nooit in de code en nooit in een chat.
 | `STRIPE_PRIJS_ENTERPRISE` | De prijs van het pakket Enterprise |
 | `STRIPE_KORTING_COUPON` | De bon voor het laatste aanbod, mag ontbreken |
 | `APP_URL` | Waarheen Stripe terugstuurt na het afrekenen |
-| `KOPPELING_SLEUTEL` | 32 bytes in base64. Hiermee worden webshoptokens versleuteld opgeslagen |
+| `KOPPELING_SLEUTEL` | 32 bytes in base64. Hiermee worden webshoptokens en leverancierswachtwoorden versleuteld opgeslagen |
 | `SHOPIFY_CLIENT_ID` | Client ID van de Storvo-app in het Shopify Dev Dashboard |
 | `SHOPIFY_CLIENT_SECRET` | Client secret van diezelfde app. Hiermee worden ook de meldingen gecontroleerd |
 | `ICECAT_GEBRUIKER` | Gebruikersnaam van je gratis Icecat-account, voor productfoto's |
