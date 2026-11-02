@@ -179,6 +179,36 @@
   details.kaartuitklap > summary{font-size:16px; color:var(--text); padding:2px 0;}
   details.kaartuitklap > summary .i{width:20px; height:20px; color:var(--oranje);}
   .modussel button{flex:1;}
+  /* ═══ Modulepagina ═══
+     Per module een kaart: wat het is, een schakelaar, en als chips wat er verdwijnt.
+     Chips in plaats van een opsomming: sneller te scannen, en geen streepjes-lijst. */
+  .modgroep{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:22px 0 10px;}
+  .modgroep:first-child{margin-top:4px;}
+  .modgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px;}
+  .modkaart{border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; background:var(--card); display:flex; flex-direction:column; gap:10px; transition:border-color .15s, background .15s;}
+  .modkaart.uit{background:var(--soft-2); border-style:dashed;}
+  .modkop{display:flex; align-items:flex-start; gap:12px;}
+  .modico{width:36px; height:36px; border-radius:10px; background:var(--soft-2); display:flex; align-items:center; justify-content:center; flex:none;}
+  .modico .i{width:19px; height:19px; color:var(--oranje);}
+  .modkaart.uit .modico{background:var(--card);}
+  .modkaart.uit .modico .i{color:var(--muted-l);}
+  .modtekst{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+  .modtekst b{font-size:15px;}
+  .modkaart.uit .modtekst b{color:var(--muted);}
+  .modtekst span{font-size:12.5px; color:var(--muted); line-height:1.4;}
+  .modverdwijnt{display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
+  .modlabel{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted-l); margin-right:2px;}
+  .modchip{font-size:12px; padding:3px 9px; border-radius:var(--pil); background:var(--soft-2); color:var(--text); line-height:1.4;}
+  .modkaart.uit .modchip{background:var(--card); color:var(--muted);}
+  .modblijft{font-size:12px; color:var(--muted); margin:0;}
+  .modweergave{margin-top:24px; padding-top:18px; border-top:1.5px solid var(--border);}
+  /* Een schakelaar in plaats van een vinkje: aan of uit, en dat lees je in één blik. */
+  .schakel{width:46px; height:27px; border-radius:var(--pil); border:none; background:var(--border); position:relative; cursor:pointer; flex:none; padding:0; transition:background .15s;}
+  .schakel span{position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .15s;}
+  .schakel.aan{background:var(--oranje);}
+  .schakel.aan span{transform:translateX(19px);}
+  .schakel:focus-visible{outline:none; box-shadow:0 0 0 3px var(--mint);}
+  @media(prefers-reduced-motion:reduce){ .schakel, .schakel span, .modkaart{transition:none;} }
   .zijmodus{padding:0 2px 12px;}
   .zijmodus .periodesel{display:flex;}
   .modusuitleg{font-size:12px; color:var(--muted); margin:6px 2px 0; line-height:1.4;}
@@ -2287,7 +2317,6 @@
     </div>
     <div class="navgroep">
       <div class="navkop">Online</div>
-      <button data-tab="inruil"><svg class="i"><use href="#i-recycle"/></svg> Inruil<span class="badge" id="inrBadge" style="display:none">0</span></button>
       <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
     </div>
     <button data-tab="rooster"><svg class="i"><use href="#i-clock"/></svg> Rooster</button>
@@ -2328,6 +2357,13 @@
 <!-- Voorraad-hub: een gedeelde sub-balk boven de vier voorraadschermen, zodat je er
      via een ingang in het menu tussen wisselt. De badges wonen hier (een keer, geen
      dubbele id's). Alleen zichtbaar op die vier schermen. -->
+<!-- Verkoop-hub: afrekenen, inruil en alle verkopen onder één menuknop. Inruil had een
+     eigen plek in het menu, maar hoort bij de balie: daar koop je ook in. -->
+<nav class="voorraadsub pagtabs" id="verkoopSub" hidden aria-label="Verkoop">
+  <button data-vsub="verkoop" onclick="showTab('verkoop')">Afrekenen</button>
+  <button data-vsub="inruil" onclick="showTab('inruil')">Inruil en inname<span class="badge" id="inrBadge" style="display:none">0</span></button>
+  <button data-vsub="verkopen" onclick="showTab('verkopen')">Alle verkopen</button>
+</nav>
 <nav class="voorraadsub pagtabs" id="voorraadSub" hidden aria-label="Voorraad">
   <button data-vsub="producten" onclick="showTab('producten')">Producten</button>
   <button data-vsub="voorraad" onclick="showTab('voorraad')">Tellen<span class="badge" id="vrdBadge" style="display:none">0</span></button>
@@ -2366,7 +2402,7 @@
   <p class="kpivoet uitgebreid">Alle bedragen incl. btw.</p>
   <button class="btn ghost small uitgebreid" id="dashMeerKnop" onclick="dashMeerToggle()" style="margin:2px 0 16px"><svg class="i s"><use href="#i-chart"/></svg><span id="dashMeerLabel">Meer cijfers tonen</span></button>
   <div class="kpis uitgebreid" id="kpiRow2" data-dashmeer hidden></div>
-  <div class="kpis uitgebreid" id="kpiRow3" data-dashmeer hidden></div>
+  <div class="kpis uitgebreid" id="kpiRow3" data-dashmeer data-module="financien" hidden></div>
   <div class="modules uitgebreid">
   <div class="card breed">
     <h2><svg class="i"><use href="#i-clipboard"/></svg>Taken en planning</h2>
@@ -2392,14 +2428,14 @@
     <div class="chart" id="chart"></div>
     <div class="legend"><span class="lo">Omzet</span><span class="lw">Winst</span><span class="lv" id="legVorig">Vorige week</span></div>
   </div>
-  <div class="card breed" id="dashRoosterKaart" hidden>
+  <div class="card breed" id="dashRoosterKaart" data-module="rooster" hidden>
     <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px">
       <h2 style="margin:0"><svg class="i"><use href="#i-users"/></svg>Rooster deze week</h2>
       <button class="btn ghost small" onclick="showTab('rooster')">Naar het rooster</button>
     </div>
     <div id="dashRoosterLijst"></div>
   </div>
-  <div class="card breed" id="hangKaart" hidden>
+  <div class="card breed" id="hangKaart" data-module="voorraad" hidden>
     <h2><svg class="i"><use href="#i-up"/></svg>Uit het magazijn de winkel in <span class="muted" id="hangKaartTel"></span></h2>
     <p class="muted" style="margin-bottom:14px; max-width:78ch">Deze liggen achter maar hangen niet in de winkel. Wat niet hangt wordt niet gekocht.</p>
     <div class="row">
@@ -2407,7 +2443,7 @@
       <button class="btn ghost" onclick="showTab('voorraad')">Hele lijst bekijken</button>
     </div>
   </div>
-  <div class="card breed">
+  <div class="card breed" data-module="reparaties">
     <h2><svg class="i"><use href="#i-wrench"/></svg>Lopende reparaties <span class="muted" id="repDashTelling"></span></h2>
     <div id="repDash"></div>
   </div>
@@ -3395,7 +3431,6 @@
     <div class="hubsectie">
       <div class="hubgroep">Geld</div>
       <div class="hubgrid">
-        <button class="hubtegel" data-tab="verkopen" onclick="showTab('verkopen')"><svg class="i"><use href="#i-receipt"/></svg><span class="tt"><b>Verkopen</b><span>Alles wat je verkocht hebt, per dag</span></span></button>
         <button class="hubtegel" data-tab="inkopen" onclick="showTab('inkopen')"><svg class="i"><use href="#i-cart"/></svg><span class="tt"><b>Inkopen</b><span>Maak een foto van je bon</span></span></button>
         <button class="hubtegel" data-tab="rapport" onclick="showTab('rapport')"><svg class="i"><use href="#i-chart"/></svg><span class="tt"><b>Rapport</b><span>Wat je overhoudt</span></span></button>
         <button class="hubtegel" data-tab="uren" onclick="showTab('uren')"><svg class="i"><use href="#i-clock"/></svg><span class="tt"><b>Uren</b><span>Gewerkte uren en loon</span></span></button>
@@ -3408,6 +3443,7 @@
         <button class="hubtegel" data-tab="labelprinter" onclick="showTab('labelprinter')"><svg class="i"><use href="#i-tag"/></svg><span class="tt"><b>Labelprinter</b><span>Stickers printen</span></span></button>
         <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak</span></span></button>
         <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Wie mag wat</span></span></button>
+        <button class="hubtegel" data-tab="instellingen" onclick="naarModules()"><svg class="i"><use href="#i-layers"/></svg><span class="tt"><b>Modules</b><span>Zet aan of uit wat je gebruikt</span></span></button>
       </div>
     </div>
     <details class="hubsectie meeropties hubaf">
@@ -3509,24 +3545,24 @@
       <button type="button" class="instmenuknop" onclick="instMenuWissel()"><svg class="i s"><use href="#i-layers"/></svg>Andere instelling kiezen</button>
       <div class="instgroep">Je zaak</div>
       <button data-s="bedrijf" class="active"><svg class="i"><use href="#i-shop"/></svg>Bedrijf</button>
-      <button data-s="paginas"><svg class="i"><use href="#i-edit"/></svg>Pagina's en weergave</button>
+      <button data-s="modules"><svg class="i"><use href="#i-layers"/></svg>Modules en weergave</button>
       <button data-s="huisstijl"><svg class="i"><use href="#i-palette"/></svg>Huisstijl</button>
       <button data-s="abonnement"><svg class="i"><use href="#i-card"/></svg>Abonnement</button>
       <div class="instgroep">Verkoop en kanalen</div>
-      <button data-s="kassa"><svg class="i"><use href="#i-cash"/></svg>Kassa</button>
-      <button data-s="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
-      <button data-s="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
+      <button data-s="kassa" data-module="kassa"><svg class="i"><use href="#i-cash"/></svg>Kassa</button>
+      <button data-s="aanvragen" data-module="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
+      <button data-s="webshop" data-module="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
       <button data-s="clover"><svg class="i"><use href="#i-shop"/></svg>Clover (pin)</button>
-      <button data-s="factuur"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
+      <button data-s="factuur" data-module="facturen"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
       <button data-s="leveranciers"><svg class="i"><use href="#i-truck"/></svg>Leveranciers</button>
       <div class="instgroep">Klantcontact</div>
-      <button data-s="klantpagina"><svg class="i"><use href="#i-globe"/></svg>Klantpagina</button>
+      <button data-s="klantpagina" data-module="reparaties"><svg class="i"><use href="#i-globe"/></svg>Klantpagina</button>
       <button data-s="berichten"><svg class="i"><use href="#i-message"/></svg>Berichten</button>
       <div class="instgroep">Assortiment</div>
       <button data-s="cats"><svg class="i"><use href="#i-layers"/></svg>Categorieën</button>
-      <button data-s="voorraad"><svg class="i"><use href="#i-box"/></svg>Voorraad</button>
-      <button data-s="snel"><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</button>
-      <button data-s="types"><svg class="i"><use href="#i-tag"/></svg>Producttypes</button>
+      <button data-s="voorraad" data-module="voorraad"><svg class="i"><use href="#i-box"/></svg>Voorraad</button>
+      <button data-s="snel" data-module="voorraad"><svg class="i"><use href="#i-zap"/></svg>Serie inscannen</button>
+      <button data-s="types" data-module="voorraad"><svg class="i"><use href="#i-tag"/></svg>Producttypes</button>
       <button data-s="modellen"><svg class="i"><use href="#i-phone"/></svg>Modellen</button>
       <div class="instgroep">Werkbank</div>
       <button data-s="refurbish"><svg class="i"><use href="#i-recycle"/></svg>Refurbishen</button>
@@ -3666,16 +3702,23 @@
     <p class="muted" style="margin-top:10px">Op nul zetten schakelt de melding uit.</p>
   </div>
 
-  <div class="card" id="inst-paginas"hidden>
-    <h2><svg class="i"><use href="#i-layers"/></svg>Welke pagina's gebruik je?</h2>
-    <label>Weergave</label>
-    <div class="periodesel modussel" role="group" aria-label="Weergave">
-      <button data-s="simpel" class="active" onclick="zetModus(true)">Simpel</button>
-      <button data-s="alles" onclick="zetModus(false)">Alles</button>
+  <!-- Modules: elk stuk van de app aan of uit, met per module wat er dan verdwijnt.
+       Bovenaan de weergave (Simpel of Alles), want die twee vragen horen bij elkaar:
+       wat gebruik ik, en hoeveel wil ik ervan zien. -->
+  <div class="card" id="inst-modules"hidden>
+    <h2><svg class="i"><use href="#i-layers"/></svg>Modules</h2>
+    <p class="muted" style="margin-bottom:6px; max-width:70ch">Zet uit wat je winkel niet doet. Het verdwijnt dan voor je hele team uit beeld, op elk apparaat.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:70ch"><b>Er gaat niets verloren.</b> Zet je een module weer aan, dan staat alles er nog.</p>
+    <div id="moduleLijst"></div>
+    <p class="muted klein" style="margin-top:18px">Altijd aan: Dashboard, Verkoop en Instellingen.</p>
+    <div class="modweergave">
+      <label>Weergave</label>
+      <div class="periodesel modussel" role="group" aria-label="Weergave">
+        <button data-s="simpel" class="active" onclick="zetModus(true)">Simpel</button>
+        <button data-s="alles" onclick="zetModus(false)">Alles</button>
+      </div>
+      <p class="modusuitleg" style="max-width:70ch">Simpel toont alleen wat je elke dag doet. Alles toont ook de cijfers en zeldzame opties. Je team werkt altijd in Simpel.</p>
     </div>
-    <p class="modusuitleg" style="margin-bottom:20px; max-width:70ch">Simpel toont alleen wat je elke dag doet. Alles toont ook de cijfers en zeldzame opties. Er gaat niets verloren. Je team werkt altijd in Simpel.</p>
-    <p class="muted" style="margin-bottom:18px; max-width:78ch">Zet uit wat je winkel niet doet. De pagina verdwijnt dan voor iedereen uit het menu. Zet je hem later weer aan, dan staat alles er nog.</p>
-    <div id="paginaLijst"></div>
   </div>
 
   <div class="card" id="inst-bedrijf">
@@ -4086,7 +4129,15 @@ function load(){
   if(!s.repNr) s.repNr=0;
   if(!s.teams) s.teams=[{id:1, naam:'Winkel'}];
   if(!s.medewerkers) s.medewerkers=[{id:1, naam:'Eigenaar', rol:'eigenaar', team:1, pin:'', actief:true}];
-  if(!Array.isArray(s.verborgen)) s.verborgen=[];
+  /* Modules aan en uit (zie MODULES). De oude keuze stond in s.verborgen en alleen op
+     dit apparaat; eenmalig omzetten. Alleen de hoofdpagina telt: wie vroeger alleen
+     Inscannen verborg, zette daarmee niet de hele voorraad uit. */
+  if(!s.modules || typeof s.modules!=='object'){
+    s.modules={};
+    const oud={producten:'voorraad', reparaties:'reparaties', hardware:'hardware', aanvragen:'aanvragen', kassa:'kassa', team:'team'};
+    (Array.isArray(s.verborgen)?s.verborgen:[]).forEach(t=>{ if(oud[t]) s.modules[oud[t]]=false; });
+  }
+  s.verborgen=[];
   if(s.schapNorm==null) s.schapNorm=1;
   if(s.minOverNorm==null) s.minOverNorm=0;
   /* De overvoorraad-standaard stond vroeger op 2. Die was nergens bewust
@@ -4241,12 +4292,17 @@ function showTab(t){
      blijft dan oplichten. */
   let menu = t;
   if(t==='nieuw'||t==='catalogus') menu='producten';
-  else if(t==='facturen') menu='verkoop';
+  else if(t==='facturen'||t==='inruil'||t==='verkopen') menu='verkoop';   /* de verkoop-hub */
   else if(t==='scan'||t==='voorraad'||t==='bestellen') menu='producten';   /* de voorraad-hub */
   else if(HUB_TABS.includes(t)) menu='meer';
   document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
   /* De gedeelde voorraad-sub-balk: tonen op de vier voorraadschermen, met de juiste
      knop actief. */
+  const kSub=document.getElementById('verkoopSub');
+  if(kSub){
+    kSub.hidden = !['verkoop','inruil','verkopen'].includes(t);
+    kSub.querySelectorAll('button').forEach(b=>{ b.classList.toggle('active', b.dataset.vsub===t); b.hidden=!mag(b.dataset.vsub); });
+  }
   const vSub=document.getElementById('voorraadSub');
   if(vSub){
     vSub.hidden = !['producten','voorraad','scan','bestellen'].includes(t);
@@ -4394,9 +4450,9 @@ function globaalZoeken(){
   if(q.length<2) return;
   const g=zoekGroepen(q);
   const treffers=[];
-  state.producten.filter(p=>zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||''), g)||String(p.barcode||'').includes(q)).slice(0,5)
+  (mag('producten')?state.producten:[]).filter(p=>zoekPast(p.naam+' '+(p.type||'')+' '+(p.model||''), g)||String(p.barcode||'').includes(q)).slice(0,5)
     .forEach(p=>treffers.push({t:`<svg class="i s"><use href="#i-box"/></svg> ${esc(p.naam)} <span class="muted">· voorraad ${p.voorraad} · ${euro(p.verkoop)}</span>`, fn:()=>{ showTab('producten'); document.getElementById('zoek').value=p.naam; renderProducten(); }}));
-  (state.reparaties||[]).filter(r=>zoekPast(r.nr+' '+r.klant.naam+' '+(r.toestel||'')+' '+(r.type||''), g)||String(r.klant.tel||'').includes(q)).slice(0,5)
+  (mag('reparaties')?(state.reparaties||[]):[]).filter(r=>zoekPast(r.nr+' '+r.klant.naam+' '+(r.toestel||'')+' '+(r.type||''), g)||String(r.klant.tel||'').includes(q)).slice(0,5)
     .forEach(r=>treffers.push({t:`<svg class="i s"><use href="#i-wrench"/></svg> ${esc(r.nr)} <span class="muted">· ${esc(r.klant.naam)} · ${esc(r.toestel)} ${esc(r.type)}</span>`, fn:()=>{ showTab('reparaties'); repDetail(r.id); }}));
   state.diensten.filter(d=>zoekPast(d.naam, g)).slice(0,3)
     .forEach(d=>treffers.push({t:`<svg class="i s"><use href="#i-tool"/></svg> ${esc(d.naam)} <span class="muted">· ${euro(d.prijs)}</span>`, fn:()=>{ showTab('verkoop'); }}));
@@ -5068,7 +5124,7 @@ async function roosterKeurLaden(){
 }
 function toonKeurBalk(){
   let balk=document.getElementById('keurBalk');
-  if(!keurWacht.aantal || !roosterMagInplannen()){
+  if(!keurWacht.aantal || !roosterMagInplannen() || !mag('rooster')){
     if(balk) balk.remove();
     document.body.classList.remove('metkeurbalk');
     return;
@@ -5173,6 +5229,7 @@ async function roosterMeldingen(){
   await roosterKeurLaden();
   toonKeurBalk();
   setTimeout(async()=>{
+    if(!mag('rooster')) return;   // module Rooster en uren staat uit
     const dag='storvo_rooster_por_'+new Date().toISOString().slice(0,10);
     if(nudgeGezien(dag)) return;
     await roosterNietIngevuldPopup();
@@ -6389,7 +6446,7 @@ function renderDashboard(){
   document.getElementById('kpiRow').innerHTML=
     geldKpi('Omzet', s.omzet, 'omzet', {accent:true})+
     geldKpi('Winst', s.winst, 'winst', {groen:true})+
-    geldKpi('Resultaat', c.resultaat, null, {groen:c.resultaat>=0, rood:c.resultaat<0});
+    (mag('rapport') ? geldKpi('Resultaat', c.resultaat, null, {groen:c.resultaat>=0, rood:c.resultaat<0}) : '');
   const waarde=state.producten.reduce((x,p)=>x+p.voorraad*p.inkoop,0);
   const laag=state.producten.filter(p=>moetBestellen(p)).length;
   document.getElementById('kpiRow2').innerHTML=
@@ -6399,8 +6456,8 @@ function renderDashboard(){
     geldKpi('Cash zonder bon', s.cashzb, 'cashzb')+
     `<div class="kpi"><div class="l">Marge</div><div class="v oranje">${marge.toFixed(1)}%</div></div>`+
     `<div class="kpi"><div class="l">Verkochte stuks</div><div class="v">${s.stuks}${P('stuks')}</div></div>`+
-    `<div class="kpi"><div class="l">Voorraadwaarde</div><div class="v">${euro(waarde)}</div></div>`+
-    `<div class="kpi"><div class="l">Onder minimum</div><div class="v${laag?' oranje':''}">${laag}</div></div>`;
+    (mag('producten') ? `<div class="kpi"><div class="l">Voorraadwaarde</div><div class="v">${euro(waarde)}</div></div>`+
+    `<div class="kpi"><div class="l">Onder minimum</div><div class="v${laag?' oranje':''}">${laag}</div></div>` : '');
   /* Hoe het resultaat tot stand komt, met dezelfde periode: brutowinst min loon en
      vaste lasten. */
   document.getElementById('kpiRow3').innerHTML=
@@ -6486,13 +6543,13 @@ function renderDashSimpel(){
   const d0=new Date(); d0.setHours(0,0,0,0); const van=d0.getTime();
   const winst=(typeof winstIn==='function')?winstIn(van, van+86400000):0;
   // Wat moet er gebeuren: reparaties die actie nodig hebben + wat je vandaag moet bestellen.
-  const reps=(typeof repTeDoen==='function')?repTeDoen():[];
+  const reps=(typeof repTeDoen==='function' && mag('reparaties'))?repTeDoen():[];
   const actie=reps.filter(r=>repActie(r).urgent).length;
-  const bestel=(typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0;
+  const bestel=(typeof bestelLijst==='function' && mag('bestellen'))?bestelLijst().filter(p=>!p.besteld).length:0;
   /* De rest komt uit dezelfde tellingen als de rode bolletjes in het menu, zodat het
      lijstje en de bolletjes het altijd met elkaar eens zijn. */
-  const aanvKlaar=(typeof aanvLopend==='function')?aanvLopend().filter(a=>a.status==='binnen').length:0;
-  const kasVol=(typeof kasTeVol==='function') && kasTeVol();
+  const aanvKlaar=(typeof aanvLopend==='function' && mag('aanvragen'))?aanvLopend().filter(a=>a.status==='binnen').length:0;
+  const kasVol=(typeof kasTeVol==='function') && mag('kassa') && kasTeVol();
   let webNieuw=0, inrNieuw=0;
   try{ webNieuw=bstData.filter(x=>!x.gezien && !x.geannuleerd).length; }catch(e){}
   try{ inrNieuw=inrData.filter(x=>!x.gezien).length; }catch(e){}
@@ -6503,21 +6560,22 @@ function renderDashSimpel(){
   if(inrNieuw && mag('inruil')) taken+=`<a onclick="showTab('inruil')"><svg class="i"><use href="#i-recycle"/></svg>${inrNieuw} nieuwe inruilaanvra${inrNieuw===1?'ag':'gen'}</a>`;
   if(bestel) taken+=`<a onclick="showTab('bestellen')"><svg class="i"><use href="#i-cart"/></svg>${bestel} ding${bestel===1?'':'en'} vandaag bestellen</a>`;
   if(kasVol) taken+=`<a onclick="showTab('kassa')"><svg class="i"><use href="#i-cash"/></svg>Er zit te veel geld in de kassa</a>`;
-  if(typeof keurWacht!=='undefined' && keurWacht.aantal && typeof roosterMagInplannen==='function' && roosterMagInplannen())
+  if(typeof keurWacht!=='undefined' && keurWacht.aantal && mag('rooster') && typeof roosterMagInplannen==='function' && roosterMagInplannen())
     taken+=`<a onclick="keurBalkGa()"><svg class="i"><use href="#i-clock"/></svg>Rooster goedkeuren: ${keurWacht.aantal} ${keurWacht.aantal===1?'teamlid wacht':'teamleden wachten'}</a>`;
   if(!taken) taken='<span class="rust">Niks dringends. Mooi.</span>';
   // De acties die jij het meest doet. Werkbank = laptops toevoegen, controleren, online
   // zetten en kaartjes uitdraaien (dat zit allemaal in de refurbish-werkbank).
   const tegel=(doe,ico,titel,sub)=>`<button class="hubtegel" onclick="${doe}"><svg class="i"><use href="#${ico}"/></svg><span class="tt"><b>${titel}</b><span>${sub}</span></span></button>`;
+  /* Alleen tegels van modules die aan staan (en die deze rol mag zien). */
   const tegels=[
     tegel("showTab('verkoop')", 'i-receipt', 'Verkopen', 'Scan of kies, en reken af'),
-    tegel("showTab('kassa')", 'i-cash', 'Kassa', 'Kas tellen en invoeren'),
-    tegel("showTab('reparaties')", 'i-wrench', 'Reparaties', 'Aanmelden en volgen'),
-    tegel("showTab('aanvragen')", 'i-clipboard', 'Aanvragen', 'Offertes en opdrachten'),
-    tegel("showTab('inruil')", 'i-recycle', 'Inruil en inname', 'Toestellen opkopen'),
-    tegel("startNieuwProduct()", 'i-plus', 'Product toevoegen', 'In de voorraad'),
+    mag('kassa') && tegel("showTab('kassa')", 'i-cash', 'Kassa', 'Kas tellen en invoeren'),
+    mag('reparaties') && tegel("showTab('reparaties')", 'i-wrench', 'Reparaties', 'Aanmelden en volgen'),
+    mag('aanvragen') && tegel("showTab('aanvragen')", 'i-clipboard', 'Aanvragen', 'Offertes en opdrachten'),
+    mag('inruil') && tegel("showTab('inruil')", 'i-recycle', 'Inruil en inname', 'Toestellen opkopen'),
+    mag('nieuw') && tegel("startNieuwProduct()", 'i-plus', 'Product toevoegen', 'In de voorraad'),
     tegel("location.href='/refurbish/'", 'i-laptop', 'Werkbank', 'Laptops, online zetten, kaartjes'),
-  ].join('');
+  ].filter(Boolean).join('');
   el.innerHTML=
     `<div class="simpelwinst"><span class="l">Winst vandaag</span><span class="v">${euro(winst)}</span></div>`+
     `<div class="simpeltaken"><div class="l">Wat moet er gebeuren</div>${taken}</div>`+
@@ -6653,9 +6711,9 @@ function leverTekst(ts){
   return dstr;
 }
 function renderLeveringen(){
-  const items=state.producten.filter(p=>p.besteld && p.besteldOp)
+  const items=(mag('bestellen')?state.producten:[]).filter(p=>p.besteld && p.besteldOp)
     .sort((a,b)=>verwachteLevering(a.besteldOp)-verwachteLevering(b.besteldOp));
-  const reps=(state.reparaties||[]).filter(r=>r.status==='besteld' && r.besteldOp);
+  const reps=(mag('reparaties')?(state.reparaties||[]):[]).filter(r=>r.status==='besteld' && r.besteldOp);
   const rijen=
     items.map(p=>`<div class="levrij" id="lev${p.id}">
       <div class="levinfo"><b>${esc(p.naam)}</b> <span class="muted">· ${teBestellen(p)} st.</span></div>
@@ -8258,6 +8316,8 @@ function popupUit(id,bet){
   herteken();
 }
 function herteken(){
+  /* Zette iemand op een ander apparaat een module uit, dan nu ook hier het menu. */
+  if(typeof moduleToepassen==='function' && moduleToepassen()) pasRechtenToe();
   if(!document.getElementById('tab-dashboard').hidden) renderDashboard();
   if(!document.getElementById('tab-producten').hidden) renderProducten();
   if(!document.getElementById('tab-voorraad').hidden) renderVoorraad();
@@ -8319,7 +8379,7 @@ function hvOpen(){
       '<div style="flex:1; min-width:100px"><label>Beginvoorraad</label><input id="hvVoorraad" type="number" min="0" step="1" value="0"></div>'+
       '<div style="flex:1; min-width:130px"><label>Leverancier</label><input id="hvLev" placeholder="optioneel" autocomplete="off"></div>'+
     '</div>'+
-    '<label style="display:flex; align-items:center; gap:8px; margin:2px 0 14px; font-size:13px; font-weight:600; color:var(--tekst); text-transform:none; letter-spacing:0" id="hvSysteemLabel"><input type="checkbox" id="hvSysteem" style="width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none"> Ook aan het systeem toevoegen (met voorraad en categorie)</label>'+
+    '<label style="display:flex; align-items:center; gap:8px; margin:2px 0 14px; font-size:13px; font-weight:600; color:var(--tekst); text-transform:none; letter-spacing:0" id="hvSysteemLabel"'+(mag('producten')?'':' hidden')+'><input type="checkbox" id="hvSysteem" style="width:18px; height:18px; padding:0; margin:0; accent-color:var(--oranje); flex:none"> Ook aan het systeem toevoegen (met voorraad en categorie)</label>'+
     '<div class="acts" style="flex-direction:row; gap:8px">'+
       '<button class="btn" style="background:var(--green)" onclick="hvVerkopen()"><svg class="i s"><use href="#i-plus"/></svg>Toevoegen</button>'+
       '<button class="btn ghost" onclick="hvSluit()">Annuleren</button>'+
@@ -8401,7 +8461,7 @@ function hvVoorraadInfo(){
   /* De "nieuw product"-velden en het systeem-vinkje horen alleen bij iets dat nog
      niet in je voorraad staat; kies je een bestaand product, dan zijn ze overbodig. */
   const nieuw=document.getElementById('hvNieuw'); if(nieuw) nieuw.hidden=bestaand;
-  const vink=document.getElementById('hvSysteemLabel'); if(vink) vink.hidden=bestaand;
+  const vink=document.getElementById('hvSysteemLabel'); if(vink) vink.hidden=bestaand || !mag('producten');
   if(!tekst) return;
   if(bestaand){
     const p=state.producten.find(x=>x.id===hvProductId);
@@ -8475,7 +8535,7 @@ function renderVerkoop(){
     blok.innerHTML = (state.categorieen.filter(c=>!c.systeem).map(c=>
       `<button type="button" class="blokje" onclick="blokOpen(${c.id})"><svg class="i"><use href="#${catIcoon(c.naam)}"/></svg><span data-onvertaald>${esc(c.naam)}</span><span class="bkprijs">${c.verkoop>0?euro(c.verkoop):'prijs zelf'}</span></button>`
     ).join('') || '<span class="muted">Nog geen categorieën. Voeg ze toe bij Instellingen, Categorieën.</span>')
-    + `<button type="button" class="blokje" onclick="postnlOpen()"><svg class="i"><use href="#i-truck"/></svg><span data-onvertaald>PostNL</span><span class="bkprijs">pakketten en brieven</span></button>`;
+    + (mag('pakketten') ? `<button type="button" class="blokje" onclick="postnlOpen()"><svg class="i"><use href="#i-truck"/></svg><span data-onvertaald>PostNL</span><span class="bkprijs">pakketten en brieven</span></button>` : '');
   }
   const log=document.getElementById('vkLog');
   if(log){
@@ -11089,7 +11149,7 @@ function kasVerkoop(bedrag, bet, naam){
      houden we bewust buiten de kassa-telling. */
   if(bet!=='cash') return;
   kasBoek(bedrag, 'verkoop', naam||'Verkoop', true);
-  if(kasTeVol()) setTimeout(kasWaarschuw, 400);
+  if(kasTeVol() && mag('kassa')) setTimeout(kasWaarschuw, 400);
 }
 function kasWaarschuw(){
   const vandaag=new Date().toISOString().slice(0,10)+'-'+Math.floor(kasSaldo()/100);
@@ -11481,10 +11541,10 @@ function instMenuWissel(){ const n=document.getElementById('instTabs'); if(n) n.
 document.querySelectorAll('#instTabs button[data-s]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button[data-s]').forEach(x=>x.classList.toggle('active', x===b));
   const nav=document.getElementById('instTabs'); if(nav) nav.classList.remove('open');
-  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','paginas','huisstijl','klantpagina','berichten','webshop','clover','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','modules','huisstijl','klantpagina','berichten','webshop','clover','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
     const el=document.getElementById('inst-'+s); if(el) el.hidden = s!==b.dataset.s;
   });
-  if(b.dataset.s==='paginas') renderPaginas();
+  if(b.dataset.s==='modules') renderModules();
   if(b.dataset.s==='webshop'){ shopStatus(); web2Status(); }
   if(b.dataset.s==='clover') cloverStatus();
   if(b.dataset.s==='leveranciers') lvLaad();
@@ -12547,32 +12607,147 @@ async function web2Los2(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','verkopen','inkopen','pakketten','vastelasten','rapport','team','partners','mail','labelprinter'];
+const HUB_TABS=['uren','inkopen','pakketten','vastelasten','rapport','team','partners','mail','labelprinter'];
 const ROL_TABS={
   eigenaar:null,
   beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
   medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','meer']
 };
-/* ---------- pagina's aan of uit ----------
-   Niet elke winkel doet alles. Wie geen reparaties aanneemt hoeft die pagina
-   niet in zijn menu te hebben staan. De eigenaar zet hier zelf uit wat hij
-   niet gebruikt; dat scheelt ruis voor het hele team.
+/* ═══════════════ MODULES AAN EN UIT ═══════════════
+   Niet elke winkel doet alles. Een module is een stuk van de app dat bij elkaar
+   hoort: een of meer pagina's plus alles wat er elders naar verwijst (tegels op het
+   dashboard, meldingen, knoppen op andere pagina's, instellingen). Zet je hem uit,
+   dan verdwijnt dat allemaal uit beeld, voor het hele team en op elk apparaat.
 
-   Dashboard en Instellingen kunnen niet uit. Zonder die twee kom je nergens
-   meer, ook niet terug bij deze schakelaars.                               */
-const UITZETBAAR=[
-  {tab:'scan',        naam:'Scannen',      uitleg:'In- en uitscannen van producten met de barcodescanner.'},
-  {tab:'reparaties',  naam:'Reparaties',   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.'},
-  {tab:'producten',   naam:'Producten',    uitleg:'De voorraadlijst en het toevoegen van nieuwe producten.'},
-  {tab:'voorraad',    naam:'Voorraad',     uitleg:'Wat er bijgehangen moet worden vanuit het magazijn, en het tellen van de voorraad.'},
-  {tab:'hardware',    naam:'Hardware',     uitleg:'Losse toestellen met een serienummer, zoals tweedehands laptops en telefoons.'},
-  {tab:'aanvragen',   naam:'Aanvragen',    uitleg:'Bestellingen op aanvraag voor klanten, met marge en aanbetaling.'},
-  {tab:'kassa',       naam:'Kassa',        uitleg:'Het kasboek, wat er in de lade zit en een melding als het te veel wordt.'},
-  {tab:'bestellen',   naam:'Bijbestellen', uitleg:'Wat er bijbesteld moet worden zodra de voorraad opraakt.'},
-  {tab:'team',        naam:'Team',         uitleg:'Medewerkers, rollen en wachtwoorden.'}
+   Uitzetten haalt alleen dingen uit beeld. Er gaat niets verloren en er stopt niets
+   op de achtergrond: zet je hem weer aan, dan staat alles er nog.
+
+   Hoe het werkt: mag() vraagt paginaAan(); een pagina van een module die uit staat
+   bestaat dan niet voor menu, Meer, onderbalk en links. Losse stukken elders krijgen
+   data-module="id" en verdwijnen via een regel die moduleToepassen() maakt. Wat in
+   javascript gekozen wordt (tegels, het takenlijstje, de bestelbalk) vraagt mag().
+
+   De keuze staat in state.modules ({id:false} = uit) en gaat mee met de sync.
+   Eerst stond dit als state.verborgen alleen op het apparaat zelf: zette je Kassa uit
+   op de computer, dan stond hij op je telefoon nog gewoon aan.
+
+   verdwijnt en blijft zijn de teksten op de modulepagina. Houd ze kloppend als je
+   ergens een nieuw stuk aan een module hangt. */
+const MODULES=[
+  {id:'kassa', groep:'Winkel', naam:'Kassa', ico:'i-cash', tabs:['kassa'],
+   uitleg:'Het geld in de lade bijhouden en tellen.',
+   verdwijnt:['Kassa in het menu','De kassa-tegel','Melding bij te veel geld','Instellingen: Kassa'],
+   blijft:'Contante verkopen tellen gewoon mee in je omzet.'},
+  {id:'voorraad', groep:'Winkel', naam:'Winkelvoorraad', ico:'i-package', tabs:['producten','nieuw','catalogus','voorraad','scan','bestellen'],
+   uitleg:'Producten met een barcode, zoals hoesjes en kabels. Tellen, inscannen en bijbestellen.',
+   verdwijnt:['Voorraad in het menu','Producten, tellen en inscannen','Bijbestellen en de bestellijst','Product toevoegen op het dashboard','Instellingen: Voorraad en Serie inscannen'],
+   blijft:'Verkopen via de blokjes en de diensten blijft werken.'},
+  {id:'hardware', groep:'Winkel', naam:'Laptops en toestellen', ico:'i-laptop', tabs:['hardware'],
+   uitleg:'Losse toestellen met een nummer, uit de werkbank of zelf toegevoegd.',
+   verdwijnt:['Hardware in het menu','Toestellen vinden bij Verkoop'],
+   blijft:'De werkbank zelf blijft werken.'},
+  {id:'inruil', groep:'Winkel', naam:'Inruil en inname', ico:'i-recycle', tabs:['inruil'],
+   uitleg:'Toestellen inkopen van klanten, aan de balie of via de webshop.',
+   verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen']},
+  {id:'webshop', groep:'Winkel', naam:'Webshop', ico:'i-shop', tabs:['webshop'],
+   uitleg:'Bestellingen en reserveringen uit je webshop.',
+   verdwijnt:['Webshop in het menu','Meldingen van nieuwe bestellingen','Instellingen: Webshop'],
+   blijft:'De koppeling blijft werken: wat online verkocht wordt, gaat nog steeds uit je voorraad.'},
+  {id:'pakketten', groep:'Winkel', naam:'Pakketdiensten', ico:'i-truck', tabs:['pakketten'],
+   uitleg:'PostNL aan de balie en wat je verdient aan pakketten.',
+   verdwijnt:['De PostNL-knop bij Verkoop','Pakketdiensten onder Meer','Herinnering aan het eind van de maand']},
+  {id:'reparaties', groep:'Klanten', naam:'Reparaties', ico:'i-wrench', tabs:['reparaties'],
+   uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.',
+   verdwijnt:['Reparaties in het menu','Reparaties op het dashboard','Onderdelen in de bestelbalk','Instellingen: Klantpagina']},
+  {id:'aanvragen', groep:'Klanten', naam:'Aanvragen', ico:'i-clipboard', tabs:['aanvragen'],
+   uitleg:'Iets speciaal bestellen voor een klant, met aanbetaling.',
+   verdwijnt:['Aanvragen in het menu','Aanvragen op het dashboard','Aanvragen in de bestelbalk','Instellingen: Aanvragen']},
+  {id:'mail', groep:'Klanten', naam:'Mail', ico:'i-mail', tabs:['mail'],
+   uitleg:'Je postvak in Storvo.',
+   verdwijnt:['Mail onder Meer']},
+  {id:'rooster', groep:'Team', naam:'Rooster en uren', ico:'i-clock', tabs:['rooster','uren'],
+   uitleg:'Wie wanneer werkt, en de gewerkte uren.',
+   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De goedkeurbalk en herinneringen','Rooster op het dashboard']},
+  {id:'team', groep:'Team', naam:'Team', ico:'i-users', tabs:['team'],
+   uitleg:'Gebruikers, rollen en wie wat mag.',
+   verdwijnt:['Team onder Meer'],
+   blijft:'Iedereen kan gewoon blijven inloggen.'},
+  {id:'partners', groep:'Team', naam:'Partners', ico:'i-link', tabs:['partners'],
+   uitleg:'Toestellen die een ander voor je verkoopt.',
+   verdwijnt:['Partners onder Meer','Toewijzen aan een partner bij een toestel']},
+  {id:'inkopen', groep:'Geld', naam:'Inkopen', ico:'i-cart', tabs:['inkopen'],
+   uitleg:'Bonnen en facturen van wat je inkoopt.',
+   verdwijnt:['Inkopen onder Meer']},
+  {id:'facturen', groep:'Geld', naam:'Facturen en offertes', ico:'i-card', tabs:['facturen'],
+   uitleg:'Zelf facturen en offertes maken.',
+   verdwijnt:['De knop Facturen bij Verkoop','Factuur maken bij een reparatie of toestel','Instellingen: Facturen']},
+  {id:'financien', groep:'Geld', naam:'Rapport en vaste lasten', ico:'i-chart', tabs:['rapport','vastelasten'],
+   uitleg:'Wat je overhoudt, met belasting, buffers en vaste kosten.',
+   verdwijnt:['Rapport en Vaste lasten onder Meer','Resultaat op het dashboard']},
+  {id:'labelprinter', groep:'Geld', naam:'Labelprinter', ico:'i-tag', tabs:['labelprinter'],
+   uitleg:'Stickers direct op je Brother-printer.',
+   verdwijnt:['Labelprinter onder Meer'],
+   blijft:'Printen vanuit andere schermen blijft werken.'}
 ];
-function verborgen(){ return Array.isArray(state.verborgen)?state.verborgen:[]; }
-function paginaAan(tab){ return !verborgen().includes(tab); }
+const MODULE_GROEPEN=['Winkel','Klanten','Team','Geld'];
+function moduleVanTab(tab){ return MODULES.find(m=>m.tabs.includes(tab)) || null; }
+function modAan(id){ const m=state && state.modules; return !(m && m[id]===false); }
+function paginaAan(tab){ const m=moduleVanTab(tab); return !m || modAan(m.id); }
+/* Op body een klasse per module die uit staat, plus één stijlregel per module die
+   alles met data-module="id" verbergt. De regels maken we hier uit MODULES, zodat
+   een nieuwe module vanzelf meedoet. */
+let _moduleSig=null;
+/* Geeft true als er sinds de vorige keer een module aan of uit ging, zodat een sync
+   van een ander apparaat alleen dan het menu opnieuw opbouwt. */
+function moduleToepassen(){
+  let st=document.getElementById('moduleStijl');
+  if(!st){
+    st=document.createElement('style'); st.id='moduleStijl';
+    st.textContent=MODULES.map(m=>`body.moduit-${m.id} [data-module~="${m.id}"]{display:none !important;}`).join('\n');
+    document.head.appendChild(st);
+  }
+  MODULES.forEach(m=>document.body.classList.toggle('moduit-'+m.id, !modAan(m.id)));
+  const sig=MODULES.filter(m=>!modAan(m.id)).map(m=>m.id).join(',');
+  const anders=_moduleSig!==null && sig!==_moduleSig;
+  _moduleSig=sig;
+  return anders;
+}
+function moduleWissel(id){
+  const m=MODULES.find(x=>x.id===id); if(!m) return;
+  if(!state.modules || typeof state.modules!=='object') state.modules={};
+  const aan=!modAan(id);
+  /* Ook "aan" bewaren we als waarde (true), niet door de sleutel weg te halen: de
+     sync voegt per sleutel samen en ziet een weggehaalde sleutel niet als wijziging. */
+  state.modules[id]=aan;
+  save();
+  moduleToepassen();
+  pasRechtenToe();
+  renderModules();
+  toast(aan ? m.naam+' staat weer aan' : m.naam+' staat uit. Er is niets weg.', true);
+}
+function naarModules(){
+  if(typeof mobMeerSluit==='function') mobMeerSluit();
+  showTab('instellingen');
+  const k=document.querySelector('#instTabs button[data-s="modules"]'); if(k) k.click();
+}
+function renderModules(){
+  const el=document.getElementById('moduleLijst'); if(!el) return;
+  el.innerHTML=MODULE_GROEPEN.map(g=>{
+    const lijst=MODULES.filter(m=>m.groep===g);
+    return `<div class="modgroep">${esc(g)}</div><div class="modgrid">`+lijst.map(m=>{
+      const aan=modAan(m.id);
+      return `<div class="modkaart${aan?'':' uit'}">
+        <div class="modkop">
+          <span class="modico"><svg class="i"><use href="#${m.ico}"/></svg></span>
+          <div class="modtekst"><b>${esc(m.naam)}</b><span>${esc(m.uitleg)}</span></div>
+          <button type="button" class="schakel${aan?' aan':''}" role="switch" aria-checked="${aan}" aria-label="${esc(m.naam)} ${aan?'uitzetten':'aanzetten'}" onclick="moduleWissel('${m.id}')"><span></span></button>
+        </div>
+        <div class="modverdwijnt"><span class="modlabel">${aan?'Uit betekent weg':'Nu uit beeld'}</span>${m.verdwijnt.map(v=>`<span class="modchip">${esc(v)}</span>`).join('')}</div>
+        ${m.blijft?`<p class="modblijft">${esc(m.blijft)}</p>`:''}
+      </div>`;
+    }).join('')+`</div>`;
+  }).join('');
+}
 
 function mag(tab){
   /* Producten uit betekent ook geen nieuw product kunnen aanmaken. */
@@ -12598,28 +12773,6 @@ function mag(tab){
 function eersteTab(){
   const volgorde=['dashboard','scan','kassa','voorraad','hardware','reparaties','aanvragen','producten','webshop','inruil','bestellen','team','partners','instellingen'];
   return volgorde.find(t=>mag(t)) || 'instellingen';
-}
-function paginaWissel(tab, aan){
-  const lijst=verborgen().filter(t=>t!==tab);
-  if(!aan) lijst.push(tab);
-  state.verborgen=lijst;
-  save();
-  pasRechtenToe();
-  renderPaginas();
-  toast(aan ? UITZETBAAR.find(u=>u.tab===tab).naam+' staat weer in het menu'
-            : UITZETBAAR.find(u=>u.tab===tab).naam+' is verborgen', true);
-}
-function renderPaginas(){
-  const el=document.getElementById('paginaLijst');
-  if(!el) return;
-  el.innerHTML=UITZETBAAR.map(u=>{
-    const aan=paginaAan(u.tab);
-    return `<label class="pagrij${aan?'':' uit'}">
-      <input type="checkbox" ${aan?'checked':''} onchange="paginaWissel('${u.tab}', this.checked)">
-      <span class="pagnaam">${esc(u.naam)}</span>
-      <span class="paguitleg">${esc(u.uitleg)}</span>
-    </label>`;
-  }).join('');
 }
 /* ═══════════════ DE TELEFOONBALK ═══════════════
    Vier knoppen onderin, binnen duimbereik, plus een vijfde die het vel met
@@ -12660,10 +12813,12 @@ function huidigeTab(){
    dashboard zien) schuift kassa daardoor naar Meer, want die rekenen meestal op de
    Clover-pin af. Een medewerker heeft geen dashboard, houdt dus een slot over en ziet
    rooster én kassa allebei. */
-const MOB_CORE=['dashboard','verkoop','reparaties','rooster','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop','inruil'];
+const MOB_CORE=['dashboard','verkoop','reparaties','rooster','kassa','scan','producten','voorraad','hardware','aanvragen','bestellen','webshop'];
 function mobCore(){ return MOB_CORE.filter(t=>mag(t)).slice(0,4); }
 
 function mobTel(t){
+  /* Nieuwe inruilaanvragen tellen op Verkoop, want daar zit Inruil nu onder. */
+  if(t==='verkoop'){ try{ return mag('inruil') ? inrData.filter(x=>!x.gezien).length : 0; }catch(e){ return 0; } }
   if(t==='reparaties') return (typeof repTeDoen==='function')?repTeDoen().length:0;
   if(t==='aanvragen') return (typeof aanvLopend==='function')?aanvLopend().length:0;
   if(t==='voorraad') return (typeof bijvulLijst==='function')?bijvulLijst().length:0;
@@ -12685,11 +12840,12 @@ const MOB_MEERLABEL=Object.assign({}, MOB, {
   pakketten:{naam:'Pakketdiensten',ico:'i-truck'},
   partners:{naam:'Partners',ico:'i-link'}
 });
-const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','rooster','aanvragen','producten','voorraad','bestellen','hardware','inruil','webshop','kassa'];
+/* Inruil en Alle verkopen staan in de subbalk van Verkoop, dus niet apart in het vel. */
+const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','rooster','aanvragen','producten','voorraad','bestellen','hardware','webshop','kassa'];
 /* Verkopen, inkopen, mail en labelprinter stonden hier eerst niet in. Op de telefoon
    waren die pagina's daardoor nergens te openen, want de Meer-pagina van de computer
    bestaat daar niet. Houd deze lijst gelijk met de tegels op #tab-meer. */
-const MOB_ALLES_BEHEER=['verkopen','inkopen','rapport','uren','labelprinter','mail','team','vastelasten','pakketten','partners','instellingen'];
+const MOB_ALLES_BEHEER=['inkopen','rapport','uren','labelprinter','mail','team','vastelasten','pakketten','partners','instellingen'];
 /* In Simpel laten we de voorraad-subpagina's weg uit het Meer-vel: die open je via de
    balk bovenin Voorraad, en zo blijft het vel kort. */
 const MOB_ALLEEN_ALLES=['voorraad','scan','bestellen'];
@@ -12697,7 +12853,8 @@ const MOB_ALLEEN_ALLES=['voorraad','scan','bestellen'];
 function tekenOnderbalk(){
   const balk=document.getElementById('onderBalk');
   if(!balk) return;
-  const nu=huidigeTab();
+  /* Inruil en Alle verkopen horen bij Verkoop: dan licht Verkoop op, niet Meer. */
+  const t0=huidigeTab(), nu=(t0==='inruil'||t0==='verkopen')?'verkoop':t0;
   const core=mobCore();
   const knop=(t)=>{
     const n=mobTel(t);
@@ -12760,7 +12917,8 @@ function mobMeerOpen(){
     <div class="periodesel modussel" role="group" aria-label="Weergave">
       <button data-s="simpel" class="${modusSimpel()?'active':''}" onclick="zetModus(true); mobMeerOpen()">Simpel</button>
       <button data-s="alles" class="${modusSimpel()?'':'active'}" onclick="zetModus(false); mobMeerOpen()">Alles</button>
-    </div>`}
+    </div>
+    ${mag('instellingen')?`<button class="btn ghost small" style="margin-top:12px" onclick="naarModules()"><svg class="i s"><use href="#i-layers"/></svg>Modules aan en uit</button>`:''}`}
   </div>`;
   vel.hidden=false;
 }
@@ -12875,6 +13033,7 @@ function tabelObserver(){
 }
 
 function pasRechtenToe(){
+  moduleToepassen();
   document.querySelectorAll('aside nav button').forEach(b=>{
     b.style.display = mag(b.dataset.tab)?'':'none';
   });
@@ -12993,7 +13152,7 @@ const SYNC_LIJSTEN = ['producten','categorieen','types','modellen','verkopen','l
    Mobileparts leesbaar mee in de blob. Zet hier nooit iets in wat geheim is: alles
    in deze lijst kan iedereen in het team uitlezen. Geheimen gaan via een edge-functie
    naar een versleutelde tabel (zie lvOverzetten en tests/leveranciers.js). */
-const SYNC_VELDEN  = ['instellingen','huisstijl','ui','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','cloverGekoppeld','bedrijf','kasMax','personeel'];
+const SYNC_VELDEN  = ['instellingen','huisstijl','ui','vergrendeld','onboardingKlaar','klantpagina','berichten','bijbestel','bijbestelBesteld','lonen','loonViaInvite','cloverVerwerkt','cloverGekoppeld','bedrijf','kasMax','personeel','modules'];
 
 /* Lijsten met vaste (niet-willekeurige) id's: de seed maakt op elk leeg apparaat
    categorie 1/2/3, dienst 1/2/3, postnl 1..16, team 1, enzovoort. Bij de EERSTE sync
@@ -13005,7 +13164,7 @@ const SYNC_SEED_LIJSTEN = new Set(['categorieen','types','modellen','diensten','
 /* Velden die zelf een map met eigen sleutels zijn (loon per medewerker, bestel-reset
    per categorie, de instellingen, de klantpagina). Die per sleutel samenvoegen in plaats
    van het hele veld te overschrijven, anders wist de een stil de sleutel van de ander. */
-const SYNC_KEYED = new Set(['lonen','loonViaInvite','cloverVerwerkt','bijbestelBesteld','klantpagina','instellingen','personeel']);
+const SYNC_KEYED = new Set(['lonen','loonViaInvite','cloverVerwerkt','bijbestelBesteld','klantpagina','instellingen','personeel','modules']);
 /* Lijsten waarvan één record door twee mensen tegelijk bewerkt kan worden (dezelfde
    reparatie: de een zet de status, de ander voegt een opmerking toe). Die voegen we per
    VELD samen i.p.v. het hele record van de laatste opslag te laten winnen, zodat geen van
@@ -14299,7 +14458,7 @@ function renderHardware(){
         <td class="num hwact">${h.status==='verkocht'?''
           : `<div class="hwacties">${h.partner_id
             ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span><button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
-            : `${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg')
+            : `${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg'&&mag('partners'))
               ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button>`:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
               ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="event.stopPropagation(); hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button>`:''}<button class="btn ghost small" onclick="event.stopPropagation(); hwBewerk('${h.id}')">Openen</button>`}</div>`}</td>
       </tr>`;
@@ -14557,7 +14716,7 @@ function hwVenster(h){
 }
 function hwDetailMenu(ev, id){
   const h=hwData.find(x=>x.id===id) || hwOpen; if(!h) return;
-  const eigenaarKan = h.status!=='verkocht' && !h.partner_id && account && account.rol==='eigenaar';
+  const eigenaarKan = h.status!=='verkocht' && !h.partner_id && account && account.rol==='eigenaar' && mag('partners');
   toonRijMenu(ev, [
     {ico:'i-right', label:'Toewijzen aan partner', fn:()=>hwWijsToe(id), verborgen:!eigenaarKan},
     {ico:'i-link', label:(h.kanalen&&h.kanalen.partner)?'Uit partner-dashboard halen':'Zichtbaar in partner-dashboard',
@@ -15614,8 +15773,8 @@ function toonAboBalk(){
    besteld moeten worden (status 'aangemeld') en hardware-aanvragen die nog niet
    besteld zijn (status 'aangevraagd'). */
 function vandaagBestellen(){
-  const reps=(state.reparaties||[]).filter(r=>r.status==='aangemeld').length;
-  const aanvr=aanvragen().filter(a=>a.status==='aangevraagd').length;
+  const reps=mag('reparaties') ? (state.reparaties||[]).filter(r=>r.status==='aangemeld').length : 0;
+  const aanvr=mag('aanvragen') ? aanvragen().filter(a=>a.status==='aangevraagd').length : 0;
   return {reps, aanvr, totaal:reps+aanvr};
 }
 function toonBestelBalk(){
@@ -15623,7 +15782,7 @@ function toonBestelBalk(){
   const u=vandaagBestellen();
   /* De maand-herinnering voor de pakketdienst-stats heeft op die ene dag voorrang:
      hij komt maar één keer per maand langs en is zo weg als je hem doorgeeft. */
-  const pakketMeld = (typeof pakketHerinneringNodig==='function') && pakketHerinneringNodig();
+  const pakketMeld = (typeof pakketHerinneringNodig==='function') && mag('pakketten') && pakketHerinneringNodig();
   if(u.totaal<=0 && !pakketMeld){
     if(balk) balk.remove();
     document.body.classList.remove('metbestelbalk');
@@ -16049,9 +16208,13 @@ function pagChipsHtml(prefix, actief){
      zodat het naast Rooster staat. De opslag blijft gelijk: het vinkje houdt het id
      prefix_uren dat paginasUit leest. */
   return `<div class="pagchips">`+PAGINAS_BEHEER.filter(([id])=>id!=='uren').map(([id,label])=>
-    `<label class="pagchip"><input type="checkbox" id="${prefix}_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
+    `<label class="pagchip"${modAttr(id)}><input type="checkbox" id="${prefix}_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
   ).join('')+`</div>`;
 }
+/* Een vinkje van een module die uit staat verbergen we, maar het blijft in het scherm
+   met zijn stand. paginasUit leest de vinkjes terug bij opslaan; een weggelaten vinkje
+   telt als uit, en dan was die gebruiker de pagina kwijt als de module weer aan ging. */
+function modAttr(tab){ const m=moduleVanTab(tab); return m ? ` data-module="${m.id}"` : ''; }
 /* De pagina's van de Reloop-IT (refurbish) omgeving, apart van de winkel-pagina's.
    De sleutels krijgen een 'ref_'-voorvoegsel in accounts.tabs, want de werkbank heeft
    ook een Voorraad en een Bestellen en die mogen niet botsen met die van de winkel.
@@ -16102,7 +16265,7 @@ function extraChipsHtml(prefix, actief){
   /* Rooster staat niet hier maar in het blok "Uren en rooster" (tijdSectieHtml), naast
      Uren. Het vinkje houdt het id prefix_x_rooster dat extraUit leest. */
   return `<div class="pagchips">`+EXTRA_PAGINAS.filter(([id])=>id!=='rooster').map(([id,label])=>
-    `<label class="pagchip"><input type="checkbox" id="${prefix}_x_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
+    `<label class="pagchip"${modAttr(id)}><input type="checkbox" id="${prefix}_x_${id}" ${actief.includes(id)?'checked':''}><span>${esc(label)}</span></label>`
   ).join('')+`</div>`;
 }
 /* Uren en rooster horen bij elkaar (allebei over de tijd van het team) maar zijn twee
@@ -16806,7 +16969,7 @@ function renderInstellingen(){
   const _it=document.getElementById('tab-instellingen');
   if(_it && !_it.hidden && _it.contains(document.activeElement)) return;
   shopTabAls();
-  renderSnel(); renderTypes(); renderModellen(); renderCats(); renderPaginas();
+  renderSnel(); renderTypes(); renderModellen(); renderCats(); renderModules();
   document.getElementById('s_schap').value=state.schapNorm!=null?state.schapNorm:1;
   document.getElementById('s_minover').value=state.minOverNorm!=null?state.minOverNorm:0;
   document.getElementById('s_kasmax').value=kasMax();
@@ -19708,6 +19871,7 @@ kopVolgen();
 /* Meteen bij het laden, zodat de eerste aanblik al Simpel of Alles is en niet even
    alles laat zien voor het inloggen klaar is. */
 modusToepassen();
+moduleToepassen();
 
 /* Terug uit Stripe: even laten weten hoe het is afgelopen. */
 (function(){

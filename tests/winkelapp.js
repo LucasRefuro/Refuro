@@ -324,6 +324,37 @@ setTimeout(async()=>{
   ok('na de vraag wordt de verse lijst gewijzigd, niet een oude kopie',
      w.eval("state.producten.find(p=>p.id===987002).voorraad===0 && state.log.find(l=>l.id===987003).ongedaan===true"));
 
+  // ── Modules aan en uit ──
+  // Een module die uit staat bestaat niet voor menu, links en tegels, voor iedereen
+  // (ook de eigenaar), en de keuze gaat mee met de sync naar elk apparaat.
+  w.eval("gebruiker={id:'a1', naam:'Lucas', rol:'eigenaar', tabs:null}; state.modules={}; pasRechtenToe(); showTab('dashboard');");
+  ok('modules synchroniseren per sleutel', w.eval("SYNC_VELDEN.includes('modules') && SYNC_KEYED.has('modules')"));
+  w.eval("moduleWissel('kassa')");
+  ok('Kassa uit: ook de eigenaar mag er niet meer heen', w.eval("mag('kassa')===false"));
+  ok('Kassa uit: weg uit het menu', d.querySelector('aside nav button[data-tab="kassa"]').style.display==='none');
+  ok('Kassa uit: losse stukken verdwijnen via de body-klasse', d.body.classList.contains('moduit-kassa')
+     && /moduit-kassa \[data-module~="kassa"\]\{display:none/.test(d.getElementById('moduleStijl').textContent));
+  w.eval("showTab('dashboard')");
+  ok('Kassa uit: geen kassategel op het dashboard', !/showTab\('kassa'\)/.test(d.getElementById('dashSimpel').innerHTML));
+  w.eval("moduleWissel('voorraad')");
+  ok('Winkelvoorraad uit: ook nieuw product, tellen en bijbestellen dicht',
+     w.eval("['producten','nieuw','catalogus','voorraad','scan','bestellen'].every(t=>!mag(t))"));
+  ok('een rechtenvinkje van een module die uit staat blijft bestaan (met zijn stand)',
+     /data-module="kassa"><input type="checkbox" id="x_kassa" checked/.test(w.eval("pagChipsHtml('x',['kassa'])")));
+  w.eval("moduleWissel('kassa'); moduleWissel('voorraad');");
+  ok('weer aan bewaart true, zodat de sync de wijziging ziet', w.eval("state.modules.kassa===true && mag('kassa')"));
+  // Inruil zit onder Verkoop, niet meer als eigen menuknop.
+  w.eval("showTab('inruil')");
+  ok('Inruil heeft geen eigen menuknop meer', !d.querySelector('aside nav button[data-tab="inruil"]'));
+  ok('op Inruil staat de verkoopbalk en licht Verkoop op', !d.getElementById('verkoopSub').hidden
+     && d.querySelector('aside nav button[data-tab="verkoop"]').classList.contains('active'));
+  // De oude keuze (alleen op dit apparaat) wordt één keer omgezet. Alleen hoofdpagina's
+  // tellen: wie alleen Inscannen verborg, zette niet de hele voorraad uit.
+  ok('oude verborgen pagina\'s worden modules',
+     w.eval(`localStorage.setItem(KEY, JSON.stringify({producten:[], verborgen:['kassa','scan','reparaties']}));
+       var s2=load(); s2.modules.kassa===false && s2.modules.reparaties===false && s2.modules.voorraad===undefined && s2.verborgen.length===0`));
+  w.eval("showTab('dashboard')");
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nwinkelapp in orde');
   process.exit(fout?1:0);
 },800);
