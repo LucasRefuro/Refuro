@@ -384,18 +384,22 @@ export function webshopSleutel(h: any) {
   return deel.filter(Boolean).map((s: any) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).join("_");
 }
 
+// Wat een grade in het algemeen betekent. Staat vooraan in "wat wij zagen", en staat er
+// alleen als er van die grade nu niets op voorraad is. "Als nieuw" stond hier eerst, maar
+// dat woord verbiedt het merkboek van de webshop.
+export const GRADE_TEKST: Record<string, string> = {
+  A: "Nauwelijks gebruikssporen. Je moet ze echt zoeken.",
+  B: "Lichte gebruikssporen, netjes verzorgd. Werkt precies zoals het hoort.",
+  C: "Zichtbare gebruikssporen, maar werkt helemaal naar behoren.",
+};
+
 // "Wat wij zagen": eerst de conditie-items die de winkelier bij de controle zelf
 // heeft ingevuld (Behuizing, Scherm, Toetsenbord, Scharnieren), anders een vaste
 // zin per grade. Zo staat er altijd iets echts, niet alleen "grade A".
 export function staatToelichting(h: any, refurbish: any) {
   const CONDITIE = ["behuizing", "scherm", "toetsenbord", "scharnieren en deksel", "scharnieren", "deksel", "onderkant", "poorten"];
-  const perGrade: Record<string, string> = {
-    A: "Als nieuw. Je moet de gebruikssporen echt zoeken.",
-    B: "Lichte gebruikssporen, netjes verzorgd. Werkt precies zoals het hoort.",
-    C: "Zichtbare gebruikssporen, maar werkt helemaal naar behoren.",
-  };
   const delen: string[] = [];
-  const opening = perGrade[String(h.staat || "").toUpperCase()];
+  const opening = GRADE_TEKST[String(h.staat || "").toUpperCase()];
   if (opening) delen.push(opening);
   const cl = refurbish?.checklist;
   if (Array.isArray(cl)) {
@@ -407,6 +411,57 @@ export function staatToelichting(h: any, refurbish: any) {
   }
   delen.push("Elk toestel wordt bij ons nagekeken en getest.");
   return delen.join(" ");
+}
+
+/* De accu van één exemplaar. De controle (refurbish_apparaten) gaat voor: daar landt een
+   hertest of een nieuw geplaatste accu, terwijl hardware.accu bij het naar de voorraad
+   zetten is vastgelegd en daarna kan verouderen. Een nieuwe accu telt als 100%. Geen
+   meting is null, nooit 0 of 100: een verzonnen getal op de webshop is een valse belofte. */
+export function accuVan(h: any, controle: any) {
+  if (h?.nieuwe_accu || controle?.nieuwe_accu) return { accu: 100, nieuw: true, cycli: null as number | null };
+  const ruw = controle?.accu ?? h?.accu;
+  const n = Number(ruw);
+  const accu = ruw != null && ruw !== "" && Number.isFinite(n) && n > 0 ? Math.round(Math.min(n, 100)) : null;
+  const m = String(controle?.accu_notitie || "").match(/(\d+)\s*laadcycli/i);
+  return { accu, nieuw: false, cycli: m ? Number(m[1]) : null };
+}
+
+/* ── per grade: het exemplaar dat je krijgt ──
+   Eén grade-variant staat voor meerdere toestellen. Bij een webshopverkoop bindt de webhook
+   het oudste onverkochte exemplaar van die variant (aangemaakt_op oplopend), een reservering
+   doet hetzelfde. Daarom zetten we per variant de hele wachtrij in precies die volgorde op de
+   webshop, met per exemplaar het toestelnummer, de accu en wat we zagen.
+
+   Het thema rekent zelf uit wie er vooraan staat: lengte van de wachtrij min de Shopify-voorraad
+   is het aantal dat sinds deze sync al weg is. Zo klopt de accu op de pagina ook direct na een
+   webshopverkoop of reservering. De webhook hoeft de advertentie dan niet opnieuw te
+   synchroniseren; dat zou de voorraad absoluut zetten en in het venster voordat een verkoop
+   verwerkt is een verkocht toestel weer te koop zetten. */
+export function gradeWachtrij(exemplaren: any[], controles: Record<string, any>) {
+  return exemplaren.slice()
+    .sort((a, b) => String(a.aangemaakt_op || "").localeCompare(String(b.aangemaakt_op || "")))
+    .map((h) => {
+      const c = controles[h.id] || null;
+      const a = accuVan(h, c);
+      return { code: h.code ? String(h.code) : null, accu: a.accu, nieuw: a.nieuw, cycli: a.cycli, tekst: staatToelichting(h, c) };
+    });
+}
+
+/* De metafields van één grade-variant. staat_toelichting en accu_gezondheid zijn die van de
+   voorste in de rij, zodat ook een thema zonder wachtrij-logica de juiste grade-tekst toont.
+   Alles wordt ELKE sync geschreven, ook voor een uitverkochte grade (algemene tekst, accu 0 =
+   onbekend, lege rij): een veld dat we zouden weglaten blijft anders met een oud toestel staan. */
+export function bouwGradeMetafields(variantId: string, g: string, rij: any[]) {
+  const voor = rij[0] || null;
+  const mf = (key: string, type: string, value: string) => ({ ownerId: variantId, namespace: "refuro", key, type, value });
+  return [
+    mf("staat", "single_line_text_field", staatCode(g)),
+    mf("staat_toelichting", "single_line_text_field", voor ? voor.tekst : staatToelichting({ staat: g }, null)),
+    mf("accu_gezondheid", "number_integer", String(voor?.accu || 0)),
+    // Ingepakt in een object: een kale lege lijst kan Shopify als leeg veld weigeren. n is de
+    // echte lengte; het thema rekent daarmee, ook als de rij hier is ingekort.
+    mf("wachtrij", "json", JSON.stringify({ n: rij.length, rij: rij.slice(0, 50) })),
+  ];
 }
 
 function mfText(key: string, val: unknown) {

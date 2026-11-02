@@ -13,7 +13,7 @@
 
 import {
   admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
-  bouwProductMetafields,
+  bouwProductMetafields, bouwGradeMetafields, gradeWachtrij,
   webshopSleutel, gradeLetter, gradeSchat, GRADE_LETTERS, GRADE_NAAM,
 } from "../_gedeeld/shopify.ts";
 
@@ -92,6 +92,16 @@ async function controleBij(hardwareId: string) {
   const { data } = await admin.from("refurbish_apparaten")
     .select("accu, checklist, grade, notitie").eq("hardware_id", hardwareId).limit(1);
   return data?.[0] ?? null;
+}
+
+// Hetzelfde voor alle exemplaren van een advertentie in één keer, voor de wachtrij per grade.
+async function controlesBij(hardwareIds: string[]): Promise<Record<string, any>> {
+  const uit: Record<string, any> = {};
+  if (!hardwareIds.length) return uit;
+  const { data } = await admin.from("refurbish_apparaten")
+    .select("hardware_id, accu, nieuwe_accu, accu_notitie, checklist").in("hardware_id", hardwareIds);
+  for (const c of (data || [])) if (c.hardware_id && !uit[c.hardware_id]) uit[c.hardware_id] = c;
+  return uit;
 }
 
 /* De gebruik-tags voeden de filters in het mega-menu en de laptop-adviseur
@@ -224,6 +234,18 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string)
     if (g) variantIds[g] = vn.id;
   }
 
+  /* Per grade de staat, de accu en de wachtrij van exemplaren (zie gradeWachtrij). Los van
+     productSet: heeft de winkel voor deze velden een definitie met een ander type, dan slaan
+     we alleen dit over en blijft het online zetten zelf werken. */
+  const controles = await controlesBij(beschikbaar.map((e: any) => e.id));
+  const gradeMf = GRADE_LETTERS.filter((g) => variantIds[g])
+    .flatMap((g) => bouwGradeMetafields(variantIds[g], g, gradeWachtrij(perGrade[g] || [], controles)));
+  let gradeInfo = true;
+  try {
+    const mu = await graphql(k, `mutation($m: [MetafieldsSetInput!]!){ metafieldsSet(metafields: $m){ userErrors { field message } } }`, { m: gradeMf });
+    letOp(mu?.metafieldsSet, "De staat per grade");
+  } catch (e) { gradeInfo = false; console.error("grade-metafields", sleutel, e); }
+
   let zichtbaar = false;
   if (k.publicatie_id) {
     const pub = await graphql(k, `mutation($id: ID!, $input: [PublicationInput!]!){ publishablePublish(id: $id, input: $input){ userErrors { field message } } }`, { id: p.id, input: [{ publicationId: k.publicatie_id }] });
@@ -249,7 +271,7 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string)
     await admin.from("hardware").update({ kanalen: ek, bijgewerkt_op: new Date().toISOString() }).eq("id", e.id);
   }
 
-  return { leeg: false, product_id: p.id, nummer, url, beheer, zichtbaar, collecties, variantIds } as any;
+  return { leeg: false, product_id: p.id, nummer, url, beheer, zichtbaar, collecties, variantIds, gradeInfo } as any;
 }
 
 Deno.serve(async (req) => {
@@ -320,9 +342,10 @@ Deno.serve(async (req) => {
       const { data: verse } = await admin.from("hardware").select("kanalen").eq("id", id).maybeSingle();
       return new Response(JSON.stringify({
         ok: true, kanalen: verse?.kanalen || kanalen,
-        waarschuwing: r.zichtbaar ? null
-          : "Het toestel staat op Shopify maar is nog niet in de webshop gepubliceerd. " +
-            "Kijk bij Instellingen of de koppeling het verkoopkanaal heeft gevonden.",
+        waarschuwing: !r.zichtbaar
+          ? "Het toestel staat op Shopify maar is nog niet in de webshop gepubliceerd. " +
+            "Kijk bij Instellingen of de koppeling het verkoopkanaal heeft gevonden."
+          : (r.gradeInfo === false ? "Het toestel staat online. De accu per staat kwam niet mee; zet hem later opnieuw online." : null),
       }), { headers: cors });
     }
 

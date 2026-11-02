@@ -136,12 +136,29 @@ repo `refuro-webshop`.
       over de losse created/paid/fulfilled-meldingen; de variant wordt meebewaard zodat annulering
       het juiste toestel terugzet. Aanrader: één echte grade-aankoop doen om te bevestigen dat het
       juiste exemplaar bindt.
-- [ ] **Fase 4.** Per grade eigen staat-toelichting/accu + in het thema automatisch de
-      op-voorraad grade selecteren.
+- [x] **Fase 4.** GEBOUWD (2 nov), WACHT OP UITROL. Per grade toont de productpagina de
+      staat, de accu en het toestelnummer van het exemplaar dat je echt krijgt, en de pagina
+      opent altijd op een grade die op voorraad is. Edge `shopify` zet per grade-variant
+      `refuro.staat`, `staat_toelichting`, `accu_gezondheid` en `refuro.wachtrij` (alle
+      exemplaren, oudste eerst: de volgorde waarin webhook en reservering binden). Dat gaat
+      los van productSet via metafieldsSet, dus een afwijkende metafield-definitie breekt het
+      online zetten niet (dan komt er een let-op-melding). De A-tekst zegt geen "als nieuw" meer.
+      Thema: `refuro-webshop` commit 441f420, met uitrolstappen in `WERKLIJST.md`.
+      Meegevonden in het thema: het productscript stopte stil op elke productpagina. Tabs
+      werkten niet en een andere grade kiezen veranderde de variant in het mandje niet. Gefixt.
+      **Uitrol:** 1) edge `shopify` deployen (neemt ook de gradeSchat-centen van 8b1f3ac mee),
+      2) de vier thema-bestanden pushen (WERKLIJST), 3) elke grade-advertentie één keer opnieuw
+      online zetten.
 
 ### Testen
 - [ ] **Grade-varianten tegen de live shop:** tweede exemplaar van dezelfde uitvoering =
       voorraad +1, geen nieuwe advertentie.
+- [ ] **Na de uitrol van fase 4:** twee exemplaren van één grade online, één kopen of
+      reserveren. De pagina moet daarna meteen het tweede toestelnummer en de tweede accu tonen.
+- [ ] **HP ProBook 450 G8 (A0084)** staat in Storvo op voorraad, maar Shopify zegt
+      uitverkocht: de geannuleerde testreservering zette de Shopify-voorraad niet terug.
+      Opnieuw online zetten herstelt het. Oorzaak in edge `reservering`
+      (`herstelShopifyVoorraad`) nog uitzoeken.
 
 ### Jouw actie (code is klaar)
 - [ ] **Bestaande producten opnieuw online zetten** -> net artikelnummer (A0016), OS-rij,
