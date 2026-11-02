@@ -359,6 +359,22 @@ setTimeout(async()=>{
        var s2=load(); s2.modules.kassa===false && s2.modules.reparaties===false && s2.modules.voorraad===undefined && s2.verborgen.length===0`));
   w.eval("showTab('dashboard')");
 
+  // Een module uitzetten is alleen verbergen. Achtergrondwerk vraagt de rol, niet de
+  // module: met Hardware uit moet Verkoop (en de Clover-pin) de toestellen nog laden.
+  w.eval(`state.modules={hardware:false}; moduleToepassen(); hwData.length=0;
+    window.__hwGeladen=0; window.__hwLaadOud=hwLaad; hwLaad=async()=>{ window.__hwGeladen++; };
+    showTab('verkoop');`);
+  ok('Hardware uit: verborgen voor het menu', w.eval("mag('hardware')===false"));
+  ok('Hardware uit: de rol mag het nog', w.eval("magRol('hardware')===true"));
+  ok('Hardware uit: Verkoop laadt de toestellen toch', w.__hwGeladen>0);
+  w.eval("hwLaad=window.__hwLaadOud; state.modules={}; moduleToepassen();");
+
+  // In de hardwarelijst staat per toestel een Verkopen-knop.
+  w.eval("showTab('hardware'); hwFilterNu='voorraad'; hwData="+JSON.stringify(toestellen)+"; renderHardware();");
+  ok('hardwarelijst heeft een Verkopen-knop per toestel', /hwVerkoop\('h1'\)/.test(d.getElementById('hwLijst').innerHTML));
+  ok('een verkocht toestel krijgt geen Verkopen-knop', !/hwVerkoop\('h3'\)/.test(d.getElementById('hwLijst').innerHTML));
+  w.eval("showTab('dashboard')");
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nwinkelapp in orde');
   process.exit(fout?1:0);
 },800);

@@ -3638,8 +3638,8 @@
        wat gebruik ik, en hoeveel wil ik ervan zien. -->
   <div class="card" id="inst-modules"hidden>
     <h2><svg class="i"><use href="#i-layers"/></svg>Modules</h2>
-    <p class="muted" style="margin-bottom:6px; max-width:70ch">Zet uit wat je winkel niet doet. Het verdwijnt dan voor je hele team uit beeld, op elk apparaat.</p>
-    <p class="muted" style="margin-bottom:16px; max-width:70ch"><b>Er gaat niets verloren.</b> Zet je een module weer aan, dan staat alles er nog.</p>
+    <p class="muted" style="margin-bottom:6px; max-width:70ch">Zet uit wat je nu niet wilt zien. Het verdwijnt voor je hele team uit beeld, op elk apparaat.</p>
+    <p class="muted" style="margin-bottom:16px; max-width:70ch"><b>Uit is alleen uit beeld.</b> Op de achtergrond werkt alles door: verkopen, voorraad, kassa en koppelingen. Zet je hem weer aan, dan staat alles er, bijgewerkt.</p>
     <div id="moduleLijst"></div>
     <p class="muted klein" style="margin-top:18px">Altijd aan: Dashboard, Verkoop en Instellingen.</p>
     <div class="modweergave">
@@ -8524,7 +8524,7 @@ function renderVerkoop(){
   if(!mandje.length) mandjeHerstel();   /* na een verse pagina de order terughalen */
   /* Hardware (laptops e.d.) laden zodat je ze via 'Los product zoeken' kunt vinden
      en meenemen in de verkoop. Stil, en alleen als de gebruiker hardware mag zien. */
-  if(typeof hwData!=='undefined' && !hwData.length && typeof mag==='function' && mag('hardware') && typeof hwLaad==='function') hwLaad(true);
+  if(typeof hwData!=='undefined' && !hwData.length && typeof magRol==='function' && magRol('hardware') && typeof hwLaad==='function') hwLaad(true);
   vulModellenLijst();
   if(typeof renderDiensten==='function') renderDiensten();   /* de diensten-kaart staat nu op dit scherm */
   const fb=document.getElementById('vkFeedback'); if(fb){ fb.className=''; fb.textContent=''; }
@@ -12159,7 +12159,9 @@ async function cloverToestelVerkocht(h){
 async function cloverBestellingenVerwerken(){
   if(!account || !state.cloverGekoppeld) return;
   // De toestellenlijst nodig om een pinverkoop van een toestel als marge te herkennen.
-  if(typeof hwData!=='undefined' && !hwData.length && typeof hwLaad==='function' && (typeof mag!=='function' || mag('hardware'))){ try{ await hwLaad(true); }catch(e){} }
+  /* magRol, niet mag: ook met de module Hardware uit moet een pinbetaling voor een toestel
+     als toestelverkoop (marge, toestel verkocht) verwerkt worden. */
+  if(typeof hwData!=='undefined' && !hwData.length && typeof hwLaad==='function' && (typeof magRol!=='function' || magRol('hardware'))){ try{ await hwLaad(true); }catch(e){} }
   let bonnen;
   try{ const r=await sb.from('clover_bestellingen').select('clover_order_id,bedrag,betaald,regels,besteld_op,historisch').order('aangemaakt_op',{ascending:true}); bonnen=r.data||[]; }
   catch(e){ return; }
@@ -12637,21 +12639,22 @@ const MODULES=[
   {id:'kassa', groep:'Winkel', naam:'Kassa', ico:'i-cash', tabs:['kassa'],
    uitleg:'Het geld in de lade bijhouden en tellen.',
    verdwijnt:['Kassa in het menu','De kassa-tegel','Melding bij te veel geld','Instellingen: Kassa'],
-   blijft:'Contante verkopen tellen gewoon mee in je omzet.'},
+   blijft:'Contante verkopen gaan gewoon in het kasboek.'},
   {id:'voorraad', groep:'Winkel', naam:'Winkelvoorraad', ico:'i-package', tabs:['producten','nieuw','catalogus','voorraad','scan','bestellen'],
    uitleg:'Producten met een barcode, zoals hoesjes en kabels. Tellen, inscannen en bijbestellen.',
    verdwijnt:['Voorraad in het menu','Producten, tellen en inscannen','Bijbestellen en de bestellijst','Product toevoegen op het dashboard','Instellingen: Voorraad en Serie inscannen'],
-   blijft:'Verkopen via de blokjes en de diensten blijft werken.'},
+   blijft:'Een verkoop haalt nog steeds van de voorraad af, en de bestellijst telt door.'},
   /* Hardware is een eigen groep, naast de winkel: de winkelvoorraad zijn producten met
      een barcode (hoesjes, kabels), de hardwarevoorraad zijn losse toestellen met elk een
      eigen nummer. Inruil hoort hier ook bij: zo komen die toestellen binnen. */
   {id:'hardware', groep:'Hardware', naam:'Hardwarevoorraad', ico:'i-laptop', tabs:['hardware'],
    uitleg:'Laptops en toestellen, elk met een eigen nummer. Uit de werkbank of zelf toegevoegd.',
-   verdwijnt:['Hardware in het menu','Toestellen vinden bij Verkoop'],
-   blijft:'De werkbank zelf blijft werken.'},
+   verdwijnt:['Hardware in het menu','De wijzer op Producten'],
+   blijft:'Toestellen blijven vindbaar en verkoopbaar bij Verkoop, ook via de pin.'},
   {id:'inruil', groep:'Hardware', naam:'Inruil en inname', ico:'i-recycle', tabs:['inruil'],
    uitleg:'Toestellen inkopen van klanten, aan de balie of via de webshop.',
-   verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen']},
+   verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen'],
+   blijft:'Inruilaanvragen uit de webshop komen gewoon binnen.'},
   {id:'webshop', groep:'Winkel', naam:'Webshop', ico:'i-shop', tabs:['webshop'],
    uitleg:'Bestellingen en reserveringen uit je webshop.',
    verdwijnt:['Webshop in het menu','Meldingen van nieuwe bestellingen','Instellingen: Webshop'],
@@ -12661,7 +12664,8 @@ const MODULES=[
    verdwijnt:['De PostNL-knop bij Verkoop','Pakketdiensten onder Meer','Herinnering aan het eind van de maand']},
   {id:'reparaties', groep:'Klanten', naam:'Reparaties', ico:'i-wrench', tabs:['reparaties'],
    uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.',
-   verdwijnt:['Reparaties in het menu','Reparaties op het dashboard','Onderdelen in de bestelbalk','Instellingen: Klantpagina']},
+   verdwijnt:['Reparaties in het menu','Reparaties op het dashboard','Onderdelen in de bestelbalk','Instellingen: Klantpagina'],
+   blijft:'Klanten kunnen hun reparatie nog volgen via hun link.'},
   {id:'aanvragen', groep:'Klanten', naam:'Aanvragen', ico:'i-clipboard', tabs:['aanvragen'],
    uitleg:'Iets speciaal bestellen voor een klant, met aanbetaling.',
    verdwijnt:['Aanvragen in het menu','Aanvragen op het dashboard','Aanvragen in de bestelbalk','Instellingen: Aanvragen']},
@@ -12670,7 +12674,8 @@ const MODULES=[
    verdwijnt:['Mail onder Meer']},
   {id:'rooster', groep:'Team', naam:'Rooster en uren', ico:'i-clock', tabs:['rooster','uren'],
    uitleg:'Wie wanneer werkt, en de gewerkte uren.',
-   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De goedkeurbalk en herinneringen','Rooster op het dashboard']},
+   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De goedkeurbalk en herinneringen','Rooster op het dashboard'],
+   blijft:'Herinneringsmails naar je team gaan gewoon door.'},
   {id:'team', groep:'Team', naam:'Team', ico:'i-users', tabs:['team'],
    uitleg:'Gebruikers, rollen en wie wat mag.',
    verdwijnt:['Team onder Meer'],
@@ -12750,10 +12755,20 @@ function renderModules(){
   }).join('');
 }
 
+/* mag(): staat het in beeld voor deze gebruiker? Dat is de rol EN de module.
+   magRol(): mag deze gebruiker het, los van of de module aan staat.
+   Een module uitzetten is alleen verbergen; op de achtergrond draait alles door. Werk
+   dat niet over het scherm gaat (gegevens laden, pinbetalingen van Clover verwerken)
+   vraagt daarom magRol. Eerst stond daar mag: zette je Hardware uit, dan werd een
+   pinbetaling voor een laptop niet meer als toestelverkoop herkend. */
 function mag(tab){
   /* Producten uit betekent ook geen nieuw product kunnen aanmaken. */
   const hoort = (tab==='nieuw'||tab==='catalogus') ? 'producten' : tab;
   if(!paginaAan(hoort)) return false;
+  return magRol(tab);
+}
+function magRol(tab){
+  const hoort = (tab==='nieuw'||tab==='catalogus') ? 'producten' : tab;
   const r=gebruiker?gebruiker.rol:'eigenaar';
   if(r==='eigenaar') return true;   /* de eigenaar ziet altijd alles */
   /* Heeft dit account een eigen paginalijst (door de eigenaar ingesteld), dan wint
@@ -14460,7 +14475,8 @@ function renderHardware(){
             ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span><button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
             : `${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg'&&mag('partners'))
               ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button>`:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
-              ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="event.stopPropagation(); hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button>`:''}<button class="btn ghost small" onclick="event.stopPropagation(); hwBewerk('${h.id}')">Openen</button>`}</div>`}</td>
+              ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="event.stopPropagation(); hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button>`:''}${h.status!=='onderweg'
+              ? `<button class="btn small" style="background:var(--green); color:#fff" onclick="event.stopPropagation(); hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen</button>`:''}<button class="btn ghost small" onclick="event.stopPropagation(); hwBewerk('${h.id}')">Openen</button>`}</div>`}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   hwSelectieBalk();
