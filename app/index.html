@@ -1068,6 +1068,7 @@
   .kpi .bedrag{white-space:nowrap;}
   .kpi .kpimeta{display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;}
   .kpi .kpimeta .pct{margin-left:0; vertical-align:baseline;}
+  .kopsub{font-size:15px; font-weight:600; margin-left:6px;}
   .kpivoet{font-size:12px; color:var(--muted); margin:-6px 2px 8px;}
   .kpi .btwhint{font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted-l);}
 
@@ -1200,6 +1201,28 @@
   .rijmenu-item:hover{background:var(--soft-2);}
   .rijmenu-item .i{color:var(--muted); flex:none;}
   .rijmenu-item.danger{color:var(--red-tekst);}
+  .rijmenu-tekst{flex:1;}
+  .rijmenu-kop{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted-l); padding:8px 12px 4px;}
+  .rijvink{width:18px; height:18px; border-radius:6px; border:1.5px solid var(--border); flex:none; position:relative;}
+  .rijvink.aan{background:var(--oranje); border-color:var(--oranje);}
+  .rijvink.aan::after{content:''; position:absolute; left:5px; top:1.5px; width:5px; height:9px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);}
+  /* Hardwarelijst: categorieën met aantal, sorteren, kopregel per merk. */
+  .hwbalk{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+  .hwcats{display:flex; flex-wrap:wrap; gap:6px;}
+  .hwcat{border:1.5px solid var(--border); background:var(--card); border-radius:var(--pil); padding:7px 13px; font:inherit; font-size:13px; font-weight:600; color:var(--text); cursor:pointer; display:inline-flex; align-items:center; gap:7px;}
+  .hwcat .tel{font-size:11.5px; font-weight:700; color:var(--muted); background:var(--soft-2); border-radius:var(--pil); padding:1px 7px;}
+  .hwcat.aan{background:var(--oranje); border-color:var(--oranje); color:#fff;}
+  .hwcat.aan .tel{background:rgba(255,255,255,.2); color:#fff;}
+  .hwcat:focus-visible{outline:none; box-shadow:0 0 0 3px var(--mint);}
+  .hwsort{display:inline-flex; align-items:center; gap:8px; margin:0; font-size:12.5px; font-weight:600; color:var(--muted); text-transform:none; letter-spacing:0;}
+  .hwsort select{width:auto; min-width:200px;}
+  tr.hwmerkrij td{background:var(--soft-2); font-weight:700; font-size:13px; padding:8px 14px;}
+  tr.hwmerkrij .tel{font-weight:600; color:var(--muted); margin-left:4px;}
+  /* De online-knop: leeg is een omlijnde knop, online toont hij zacht groen waar. */
+  .btn.hwonline{background:var(--card); border:1.5px solid var(--oranje); color:var(--oranje);}
+  .btn.hwonline.aan{background:var(--green-soft); border-color:transparent; color:var(--green-tekst);}
+  .btn.hwonline::after{content:''; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); margin:-3px 0 0 2px;}
+  .btn.hwverkoop{background:var(--oranje); color:#fff;}
   .rijmenu-item.danger:hover{background:var(--red-soft);}
   .rijmenu-item.danger .i{color:var(--red-tekst);}
   /* Barcode-hint onder het barcodeveld: rustige tip, of amber bij een botsing. */
@@ -2310,16 +2333,15 @@
     <button data-tab="kassa"><svg class="i"><use href="#i-cash"/></svg> Kassa<span class="badge" id="kasBadge" style="display:none">!</span></button>
     <button data-tab="producten"><svg class="i"><use href="#i-package"/></svg> Voorraad<span class="badge" id="vrdNavBadge" style="display:none">0</span></button>
     <button data-tab="hardware"><svg class="i"><use href="#i-laptop"/></svg> Hardware</button>
-    <!-- Webshop stond onder een eigen kopje "Online", samen met Inruil. Inruil zit nu onder
-         Verkoop; een kopje met alleen Webshop (en zonder webshop een leeg kopje) was ruis. -->
-    <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Webshop<span class="badge" id="bBestel" hidden>0</span></button>
+    <!-- Bestellingen uit de webshop. Stond onder een kopje "Online" met Inruil; Inruil zit nu
+         onder Verkoop. De webshop zelf instellen doe je bij Instellingen, Koppelingen. -->
+    <button data-tab="webshop" id="webshopLink"hidden><svg class="i"><use href="#i-shop"/></svg> Bestellingen<span class="badge" id="bBestel" hidden>0</span></button>
     <div class="navgroep">
       <div class="navkop">Werk</div>
       <button data-tab="reparaties"><svg class="i"><use href="#i-wrench"/></svg> Reparaties<span class="badge" id="repBadge" style="display:none">0</span></button>
       <button data-tab="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg> Aanvragen<span class="badge" id="aanvBadge" style="display:none">0</span></button>
     </div>
     <button data-tab="rooster"><svg class="i"><use href="#i-clock"/></svg> Rooster</button>
-    <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
   </nav>
   <div class="onderin">
     <div class="zijmodus">
@@ -2329,7 +2351,10 @@
       </div>
     </div>
     <a class="refurblink" id="refurbLink" href="/refurbish/" hidden><svg class="i"><use href="#i-recycle"/></svg> Refurbishen</a>
+    <!-- Meer staat onderaan bij Instellingen: dat zijn de twee plekken voor alles wat je
+         niet elke dag nodig hebt. Bovenin blijft alleen het dagelijkse werk. -->
     <nav>
+      <button data-tab="meer"><svg class="i"><use href="#i-layers"/></svg> Meer</button>
       <button data-tab="instellingen"><svg class="i"><use href="#i-settings"/></svg> Instellingen</button>
     </nav>
     <div class="foot" id="sidebarFoot">Versie 1.0 · <a href="#" onclick="feedbackPopup(); return false;">Feedback</a></div>
@@ -2947,7 +2972,8 @@
      eruit gingen. -->
 <section id="tab-webshop" hidden>
   <div class="pagehead">
-    <h1>Webshop</h1>
+    <h1>Bestellingen <span class="muted kopsub">uit je webshop</span></h1>
+    <button class="btn ghost" onclick="naarInstelling('webshop')"><svg class="i s"><use href="#i-settings"/></svg>Koppeling</button>
     <div class="periodesel" id="bstFilter">
       <button data-f="alles" class="active">Alles</button>
       <button data-f="nieuw">Nieuw</button>
@@ -3482,7 +3508,7 @@
       <button data-s="aanvragen" data-module="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
       <button data-s="factuur" data-module="facturen"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
       <div class="instgroep">Koppelingen</div>
-      <button data-s="webshop" data-module="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
+      <button data-s="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
       <button data-s="clover"><svg class="i"><use href="#i-shop"/></svg>Clover (pin)</button>
       <button data-s="labelprinter"><svg class="i"><use href="#i-tag"/></svg>Labelprinter</button>
       <button data-s="leveranciers"><svg class="i"><use href="#i-truck"/></svg>Leveranciers</button>
@@ -9704,7 +9730,14 @@ function toonRijMenu(ev, items){
   items=items.filter(it=>it && !it.verborgen);
   const m=document.createElement('div');
   m.className='rijmenu'; m.id='rijMenu';
-  m.innerHTML=items.map(function(it,i){ return `<button type="button" class="rijmenu-item${it.danger?' danger':''}" data-i="${i}"><svg class="i s"><use href="#${it.ico}"/></svg>${esc(it.label)}</button>`; }).join('');
+  /* {kop} is een kopregel; een item met vink (true/false) krijgt een vinkje rechts, voor
+     dingen die aan of uit staan, zoals de kanalen van een toestel. */
+  m.innerHTML=items.map(function(it,i){
+    if(it.kop) return `<div class="rijmenu-kop">${esc(it.kop)}</div>`;
+    const vink = it.vink===undefined ? '' : `<span class="rijvink${it.vink?' aan':''}" aria-hidden="true"></span>`;
+    const rol = it.vink===undefined ? '' : ` role="menuitemcheckbox" aria-checked="${!!it.vink}"`;
+    return `<button type="button" class="rijmenu-item${it.danger?' danger':''}" data-i="${i}"${rol}><svg class="i s"><use href="#${it.ico}"/></svg><span class="rijmenu-tekst">${esc(it.label)}</span>${vink}</button>`;
+  }).join('');
   document.body.appendChild(m);
   const knop=ev&&ev.currentTarget?ev.currentTarget:null;
   const r=knop?knop.getBoundingClientRect():{bottom:80,top:60,right:200};
@@ -9712,7 +9745,8 @@ function toonRijMenu(ev, items){
   let top=r.bottom+4; if(top+mh>window.innerHeight-8) top=Math.max(8, r.top-mh-4);
   m.style.top=top+'px';
   m.style.left=Math.max(8, r.right-mw)+'px';
-  [...m.querySelectorAll('.rijmenu-item')].forEach(function(b,i){ b.onclick=function(){ sluitRijMenu(); items[i].fn(); }; });
+  /* Op data-i koppelen, niet op volgorde: kopregels zitten tussen de knoppen in. */
+  [...m.querySelectorAll('.rijmenu-item')].forEach(function(b){ const it=items[Number(b.dataset.i)]; b.onclick=function(){ sluitRijMenu(); it.fn(); }; });
   setTimeout(function(){ document.addEventListener('click', sluitRijMenu); document.addEventListener('scroll', sluitRijMenu, true); },0);
 }
 function sluitRijMenu(){
@@ -12655,10 +12689,6 @@ const MODULES=[
    uitleg:'Toestellen inkopen van klanten, aan de balie of via de webshop.',
    verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen'],
    blijft:'Inruilaanvragen uit de webshop komen gewoon binnen.'},
-  {id:'webshop', groep:'Winkel', naam:'Webshop', ico:'i-shop', tabs:['webshop'],
-   uitleg:'Bestellingen en reserveringen uit je webshop.',
-   verdwijnt:['Webshop in het menu','Meldingen van nieuwe bestellingen','Instellingen: Webshop'],
-   blijft:'De koppeling blijft werken: wat online verkocht wordt, gaat nog steeds uit je voorraad.'},
   {id:'pakketten', groep:'Winkel', naam:'Pakketdiensten', ico:'i-truck', tabs:['pakketten'],
    uitleg:'PostNL aan de balie en wat je verdient aan pakketten.',
    verdwijnt:['De PostNL-knop bij Verkoop','Pakketdiensten onder Meer','Herinnering aan het eind van de maand']},
@@ -12693,7 +12723,9 @@ const MODULES=[
    uitleg:'Wat je overhoudt, met belasting, buffers en vaste kosten.',
    verdwijnt:['Rapport en Vaste lasten onder Meer','Resultaat op het dashboard']}
 ];
-/* De labelprinter is geen module meer maar een koppeling: Instellingen, Labelprinter. */
+/* De labelprinter en de webshop zijn geen module maar een koppeling (Instellingen,
+   Koppelingen). De pagina Bestellingen hoort bij de webshop en staat in het menu zodra
+   er een webshop gekoppeld is. */
 const MODULE_GROEPEN=['Winkel','Hardware','Klanten','Team','Geld'];
 function moduleVanTab(tab){ return MODULES.find(m=>m.tabs.includes(tab)) || null; }
 function modAan(id){ const m=state && state.modules; return !(m && m[id]===false); }
@@ -12809,7 +12841,7 @@ const MOB={
   bestellen:   {naam:'Bestellen',    ico:'i-cart'},
   diensten:    {naam:'Diensten',     ico:'i-tool'},
   inruil:      {naam:'Inruil',       ico:'i-recycle'},
-  webshop:     {naam:'Webshop',      ico:'i-shop'},
+  webshop:     {naam:'Bestellingen', ico:'i-shop'},
   team:        {naam:'Team',         ico:'i-users'},
   meer:        {naam:'Meer',         ico:'i-layers'},
   instellingen:{naam:'Instellingen', ico:'i-settings'}
@@ -14350,7 +14382,7 @@ function hwZichtbaar(h){
   if(hwFilterNu.startsWith('loc:'))
     return h.status!=='onderweg' && h.locatie_id===hwFilterNu.slice(4);
   if(h.status==='onderweg' && hwFilterNu==='voorraad') return false;
-  if(hwFilterNu==='online')  return hwOnline(h);
+  if(hwFilterNu==='online')  return hwOnlineWaar(h).length>0;
   if(hwFilterNu==='oud')     return hwDagen(h)>=30;
   return true;
 }
@@ -14392,18 +14424,120 @@ function cpuGen(specs){
 }
 /* De hardwarelijst overzichtelijk: per soort bij elkaar, dan op merk (HP, Dell...),
    dan model, dan generatie. Zo staan de laptops netjes gesorteerd. */
-function hwSorteer(a, b){
-  return natCmp(a.categorie, b.categorie)
-      || natCmp(a.merk, b.merk)
+/* ═══ Hardwarelijst: categorie, sorteren en online ═══
+   Sorteren op naam zette "iPhone X" na "iPhone 15" en een Galaxy A54 tussen de S-serie.
+   Daarom per merk, dan per serie (iPhone, Galaxy S, Latitude), dan op generatie: hoe
+   nieuw het model is. Voor laptops is dat de processorgeneratie (cpuGen). */
+const HW_CAT_VOLGORDE=['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'];
+const HW_SORTEN=[['merk-oud','Per merk, oud naar nieuw'],['merk-nieuw','Per merk, nieuw naar oud'],['prijs','Prijs, laag naar hoog'],['dagen','Langst op voorraad']];
+let hwCatNu='alles';
+let hwSortNu=(()=>{ try{ const v=localStorage.getItem('storvo_hw_sort'); return HW_SORTEN.some(x=>x[0]===v)?v:'merk-oud'; }catch(e){ return 'merk-oud'; } })();
+function hwKiesCat(c){ hwCatNu=c; renderHardware(); }
+function hwKiesSort(v){ hwSortNu=v; try{ localStorage.setItem('storvo_hw_sort', v); }catch(e){} renderHardware(); }
+function hwSerie(h){
+  const t=(String(h.merk||'')+' '+String(h.model||'')).toLowerCase();
+  if(/iphone/.test(t)) return 'iphone';
+  let m=t.match(/ipad\s*(pro|air|mini)?/); if(m) return 'ipad '+(m[1]||'');
+  m=t.match(/macbook\s*(pro|air)?/); if(m) return 'macbook '+(m[1]||'');
+  m=t.match(/galaxy\s*(tab\s*[sa]|z\s*fold|z\s*flip|note|[sam])\s*\d/); if(m) return 'galaxy '+m[1].replace(/\s+/g,' ');
+  return String(h.model||'').toLowerCase().replace(/\d.*$/,'').trim();
+}
+/* Hoe nieuw is dit model? Hoger is nieuwer, null als we het niet weten. */
+function hwGeneratie(h){
+  const t=(String(h.merk||'')+' '+String(h.model||'')).toLowerCase();
+  let m=t.match(/iphone\s*(\d{1,2}|xs|xr|x|se)\s*(pro\s*max|pro|plus|max|mini|e)?/);
+  if(m){
+    const tag=m[1]; let g;
+    if(/^\d+$/.test(tag)) g=Number(tag);
+    else if(tag==='se') g=/2022|3e|3rd|derde/.test(t)?13.5:(/2020|2e|2nd|tweede/.test(t)?11.5:6.5);
+    else g={x:10, xr:10.2, xs:10.4}[tag];
+    const v=(m[2]||'').replace(/\s+/g,' ');
+    const extra = v==='pro max'||v==='max' ? 5 : v==='pro' ? 4 : v==='plus' ? 3 : (v==='mini'||v==='e') ? 1 : 2;
+    return g*10+extra;
+  }
+  m=t.match(/galaxy\s*(?:tab\s*)?(?:s|a|m|note|z\s*fold|z\s*flip)\s*(\d{1,3})\s*(fe|e|plus|\+|ultra)?/);
+  if(m){
+    const v=m[2]||'';
+    return Number(m[1])*10 + (v==='ultra'?4 : (v==='plus'||v==='+')?3 : (v==='fe'||v==='e')?1 : 2);
+  }
+  m=t.match(/(\d{1,2})\s*(?:e|ste|de|th|rd|nd|st)\s*(?:gen|generatie|generation)/); if(m) return Number(m[1]);
+  const c=cpuGen(h.specs); if(c) return c;
+  m=t.match(/(\d{1,4})/); return m?Number(m[1]):null;
+}
+function hwVergelijkModel(a, b, r){
+  const ga=hwGeneratie(a), gb=hwGeneratie(b);
+  return natCmp(a.merk, b.merk) || natCmp(hwSerie(a), hwSerie(b))
+      || (ga!=null && gb!=null ? r*(ga-gb) : (ga==null)-(gb==null))
+      || r*(cpuGen(a.specs)-cpuGen(b.specs))
       || natCmp(a.model, b.model)
-      || (cpuGen(a.specs)-cpuGen(b.specs))
       || natCmp(a.code||a.serienummer, b.code||b.serienummer);
+}
+function hwSorteerNu(a, b){
+  if(hwSortNu==='prijs') return ((a.verkoop==null)-(b.verkoop==null)) || (Number(a.verkoop)||0)-(Number(b.verkoop)||0) || hwVergelijkModel(a,b,1);
+  if(hwSortNu==='dagen') return (hwDagen(b)-hwDagen(a)) || hwVergelijkModel(a,b,1);
+  return hwVergelijkModel(a, b, hwSortNu==='merk-nieuw' ? -1 : 1);
+}
+/* Waar staat dit toestel online? De winkel zelf telt niet mee: daar ligt alles. */
+function hwOnlineWaar(h){
+  const k=h.kanalen||{}, w=[];
+  if(hwOnline(h)) w.push('Webshop');
+  if(k.marktplaats) w.push('Marktplaats');
+  if(k.partner) w.push('Partner');
+  return w;
+}
+/* De knop zegt zelf waar hij online staat; erop tikken opent het menu met alle kanalen.
+   Eerst verdween de knop zodra een toestel online stond, en zag je nergens meer waar. */
+function hwOnlineKnop(h){
+  const w=hwOnlineWaar(h);
+  return `<button class="btn small hwonline${w.length?' aan':''}" aria-haspopup="menu" onclick="event.stopPropagation(); hwOnlineMenu(event,'${h.id}')"><svg class="i s"><use href="#${w.length?'i-check':'i-globe'}"/></svg><span>${w.length?esc(w.join(' · ')):'Online zetten'}</span></button>`;
+}
+function hwOnlineMenu(ev, id){
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const k=h.kanalen||{}, op=hwOnline(h);
+  const eig=!!(account && account.rol==='eigenaar') && mag('partners') && !h.partner_id;
+  toonRijMenu(ev, [
+    {kop:'Waar staat hij te koop?'},
+    {ico:'i-shop', label:'Webshop', vink:op, fn:()=> op ? hwWebshopUit(id) : hwOnlineSnel(id, null)},
+    {ico:'i-link', label:'Bekijken op de webshop', fn:()=>window.open(k.shopify.url,'_blank','noopener'), verborgen:!(op && k.shopify && k.shopify.url)},
+    {ico:'i-tag', label:'Marktplaats', vink:!!k.marktplaats, fn:()=>hwKanaalZet(id,'marktplaats',!k.marktplaats)},
+    {ico:'i-clipboard', label:'Tekst kopiëren voor Marktplaats', fn:()=>hwKopieerVan(id)},
+    {ico:'i-users', label:'Partner-dashboard', vink:!!k.partner, fn:()=>hwDashboard(id, !k.partner, null), verborgen:!eig},
+    {ico:'i-right', label:'Aan een partner geven', fn:()=>hwWijsToe(id), verborgen:!(eig && hwPartners.length)},
+    {ico:'i-box', label:'In de winkel', vink:k.winkel!==false, fn:()=>hwKanaalZet(id,'winkel',k.winkel===false)}
+  ]);
+}
+/* Marktplaats en "in de winkel" zijn vinkjes in kanalen. Eerst de verse kanalen uit de
+   database: de webshopkoppeling schrijft daar zelf in (kanalen.shopify). Met de lijst
+   uit je browser zou je die anders kunnen overschrijven. */
+async function hwKanaalZet(id, sleutel, aan){
+  const {data, error:e1}=await sb.from('hardware').select('kanalen').eq('id',id).maybeSingle();
+  if(e1){ toast('Opslaan lukte niet','fout'); return; }
+  const kan=Object.assign({}, (data&&data.kanalen)||{}, {[sleutel]:aan});
+  const {error}=await sb.from('hardware').update({kanalen:kan}).eq('id',id);
+  if(error){ toast('Opslaan lukte niet','fout'); return; }
+  const h=hwData.find(x=>x.id===id); if(h) h.kanalen=kan;
+  renderHardware();
+  const teksten={marktplaats:['Staat op Marktplaats','Niet meer op Marktplaats'], winkel:['Te koop in de winkel','Niet meer in de winkel']};
+  toast((teksten[sleutel]||['Opgeslagen','Opgeslagen'])[aan?0:1], true);
+}
+async function hwWebshopUit(id){
+  if(!await vraagJaNee('Hij is daarna niet meer online te koop.', {kop:'Van de webshop halen?', ja:'Van de webshop halen', gevaar:true})) return;
+  toast('Bezig met van de webshop halen…');
+  hwShopify(id,'offline',null);
+}
+function hwKopieerVan(id){
+  const h=hwData.find(x=>x.id===id); if(!h) return;
+  const titel=h.titel || [h.merk,h.model].filter(Boolean).join(' ');
+  const tekst=[titel, '', h.omschrijving||hwSpecsKort(h)||'', '', h.verkoop!=null?'Prijs: '+euro(h.verkoop):''].join('\n').trim();
+  try{ navigator.clipboard.writeText(tekst); toast('Gekopieerd, plak het in je advertentie', true); }
+  catch(e){ toast('Kopiëren lukte niet','fout'); }
 }
 /* Snel online zetten vanuit de lijst. Nog geen vraagprijs? Dan eerst de detailpagina
    openen om die in te vullen, in plaats van een foutmelding. */
 function hwOnlineSnel(id, knop){
   const h=hwData.find(x=>x.id===id); if(!h) return;
   if(h.verkoop==null || h.verkoop===''){ toast('Vul eerst een vraagprijs in','let-op'); hwBewerk(id); return; }
+  if(!knop) toast('Bezig met online zetten…');
   hwShopify(id,'online',knop);
 }
 function renderHardware(){
@@ -14413,7 +14547,7 @@ function renderHardware(){
   const opVoorraad=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg');
   const onderweg=hwData.filter(h=>h.status==='onderweg');
   const waarde=opVoorraad.reduce((n,h)=>n+(Number(h.inkoop)||0),0);
-  const online=opVoorraad.filter(hwOnline).length;
+  const online=opVoorraad.filter(h=>hwOnlineWaar(h).length).length;
   const oud=opVoorraad.filter(h=>hwDagen(h)>=30).length;
   const k=document.getElementById('hwKpis');
   if(k) k.innerHTML=
@@ -14423,19 +14557,38 @@ function renderHardware(){
     `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`+
     (onderweg.length?`<div class="kpi hwattentie"><div class="l">Nog inscannen</div><div class="v">${onderweg.length}</div></div>`:'');
 
-  const rijen=hwData.filter(hwZichtbaar).sort(hwSorteer);
+  const basis=hwData.filter(hwZichtbaar);
+  const catVan=h=>h.categorie||'Overig';
+  const perCat={}; basis.forEach(h=>{ perCat[catVan(h)]=(perCat[catVan(h)]||0)+1; });
+  const cats=Object.keys(perCat).sort((x,y)=>{ const a=HW_CAT_VOLGORDE.indexOf(x), b=HW_CAT_VOLGORDE.indexOf(y); return (a<0?99:a)-(b<0?99:b) || natCmp(x,y); });
+  if(hwCatNu!=='alles' && !perCat[hwCatNu]) hwCatNu='alles';
+  const rijen=basis.filter(h=>hwCatNu==='alles' || catVan(h)===hwCatNu).sort(hwSorteerNu);
   const tel=document.getElementById('hwTelling');
   if(tel) tel.textContent=rijen.length?'('+rijen.length+')':'';
 
-  if(!rijen.length){
+  if(!basis.length){
     vak.innerHTML=`<p class="muted">${hwFilterNu==='verkocht'
       ? 'Nog niets verkocht.'
       : 'Niets in deze lijst. Voeg een toestel toe, of laat de refurbish-app ze hierheen sturen zodra ze goedgekeurd zijn.'}</p>`;
     return;
   }
+  /* Categorieën met hun aantal, en de sortering. Per merk krijgt elk merk een kopregel
+     met zijn aantal, zodat je ziet hoeveel iPhones of Latitudes er liggen. */
+  const balk=`<div class="hwbalk">
+      <div class="hwcats" role="group" aria-label="Categorie">
+        <button type="button" class="hwcat${hwCatNu==='alles'?' aan':''}" onclick="hwKiesCat('alles')">Alles <span class="tel">${basis.length}</span></button>
+        ${cats.map(c=>`<button type="button" class="hwcat${hwCatNu===c?' aan':''}" onclick="hwKiesCat('${esc(c)}')">${esc(c)} <span class="tel">${perCat[c]}</span></button>`).join('')}
+      </div>
+      <label class="hwsort">Sorteren
+        <select id="hwSortKeuze" onchange="hwKiesSort(this.value)">${HW_SORTEN.map(([v,l])=>`<option value="${v}"${hwSortNu===v?' selected':''}>${l}</option>`).join('')}</select>
+      </label>
+    </div>`;
+  const perMerk=hwSortNu==='merk-oud'||hwSortNu==='merk-nieuw';
+  const merkTel={}; rijen.forEach(h=>{ const mk=h.merk||'Zonder merk'; merkTel[mk]=(merkTel[mk]||0)+1; });
 
   hwZichtbaarIds=rijen.map(h=>h.id);
-  vak.innerHTML=`<div id="hwBulk" ${hwGeselecteerd.size?'':'hidden'} style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--lblauw); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:12px">
+  let vorigMerk=null;
+  vak.innerHTML=balk+`<div id="hwBulk" ${hwGeselecteerd.size?'':'hidden'} style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--lblauw); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:12px">
       <span id="hwBulkAantal" style="font-weight:700">${hwGeselecteerd.size} geselecteerd</span>
       <button class="btn small danger" onclick="hwBulkVerwijder()"><svg class="i s"><use href="#i-trash"/></svg>Verwijder geselecteerde</button>
       <button class="btn small ghost" onclick="hwSelectieWissen()">Selectie wissen</button>
@@ -14450,7 +14603,10 @@ function renderHardware(){
     <tbody>${rijen.map(h=>{
       const m=hwMarge(h);
       const d=hwDagen(h);
-      return `<tr class="klikrij" onclick="hwRijKlik(event,'${h.id}')">
+      const mk=h.merk||'Zonder merk';
+      const kop=(perMerk && mk!==vorigMerk) ? `<tr class="hwmerkrij"><td colspan="11">${esc(mk)} <span class="tel">${merkTel[mk]}</span></td></tr>` : '';
+      vorigMerk=mk;
+      return kop+`<tr class="klikrij" onclick="hwRijKlik(event,'${h.id}')">
         <td class="uitgebreid"><input type="checkbox" onchange="hwSelect('${h.id}',this.checked)"${hwGeselecteerd.has(h.id)?' checked':''}></td>
         <td><div class="hwrij">${hwThumbHtml(h)}<div style="min-width:0">
             <b>${esc([h.merk,h.model].filter(Boolean).join(' '))}</b>
@@ -14473,10 +14629,8 @@ function renderHardware(){
         <td class="num hwact">${h.status==='verkocht'?''
           : `<div class="hwacties">${h.partner_id
             ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span><button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
-            : `${(account&&account.rol==='eigenaar'&&hwPartners.length&&h.status!=='onderweg'&&mag('partners'))
-              ? `<button class="btn ghost small" onclick="event.stopPropagation(); hwWijsToe('${h.id}')">Naar partner</button>`:''}${(h.status!=='onderweg' && !(h.kanalen&&h.kanalen.shopify&&h.kanalen.shopify.id))
-              ? `<button class="btn small" style="background:var(--oranje); color:#fff" onclick="event.stopPropagation(); hwOnlineSnel('${h.id}', this)"><svg class="i s"><use href="#i-globe"/></svg>Online</button>`:''}${h.status!=='onderweg'
-              ? `<button class="btn small" style="background:var(--green); color:#fff" onclick="event.stopPropagation(); hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen</button>`:''}<button class="btn ghost small" onclick="event.stopPropagation(); hwBewerk('${h.id}')">Openen</button>`}</div>`}</td>
+            : `${h.status!=='onderweg' ? hwOnlineKnop(h) : ''}${h.status!=='onderweg'
+              ? `<button class="btn small hwverkoop" onclick="event.stopPropagation(); hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen</button>`:''}<button class="btn ghost small" onclick="event.stopPropagation(); hwBewerk('${h.id}')">Openen</button>`}</div>`}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   hwSelectieBalk();
@@ -16097,7 +16251,7 @@ async function maakInviteAccount(token, knop){
 const PAGINAS_BEHEER=[
   ['dashboard','Dashboard'],['scan','Inscannen'],['verkoop','Verkoop'],['reparaties','Reparaties'],
   ['aanvragen','Aanvragen'],['producten','Producten'],['voorraad','Voorraad'],['hardware','Hardware'],
-  ['webshop','Webshop'],['inruil','Inruil'],['kassa','Kassa'],['bestellen','Bijbestellen'],['uren','Uren'],['instellingen','Instellingen']
+  ['webshop','Bestellingen'],['inruil','Inruil'],['kassa','Kassa'],['bestellen','Bijbestellen'],['uren','Uren'],['instellingen','Instellingen']
 ];
 function rolDefaultTabs(rol){
   const t=ROL_TABS[rol];

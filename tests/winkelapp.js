@@ -373,6 +373,21 @@ setTimeout(async()=>{
   w.eval("showTab('hardware'); hwFilterNu='voorraad'; hwData="+JSON.stringify(toestellen)+"; renderHardware();");
   ok('hardwarelijst heeft een Verkopen-knop per toestel', /hwVerkoop\('h1'\)/.test(d.getElementById('hwLijst').innerHTML));
   ok('een verkocht toestel krijgt geen Verkopen-knop', !/hwVerkoop\('h3'\)/.test(d.getElementById('hwLijst').innerHTML));
+
+  // Sorteren op naam zette "iPhone X" na "iPhone 15"; nu per merk en serie op generatie.
+  ok('iPhones van oud naar nieuw', w.eval(`['iPhone 15 Pro','iPhone X','iPhone 11','iPhone 8','iPhone 13 mini','iPhone SE (2022)']
+      .map(m=>({merk:'Apple', model:m})).sort((a,b)=>hwVergelijkModel(a,b,1)).map(h=>h.model).join('|')`)
+     ==='iPhone 8|iPhone X|iPhone 11|iPhone 13 mini|iPhone SE (2022)|iPhone 15 Pro');
+  ok('Galaxy A en S apart, elk van oud naar nieuw', w.eval(`['Galaxy S23 Ultra','Galaxy A54','Galaxy S10','Galaxy A12']
+      .map(m=>({merk:'Samsung', model:m})).sort((a,b)=>hwVergelijkModel(a,b,1)).map(h=>h.model).join('|')`)
+     ==='Galaxy A12|Galaxy A54|Galaxy S10|Galaxy S23 Ultra');
+  // Categorieën met aantal boven de lijst, en een kopregel per merk.
+  ok('categorieën met aantal boven de lijst', /hwKiesCat\('alles'\)/.test(d.getElementById('hwLijst').innerHTML));
+  ok('kopregel per merk bij sorteren per merk', d.querySelectorAll('#hwLijst tr.hwmerkrij').length>0);
+  // De Online-knop blijft staan en zegt waar het toestel online staat.
+  ok('online-knop zegt waar hij online staat', /hwonline aan[^>]*>.*Webshop/.test(d.getElementById('hwLijst').innerHTML));
+  // Webshop en labelprinter zijn koppelingen, geen modules.
+  ok('webshop en labelprinter zijn geen module', w.eval("!MODULES.some(m=>m.id==='webshop'||m.id==='labelprinter')"));
   w.eval("showTab('dashboard')");
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nwinkelapp in orde');
