@@ -5,19 +5,28 @@ er niet in staat is af.
 
 ---
 
-## Na het versimpelplan (27 oktober 2026)
+## Na het versimpelplan (27 oktober tot 2 november 2026)
 
 Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan bovenin
-`VERSIMPELEN-PLAN.md`. Wat er daarna nog openstaat:
+`VERSIMPELEN-PLAN.md`.
 
-- [ ] **Eigen venster in plaats van `confirm()` in de winkelapp.** Nog 39 keer het
-      venster van het besturingssysteem. De werkbank heeft er al een eigen ja/nee- en
-      vraagvenster voor; dat patroon overnemen.
-- [ ] **Leveranciers-wachtwoorden versleutelen.** Ze staan nu leesbaar in de winkeldata
-      (`state.leveranciers`, gaat mee met de sync). Net als de webshoptokens server-side
-      versleuteld bewaren.
-- [ ] **Visueel nalopen.** Simpel en Alles op een echte telefoon en computer bekijken.
-      De app is te groot voor het voorbeeldvenster; alles is in jsdom gecontroleerd.
+- [x] **Eigen venster in plaats van `confirm()`.** GEDAAN: winkelapp (9aad1fb) en admin,
+      portaalbeheer en klantportaal (8522b19). Nergens meer een venster van het systeem.
+- [x] **Leveranciers-wachtwoorden versleutelen.** GEDAAN (cc9f61f): versleuteld in
+      `leverancier_inloggegevens` via de edge function `leveranciers`, niet meer in de blob.
+- [x] **Modules aan en uit.** GEDAAN (0ca1aef, ca56888): elke module van de winkelapp aan
+      of uit bij Instellingen, Modules en weergave. Synct naar elk apparaat. Inruil zit
+      onder Verkoop; groep Hardware naast Winkel; Labelprinter is een koppeling bij
+      Instellingen. Zie de memory "modules-aan-uit".
+- [x] **Hulp-assistent bijgewerkt** (edge `assistent` v3): kent de nieuwe indeling en kan
+      ook naar Kassa, Aanvragen, Inruil en Webshop brengen.
+- [ ] **Eigenaar: Kassa en Winkelvoorraad uitzetten** bij Instellingen, Modules en
+      weergave (wens van 2 november). Bewust niet vanaf de server in de winkeldata gezet.
+- [ ] **Eigenaar: één leverancierswachtwoord opslaan** als test (Instellingen,
+      Leveranciers): het veld moet daarna leeg zijn met "Opgeslagen", ook na verversen.
+- [ ] **Visueel nalopen.** Simpel en Alles, en de modulepagina, op een echte telefoon en
+      computer bekijken. De app is te groot voor het voorbeeldvenster; alles is in jsdom
+      gecontroleerd.
 
 ---
 

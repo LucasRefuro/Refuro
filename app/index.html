@@ -19886,7 +19886,9 @@ moduleToepassen();
 
 /* ===== Hulp-assistent (rechtsonder): stelt vragen aan de assistent-edge, brengt je naar de
    juiste pagina, en meldt bugs/ideeën in de tabel meldingen. ===== */
-const HULP_TABS=['dashboard','verkoop','verkopen','producten','voorraad','scan','bestellen','nieuw','catalogus','hardware','reparaties','inkopen','pakketten','mail','labelprinter','vastelasten','rapport','facturen','uren','rooster','team','partners','instellingen','meer'];
+/* Kassa, Aanvragen, Inruil en Webshop stonden hier niet in, dus de assistent kon je daar
+   niet heen brengen. mag() haalt er per gebruiker af wat hij niet mag of wat uit staat. */
+const HULP_TABS=['dashboard','verkoop','verkopen','inruil','kassa','producten','voorraad','scan','bestellen','nieuw','catalogus','hardware','webshop','reparaties','aanvragen','inkopen','pakketten','mail','vastelasten','rapport','facturen','uren','rooster','team','partners','instellingen','meer'];
 let hulpGesch=[], hulpBezig=false;
 const HULP_START=['Waar maak ik een factuur?','Hoe zet ik een toestel online?','Waar zie ik mijn omzet?','Hoe koppel ik de webshop?'];
 function hulpHuidigeTab(){ const s=document.querySelector('main section[id^="tab-"]:not([hidden])'); return s? s.id.replace('tab-','') : ''; }

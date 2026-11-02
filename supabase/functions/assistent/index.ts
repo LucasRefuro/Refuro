@@ -24,34 +24,43 @@ const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE
 // mag alleen navigeren naar een id dat in de meegestuurde 'toegankelijk'-lijst staat.
 const GIDS = `
 PAGINA'S (tab-id — wat je er doet):
-- dashboard — Startscherm met de cijfers en aandachtspunten van vandaag.
-- verkoop — De KASSA: artikelen scannen en afrekenen aan de balie (pin/contant).
-- verkopen — Overzicht van gedane verkopen en de omzet per periode.
-- producten — De winkelvoorraad (hoesjes, opladers, accessoires): producten en prijzen beheren.
-- voorraad — Voorraad-aantallen per product bijhouden (hoort onder Producten).
-- scan — Met de barcode-scanner een product opzoeken.
-- bestellen — De bestellijst: wat er bijbesteld moet worden.
+- dashboard — Startscherm: winst van vandaag, wat er moet gebeuren, grote knoppen. Schakelaar Simpel of Alles.
+- verkoop — Afrekenen aan de balie: scannen, blokjes per categorie, diensten, PostNL, pin of contant.
+  Bovenin staat een balk met Afrekenen, Inruil en inname, en Alle verkopen.
+- verkopen — Alle verkopen per dag of periode (zit onder Verkoop).
+- inruil — Inruil en inname: toestellen inkopen van klanten, met inkoopverklaring (zit onder Verkoop).
+- kassa — Het contante geld in de lade: tellen, geld erin of eruit, naar de kluis.
+- producten — De winkelvoorraad (hoesjes, kabels, accessoires met een barcode). Bovenin: Producten, Tellen, Inscannen, Bijbestellen.
+- voorraad — Voorraad tellen en bijhangen (hoort onder Producten).
+- scan — Inscannen: voorraad erbij of eraf met de barcodescanner (hoort onder Producten).
+- bestellen — Bijbestellen: wat er besteld moet worden (hoort onder Producten).
 - nieuw — Een nieuw product toevoegen (hoort onder Producten).
 - catalogus — De leverancierscatalogus doorzoeken en producten overnemen.
-- hardware — De verkoopbare TOESTELLEN (refurbished laptops/telefoons): prijs, prijskaartje printen, online zetten, verkopen aan de balie.
+- hardware — De hardwarevoorraad: losse laptops en toestellen met een eigen nummer. Prijs, prijskaartje printen, online zetten, verkopen aan de balie.
+- webshop — Bestellingen en reserveringen uit de webshop.
 - reparaties — Reparaties aannemen en volgen (het reparatiebord).
-- inkopen — Inkopen registreren (voor de btw-voorbelasting en je kosten).
+- aanvragen — Iets speciaal bestellen voor een klant, met aanbetaling.
+- inkopen — Inkopen vastleggen: maak een foto van de bon en Storvo vult het in.
 - pakketten — Verdiensten van pakketdiensten (PostNL, DHL, Vinted) bijhouden.
 - mail — De mailbox (info@) lezen en beantwoorden.
-- labelprinter — De labelprinter instellen en testen.
 - vastelasten — Vaste maandelijkse lasten.
-- rapport — Financieel rapport: btw per kwartaal, inkomstenbelasting-indicatie, buffers.
-- facturen — Facturen en offertes maken en versturen.
+- rapport — Wat je overhoudt: resultaat, btw per kwartaal, belasting en buffers.
+- facturen — Facturen en offertes maken en versturen (knop bij Verkoop).
 - uren — Gewerkte uren van het personeel.
 - rooster — Het werkrooster en de beschikbaarheid.
 - team — Team en gebruikers beheren: rollen, rechten, en loon per medewerker.
 - partners — Toestellen die een partner voor je verkoopt (partner-dashboard).
 - instellingen — Alle instellingen. Heeft SUB-pagina's (geef dan ga.tab='instellingen' en ga.sub):
-    bedrijf (naam, logo, contact) · factuur (IBAN, KVK, btw-nummer, betaaltermijn) ·
-    huisstijl (kleuren) · klantpagina · berichten (standaardberichten) · webshop (Shopify-koppeling) ·
-    clover (pin/kassa-koppeling) · leveranciers (logins Foneday/Mobileparts) · kassa · cats · types ·
-    modellen · snel (snelkoppelingen) · paginas (zichtbare pagina's) · abonnement · backup · refurbish
-- meer — Verzamelpagina met de minder gebruikte onderdelen.
+    bedrijf (naam, contact) · modules (modules aan of uit zetten, en Simpel of Alles) · huisstijl (kleuren, logo) ·
+    abonnement · kassa · aanvragen · factuur (IBAN, KVK, btw-nummer, betaaltermijn) ·
+    webshop (Shopify-koppeling) · clover (pin-koppeling) · labelprinter (labelprinter instellen en testen, losse sticker) ·
+    leveranciers (logins Foneday/Mobileparts) · klantpagina · berichten (berichten aan de klant) ·
+    cats (categorieën) · voorraad · snel (serie inscannen) · types · modellen · refurbish · backup · feedback
+- meer — Verzamelpagina: Inkopen, Rapport, Uren, Mail, Team, Modules, en onder "Af en toe" Vaste lasten, Pakketdiensten, Partners.
+
+MODULES: de winkel kan stukken van de app uitzetten (Instellingen > modules). Staat een pagina niet in
+de lijst van toegankelijke pagina's, dan kan het zijn dat die module uit staat: zeg dan dat hij hem bij
+Instellingen, Modules weer aan kan zetten.
 `;
 
 Deno.serve(async (req) => {
