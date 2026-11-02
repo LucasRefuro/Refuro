@@ -3252,75 +3252,6 @@
 </section>
 
 <!-- LABELPRINTER -->
-<section id="tab-labelprinter"hidden>
-  <div class="pagehead"><h1>Labelprinter</h1></div>
-  <div class="modules">
-  <div class="card breed">
-    <h2><svg class="i"><use href="#i-tag"/></svg>Labels printen</h2>
-    <p class="muted" style="margin-bottom:12px">Stickers gaan direct naar je Brother QL-800, zonder printvenster.</p>
-    <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet getest. Klik op "Verbinding testen".</div>
-    <div class="acts2">
-      <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinding testen</button>
-      <button class="btn actie" onclick="labelTest(this)"><svg class="i s"><use href="#i-tag"/></svg>Test label printen</button>
-    </div>
-    <!-- Formaat en rol stel je één keer in, daarna nooit meer. -->
-    <details class="meeropties">
-      <summary>Formaat en rol</summary>
-      <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
-        <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
-        <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
-        <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
-        <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
-      </div>
-      <p class="muted klein" style="margin-top:12px">Rol van 62 mm: breedte 62, hoogte bijvoorbeeld 30. Zwart/rood-rol? Laat dat vinkje aan, anders knippert de printer rood. Dit geldt voor dit apparaat.</p>
-    </details>
-  </div>
-  <div class="card breed">
-    <h2><svg class="i"><use href="#i-tag"/></svg>Losse sticker</h2>
-    <p class="muted" style="margin-bottom:14px">Een sticker voor iets dat niet in je voorraad staat. Er komt niets bij je producten.</p>
-    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
-      <div style="flex:1; min-width:200px"><label>Naam op de sticker</label><input id="ls_naam" placeholder="bijv. Gebruikte oplader" onkeydown="if(event.key==='Enter'){event.preventDefault(); losseStickerPrint(this);}"></div>
-      <div style="min-width:120px"><label>Prijs <span class="muted">(mag leeg)</span></label><input id="ls_prijs" type="number" min="0" step="0.01" placeholder="0,00"></div>
-      <div style="min-width:90px"><label>Aantal</label><input id="ls_aantal" type="number" min="1" step="1" value="1"></div>
-    </div>
-    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px">
-      <div style="flex:1; min-width:200px"><label>Barcode <span class="muted">(mag leeg)</span></label><div style="display:flex; gap:6px"><input id="ls_barcode" style="flex:1; min-width:0" placeholder="Leeg = geen barcode op de sticker"><button type="button" class="btn ghost small" onclick="losseStickerEigenCode()" title="Eigen barcode aanmaken"><svg class="i s"><use href="#i-plus"/></svg>Eigen code</button></div></div>
-    </div>
-    <div class="acts2" style="margin-top:14px">
-      <button class="btn actie" onclick="losseStickerPrint(this)"><svg class="i s"><use href="#i-tag"/></svg>Sticker printen</button>
-    </div>
-  </div>
-  <!-- Installeren doe je één keer per computer. Daarom dicht, ook in Alles. -->
-  <div class="card breed">
-    <details class="meeropties kaartuitklap" data-handmatig>
-      <summary><svg class="i"><use href="#i-laptop"/></svg>Nog een printer toevoegen</summary>
-    <h2 style="margin-top:14px"><svg class="i"><use href="#i-laptop"/></svg>Op een Mac</h2>
-    <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando, óók op een compleet kale Mac waar nog niets op staat. Het installeert zelf alles wat nodig is (Apple-tools, Homebrew en de rest). Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
-    <ol class="setupstappen">
-      <li>Open op die Mac <b>Terminal</b> (Cmd+spatie, typ "Terminal", Enter).</li>
-      <li>Plak dit commando en druk op Enter. Voer je Mac-wachtwoord in als erom gevraagd wordt, en klik één keer op "Installeer" als het venster voor de Apple-tools verschijnt. Verder gaat alles vanzelf (reken op 10 tot 20 minuten de eerste keer).</li>
-    </ol>
-    <div class="cmdrij">
-      <code id="printSetupCmd">curl -fsSL https://storvo.app/printhulp/installeer.sh -o /tmp/storvo-printhulp.sh &amp;&amp; bash /tmp/storvo-printhulp.sh</code>
-      <button class="btn ghost small" onclick="kopieerPrintSetup(this)"><svg class="i s"><use href="#i-clipboard"/></svg>Kopieer</button>
-    </div>
-    <div class="infobox" style="margin-top:16px"><b>Daarna nog bij de printer:</b> zet <b>Editor Lite uit</b> (houd de Editor-Lite-knop op de printer ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat, anders ziet de Mac hem als USB-stick), zorg dat de zwart/rode DK-22251-rol erin zit, en print daarna gewoon vanuit storvo.app.</div>
-    <h2 style="margin-top:26px"><svg class="i"><use href="#i-laptop"/></svg>Op een Windows-pc</h2>
-    <p class="muted" style="margin-bottom:14px; max-width:80ch">Op Windows werkt het via de gewone Brother-driver. Download de installer, dubbelklik hem en klik door de stappen. Hij zet alles klaar en start voortaan vanzelf mee bij het aanzetten van de pc. Werkt in Edge en Chrome.</p>
-    <ol class="setupstappen">
-      <li>Installeer eerst de <b>Brother QL-800 driver</b> van de site van Brother, als dat nog niet is gebeurd.</li>
-      <li>Download en dubbelklik de installer hieronder. Toont Windows een waarschuwing "onbekende uitgever", klik dan op <b>Meer info</b> en <b>Toch uitvoeren</b>.</li>
-      <li>Zet <b>Editor Lite uit</b> op de printer (Editor-Lite-knop ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat) en sluit de QL-800 met de USB-kabel aan.</li>
-    </ol>
-    <div class="acts2" style="margin-top:14px">
-      <a class="btn actie" href="https://github.com/LucasRefuro/Refuro/releases/download/printhulp/storvo-printhulp-setup.exe" target="_blank" rel="noopener"><svg class="i s"><use href="#i-download"/></svg>Download voor Windows</a>
-    </div>
-    <div class="infobox" style="margin-top:16px">Gebruik je Firefox? Dat werkt meestal ook. Lukt printen daar niet, gebruik dan Edge of Chrome.</div>
-    </details>
-  </div>
-  </div>
-</section>
-
 <!-- PAKKETDIENSTEN -->
 <section id="tab-pakketten"hidden>
   <div class="pagehead"><h1>Pakketdiensten</h1></div>
@@ -3440,7 +3371,6 @@
       <div class="hubgroep">Winkel</div>
       <div class="hubgrid">
         <button class="hubtegel" onclick="qrScanOpen()"><svg class="i"><use href="#i-scan"/></svg><span class="tt"><b>Scannen</b><span>Scan een label en open het toestel</span></span></button>
-        <button class="hubtegel" data-tab="labelprinter" onclick="showTab('labelprinter')"><svg class="i"><use href="#i-tag"/></svg><span class="tt"><b>Labelprinter</b><span>Stickers printen</span></span></button>
         <button class="hubtegel" data-tab="mail" onclick="showTab('mail')"><svg class="i"><use href="#i-mail"/></svg><span class="tt"><b>Mail</b><span>Je postvak</span></span></button>
         <button class="hubtegel" data-tab="team" onclick="showTab('team')"><svg class="i"><use href="#i-users"/></svg><span class="tt"><b>Team</b><span>Wie mag wat</span></span></button>
         <button class="hubtegel" data-tab="instellingen" onclick="naarModules()"><svg class="i"><use href="#i-layers"/></svg><span class="tt"><b>Modules</b><span>Zet aan of uit wat je gebruikt</span></span></button>
@@ -3548,12 +3478,14 @@
       <button data-s="modules"><svg class="i"><use href="#i-layers"/></svg>Modules en weergave</button>
       <button data-s="huisstijl"><svg class="i"><use href="#i-palette"/></svg>Huisstijl</button>
       <button data-s="abonnement"><svg class="i"><use href="#i-card"/></svg>Abonnement</button>
-      <div class="instgroep">Verkoop en kanalen</div>
+      <div class="instgroep">Verkoop</div>
       <button data-s="kassa" data-module="kassa"><svg class="i"><use href="#i-cash"/></svg>Kassa</button>
       <button data-s="aanvragen" data-module="aanvragen"><svg class="i"><use href="#i-clipboard"/></svg>Aanvragen</button>
+      <button data-s="factuur" data-module="facturen"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
+      <div class="instgroep">Koppelingen</div>
       <button data-s="webshop" data-module="webshop"><svg class="i"><use href="#i-cart"/></svg>Webshop</button>
       <button data-s="clover"><svg class="i"><use href="#i-shop"/></svg>Clover (pin)</button>
-      <button data-s="factuur" data-module="facturen"><svg class="i"><use href="#i-card"/></svg>Facturen</button>
+      <button data-s="labelprinter"><svg class="i"><use href="#i-tag"/></svg>Labelprinter</button>
       <button data-s="leveranciers"><svg class="i"><use href="#i-truck"/></svg>Leveranciers</button>
       <div class="instgroep">Klantcontact</div>
       <button data-s="klantpagina" data-module="reparaties"><svg class="i"><use href="#i-globe"/></svg>Klantpagina</button>
@@ -3895,6 +3827,75 @@
     <h2><svg class="i"><use href="#i-shop"/></svg>Je pin koppelen <span class="muted">(Clover)</span></h2>
     <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Clover-pin, dan zet je je hele assortiment met één knop in de kassa: naam, prijs, barcode en voorraad. Straks (fase 2) komt een verkoop op de pin ook vanzelf terug in Storvo, net als je webshop.</p>
     <div id="cloverVak">Bezig met kijken…</div>
+  </div>
+
+  <!-- De labelprinter is een koppeling: één keer instellen per computer. Daarom hier bij
+       Instellingen, en niet meer als eigen pagina onder Meer. De losse sticker staat er
+       nog bij, want die print op dezelfde printer. -->
+  <div id="inst-labelprinter" hidden>
+  <div class="card">
+    <h2><svg class="i"><use href="#i-tag"/></svg>Labels printen</h2>
+    <p class="muted" style="margin-bottom:12px">Stickers gaan direct naar je Brother QL-800, zonder printvenster.</p>
+    <div id="labelStatus" class="muted klein" style="margin-bottom:12px">Nog niet getest. Klik op "Verbinding testen".</div>
+    <div class="acts2">
+      <button class="btn ghost" onclick="labelVerbind(this)"><svg class="i s"><use href="#i-link"/></svg>Verbinding testen</button>
+      <button class="btn actie" onclick="labelTest(this)"><svg class="i s"><use href="#i-tag"/></svg>Test label printen</button>
+    </div>
+    <!-- Formaat en rol stel je één keer in, daarna nooit meer. -->
+    <details class="meeropties">
+      <summary>Formaat en rol</summary>
+      <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
+        <div style="min-width:110px"><label>Breedte (mm)</label><input id="labelBreedte" type="number" min="10" max="120" step="1" onchange="labelBewaar()"></div>
+        <div style="min-width:110px"><label>Hoogte (mm)</label><input id="labelHoogte" type="number" min="10" max="200" step="1" onchange="labelBewaar()"></div>
+        <div style="min-width:220px"><label>Roltype</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelTweekleur" type="checkbox" onchange="labelBewaar()" style="width:auto">Zwart/rood-rol (DK-22251)</label></div>
+        <div style="min-width:240px"><label>Vorm</label><label class="klein" style="display:flex; align-items:center; gap:8px; font-weight:600; text-transform:none; letter-spacing:normal"><input id="labelVouw" type="checkbox" onchange="labelBewaar()" style="width:auto">Vouwlabel (verticaal, om te vouwen)</label></div>
+      </div>
+      <p class="muted klein" style="margin-top:12px">Rol van 62 mm: breedte 62, hoogte bijvoorbeeld 30. Zwart/rood-rol? Laat dat vinkje aan, anders knippert de printer rood. Dit geldt voor dit apparaat.</p>
+    </details>
+  </div>
+  <div class="card">
+    <h2><svg class="i"><use href="#i-tag"/></svg>Losse sticker</h2>
+    <p class="muted" style="margin-bottom:14px">Een sticker voor iets dat niet in je voorraad staat. Er komt niets bij je producten.</p>
+    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap">
+      <div style="flex:1; min-width:200px"><label>Naam op de sticker</label><input id="ls_naam" placeholder="bijv. Gebruikte oplader" onkeydown="if(event.key==='Enter'){event.preventDefault(); losseStickerPrint(this);}"></div>
+      <div style="min-width:120px"><label>Prijs <span class="muted">(mag leeg)</span></label><input id="ls_prijs" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      <div style="min-width:90px"><label>Aantal</label><input id="ls_aantal" type="number" min="1" step="1" value="1"></div>
+    </div>
+    <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px">
+      <div style="flex:1; min-width:200px"><label>Barcode <span class="muted">(mag leeg)</span></label><div style="display:flex; gap:6px"><input id="ls_barcode" style="flex:1; min-width:0" placeholder="Leeg = geen barcode op de sticker"><button type="button" class="btn ghost small" onclick="losseStickerEigenCode()" title="Eigen barcode aanmaken"><svg class="i s"><use href="#i-plus"/></svg>Eigen code</button></div></div>
+    </div>
+    <div class="acts2" style="margin-top:14px">
+      <button class="btn actie" onclick="losseStickerPrint(this)"><svg class="i s"><use href="#i-tag"/></svg>Sticker printen</button>
+    </div>
+  </div>
+  <!-- Installeren doe je één keer per computer. Daarom dicht, ook in Alles. -->
+  <div class="card">
+    <details class="meeropties kaartuitklap" data-handmatig>
+      <summary><svg class="i"><use href="#i-laptop"/></svg>Nog een printer toevoegen</summary>
+    <h2 style="margin-top:14px"><svg class="i"><use href="#i-laptop"/></svg>Op een Mac</h2>
+    <p class="muted" style="margin-bottom:14px; max-width:80ch">Wil je hetzelfde stil printen op nog een Mac, bijvoorbeeld een tweede iMac aan de balie? Dat regel je met één commando, óók op een compleet kale Mac waar nog niets op staat. Het installeert zelf alles wat nodig is (Apple-tools, Homebrew en de rest). Sluit daar de Brother QL-800 met de USB-kabel aan.</p>
+    <ol class="setupstappen">
+      <li>Open op die Mac <b>Terminal</b> (Cmd+spatie, typ "Terminal", Enter).</li>
+      <li>Plak dit commando en druk op Enter. Voer je Mac-wachtwoord in als erom gevraagd wordt, en klik één keer op "Installeer" als het venster voor de Apple-tools verschijnt. Verder gaat alles vanzelf (reken op 10 tot 20 minuten de eerste keer).</li>
+    </ol>
+    <div class="cmdrij">
+      <code id="printSetupCmd">curl -fsSL https://storvo.app/printhulp/installeer.sh -o /tmp/storvo-printhulp.sh &amp;&amp; bash /tmp/storvo-printhulp.sh</code>
+      <button class="btn ghost small" onclick="kopieerPrintSetup(this)"><svg class="i s"><use href="#i-clipboard"/></svg>Kopieer</button>
+    </div>
+    <div class="infobox" style="margin-top:16px"><b>Daarna nog bij de printer:</b> zet <b>Editor Lite uit</b> (houd de Editor-Lite-knop op de printer ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat, anders ziet de Mac hem als USB-stick), zorg dat de zwart/rode DK-22251-rol erin zit, en print daarna gewoon vanuit storvo.app.</div>
+    <h2 style="margin-top:26px"><svg class="i"><use href="#i-laptop"/></svg>Op een Windows-pc</h2>
+    <p class="muted" style="margin-bottom:14px; max-width:80ch">Op Windows werkt het via de gewone Brother-driver. Download de installer, dubbelklik hem en klik door de stappen. Hij zet alles klaar en start voortaan vanzelf mee bij het aanzetten van de pc. Werkt in Edge en Chrome.</p>
+    <ol class="setupstappen">
+      <li>Installeer eerst de <b>Brother QL-800 driver</b> van de site van Brother, als dat nog niet is gebeurd.</li>
+      <li>Download en dubbelklik de installer hieronder. Toont Windows een waarschuwing "onbekende uitgever", klik dan op <b>Meer info</b> en <b>Toch uitvoeren</b>.</li>
+      <li>Zet <b>Editor Lite uit</b> op de printer (Editor-Lite-knop ongeveer 2 seconden ingedrukt tot het groene lampje uitgaat) en sluit de QL-800 met de USB-kabel aan.</li>
+    </ol>
+    <div class="acts2" style="margin-top:14px">
+      <a class="btn actie" href="https://github.com/LucasRefuro/Refuro/releases/download/printhulp/storvo-printhulp-setup.exe" target="_blank" rel="noopener"><svg class="i s"><use href="#i-download"/></svg>Download voor Windows</a>
+    </div>
+    <div class="infobox" style="margin-top:16px">Gebruik je Firefox? Dat werkt meestal ook. Lukt printen daar niet, gebruik dan Edge of Chrome.</div>
+    </details>
+  </div>
   </div>
 
   <div class="card" id="inst-leveranciers" hidden>
@@ -4322,7 +4323,6 @@ function showTab(t){
   if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); inkConceptHerstel(); }
   if(t==='pakketten') renderPakketten();
   if(t==='mail') renderMail();
-  if(t==='labelprinter') renderLabelprinter();
   if(t==='vastelasten') renderVasteLasten();
   if(t==='rapport') renderRapport();
   if(t==='facturen'){ renderFacturen(); facHervatCheck(); }
@@ -7371,7 +7371,7 @@ async function printProductSticker(id, stil, kopieen){
     const ok=await qzPrintLabel({titel:p.naam, prijs:p.verkoop, code:p.barcode, kopieen:kopieen||1});
     if(ok && !stil) toast('Sticker geprint', true);
     return ok;
-  }catch(e){ if(!stil) toast('Printen mislukte. Staat de printhulp aan? Test via Meer, Labelprinter.','fout'); return false; }
+  }catch(e){ if(!stil) toast('Printen mislukte. Staat de printhulp aan? Test via Instellingen, Labelprinter.','fout'); return false; }
 }
 async function printBulkStickers(knop){
   const ids=[...prodGeselecteerd];
@@ -11541,10 +11541,11 @@ function instMenuWissel(){ const n=document.getElementById('instTabs'); if(n) n.
 document.querySelectorAll('#instTabs button[data-s]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#instTabs button[data-s]').forEach(x=>x.classList.toggle('active', x===b));
   const nav=document.getElementById('instTabs'); if(nav) nav.classList.remove('open');
-  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','modules','huisstijl','klantpagina','berichten','webshop','clover','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
+  ['snel','types','modellen','cats','bedrijf','factuur','voorraad','aanvragen','kassa','feedback','modules','labelprinter','huisstijl','klantpagina','berichten','webshop','clover','leveranciers','abonnement','backup','refurbish'].forEach(s=>{
     const el=document.getElementById('inst-'+s); if(el) el.hidden = s!==b.dataset.s;
   });
   if(b.dataset.s==='modules') renderModules();
+  if(b.dataset.s==='labelprinter') renderLabelprinter();
   if(b.dataset.s==='webshop'){ shopStatus(); web2Status(); }
   if(b.dataset.s==='clover') cloverStatus();
   if(b.dataset.s==='leveranciers') lvLaad();
@@ -12607,7 +12608,7 @@ async function web2Los2(knop){
 /* ---------- team / medewerkers ---------- */
 /* De pagina's die niet meer in het hoofdmenu staan maar samen onder "Meer". Als je
    op zo'n pagina zit, licht de Meer-knop op. */
-const HUB_TABS=['uren','inkopen','pakketten','vastelasten','rapport','team','partners','mail','labelprinter'];
+const HUB_TABS=['uren','inkopen','pakketten','vastelasten','rapport','team','partners','mail'];
 const ROL_TABS={
   eigenaar:null,
   beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
@@ -12642,11 +12643,14 @@ const MODULES=[
    uitleg:'Producten met een barcode, zoals hoesjes en kabels. Tellen, inscannen en bijbestellen.',
    verdwijnt:['Voorraad in het menu','Producten, tellen en inscannen','Bijbestellen en de bestellijst','Product toevoegen op het dashboard','Instellingen: Voorraad en Serie inscannen'],
    blijft:'Verkopen via de blokjes en de diensten blijft werken.'},
-  {id:'hardware', groep:'Winkel', naam:'Laptops en toestellen', ico:'i-laptop', tabs:['hardware'],
-   uitleg:'Losse toestellen met een nummer, uit de werkbank of zelf toegevoegd.',
+  /* Hardware is een eigen groep, naast de winkel: de winkelvoorraad zijn producten met
+     een barcode (hoesjes, kabels), de hardwarevoorraad zijn losse toestellen met elk een
+     eigen nummer. Inruil hoort hier ook bij: zo komen die toestellen binnen. */
+  {id:'hardware', groep:'Hardware', naam:'Hardwarevoorraad', ico:'i-laptop', tabs:['hardware'],
+   uitleg:'Laptops en toestellen, elk met een eigen nummer. Uit de werkbank of zelf toegevoegd.',
    verdwijnt:['Hardware in het menu','Toestellen vinden bij Verkoop'],
    blijft:'De werkbank zelf blijft werken.'},
-  {id:'inruil', groep:'Winkel', naam:'Inruil en inname', ico:'i-recycle', tabs:['inruil'],
+  {id:'inruil', groep:'Hardware', naam:'Inruil en inname', ico:'i-recycle', tabs:['inruil'],
    uitleg:'Toestellen inkopen van klanten, aan de balie of via de webshop.',
    verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen']},
   {id:'webshop', groep:'Winkel', naam:'Webshop', ico:'i-shop', tabs:['webshop'],
@@ -12683,13 +12687,10 @@ const MODULES=[
    verdwijnt:['De knop Facturen bij Verkoop','Factuur maken bij een reparatie of toestel','Instellingen: Facturen']},
   {id:'financien', groep:'Geld', naam:'Rapport en vaste lasten', ico:'i-chart', tabs:['rapport','vastelasten'],
    uitleg:'Wat je overhoudt, met belasting, buffers en vaste kosten.',
-   verdwijnt:['Rapport en Vaste lasten onder Meer','Resultaat op het dashboard']},
-  {id:'labelprinter', groep:'Geld', naam:'Labelprinter', ico:'i-tag', tabs:['labelprinter'],
-   uitleg:'Stickers direct op je Brother-printer.',
-   verdwijnt:['Labelprinter onder Meer'],
-   blijft:'Printen vanuit andere schermen blijft werken.'}
+   verdwijnt:['Rapport en Vaste lasten onder Meer','Resultaat op het dashboard']}
 ];
-const MODULE_GROEPEN=['Winkel','Klanten','Team','Geld'];
+/* De labelprinter is geen module meer maar een koppeling: Instellingen, Labelprinter. */
+const MODULE_GROEPEN=['Winkel','Hardware','Klanten','Team','Geld'];
 function moduleVanTab(tab){ return MODULES.find(m=>m.tabs.includes(tab)) || null; }
 function modAan(id){ const m=state && state.modules; return !(m && m[id]===false); }
 function paginaAan(tab){ const m=moduleVanTab(tab); return !m || modAan(m.id); }
@@ -12725,10 +12726,11 @@ function moduleWissel(id){
   renderModules();
   toast(aan ? m.naam+' staat weer aan' : m.naam+' staat uit. Er is niets weg.', true);
 }
-function naarModules(){
+function naarModules(){ naarInstelling('modules'); }
+function naarInstelling(sub){
   if(typeof mobMeerSluit==='function') mobMeerSluit();
   showTab('instellingen');
-  const k=document.querySelector('#instTabs button[data-s="modules"]'); if(k) k.click();
+  const k=document.querySelector('#instTabs button[data-s="'+sub+'"]'); if(k) k.click();
 }
 function renderModules(){
   const el=document.getElementById('moduleLijst'); if(!el) return;
@@ -12834,7 +12836,6 @@ const MOB_MEERLABEL=Object.assign({}, MOB, {
   inkopen:{naam:'Inkopen',ico:'i-cart'},
   rapport:{naam:'Rapport',ico:'i-chart'},
   uren:{naam:'Uren',ico:'i-clock'},
-  labelprinter:{naam:'Labelprinter',ico:'i-tag'},
   mail:{naam:'Mail',ico:'i-mail'},
   vastelasten:{naam:'Vaste lasten',ico:'i-euro'},
   pakketten:{naam:'Pakketdiensten',ico:'i-truck'},
@@ -12845,7 +12846,7 @@ const MOB_ALLES_DAG=['dashboard','scan','verkoop','reparaties','rooster','aanvra
 /* Verkopen, inkopen, mail en labelprinter stonden hier eerst niet in. Op de telefoon
    waren die pagina's daardoor nergens te openen, want de Meer-pagina van de computer
    bestaat daar niet. Houd deze lijst gelijk met de tegels op #tab-meer. */
-const MOB_ALLES_BEHEER=['inkopen','rapport','uren','labelprinter','mail','team','vastelasten','pakketten','partners','instellingen'];
+const MOB_ALLES_BEHEER=['inkopen','rapport','uren','mail','team','vastelasten','pakketten','partners','instellingen'];
 /* In Simpel laten we de voorraad-subpagina's weg uit het Meer-vel: die open je via de
    balk bovenin Voorraad, en zo blijft het vel kort. */
 const MOB_ALLEEN_ALLES=['voorraad','scan','bestellen'];
@@ -19941,7 +19942,12 @@ async function hulpVerstuur(){
   hulpBezig=false; const k2=document.getElementById('hulpVerstuurKnop'); if(k2) k2.disabled=false;
 }
 function hulpWijs(el){ if(!el) return; el.classList.add('hulp-wijs'); setTimeout(()=>el.classList.remove('hulp-wijs'), 2600); }
+/* De assistent kent nog de oude plekken: Labelprinter was een eigen pagina en de
+   modulekeuze heette "paginas". Hier omzetten, dan hoeft de assistent niet opnieuw
+   uitgerold te worden als er iets verhuist. */
 function hulpGaNaar(tab, sub){
+  if(tab==='labelprinter'){ tab='instellingen'; sub='labelprinter'; }
+  if(sub==='paginas') sub='modules';
   hulpDicht();
   try{ showTab(tab); }catch(e){}
   if(sub){ setTimeout(()=>{ const b=document.querySelector('#instTabs [data-s="'+sub+'"]'); if(b){ b.click(); hulpWijs(b); } }, 160); }

@@ -242,10 +242,14 @@ setTimeout(async()=>{
   w.eval("gebruiker=null; localStorage.setItem('storvo_simpel','1'); modusToepassen();");
   // Op de telefoon was Inkopen nergens te openen; het Meer-vel moet hem tonen.
   w.eval('mobMeerOpen()');
-  ok('Meer-vel op de telefoon heeft Inkopen en Labelprinter',
-     /mobMeerKies\('inkopen'\)/.test(d.getElementById('mobMeer').innerHTML)
-     && /mobMeerKies\('labelprinter'\)/.test(d.getElementById('mobMeer').innerHTML));
+  ok('Meer-vel op de telefoon heeft Inkopen', /mobMeerKies\('inkopen'\)/.test(d.getElementById('mobMeer').innerHTML));
   w.eval('mobMeerSluit()');
+  // De labelprinter is een koppeling en staat bij Instellingen, niet meer als eigen pagina.
+  ok('Labelprinter is geen eigen pagina meer', !d.getElementById('tab-labelprinter'));
+  w.eval("naarInstelling('labelprinter')");
+  ok('Labelprinter staat bij Instellingen', !d.getElementById('inst-labelprinter').hidden && !!d.getElementById('labelBreedte'));
+  w.eval("hulpGaNaar('labelprinter')");
+  ok('de hulp-assistent stuurt de oude plek naar Instellingen', !d.getElementById('inst-labelprinter').hidden && !d.getElementById('tab-instellingen').hidden);
 
   // Reparaties openen standaard op het bord, niet op de lijst van acht kolommen.
   w.eval("try{localStorage.removeItem('storvo_rep_weergave');}catch(e){} showTab('reparaties')");
