@@ -162,7 +162,7 @@ repo `refuro-webshop`.
       Thema: `refuro-webshop` commit 441f420, met uitrolstappen in `WERKLIJST.md`.
       Meegevonden in het thema: het productscript stopte stil op elke productpagina. Tabs
       werkten niet en een andere grade kiezen veranderde de variant in het mandje niet. Gefixt.
-      **Uitrol:** 1) edge `shopify` deployen (neemt ook de gradeSchat-centen van 8b1f3ac mee),
+      **Uitrol:** 1) edge `shopify` GEDAAN (3 nov, v26, met de gradeSchat-centen van 8b1f3ac),
       2) de vier thema-bestanden pushen (WERKLIJST), 3) elke grade-advertentie één keer opnieuw
       online zetten.
 
