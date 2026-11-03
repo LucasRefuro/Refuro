@@ -43,8 +43,10 @@ Alles staat in `INKOOP-DOR-STAPPENPLAN.md`, met de bronnen.
       waarschuwing in de werkbank. Winkelapp, Inkopen: blok "Inkoop bij particulieren" met
       PDF per inkoop, alles van de periode in één PDF, en een lijst voor de boekhouder.
       Test: `tests/inkoopregister.js`.
-- [ ] **Uitrol:** migratie `20261103120000_inkoop_registraties.sql` draaien, dan pushen.
-      Zonder migratie werkt alles zoals vroeger.
+- [x] **Uitrol:** GEDAAN (3 nov). Migratie `20261103120000_inkoop_registraties.sql` gedraaid
+      (volgnummer-trigger getest), gepusht als 16f376d en live op storvo.app.
+- [ ] **Eigenaar: één echte inname doen** met verklaring: komt hij in het register, opent het
+      DOR-scherm, en staat hij daarna op Inkopen bij "Inkoop bij particulieren"?
 - [ ] **Eigenaar: gemeente bellen** (14 0161): is het DOR in Gilze en Rijen verplicht?
 - [ ] **Eigenaar: DOR-koppeling aanvragen** met de mail in `INKOOP-DOR-STAPPENPLAN.md`.
       Tot die er is: overnemen met de kopieerknoppen.
