@@ -386,6 +386,24 @@ setTimeout(async()=>{
   ok('kopregel per merk bij sorteren per merk', d.querySelectorAll('#hwLijst tr.hwmerkrij').length>0);
   // De Online-knop blijft staan en zegt waar het toestel online staat.
   ok('online-knop zegt waar hij online staat', /hwonline aan[^>]*>.*Webshop/.test(d.getElementById('hwLijst').innerHTML));
+  // Meldingen (bestellen, rooster) staan als kaartje in de zijbalk boven Simpel of Alles,
+  // niet meer als balk over de hele breedte bovenin. Wegtikken geldt voor vandaag, tot er
+  // iets bijkomt.
+  w.eval(`localStorage.removeItem('storvo_melding_bestel');
+    state.reparaties=[1,2,3,4].map(i=>({id:900+i,nr:'R'+i,status:'aangemeld',klant:{naam:'K',tel:'1'},toestel:'iPhone',type:'scherm',prijs:10,onderdelen:[],notities:[],log:[]}));
+    showTab('dashboard');`);
+  const zm=d.getElementById('zijMeldingen');
+  ok('meldingskaartje in de zijbalk', /4 reparaties \(onderdelen\)/.test(zm.textContent));
+  ok('geen balk meer bovenin', !d.getElementById('bestelBalk') && !d.body.classList.contains('metbestelbalk'));
+  ok('het kaartje staat boven Simpel of Alles', zm.nextElementSibling && zm.nextElementSibling.classList.contains('zijmodus'));
+  zm.querySelector('.zmweg').click();
+  ok('wegtikken verbergt het kaartje', !zm.querySelector('.zijmelding'));
+  w.eval("state.reparaties.push({id:905,nr:'R5',status:'aangemeld',klant:{naam:'K',tel:'1'},toestel:'iPhone',type:'scherm',prijs:10,onderdelen:[],notities:[],log:[]}); toonMeldingen();");
+  ok('komt terug als er iets bijkomt', /5 reparaties/.test(zm.textContent));
+  w.eval('mobMeerOpen()');
+  ok('op de telefoon bovenin het Meer-vel', /5 reparaties/.test(d.getElementById('mobMeer').textContent));
+  w.eval("mobMeerSluit(); state.reparaties=[]; localStorage.removeItem('storvo_melding_bestel'); toonMeldingen();");
+
   // Webshop en labelprinter zijn koppelingen, geen modules.
   ok('webshop en labelprinter zijn geen module', w.eval("!MODULES.some(m=>m.id==='webshop'||m.id==='labelprinter')"));
   w.eval("showTab('dashboard')");

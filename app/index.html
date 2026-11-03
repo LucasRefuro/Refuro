@@ -2164,65 +2164,29 @@
   body.metabobalk aside{top:var(--abohoogte);}
   body.metabobalk .topbar{top:var(--abohoogte);}
 
-  /* De bestelbalk: dezelfde plek en maat als de abobalk, maar hij herinnert je
-     aan wat vandaag nog besteld moet worden (voor 16:30 = morgen binnen). Staat
-     er ook een abobalk, dan zakt hij er netjes onder. */
-  .bestelbalk{position:fixed; left:0; right:0; top:0; z-index:899; width:100%;
-    min-height:var(--abohoogte); display:flex; align-items:center;
-    padding:0 22px; font-size:13px; line-height:1.3;
-    background:var(--amber-soft); color:var(--amber-tekst); border-bottom:1.5px solid #F0D9A8;}
-  .bestelbinnen{max-width:1640px; margin:0 auto; width:100%;
-    display:flex; align-items:center; gap:12px;}
-  .bestelbalk .i{flex:none; width:15px; height:15px; color:var(--amber-tekst);}
-  .bestelbalk span{flex:1; min-width:0;}
-  .bestelbalk b{font-weight:700;}
-  .bestelbalk button{border:none; border-radius:var(--pil); padding:5px 14px; font-family:inherit;
-    font-size:12.5px; font-weight:700; line-height:1.35; cursor:pointer; background:var(--actie); color:#fff; flex:none;
-    white-space:nowrap; box-shadow:0 1px 5px rgba(23,32,30,.10); transition:.15s;}
-  .bestelbalk button:hover{box-shadow:0 3px 10px rgba(23,32,30,.16);}
-  body.metbestelbalk{padding-top:var(--abohoogte);}
-  body.metbestelbalk aside{top:var(--abohoogte);}
-  body.metbestelbalk .topbar{top:var(--abohoogte);}
-  /* Allebei de balken tegelijk: samen twee balken hoog, bestelbalk onder de abobalk. */
-  body.metbestelbalk.metabobalk{padding-top:calc(var(--abohoogte)*2);}
-  body.metbestelbalk.metabobalk aside{top:calc(var(--abohoogte)*2);}
-  body.metbestelbalk.metabobalk .topbar{top:calc(var(--abohoogte)*2);}
-  body.metbestelbalk.metabobalk .bestelbalk{top:var(--abohoogte);}
-
-  /* De rooster-goedkeurbalk: voor een beheerder, als er inzendingen op goedkeuring
-     wachten. Zelfde plek en maat als de andere twee; hij zakt onder een eventuele
-     abo- en bestelbalk. Groen omdat het over het team en het rooster gaat. */
-  .keurbalk{position:fixed; left:0; right:0; top:0; z-index:898; width:100%;
-    min-height:var(--abohoogte); display:flex; align-items:center;
-    padding:0 22px; font-size:13px; line-height:1.3;
-    background:var(--green-soft); color:var(--green-tekst); border-bottom:1.5px solid rgba(30,158,106,.28);}
-  .keurbinnen{max-width:1640px; margin:0 auto; width:100%;
-    display:flex; align-items:center; gap:12px;}
-  .keurbalk .i{flex:none; width:15px; height:15px; color:var(--green-tekst);}
-  .keurbalk span{flex:1; min-width:0;}
-  .keurbalk b{font-weight:700;}
-  .keurbalk button{border:none; border-radius:var(--pil); padding:5px 14px; font-family:inherit;
-    font-size:12.5px; font-weight:700; line-height:1.35; cursor:pointer; background:var(--actie); color:#fff; flex:none;
-    white-space:nowrap; box-shadow:0 1px 5px rgba(23,32,30,.10); transition:.15s;}
-  .keurbalk button:hover{box-shadow:0 3px 10px rgba(23,32,30,.16);}
-  body.metkeurbalk{padding-top:var(--abohoogte);}
-  body.metkeurbalk aside{top:var(--abohoogte);}
-  body.metkeurbalk .topbar{top:var(--abohoogte);}
-  /* Keurbalk onder de bestelbalk. */
-  body.metkeurbalk.metbestelbalk{padding-top:calc(var(--abohoogte)*2);}
-  body.metkeurbalk.metbestelbalk aside{top:calc(var(--abohoogte)*2);}
-  body.metkeurbalk.metbestelbalk .topbar{top:calc(var(--abohoogte)*2);}
-  body.metkeurbalk.metbestelbalk .keurbalk{top:var(--abohoogte);}
-  /* Keurbalk onder de abobalk (als er geen bestelbalk is). */
-  body.metkeurbalk.metabobalk{padding-top:calc(var(--abohoogte)*2);}
-  body.metkeurbalk.metabobalk aside{top:calc(var(--abohoogte)*2);}
-  body.metkeurbalk.metabobalk .topbar{top:calc(var(--abohoogte)*2);}
-  body.metkeurbalk.metabobalk .keurbalk{top:var(--abohoogte);}
-  /* Alle drie tegelijk: abo boven, bestel in het midden, keur onderaan. */
-  body.metkeurbalk.metbestelbalk.metabobalk{padding-top:calc(var(--abohoogte)*3);}
-  body.metkeurbalk.metbestelbalk.metabobalk aside{top:calc(var(--abohoogte)*3);}
-  body.metkeurbalk.metbestelbalk.metabobalk .topbar{top:calc(var(--abohoogte)*3);}
-  body.metkeurbalk.metbestelbalk.metabobalk .keurbalk{top:calc(var(--abohoogte)*2);}
+  /* Meldingen in de zijbalk, boven Simpel of Alles: wat er vandaag nog moet (bestellen,
+     rooster goedkeuren, pakketdiensten doorgeven). Dit stond eerst als balk over de hele
+     breedte bovenin elke pagina; dat drukte alles omlaag en was niet weg te klikken. Nu
+     een rustig kaartje dat je per melding voor vandaag wegtikt. Op de telefoon staan ze
+     bovenin het Meer-vel. De abobalk blijft bovenin: die gaat over betalen. */
+  .zijmeldingen{display:flex; flex-direction:column; gap:8px; padding:0 2px 12px;}
+  .zijmeldingen:empty{display:none;}
+  .zijmelding{background:var(--amber-soft); color:var(--amber-tekst); border:1.5px solid #F0D9A8; border-radius:14px;
+    padding:10px 12px; font-size:12.5px; line-height:1.4; box-shadow:0 4px 14px rgba(23,32,30,.08); animation:zmIn .2s ease;}
+  .zijmelding.groen{background:var(--green-soft); color:var(--green-tekst); border-color:rgba(30,158,106,.28);}
+  .zmkop{display:flex; align-items:center; gap:7px; font-weight:700; font-size:13px;}
+  .zmkop .i{width:15px; height:15px; flex:none;}
+  .zmkop b{flex:1; min-width:0;}
+  .zmweg{border:none; background:none; color:inherit; opacity:.6; cursor:pointer; font-size:17px; line-height:1; padding:2px 4px; border-radius:6px;}
+  .zmweg:hover{opacity:1;}
+  .zmweg:focus-visible{outline:none; opacity:1; box-shadow:0 0 0 2px currentColor;}
+  .zijmelding p{margin:4px 0 8px;}
+  .zmknop{border:none; border-radius:var(--pil); padding:5px 12px; font:inherit; font-size:12px; font-weight:700;
+    cursor:pointer; background:var(--actie); color:#fff;}
+  .zmknop:hover{box-shadow:0 3px 10px rgba(23,32,30,.16);}
+  .mobmeer-vel .zijmeldingen{padding:6px 0 4px;}
+  @keyframes zmIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+  @media(prefers-reduced-motion:reduce){ .zijmelding{animation:none;} }
 
   /* Op een smal scherm staat de zijbalk toch al boven de inhoud. Dan hoeft de
      balk niet vast te staan: hij is gewoon het eerste blok van de pagina. */
@@ -2233,19 +2197,6 @@
     .abobalk button{width:100%; padding:8px 14px;}
     body.metabobalk{padding-top:0;}
     body.metabobalk .topbar{top:0;}
-    .bestelbalk{position:static; padding:8px 16px;}
-    .bestelbinnen{flex-wrap:wrap; gap:8px;}
-    .bestelbalk span{flex:1 1 100%;}
-    .bestelbalk button{width:100%; padding:8px 14px;}
-    body.metbestelbalk, body.metbestelbalk.metabobalk{padding-top:0;}
-    body.metbestelbalk .topbar, body.metbestelbalk.metabobalk .topbar{top:0;}
-    .keurbalk{position:static; padding:8px 16px;}
-    .keurbinnen{flex-wrap:wrap; gap:8px;}
-    .keurbalk span{flex:1 1 100%;}
-    .keurbalk button{width:100%; padding:8px 14px;}
-    body.metkeurbalk, body.metkeurbalk.metbestelbalk, body.metkeurbalk.metabobalk, body.metkeurbalk.metbestelbalk.metabobalk{padding-top:0;}
-    body.metkeurbalk .topbar, body.metkeurbalk.metbestelbalk .topbar, body.metkeurbalk.metabobalk .topbar, body.metkeurbalk.metbestelbalk.metabobalk .topbar{top:0;}
-    body.metkeurbalk.metbestelbalk .keurbalk, body.metkeurbalk.metabobalk .keurbalk, body.metkeurbalk.metbestelbalk.metabobalk .keurbalk{top:0;}
   }
 
   /* Scan-knop in de kopbalk + de camera-scanner. iPhone-Safari kan zelf geen QR lezen,
@@ -2344,6 +2295,7 @@
     <button data-tab="rooster"><svg class="i"><use href="#i-clock"/></svg> Rooster</button>
   </nav>
   <div class="onderin">
+    <div class="zijmeldingen" id="zijMeldingen" role="status" aria-live="polite"></div>
     <div class="zijmodus">
       <div class="periodesel modussel" role="group" aria-label="Weergave">
         <button data-s="simpel" class="active" onclick="zetModus(true)">Simpel</button>
@@ -4371,10 +4323,8 @@ function showTab(t){
     if(k){ k.hidden=!!editId; if(!editId) npTeken(); }
   }
   if(typeof mobielBijwerken==='function') mobielBijwerken();
-  /* De bestelbalk hoort op elke pagina, dus bij elke paginawissel opnieuw kijken. */
+  /* De meldingen in de zijbalk (bestellen, rooster) bij elke paginawissel bijwerken. */
   if(typeof toonBestelBalk==='function') toonBestelBalk();
-  /* De rooster-goedkeurbalk net zo, uit wat er bij het inloggen is opgehaald. */
-  if(typeof toonKeurBalk==='function') toonKeurBalk();
   /* Bij het wisselen van pagina weer bovenaan beginnen, met de kop in beeld. */
   const bar=document.querySelector('.topbar');
   if(bar) bar.classList.remove('weg');
@@ -5147,27 +5097,7 @@ async function roosterKeurLaden(){
     keurWacht={aantal:ids.size, ids:[...ids], week:vroegste};
   }catch(e){/* stil: geen balk is beter dan een verkeerde balk */}
 }
-function toonKeurBalk(){
-  let balk=document.getElementById('keurBalk');
-  if(!keurWacht.aantal || !roosterMagInplannen() || !mag('rooster')){
-    if(balk) balk.remove();
-    document.body.classList.remove('metkeurbalk');
-    return;
-  }
-  if(!balk){
-    balk=document.createElement('div'); balk.id='keurBalk';
-    document.body.insertBefore(balk, document.body.firstChild);
-  }
-  balk.className='keurbalk';
-  const n=keurWacht.aantal;
-  const tekst = n===1 ? '1 teamlid wacht op je goedkeuring.' : n+' teamleden wachten op je goedkeuring.';
-  balk.innerHTML=`<div class="keurbinnen">
-    <svg class="i s"><use href="#i-users"/></svg>
-    <span><b>Rooster:</b> ${tekst}</span>
-    <button onclick="keurBalkGa()">Bekijken</button>
-  </div>`;
-  document.body.classList.add('metkeurbalk');
-}
+function toonKeurBalk(){ toonMeldingen(); }
 function keurBalkGa(){
   /* Spring meteen naar de week waar de oudste inzending in zit, anders sta je op
      deze week en zie je de wachtrij in de kop niet. */
@@ -12694,17 +12624,17 @@ const MODULES=[
    verdwijnt:['De PostNL-knop bij Verkoop','Pakketdiensten onder Meer','Herinnering aan het eind van de maand']},
   {id:'reparaties', groep:'Klanten', naam:'Reparaties', ico:'i-wrench', tabs:['reparaties'],
    uitleg:'Reparaties aannemen, volgen en de klant op de hoogte houden.',
-   verdwijnt:['Reparaties in het menu','Reparaties op het dashboard','Onderdelen in de bestelbalk','Instellingen: Klantpagina'],
+   verdwijnt:['Reparaties in het menu','Reparaties op het dashboard','Onderdelen in de meldingen','Instellingen: Klantpagina'],
    blijft:'Klanten kunnen hun reparatie nog volgen via hun link.'},
   {id:'aanvragen', groep:'Klanten', naam:'Aanvragen', ico:'i-clipboard', tabs:['aanvragen'],
    uitleg:'Iets speciaal bestellen voor een klant, met aanbetaling.',
-   verdwijnt:['Aanvragen in het menu','Aanvragen op het dashboard','Aanvragen in de bestelbalk','Instellingen: Aanvragen']},
+   verdwijnt:['Aanvragen in het menu','Aanvragen op het dashboard','Aanvragen in de meldingen','Instellingen: Aanvragen']},
   {id:'mail', groep:'Klanten', naam:'Mail', ico:'i-mail', tabs:['mail'],
    uitleg:'Je postvak in Storvo.',
    verdwijnt:['Mail onder Meer']},
   {id:'rooster', groep:'Team', naam:'Rooster en uren', ico:'i-clock', tabs:['rooster','uren'],
    uitleg:'Wie wanneer werkt, en de gewerkte uren.',
-   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De goedkeurbalk en herinneringen','Rooster op het dashboard'],
+   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De goedkeurmelding en herinneringen','Rooster op het dashboard'],
    blijft:'Herinneringsmails naar je team gaan gewoon door.'},
   {id:'team', groep:'Team', naam:'Team', ico:'i-users', tabs:['team'],
    uitleg:'Gebruikers, rollen en wie wat mag.',
@@ -12956,8 +12886,10 @@ function mobMeerBeheer(){
 }
 function mobMeerOpen(){
   const vel=document.getElementById('mobMeer'); if(!vel) return;
+  const meld=meldingenHtml();
   vel.innerHTML=`<div class="mobmeer-vel">
     <div class="mobmeer-greep"></div>
+    ${meld?`<div class="zijmeldingen">${meld}</div>`:''}
     ${mobMeerTegels(MOB_ALLES_DAG,"Pagina's")}
     ${mobMeerBeheer()}
     ${(gebruiker && gebruiker.rol==='medewerker') ? '' : `<div class="mobmeer-kop">Weergave</div>
@@ -15947,46 +15879,58 @@ function vandaagBestellen(){
   const aanvr=mag('aanvragen') ? aanvragen().filter(a=>a.status==='aangevraagd').length : 0;
   return {reps, aanvr, totaal:reps+aanvr};
 }
-function toonBestelBalk(){
-  let balk=document.getElementById('bestelBalk');
+/* De meldingen voor de zijbalk (en bovenin het Meer-vel op de telefoon). Elke melding
+   heeft een id; wegtikken bewaart voor vandaag hoeveel het er waren. Komt er iets bij,
+   dan verschijnt hij gewoon weer. */
+function meldingenLijst(){
+  const uit=[];
+  if(typeof pakketHerinneringNodig==='function' && mag('pakketten') && pakketHerinneringNodig())
+    uit.push({id:'pakket', ico:'i-truck', kop:'Laatste dag van de maand', tekst:'Geef je pakketdienst-stats door.', knop:'Doorgeven', ga:"showTab('pakketten')", aantal:1});
   const u=vandaagBestellen();
-  /* De maand-herinnering voor de pakketdienst-stats heeft op die ene dag voorrang:
-     hij komt maar één keer per maand langs en is zo weg als je hem doorgeeft. */
-  const pakketMeld = (typeof pakketHerinneringNodig==='function') && mag('pakketten') && pakketHerinneringNodig();
-  if(u.totaal<=0 && !pakketMeld){
-    if(balk) balk.remove();
-    document.body.classList.remove('metbestelbalk');
-    return;
-  }
-  if(!balk){
-    balk=document.createElement('div'); balk.id='bestelBalk';
-    /* Vooraan, net als de abobalk. Staan ze er allebei, dan regelt de CSS dat
-       deze onder de abobalk zakt. */
-    document.body.insertBefore(balk, document.body.firstChild);
-  }
-  balk.className='bestelbalk';
-  if(pakketMeld){
-    balk.innerHTML=`<div class="bestelbinnen">
-      <svg class="i s"><use href="#i-truck"/></svg>
-      <span><b>Laatste dag van de maand:</b> geef je pakketdienst-stats door (PostNL, Vinted, DHL).</span>
-      <button onclick="showTab('pakketten')">Doorgeven</button>
-    </div>`;
-  } else {
+  if(u.totaal>0){
     const delen=[];
     if(u.reps) delen.push(u.reps+' reparatie'+(u.reps>1?'s':'')+' (onderdelen)');
     if(u.aanvr) delen.push(u.aanvr+' aanvra'+(u.aanvr>1?'gen':'ag'));
     /* Na 16:30 heeft "vandaag voor 16:30" geen zin meer; dan gewoon "nog te bestellen". */
     const nu=new Date(), voor1630 = nu.getHours()<16 || (nu.getHours()===16 && nu.getMinutes()<30);
-    const kop = voor1630 ? 'Vandaag vóór 16:30 bestellen' : 'Nog te bestellen';
-    const staart = voor1630 ? ', dan is het morgen binnen' : '';
-    balk.innerHTML=`<div class="bestelbinnen">
-      <svg class="i s"><use href="#i-cart"/></svg>
-      <span><b>${kop}:</b> ${esc(delen.join(' en '))}${staart}.</span>
-      <button onclick="bestelBalkGa()">Bekijken</button>
-    </div>`;
+    uit.push({id:'bestel', ico:'i-cart', kop: voor1630 ? 'Vandaag vóór 16:30 bestellen' : 'Nog te bestellen',
+      tekst: delen.join(' en ')+(voor1630 ? ', dan is het morgen binnen.' : '.'), knop:'Bekijken', ga:'bestelBalkGa()', aantal:u.totaal});
   }
-  document.body.classList.add('metbestelbalk');
+  if(typeof keurWacht!=='undefined' && keurWacht.aantal && typeof roosterMagInplannen==='function' && roosterMagInplannen() && mag('rooster')){
+    const n=keurWacht.aantal;
+    uit.push({id:'keur', ico:'i-users', kop:'Rooster', groen:true, tekst: n===1 ? '1 teamlid wacht op je goedkeuring.' : n+' teamleden wachten op je goedkeuring.', knop:'Bekijken', ga:'keurBalkGa()', aantal:n});
+  }
+  return uit.filter(m=>!meldingWeg(m));
 }
+function meldingWeg(m){
+  try{
+    const w=JSON.parse(localStorage.getItem('storvo_melding_'+m.id)||'null');
+    return !!(w && w.dag===new Date().toISOString().slice(0,10) && m.aantal<=w.aantal);
+  }catch(e){ return false; }
+}
+function meldingWegtikken(id){
+  const m=meldingenLijst().find(x=>x.id===id); if(!m) return;
+  try{ localStorage.setItem('storvo_melding_'+id, JSON.stringify({dag:new Date().toISOString().slice(0,10), aantal:m.aantal})); }catch(e){}
+  toonMeldingen();
+  const vel=document.getElementById('mobMeer'); if(vel && !vel.hidden) mobMeerOpen();
+}
+function meldingenHtml(){
+  return meldingenLijst().map(m=>`<div class="zijmelding${m.groen?' groen':''}">
+      <div class="zmkop"><svg class="i s"><use href="#${m.ico}"/></svg><b>${esc(m.kop)}</b>
+        <button type="button" class="zmweg" title="Voor vandaag verbergen" aria-label="Verbergen" onclick="meldingWegtikken('${m.id}')">&times;</button></div>
+      <p>${esc(m.tekst)}</p>
+      <button type="button" class="zmknop" onclick="${m.ga}">${esc(m.knop)}</button>
+    </div>`).join('');
+}
+function toonMeldingen(){
+  const vak=document.getElementById('zijMeldingen'); if(vak) vak.innerHTML=meldingenHtml();
+  /* Een oude balk van voor deze versie (open tabblad tijdens het uitrollen) opruimen. */
+  ['bestelBalk','keurBalk'].forEach(id=>{ const b=document.getElementById(id); if(b) b.remove(); });
+  document.body.classList.remove('metbestelbalk','metkeurbalk');
+}
+/* De oude namen blijven: ze worden op veel plekken aangeroepen (bij elke paginawissel,
+   na het inloggen, na het laden van het rooster). */
+function toonBestelBalk(){ toonMeldingen(); }
 function bestelBalkGa(){
   const u=vandaagBestellen();
   showTab(u.reps ? 'reparaties' : 'aanvragen');
