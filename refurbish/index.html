@@ -55,6 +55,8 @@ aside{width:246px; background:var(--card); border-right:1.5px solid var(--border
 .logo .name{font-family:'Sora',sans-serif; font-weight:800; font-size:17px; line-height:1.1;}
 .logo .sub{font-size:10px; font-weight:600; color:var(--muted-l); letter-spacing:.12em; text-transform:uppercase;}
 aside nav{display:flex; flex-direction:column; gap:3px;}
+.menuknop{display:none; align-items:center; gap:8px; border:1.5px solid var(--border); background:var(--card); color:var(--tekst);
+  border-radius:var(--pil); padding:10px 16px; min-height:44px; font:inherit; font-weight:700; font-size:14px; cursor:pointer;}
 aside nav button{display:flex; align-items:center; gap:11px; width:100%; text-align:left;
   background:none; border:none; color:var(--muted); padding:11px 16px; border-radius:var(--pil);
   font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; transition:.16s;}
@@ -176,6 +178,31 @@ tr.klikbaar{cursor:pointer;}
 .tabelscroll{max-height:70vh; overflow:auto;}
 .tabelscroll thead th{position:sticky; top:0; background:var(--card); z-index:1; padding-top:10px; box-shadow:inset 0 -1px 0 var(--border);}
 .tabelpager{display:flex; align-items:center; justify-content:center; gap:16px; margin-top:14px;}
+/* ═══ Tabellen op de telefoon ═══
+   Op een smal scherm wordt elke tabel een stapel kaartjes: een rij is een kaart, een cel
+   een regel met de kolomnaam ervoor. Zo scrol je alleen naar beneden, nooit opzij.
+   tabellenStapelen() zet de kolomnamen als data-label op de cellen. De eerste kolom met
+   een naam wordt de kop van de kaart (stapel-kop); een vinkje of knop in de kop blijft
+   staan (stapel-houd), anders verdwijnt "alles selecteren" op de telefoon. */
+@media(max-width:720px){
+  .tabelrol{overflow-x:visible;}
+  .tabelscroll{max-height:none; overflow:visible;}
+  table.stapel,table.stapel>tbody,table.stapel>tbody>tr,table.stapel>tbody>tr>td{display:block; width:100%;}
+  table.stapel>thead{display:block;}
+  table.stapel>thead>tr{display:flex; flex-wrap:wrap; gap:8px;}
+  table.stapel>thead th{display:none;}
+  table.stapel>thead th.stapel-houd{display:block; position:static; padding:0 0 10px; box-shadow:none;}
+  table.stapel>tbody>tr{border:1.5px solid var(--border); border-radius:var(--radius-s); padding:10px 14px; margin-bottom:10px; background:var(--card);}
+  table.stapel>tbody>tr:hover>td{background:none;}
+  table.stapel>tbody>tr>td{border:none; padding:5px 0; display:flex; justify-content:space-between; align-items:center; gap:14px; text-align:right; white-space:normal; min-width:0;}
+  table.stapel>tbody>tr>td::before{content:attr(data-label); flex:none; max-width:45%; text-align:left; font-family:'Instrument Sans',system-ui,sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted-l);}
+  table.stapel>tbody>tr>td.stapel-kop{display:block; text-align:left; font-size:15px; padding-bottom:6px;}
+  table.stapel>tbody>tr>td.stapel-kop::before,table.stapel>tbody>tr>td[data-label=""]::before{content:none;}
+  table.stapel>tbody>tr>td[data-label=""]{justify-content:flex-start; text-align:left;}
+  table.stapel>tbody>tr>td:empty{display:none;}
+  /* Pillen en knoppen in een kaartregel niet laten afbreken: ingeknepen worden ze anders een rondje. */
+  table.stapel>tbody>tr>td :is(.locpil,.batpil,.gradepil,.deelpil,.onlinepil,.partnerpil,.st,.btn){white-space:nowrap; flex:none;}
+}
 .tabelbalk{display:flex; justify-content:flex-end; margin-bottom:10px;}
 /* Het gedeelde lijst-menu: de sorteerknoppen als pil-groep, met het merk-filter ernaast. */
 .lijstbalk{margin-bottom:12px; flex-wrap:wrap; gap:6px; vertical-align:middle;}
@@ -346,7 +373,9 @@ details.meeropties>summary .muted{font-weight:500;}
   a.onlinepil:hover{filter:brightness(.97);}
   .filtertel{opacity:.6; font-variant-numeric:tabular-nums;}
   .kpi.vrattentie .v{color:var(--oranje);}
-  .locpil.leeg{background:transparent; color:var(--muted-l); border:1.5px dashed var(--border);}
+  /* padding en text-align terugzetten: .leeg is ook de klasse van de lege-lijst-melding
+     (40px padding), en zonder dit werd "nog geen plek" een grote gestippelde bol. */
+  .locpil.leeg{background:transparent; color:var(--muted-l); border:1.5px dashed var(--border); padding:3px 10px; text-align:left;}
   .verhuis{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px;
     padding:12px 16px; border-radius:var(--radius-s); background:var(--lblauw);
     font-size:14px; font-weight:600;}
@@ -675,14 +704,19 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 
 @media(max-width:860px){
   body.ingelogd{flex-direction:column;}
-  aside{position:static; width:100%; flex-direction:row; align-items:center; overflow-x:auto;
+  /* Het menu op de telefoon: bovenin alleen het logo en een Menu-knop met de pagina waar
+     je bent. Open is het een lijst onder elkaar. Vroeger was het een balk die je opzij
+     moest schuiven, en dan zag je de helft van de knoppen niet. */
+  aside{position:static; width:100%; flex-direction:row; flex-wrap:wrap; align-items:center;
     padding:12px; border-right:none; border-bottom:1.5px solid var(--border); gap:8px;}
-  aside nav{flex-direction:row;}
-  aside nav button{white-space:nowrap; padding:10px 15px;}
+  .menuknop{display:inline-flex; margin-left:auto;}
+  aside nav,aside .onderin{display:none; width:100%;}
+  aside.menu-open nav{display:flex; flex-direction:column; padding-top:6px;}
+  aside nav button{padding:12px 15px; min-height:44px;}
   .logo{padding:0 14px 0 4px;}
-  .onderin{margin-top:0; padding-top:0; border-top:none; display:flex; align-items:center; gap:8px;}
+  aside.menu-open .onderin{display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-top:6px; padding-top:12px; border-top:1.5px solid var(--border);}
   .modussel{width:auto; margin:0;}
-  .onderin .terug,.onderin .portaallink{width:auto; margin:0; white-space:nowrap;}
+  .onderin .terug,.onderin .portaallink{width:auto; margin:0;}
   main{margin-left:0;}
   .topbar{padding:12px 16px;}
   .binnen{padding:20px 16px 60px;}
@@ -768,6 +802,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
   <symbol id="i-recycle" viewBox="0 0 24 24"><path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 7.196 9.5 3.1 10.598"/><path d="m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843"/><path d="m13.378 9.633 4.096 1.098 1.097-4.096"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
 </svg>
 
 <aside hidden id="zijbalk">
@@ -775,6 +810,9 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
     <div class="mark" id="merkVlak"></div>
     <div><div class="name">Refurbishen</div><div class="sub">Storvo</div></div>
   </div>
+  <!-- Alleen op de telefoon: het menu klapt open als lijst onder elkaar, in plaats van
+       een balk waar je zijwaarts doorheen moet schuiven. -->
+  <button type="button" class="menuknop" id="menuKnop" onclick="menuWissel()" aria-expanded="false"><svg class="i"><use href="#i-menu"/></svg><span id="menuNu">Menu</span></button>
   <nav>
     <button class="navscan" onclick="qrScanOpen()"><svg class="i"><use href="#i-camera"/></svg> Scan een label</button>
     <button data-tab="werkbank" class="active"><svg class="i"><use href="#i-laptop"/></svg> Werkbank</button>
@@ -1354,6 +1392,49 @@ if(typeof MutationObserver==='function'){
     }
   }).observe(document.body, {childList:true, subtree:true});
 }
+/* ═══ Tabellen op de telefoon onder elkaar ═══
+   Zet bij elke tabel met drie of meer kolommen de kolomnaam als data-label op elke cel, zodat
+   de CSS hem op een smal scherm als kaartjes toont (zie "Tabellen op de telefoon"). Twee
+   kolommen passen altijd en blijven een tabel. Een cel over meer kolommen (bijvoorbeeld
+   "nog niets") en een cel onder een lege kop (vinkje, knoppen) krijgen geen label. Draait
+   vanzelf op elke nieuw getekende tabel of rij, net als de uitklappers hierboven, zodat geen
+   enkele tekenfunctie eraan hoeft te denken. */
+function tabellenStapelen(){
+  if(typeof document==='undefined' || !document) return;   // pagina al gesloten (tests)
+  document.querySelectorAll('table').forEach(t=>{
+    if(!t._stapelNamen){
+      const kopRij=t.tHead && t.tHead.rows[t.tHead.rows.length-1];
+      if(!kopRij) return;
+      const namen=[];
+      for(const th of kopRij.cells){
+        const n=th.textContent.trim();
+        for(let i=0;i<(th.colSpan||1);i++) namen.push(n);
+        if(th.querySelector('input,select,button')) th.classList.add('stapel-houd');
+      }
+      t._stapelNamen=namen;
+      if(namen.length>=3) t.classList.add('stapel');
+    }
+    const namen=t._stapelNamen;
+    if(namen.length<3) return;
+    const kop=namen.findIndex(n=>n);
+    for(const tb of t.tBodies) for(const tr of tb.rows){
+      if(tr._gestapeld) continue;
+      tr._gestapeld=true;
+      let kol=0;
+      for(const td of tr.cells){
+        const span=td.colSpan||1;
+        if(!td.hasAttribute('data-label')) td.setAttribute('data-label', span>1 ? '' : (namen[kol]||''));
+        if(kol===kop && span===1) td.classList.add('stapel-kop');
+        kol+=span;
+      }
+    }
+  });
+}
+/* Direct in de observer en niet via requestAnimationFrame: de observer bundelt de
+   wijzigingen al en draait vóór het scherm wordt getekend, dus geen flits van een brede
+   tabel. Een animatieframe liet bovendien de jsdom-tests omvallen na het sluiten. */
+if(typeof MutationObserver==='function') new MutationObserver(tabellenStapelen).observe(document.body, {childList:true, subtree:true});
+
 /* Een open rijmenu klapt dicht zodra je ergens anders klikt, of een keuze maakt. */
 document.addEventListener('click', e=>{
   document.querySelectorAll('details.rijmenu[open]').forEach(m=>{
@@ -1633,10 +1714,17 @@ function showTab(t){
   document.querySelectorAll('main section[id^="tab-"]').forEach(s=>s.hidden = (s.id!=='tab-'+t));
   tekenAlles();
   window.scrollTo(0,0);
-  /* Op de telefoon is het menu een horizontaal schuivende balk; zet de actieve
-     knop in beeld zodat je diep in de app niet denkt dat er maar vijf tabs zijn. */
-  if(actief&&actief.scrollIntoView) actief.scrollIntoView({inline:'center', block:'nearest'});
+  /* Op de telefoon klapt het menu na een keuze dicht, en de Menu-knop zegt waar je bent. */
+  menuWissel(false);
+  const nu=document.getElementById('menuNu');
+  if(nu) nu.textContent = actief ? actief.textContent.replace(/\d+\s*$/,'').trim() : 'Menu';
   sessieBewaar();
+}
+function menuWissel(aan){
+  const zij=document.getElementById('zijbalk'), knop=document.getElementById('menuKnop'); if(!zij) return;
+  const open = typeof aan==='boolean' ? aan : !zij.classList.contains('menu-open');
+  zij.classList.toggle('menu-open', open);
+  if(knop) knop.setAttribute('aria-expanded', open?'true':'false');
 }
 /* Alleen echte tab-knoppen wisselen van pagina. De Scan-knop is een actie (opent de
    camera) en heeft geen data-tab; die slaan we hier over, anders zou showTab(undefined)
