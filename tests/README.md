@@ -29,6 +29,7 @@ npm test
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
 | `leveranciers.js` | Dat het wachtwoord van Foneday en Mobileparts nooit in de sync, in state of in de browseropslag belandt, ook niet bij de verhuizing van een oud apparaat |
 | `mobiel.js` | De telefoon: elke tabel met drie of meer kolommen wordt een stapel kaartjes (kolomnaam op elke cel, ook bij later bijgetekende rijen), het vinkje in de kop blijft bereikbaar, en het menu is een Menu-knop met een lijst onder elkaar in plaats van een zijwaartse balk |
+| `inkoopregister.js` | Inkoop bij een particulier: de DOR-velden in het scherm (onder de 18 en zonder legitimatie gaat niet door, geen veld voor een kopie of BSN), elk toestel zijn eigen serienummer of IMEI, het register en de verklaring met de btw-zin, de vijf werkdagen bewaring rond weekend en feestdagen, de waarschuwing in de werkbank, het DOR-scherm, en op de Inkopen-pagina de lijst, de CSV voor de boekhouder (zonder geboortedatum of legitimatie) en het aanvinken van het DOR |
 
 Die laatste bestaat vanwege een fout die er echt in zat: een element met
 `hidden` bleef gewoon staan omdat er `display:flex` op stond. In de code was

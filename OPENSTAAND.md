@@ -28,6 +28,29 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       computer bekijken. De app is te groot voor het voorbeeldvenster; alles is in jsdom
       gecontroleerd.
 
+## Inkoopregister, DOR en de telefoon (3 november 2026)
+
+Alles staat in `INKOOP-DOR-STAPPENPLAN.md`, met de bronnen.
+
+- [x] **Telefoon: niets schuift meer opzij.** GEDAAN (cf8aa63, 728d8d0). Tabellen worden op
+      de telefoon kaartjes (winkelapp vanaf drie kolommen, werkbank ook), filterknoppen
+      breken af, het werkbankmenu is een Menu-knop met een lijst. Test: `tests/mobiel.js`.
+- [x] **Inkoop bij een particulier met DOR-velden.** GEBOUWD, WACHT OP UITROL. Eén scherm in
+      de werkbank vult het inkoopregister en de inkoopverklaring: verkoper, legitimatie
+      (alleen soort en nummer), serienummer of IMEI per toestel, onder de 18 gaat niet
+      door, en de verklaring zegt nu ook dat er geen btw is afgetrokken. Daarna het scherm
+      "Overnemen in het DOR" met kopieerknoppen. Vijf werkdagen bewaring (APV 2:68) met een
+      waarschuwing in de werkbank. Winkelapp, Inkopen: blok "Inkoop bij particulieren" met
+      PDF per inkoop, alles van de periode in één PDF, en een lijst voor de boekhouder.
+      Test: `tests/inkoopregister.js`.
+- [ ] **Uitrol:** migratie `20261103120000_inkoop_registraties.sql` draaien, dan pushen.
+      Zonder migratie werkt alles zoals vroeger.
+- [ ] **Eigenaar: gemeente bellen** (14 0161): is het DOR in Gilze en Rijen verplicht?
+- [ ] **Eigenaar: DOR-koppeling aanvragen** met de mail in `INKOOP-DOR-STAPPENPLAN.md`.
+      Tot die er is: overnemen met de kopieerknoppen.
+- [ ] **Later:** geboortedatum en legitimatie na 4 jaar leegmaken (zodra de wet dat zegt);
+      bewaardatum ook voor toestellen uit een batch.
+
 ---
 
 ## Nu openstaand — refurbish + webshop (27 september 2026)

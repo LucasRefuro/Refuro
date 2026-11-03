@@ -197,6 +197,7 @@ Wat er over de grens gaat is weinig: een goedgekeurd toestel wordt een rij in
 | `REFURBISH-STAPPENPLAN.md` | de refurbishmodule, van toevoegen tot online |
 | `KLANTPORTAAL-STAPPENPLAN.md` | het klantportaal: hoe het werkt en hoe je het live zet |
 | `ABONNEMENT-STAPPENPLAN.md` | Stripe, proefperiode, blokkade |
+| `INKOOP-DOR-STAPPENPLAN.md` | inkoop bij particulieren, het inkoopregister en het DOR |
 | `WHATSAPP-STAPPENPLAN.md` | berichten naar de klant |
 | `MAILBOX-STAPPENPLAN.md` | de mailbox op info@storvo.nl |
 | `supabase/functions/README.md` | elke Edge Function en elk geheim |

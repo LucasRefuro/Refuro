@@ -689,6 +689,9 @@
   .teamRij2 summary::-webkit-details-marker{display:none;}
   .teamRij2 summary::after{content:'›'; margin-left:auto; color:var(--muted); font-size:20px; line-height:1; transform:rotate(90deg); transition:transform .15s;}
   .teamRij2[open] summary::after{transform:rotate(-90deg);}
+  /* Eén DOR-veld per regel: label, waarde, kopieerknop (Inkoop bij particulieren). */
+  .dorregel{display:grid; grid-template-columns:minmax(110px,38%) 1fr auto; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border);}
+  .dorregel b{overflow-wrap:anywhere; font-weight:600;}
   .wachtTag{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
   /* ─ Gebruikersbeheer: lijst met kaarten en een detailpagina per gebruiker ─ */
   .usercard{display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:13px 16px; margin-bottom:10px; cursor:pointer; font-family:inherit; transition:border-color .14s, box-shadow .14s;}
@@ -3207,6 +3210,18 @@
     </div>
     <div class="loglist paginalijst" id="inkopenLijst"></div>
   </div>
+  <!-- Inkoop bij particulieren: het inkoopregister uit de werkbank (tabel inkoop_registraties).
+       Hier haalt de boekhouder de ondertekende inkoopverklaringen op, per stuk of alles van
+       de gekozen periode in één PDF, plus een lijst. Invoeren gebeurt bij de inname. -->
+  <div class="card breed" id="particulierKaart">
+    <h2><svg class="i"><use href="#i-receipt"/></svg>Inkoop bij particulieren <span class="muted klein" id="partTel"></span></h2>
+    <p class="muted klein" style="margin:2px 0 12px">Alles wat je met een inkoopverklaring kocht, in de periode van hierboven. Dit is ook je inkoopregister.</p>
+    <div class="row" style="gap:8px; flex-wrap:wrap; margin-bottom:12px">
+      <button class="btn small" onclick="partAllesPdf(this)"><svg class="i s"><use href="#i-download"/></svg>Alle verklaringen als PDF</button>
+      <button class="btn ghost small" onclick="partCsv()"><svg class="i s"><use href="#i-download"/></svg>Lijst voor de boekhouder</button>
+    </div>
+    <div id="partLijst"><span class="muted klein">Bezig met laden…</span></div>
+  </div>
   </div>
 </section>
 
@@ -4308,7 +4323,7 @@ function showTab(t){
   if(t==='uren') renderUren();
   if(t==='rooster') renderRooster();
   if(t==='verkopen') renderVerkopen();
-  if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); inkConceptHerstel(); }
+  if(t==='inkopen'){ renderInkopen(); laadMailConcepten(); inkConceptHerstel(); partLaden(); }
   if(t==='pakketten') renderPakketten();
   if(t==='mail') renderMail();
   if(t==='vastelasten') renderVasteLasten();
@@ -7808,6 +7823,177 @@ function inkopenKiesPeriode(p){
   inkopenPeriode=p;
   const sel=document.getElementById('inkopenPeriodeSel'); if(sel) sel.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.ip===p));
   renderInkopen();
+  partLaden();
+}
+
+/* ═══ Inkoop bij particulieren (het inkoopregister) ═══
+   De werkbank legt elke inkoop met een inkoopverklaring vast in inkoop_registraties: de
+   verkoper zoals het DOR hem vraagt, de goederen met serienummer of IMEI, het bedrag en de
+   ondertekende verklaring. Hier lees je dat terug. De boekhouder heeft genoeg aan naam,
+   adres, wat, bedrag en de verklaring zelf: geboortedatum en legitimatie gaan dus niet mee
+   in de lijst. Zie INKOOP-DOR-STAPPENPLAN.md. */
+let partRijen=[], _partVraag=0;
+async function partLaden(){
+  const el=document.getElementById('partLijst'); if(!el) return;
+  const mijn=++_partVraag;
+  const start=inkopenPeriodeStart();
+  try{
+    let q=sb.from('inkoop_registraties').select('*').order('datum',{ascending:false}).limit(500);
+    if(start) q=q.gte('datum', new Date(start).toISOString());
+    const {data, error}=await q;
+    if(mijn!==_partVraag) return;
+    if(error){ el.innerHTML='<span class="muted klein">Het inkoopregister staat nog niet aan.</span>'; partRijen=[]; partTel(); return; }
+    partRijen=data||[];
+  }catch(e){ partRijen=[]; }
+  partTeken();
+}
+function partNaam(r){
+  const naam=[r.voornamen, r.voorvoegsel, r.achternaam].filter(Boolean).join(' ');
+  return r.bedrijfsnaam ? r.bedrijfsnaam+(naam?' ('+naam+')':'') : (naam||'Onbekend');
+}
+function partAdres(r){
+  return [[r.straat, r.huisnummer].filter(Boolean).join(' '), [r.postcode, r.woonplaats].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+}
+function partWat(r){
+  const g=r.goederen||[];
+  if(!g.length) return '';
+  if(g.length===1) return g[0].omschrijving || [g[0].merk, g[0].type].filter(Boolean).join(' ');
+  const eerst=g[0].omschrijving || [g[0].merk, g[0].type].filter(Boolean).join(' ');
+  return g.length+' toestellen'+(eerst?', o.a. '+eerst:'');
+}
+function partTel(){ const t=document.getElementById('partTel'); if(t) t.textContent=partRijen.length?'('+partRijen.length+')':''; }
+function partTeken(){
+  const el=document.getElementById('partLijst'); if(!el) return;
+  partTel();
+  if(!partRijen.length){ el.innerHTML='<span class="muted klein">Nog geen inkopen bij particulieren in deze periode. Die komen hier vanzelf bij een inname met verklaring.</span>'; return; }
+  const totaal=partRijen.reduce((n,r)=>n+(Number(r.bedrag)||0),0);
+  el.innerHTML=`<div class="muted klein" style="margin-bottom:8px">Samen ${euro(totaal)}</div>
+    <div class="tabelrol"><table>
+    <thead><tr><th>Verkoper</th><th>Nr</th><th>Datum</th><th>Wat</th><th class="num">Bedrag</th><th>DOR</th><th></th></tr></thead>
+    <tbody>${partRijen.map(r=>`<tr>
+      <td>${esc(partNaam(r))}</td>
+      <td>${esc(String(r.volgnummer||''))}</td>
+      <td>${new Date(r.datum).toLocaleDateString('nl-NL')}</td>
+      <td>${esc(partWat(r))}</td>
+      <td class="num">${euro(r.bedrag)}</td>
+      <td>${r.dor_ingevoerd_op?'<span class="wachtTag" style="background:var(--green-soft); color:var(--green-tekst)">staat erin</span>':`<button class="btn ghost small" onclick="partDor('${r.id}')">Overnemen</button>`}</td>
+      <td>${r.verklaring_url?`<button class="btn ghost small" onclick="partPdf('${r.id}', this)">Verklaring</button>`:'<span class="muted klein">geen verklaring</span>'}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+/* Eén opgeslagen verklaring (een PNG in de privé-bucket) als bladzijde in een A4-PDF. */
+async function partPagina(doc, r, eerste){
+  const {data, error}=await sb.storage.from('inkoopfacturen').createSignedUrl(r.verklaring_url, 300);
+  if(error||!data) throw new Error('laden');
+  const blob=await (await fetch(data.signedUrl)).blob();
+  const url=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(blob); });
+  const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('beeld')); i.src=url; });
+  if(!eerste) doc.addPage();
+  const mm=14, maxW=210-2*mm, maxH=297-2*mm;
+  let w=maxW, h=w*(img.height/img.width);
+  if(h>maxH){ h=maxH; w=h*(img.width/img.height); }
+  doc.addImage(url, 'PNG', (210-w)/2, mm, w, h);
+}
+async function partPdf(id, knop){
+  const r=partRijen.find(x=>x.id===id); if(!r||!r.verklaring_url) return;
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Even…'; }
+  try{
+    await jspdfKlaar();
+    const doc=new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    await partPagina(doc, r, true);
+    doc.save(('inkoopverklaring '+r.volgnummer+' '+partNaam(r)).replace(/[^\w -]+/g,'').trim()+'.pdf');
+  }catch(e){ toast('De verklaring laden lukte niet','fout'); }
+  if(knop){ knop.disabled=false; knop.textContent=oud; }
+}
+/* Alles van de gekozen periode in één PDF, oudste eerst, zoals een boekhouder hem wil. */
+async function partAllesPdf(knop){
+  const met=partRijen.filter(r=>r.verklaring_url).slice().reverse();
+  if(!met.length){ toast('Geen verklaringen in deze periode','let-op'); return; }
+  const oud=knop.textContent; knop.disabled=true; knop.textContent='Bezig ('+met.length+')…';
+  let mis=0;
+  try{
+    await jspdfKlaar();
+    const doc=new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    let eerste=true;
+    for(const r of met){
+      try{ await partPagina(doc, r, eerste); eerste=false; }catch(e){ mis++; }
+    }
+    if(eerste) throw new Error('niets');
+    doc.save('inkoopverklaringen '+inkopenPeriodeNaam()+'.pdf');
+    toast(mis ? (met.length-mis)+' verklaringen klaar, '+mis+' konden niet laden' : met.length+' verklaringen klaar', !mis);
+  }catch(e){ toast('Het maken van de PDF mislukte','fout'); }
+  knop.disabled=false; knop.textContent=oud;
+}
+function inkopenPeriodeNaam(){
+  const d=new Date();
+  if(inkopenPeriode==='maand') return d.toLocaleDateString('nl-NL',{month:'long', year:'numeric'});
+  if(inkopenPeriode==='kwartaal') return 'Q'+(Math.floor(d.getMonth()/3)+1)+' '+d.getFullYear();
+  if(inkopenPeriode==='jaar') return String(d.getFullYear());
+  return 'alles';
+}
+/* De lijst voor de boekhouder: één regel per inkoop, met puntkomma's zodat Excel hem in
+   het Nederlands goed opent. Zonder geboortedatum en legitimatie: die heeft hij niet nodig. */
+function partCsv(){
+  if(!partRijen.length){ toast('Geen inkopen in deze periode','let-op'); return; }
+  const cel=v=>{ const t=String(v==null?'':v); return /[;"\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
+  const regels=[['Nr','Datum','Verkoper','Adres','Wat','Serienummers','Aantal','Bedrag','Betaalwijze','Margeregeling'].join(';')];
+  partRijen.slice().reverse().forEach(r=>{
+    const g=r.goederen||[];
+    regels.push([r.volgnummer, new Date(r.datum).toLocaleDateString('nl-NL'), partNaam(r), partAdres(r), partWat(r),
+      g.map(x=>x.nummer).filter(Boolean).join(' '), g.reduce((n,x)=>n+(Number(x.aantal)||1),0),
+      (Number(r.bedrag)||0).toFixed(2).replace('.',','), r.betaalwijze||'', 'ja'].map(cel).join(';'));
+  });
+  const blob=new Blob(['\ufeff'+regels.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='inkoop particulieren '+inkopenPeriodeNaam()+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+/* Overnemen in het DOR, voor een inkoop die bij de inname nog niet is overgenomen. Zelfde
+   velden en volgorde als het scherm in de werkbank (dorVenster daar). */
+const DOR_ADRES='https://opkopersregister.stopheling.nl';
+const DOR_ID={paspoort:'Paspoort', 'id-kaart':'Identiteitskaart', rijbewijs:'Rijbewijs', verblijfsdocument:'Verblijfsdocument'};
+function partDor(id){
+  const r=partRijen.find(x=>x.id===id); if(!r) return;
+  const rij=(label, waarde)=>{
+    const w=String(waarde==null?'':waarde);
+    return `<div class="dorregel"><span class="muted klein">${esc(label)}</span><b>${w?esc(w):'<span class="muted">leeg</span>'}</b>${w?`<button type="button" class="btn ghost small" data-kopie="${esc(w)}" onclick="partKopieer(this)">Kopieer</button>`:'<span></span>'}</div>`;
+  };
+  const geb=r.geboortedatum?new Date(r.geboortedatum+'T12:00:00').toLocaleDateString('nl-NL'):'';
+  const goed=(r.goederen||[]).map((g,i)=>`<h4 style="margin:16px 0 4px">Goed ${(r.goederen.length>1)?(i+1)+' van '+r.goederen.length:''}</h4>
+    ${g.omschrijving?rij('Omschrijving', g.omschrijving):''}${g.soort?rij('Productgroep', g.soort):''}${g.merk?rij('Merk', g.merk):''}${g.type?rij('Type', g.type):''}
+    ${rij(/telefoon|tablet|watch/i.test(g.soort||'')?'Uniek nummer (IMEI)':'Uniek nummer (serienummer)', g.nummer)}
+    ${g.prijs!=null?rij('Prijs', Number(g.prijs).toFixed(2).replace('.',',')):''}${g.kleur?rij('Kleur', g.kleur):''}`).join('');
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='partDorOverlay';
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div class="popup groot">
+    <h3>Overnemen in het DOR</h3>
+    <p class="muted klein" style="margin-bottom:10px">Inkoop nr ${esc(String(r.volgnummer))}. Open het DOR, maak een nieuwe registratie en kopieer de velden. Vink daarna aan dat hij erin staat.</p>
+    <a class="btn ghost small" style="text-decoration:none" href="${DOR_ADRES}" target="_blank" rel="noopener"><svg class="i s"><use href="#i-globe"/></svg>DOR openen</a>
+    ${goed}
+    <h4 style="margin:16px 0 4px">Verkoper</h4>
+    ${rij('Datum', new Date(r.datum).toLocaleDateString('nl-NL'))}${rij('Inkoper', r.inkoper)}${r.bedrijfsnaam?rij('Bedrijfsnaam', r.bedrijfsnaam):''}
+    ${rij('Voornamen', r.voornamen)}${rij('Voorvoegsel', r.voorvoegsel)}${rij('Achternaam', r.achternaam)}${rij('Geboortedatum', geb)}
+    ${rij('Postcode', r.postcode)}${rij('Huisnummer', r.huisnummer)}${rij('Straat', r.straat)}${rij('Woonplaats', r.woonplaats)}${rij('Land', r.land)}
+    ${rij('Soort identiteitsbewijs', DOR_ID[r.id_soort]||r.id_soort)}${rij('Nationaliteit identiteitsbewijs', r.id_nationaliteit)}${rij('Nummer identiteitsbewijs', r.id_nummer)}
+    <div class="acts" style="margin-top:16px">
+      <button class="btn actie" id="partDorKlaar">Staat in het DOR</button>
+      <button class="btn ghost" onclick="document.getElementById('partDorOverlay').remove()">Sluiten</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#partDorKlaar').onclick=async(e)=>{
+    const kn=e.currentTarget; kn.disabled=true;
+    const patch={dor_ingevoerd_op:new Date().toISOString(), dor_door:(gebruiker&&gebruiker.naam)||null};
+    const {error}=await sb.from('inkoop_registraties').update(patch).eq('id', r.id);
+    if(error){ kn.disabled=false; toast('Opslaan mislukt','fout'); return; }
+    Object.assign(r, patch); ov.remove(); partTeken(); toast('Vastgelegd: staat in het DOR', true);
+  };
+}
+async function partKopieer(knop){
+  const tekst=knop.dataset.kopie||'';
+  try{ await navigator.clipboard.writeText(tekst); }
+  catch(_e){ toonOmTeKopieren('Kopieer dit veld', tekst); return; }
+  const oud=knop.textContent; knop.textContent='Gekopieerd'; setTimeout(()=>{ knop.textContent=oud; }, 1200);
 }
 function inkopenPeriodeStart(){
   const d=new Date(); d.setHours(0,0,0,0);

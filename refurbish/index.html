@@ -222,6 +222,14 @@ tr.klikbaar{cursor:pointer;}
   .slotchip.ingevuld{background:var(--green-soft); border-color:transparent; color:var(--green-tekst);}
   .vklwrap{border:1.5px dashed var(--border); border-radius:12px; background:var(--soft); margin-top:4px;}
   .vklpad{display:block; width:100%; height:180px; touch-action:none; cursor:crosshair;}
+  .vklkeuze{display:flex; flex-wrap:wrap;}
+  /* Kopjes boven de groepen (Wie verkoopt, Adres, Legitimatie): groter dan de veldnamen,
+     zodat je in het lange scherm ziet in welk blok je zit. */
+  .vklkop{margin-top:22px;}
+  .vklkop>label{font-size:15.5px; font-weight:700; color:var(--tekst);}
+  /* Eén DOR-veld per regel: label, waarde, kopieerknop. Op de telefoon breekt de waarde af. */
+  .dorregel{display:grid; grid-template-columns:minmax(110px,38%) 1fr auto; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border);}
+  .dorregel b{overflow-wrap:anywhere; font-weight:600;}
   .topscan{display:inline-flex; align-items:center; gap:7px; flex:none; border:none; cursor:pointer;
     background:var(--groen); color:var(--actieftekst); font-family:inherit; font-weight:700;
     font-size:13.5px; padding:9px 14px; border-radius:var(--pil);}
@@ -980,7 +988,7 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
                  het toevoegen op alle zojuist toegevoegde toestellen (dan is er pas een id). -->
             <div style="margin-top:18px">
               <label>Bewijs van inkoop</label>
-              <p class="muted klein" style="margin:2px 0 10px">Een factuur, of een inkoopverklaring als je van een particulier koopt.</p>
+              <p class="muted klein" style="margin:2px 0 10px">Een factuur, of een inkoopverklaring als je van een particulier koopt. De verklaring vult ook je inkoopregister.</p>
               <div class="row" id="t_bewijs_knoppen">
                 <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-note"/></svg>Factuur uploaden<input type="file" accept="application/pdf,image/*" hidden onchange="bewijsFactuurKies(this)"></label>
                 <button type="button" class="btn ghost small" onclick="bewijsVerklaringOpen()"><svg class="i s"><use href="#i-note"/></svg>Inkoopverklaring maken</button>
@@ -1854,7 +1862,7 @@ function tabel(rijen, sleutel){
       const bat=batches.find(x=>x.id===a.batch_id);
       return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
         <td><b>${esc(toestelNaam(a))}</b>${bat?` <span class="batpil">${esc(bat.code||bat.nummer||'batch')}</span>`:''}
-            <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}</div></td>
+            <div class="muted klein">${esc(a.categorie||'')}${a.grade?' · grade '+esc(a.grade):''}${a.gelabeld?'':' · nog geen label'}${inBewaring(a)?' · in bewaring t/m '+esc(dagTekst(a.bewaar_tot)):''}</div></td>
         <td class="mono">${esc(a.code||'—')}</td>
         <td>${locNaam(plekVan(a))?`<span class="locpil">${esc(locNaam(plekVan(a)))}</span>`:'<span class="muted klein">—</span>'}</td>
         <td>${a.status==='installeren' && a.stap==='installeren'
@@ -2036,10 +2044,17 @@ function bewijsFactuurKies(invoer){
 function bewijsVerklaringOpen(){
   const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
   const bedrag=Math.round((Number(v('t_inkoop'))||0)*aantal*100)/100;
-  verklaringVenster({naam:'', adres:'', bedrag:(bedrag>0?bedrag:'')}, (d)=>{
-    nieuwBewijs={soort:'verklaring', naam:d.naam, adres:d.adres, bedrag:d.bedrag, handtekening:d.handtekening};
+  const {merk, model}=splitsModel(v('t_model'));
+  const kleur=(soortNu==='Telefoon' && v('t_kleur'))?' '+v('t_kleur'):'';
+  const label=([merk,model].filter(Boolean).join(' ')||'Toestel')+kleur;
+  const toestellen=Array.from({length:aantal}, ()=>({label, soort:soortNu}));
+  // Opnieuw openen houdt wat je al had ingevuld, ook de nummers.
+  const vorig=(nieuwBewijs && nieuwBewijs.soort==='verklaring') ? nieuwBewijs : null;
+  if(vorig) toestellen.forEach((t,i)=>{ t.nummer=(vorig.nummers||[])[i]||''; });
+  verklaringVenster({naam:vorig?vorig.naam:'', bedrag:(bedrag>0?bedrag:''), dor:vorig?vorig.dor:null}, (d)=>{
+    nieuwBewijs=Object.assign({soort:'verklaring'}, d);
     sluit(); bewijsStatusTeken();
-  });
+  }, {toestellen});
 }
 function bewijsStatusTeken(){
   const el=document.getElementById('t_bewijs_status'); if(!el) return;
@@ -2074,17 +2089,178 @@ async function bewijsToepassen(bewijs, rijen, ctx){
     if(error) throw new Error('upload');
     patch={ factuur_url:pad };
   }else{
-    const goederen=(ctx.aantal>1?ctx.aantal+' × ':'')+([ctx.merk,ctx.model].filter(Boolean).join(' ')||'toestel');
-    const png=await verklaringPng({code:'', verwacht:null, betaalwijze:null},
-      {naam:bewijs.naam, adres:bewijs.adres, bedrag:bewijs.bedrag, handtekening:bewijs.handtekening, goederen});
-    const blob=await (await fetch(png)).blob();
-    const pad=basis+'inkoopverklaring-'+Date.now()+'.png';
-    const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
-    if(error) throw new Error('upload');
-    patch={ verkoper_naam:bewijs.naam, verkoper_adres:bewijs.adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
+    // De inkoopverklaring met het register erbij; die zet zelf alles op de toestellen.
+    // Het register gaat terug naar toevoegen, dat na afloop het DOR-scherm opent.
+    return await inkoopVastleggen(bewijs, rijen, basis);
   }
   await sb.from('refurbish_apparaten').update(patch).in('id', ids);
   (apparaten||[]).forEach(a=>{ if(ids.includes(a.id)) Object.assign(a, patch); });
+}
+
+/* ═══ Het inkoopregister ═══
+   Elke inkoop met een inkoopverklaring komt in inkoop_registraties: wie verkocht, wat
+   (met serienummer of IMEI), voor hoeveel, en tot wanneer het in bewaring moet blijven.
+   Dat is het register dat de wet vraagt (art. 437 Sr) en wat je in het DOR overneemt.
+
+   Bestaat de tabel nog niet (de migratie is nog niet gedraaid), dan gaat de verklaring
+   gewoon door zoals vroeger: het register is erbij, geen voorwaarde. */
+
+/* APV Gilze en Rijen art. 2:68: een ingekocht goed blijft de eerste vijf werkdagen in
+   bewaring, in de staat waarin je het kocht. De inkoopdag telt niet mee. Een werkdag is
+   geen zaterdag, zondag of feestdag uit de Algemene termijnenwet (art. 3): zonder die
+   feestdagen zou de termijn rond Pasen of Kerst een dag te vroeg aflopen. */
+function paasZondag(jaar){
+  // De gangbare rekenregel voor de gregoriaanse kalender (Meeus/Jones/Butcher).
+  const a=jaar%19, b=Math.floor(jaar/100), c=jaar%100, d=Math.floor(b/4), e=b%4,
+    f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30,
+    i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451),
+    maand=Math.floor((h+l-7*m+114)/31), dag=((h+l-7*m+114)%31)+1;
+  return new Date(jaar, maand-1, dag);
+}
+function feestdagen(jaar){
+  const p=paasZondag(jaar), na=n=>{ const d=new Date(p); d.setDate(d.getDate()+n); return isoDag(d); };
+  const koning=new Date(jaar,3,27); if(koning.getDay()===0) koning.setDate(26);   // valt 27 april op zondag, dan de 26e
+  return new Set([jaar+'-01-01', na(1), isoDag(koning), jaar+'-05-05', na(39), na(50), jaar+'-12-25', jaar+'-12-26']);
+}
+function werkdagenNa(datum, n){
+  const d=new Date(datum); let over=n;
+  while(over>0){
+    d.setDate(d.getDate()+1);
+    const w=d.getDay();
+    if(w!==0 && w!==6 && !feestdagen(d.getFullYear()).has(isoDag(d))) over--;
+  }
+  return d;
+}
+function isoDag(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dagTekst(iso){ return new Date(iso+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'short', day:'numeric', month:'short'}); }
+/* Nog in bewaring: vandaag is uiterlijk de laatste bewaardag. */
+function inBewaring(a){ return !!(a && a.bewaar_tot && isoDag(new Date())<=String(a.bewaar_tot).slice(0,10)); }
+
+/* ── Overnemen in het DOR ──
+   Het Digitaal Opkopers Register van de politie heeft wel een koppeling, maar alleen voor
+   goedgekeurde softwareleveranciers (zie INKOOP-DOR-STAPPENPLAN.md). Tot die er is zet
+   Storvo alles klaar in de volgorde van het DOR-invoerscherm, met een kopieerknop per veld,
+   en vink je zelf aan dat het erin staat. Vlak na de inkoop open, want het DOR wil het
+   "onverwijld". */
+const DOR_ADRES='https://opkopersregister.stopheling.nl';
+const DOR_ID={paspoort:'Paspoort', 'id-kaart':'Identiteitskaart', rijbewijs:'Rijbewijs', verblijfsdocument:'Verblijfsdocument'};
+function dorVenster(reg){
+  if(!reg) return;
+  const rij=(label, waarde)=>{
+    const w=String(waarde==null?'':waarde);
+    return `<div class="dorregel"><span class="muted klein">${esc(label)}</span><b>${w?esc(w):'<span class="muted">leeg</span>'}</b>${w?`<button type="button" class="btn ghost small" data-kopie="${esc(w)}" onclick="dorKopieer(this)">Kopieer</button>`:'<span></span>'}</div>`;
+  };
+  const geb=reg.geboortedatum?new Date(reg.geboortedatum+'T12:00:00').toLocaleDateString('nl-NL'):'';
+  const goed=(reg.goederen||[]).map((g,i)=>`
+    <div class="veldkop"><label>Goed ${(reg.goederen.length>1)?(i+1)+' van '+reg.goederen.length:''}</label></div>
+    ${g.omschrijving?rij('Omschrijving', g.omschrijving):''}
+    ${g.soort?rij('Productgroep', g.soort):''}
+    ${g.merk?rij('Merk', g.merk):''}
+    ${g.type?rij('Type', g.type):''}
+    ${rij(/telefoon|tablet|watch/i.test(g.soort||'')?'Uniek nummer (IMEI)':'Uniek nummer (serienummer)', g.nummer)}
+    ${g.prijs!=null?rij('Prijs', String(Number(g.prijs).toFixed(2)).replace('.',',')):''}
+    ${g.kleur?rij('Kleur', g.kleur):''}`).join('');
+  venster('Overnemen in het DOR', `
+    <p class="muted klein" style="margin-bottom:10px">Inkoop nr ${esc(reg.volgnummer)}. Open het DOR, maak een nieuwe registratie en kopieer de velden hieronder. Vink daarna aan dat hij erin staat.</p>
+    <a class="btn ghost small" href="${DOR_ADRES}" target="_blank" rel="noopener"><svg class="i s"><use href="#i-globe"/></svg>DOR openen</a>
+    ${goed}
+    <div class="veldkop"><label>Verkoper</label></div>
+    ${rij('Datum', new Date(reg.datum).toLocaleDateString('nl-NL'))}
+    ${rij('Inkoper', reg.inkoper)}
+    ${reg.bedrijfsnaam?rij('Bedrijfsnaam', reg.bedrijfsnaam):''}
+    ${rij('Voornamen', reg.voornamen)}
+    ${rij('Voorvoegsel', reg.voorvoegsel)}
+    ${rij('Achternaam', reg.achternaam)}
+    ${rij('Geboortedatum', geb)}
+    ${rij('Postcode', reg.postcode)}
+    ${rij('Huisnummer', reg.huisnummer)}
+    ${rij('Straat', reg.straat)}
+    ${rij('Woonplaats', reg.woonplaats)}
+    ${rij('Land', reg.land)}
+    ${rij('Soort identiteitsbewijs', DOR_ID[reg.id_soort]||reg.id_soort)}
+    ${rij('Nationaliteit identiteitsbewijs', reg.id_nationaliteit)}
+    ${rij('Nummer identiteitsbewijs', reg.id_nummer)}
+    ${reg.dor_ingevoerd_op?`<p class="muted klein" style="margin-top:12px">Staat in het DOR sinds ${new Date(reg.dor_ingevoerd_op).toLocaleDateString('nl-NL')}${reg.dor_door?' (door '+esc(reg.dor_door)+')':''}.</p>`:''}
+  `, reg.dor_ingevoerd_op ? [] : [{tekst:'Staat in het DOR', klasse:'actie', doe:async(kn)=>{
+    await bezig(kn, async()=>{
+      const patch={dor_ingevoerd_op:new Date().toISOString(), dor_door:account.naam||null};
+      const {error}=await sb.from('inkoop_registraties').update(patch).eq('id', reg.id);
+      if(error) throw new Error('Opslaan mislukt');
+      Object.assign(reg, patch);
+      sluit(); toast('Vastgelegd: staat in het DOR', true);
+    });
+  }}], 'groot');
+}
+async function dorKopieer(knop){
+  const tekst=knop.dataset.kopie||'';
+  try{ await navigator.clipboard.writeText(tekst); }
+  catch(_e){
+    // Geen klembord (oude browser of geen https): selecteer het, dan kopieer je met de hand.
+    const t=document.createElement('textarea'); t.value=tekst; document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); }catch(_e2){}
+    t.remove();
+  }
+  const oud=knop.textContent; knop.textContent='Gekopieerd'; setTimeout(()=>{ knop.textContent=oud; }, 1200);
+}
+/* Het register van één toestel ophalen en het DOR-scherm openen (vanaf de toestelpagina). */
+async function dorVanToestel(id){
+  const a=apparaten.find(x=>x.id===id); if(!a||!a.inkoop_registratie_id) return;
+  const {data}=await sb.from('inkoop_registraties').select('*').eq('id', a.inkoop_registratie_id).maybeSingle();
+  if(!data){ toast('Deze inkoop staat niet in het register','let-op'); return; }
+  dorVenster(data);
+}
+
+async function registratieOpslaan(d, goederen){
+  const nu=new Date();
+  const rij=Object.assign({
+    team_id:account.team_id, datum:nu.toISOString(),
+    inkoper:account.naam||null, inkoper_id:account.id||null,
+    goederen, bedrag:d.bedrag, bewaar_tot:isoDag(werkdagenNa(nu,5))
+  }, d.dor||{});
+  try{
+    const {data, error}=await sb.from('inkoop_registraties').insert(rij).select();
+    if(error || !data || !data[0]) return null;
+    return data[0];
+  }catch(_e){ return null; }
+}
+
+/* Register + verklaring voor een rij toestellen die al bestaan (na Toevoegen, of één
+   toestel vanaf zijn pagina). d komt uit verklaringVenster. Elk toestel krijgt zijn eigen
+   serienummer (als dat nog leeg was), de koppeling naar het register en de bewaardatum. */
+async function inkoopVastleggen(d, rijen, basis){
+  const nummers=d.nummers||[];
+  const goederen=(rijen||[]).map((a,i)=>({
+    apparaat_id:a.id, code:a.code||null, soort:a.categorie||null, merk:a.merk||null, type:a.model||null,
+    kleur:a.kleur||null, nummer:nummers[i]||a.serienummer||null, prijs:a.inkoop!=null?Number(a.inkoop):null
+  }));
+  const reg=await registratieOpslaan(d, goederen);
+  const regels=goederen.map(g=>{
+    const naam=[g.merk,g.type].filter(Boolean).join(' ')+(g.kleur?' '+g.kleur:'');
+    const tel=/telefoon|tablet|watch/i.test(g.soort||'');
+    return (naam||'Toestel')+(g.code?' ('+g.code+')':'')+(g.nummer?(tel?', IMEI ':', serienummer ')+g.nummer:'');
+  });
+  const png=await verklaringPng({code:'', verwacht:null, betaalwijze:null},
+    {naam:d.naam, adres:d.adres, bedrag:d.bedrag, handtekening:d.handtekening, goederenLijst:regels,
+     betaalwijze:(d.dor||{}).betaalwijze, volgnummer:reg?reg.volgnummer:null, datum:reg?reg.datum:null});
+  const blob=await (await fetch(png)).blob();
+  const pad=basis+'inkoopverklaring-'+Date.now()+'.png';
+  const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
+  if(error) throw new Error('upload');
+  if(reg){
+    await sb.from('inkoop_registraties').update({verklaring_url:pad}).eq('id', reg.id);
+    reg.verklaring_url=pad;
+  }
+  const nu=new Date().toISOString();
+  for(let i=0;i<(rijen||[]).length;i++){
+    const a=rijen[i];
+    const patch={ verkoper_naam:d.naam, verkoper_adres:d.adres||null, handtekening_url:pad, verklaring_op:nu };
+    if(reg){ patch.inkoop_registratie_id=reg.id; patch.bewaar_tot=reg.bewaar_tot; }
+    if(nummers[i] && !a.serienummer) patch.serienummer=nummers[i];
+    await sb.from('refurbish_apparaten').update(patch).eq('id', a.id);
+    const lokaal=(apparaten||[]).find(x=>x.id===a.id); if(lokaal) Object.assign(lokaal, patch);
+  }
+  if(!reg) toast('Verklaring opgeslagen. Het inkoopregister is nog niet aangezet.','let-op');
+  return reg;
 }
 
 async function toevoegen(knop){
@@ -2095,7 +2271,15 @@ async function toevoegen(knop){
   const doos = !!((CATEGORIE_PROFIEL[cat]||{}).vraagDoos) && !!((document.getElementById('t_doos')||{}).checked);
   const batKeuze=(document.getElementById('t_batch')||{}).value||null;
   const bekend=modellen.find(m=>m.model.toLowerCase()===model.toLowerCase());
+  /* Aan de balie (Inname starten) hoort er een verklaring bij: zonder komt de inkoop niet
+     in het inkoopregister en mist het DOR hem. Vergeten is makkelijk, dus even vragen. */
+  if(innameOpen && !nieuwBewijs){
+    const toch=await bevestig('Er is nog geen inkoopverklaring. Dan staat deze inkoop niet in je inkoopregister. Toch toevoegen?',
+      {kop:'Zonder verklaring?', ja:'Toch toevoegen', nee:'Eerst de verklaring'});
+    if(!toch){ bewijsVerklaringOpen(); return; }
+  }
 
+  let registratie=null;   // de inkoop in het register, als er een verklaring bij zat
   await bezig(knop, async()=>{
     const rijen=[];
     for(let i=0;i<aantal;i++){
@@ -2141,7 +2325,7 @@ async function toevoegen(knop){
     // Het inkoopbewijs dat bij deze toevoeging hoort op alle nieuwe toestellen zetten.
     // Pas hier, want nu bestaan de id's; alle toestellen van deze inkoop delen één bewijs.
     if(nieuwBewijs && (data||[]).length){
-      try{ await bewijsToepassen(nieuwBewijs, data, {merk, model, aantal}); }
+      try{ registratie=await bewijsToepassen(nieuwBewijs, data, {merk, model, aantal}); }
       catch(_e){ toast('Toestellen toegevoegd, maar het inkoopbewijs opslaan lukte niet','let-op'); }
       nieuwBewijs=null; bewijsStatusTeken();
     }
@@ -2159,6 +2343,8 @@ async function toevoegen(knop){
     const waar=locNaam(locKeuze);
     toast((aantal===1?'Toegevoegd':aantal+' apparaten toegevoegd')+(waar?' · '+waar:'')+(geprint?' · label geprint':''), true);
   });
+  // Meteen overnemen in het DOR: het moet er "onverwijld" in, en nu staat alles nog vers.
+  if(registratie) dorVenster(registratie);
 }
 
 /* Een kort nummer dat op het label past en dat je aan de telefoon kunt
@@ -2224,7 +2410,7 @@ function verwachtTekst(v){
   return ({werkend:'werkend', compleet:'compleet werkend', poweron:'power on tested', ongetest:'ongetest'})[v]||'';
 }
 /* Betaalwijze van de inkoop, kort. */
-function betaalTekst(v){ return ({factuur:'op factuur', contant:'contant', bank:'per bank'})[v]||''; }
+function betaalTekst(v){ return ({factuur:'op factuur', contant:'contant', bank:'per bank', pin:'per pin'})[v]||''; }
 /* Het eigen batch-nummer (B0004). Nieuwe batches krijgen automatisch het volgende nummer. */
 function batCode(){
   const nrs=(batches||[]).map(b=>Number(String(b.code||'').replace(/\D/g,''))||0);
@@ -2776,23 +2962,17 @@ async function appFactuurUpload(id, invoer){
 }
 function appVerklaringOpen(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
-  verklaringVenster({naam:a.verkoper_naam||'', adres:a.verkoper_adres||'', bedrag:(a.inkoop!=null?a.inkoop:'')}, async(d, kn)=>{
+  const label=([a.merk,a.model].filter(Boolean).join(' ')||'Toestel')+(a.kleur?' '+a.kleur:'');
+  verklaringVenster({naam:a.verkoper_naam||'', bedrag:(a.inkoop!=null?a.inkoop:'')}, async(d, kn)=>{
     await bezig(kn, async()=>{
-      const goederen=[a.merk,a.model].filter(Boolean).join(' ')||'toestel';
-      const png=await verklaringPng({code:a.code||'', verwacht:null, betaalwijze:null},
-        {naam:d.naam, adres:d.adres, bedrag:d.bedrag, handtekening:d.handtekening, goederen});
-      const blob=await (await fetch(png)).blob();
-      const pad=account.team_id+'/apparaat/'+id+'/inkoopverklaring-'+Date.now()+'.png';
-      const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
-      if(error) throw new Error('Opslaan mislukt');
-      const patch={ verkoper_naam:d.naam, verkoper_adres:d.adres||null, handtekening_url:pad, verklaring_op:new Date().toISOString() };
-      const {error:e2}=await sb.from('refurbish_apparaten').update(patch).eq('id',id);
-      if(e2) throw new Error('Opslaan mislukt');
-      Object.assign(a, patch);
+      let reg=null;
+      try{ reg=await inkoopVastleggen(d, [a], account.team_id+'/apparaat/'+id+'/'); }
+      catch(_e){ throw new Error('Opslaan mislukt'); }
       sluit(); tekenApparaat();
       toast('Inkoopverklaring opgeslagen', true);
+      if(reg) setTimeout(()=>dorVenster(reg), 300);
     });
-  });
+  }, {toestellen:[{label, soort:a.categorie, nummer:a.serienummer||''}]});
 }
 function appBewijsBekijk(id, welk){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
@@ -2967,6 +3147,10 @@ function tekenApparaat(){
                 : `<button class="btn ghost small" onclick="appVerklaringOpen('${a.id}')">Maken</button>`}
             </span>
           </div>
+          ${a.inkoop_registratie_id?`<div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px">
+            <span>Inkoopregister${inBewaring(a)?' <span class="locpil">in bewaring t/m '+esc(dagTekst(a.bewaar_tot))+'</span>':''}</span>
+            <button class="btn ghost small" onclick="dorVanToestel('${a.id}')">DOR-gegevens</button>
+          </div>`:''}
         </div>
 
         <div class="card${leegUit((a.extra_kosten||[]).length)}">
@@ -3329,8 +3513,23 @@ function sloopGroepen(p){
 
 let ctr=null;   /* alles van de lopende controle staat hierin */
 
+/* Nog in bewaring (APV 2:68, zie werkdagenNa): eerst vragen of je toch wilt beginnen. Eén
+   keer per toestel per sessie, zodat je bij elke klik niet opnieuw dezelfde vraag krijgt.
+   Waarschuwen en niet blokkeren: de eigenaar koos dat zo. Geeft true als de vraag openstaat;
+   de aanroeper stopt dan, en verder() gaat door na "Toch beginnen". */
+const bewaringAkkoord=new Set();
+function bewaringEerst(a, verder){
+  if(!inBewaring(a) || bewaringAkkoord.has(a.id)) return false;
+  bevestig('Tot en met '+dagTekst(a.bewaar_tot)+' moet hij blijven zoals je hem kocht. Niet wissen, repareren of verkopen. Toch beginnen?',
+    {kop:'Nog in bewaring', ja:'Toch beginnen', nee:'Wachten'})
+    .then(ok=>{ if(ok){ bewaringAkkoord.add(a.id); verder(); } });
+  return true;
+}
+
 function appOpen(id){
   const a=apparaten.find(x=>x.id===id); if(!a) return;
+  // Bekijken mag altijd; controleren, repareren en slopen veranderen het toestel.
+  if(!OP_VOORRAAD.includes(a.status) && bewaringEerst(a, ()=>appOpen(id))) return;
   if(a.status==='te_repareren') return repOpen(a);
   if(OP_VOORRAAD.includes(a.status)) return appPagina(a.id);
   if(a.status==='repurpose')    return sloopOpen(a);
@@ -5629,6 +5828,7 @@ let onl=null;   /* het apparaat dat je online zet */
 function onlineZetten(id){
   const a=apparaten.find(x=>x.id===id);
   if(!a){ toast('Dit apparaat bestaat niet meer','let-op'); return; }
+  if(bewaringEerst(a, ()=>onlineZetten(id))) return;
   onl={a, kanaal:'webshop', titel:'', tekst:'', zoekwoorden:[], fotocode:null,
        prijs:null, nieuwprijs:a.nieuwprijs!=null?a.nieuwprijs:null,
        prijsBron:'', staat:a.grade||'B', garantie:6, marge:margeVan(a),
@@ -8952,8 +9152,14 @@ function batVerklaringOpen(id){
     {naam:b.verkoper_naam||'', adres:b.verkoper_adres||'', bedrag:(b.inkoopprijs!=null?b.inkoopprijs:'')},
     async(d, kn)=>{
       await bezig(kn, async()=>{
+        /* Ook een partij hoort in het inkoopregister. De toestellen bestaan vaak nog niet
+           (die vul je later per stuk in), dus de partij staat er als één regel in. */
+        const reg=await registratieOpslaan(d, [{batch_id:id, code:b.code||b.nummer||null,
+          omschrijving:cap+' toestel'+(cap===1?'':'len')+(b.verwacht?' ('+verwachtTekst(b.verwacht)+')':''), aantal:cap,
+          prijs:d.bedrag}]);
         const png=await verklaringPng({code:b.code||b.nummer||'', verwacht:b.verwacht, betaalwijze:b.betaalwijze},
-          {naam:d.naam, adres:d.adres, aantal:cap, bedrag:d.bedrag, handtekening:d.handtekening});
+          {naam:d.naam, adres:d.adres, aantal:cap, bedrag:d.bedrag, handtekening:d.handtekening,
+           betaalwijze:(d.dor||{}).betaalwijze, volgnummer:reg?reg.volgnummer:null});
         const blob=await (await fetch(png)).blob();
         const pad=batDocPad(id,'inkoopverklaring','png');
         const {error}=await sb.storage.from('inkoopfacturen').upload(pad, blob, {contentType:'image/png'});
@@ -8963,50 +9169,183 @@ function batVerklaringOpen(id){
         const {error:e2}=await sb.from('refurbish_batches').update(patch).eq('id',id);
         if(e2) throw new Error('Opslaan mislukt');
         Object.assign(b, patch);
-        if(oud) try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
+        if(reg){ await sb.from('inkoop_registraties').update({verklaring_url:pad}).eq('id', reg.id); reg.verklaring_url=pad; }
+        /* Het oude bestand alleen weghalen als het register er niet naar wijst: een
+           registerregel moet zijn verklaring houden. */
+        if(oud && !reg) try{ await sb.storage.from('inkoopfacturen').remove([oud]); }catch(_e){}
         sluit(); renderBatchDetail();
         toast('Inkoopverklaring opgeslagen', true);
+        if(reg) setTimeout(()=>dorVenster(reg), 300);
       });
     }
   );
 }
-/* De inkoopverklaring-invoer, los van waar hij heen gaat. Naam, adres, bedrag en een
-   handtekening. Bij "Klaar" krijg je {naam,adres,bedrag,handtekening} terug via onKlaar;
-   opslaan doet de aanroeper (een batch, een los toestel of een nieuwe toevoeging). Het
-   aantal komt uit de context, dus dat hoeft de winkelier hier niet nog eens te tikken. */
-function verklaringVenster(prefill, onKlaar){
-  venster('Inkoopverklaring', `
-    <p class="muted klein" style="margin-bottom:12px">Voor een contante inkoop bij een particulier. Vul de gegevens in en laat de verkoper <b>op het scherm</b> tekenen, of druk op <b>Printen om te tekenen</b> en laat op papier tekenen. Je bewaart het als bewijs voor je eigen inkoopadministratie.</p>
-    <div class="grid">
-      <div style="grid-column:1/-1"><label>Naam verkoper *</label><input id="vkl_naam" value="${esc(prefill.naam||'')}" placeholder="voor- en achternaam"></div>
-      <div style="grid-column:1/-1"><label>Adres verkoper</label><input id="vkl_adres" value="${esc(prefill.adres||'')}" placeholder="straat, postcode, plaats"></div>
-      <div><label>Totaalbedrag (€)</label><input id="vkl_bedrag" type="number" step="0.01" min="0" value="${(prefill.bedrag!=null&&prefill.bedrag!=='')?prefill.bedrag:''}" placeholder="0,00"></div>
+/* De inkoopverklaring-invoer, los van waar hij heen gaat. Eén scherm vult twee dingen:
+   het inkoopregister (wat het DOR van de politie vraagt, art. 437 Sr en APV art. 2:66)
+   en de inkoopverklaring voor de margeregeling. Zie INKOOP-DOR-STAPPENPLAN.md.
+
+   Bij "Klaar" krijg je via onKlaar(d, knop) terug: naam, adres, bedrag, handtekening
+   (zoals vroeger, dus de oude aanroepers blijven werken), plus d.dor met de losse
+   velden en d.nummers met het serienummer of IMEI per toestel. Opslaan doet de aanroeper.
+
+   o.toestellen: [{label, soort}] geeft per toestel een veld voor het nummer. Zonder
+   toestellen (een batch) vraagt het scherm geen nummers.
+
+   Bewust geen veld voor een kopie van het legitimatiebewijs en geen BSN: een opkoper
+   noteert alleen soort en nummer. */
+const VKL_ID_SOORTEN=[['paspoort','Paspoort'],['id-kaart','ID-kaart'],['rijbewijs','Rijbewijs'],['verblijfsdocument','Verblijfsdocument']];
+const VKL_BETAAL=[['contant','Contant'],['pin','Pin'],['bank','Bank']];
+let vklKeuze={soort:'particulier', id_soort:'', betaalwijze:'contant'};
+let vklToestellen=[];
+/* De goederenregels voor op de verklaring: per toestel naam en nummer. */
+function vklGoederen(toestellen, nummers){
+  return (toestellen||[]).map((t,i)=>{
+    const nr=(nummers||[])[i]||t.nummer||'';
+    const tel=/telefoon|tablet|watch/i.test(t.soort||'');
+    return t.label+(nr?(tel?', IMEI ':', serienummer ')+nr:'');
+  });
+}
+function verklaringVenster(prefill, onKlaar, o){
+  o=o||{};
+  const dor=prefill.dor||{};
+  /* Een oude verklaring had alleen een naam in één veld: de laatste naam wordt de
+     achternaam, de rest de voornamen. Beter half ingevuld dan alles opnieuw. */
+  let voor=dor.voornamen||'', achter=dor.achternaam||'';
+  if(!voor && !achter && prefill.naam){ const d=String(prefill.naam).trim().split(/\s+/); achter=d.pop()||''; voor=d.join(' '); }
+  vklKeuze={ soort:dor.verkoper_soort||'particulier', id_soort:dor.id_soort||'', betaalwijze:dor.betaalwijze||'contant' };
+  const keuzes=(groep, lijst)=>`<div class="periodesel vklkeuze" data-groep="${groep}">${lijst.map(([w,t])=>
+    `<button type="button" data-w="${w}" class="${vklKeuze[groep]===w?'active':''}" onclick="vklKies('${groep}','${w}')">${t}</button>`).join('')}</div>`;
+  const veld=(id, label, waarde, extra)=>`<div${extra&&extra.breed?' style="grid-column:1/-1"':''}><label for="${id}">${label}</label><input id="${id}" value="${esc(waarde||'')}"${extra&&extra.attr?' '+extra.attr:''}></div>`;
+  const toestellen=(o.toestellen||[]);
+  vklToestellen=toestellen;
+  const nummers=toestellen.map((t,i)=>{
+    const tel=/telefoon|tablet|watch/i.test(t.soort||'');
+    return `<div style="grid-column:1/-1"><label for="vkl_nr_${i}">${esc(t.label)}${toestellen.length>1?' ('+(i+1)+' van '+toestellen.length+')':''}</label>
+      <input id="vkl_nr_${i}" value="${esc(t.nummer||'')}" placeholder="${tel?'IMEI, te zien met *#06#':'Serienummer, staat op de onderkant'}" autocomplete="off" autocapitalize="characters"></div>`;
+  }).join('');
+  venster('Inkoop bij een particulier', `
+    <p class="muted klein" style="margin-bottom:12px">Dit is je inkoopregister en de inkoopverklaring in één. Vraag naar een legitimatiebewijs en schrijf alleen de soort en het nummer op. Maak geen kopie.</p>
+    <div class="veldkop vklkop" style="margin-top:0"><label>Wie verkoopt</label></div>
+    ${keuzes('soort',[['particulier','Particulier'],['bedrijf','Bedrijf']])}
+    <div class="grid" style="margin-top:10px">
+      <div id="vkl_bedrijf_vak" style="grid-column:1/-1"${vklKeuze.soort==='bedrijf'?'':' hidden'}><label for="vkl_bedrijf">Bedrijfsnaam</label><input id="vkl_bedrijf" value="${esc(dor.bedrijfsnaam||'')}"></div>
+      ${veld('vkl_voornamen','Voornamen',voor,{attr:'autocomplete="off" autocapitalize="words"'})}
+      ${veld('vkl_voorvoegsel','Tussenvoegsel',dor.voorvoegsel,{attr:'autocomplete="off" placeholder="van, de"'})}
+      ${veld('vkl_achternaam','Achternaam *',achter,{attr:'autocomplete="off" autocapitalize="words"'})}
+      ${veld('vkl_geboorte','Geboortedatum *',dor.geboortedatum,{attr:'type="date"'})}
     </div>
-    <div class="veldkop"><label>Handtekening verkoper <span class="muted">(op scherm, of laat leeg en teken op papier)</span></label></div>
+    <div class="veldkop vklkop"><label>Adres</label><span class="muted klein">Postcode en huisnummer vullen de straat vanzelf</span></div>
+    <div class="grid">
+      ${veld('vkl_postcode','Postcode *',dor.postcode,{attr:'autocomplete="off" autocapitalize="characters" placeholder="1234 AB" onchange="vklAdresZoek()"'})}
+      ${veld('vkl_huisnr','Huisnummer *',dor.huisnummer,{attr:'autocomplete="off" onchange="vklAdresZoek()"'})}
+      ${veld('vkl_straat','Straat *',dor.straat,{attr:'autocomplete="off"'})}
+      ${veld('vkl_plaats','Woonplaats *',dor.woonplaats,{attr:'autocomplete="off"'})}
+    </div>
+    <div class="veldkop vklkop"><label>Legitimatie</label></div>
+    ${keuzes('id_soort',VKL_ID_SOORTEN)}
+    <div class="grid" style="margin-top:10px">
+      ${veld('vkl_idnr','Nummer van het document *',dor.id_nummer,{attr:'autocomplete="off" autocapitalize="characters"'})}
+      ${veld('vkl_idland','Land van het document',dor.id_nationaliteit||'Nederland',{attr:'autocomplete="off"'})}
+    </div>
+    ${toestellen.length?`<div class="veldkop vklkop"><label>Serienummer of IMEI</label></div><div class="grid">${nummers}</div>`:''}
+    <div class="veldkop vklkop"><label>Betaling</label></div>
+    <div class="grid">
+      <div><label for="vkl_bedrag">Totaalbedrag (€)</label><input id="vkl_bedrag" type="number" step="0.01" min="0" value="${(prefill.bedrag!=null&&prefill.bedrag!=='')?prefill.bedrag:''}" placeholder="0,00"></div>
+      <div><label>Betaald met</label>${keuzes('betaalwijze',VKL_BETAAL)}</div>
+    </div>
+    <div class="veldkop vklkop"><label>Handtekening verkoper <span class="muted">(op scherm, of laat leeg en teken op papier)</span></label></div>
     <div class="vklwrap"><canvas id="vklCanvas" class="vklpad"></canvas></div>
     <div class="row" style="justify-content:space-between; margin-top:6px">
       <button type="button" class="btn ghost small" onclick="verklaringPrintNu()"><svg class="i s"><use href="#i-print"/></svg>Printen om te tekenen</button>
       <button type="button" class="btn ghost small" onclick="vklWis()">Wissen</button>
     </div>
   `, [{tekst:'Klaar', klasse:'actie', doe:(kn)=>{
-    const naam=v('vkl_naam'); if(!naam){ toast('Vul de naam van de verkoper in','let-op'); return; }
-    const d={ naam, adres:v('vkl_adres')||'', bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100, handtekening: vklLeeg ? null : document.getElementById('vklCanvas').toDataURL('image/png') };
-    onKlaar(d, kn);
+    const d=vklGegevens(toestellen.length, true);
+    if(d) onKlaar(d, kn);
   }}], 'groot');
   setTimeout(vklInit, 60);
+}
+function vklKies(groep, w){
+  vklKeuze[groep]=w;
+  document.querySelectorAll('.vklkeuze[data-groep="'+groep+'"] button').forEach(b=>b.classList.toggle('active', b.dataset.w===w));
+  if(groep==='soort'){ const vak=document.getElementById('vkl_bedrijf_vak'); if(vak) vak.hidden = w!=='bedrijf'; }
+}
+/* Leeftijd in hele jaren op een datum. Kopen van iemand onder de achttien mag niet
+   (art. 437bis Sr), dus dit is een harde stop, geen waarschuwing. */
+function leeftijdOp(geboren, op){
+  const g=new Date(geboren+'T12:00:00'), d=op||new Date();
+  if(isNaN(g)) return null;
+  let j=d.getFullYear()-g.getFullYear();
+  if(d.getMonth()<g.getMonth() || (d.getMonth()===g.getMonth() && d.getDate()<g.getDate())) j--;
+  return j;
+}
+/* Alles uit het scherm halen en nakijken. streng=false is voor "Printen om te tekenen":
+   dan mag het nog half leeg zijn, als de naam er maar staat. */
+function vklGegevens(aantalNummers, streng){
+  const soort=vklKeuze.soort, bedrijf=v('vkl_bedrijf');
+  const voornamen=v('vkl_voornamen'), voorvoegsel=v('vkl_voorvoegsel'), achternaam=v('vkl_achternaam');
+  const geboortedatum=v('vkl_geboorte');
+  const postcode=v('vkl_postcode').toUpperCase().replace(/\s+/g,'').replace(/^(\d{4})([A-Z]{2})$/,'$1 $2');
+  const huisnummer=v('vkl_huisnr'), straat=v('vkl_straat'), woonplaats=v('vkl_plaats');
+  const id_nummer=v('vkl_idnr').toUpperCase().replace(/\s+/g,''), id_nationaliteit=v('vkl_idland')||'Nederland';
+  const fout=t=>{ toast(t,'let-op'); return null; };
+  if(!achternaam && !(soort==='bedrijf' && bedrijf)) return fout('Vul de achternaam in');
+  if(streng){
+    if(soort==='bedrijf' && !bedrijf) return fout('Vul de bedrijfsnaam in');
+    if(soort==='particulier'){
+      if(!geboortedatum) return fout('Vul de geboortedatum in');
+      const jaren=leeftijdOp(geboortedatum);
+      if(jaren==null || jaren>120) return fout('Deze geboortedatum klopt niet');
+      if(jaren<18) return fout('Jonger dan 18. Inkopen mag niet.');
+    }
+    if(!straat || !huisnummer || !postcode || !woonplaats) return fout('Vul het hele adres in');
+    if(soort==='particulier' && (!vklKeuze.id_soort || !id_nummer)) return fout('Kies de legitimatie en vul het nummer in');
+  }
+  const nummers=[];
+  for(let i=0;i<(aantalNummers||0);i++) nummers.push(v('vkl_nr_'+i).toUpperCase().replace(/\s+/g,''));
+  const naam=[voornamen, voorvoegsel, achternaam].filter(Boolean).join(' ');
+  const adres=[[straat, huisnummer].filter(Boolean).join(' '), [postcode, woonplaats].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  return {
+    naam: soort==='bedrijf' && bedrijf ? (naam ? bedrijf+' ('+naam+')' : bedrijf) : naam,
+    adres, bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100,
+    handtekening: vklLeeg ? null : document.getElementById('vklCanvas').toDataURL('image/png'),
+    nummers,
+    dor:{ verkoper_soort:soort, voornamen:voornamen||null, voorvoegsel:voorvoegsel||null, achternaam:achternaam||null,
+      bedrijfsnaam: soort==='bedrijf' ? (bedrijf||null) : null, geboortedatum:geboortedatum||null,
+      straat:straat||null, huisnummer:huisnummer||null, postcode:postcode||null, woonplaats:woonplaats||null, land:'Nederland',
+      id_soort:vklKeuze.id_soort||null, id_nationaliteit, id_nummer:id_nummer||null, betaalwijze:vklKeuze.betaalwijze||null }
+  };
+}
+/* Postcode en huisnummer vullen straat en woonplaats via de Locatieserver van PDOK (de
+   overheid, gratis, zonder sleutel). Alleen invullen wat nog leeg is, en stil falen:
+   zonder internet of bij een onbekend adres typ je het gewoon zelf. */
+let _vklAdresVraag=0;
+async function vklAdresZoek(){
+  const pc=v('vkl_postcode').toUpperCase().replace(/\s+/g,''), nr=(v('vkl_huisnr').match(/^\d+/)||[''])[0];
+  if(!/^\d{4}[A-Z]{2}$/.test(pc) || !nr) return;
+  const mijn=++_vklAdresVraag;
+  try{
+    const r=await fetch('https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?fq=type:adres&rows=1&q='+encodeURIComponent('postcode:'+pc+' and huisnummer:'+nr));
+    const j=await r.json();
+    const doc=j && j.response && j.response.docs && j.response.docs[0];
+    if(!doc || mijn!==_vklAdresVraag) return;
+    const st=document.getElementById('vkl_straat'), pl=document.getElementById('vkl_plaats');
+    if(st && !st.value && doc.straatnaam) st.value=doc.straatnaam;
+    if(pl && !pl.value && doc.woonplaatsnaam) pl.value=doc.woonplaatsnaam;
+  }catch(_e){}
 }
 /* De verklaring nu meteen afdrukken om op papier te laten tekenen. Gebruikt dezelfde
    opmaak als de opgeslagen verklaring; zonder schermhandtekening tekent verklaringPng
    een lege handtekeningregel. Vereist geen toestel, dus het kan aan de balie voordat
    je het toestel toevoegt. */
 async function verklaringPrintNu(){
-  const naam=v('vkl_naam'); if(!naam){ toast('Vul eerst de naam van de verkoper in','let-op'); return; }
-  const d={ naam, adres:v('vkl_adres')||'', bedrag:Math.round((Number(v('vkl_bedrag'))||0)*100)/100,
-    handtekening: vklLeeg ? null : document.getElementById('vklCanvas').toDataURL('image/png') };
+  const d=vklGegevens(vklToestellen.length, false); if(!d) return;
+  if(vklToestellen.length) d.goederenLijst=vklGoederen(vklToestellen, d.nummers);
+  d.betaalwijze=d.dor.betaalwijze;
   try{
     const png=await verklaringPng({code:'', verwacht:null, betaalwijze:null}, d);
     const doc=await verklaringPdfDoc(png);
-    doc.save(('inkoopverklaring '+naam).replace(/[^\w -]+/g,'').trim()+'.pdf');
+    doc.save(('inkoopverklaring '+d.naam).replace(/[^\w -]+/g,'').trim()+'.pdf');
     toast('Verklaring klaar om te printen', true);
   }catch(e){ toast('Het maken van de PDF mislukte','fout'); }
 }
@@ -9037,7 +9376,7 @@ async function verklaringPng(b, d){
   const koperExtra = [koperG.kvk?('KVK '+koperG.kvk):'', koperG.btw?('BTW '+koperG.btw):''].filter(Boolean).join('  ·  ');
   const bcode=b.code||b.nummer||'';
   x.font='400 22px Arial'; x.fillStyle='#5B6663';
-  x.fillText((bcode?'Batch '+bcode+'  ·  ':'')+'Datum: '+new Date().toLocaleDateString('nl-NL'), m, y); y+=44;
+  x.fillText((d.volgnummer?'Inkoop nr '+d.volgnummer+'  ·  ':'')+(bcode?'Batch '+bcode+'  ·  ':'')+'Datum: '+(d.datum?new Date(d.datum):new Date()).toLocaleDateString('nl-NL'), m, y); y+=44;
   x.strokeStyle='#ECEAE4'; x.lineWidth=2; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=30;
   // Koper (jouw bedrijf), zodat de verklaring een compleet inkoopdocument is.
   x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Koper', m, y);
@@ -9050,11 +9389,23 @@ async function verklaringPng(b, d){
   const regel=(kop,val)=>{ x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText(kop, m, y); x.font='400 24px Arial'; x.fillStyle='#17201E'; x.fillText(val||'-', m, y+26); y+=76; };
   regel('Verkoper', d.naam);
   if(d.adres) regel('Adres', d.adres);
-  regel('Goederen', d.goederen || ((d.aantal||0)+' toestel'+((d.aantal===1)?'':'len')+(b.verwacht?' ('+verwachtTekst(b.verwacht)+')':'')));
-  regel('Bedrag', euro(d.bedrag)+(b.betaalwijze?'  ·  '+betaalTekst(b.betaalwijze):'  ·  contant'));
+  if(d.goederenLijst && d.goederenLijst.length){
+    // Eén regel per toestel met het serienummer of IMEI. Meer dan twaalf past niet op
+    // een A4; dan de rest als aantal, de volledige lijst staat in het inkoopregister.
+    x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Goederen ('+d.goederenLijst.length+')', m, y); y+=30;
+    x.font='400 22px Arial'; x.fillStyle='#17201E';
+    const toon=d.goederenLijst.slice(0,12);
+    toon.forEach(g=>{ y=labelWrap(x, g, m, y, W-2*m, 30, 2); });
+    if(d.goederenLijst.length>toon.length){ x.fillText('en nog '+(d.goederenLijst.length-toon.length)+' toestellen', m, y); y+=30; }
+    y+=16;
+  }else regel('Goederen', d.goederen || ((d.aantal||0)+' toestel'+((d.aantal===1)?'':'len')+(b.verwacht?' ('+verwachtTekst(b.verwacht)+')':'')));
+  const bw=d.betaalwijze||b.betaalwijze;
+  regel('Bedrag', euro(d.bedrag)+'  ·  '+(bw?betaalTekst(bw):'contant'));
   y+=6; x.strokeStyle='#ECEAE4'; x.beginPath(); x.moveTo(m,y); x.lineTo(W-m,y); x.stroke(); y+=28;
   x.font='400 21px Arial'; x.fillStyle='#17201E';
-  const verkl='De verkoper verklaart de bovengenoemde goederen te verkopen aan de koper, hier rechtmatig eigenaar van te zijn, en het bovengenoemde bedrag te hebben ontvangen.';
+  /* De btw-zin is verplicht voor de margeregeling (art. 4a Uitvoeringsbeschikking OB):
+     de verkoper heeft over deze goederen geen btw afgetrokken. */
+  const verkl='De verkoper verklaart de bovengenoemde goederen te verkopen aan de koper, hier rechtmatig eigenaar van te zijn, het bovengenoemde bedrag te hebben ontvangen, en over deze goederen geen btw in aftrek te hebben gebracht.';
   y=labelWrap(x, verkl, m, y, W-2*m, 30, 4)+18;
   x.font='700 20px Arial'; x.fillStyle='#5B6663'; x.fillText('Handtekening verkoper', m, y); y+=34;
   if(d.handtekening){
