@@ -201,9 +201,11 @@ repo `refuro-webshop`.
       halen = concept. Komt dezelfde uitvoering terug, dan hetzelfde product en dezelfde link.
       Storvo: `supabase/functions/shopify/uitverkocht.ts` + `index.ts`, test
       `tests/webshop-uitverkocht.js`. Thema: zie `WERKLIJST.md` in refuro-webshop.
-      **Uitrol:** 1) het thema samen met fase 4 pushen (7 bestanden, WERKLIJST), 2) edge
-      `shopify` uitrollen met index.ts + uitverkocht.ts + _gedeeld/shopify.ts, verify_jwt
-      **true** zoals v26. Volgorde maakt niet uit; beide los zijn veilig.
+      **Uitrol:** 1) het thema samen met fase 4 pushen (7 bestanden, WERKLIJST), 2) ~~edge
+      `shopify`~~ GEDAAN (3 nov, v27, verify_jwt true, terughaald en gelijk aan git 9db54a0).
+      **Testen na de thema-push:** het laatste exemplaar van een advertentie aan de balie
+      verkopen. De link moet blijven werken met "Net verkocht" en alternatieven; in Shopify
+      staat het product op "Niet vermeld" met voorraad 0.
 
 ### Testen
 - [ ] **Grade-varianten tegen de live shop:** tweede exemplaar van dezelfde uitvoering =
