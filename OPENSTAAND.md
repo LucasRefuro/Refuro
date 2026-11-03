@@ -225,8 +225,9 @@ repo `refuro-webshop`.
       stond, en geeft een fout terug in plaats van hem alleen te loggen (de winkelapp zegt het
       dan). Vervallen loopt elk uur via pg_cron (migratie `20261103180000`). Afrekenen van het
       laatste exemplaar zet het product op niet vermeld, zoals een balieverkoop. Test
-      `tests/reservering-voorraad.js`. **Uitrol:** edge `reservering` (index.ts + voorraad.ts +
-      ../shopify/uitverkocht.ts, verify_jwt **false** zoals v6) en de migratie.
+      `tests/reservering-voorraad.js`. **UITGEROLD (3 nov):** edge `reservering` v7 (index.ts +
+      voorraad.ts + ../shopify/uitverkocht.ts, verify_jwt false zoals v6; rooktest goed) en de
+      taak `reservering-verval-uur` (minuut 7, cron-pad getest: 200, niets te doen).
       **A0084 zelf:** één keer opnieuw online zetten. Dat is ook stap 3 van de fase-4-uitrol.
 
 ### Jouw actie (code is klaar)
