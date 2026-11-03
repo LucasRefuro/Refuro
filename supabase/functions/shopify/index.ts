@@ -168,7 +168,18 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
         .select("id", { count: "exact", head: true })
         .eq("team_id", teamId).eq("status", "gereserveerd").eq("kanalen->shopify->>sleutel", sleutel);
       const status = statusNaLaatste({ verkocht: !!opties.verkocht, gereserveerd: gereserveerd ?? 0 });
-      const r = await zetUitverkocht(gql, k.locatie_id || null, reg.product_id, status);
+      let r: any;
+      try {
+        r = await zetUitverkocht(gql, k.locatie_id || null, reg.product_id, status);
+      } catch (e) {
+        // Lukt het op 0 zetten niet, dan toch weg zoals vroeger: liever een foutpagina dan een
+        // toestel dat online te koop blijft terwijl het al aan de balie verkocht is.
+        console.error("uitverkocht zetten, terugval op verwijderen", sleutel, e);
+        try {
+          await graphql(k, `mutation($input: ProductDeleteInput!){ productDelete(input: $input){ deletedProductId userErrors { field message } } }`, { input: { id: reg.product_id } });
+        } catch (_e) { /* al weg is prima */ }
+        r = { bestaat: false };
+      }
       if (r.bestaat) {
         await admin.from("webshop_producten").update({ bijgewerkt_op: new Date().toISOString() })
           .eq("team_id", teamId).eq("sleutel", sleutel);

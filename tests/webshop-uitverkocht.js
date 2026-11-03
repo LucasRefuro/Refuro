@@ -103,7 +103,10 @@ const variant=(n,aantal)=>({id:'gid://shopify/ProductVariant/'+n,
   // ── 4. de sync zelf (bron gelezen; index.ts heeft Deno-imports) ──
   const idx=fs.readFileSync(bron('supabase/functions/shopify/index.ts'),'utf8');
   const sync=idx.slice(idx.indexOf('async function synchroniseerAdvertentie'), idx.indexOf('Deno.serve('));
-  ok('de sync gooit het product niet meer weg', !/productDelete/.test(sync));
+  // Alleen nog als vangnet: lukt het op 0 zetten niet, dan liever weg dan dubbel verkopen.
+  const vangnet=sync.slice(sync.indexOf('catch (e)'), sync.indexOf('if (r.bestaat)'));
+  ok('de sync gooit het product alleen nog weg als het op 0 zetten mislukt',
+     (sync.match(/productDelete/g)||[]).length===1 && /productDelete/.test(vangnet) && /zetUitverkocht\(/.test(sync.slice(0, sync.indexOf('catch (e)'))));
   ok('de sync gebruikt zetUitverkocht met de status uit statusNaLaatste',
      /statusNaLaatste\(/.test(sync) && /zetUitverkocht\(gql, k\.locatie_id/.test(sync));
   ok('open reserveringen tellen mee', /"status", "gereserveerd"\)\.eq\("kanalen->shopify->>sleutel", sleutel\)/.test(sync));
