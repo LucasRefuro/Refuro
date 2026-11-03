@@ -11,9 +11,13 @@
 // 'reserveer' is publiek (zoals inruil-aanvraag: honeypot + rate-limit +
 // server-side validatie; de webshop is publiek, dus een gedeeld secret is geen
 // echte auth). 'afrekenen' / 'annuleren' / 'verval' zijn ingelogd (wieBelt),
-// want die komen uit de winkelapp.
+// want die komen uit de winkelapp. 'verval' komt daarnaast elk uur uit de database
+// (pg_cron met X-Cron-Secret), zodat een reservering ook vervalt als niemand de
+// lijst in de winkelapp opent.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { herstelNaVrijgeven, zetVariantVoorraad, type Deps, type Uitkomst } from "./voorraad.ts";
+import { zetUitverkocht } from "../shopify/uitverkocht.ts";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -131,42 +135,9 @@ function euro(n: unknown): string {
 }
 
 /* ── Shopify-voorraad van één grade-variant op het juiste aantal zetten ──
-   Deze API-versie eist changeFromQuantity (de waarde die je verwacht). We lezen
-   dus eerst de huidige "available" op de winkel-locatie en zetten hem dan op het
-   echte aantal onverkochte exemplaren van die grade. Absoluut zetten (niet een
-   delta) is zelfcorrigerend: het kan niet uit de pas gaan lopen met de bron van
-   waarheid. Best effort: een fout hier houdt de actie niet tegen; de volledige
-   sync corrigeert later alsnog. */
-async function inventoryNiveauVan(k: any, variantGid: string) {
-  const d = await graphql(k, `query($id:ID!,$loc:ID!){
-    productVariant(id:$id){ inventoryItem{ id inventoryLevel(locationId:$loc){ quantities(names:["available"]){ name quantity } } } }
-  }`, { id: variantGid, loc: k.locatie_id });
-  const item = d?.productVariant?.inventoryItem;
-  if (!item?.id) return null;
-  const q = (item.inventoryLevel?.quantities || []).find((x: any) => x?.name === "available");
-  return { itemId: item.id as string, huidig: q ? Number(q.quantity) : 0 };
-}
-async function zetShopifyVoorraad(k: any, variantGid: string, doelAantal: number) {
-  if (!k?.locatie_id) return; // geen locatie bekend: de volgende volledige sync zet het recht
-  const niv = await inventoryNiveauVan(k, variantGid);
-  if (!niv) return;
-  const doel = Math.max(0, Math.round(doelAantal));
-  if (niv.huidig === doel) return; // al goed, niets te doen
-  // De @idempotent-directive met unieke sleutel is sinds 2026-04 verplicht.
-  const uit = await graphql(k, `
-    mutation($input: InventorySetQuantitiesInput!, $key: String!){
-      inventorySetQuantities(input: $input) @idempotent(key: $key){ userErrors { field message } }
-    }`, {
-    input: {
-      name: "available",
-      reason: "correction",
-      quantities: [{ inventoryItemId: niv.itemId, locationId: k.locatie_id, quantity: doel, changeFromQuantity: niv.huidig }],
-    },
-    key: crypto.randomUUID(),
-  });
-  const f = uit?.inventorySetQuantities?.userErrors || [];
-  if (f.length) console.error("voorraad zetten", f.map((e: any) => e.message).join(" · "));
-}
+   Het rekenwerk staat in voorraad.ts (getest). Hier alleen de echte database en Shopify erbij.
+   Absoluut zetten op het aantal onverkochte exemplaren van die grade: dat kan niet uit de pas
+   gaan lopen met Storvo. */
 async function telVoorraad(teamId: string, variantGid: string) {
   const { count } = await admin.from("hardware")
     .select("id", { count: "exact", head: true })
@@ -174,13 +145,29 @@ async function telVoorraad(teamId: string, variantGid: string) {
     .eq("kanalen->shopify->>variant", variantGid);
   return count ?? 0;
 }
-// De grade-variant op de echte voorraad zetten (na reserveren/annuleren/vervallen).
-async function herstelShopifyVoorraad(teamId: string, variantGid: string) {
+async function depsVoor(teamId: string): Promise<Deps> {
+  const k = await koppelingVan(teamId);
+  return {
+    gql: k ? (q: string, v?: unknown) => graphql(k, q, v) : null,
+    locatieId: k?.locatie_id || null,
+    registratie: async (sleutel: string) => (await admin.from("webshop_producten")
+      .select("product_id, varianten").eq("team_id", teamId).eq("sleutel", sleutel).maybeSingle()).data as any,
+    hardware: async (id: string) => (await admin.from("hardware")
+      .select("id, status, kanalen").eq("id", id).maybeSingle()).data,
+    herkoppel: async (id: string, kanalen: Record<string, unknown>) => {
+      await admin.from("hardware").update({ kanalen, bijgewerkt_op: new Date().toISOString() }).eq("id", id);
+    },
+    tel: (variantGid: string) => telVoorraad(teamId, variantGid),
+  };
+}
+// Na annuleren of vervallen. Geeft de uitkomst terug in plaats van hem alleen te loggen: de
+// winkelapp zei vroeger "weer online" terwijl Shopify het toestel nog uitverkocht noemde.
+async function herstel(teamId: string, r: any): Promise<Uitkomst> {
   try {
-    const k = await koppelingVan(teamId);
-    if (k) await zetShopifyVoorraad(k, variantGid, await telVoorraad(teamId, variantGid));
+    return await herstelNaVrijgeven(await depsVoor(teamId), r);
   } catch (e) {
-    console.error("herstel voorraad", e); // de sync zet het later alsnog recht
+    console.error("herstel voorraad", r?.id, e);
+    return { ok: false, melding: "De webshop is niet bijgewerkt: " + (e instanceof Error ? e.message : "onbekende fout") };
   }
 }
 
@@ -306,7 +293,10 @@ async function reserveer(lijf: Record<string, unknown>, req: Request) {
 
   // De webshop-voorraad van deze grade op het nieuwe (lagere) aantal zetten,
   // zodat niemand het gereserveerde toestel nog online koopt.
-  await herstelShopifyVoorraad(TEAM, variantGid);
+  try {
+    const d = await depsVoor(TEAM);
+    if (d.gql && d.locatieId) await zetVariantVoorraad(d.gql, d.locatieId, variantGid, await telVoorraad(TEAM, variantGid));
+  } catch (e) { console.error("voorraad na reserveren", e); }
 
   const taal = knip(lijf.taal, 5).toLowerCase().startsWith("en") ? "en" : "nl";
   try { EdgeRuntime.waitUntil(mailWinkel(rij)); } catch { /* geen waitUntil: laat lopen */ }
@@ -343,6 +333,22 @@ async function afrekenen(lijf: Record<string, unknown>, acc: any) {
     bijgewerkt_op: new Date().toISOString(),
     ruwe_json: { ...(r.ruwe_json || {}), betaal },
   }).eq("id", r.id);
+  // Was dit het laatste exemplaar van de advertentie, dan hetzelfde als een verkoop aan de balie
+  // (edge shopify): de pagina blijft staan als verkocht, maar uit de lijsten. Anders bleef een
+  // afgerekende reservering grijs in de categorie staan.
+  if (r.sleutel) {
+    try {
+      const { count } = await admin.from("hardware")
+        .select("id", { count: "exact", head: true })
+        .eq("team_id", acc.team_id).in("status", ["voorraad", "gereserveerd"])
+        .eq("kanalen->shopify->>sleutel", r.sleutel);
+      if ((count ?? 0) === 0) {
+        const d = await depsVoor(acc.team_id);
+        const reg = await d.registratie(r.sleutel);
+        if (d.gql && reg?.product_id) await zetUitverkocht(d.gql, d.locatieId, reg.product_id, "UNLISTED");
+      }
+    } catch (e) { console.error("afrekenen: laatste exemplaar", e); }
+  }
   return ok();
 }
 
@@ -360,19 +366,19 @@ async function annuleren(lijf: Record<string, unknown>, acc: any) {
     status: "geannuleerd", afgehandeld_op: new Date().toISOString(),
     bijgewerkt_op: new Date().toISOString(),
   }).eq("id", r.id);
-  if (r.variant_id) await herstelShopifyVoorraad(acc.team_id, r.variant_id);
-  return ok();
+  const uit = (r.variant_id || r.sleutel) ? await herstel(acc.team_id, r) : { ok: true, melding: null };
+  return ok({ webshop: uit.ok, melding: uit.melding });
 }
 
-/* ── verval (ingelogd): alle open reserveringen over de vervaltijd vrijgeven ──
-   De winkelapp roept dit aan bij het openen van de lijst, zodat verlopen
-   reserveringen het toestel vanzelf teruggeven aan de webshop. */
-async function verval(acc: any) {
+/* ── verval: alle open reserveringen over de vervaltijd vrijgeven ──
+   Elk uur vanuit de database, en ook als de winkelapp de lijst opent. Eerst liep dit alleen
+   bij het openen van die lijst: opende niemand hem, dan bleef een toestel na drie dagen
+   gewoon vastzitten en op de webshop uitverkocht. */
+async function verval(teamId: string) {
   const nu = new Date().toISOString();
   const { data: verlopen } = await admin.from("webshop_reserveringen")
-    .select("*").eq("team_id", acc.team_id).eq("status", "open").lt("vervalt_op", nu);
+    .select("*").eq("team_id", teamId).eq("status", "open").lt("vervalt_op", nu);
   const lijst = (verlopen || []) as any[];
-  const varianten = new Set<string>();
   for (const r of lijst) {
     if (r.hardware_id) {
       await admin.from("hardware").update({ status: "voorraad", bijgewerkt_op: new Date().toISOString() })
@@ -381,11 +387,16 @@ async function verval(acc: any) {
     await admin.from("webshop_reserveringen").update({
       status: "vervallen", afgehandeld_op: nu, bijgewerkt_op: nu,
     }).eq("id", r.id);
-    if (r.variant_id) varianten.add(r.variant_id);
   }
-  // Absoluut zetten op het echte aantal, dus één keer per variant is genoeg.
-  for (const v of varianten) await herstelShopifyVoorraad(acc.team_id, v);
-  return ok({ vervallen: lijst.length });
+  // Per reservering herstellen, niet per grade: elk vrijgekomen toestel moet aan de huidige
+  // variant hangen. Absoluut zetten mag vaker; de laatste ronde ziet het echte eindtotaal.
+  const fouten: string[] = [];
+  for (const r of lijst) {
+    if (!r.variant_id && !r.sleutel) continue;
+    const uit = await herstel(teamId, r);
+    if (!uit.ok && uit.melding) fouten.push(uit.melding);
+  }
+  return { vervallen: lijst.length, webshop: fouten.length === 0, melding: fouten[0] || null };
 }
 
 Deno.serve(async (req) => {
@@ -403,11 +414,23 @@ Deno.serve(async (req) => {
     return await reserveer(lijf, req);
   }
 
+  // Elk uur vanuit de database (pg_cron, migratie 20261103180000_reservering_verval_cron.sql),
+  // met hetzelfde geheim als mail-sync. Alle teams met een verlopen reservering.
+  const cronGeheim = Deno.env.get("MAIL_CRON_SECRET");
+  if (actie === "verval" && cronGeheim && (req.headers.get("x-cron-secret") || "") === cronGeheim) {
+    const { data } = await admin.from("webshop_reserveringen")
+      .select("team_id").eq("status", "open").lt("vervalt_op", new Date().toISOString());
+    const teams = [...new Set(((data || []) as any[]).map((x) => x.team_id).filter(Boolean))];
+    const uitkomsten = [];
+    for (const t of teams) uitkomsten.push({ team: t, ...(await verval(t)) });
+    return ok({ teams: uitkomsten });
+  }
+
   // Ingelogde acties vanuit de winkelapp.
   const acc = await wieBelt(req);
   if (!acc) return fout("Niet ingelogd", 401);
   if (actie === "afrekenen") return await afrekenen(lijf, acc);
   if (actie === "annuleren") return await annuleren(lijf, acc);
-  if (actie === "verval") return await verval(acc);
+  if (actie === "verval") return ok(await verval(acc.team_id));
   return fout("Onbekende actie");
 });

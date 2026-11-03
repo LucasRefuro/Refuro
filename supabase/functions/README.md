@@ -34,6 +34,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `shopify-installeren` | ja | Hier komt de winkelier terug na het installeren bij Shopify |
 | `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf. Is het laatste exemplaar verkocht, dan blijft de pagina bestaan zonder voorraad en uit de lijsten (status niet vermeld), zodat de link werkt en het thema vergelijkbare toestellen aanraadt |
 | `shopify-webhook` | ja | Shopify meldt hier dat er iets verkocht is |
+| `reservering` | ja | Reserveren op de webshop (publiek), afrekenen en annuleren vanuit de winkelapp, en elk uur verlopen reserveringen vrijgeven (pg_cron met `MAIL_CRON_SECRET`). Zet daarbij de voorraad van die grade op Shopify terug |
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
 | `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |

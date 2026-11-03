@@ -12093,7 +12093,7 @@ async function rsvEdge(payload, knop, bezigTekst){
       body:JSON.stringify(payload)});
     const j=await res.json().catch(()=>({}));
     if(!res.ok||!j.ok) throw new Error(j.error||'Mislukt');
-    return true;
+    return j;
   }catch(e){ toast(e.message||'Mislukt','fout'); return false; }
   finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
 }
@@ -12106,7 +12106,13 @@ async function rsvAfrekenen(id, betaal, knop){
 async function rsvAnnuleren(id, knop){
   if(!await vraagJaNee('Het toestel komt dan weer online in de webshop.', {kop:'Reservering annuleren?', ja:'Reservering annuleren', nee:'Terug', gevaar:true})) return;
   const okd=await rsvEdge({actie:'annuleren', id:id}, knop, 'Annuleren…');
-  if(okd){ toast('Geannuleerd, toestel weer online', true); rsvLaad(true); if(typeof hwLaad==='function') hwLaad(); }
+  /* Lukt de webshop niet, dan dat ook zeggen. Eerst stond hier altijd "weer online", terwijl
+     Shopify het toestel soms nog uitverkocht noemde (A0084). */
+  if(okd){
+    if(okd.webshop===false) toast('Geannuleerd. '+(okd.melding||'De webshop is niet bijgewerkt.'),'let-op');
+    else toast('Geannuleerd, toestel weer online', true);
+    rsvLaad(true); if(typeof hwLaad==='function') hwLaad();
+  }
 }
 
 /* ---------- de webshop koppelen ----------

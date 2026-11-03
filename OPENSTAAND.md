@@ -212,10 +212,19 @@ repo `refuro-webshop`.
       voorraad +1, geen nieuwe advertentie.
 - [ ] **Na de uitrol van fase 4:** twee exemplaren van één grade online, één kopen of
       reserveren. De pagina moet daarna meteen het tweede toestelnummer en de tweede accu tonen.
-- [ ] **HP ProBook 450 G8 (A0084)** staat in Storvo op voorraad, maar Shopify zegt
-      uitverkocht: de geannuleerde testreservering zette de Shopify-voorraad niet terug.
-      Opnieuw online zetten herstelt het. Oorzaak in edge `reservering`
-      (`herstelShopifyVoorraad`) nog uitzoeken.
+- [x] **HP ProBook 450 G8 (A0084)** stond in Storvo op voorraad, maar Shopify zei
+      uitverkocht. UITGEZOCHT (3 nov): de test-reservering is op 5 okt met losse SQL geannuleerd
+      (annuleertijd en toestel hebben dezelfde Postgres-tijd tot op de microseconde), dus buiten
+      de edge om; Shopify hoorde er nooit van. Ze stond ook al twee dagen over de vervaldatum,
+      want vervallen liep alleen als iemand de lijst opende. GEBOUWD: edge `reservering`
+      (`voorraad.ts`) hangt het toestel aan de huidige variant uit `webshop_producten`, zet de
+      voorraad van precies die grade, maakt het product weer actief als het op niet vermeld
+      stond, en geeft een fout terug in plaats van hem alleen te loggen (de winkelapp zegt het
+      dan). Vervallen loopt elk uur via pg_cron (migratie `20261103180000`). Afrekenen van het
+      laatste exemplaar zet het product op niet vermeld, zoals een balieverkoop. Test
+      `tests/reservering-voorraad.js`. **Uitrol:** edge `reservering` (index.ts + voorraad.ts +
+      ../shopify/uitverkocht.ts, verify_jwt **false** zoals v6) en de migratie.
+      **A0084 zelf:** één keer opnieuw online zetten. Dat is ook stap 3 van de fase-4-uitrol.
 
 ### Jouw actie (code is klaar)
 - [ ] **Bestaande producten opnieuw online zetten** -> net artikelnummer (A0016), OS-rij,
