@@ -7844,7 +7844,10 @@ async function partLaden(){
     if(mijn!==_partVraag) return;
     if(error){ el.innerHTML='<span class="muted klein">Het inkoopregister staat nog niet aan.</span>'; partRijen=[]; partTel(); return; }
     partRijen=data||[];
-  }catch(e){ partRijen=[]; }
+  }catch(e){
+    if(mijn!==_partVraag) return;   // een nieuwere vraag is al onderweg; die wint
+    partRijen=[];
+  }
   partTeken();
 }
 function partNaam(r){
@@ -7867,7 +7870,9 @@ function partTeken(){
   partTel();
   if(!partRijen.length){ el.innerHTML='<span class="muted klein">Nog geen inkopen bij particulieren in deze periode. Die komen hier vanzelf bij een inname met verklaring.</span>'; return; }
   const totaal=partRijen.reduce((n,r)=>n+(Number(r.bedrag)||0),0);
-  el.innerHTML=`<div class="muted klein" style="margin-bottom:8px">Samen ${euro(totaal)}</div>
+  // Meer dan 500 halen we niet op; zeg dat, anders lijkt het totaal compleet.
+  const vol=partRijen.length>=500 ? ' · alleen de laatste 500, kies een kortere periode' : '';
+  el.innerHTML=`<div class="muted klein" style="margin-bottom:8px">Samen ${euro(totaal)}${vol}</div>
     <div class="tabelrol"><table>
     <thead><tr><th>Verkoper</th><th>Nr</th><th>Datum</th><th>Wat</th><th class="num">Bedrag</th><th>DOR</th><th></th></tr></thead>
     <tbody>${partRijen.map(r=>`<tr>
@@ -7940,7 +7945,9 @@ function partCsv(){
     const g=r.goederen||[];
     regels.push([r.volgnummer, new Date(r.datum).toLocaleDateString('nl-NL'), partNaam(r), partAdres(r), partWat(r),
       g.map(x=>x.nummer).filter(Boolean).join(' '), g.reduce((n,x)=>n+(Number(x.aantal)||1),0),
-      (Number(r.bedrag)||0).toFixed(2).replace('.',','), r.betaalwijze||'', 'ja'].map(cel).join(';'));
+      (Number(r.bedrag)||0).toFixed(2).replace('.',','), r.betaalwijze||'',
+      // Een particulier trekt nooit btw af; bij een bedrijf hangt het ervan af of het dat kon.
+      r.verkoper_soort==='bedrijf' ? 'nagaan' : 'ja'].map(cel).join(';'));
   });
   const blob=new Blob(['\ufeff'+regels.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);

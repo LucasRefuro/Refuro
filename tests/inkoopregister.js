@@ -22,8 +22,12 @@ window.__db={
   ],
   refurbish_onderdelen:[], refurbish_checklists:[], refurbish_orders:[], refurbish_batches:[],
   hardware_locaties:[{id:'l1', team_id:'t1', naam:'Magazijn', soort:'magazijn', volgorde:0}],
-  hardware_modellen:[{id:'m1', merk:'Apple', model:'iPhone 12', categorie:'Telefoon', specs:{}, keer_gebruikt:2}]
+  hardware_modellen:[{id:'m1', merk:'Apple', model:'iPhone 12', categorie:'Telefoon', specs:{}, keer_gebruikt:2}],
+  inkoop_registraties:[{id:'reg1', volgnummer:7, datum:'2026-10-01T10:00:00Z', bewaar_tot:'2026-10-08', voornamen:'Jan', voorvoegsel:'van der',
+    achternaam:'Berg', geboortedatum:'1990-05-17', straat:'Hoofdstraat', huisnummer:'1', postcode:'5121 JA', woonplaats:'Rijen', land:'Nederland',
+    id_soort:'paspoort', id_nummer:'NX1234567', id_nationaliteit:'Nederland', goederen:[], bedrag:150}]
 };
+window.__uploadFout=false;
 window.__geschreven=[]; window.__rpcs=[];
 function __tabel(naam){
   const api={select(){return api;},order(){return api;},limit(){return api;},eq(){return api;},
@@ -38,7 +42,7 @@ function __tabel(naam){
 }
 window.supabase={createClient:()=>({
   auth:{getSession:async()=>({data:{session:{user:{id:'u1'},access_token:'t'}}})},
-  storage:{from:()=>({upload:async(pad)=>{ window.__geschreven.push(['opslag','upload',pad]); return {error:null}; }})},
+  storage:{from:()=>({upload:async(pad)=>{ if(window.__uploadFout) return {error:{message:'kapot'}}; window.__geschreven.push(['opslag','upload',pad]); return {error:null}; }})},
   from:(n)=> n==='accounts'
     ? {select(){return this;},eq(){return this;},maybeSingle:async()=>({data:{id:'u1',team_id:'t1',naam:'Lucas'}})}
     : __tabel(n),
@@ -83,6 +87,12 @@ setTimeout(async()=>{
   ok('in bewaring tot en met de laatste dag', w.eval("inBewaring({bewaar_tot:isoDag(new Date())})"));
   ok('daarna niet meer', !w.eval("inBewaring({bewaar_tot:'2020-01-01'})"));
 
+  console.log('\n── oude regels terug splitsen');
+  ok('voorvoegsel herkend', w.eval("JSON.stringify(vklNaamUit('Jan van der Berg'))")==='{"achternaam":"Berg","voorvoegsel":"van der","voornamen":"Jan"}');
+  ok('bedrijf met contactpersoon', w.eval("(()=>{ const n=vklNaamUit('Kantoor BV (Jan Jansen)'); return n.bedrijfsnaam==='Kantoor BV' && n.achternaam==='Jansen' && n.verkoper_soort==='bedrijf'; })()"));
+  ok('adresregel terug in velden', w.eval("JSON.stringify(vklAdresUit('Hoofdstraat 1, 5121 JA Rijen'))")==='{"straat":"Hoofdstraat","huisnummer":"1","postcode":"5121 JA","woonplaats":"Rijen"}');
+  ok('onbekend adres blijft heel', w.eval("vklAdresUit('Rue de la Paix 3, Paris').straat")==='Rue de la Paix 3, Paris');
+
   console.log('\n── het scherm');
   ok('leeftijd klopt', w.eval("leeftijdOp('2000-11-04', new Date(2026,10,3))")===25);
   w.eval("showTab('toevoegen')");
@@ -92,6 +102,7 @@ setTimeout(async()=>{
   ok('venster heet inkoop bij een particulier', /Inkoop bij een particulier/.test(d.getElementById('venster').innerHTML));
   ok('per toestel een veld voor het nummer', !!d.getElementById('vkl_nr_0') && !!d.getElementById('vkl_nr_1'));
   ok('een telefoon vraagt om het IMEI', /IMEI/.test(d.getElementById('vkl_nr_0').placeholder));
+  ok('elk nummerveld noemt het A-nummer dat het toestel krijgt', /A0008/.test(d.querySelector('label[for="vkl_nr_0"]').textContent) && /A0009/.test(d.querySelector('label[for="vkl_nr_1"]').textContent));
   ok('totaalbedrag is prijs maal aantal', d.getElementById('vkl_bedrag').value==='300');
   ok('geen veld voor een kopie of BSN', !/BSN|kopie uploaden|type="file"/.test(d.getElementById('venster').innerHTML));
   ok('legitimatie als knoppen, niet als keuzelijst', d.querySelectorAll('.vklkeuze[data-groep="id_soort"] button').length===4);
@@ -138,6 +149,8 @@ setTimeout(async()=>{
   const ups=gs.filter(g=>g[0]==='refurbish_apparaten' && g[1]==='update');
   ok('elk toestel gekoppeld aan het register', ups.filter(u=>u[2].inkoop_registratie_id==='reg1').length===2);
   ok('elk toestel zijn eigen serienummer', ups.some(u=>u[2].serienummer==='351234567890123') && ups.some(u=>u[2].serienummer==='351234567890124'));
+  if(reg) ok('IMEI hoort bij het A-nummer uit het scherm', reg[2].goederen[0].code==='A0008' && reg[2].goederen[0].nummer==='351234567890123'
+                                                     && reg[2].goederen[1].code==='A0009' && reg[2].goederen[1].nummer==='351234567890124');
   ok('verklaring krijgt het volgnummer', w.__verklaring && w.__verklaring.volgnummer===7);
   ok('verklaring noemt elk toestel met IMEI', w.__verklaring && w.__verklaring.goederenLijst.length===2 && /IMEI 351234567890123/.test(w.__verklaring.goederenLijst[0]));
   ok('verklaring zegt dat er geen btw is afgetrokken', /geen btw in aftrek te hebben gebracht/.test(ruw));
@@ -160,6 +173,49 @@ setTimeout(async()=>{
   klik('Staat in het DOR');
   await wacht(30);
   ok('aanvinken legt vast wanneer en door wie', w.__geschreven.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && g[2].dor_ingevoerd_op && g[2].dor_door==='Lucas'));
+
+  console.log('\n── opnieuw en achteraf');
+  // Opnieuw op een toestel dat al in het register staat: zelfde regel bijwerken.
+  w.eval("sluit(); const a=apparaten.find(x=>x.id==='a1'); a.inkoop_registratie_id='reg1'; a.verkoper_naam='Jan van der Berg';");
+  await w.eval("appVerklaringOpen('a1')");
+  await wacht(20);
+  ok('opnieuw vult de registergegevens vooraf in', d.getElementById('vkl_voorvoegsel').value==='van der' && d.getElementById('vkl_idnr').value==='NX1234567');
+  zet('vkl_achternaam','Bergen');
+  w.__geschreven.length=0;
+  klik('Klaar');
+  await wacht(50);
+  const gs2=w.__geschreven;
+  ok('opnieuw maakt geen tweede inkoop', !gs2.some(g=>g[0]==='inkoop_registraties' && g[1]==='insert'));
+  ok('opnieuw werkt de bestaande regel bij', gs2.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && g[2].achternaam==='Bergen'));
+  ok('en houdt datum en bewaardatum', !gs2.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && (g[2].datum || g[2].volgnummer)));
+
+  // Maken achteraf op een toestel zonder registerregel: de inkoopdatum is die van het toestel.
+  w.eval("sluit(); apparaten.push({id:'a2', team_id:'t1', code:'A0005', merk:'Dell', model:'Latitude 5430', categorie:'Laptop', status:'klaar', aangemaakt_op:'2026-09-01T09:00:00Z'});");
+  await w.eval("appVerklaringOpen('a2')");
+  await wacht(20);
+  zet('vkl_voornamen','Piet'); zet('vkl_achternaam','Pieters'); zet('vkl_geboorte','1980-01-01');
+  zet('vkl_postcode','5121 JA'); zet('vkl_huisnr','1'); zet('vkl_straat','Hoofdstraat'); zet('vkl_plaats','Rijen');
+  w.eval("vklKies('id_soort','rijbewijs')"); zet('vkl_idnr','5123456789');
+  w.__geschreven.length=0;
+  klik('Klaar');
+  await wacht(50);
+  const ins3=w.__geschreven.find(g=>g[0]==='inkoop_registraties' && g[1]==='insert');
+  ok('achteraf: inkoopdatum van het toestel', !!ins3 && ins3[2].datum.slice(0,10)==='2026-09-01');
+  ok('achteraf: bewaartermijn vanaf die dag', !!ins3 && ins3[2].bewaar_tot==='2026-09-08');
+
+  // Upload mislukt: de inkoop staat wel in het register en de toestellen hangen eraan.
+  w.eval("sluit(); apparaten.push({id:'a3', team_id:'t1', code:'A0006', merk:'HP', model:'ProBook', categorie:'Laptop', status:'klaar', aangemaakt_op:new Date().toISOString()});");
+  await w.eval("appVerklaringOpen('a3')");
+  await wacht(20);
+  zet('vkl_voornamen','Piet'); zet('vkl_achternaam','Pieters'); zet('vkl_geboorte','1980-01-01');
+  zet('vkl_postcode','5121 JA'); zet('vkl_huisnr','1'); zet('vkl_straat','Hoofdstraat'); zet('vkl_plaats','Rijen');
+  w.eval("vklKies('id_soort','rijbewijs')"); zet('vkl_idnr','5123456789');
+  w.__uploadFout=true; w.__geschreven.length=0;
+  klik('Klaar');
+  await wacht(50);
+  w.__uploadFout=false;
+  const koppel=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].inkoop_registratie_id);
+  ok('upload mislukt: toestel toch aan het register', !!koppel && !koppel[2].handtekening_url);
 
   console.log('\n── waarschuwen tijdens de bewaring');
   w.eval("sluit(); apparaten.find(a=>a.id==='a1').bewaar_tot=isoDag(werkdagenNa(new Date(),3)); ctr=null; appOpen('a1');");
@@ -187,7 +243,7 @@ async function winkelapp(){
      postcode:'5121 JA', woonplaats:'Rijen', geboortedatum:'1990-05-17', id_soort:'id-kaart', id_nummer:'AB12CD34', id_nationaliteit:'Nederland',
      goederen:[{soort:'Telefoon', merk:'Apple', type:'iPhone 12', nummer:'351234567890123', prijs:150}], bedrag:150, betaalwijze:'contant',
      verklaring_url:'t1/apparaat/a1/inkoopverklaring-1.png', dor_ingevoerd_op:null},
-    {id:'r2', volgnummer:2, datum:'2026-10-05T10:00:00Z', bedrijfsnaam:'Kantoor BV', achternaam:'Smit', straat:'Markt', huisnummer:'3',
+    {id:'r2', volgnummer:2, datum:'2026-10-05T10:00:00Z', verkoper_soort:'bedrijf', bedrijfsnaam:'Kantoor BV', achternaam:'Smit', straat:'Markt', huisnummer:'3',
      postcode:'5121 AB', woonplaats:'Rijen', goederen:[{batch_id:'b1', omschrijving:'12 toestellen (laptops)', aantal:12, prijs:1450}],
      bedrag:1450, betaalwijze:'bank', verklaring_url:null, dor_ingevoerd_op:'2026-10-05T12:00:00Z'}
   ].reverse();   // zoals de database ze geeft: nieuwste eerst
@@ -231,6 +287,7 @@ window.supabase={createClient:()=>({
   ok('oudste eerst', csv.indexOf('Jan Jansen')<csv.indexOf('Kantoor BV'));
   ok('met serienummer en bedrag', /351234567890123/.test(csv) && /150,00/.test(csv));
   ok('zonder geboortedatum of legitimatie', !/1990|AB12CD34|id-kaart/.test(csv));
+  ok('margeregeling: particulier ja, bedrijf nagaan', /Jan Jansen.*;ja\r?$/m.test(csv) && /Kantoor BV.*;nagaan/.test(csv));
 
   // Overnemen in het DOR vanaf de Inkopen-pagina.
   ww.eval("partDor('r1')");

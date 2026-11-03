@@ -6,8 +6,11 @@
 --
 -- Eén rij per inkoop bij één verkoper. De goederen staan erin als momentopname (merk,
 -- type, kleur, serienummer of IMEI, prijs), zodat het register blijft kloppen als een
--- toestel later een andere naam krijgt, wordt gesloopt of verkocht. Een register pas je
--- niet achteraf aan: er is daarom geen verwijder-policy.
+-- toestel later een andere naam krijgt, wordt gesloopt of verkocht. Een regel weggooien kan
+-- niet (geen verwijder-policy). Bijwerken wel: "Opnieuw" herstelt een tikfout in dezelfde
+-- regel, met hetzelfde volgnummer, dezelfde inkoopdatum en dezelfde bewaardatum. Strenger
+-- (alleen het DOR-vinkje mogen wijzigen) zou betekenen dat een fout in het register blijft
+-- staan; dat lijkt erger dan een herstel door de winkel zelf.
 --
 -- Bewust NIET opgeslagen: een kopie van het legitimatiebewijs en het BSN. Een opkoper
 -- mag geen kopie maken (alleen soort en nummer opschrijven), en het BSN mag alleen als
@@ -81,3 +84,8 @@ create policy inkoop_registraties_bijwerken on public.inkoop_registraties
 alter table public.refurbish_apparaten
   add column if not exists inkoop_registratie_id uuid references public.inkoop_registraties(id) on delete set null,
   add column if not exists bewaar_tot date;
+
+-- Een partij met een inkoopverklaring staat als één regel in het register. De batch onthoudt
+-- welke, zodat opnieuw ondertekenen die regel bijwerkt in plaats van een tweede te maken.
+alter table public.refurbish_batches
+  add column if not exists inkoop_registratie_id uuid references public.inkoop_registraties(id) on delete set null;
