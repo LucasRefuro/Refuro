@@ -118,11 +118,27 @@ repo `refuro-webshop`.
       prijs, en bij een dubbele aanslag (ook in Storvo) telt het dubbel. Oplossing: toestellen
       als artikel in Clover zetten of altijd in Storvo aanslaan (Clover alleen de pin). Verifieer
       met 1 echte Clover-toestelverkoop dat de btw in het Rapport als marge verschijnt.
-- [ ] **Telefoons/iPhones krijgen geen automatische foto's.** De auto-ophaal (edge
-      `productfotos` via Icecat) dekt Apple en veel telefoons niet in de gratis Icecat, dus de
-      fotokaart blijft leeg en je moet met de hand fotograferen. Fotobron zoeken die telefoons
-      wel dekt (GSMArena-render, leverancierfeed, of eigen model-fotobank), zodat een iPhone
-      net als een laptop vanzelf foto's krijgt.
+- [x] **Telefoons/iPhones krijgen geen automatische foto's.** GEDAAN (3 nov): migratie
+      `20261102120000_refurbish_fotos_kleur.sql` toegepast, edge `productfotos` v24 (met
+      `galaxy.ts`, verify_jwt uit) en `refurbish/index.html` live.
+      Bronnen nagelopen: de leveranciersfeeds (OneStopMobile, MondiParts, Foneday) hebben
+      alleen hoesjes en onderdelen, geen toestellen. Apple blokkeert Icecat en er is geen
+      andere iPhone-bron die een winkel mag gebruiken (GSMArena en apple.com niet, Apples
+      persfoto's alleen voor nieuws). Samsung staat wel in de gratis Icecat, met 5 tot 9
+      fabrieksfoto's, maar alleen op de volle fabriekscode.
+      Nu zo: **Galaxy** gaat vanzelf. Uit naam en kleur maken we de code (S23 groen wordt
+      SM-S911BZGDEUB) en Icecat zegt welke bestaat. Nagelopen voor S10 tot S25, Note, Fold,
+      Flip en de meeste A-modellen. Zonder kleur zoeken we niet (dan staat er "vul de kleur
+      in"). **iPhone**: de kaart zegt dat je hem één keer zelf vult. Fotografeer één mooi
+      exemplaar en druk op "Voor het hele model"; elk volgend toestel van dat model in die
+      kleur heeft ze dan vanzelf. Fabrieksfoto's van telefoons horen nu bij model EN kleur
+      (nieuwe kolom `refurbish_fotos.kleur`), zodat een groene S23 nooit de zwarte set
+      toont. Laptops ongewijzigd. Test: `tests/productfotos-telefoon.js`.
+      NOG NALOPEN in de app (niet getest met een echte inlog): één Galaxy met kleur online
+      zetten (foto's moeten vanzelf komen) en één iPhone fotograferen en "Voor het hele
+      model" drukken.
+      Later: de telefoon-fotoset (`refurbish/foto.html`) noemt de aanzichten nog
+      "Toetsenbord" en "Dicht, van boven"; voor telefoons eigen namen geven.
 - [x] **Foto-ophaal grijpt soms een merklogo i.p.v. een productfoto.** OPGELOST (28 sep).
       Icecat gaf voor de Dell Latitude 3520 alleen een merklogo terug (`Type: BrandLogo`, pad
       `/img/brand/`). Edge `productfotos` v23 filtert die er nu uit; blijft er niets over, dan
@@ -170,6 +186,7 @@ repo `refuro-webshop`.
 
 ### Bekende beperkingen / klein
 - Apple-toestellen zitten niet in de gratis Icecat -> vallen terug op de telefoonfoto (bewust).
+  Voor iPhones is daar nu de knop "Voor het hele model": één keer fotograferen per model en kleur.
 - Diagnose-logregels in de foto-functie (edge `productfotos`) mogen later weg.
 
 ### Klaar op schijf webshop, wacht op `shopify theme push` (28 sep)

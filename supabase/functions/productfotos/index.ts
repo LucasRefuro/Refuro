@@ -9,14 +9,24 @@
 // voor een webshop; voor Marktplaats wil een koper ook echte foto's zien van
 // het apparaat dat hij koopt.
 //
-// Drie acties:
+// Telefoons: Samsung zit in de gratis Icecat, maar alleen op de volle fabriekscode.
+// Die maken we zelf uit naam en kleur (zie galaxy.ts). Apple blokkeert Icecat, en
+// er is geen andere bron met iPhone-foto's die een winkel mag gebruiken (GSMArena en
+// apple.com niet, de persfoto's van Apple alleen voor nieuws). Voor iPhones vult de
+// winkel daarom zelf één keer een set per model en kleur, het snelst met actie
+// alsModel: de eigen foto's van een mooi exemplaar worden de fabrieksfoto's.
+//
+// Vier acties:
 //   overnemen   - één foto (gevonden link, geplakte foto of upload) opslaan.
 //   automatisch - zelf bij Icecat zoeken EN de beste foto's meteen als
 //                 modelfoto's opslaan. Dit draait vanzelf bij "online zetten"
 //                 zodra een model nog geen foto's heeft.
+//   alsModel    - de eigen foto's van een toestel kopiëren naar de set van het
+//                 hele model (bij een telefoon: model en kleur).
 //   (geen actie)- alleen zoeken en de gevonden foto's teruggeven.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { galaxyKandidaten, isGalaxy, kleurVan } from "./galaxy.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -70,6 +80,9 @@ async function bewaarFoto(teamId: string, o: any): Promise<string> {
   const apparaatId = String(o?.apparaat_id || "");
   const model = String(o?.model || "").trim();
   const merk = String(o?.merk || "").trim();
+  // Alleen een modelfoto van een telefoon heeft een kleur; bij een laptop blijft hij
+  // leeg en verandert er niets.
+  const kleur = heelModel ? String(o?.kleur || "").trim() : "";
   const aanzicht = String(o?.aanzicht || "open");
   if (!heelModel && !apparaatId) throw new Error("Geen toestel meegegeven");
   if (heelModel && !model) throw new Error("Geen model meegegeven");
@@ -77,7 +90,11 @@ async function bewaarFoto(teamId: string, o: any): Promise<string> {
   let bytes: Uint8Array;
   let type = "image/jpeg";
   const data = String(o?.data || "");
-  if (data.startsWith("data:")) {
+  if (o?.bytes instanceof Uint8Array) {
+    // Een kopie van een foto die al in onze eigen opslag staat (alsModel).
+    bytes = o.bytes;
+    type = String(o?.type || "") || "image/jpeg";
+  } else if (data.startsWith("data:")) {
     // Een upload komt als base64 binnen: geen externe fetch nodig.
     const komma = data.indexOf(",");
     type = data.slice(5, data.indexOf(";")) || "image/jpeg";
@@ -108,7 +125,8 @@ async function bewaarFoto(teamId: string, o: any): Promise<string> {
   }
   if (bytes.length > 12_000_000) throw new Error("De afbeelding is te groot");
 
-  const sleutel = (heelModel ? `model_${merk}-${model}` : apparaatId).replace(/[^\w.-]+/g, "_");
+  const sleutel = (heelModel ? `model_${merk}-${model}${kleur ? "-" + kleur : ""}` : apparaatId)
+    .replace(/[^\w.-]+/g, "_");
   // Willekeurig staartje erbij: de automatische lus slaat meerdere foto's in dezelfde
   // milliseconde op, dus Date.now() alleen zou botsen en foto's overschrijven.
   const pad = `${teamId}/${sleutel}/${aanzicht}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
@@ -116,11 +134,15 @@ async function bewaarFoto(teamId: string, o: any): Promise<string> {
     .upload(pad, bytes, { contentType: type });
   if (opslagFout) throw new Error("De foto opslaan mislukte: " + opslagFout.message);
 
-  const { error: rijFout } = await admin.from("refurbish_fotos").insert({
+  const rij: Record<string, unknown> = {
     team_id: teamId, apparaat_id: heelModel ? null : apparaatId,
     merk: merk || null, model: model || null,
     aanzicht, pad, volgorde: AANZICHTEN.indexOf(aanzicht),
-  });
+  };
+  // Alleen meesturen als er een kleur is: zo blijft een laptopfoto precies de rij die
+  // hij altijd was.
+  if (kleur) rij.kleur = kleur;
+  const { error: rijFout } = await admin.from("refurbish_fotos").insert(rij);
   if (rijFout) throw new Error("De foto in de lijst zetten mislukte: " + rijFout.message);
 
   return pad;
@@ -132,6 +154,64 @@ async function overnemen(lijf: any, teamId: string) {
     return new Response(JSON.stringify({ ok: true, pad }), { headers: cors });
   } catch (e) {
     return fout((e as Error)?.message || "Opslaan mislukte", 502);
+  }
+}
+
+// Eén vraag aan Icecat: de galerij van één product, of "nee" als het product er niet
+// in staat. "fout" betekent dat Icecat niet gewoon antwoordde (geen JSON, een
+// HTTP-fout, of te veel vragen achter elkaar); wie veel codes probeert stopt dan.
+type IcecatAntwoord = { fotos: any[]; titel: string | null } | "nee" | "fout";
+async function icecatVraag(gebruiker: string, sleutel: string, label: string): Promise<IcecatAntwoord> {
+  const adres = `https://live.icecat.biz/api?UserName=${encodeURIComponent(gebruiker)}` +
+    `&Language=nl${sleutel}&Content=Gallery,GeneralInfo`;
+  try {
+    const res = await fetch(adres, { headers: { "Accept": "application/json" } });
+    if (!res.ok) {
+      console.log("icecat http", label, res.status);
+      // 404 is "staat er niet in": een gewoon antwoord. De rest is een storing.
+      return res.status === 404 ? "nee" : "fout";
+    }
+    const uit = await res.json();
+    const galerij = uit?.data?.Gallery;
+    if (!Array.isArray(galerij) || !galerij.length) return "nee";
+
+    // Icecat zet soms ALLEEN een merklogo in de galerij (Type "BrandLogo", pad
+    // /img/brand/), zonder echte productfoto. Dat is geen foto van het toestel: eruit
+    // filteren, anders komt het merklogo als hoofdfoto op de advertentie (gebeurde bij
+    // een Dell Latitude 3520). Blijft er niets over, dan gaan we door naar de volgende
+    // poging en uiteindelijk naar de telefoonfoto.
+    const echt = galerij.filter((g: any) => {
+      const type = String(g?.Type || "").toLowerCase();
+      const pic = String(g?.Pic || g?.Pic500x500 || g?.LowPic || "");
+      if (type.includes("logo")) return false;
+      if (/\/img\/brand\//i.test(pic)) return false;
+      return true;
+    });
+    if (!echt.length) return "nee";
+
+    // Icecat geeft de hoofdfoto met IsMain=Y en een prioriteit No (lager = eerder);
+    // de array-volgorde zelf is niet gegarandeerd. Daarop sorteren zodat de hoofdfoto
+    // vooraan staat. HighPic bestaat niet in deze Gallery; Pic500x500 wel.
+    const gesorteerd = echt.sort((a: any, b: any) => {
+      const am = (a?.IsMain === "Y" || a?.IsMain === true) ? 0 : 1;
+      const bm = (b?.IsMain === "Y" || b?.IsMain === true) ? 0 : 1;
+      if (am !== bm) return am - bm;
+      return (Number(a?.No) || 99) - (Number(b?.No) || 99);
+    });
+    const fotos = gesorteerd
+      .map((g: any, i: number) => ({
+        url: g?.Pic || g?.Pic500x500 || g?.LowPic || null,
+        klein: g?.ThumbPic || g?.LowPic || g?.Pic || null,
+        aanzicht: aanzichtVan(i),
+      }))
+      .filter((f: any) => f.url)
+      .slice(0, 8);
+
+    if (!fotos.length) return "nee";
+    return { fotos, titel: uit?.data?.GeneralInfo?.Title || null };
+  } catch (e) {
+    console.error("icecat", label, e);
+    return "fout";
   }
 }
 
@@ -168,54 +248,52 @@ async function zoekIcecat(
     const sleutel = pg.soort === "gtin"
       ? `&GTIN=${encodeURIComponent(pg.waarde)}`
       : `&Brand=${encodeURIComponent(merk)}&ProductCode=${encodeURIComponent(pg.waarde)}`;
-    const adres = `https://live.icecat.biz/api?UserName=${encodeURIComponent(gebruiker)}` +
-      `&Language=nl${sleutel}&Content=Gallery,GeneralInfo`;
-    try {
-      const res = await fetch(adres, { headers: { "Accept": "application/json" } });
-      if (!res.ok) { console.log("icecat http", pg.soort, pg.waarde, res.status); continue; }
-      const uit = await res.json();
-      const galerij = uit?.data?.Gallery;
-      if (!Array.isArray(galerij) || !galerij.length) continue;
-
-      // Icecat zet soms ALLEEN een merklogo in de galerij (Type "BrandLogo", pad
-      // /img/brand/), zonder echte productfoto. Dat is geen foto van het toestel: eruit
-      // filteren, anders komt het merklogo als hoofdfoto op de advertentie (gebeurde bij
-      // een Dell Latitude 3520). Blijft er niets over, dan gaan we door naar de volgende
-      // poging en uiteindelijk naar de telefoonfoto.
-      const echt = galerij.filter((g: any) => {
-        const type = String(g?.Type || "").toLowerCase();
-        const pic = String(g?.Pic || g?.Pic500x500 || g?.LowPic || "");
-        if (type.includes("logo")) return false;
-        if (/\/img\/brand\//i.test(pic)) return false;
-        return true;
-      });
-      if (!echt.length) continue;
-
-      // Icecat geeft de hoofdfoto met IsMain=Y en een prioriteit No (lager = eerder);
-      // de array-volgorde zelf is niet gegarandeerd. Daarop sorteren zodat de hoofdfoto
-      // vooraan staat. HighPic bestaat niet in deze Gallery; Pic500x500 wel.
-      const gesorteerd = echt.sort((a: any, b: any) => {
-        const am = (a?.IsMain === "Y" || a?.IsMain === true) ? 0 : 1;
-        const bm = (b?.IsMain === "Y" || b?.IsMain === true) ? 0 : 1;
-        if (am !== bm) return am - bm;
-        return (Number(a?.No) || 99) - (Number(b?.No) || 99);
-      });
-      const fotos = gesorteerd
-        .map((g: any, i: number) => ({
-          url: g?.Pic || g?.Pic500x500 || g?.LowPic || null,
-          klein: g?.ThumbPic || g?.LowPic || g?.Pic || null,
-          aanzicht: aanzichtVan(i),
-        }))
-        .filter((f: any) => f.url)
-        .slice(0, 8);
-
-      if (!fotos.length) continue;
-      return { fotos, titel: uit?.data?.GeneralInfo?.Title || null, gevonden: pg.waarde };
-    } catch (e) {
-      console.error("icecat", pg.waarde, e);
-    }
+    const uit = await icecatVraag(gebruiker, sleutel, `${pg.soort} ${pg.waarde}`);
+    if (typeof uit === "object") return { ...uit, gevonden: pg.waarde };
   }
   return { fotos: [] as any[], titel: null as string | null, gevonden: null as string | null };
+}
+
+// Een Galaxy zoeken op de codes die galaxy.ts uit naam en kleur maakt. Twee tegelijk
+// en stoppen bij de eerste treffer of bij een storing: meestal raak in de eerste
+// paar, en Icecat remt af als je het bestookt.
+async function zoekGalaxy(
+  gebruiker: string,
+  p: { merk: string; model: string; kleur: string; productcode?: string },
+) {
+  const kandidaten = galaxyKandidaten(p);
+  console.log("galaxy: kandidaten", kandidaten.length, kandidaten.slice(0, 3).join(","));
+  for (let i = 0; i < kandidaten.length; i += 2) {
+    const tweetal = kandidaten.slice(i, i + 2);
+    const uit = await Promise.all(tweetal.map((c) =>
+      icecatVraag(gebruiker, `&Brand=Samsung&ProductCode=${encodeURIComponent(c)}`, `galaxy ${c}`)));
+    const raak = uit.findIndex((u) => typeof u === "object");
+    if (raak >= 0) return { ...(uit[raak] as any), gevonden: tweetal[raak] };
+    if (uit.includes("fout")) { console.log("galaxy: icecat storing, gestopt bij", tweetal.join(",")); break; }
+  }
+  return { fotos: [] as any[], titel: null as string | null, gevonden: null as string | null };
+}
+
+// Een telefoon kies je in een kleur, en een foto in de verkeerde kleur is erger dan
+// geen foto. Daarom hoort een modelfoto van een telefoon bij model én kleur. Een
+// laptop ziet er per model hetzelfde uit; daar speelt de kleur niet mee en blijft
+// alles zoals het was.
+function isTelefoon(categorie: string) {
+  return /telefoon|phone/i.test(String(categorie || ""));
+}
+function isApple(merk: string, model: string) {
+  return /apple|iphone/i.test(`${merk} ${model}`);
+}
+// De bestaande modelfoto's die bij dit toestel horen: bij een telefoon in dezelfde
+// kleur, anders van het hele model.
+function modelfotosVan(teamId: string, model: string, kleur: string | null) {
+  let q = admin.from("refurbish_fotos").select("aanzicht")
+    .eq("team_id", teamId).is("apparaat_id", null).ilike("model", model);
+  if (kleur !== null) q = kleur ? q.ilike("kleur", kleur) : q.is("kleur", null);
+  return q;
+}
+function klaar(uit: Record<string, unknown>) {
+  return new Response(JSON.stringify({ ok: true, ...uit }), { headers: cors });
 }
 
 // Automatisch: zoek bij Icecat en sla de beste foto's meteen als modelfoto's op.
@@ -223,31 +301,49 @@ async function zoekIcecat(
 // aanzichten die dit model al heeft over, zodat opnieuw draaien niets dubbel doet.
 // Degradeert stil (opgeslagen:0 + reden) als er geen Icecat-account is of niets
 // gevonden wordt; de winkelier valt dan terug op een telefoonfoto.
+//
+// Redenen die de werkbank uitlegt: geen-model, niet-gevonden, en bij telefoons
+// geen-bron (iPhone: er bestaat geen vrije bron) en kleur-nodig (Galaxy zonder kleur).
 async function automatisch(lijf: any, teamId: string) {
   const merk = String(lijf?.merk || "").trim();
   const model = String(lijf?.model || "").trim();
   const productcode = String(lijf?.productcode || "").trim();
   const ean = String(lijf?.ean || lijf?.gtin || "").replace(/\D/g, "");
-  console.log("automatisch: start", JSON.stringify({ merk, model, mpn: productcode || null, ean: ean || null }));
+  const telefoon = isTelefoon(lijf?.categorie);
+  const kleur = telefoon ? kleurVan(String(lijf?.kleur || ""), model) : "";
+  console.log("automatisch: start", JSON.stringify({ merk, model, telefoon, kleur: kleur || null, mpn: productcode || null, ean: ean || null }));
 
   if (!merk || !model) {
     console.log("automatisch: geen-model");
-    return new Response(JSON.stringify({ ok: true, opgeslagen: 0, reden: "geen-model" }), { headers: cors });
+    return klaar({ opgeslagen: 0, reden: "geen-model" });
   }
+  // Apple blokkeert Icecat helemaal; vragen kost alleen tijd.
+  if (telefoon && isApple(merk, model)) return klaar({ opgeslagen: 0, reden: "geen-bron" });
 
   const gebruiker = icecatGebruiker();
   console.log("automatisch: icecat-gebruiker", gebruiker === OPEN_ICECAT ? "(open standaard)" : "(eigen account)");
 
   // Welke aanzichten heeft dit model al als fabrieksfoto? Die niet nog eens opslaan.
-  const { data: best } = await admin.from("refurbish_fotos")
-    .select("aanzicht").eq("team_id", teamId).is("apparaat_id", null).ilike("model", model);
+  const { data: best } = await modelfotosVan(teamId, model, telefoon ? kleur : null);
   const bezet = new Set((best || []).map((r: any) => r.aanzicht));
 
-  const gevonden = await zoekIcecat(gebruiker, { merk, model, ean, productcode });
-  console.log("automatisch: icecat gaf", gevonden.fotos.length, "foto's, match op", gevonden.gevonden);
-  if (!gevonden.fotos.length) {
-    return new Response(JSON.stringify({ ok: true, opgeslagen: 0, reden: "niet-gevonden" }), { headers: cors });
+  let gevonden = { fotos: [] as any[], titel: null as string | null, gevonden: null as string | null };
+  let bron = "icecat";
+  if (telefoon && isGalaxy(merk, model)) {
+    gevonden = await zoekGalaxy(gebruiker, { merk, model, kleur, productcode });
+    bron = "icecat-galaxy";
+    // Geen kleur en geen streepjescode van de doos: dan weten we niet welke foto's
+    // kloppen. Liever dat zeggen dan een zwarte telefoon op een groene advertentie.
+    if (!gevonden.fotos.length && !ean) {
+      return klaar({ opgeslagen: 0, reden: kleur ? "niet-gevonden" : "kleur-nodig" });
+    }
   }
+  if (!gevonden.fotos.length) {
+    gevonden = await zoekIcecat(gebruiker, { merk, model, ean, productcode });
+    bron = "icecat";
+  }
+  console.log("automatisch:", bron, "gaf", gevonden.fotos.length, "foto's, match op", gevonden.gevonden);
+  if (!gevonden.fotos.length) return klaar({ opgeslagen: 0, reden: "niet-gevonden" });
 
   // De vrije aanzicht-slots in de vaste volgorde (open eerst = hoofdfoto).
   const vrij = OPSLAG_VOLGORDE.filter((a) => !bezet.has(a));
@@ -256,14 +352,63 @@ async function automatisch(lijf: any, teamId: string) {
     if (opgeslagen >= vrij.length) break;
     const aanzicht = vrij[opgeslagen];
     try {
-      await bewaarFoto(teamId, { heelModel: true, merk, model, aanzicht, url: f.url });
+      await bewaarFoto(teamId, { heelModel: true, merk, model, kleur, aanzicht, url: f.url });
       opgeslagen++;
     } catch (e) {
       console.error("automatisch bewaren", (e as Error)?.message);
     }
   }
   console.log("automatisch: opgeslagen", opgeslagen);
-  return new Response(JSON.stringify({ ok: true, opgeslagen, bron: "icecat", titel: gevonden.titel }), { headers: cors });
+  return klaar({ opgeslagen, bron, titel: gevonden.titel, code: gevonden.gevonden });
+}
+
+// De eigen foto's van één toestel worden de fabrieksfoto's van het hele model (bij een
+// telefoon: model en kleur). Dit is de snelste weg voor iPhones, waar geen vrije bron
+// voor bestaat: fotografeer één mooi exemplaar en elk volgend toestel heeft ze. Het
+// zijn je eigen foto's, dus er speelt geen recht van een ander.
+//
+// We KOPIËREN het bestand in plaats van naar hetzelfde pad te wijzen. Gooi je later
+// een foto van dit toestel weg, dan haalt fotoWeg het bestand uit de opslag; met een
+// gedeeld pad was de modelfoto dan ook stuk.
+async function alsModel(lijf: any, teamId: string) {
+  const apparaatId = String(lijf?.apparaat_id || "");
+  if (!apparaatId) return fout("Geen toestel meegegeven");
+  const { data: a } = await admin.from("refurbish_apparaten")
+    .select("id, merk, model, kleur, specs, categorie")
+    .eq("id", apparaatId).eq("team_id", teamId).maybeSingle();
+  if (!a) return fout("Dit toestel ken ik niet", 404);
+  const model = String(a.model || "").trim();
+  if (!model) return fout("Vul eerst het model in");
+  const telefoon = isTelefoon(a.categorie);
+  const kleur = telefoon ? kleurVan(String(a.kleur || a.specs?.Kleur || ""), model) : "";
+
+  const { data: eigen } = await admin.from("refurbish_fotos")
+    .select("aanzicht, pad").eq("team_id", teamId).eq("apparaat_id", apparaatId).order("volgorde");
+  // Alleen de vaste zes. Een rechtgezet scherm of een foto met achtergrond hoort bij
+  // dit ene exemplaar; 'overig' heeft geen vaste plek in de set.
+  const teKopieren = (eigen || []).filter((f: any) => AANZICHTEN.includes(f.aanzicht));
+  if (!teKopieren.length) return fout("Dit toestel heeft nog geen foto's");
+
+  const { data: best } = await modelfotosVan(teamId, model, telefoon ? kleur : null);
+  const bezet = new Set((best || []).map((r: any) => r.aanzicht));
+
+  let opgeslagen = 0, overgeslagen = 0;
+  for (const f of teKopieren) {
+    if (bezet.has(f.aanzicht)) { overgeslagen++; continue; }
+    try {
+      const { data: blob, error } = await admin.storage.from("refurbish-fotos").download(f.pad);
+      if (error || !blob) throw new Error(error?.message || "niet gevonden");
+      await bewaarFoto(teamId, {
+        heelModel: true, merk: a.merk || "", model, kleur, aanzicht: f.aanzicht,
+        bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type,
+      });
+      bezet.add(f.aanzicht);
+      opgeslagen++;
+    } catch (e) {
+      console.error("alsModel", f.pad, (e as Error)?.message);
+    }
+  }
+  return klaar({ opgeslagen, overgeslagen, kleur: kleur || null });
 }
 
 Deno.serve(async (req) => {
@@ -294,6 +439,9 @@ Deno.serve(async (req) => {
 
   // Automatisch zoeken én opslaan. Zonder Icecat-account degradeert dit stil.
   if (lijf?.actie === "automatisch") return await automatisch(lijf, acc.team_id);
+
+  // De eigen foto's van een toestel als set voor het hele model.
+  if (lijf?.actie === "alsModel") return await alsModel(lijf, acc.team_id);
 
   // Vanaf hier is het alleen zóeken (foto's teruggeven, niet opslaan).
   const gebruiker = icecatGebruiker();

@@ -429,11 +429,12 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
   padding:3px 8px; border-radius:var(--pil); border:0; cursor:pointer;
   background:rgba(23,32,30,.62); color:#fff; opacity:0; transition:opacity .15s;}
 .fotovak:hover .hoofdknop{opacity:1;}
-.achtergrondvak{display:flex; align-items:center; justify-content:space-between; gap:16px;
+.achtergrondvak, .modelsetvak{display:flex; align-items:center; justify-content:space-between; gap:16px;
   flex-wrap:wrap; margin-top:16px; padding:14px 16px; border-radius:var(--radius-s);
   background:var(--lblauw);}
-.achtergrondvak .knaam{font-weight:700; font-size:14.5px;}
-.achtergrondvak .kuit{font-size:13px; color:var(--muted); max-width:60ch; margin-top:2px;}
+.modelsetvak{margin:0 0 14px;}
+.achtergrondvak .knaam, .modelsetvak .knaam{font-weight:700; font-size:14.5px;}
+.achtergrondvak .kuit, .modelsetvak .kuit{font-size:13px; color:var(--muted); max-width:60ch; margin-top:2px;}
 .schermvak{display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,1fr); gap:22px; align-items:start;}
 @media(max-width:820px){ .schermvak{grid-template-columns:1fr;} }
 .schermproef canvas{width:100%; height:auto; border-radius:12px; display:block;
@@ -5548,6 +5549,32 @@ function onlineZetten(id){
   fotosLaden(a);
 }
 
+/* Een telefoon kies je in een kleur: een iPhone 13 in roze ziet er anders uit dan in
+   zwart, en de koper moet krijgen wat hij op de foto zag. Daarom hoort een
+   fabrieksfoto van een telefoon bij model EN kleur. Een laptop is per model hetzelfde;
+   daar speelt de kleur niet mee en blijft alles zoals het was. De kleur staat in het
+   kleurveld, in de specs, of (oude invoer) achter het streepje: "12 - Blauw". */
+function fotoKleurgebonden(a){ return /telefoon/i.test(String((a&&a.categorie)||'')); }
+function fotoKleur(a){
+  if(!fotoKleurgebonden(a)) return '';
+  const k=String(a.kleur||(a.specs&&a.specs.Kleur)||'').trim();
+  if(k) return k;
+  const achter=String(a.model||'').split(' - ')[1];
+  return achter ? achter.trim() : '';
+}
+/* Van de modelfoto's houden we bij een telefoon alleen die in zijn kleur over. Is er
+   (nog) geen set in die kleur, dan een set zonder kleur, want die is ooit bewust voor
+   het hele model gevuld. Een set in een ándere kleur nooit. */
+function fotosInKleur(a, rijen){
+  if(!fotoKleurgebonden(a)) return rijen;
+  const k=fotoKleur(a).toLowerCase();
+  const kl=f=>String(f.kleur||'').trim().toLowerCase();
+  const eigen=rijen.filter(f=>f.apparaat_id);
+  const model=rijen.filter(f=>!f.apparaat_id);
+  const inKleur=k ? model.filter(f=>kl(f)===k) : [];
+  return eigen.concat(inKleur.length ? inKleur : model.filter(f=>!kl(f)));
+}
+
 const autoFotoGeprobeerd = new Set();
 async function fotosLaden(a, geenAuto){
   /* De modelnaam gaat in een PostgREST .or()-filter; daar zijn komma's scheidingstekens
@@ -5561,7 +5588,7 @@ async function fotosLaden(a, geenAuto){
   const {data}=await sb.from('refurbish_fotos').select('*')
     .or(orFilter)
     .order('volgorde');
-  onl.fotos=data||[];
+  onl.fotos=fotosInKleur(a, data||[]);
   /* Is er nog geen hoofdfoto gekozen, dan is dat de foto van voren: daar zie
      je het scherm op, en dat is de foto waar een koper op klikt. */
   if(onl.fotos.length && !onl.fotos.some(f=>f.hoofd)){
@@ -5629,7 +5656,9 @@ async function fotosLaden(a, geenAuto){
 async function fotosAutomatischMisschien(a){
   if(!a || !a.merk || !a.model) return;
   if((onl.fotos||[]).length) return;                 // er zijn al foto's
-  const sl=(a.merk+'|'+a.model).toLowerCase();
+  /* De kleur hoort bij de sleutel: een groene S23 die niets opleverde zegt niets over
+     een zwarte. Bij een laptop is fotoKleur leeg, dus daar blijft de sleutel gelijk. */
+  const sl=(a.merk+'|'+a.model+(fotoKleur(a)?'|'+fotoKleur(a):'')).toLowerCase();
   if(autoFotoGeprobeerd.has(sl)) return;              // deze sessie al geprobeerd
   autoFotoGeprobeerd.add(sl);
   onl.fotosBezig=true; tekenOnline();
@@ -5640,11 +5669,15 @@ async function fotosAutomatischMisschien(a){
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
                'Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({actie:'automatisch', merk:a.merk, model:a.model, categorie:a.categorie||'',
-        productcode:(a.specs&&a.specs.Artikelcode)||'', ean:(a.specs&&(a.specs.EAN||a.specs.GTIN))||''})
+        kleur:fotoKleur(a),
+        productcode:(a.specs&&(a.specs.Artikelcode||a.specs.Modelnummer))||'', ean:(a.specs&&(a.specs.EAN||a.specs.GTIN))||''})
     });
     const uit=await res.json().catch(()=>({}));
     if(!onl || !onl.a || onl.a.id!==a.id) return;     // ondertussen weggenavigeerd
     onl.fotosBezig=false;
+    /* Waarom er niets kwam (een iPhone, of een Galaxy zonder kleur): dat zegt de hint
+       erbij, zodat je weet wat je nu moet doen. */
+    onl.fotoReden=(uit&&uit.reden)||'';
     if(res.ok && uit.ok && uit.opgeslagen){
       await fotosLaden(a, true);                       // herladen, niet opnieuw proberen
       toast(uit.opgeslagen+' fabrieksfoto'+(uit.opgeslagen===1?'':'s')+' opgehaald voor dit model', true);
@@ -5673,6 +5706,13 @@ function tekenOnline(){
      foto ziet en niet willekeurig de modelfoto. */
   fotos.forEach(f=>{ const h=perAanzicht[f.aanzicht]; if(!h || (!h.apparaat_id && f.apparaat_id)) perAanzicht[f.aanzicht]=f; });
   const compleet=AANZICHTEN.filter(v=>perAanzicht[v.id]).length;
+  /* Eigen foto's van dit toestel in de vaste zes, en of het model al een set heeft. Een
+     telefoon met eigen foto's maar nog zonder set: dan is "voor het hele model" precies
+     de volgende stap, dus dan staat het blok open. Bij een laptop opent het zoals vroeger. */
+  const eigenSet=fotos.some(f=>f.apparaat_id && AANZICHTEN.some(v=>v.id===f.aanzicht));
+  const kleurSet=fotoKleur(a);
+  const fabriekOpen=compleet===0 || (onl.gevonden||[]).length>0 ||
+    (fotoKleurgebonden(a) && eigenSet && !fotos.some(f=>!f.apparaat_id));
   /* In Simpel staat alleen wat je voor één advertentie doet: tekst, foto's, vraagprijs,
      grade en publiceren. Nieuwprijs, garantie en btw staan onder Details (met de
      waarden in de kop), de grade-prijzen onder Meer prijsopties. De fabrieksfoto's
@@ -5723,7 +5763,7 @@ function tekenOnline(){
           <h2><svg class="i"><use href="#i-camera"/></svg>Foto's <span class="muted klein">${compleet} van ${AANZICHTEN.length}</span></h2>
           <p class="muted klein" style="margin-bottom:14px">Altijd dezelfde zes aanzichten, zodat je advertenties bij elkaar horen.</p>
           ${onl.fotosBezig?`<div class="fotobezig">Fabrieksfoto's van dit model ophalen&hellip;</div>`:''}
-          ${(!onl.fotosBezig && compleet===0)?`<div class="fotohint">Nog geen foto's voor dit model. Maak er hieronder een paar met de telefoon; zonder foto's gaat het toestel niet op de webshop.</div>`:''}
+          ${(!onl.fotosBezig && compleet===0)?`<div class="fotohint">${esc(fotoHint(a))}</div>`:''}
 
           <div class="fotorooster">${AANZICHTEN.concat(EXTRAS).map(v=>{
             const f=perAanzicht[v.id];
@@ -5762,9 +5802,16 @@ function tekenOnline(){
             </label>
           </div>
 
-          <details class="meeropties" data-sleutel="onl_fabriek"${(compleet===0 || (onl.gevonden||[]).length)?' data-open':''}>
-          <summary>Fabrieksfoto's voor het hele model</summary>
+          <details class="meeropties" data-sleutel="onl_fabriek"${fabriekOpen?' data-open':''}>
+          <summary>Fabrieksfoto's voor het hele model${kleurSet?' in '+esc(kleurSet.toLowerCase()):''}</summary>
           <div class="meerinhoud">
+          ${eigenSet?`<div class="modelsetvak">
+            <div>
+              <div class="knaam">Deze foto's voor elk toestel</div>
+              <div class="kuit">Elk volgend toestel van dit model${kleurSet?' in deze kleur':''} krijgt ze dan vanzelf. Kies een mooi exemplaar.</div>
+            </div>
+            <button class="btn actie small" onclick="fotoAlsModel(this)">Voor het hele model</button>
+          </div>`:''}
           <div class="row">
             <button class="btn ghost small" onclick="fotoZoekOnline(this)">
               <svg class="i s"><use href="#i-search"/></svg>Zoek foto's online</button>
@@ -6085,7 +6132,7 @@ async function fabriekOpslaan(payload){
     headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
              'Authorization':'Bearer '+session.access_token},
     body:JSON.stringify(Object.assign({actie:'overnemen', heelModel:true,
-      merk:onl.a.merk, model:onl.a.model}, payload))
+      merk:onl.a.merk, model:onl.a.model, kleur:fotoKleur(onl.a)}, payload))
   });
   const uit=await res.json().catch(()=>({}));
   if(!res.ok||!uit.ok) throw new Error(uit.error||'Opslaan mislukte');
@@ -6155,6 +6202,45 @@ function fotoPlak(e){
       toast('Foto geplakt · geldt voor het hele model', true);
     }catch(err){ toast('Plakken lukte niet: '+err.message,'fout'); }
   })();
+}
+
+/* Wat er boven een lege fotokaart staat. Bij een iPhone bestaat er geen bron die we
+   mogen gebruiken (Apple blokkeert Icecat, apple.com en GSMArena mogen niet), dus daar
+   zeggen we meteen hoe je het één keer vult. Een Galaxy zoeken we op kleur; zonder
+   kleur weten we niet welke foto's kloppen. De reden komt van de server, maar ook als
+   die deze sessie al eens gevraagd is (en dus niet opnieuw) weten we het zelf. */
+function fotoHint(a){
+  const tel=fotoKleurgebonden(a);
+  const naam=(a.merk||'')+' '+(a.model||'');
+  if(tel && (onl.fotoReden==='geen-bron' || /apple|iphone/i.test(naam))){
+    return "iPhones hebben geen vrije fabrieksfoto's. Maak ze één keer zelf en zet ze daarna voor het hele model. Elk volgend toestel in deze kleur heeft ze dan vanzelf.";
+  }
+  if(tel && (onl.fotoReden==='kleur-nodig' || (!fotoKleur(a) && /samsung|galaxy/i.test(naam)))){
+    return "Vul eerst de kleur in bij dit toestel. Dan haal ik de fabrieksfoto's in die kleur op.";
+  }
+  return "Nog geen foto's voor dit model. Maak er hieronder een paar met de telefoon; zonder foto's gaat het toestel niet op de webshop.";
+}
+
+/* De eigen foto's van dit toestel worden de set voor het hele model (bij een telefoon:
+   model en kleur). De snelste weg voor iPhones: één mooi exemplaar fotograferen en klaar.
+   De server kopieert de bestanden, zodat het weggooien van een foto van dit toestel de
+   modelset niet sloopt. Aanzichten die het model al heeft blijven staan. */
+async function fotoAlsModel(knop){
+  const a=onl.a;
+  await bezig(knop, async()=>{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'alsModel', apparaat_id:a.id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok||!uit.ok) throw new Error(uit.error||'Dat lukte niet');
+    await fotosLaden(a, true);
+    if(uit.opgeslagen) toast((uit.opgeslagen===1?'1 foto geldt':uit.opgeslagen+" foto's gelden")+' nu voor het hele model', true);
+    else toast('Het model had deze foto\'s al','let-op');
+  });
 }
 
 async function onlSchrijf(knop){

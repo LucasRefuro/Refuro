@@ -22,6 +22,7 @@ npm test
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
 | `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
 | `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen |
+| `productfotos-telefoon.js` | Fabrieksfoto's voor telefoons: de Galaxy-codes voor Icecat, dat een telefoon alleen de set in zijn eigen kleur ziet, de iPhone-uitleg en de knop Voor het hele model. En dat een laptop alles houdt zoals het was |
 | `refurbish-pagina.js` | De apparaatpagina, donoren en onderdelen per soort |
 | `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |

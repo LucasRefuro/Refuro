@@ -40,7 +40,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
 | `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
 | `refurbish-test` | ja | Neemt de functionele testuitslag aan van de telefoon, op dezelfde code-aanpak |
-| `productfotos` | nee | Haalt officiële productfoto's op bij Icecat |
+| `productfotos` | nee | Haalt officiële productfoto's op bij Icecat. Laptops op artikelcode, Samsung Galaxy op een zelf gemaakte fabriekscode (naam plus kleur, zie `galaxy.ts`). iPhones staan niet in Icecat; daar kopieert actie `alsModel` de eigen foto's van één toestel naar de set van model en kleur |
 | `prijsadvies` | nee | Prijsvoorstel uit eigen geschiedenis en een marktschatting |
 | `scherm-hoeken` | nee | Zoekt met AI de vier hoeken van een beeldscherm in een foto |
 | `klantportaal` | ja | Inloglinks en uitnodigingen voor het klantportaal, in de huisstijl van de winkel. Controleert zelf wie er belt |
