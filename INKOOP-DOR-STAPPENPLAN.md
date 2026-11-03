@@ -130,6 +130,11 @@ Komt er toegang, dan wordt het een Edge Function die een registratie doorstuurt 
   opruimtaak die geboortedatum en legitimatie na 4 jaar leegmaakt.
 - **Batches.** Een partij komt als één regel in het register. De toestellen die je later
   per stuk invult krijgen nog geen bewaardatum mee.
+- **Wie ziet wat.** Iedereen in het team kan het register lezen, ook geboortedatum en
+  legitimatienummer (nodig om aan de balie het DOR te vullen). Strenger kan met een policy
+  per rol, maar dan kan een medewerker na de inname het DOR-scherm niet meer zien.
+- **Corrigeren.** "Opnieuw" werkt dezelfde regel bij (zelfde volgnummer, datum en
+  bewaardatum). Een regel weggooien kan niet.
 - **Inruil bij verkoop** (klant ruilt in bij aankoop): loopt nog niet via dit scherm.
 
 ---
