@@ -103,7 +103,63 @@ setTimeout(async()=>{
   ok('na een keuze klapt het menu dicht', !d.getElementById('zijbalk').classList.contains('menu-open'));
   ok('menuknop zegt waar je bent', d.getElementById('menuNu').textContent==='Voorraad');
 
-  console.log(fout ? fout+' FOUT' : 'telefoon in orde');
   w.close();
+  await winkelapp();
+  console.log(fout ? fout+' FOUT' : 'telefoon in orde');
   process.exit(fout?1:0);
 }, 400);
+
+/* De winkelapp had het stapelen al (resptab), maar pas vanaf vijf kolommen. Bij drie
+   of vier moest je op de telefoon nog opzij schuiven. */
+async function winkelapp(){
+  console.log('\n── winkelapp op de telefoon');
+  const MOCKW=`<script>
+function _leeg(){ const api={select(){return api;},order(){return api;},limit(){return api;},eq(){return api;},
+  in(){return api;},maybeSingle:async()=>({data:null}),insert(){return {select:()=>({single:async()=>({data:{id:'x'}})})};},
+  update(){return api;},delete(){return api;},then(r){ r({data:[],error:null}); }}; return api; }
+window.supabase={createClient:()=>({
+  auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),getUser:async()=>({data:{user:null}})},
+  from:()=>_leeg(), rpc:async()=>({data:[]}),
+  channel:()=>({on(){return this;},subscribe(){return this;},send(){},unsubscribe(){}}), removeChannel(){}
+})};
+<\/script>`;
+  const ruwW=fs.readFileSync(bron('app/index.html'),'utf8');
+  const htmlW=ruwW.replace(/<script src="https:\/\/cdn\.jsdelivr[^"]*"><\/script>/, MOCKW)
+    .replace(/<script src="(?!https)[^"]*"><\/script>/g,'');
+  const domW=new JSDOM(htmlW,{runScripts:'dangerously', url:'https://storvo.app/app/', pretendToBeVisual:true});
+  const ww=domW.window, dw=ww.document;
+  const foutenW=[]; ww.onerror=(m)=>foutenW.push(String(m));
+  await new Promise(r=>setTimeout(r,400));
+  ok('winkelapp start zonder fout', foutenW.length===0);
+
+  ok('filterknoppen breken af in plaats van opzij te schuiven', /\.periodesel\{display:flex; flex-wrap:wrap;/.test(ruwW));
+  ok('een week in de dagstrip past zonder schuiven', /\.ds-dag\{flex:1 1 0; min-width:0;/.test(ruwW));
+  ok('niet-gestapelde tabellen breken af', !/main table:not\(\.resptab\) td\{white-space:nowrap/.test(ruwW));
+
+  // Een tabel van drie kolommen in main wordt nu ook een kaart-tabel.
+  const bak=dw.createElement('div');
+  bak.innerHTML='<table><thead><tr><th>Medewerker</th><th>Uren</th><th>Loonkosten</th></tr></thead><tbody><tr><td>Sam</td><td>8</td><td>120</td></tr></tbody></table>';
+  dw.querySelector('main').appendChild(bak);
+  await new Promise(r=>setTimeout(r,250));
+  const t3=bak.querySelector('table');
+  ok('drie kolommen stapelt ook', t3.classList.contains('resptab'));
+  ok('met de kolomnaam op de cel', t3.querySelectorAll('td')[1].dataset.label==='Uren');
+  ok('eerste kolom is de titel', t3.querySelector('td').classList.contains('celtitel'));
+
+  // Twee kolommen past altijd en blijft gewoon.
+  const bak2=dw.createElement('div');
+  bak2.innerHTML='<table><thead><tr><th>Wat</th><th>Bedrag</th></tr></thead><tbody><tr><td>a</td><td>1</td></tr></tbody></table>';
+  dw.querySelector('main').appendChild(bak2);
+  await new Promise(r=>setTimeout(r,250));
+  ok('twee kolommen blijft een tabel', !bak2.querySelector('table').classList.contains('resptab'));
+
+  // Alles selecteren in de kop blijft op de telefoon bereikbaar.
+  const bak3=dw.createElement('div');
+  bak3.innerHTML='<table><thead><tr><th><input type="checkbox"></th><th>Toestel</th><th>Prijs</th></tr></thead><tbody><tr><td><input type="checkbox"></td><td>HP</td><td>1</td></tr></tbody></table>';
+  dw.querySelector('main').appendChild(bak3);
+  await new Promise(r=>setTimeout(r,250));
+  ok('vinkje in de kop blijft staan', bak3.querySelector('th').classList.contains('resp-houd'));
+  ok('kop-rij krijgt geen kaartrand', /table\.resptab thead tr\{background:none; border:none;/.test(ruwW));
+  ok('knoppen van een hardwarekaart breken af', /td\.hwact \.hwacties\{flex-wrap:wrap;/.test(ruwW));
+  ww.close();
+}

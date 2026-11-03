@@ -637,8 +637,10 @@
   .dienstchip{border:1.5px solid var(--green); background:var(--card); color:var(--green-tekst); border-radius:8px; padding:3px 7px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; line-height:1.3;}
   .dienstchip.let{border-color:var(--amber); color:var(--amber-tekst); background:var(--amber-soft);}
   .dienstchip.fout{border-color:var(--red); color:var(--red-tekst); background:var(--red-soft);}
+  /* Zeven dagen delen de breedte (flex 1 1 0), zodat de week op een telefoon past
+     zonder opzij te schuiven; met een vaste 44px per dag was hij net te breed. */
   .dagstrip{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px;}
-  .ds-dag{flex:1 0 auto; min-width:44px; border:1.5px solid var(--border); border-radius:12px; background:var(--card); padding:8px 4px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:2px;}
+  .ds-dag{flex:1 1 0; min-width:0; border:1.5px solid var(--border); border-radius:12px; background:var(--card); padding:8px 4px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:2px;}
   .ds-dag.aan{background:var(--green-soft); border-color:var(--green); color:var(--green-tekst);}
   .ds-dag b{font-size:12px;} .ds-dag span{font-size:14px; font-weight:700;}
   .ds-stip{width:6px; height:6px; border-radius:50%; margin-top:2px;}
@@ -1681,7 +1683,7 @@
     .modules{gap:14px;}
     .card{padding:20px; border-radius:var(--radius-s); margin-bottom:14px;}
     .chart{height:170px;} .chart .bars{height:130px;}
-    .periodesel{width:100%; overflow-x:auto;}
+    .periodesel{width:100%;}
     .grid{grid-template-columns:1fr;}
     .betaalrow{flex-direction:column;} .betaalrow .btn{width:100%;}
     .modeToggle{flex-direction:column;}
@@ -1720,10 +1722,11 @@
     .pagehead{flex-direction:column; align-items:stretch; gap:12px;}
     .pagehead .row{width:100%; flex-direction:column; align-items:stretch; gap:10px;}
     .pagehead .btn{width:100%; justify-content:center;}
-    .periodesel{display:flex; width:100%; -webkit-overflow-scrolling:touch;
-      scrollbar-width:none; padding-bottom:2px;}
-    .periodesel::-webkit-scrollbar{display:none;}
-    .periodesel button{flex:1 0 auto; white-space:nowrap;}
+    /* Filterknoppen breken af naar een tweede regel in plaats van opzij te schuiven:
+       op de telefoon scrolt alles alleen naar beneden. De vorm wordt dan een ronde
+       rechthoek in plaats van een pil. */
+    .periodesel{display:flex; flex-wrap:wrap; width:100%; border-radius:var(--radius-s);}
+    .periodesel button{flex:1 1 auto; white-space:nowrap;}
     .dagnav{width:100%; display:flex; gap:8px;}
     .dagnav input{flex:1; min-width:0;}
 
@@ -1737,16 +1740,16 @@
     .tabelrol::-webkit-scrollbar{display:none;}
     /* Een kaart-tabel (resptab) stapelt en schuift niet, dus de rand-fade en de negatieve
        marges van de scrollbak zijn daar storend. Uitzetten als de bak zo'n tabel bevat. */
-    .tabelrol:has(> table.resptab){margin:0; padding:0; mask-image:none; -webkit-mask-image:none;}
+    .tabelrol:has(> table.resptab){margin:0; padding:0; mask-image:none; -webkit-mask-image:none; overflow-x:visible;}
     /* Alles schuift samen mee. De eerste kolom vastzetten leek handig, maar
        dan houdt de rest te weinig ruimte over en wordt het onleesbaar klein.
        Liever de hele regel in één beweging langs je duim.                   */
     table{font-size:13.5px;}
     th,td{padding:12px 12px;}
-    /* nowrap alleen voor gewone (scrollbare) tabellen in main, zodat je ze in één beweging
-       langs je duim leest. NIET voor kaart-tabellen (die stapelen) en NIET voor tabellen in
-       pop-ups (loonstrook, inkoop-detail): die moeten juist afbreken i.p.v. uit beeld lopen. */
-    main table:not(.resptab) th, main table:not(.resptab) td{white-space:nowrap;}
+    /* Tabellen die niet stapelen (twee kolommen, of geen kop) breken af in plaats van
+       uit beeld te lopen. Vroeger stond hier nowrap om ze in één veeg opzij te lezen,
+       maar op de telefoon scrolt alles nu alleen naar beneden. */
+    main table:not(.resptab) td{overflow-wrap:anywhere;}
     td:first-child{padding-left:2px;}
     th:last-child,td:last-child{padding-right:2px;}
     /* Responsieve tabel: op de telefoon stapelt elke rij tot een kaartje met per cel
@@ -1755,11 +1758,17 @@
        <table> en geef elke <td> een data-label (behalve de titelcel .celtitel). */
     table.resptab{font-size:14px;}
     table.resptab, table.resptab tbody{display:block; width:100%;}
-    table.resptab thead{display:none;}
+    /* De kop verdwijnt, behalve een vinkje of knop erin (alles selecteren). */
+    table.resptab thead{display:block;}
+    table.resptab thead tr{display:flex; flex-wrap:wrap; gap:8px;}
+    table.resptab thead th{display:none;}
+    table.resptab thead th.resp-houd{display:block; border:none; padding:0 0 10px;}
+    table.resptab thead tr{background:none; border:none; border-radius:0; padding:0; margin:0;}
     table.resptab tr{display:block; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:8px 14px; margin-bottom:10px;}
     table.resptab td{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:6px 0; border:none; border-bottom:1px solid var(--soft-2); white-space:normal; text-align:right;}
     table.resptab td:last-child{border-bottom:none;}
-    table.resptab td::before{content:attr(data-label); font-weight:600; color:var(--muted); text-align:left; flex:0 0 auto; white-space:nowrap;}
+    /* Eigen lettertype: anders erft het label dat van de cel (bv. mono bij een nummer). */
+    table.resptab td::before{content:attr(data-label); font-family:'Instrument Sans',-apple-system,sans-serif; font-weight:600; color:var(--muted); text-align:left; flex:0 0 auto; white-space:nowrap;}
     table.resptab td.celtitel{display:block; text-align:left; font-weight:700; font-size:15.5px; padding:4px 0 9px; border-bottom:1px solid var(--border); margin-bottom:3px; white-space:normal;}
     table.resptab td.celtitel::before{content:none;}
     /* Cellen zonder kop (selectievakje, actieknoppen) links uitlijnen i.p.v. rechts. */
@@ -1774,8 +1783,10 @@
     /* Hardware-acties: in een gestapelde kaart passen drie knoppen van 112px niet naast
        elkaar. Laat ze afbreken en vervallen de vaste breedte, zodat alle knoppen (ook
        "Openen") zichtbaar en aantikbaar blijven. */
-    .hwact .hwacties{flex-wrap:wrap; justify-content:flex-start;}
-    .hwact .hwacties .btn, .hwact .hwacties .partnerpil{min-width:0;}
+    /* td ervoor: de bureaubladregel verderop (.hwact .hwacties, nowrap) staat later in het
+       bestand en won anders, waardoor de derde knop van de kaart af viel. */
+    td.hwact .hwacties{flex-wrap:wrap; justify-content:flex-start; min-width:0; flex:1 1 auto;}
+    td.hwact .hwacties .btn, td.hwact .hwacties .partnerpil{min-width:0;}
     /* Tikdoelen groot genoeg voor een duim (minstens 40px). */
     .undoBtn{min-height:40px;}
     .rklabel{min-width:40px; min-height:40px; padding:8px;}
@@ -12954,11 +12965,14 @@ function rolTabellen(){
 }
 
 /* Brede tabellen leesbaar maken op de telefoon. Elke tabel in main met een kop van
-   vijf kolommen of meer krijgt de klasse 'resptab'; dan stapelt hij op smal scherm tot
+   drie kolommen of meer krijgt de klasse 'resptab'; dan stapelt hij op smal scherm tot
    kaartjes (zie de CSS). Per cel zetten we een data-label uit de kolomkop, zodat je op
    de kaart "Verkoop  € 12,00" ziet in plaats van een los getal. De eerste kolom met een
-   kop wordt de titel (vet, zonder label), meestal de naam of het nummer. Smalle tabellen
-   (minder dan vijf kolommen) laten we met rust; die passen gewoon.
+   kop wordt de titel (vet, zonder label), meestal de naam of het nummer. Alleen twee
+   kolommen laten we met rust; die passen altijd. Eerst lag de grens op vijf, maar dan
+   moest je bij drie of vier kolommen op de telefoon nog opzij schuiven, en de eigenaar
+   wil dat alles alleen naar beneden scrolt. Een vinkje of knop in de kop (alles
+   selecteren) krijgt 'resp-houd' en blijft op de telefoon zichtbaar.
 
    Waarom in JS en niet per tabel met de hand: zo geldt het in één keer voor alle
    tabellen, ook de tientallen die in JS worden opgebouwd, en het blijft kloppen na een
@@ -12966,8 +12980,9 @@ function rolTabellen(){
 function tabelLabels(root){
   (root||document).querySelectorAll('main table, .overlay table').forEach(tab=>{
     const ths=tab.tHead ? [...tab.tHead.querySelectorAll('th')] : [];
-    if(ths.length<5) return;
+    if(ths.length<3) return;
     const koppen=ths.map(th=>th.textContent.trim());
+    ths.forEach(th=>{ if(th.querySelector('input,select,button')) th.classList.add('resp-houd'); });
     let titelIdx=koppen.findIndex(k=>k!=='');
     if(titelIdx<0) titelIdx=0;
     tab.classList.add('resptab');
