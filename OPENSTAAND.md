@@ -68,8 +68,11 @@ repo `refuro-webshop`.
       (os-rij komt uit de Windows-uitlezing). Kanttekening: al eerder opgezochte modellen in
       `hardware_modellen` houden hun oude specs (cache); alleen nieuwe modellen krijgen de 3
       extra velden. Telefoon-"Poorten" (laadpoort) nog optioneel toe te voegen.
-- [ ] **Uitlezen waterdicht:** een `irm | iex`-regel om in PowerShell te plakken (geen
-      download, geen SmartScreen, geen administrator). Goedgekeurd, nog niet gebouwd.
+- [x] **Uitlezen waterdicht.** GEDAAN (3 nov). De testpagina geeft op Windows een regel om
+      in PowerShell te plakken (`$code='A0001';...;irm .../refurbish/uitlezen.ps1|iex`): geen
+      download, geen SmartScreen, geen administrator. Het script staat één keer in
+      `refurbish/uitlezen.ps1` (Vercel geeft het als platte tekst); het .bat-bestand is nu een
+      dun vangnet dat dezelfde regel draait. Nog doen: één keer echt proberen op een laptop.
 - [ ] **Lijst springt naar boven bij invullen.** Pinpoint nodig: welk scherm en veld.
 - [x] **Donorlaptop: onderdelen oogsten.** GEDAAN (29 sep). Vanaf het eerste hardwaredefect
       (op de hardware- en de na-Windows-stap) verschijnt de knop "Maak er een donorlaptop van",
