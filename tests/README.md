@@ -27,6 +27,7 @@ npm test
 | `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
+| `webshop-uitverkocht.js` | Het laatste exemplaar van een advertentie verkocht: het product blijft staan zonder voorraad (niet vermeld, of concept als je hem zelf offline haalt, of actief bij een open reservering), eerst voorraad 0 en dan de status, en dezelfde uitvoering krijgt later hetzelfde product terug |
 | `leveranciers.js` | Dat het wachtwoord van Foneday en Mobileparts nooit in de sync, in state of in de browseropslag belandt, ook niet bij de verhuizing van een oud apparaat |
 | `mobiel.js` | De telefoon: elke tabel met drie of meer kolommen wordt een stapel kaartjes (kolomnaam op elke cel, ook bij later bijgetekende rijen), het vinkje in de kop blijft bereikbaar, en het menu is een Menu-knop met een lijst onder elkaar in plaats van een zijwaartse balk |
 | `inkoopregister.js` | Inkoop bij een particulier: de DOR-velden in het scherm (onder de 18 en zonder legitimatie gaat niet door, geen veld voor een kopie of BSN), elk toestel zijn eigen serienummer of IMEI, het register en de verklaring met de btw-zin, de vijf werkdagen bewaring rond weekend en feestdagen, de waarschuwing in de werkbank, het DOR-scherm, en op de Inkopen-pagina de lijst, de CSV voor de boekhouder (zonder geboortedatum of legitimatie) en het aanvinken van het DOR |

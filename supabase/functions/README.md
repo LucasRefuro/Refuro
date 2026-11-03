@@ -32,7 +32,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `product-herkennen` | nee | Leest een foto van een productdoosje en zegt wat erin zit |
 | `shopify-koppelen` | nee | Start het koppelen, en beheert de koppeling: nakijken, meldingen, loskoppelen |
 | `shopify-installeren` | ja | Hier komt de winkelier terug na het installeren bij Shopify |
-| `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf |
+| `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf. Is het laatste exemplaar verkocht, dan blijft de pagina bestaan zonder voorraad en uit de lijsten (status niet vermeld), zodat de link werkt en het thema vergelijkbare toestellen aanraadt |
 | `shopify-webhook` | ja | Shopify meldt hier dat er iets verkocht is |
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
 | `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |

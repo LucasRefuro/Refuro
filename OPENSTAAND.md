@@ -189,6 +189,20 @@ repo `refuro-webshop`.
       2) de vier thema-bestanden pushen (WERKLIJST), 3) elke grade-advertentie één keer opnieuw
       online zetten.
 
+- [x] **Net verkocht op een open productpagina.** GEBOUWD (3 nov), WACHT OP UITROL.
+      Verkoop je een toestel aan de balie terwijl iemand de productpagina open heeft, dan ziet
+      die klant binnen 20 seconden "Net verkocht" op de plek van de koopknop, en zeker vóór het
+      reserveervenster opent. Daaronder 3 vergelijkbare toestellen (eigen keuze: zelfde model,
+      dan serie, dan merk, dan prijsklasse). Is alleen de gekozen staat weg, dan wijst hij naar
+      de staat die er nog is. Keuze eigenaar: het laatste exemplaar blijft staan als verkocht
+      (voorraad 0, status niet vermeld, uit de lijsten), geen foutpagina meer. Zelf offline
+      halen = concept. Komt dezelfde uitvoering terug, dan hetzelfde product en dezelfde link.
+      Storvo: `supabase/functions/shopify/uitverkocht.ts` + `index.ts`, test
+      `tests/webshop-uitverkocht.js`. Thema: zie `WERKLIJST.md` in refuro-webshop.
+      **Uitrol:** 1) het thema samen met fase 4 pushen (7 bestanden, WERKLIJST), 2) edge
+      `shopify` uitrollen met index.ts + uitverkocht.ts + _gedeeld/shopify.ts, verify_jwt
+      **true** zoals v26. Volgorde maakt niet uit; beide los zijn veilig.
+
 ### Testen
 - [ ] **Grade-varianten tegen de live shop:** tweede exemplaar van dezelfde uitvoering =
       voorraad +1, geen nieuwe advertentie.

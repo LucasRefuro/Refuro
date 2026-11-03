@@ -16,6 +16,7 @@ import {
   bouwProductMetafields, bouwGradeMetafields, gradeWachtrij,
   webshopSleutel, gradeLetter, gradeSchat, GRADE_LETTERS, GRADE_NAAM,
 } from "../_gedeeld/shopify.ts";
+import { statusNaLaatste, zetUitverkocht, bestaatProduct } from "./uitverkocht.ts";
 
 /* De categorie-collecties van het thema zijn HANDMATIG (geen slimme regels op
    producttype), dus vullen ze zich niet vanzelf. Storvo zet een toestel daarom zelf
@@ -146,24 +147,42 @@ function gebruikTags(h: any): string[] {
    grade komt uit webshop_grade_prijzen (of geschat), de voorraad per grade is het aantal onverkochte
    exemplaren van die grade. Zo wordt een tweede exemplaar geen nieuwe advertentie maar voorraad +1,
    en verschijnt een grade die je nog niet had zodra er een binnenkomt. Zijn er geen exemplaren meer,
-   dan gaat het product weg. Bron van waarheid: de tabel webshop_producten (sleutel -> product + de
-   variant-id's per grade), zodat de webhook een verkochte variant kan terugvertalen. */
-async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string) {
+   dan blijft het product staan zonder voorraad (zie uitverkocht.ts). Bron van waarheid: de tabel
+   webshop_producten (sleutel -> product + de variant-id's per grade), zodat de webhook een verkochte
+   variant kan terugvertalen en dezelfde uitvoering later hetzelfde product terugkrijgt.
+   opties.verkocht: het laatste exemplaar ging weg door een verkoop (en niet doordat je hem zelf
+   offline haalde); dan blijft de pagina bereikbaar met "Net verkocht". */
+async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string, opties: { verkocht?: boolean } = {}) {
+  const gql = (q: string, v?: unknown) => graphql(k, q, v);
   const { data: exemplaren } = await admin.from("hardware")
     .select("*").eq("team_id", teamId).eq("status", "voorraad").eq("kanalen->shopify->>sleutel", sleutel);
   const beschikbaar: any[] = exemplaren || [];
-  const reg = (await admin.from("webshop_producten").select("*").eq("team_id", teamId).eq("sleutel", sleutel).maybeSingle()).data;
+  let reg = (await admin.from("webshop_producten").select("*").eq("team_id", teamId).eq("sleutel", sleutel).maybeSingle()).data;
 
-  // Geen exemplaren meer: het product weg en de registratie op.
+  // Geen exemplaren meer: het product NIET weggooien. Weg was een foutpagina voor wie hem open
+  // had, en dan kon het thema daar ook geen vergelijkbaar toestel aanraden. Nu voorraad 0 en uit
+  // de lijsten; de registratie blijft, zodat dezelfde uitvoering later hetzelfde product krijgt.
   if (!beschikbaar.length) {
     if (reg?.product_id) {
-      try {
-        await graphql(k, `mutation($input: ProductDeleteInput!){ productDelete(input: $input){ deletedProductId userErrors { field message } } }`, { input: { id: reg.product_id } });
-      } catch (_e) { /* al weg is prima */ }
+      const { count: gereserveerd } = await admin.from("hardware")
+        .select("id", { count: "exact", head: true })
+        .eq("team_id", teamId).eq("status", "gereserveerd").eq("kanalen->shopify->>sleutel", sleutel);
+      const status = statusNaLaatste({ verkocht: !!opties.verkocht, gereserveerd: gereserveerd ?? 0 });
+      const r = await zetUitverkocht(gql, k.locatie_id || null, reg.product_id, status);
+      if (r.bestaat) {
+        await admin.from("webshop_producten").update({ bijgewerkt_op: new Date().toISOString() })
+          .eq("team_id", teamId).eq("sleutel", sleutel);
+        return { leeg: true, bewaard: true, status } as any;
+      }
     }
+    // Het product bestond in Shopify al niet meer: dan is er ook niets te bewaren.
     await admin.from("webshop_producten").delete().eq("team_id", teamId).eq("sleutel", sleutel);
     return { leeg: true } as any;
   }
+
+  // Met de hand weggegooid in Shopify? Dan opnieuw aanmaken in plaats van vastlopen op een
+  // product-id dat niet meer bestaat.
+  if (reg?.product_id && !(await bestaatProduct(gql, reg.product_id))) reg = null;
 
   const perGrade: Record<string, any[]> = { A: [], B: [], C: [] };
   for (const e of beschikbaar) (perGrade[gradeLetter(e.staat)] || (perGrade[gradeLetter(e.staat)] = [])).push(e);
@@ -357,9 +376,11 @@ Deno.serve(async (req) => {
       delete kanalen.shopify;
       await admin.from("hardware").update({ kanalen, bijgewerkt_op: new Date().toISOString() }).eq("id", id);
       if (sleutel) {
-        // De rest van de advertentie opnieuw synchroniseren: voorraad van deze grade omlaag,
-        // of het hele product weg als dit het laatste exemplaar was.
-        try { await synchroniseerAdvertentie(k, acc.team_id, sleutel); } catch (e) { console.error("offline sync", e); }
+        // De rest van de advertentie opnieuw synchroniseren: voorraad van deze grade omlaag. Was dit
+        // het laatste exemplaar en is het verkocht, dan blijft de pagina staan met "Net verkocht".
+        try {
+          await synchroniseerAdvertentie(k, acc.team_id, sleutel, { verkocht: h.status === "verkocht" });
+        } catch (e) { console.error("offline sync", e); }
       } else if (oudProduct) {
         try {
           const uit = await graphql(k, `mutation($input: ProductDeleteInput!){ productDelete(input: $input){ deletedProductId userErrors { field message } } }`, { input: { id: oudProduct } });
