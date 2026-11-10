@@ -446,6 +446,27 @@ setTimeout(async()=>{
   ok('bestaand toestel toont accu en doos', d.getElementById('hw_accu').value==='91' && d.getElementById('hw_doos').checked);
   w.eval('hwSluit(); showTab("dashboard")');
 
+  // Online zetten vanuit de winkelapp: de pagina van het refurbish-deel in een venster,
+  // zodat er één online-pagina is en niet twee die uit elkaar lopen.
+  w.eval("abonnement={modules:['refurbish']}; hwData=[{id:'hw1', merk:'Dell', model:'Latitude 5430', status:'voorraad', kanalen:{}, fotos:[], specs:{}}]");
+  w.eval("hwOnlineMenu({stopPropagation(){}, currentTarget:document.body, target:document.body, clientX:10, clientY:10}, 'hw1')");
+  ok('online zetten: foto\'s, tekst en prijs in het menu', /Foto's, tekst en prijs/.test((d.getElementById('rijMenu')||{}).textContent||''));
+  w.eval('sluitRijMenu()');
+  await w.eval("hwOnlinePagina('hw1')");
+  const onlVenster=d.getElementById('hwOnlineVenster');
+  ok('online zetten: venster met de refurbish-pagina', !!onlVenster && /^\/refurbish\/\?online=hw1&ingebed=1$/.test(onlVenster.querySelector('iframe').getAttribute('src')));
+  ok('online zetten: niet vanzelf verversen terwijl het open is', !w.eval('versieRustig()'));
+  // jsdom zet bij postMessage geen origin; de echte browser wel. Daarom het bericht zelf
+  // afvuren zoals de browser het aflevert. Een bericht van een ander domein telt niet.
+  w.dispatchEvent(new w.MessageEvent('message', {data:{storvo:'online-klaar'}, origin:'https://kwaad.example'}));
+  ok('online zetten: bericht van een ander domein doet niets', !!d.getElementById('hwOnlineVenster'));
+  w.dispatchEvent(new w.MessageEvent('message', {data:{storvo:'online-klaar', melding:{tekst:'Opgeslagen', soort:true}}, origin:'https://storvo.app'}));
+  await new Promise(r=>setTimeout(r,50));
+  ok('online zetten: klaar sluit het venster', !d.getElementById('hwOnlineVenster'));
+  w.eval("abonnement={modules:[]}");
+  ok('online zetten: zonder refurbish-module geen venster', !w.eval('hwOnlinePaginaMag()'));
+  w.eval("abonnement={modules:['refurbish']}; hwData=[]; showTab('dashboard')");
+
   // Webshop en labelprinter zijn koppelingen, geen modules.
   ok('webshop en labelprinter zijn geen module', w.eval("!MODULES.some(m=>m.id==='webshop'||m.id==='labelprinter')"));
   w.eval("showTab('dashboard')");

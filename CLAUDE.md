@@ -187,6 +187,14 @@ De grens ligt op één moment: **zodra een toestel de controle heeft gehaald.**
 Wat er over de grens gaat is weinig: een goedgekeurd toestel wordt een rij in
 `hardware`, en verkocht in de winkelapp geeft een seintje terug.
 
+Andersom: een toestel dat je in de winkelapp **los toevoegt** (zonder werkbank)
+krijgt via de functie `koppel_losse_hardware()` ook een rij in
+`refurbish_apparaten` (status `klaar`, stap `los`, met een A-nummer). Zo staat
+het in de Voorraad van het refurbish-deel en kan het online. Er is maar één pagina
+Online zetten: die van het refurbish-deel. De winkelapp opent hem als venster
+(iframe `/refurbish/?online=<id>&ingebed=1`); klaar of terug stuurt een
+`postMessage` en de winkelapp sluit het venster. Bouw geen tweede online-pagina.
+
 ---
 
 ## Documenten

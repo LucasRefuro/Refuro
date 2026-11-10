@@ -38,6 +38,12 @@
    hidden gewoon staan zodra er ergens display:flex op staat, en dat is precies
    wat er misging: het slotscherm lag als lege witte kaart over de hele app. */
 [hidden]{display:none !important;}
+/* Ingebed in de winkelapp (Online zetten als venster over Hardware): alleen de pagina,
+   zonder eigen zijbalk en zoekbalk. Tot de pagina open is niets tonen, anders zie je
+   heel even de werkbank. */
+body.ingebed aside, body.ingebed .topbar, body.ingebed .menuknop{display:none !important;}
+body.ingebed main{margin-left:0;}
+body.ingebed:not(.ingebedklaar) main{visibility:hidden;}
 html{overflow-x:clip;}
 body{font-family:'Instrument Sans',system-ui,sans-serif; font-size:15px; color:var(--tekst);
   background:var(--bg); line-height:1.6; overflow-x:clip; max-width:100vw;}
@@ -1496,7 +1502,9 @@ const DEEL_STATUS={voorraad:'Op de plank', gebruikt:'Gebruikt', te_bestellen:'Te
    over jouw eigen plek in het scherm, op deze computer. */
 function sessieSleutel(){ return 'refu_sessie_'+((account&&account.team_id)||'x'); }
 function sessieBewaar(){
-  if(!account) return;
+  /* In het venster in de winkelapp niets onthouden: anders opent het refurbish-deel de
+     volgende keer op Online zetten zonder toestel. */
+  if(!account || INGEBED) return;
   try{
     /* Bij een open reparatie of apparaatpagina ook welk toestel, anders landt een
        herlaad op een leeg scherm. */
@@ -1663,6 +1671,10 @@ function merkTekenen(){
 }
 
 async function allesLaden(){
+  /* Toestellen die in de winkelapp los zijn toegevoegd krijgen hier hun werkbank-rij
+     (status klaar, stap 'los'), zodat ze in de Voorraad staan en online kunnen. Zie
+     de migratie koppel_losse_hardware. Lukt het niet, dan gewoon verder laden. */
+  try{ await sb.rpc('koppel_losse_hardware'); }catch(_e){}
   const [a,o,c,r,m,i,h,bt,vd,vb]=await Promise.all([
     sb.from('refurbish_apparaten').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_onderdelen').select('*').order('aangemaakt_op',{ascending:false}).limit(1000),
@@ -1670,7 +1682,7 @@ async function allesLaden(){
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
     sb.from('refurbish_instellingen').select('*').maybeSingle(),
-    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,inkoop,marge,partner_id')
+    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,omschrijving,garantie,fotos,inkoop,marge,partner_id')
       .order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('refurbish_voorraad').select('*').order('naam'),
@@ -1707,6 +1719,10 @@ async function allesLaden(){
    ook diep in een reparatie ziet waar je bent. */
 const TAB_OUDER={repareren:'reparatie', controleren:'controle', online:'voorraad'};
 function showTab(t){
+  /* Ingebed in de winkelapp is er maar één pagina. Elke weg eruit (Terug, de kruimel,
+     na het publiceren) sluit het venster in de winkelapp in plaats van naar een
+     refurbish-pagina te gaan die daar niet hoort. */
+  if(INGEBED && ingebedOpen && t!=='online'){ ingebedSluit(); return; }
   /* Bestellen is een tabblad van Onderdelen geworden. Oude links, bewaarde sessies en
      de rechten (ref_bestellen) blijven werken: die landen gewoon op dat tabblad. */
   if(t==='bestellen'){ ondTab='bestellen'; t='onderdelen'; }
@@ -5889,6 +5905,17 @@ function onlineZetten(id){
        prijs:null, nieuwprijs:a.nieuwprijs!=null?a.nieuwprijs:null,
        prijsBron:'', staat:a.grade||'B', garantie:6, marge:margeVan(a),
        kanalen:{webshop:true, winkel:true, marktplaats:false}, gevonden:[], fotos:[]};
+  /* Los toegevoegd in de winkel (stap 'los'): wat daar al is ingevuld gaat voor. Vooral
+     de garantie: die kies je bij los toevoegen bewust (standaard 24), en de advertentie
+     van het model mag die niet stil terugzetten. */
+  const hw=hardwareVan(a);
+  if(a.stap==='los' && hw){
+    if(hw.verkoop!=null) onl.prijs=Number(hw.verkoop);
+    if(hw.titel) onl.titel=hw.titel;
+    if(hw.omschrijving) onl.tekst=hw.omschrijving;
+    if(hw.garantie!=null){ onl.garantie=Number(hw.garantie); onl.eigenGarantie=true; }
+  }
+  if(INGEBED){ ingebedOpen=true; document.body.classList.add('ingebedklaar'); }
   showTab('online');
   fotosLaden(a);
 }
@@ -5920,7 +5947,26 @@ function fotosInKleur(a, rijen){
 }
 
 const autoFotoGeprobeerd = new Set();
+/* Een los toestel kan in de winkelapp al foto's hebben (hardware.fotos, in dezelfde opslag).
+   Die zetten we als losse foto's bij dit toestel. Anders kent de online-pagina ze niet, en
+   zou publiceren ze stil van de hardware-rij afhalen (die krijgt de foto's van hier). Op
+   pad vergeleken, dus nooit dubbel; een foto van buiten de opslag laten we staan. */
+async function fotosVanWinkel(a){
+  const hw=hardwareVan(a);
+  const paden=((hw && Array.isArray(hw.fotos)) ? hw.fotos : [])
+    .map(u=>{ const m=String(u||'').match(/\/refurbish-fotos\/([^?]+)/); return m ? decodeURIComponent(m[1]) : null; })
+    .filter(Boolean);
+  if(!paden.length) return;
+  const {data:er}=await sb.from('refurbish_fotos').select('pad').eq('apparaat_id', a.id);
+  const al=new Set((er||[]).map(f=>f.pad));
+  const nieuw=paden.filter(p=>!al.has(p)).map((pad,i)=>({team_id:account.team_id, apparaat_id:a.id,
+    aanzicht:'overig', pad, volgorde:100+i, hoofd:false}));
+  if(!nieuw.length) return;
+  const {error}=await sb.from('refurbish_fotos').insert(nieuw);
+  if(error) console.error('foto\'s uit de winkel overnemen:', error);
+}
 async function fotosLaden(a, geenAuto){
+  if(a.stap==='los'){ try{ await fotosVanWinkel(a); }catch(e){ console.error(e); } }
   /* De modelnaam gaat in een PostgREST .or()-filter; daar zijn komma's scheidingstekens
      en haakjes groeperingstekens. Modelnamen als 'MacBook Pro (Retina, 15-inch, 2015)'
      braken de query anders. Quoten leest de waarde letterlijk; zonder model laten we
@@ -5975,7 +6021,7 @@ async function fotosLaden(a, geenAuto){
       if(!onl.tekst && tekst) onl.tekst=tekst;
       if((!onl.zoekwoorden||!onl.zoekwoorden.length) && zoek.length) onl.zoekwoorden=zoek;
       if(onl.nieuwprijs==null && nwp!=null) onl.nieuwprijs=nwp;
-      if(gar!=null) onl.garantie=gar;
+      if(gar!=null && !onl.eigenGarantie) onl.garantie=gar;
       /* Vraagprijs = de grade-prijs die bij dit exemplaar hoort (de grade die je hebt). */
       if(onl.prijs==null && onl.gradePrijzen){
         const gl=(onl.staat||a.grade||'B').toUpperCase();
@@ -6782,6 +6828,7 @@ async function onlPubliceren(knop){
         if(!res.ok||!uit.ok) throw new Error(uit.error||'Shopify gaf een fout');
         webshop=' · staat op de webshop';
       }catch(e){
+        ingebedMelding={tekst:'Opgeslagen, maar de webshop lukte niet: '+e.message, soort:'let-op'};
         await allesLaden(); showTab('voorraad');
         toast('Opgeslagen, maar de webshop lukte niet: '+e.message,'let-op');
         onl=null; return;
@@ -6789,6 +6836,7 @@ async function onlPubliceren(knop){
     }
 
     onl=null;
+    ingebedMelding={tekst:'Opgeslagen'+webshop, soort:true};
     await allesLaden();
     showTab('voorraad');
     toast('Opgeslagen'+webshop, true);
@@ -10425,6 +10473,19 @@ async function vbAfhalenVanRest(a){
   }catch(e){ console.error('van de rest afhalen', e); return false; }
 }
 
+/* ═══ Ingebed in de winkelapp ═══
+   De winkelapp opent Online zetten in een venster (iframe) over de hardwarepagina, met
+   ?online=<id>&ingebed=1. Zo is er één online-pagina en niet twee die uit elkaar lopen.
+   Klaar of terug: we sturen een bericht naar de winkelapp en die sluit het venster. */
+/* var, geen const/let: showTab en sessieBewaar lezen dit en staan hoger in het script. */
+var INGEBED = new URLSearchParams(location.search).get('ingebed')==='1' && window.parent!==window;
+var ingebedOpen=false, ingebedMelding=null;
+if(INGEBED) document.body.classList.add('ingebed');
+function ingebedSluit(){
+  try{ window.parent.postMessage({storvo:'online-klaar', melding:ingebedMelding}, location.origin); }catch(_e){}
+  ingebedMelding=null;
+}
+
 /* Een gescand label opent meteen het juiste apparaat. */
 function uitAdres(){
   const p=new URLSearchParams(location.search);
@@ -10436,6 +10497,14 @@ function uitAdres(){
   if(batchId && batches.find(x=>x.id===batchId)){ showTab('batches'); batOpen(batchId); return; }  // batch-sticker
   const ond=p.get('onderdeel');
   if(ond && voorraaddelen.find(x=>x.id===ond)){ vrdGebruik(ond); return; }   // onderdeel-sticker: gebruik er een
+  /* Online zetten vanuit de winkelapp: ?online= met het id van het toestel (werkbank)
+     of van de hardware-rij. Ingebed is dat het enige wat deze pagina doet. */
+  const on=p.get('online');
+  if(on){
+    const a=apparaten.find(x=>x.id===on || x.hardware_id===on);
+    if(a){ onlineZetten(a.id); return; }
+    if(INGEBED){ ingebedMelding={tekst:'Dit toestel staat niet in de voorraad.', soort:'let-op'}; ingebedSluit(); return; }
+  }
   const id=p.get('apparaat');
   if(!id) return;
   const a=apparaten.find(x=>x.id===id);

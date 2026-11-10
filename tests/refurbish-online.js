@@ -221,6 +221,39 @@ setTimeout(async()=>{
   ok('meteen in de voorraad', hw3[2].status==='voorraad');
   ok('op de plek waar hij al lag', hw3[2].locatie_id==='l1');
 
+  // ── los toegevoegd in de winkel (stap 'los'): wat daar is ingevuld gaat voor ──
+  // De garantie koos je bij los toevoegen bewust; de advertentie van het model (hier
+  // met 12 maanden) mag die niet stil terugzetten.
+  w.__db.webshop_grade_prijzen={garantie:12, titel:'Oude modeltitel', tekst:'Oude tekst'};
+  w.eval(`apparaten.push({id:'a9', team_id:'t1', code:'A0009', merk:'Dell', model:'Latitude 5430', categorie:'Laptop',
+      specs:{}, status:'klaar', stap:'los', grade:'B', hardware_id:'hw9', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()});
+    hardwares.push({id:'hw9', status:'voorraad', kanalen:{}, verkoop:449, titel:'Dell Latitude 5430', omschrijving:'Nette laptop', garantie:24});
+    onlineZetten('a9')`);
+  await new Promise(r=>setTimeout(r,60));
+  ok('los toestel: eigen garantie blijft staan', w.eval('onl.garantie')===24);
+  ok('los toestel: eigen prijs en tekst', w.eval('onl.prijs')===449 && w.eval('onl.titel')==='Dell Latitude 5430' && w.eval('onl.tekst')==='Nette laptop');
+  // Foto's die in de winkelapp al bij het toestel staan, komen mee naar de online-pagina.
+  w.__geschreven.length=0;
+  w.eval("hardwares.find(h=>h.id==='hw9').fotos=['https://x.supabase.co/storage/v1/object/public/refurbish-fotos/t1/hardware/hw9/1-0.jpg','https://elders.nl/foto.jpg']");
+  await w.eval("fotosVanWinkel(apparaten.find(a=>a.id==='a9'))");
+  const fi=w.__geschreven.find(g=>g[0]==='refurbish_fotos' && g[1]==='insert');
+  ok('los toestel: winkelfoto komt mee als foto van dit toestel', !!fi && fi[2].length===1 && fi[2][0].pad==='t1/hardware/hw9/1-0.jpg' && fi[2][0].apparaat_id==='a9');
+  delete w.__db.webshop_grade_prijzen;
+
+  // ── openen vanuit de winkelapp: ?online= met het id van de hardware-rij ──
+  w.eval("onl=null; showTab('voorraad'); history.replaceState(null,'','/refurbish/?online=hw9'); uitAdres()");
+  await new Promise(r=>setTimeout(r,30));
+  ok('?online= opent de online-pagina van dat toestel', w.eval('tab')==='online' && w.eval('onl && onl.a.id')==='a9');
+
+  // ── ingebed in de winkelapp: weg van de pagina sluit het venster, met de melding ──
+  const berichten=[]; w.addEventListener('message', e=>berichten.push(e.data));
+  w.eval("INGEBED=true; ingebedOpen=true; ingebedMelding={tekst:'Opgeslagen', soort:true}; showTab('voorraad')");
+  await new Promise(r=>setTimeout(r,30));
+  ok('ingebed: terug sluit het venster in de winkelapp', berichten.some(b=>b && b.storvo==='online-klaar' && b.melding && b.melding.tekst==='Opgeslagen'));
+  ok('ingebed: gaat niet naar een andere refurbish-pagina', w.eval('tab')==='online');
+  w.eval('INGEBED=false; ingebedOpen=false');
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);
 },450);

@@ -2185,6 +2185,10 @@
      bovenin het Meer-vel. De abobalk blijft bovenin: die gaat over betalen. */
   .zijmeldingen{display:flex; flex-direction:column; gap:8px; padding:0 2px 12px;}
   .zijmeldingen:empty{display:none;}
+  /* Online zetten als venster: de hele pagina, de refurbish-pagina erin. */
+  .overlay.hwonlinevenster{padding:0; background:var(--bg); flex-direction:column; align-items:stretch; justify-content:flex-start; backdrop-filter:none; -webkit-backdrop-filter:none; overflow:hidden; z-index:300;}
+  .hwonlinekop{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; border-bottom:1.5px solid var(--border); background:var(--card);}
+  .hwonlineframe{flex:1; width:100%; border:0; background:var(--bg);}
   .zijmelding{background:var(--amber-soft); color:var(--amber-tekst); border:1.5px solid #F0D9A8; border-radius:14px;
     padding:10px 12px; font-size:12.5px; line-height:1.4; box-shadow:0 4px 14px rgba(23,32,30,.08); animation:zmIn .2s ease;}
   .zijmelding.groen{background:var(--green-soft); color:var(--green-tekst); border-color:rgba(30,158,106,.28);}
@@ -14641,9 +14645,11 @@ function hwOnlineMenu(ev, id){
   const h=hwData.find(x=>x.id===id); if(!h) return;
   const k=h.kanalen||{}, op=hwOnline(h);
   const eig=!!(account && account.rol==='eigenaar') && mag('partners') && !h.partner_id;
+  const pag=hwOnlinePaginaMag();
   toonRijMenu(ev, [
+    {ico:'i-camera', label:"Foto's, tekst en prijs", fn:()=>hwOnlinePagina(id), verborgen:!pag},
     {kop:'Waar staat hij te koop?'},
-    {ico:'i-shop', label:'Webshop', vink:op, fn:()=> op ? hwWebshopUit(id) : hwOnlineSnel(id, null)},
+    {ico:'i-shop', label:'Webshop', vink:op, fn:()=> op ? hwWebshopUit(id) : (pag ? hwOnlinePagina(id) : hwOnlineSnel(id, null))},
     {ico:'i-link', label:'Bekijken op de webshop', fn:()=>window.open(k.shopify.url,'_blank','noopener'), verborgen:!(op && k.shopify && k.shopify.url)},
     {ico:'i-tag', label:'Marktplaats', vink:!!k.marktplaats, fn:()=>hwKanaalZet(id,'marktplaats',!k.marktplaats)},
     {ico:'i-clipboard', label:'Tekst kopiëren voor Marktplaats', fn:()=>hwKopieerVan(id)},
@@ -14678,6 +14684,48 @@ function hwKopieerVan(id){
   try{ navigator.clipboard.writeText(tekst); toast('Gekopieerd, plak het in je advertentie', true); }
   catch(e){ toast('Kopiëren lukte niet','fout'); }
 }
+/* ═══ Online zetten als venster ═══
+   De pagina Online zetten (foto's per aanzicht, scherm recht, achtergrond, fabrieksfoto's,
+   tekst, prijs, grade) staat in het refurbish-deel. In plaats van een tweede versie te
+   bouwen die uit elkaar gaat lopen, openen we die pagina hier in een venster over de
+   hardwarepagina (iframe, zelfde domein, dus je bent er al ingelogd). Klaar of terug:
+   het venster stuurt een bericht en wij sluiten het. Een los toegevoegd toestel krijgt
+   eerst zijn werkbank-rij, anders kent de pagina hem niet. Alleen met de refurbish-
+   module en toegang daartoe; zonder blijft het menu zoals het was. */
+function hwOnlinePaginaMag(){
+  const envOk = (typeof gebruiker==='undefined' || !gebruiker) ? true : heeftOmgeving(gebruiker,'refurbish');
+  return moduleAan('refurbish') && envOk;
+}
+async function hwOnlinePagina(id){
+  const h=hwData.find(x=>x.id===id) || (hwOpen&&hwOpen.id===id?hwOpen:null);
+  if(!hwOnlinePaginaMag()){ hwBewerk(id); return; }
+  if(hwDirty || _vuil){ try{ await hwStilBewaar(); }catch(_e){} }
+  try{ await sb.rpc('koppel_losse_hardware'); }catch(_e){}
+  hwOnlineSluit(null, true);
+  const v=document.createElement('div');
+  v.className='overlay hwonlinevenster'; v.id='hwOnlineVenster';
+  v.setAttribute('role','dialog'); v.setAttribute('aria-label','Online zetten');
+  v.innerHTML=`<div class="hwonlinekop">
+      <b>Online zetten${h?' · '+esc([h.merk,h.model].filter(Boolean).join(' ')):''}</b>
+      <button type="button" class="btn ghost small" onclick="hwOnlineSluit()">Sluiten</button>
+    </div>
+    <iframe class="hwonlineframe" title="Online zetten" src="/refurbish/?online=${encodeURIComponent(id)}&ingebed=1"></iframe>`;
+  document.body.appendChild(v);
+  document.body.style.overflow='hidden';
+}
+function hwOnlineSluit(melding, stil){
+  const v=document.getElementById('hwOnlineVenster'); if(!v) return;
+  v.remove();
+  document.body.style.overflow='';
+  if(stil) return;
+  if(melding && melding.tekst) toast(melding.tekst, melding.soort===true ? true : melding.soort);
+  hwLaad(true).then(()=>{ if(hwOpen && hwOpen.id){ const n=hwData.find(x=>x.id===hwOpen.id); if(n) hwVenster(n); } });
+}
+addEventListener('message', e=>{
+  if(e.origin!==location.origin || !e.data || e.data.storvo!=='online-klaar') return;
+  hwOnlineSluit(e.data.melding||null);
+});
+
 /* Snel online zetten vanuit de lijst. Nog geen vraagprijs? Dan eerst de detailpagina
    openen om die in te vullen, in plaats van een foutmelding. */
 function hwOnlineSnel(id, knop){
@@ -14919,6 +14967,8 @@ function hwVenster(h){
     <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center; margin:4px 0 18px">
       ${h&&h.status!=='verkocht'
         ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
+      ${h&&h.status!=='verkocht'&&hwOnlinePaginaMag()
+        ? `<button class="btn" onclick="hwOnlinePagina('${h.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`:''}
       ${h?'':`<button class="btn actie" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Toestel opslaan</button>`}
       ${h?`<button class="btn ghost" onclick="hwPrijskaart('${h.id}')"><svg class="i s"><use href="#i-tag"/></svg>Prijskaartje printen</button>`:''}
       ${h?`<button class="btn ghost" onclick="hwDetailMenu(event,'${h.id}')" aria-label="Meer acties"><svg class="i s"><use href="#i-more"/></svg>Meer</button>`:''}
@@ -15362,6 +15412,13 @@ async function hwStilBewaar(){
   if(!hwVeld('hw_model')) return {error:null};        // model verplicht; nog niet compleet
   const rij=hwFormRij();
   const oudMarge=hwOpen.marge, oudPlek=hwOpen.plek, id=hwOpen.id;
+  /* Wat je hier aanpast en ook op de werkbank-rij staat, gaat daar mee naartoe: de
+     pagina Online zetten leest merk, model, grade, accu en doos van die rij. Alleen wat
+     echt veranderde, zodat een controle-uitslag niet stil wordt overschreven. */
+  const SPIEGEL={merk:'merk', model:'model', serienummer:'serienummer', categorie:'categorie',
+    staat:'grade', accu:'accu', nieuwe_accu:'nieuwe_accu', doos:'doos'};
+  const spiegel={};
+  Object.keys(SPIEGEL).forEach(k=>{ if(rij[k]!==undefined && (rij[k]??null)!==(hwOpen[k]??null)) spiegel[SPIEGEL[k]]=rij[k]; });
   Object.assign(hwOpen, rij);
   const inHw=hwData.find(x=>x.id===id); if(inHw && inHw!==hwOpen) Object.assign(inHw, rij);
   const {error}=await sb.from('hardware').update(rij).eq('id',id);
@@ -15372,9 +15429,9 @@ async function hwStilBewaar(){
        refurbish-label lezen die rij. Dit deed eerst alleen de Opslaan-knop, dus wie
        een veld wijzigde en gewoon terugging, had stilletjes twee verschillende
        waarden. Nu het automatisch opslaan het enige pad is, hoort het hier. */
-    if(rij.marge!==oudMarge || rij.plek!==oudPlek){
+    if(rij.marge!==oudMarge || rij.plek!==oudPlek || Object.keys(spiegel).length){
       const {error:sErr}=await sb.from('refurbish_apparaten')
-        .update({marge:rij.marge, plek:rij.plek, bijgewerkt_op:new Date().toISOString()})
+        .update(Object.assign({marge:rij.marge, plek:rij.plek}, spiegel, {bijgewerkt_op:new Date().toISOString()}))
         .eq('hardware_id', id);
       if(sErr) console.error('refurbish marge/plek syncen:', sErr);
     }
@@ -15400,6 +15457,10 @@ async function hwOpslaan(knop){
     rij.team_id=account.team_id;
     rij.aangemaakt_door=(account&&account.id)||null;
     const {error}=await sb.from('hardware').insert(rij); fout=error;
+    /* Meteen ook in het refurbish-deel (Voorraad, Online zetten), met een A-nummer.
+       Zie de migratie koppel_losse_hardware. Lukt dat niet, dan doet de refurbish-app
+       het bij het laden alsnog. */
+    if(!fout){ try{ await sb.rpc('koppel_losse_hardware'); }catch(_e){} }
   }
   if(knop){ knop.disabled=false; knop.textContent=oud; }
   if(fout){ console.error('hardware opslaan:',fout); toast('Opslaan mislukt','fout'); return; }

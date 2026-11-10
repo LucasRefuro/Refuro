@@ -28,6 +28,27 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       computer bekijken. De app is te groot voor het voorbeeldvenster; alles is in jsdom
       gecontroleerd.
 
+## Hardware los toevoegen en online zetten vanuit de winkel (10 november 2026)
+
+- [x] **Winkelapp ververst zichzelf** bij een nieuwe versie (7c64dd2). Op een rustig moment,
+      anders een kaartje in de zijbalk. Eén keer Cmd+R op elke Mac die nog de oude versie had.
+- [x] **Los toevoegen:** standaard 24 maanden garantie, vinkje Doos erbij, accuconditie en
+      Nieuwe accu (b393d37). Nieuwe kolom `hardware.doos` (migratie gedraaid).
+- [x] **Los toegevoegd staat ook in het refurbish-deel.** Functie `koppel_losse_hardware()`
+      (migratie gedraaid) maakt een werkbank-rij met A-nummer, stap `los`. Beide apps roepen
+      hem aan. Wat je in de winkelapp aanpast (model, grade, accu, doos) gaat mee.
+- [x] **Online zetten in de winkelapp:** knop op de hardwarepagina en in het Online-menu
+      opent de refurbish-pagina als venster. Een los toestel neemt zijn eigen garantie,
+      prijs, tekst en foto's mee.
+- [ ] **Uitrollen (jouw akkoord): edge `shopify`.** Zonder deze komt de accu van een los
+      toestel niet op de productpagina (wel per grade). Code staat klaar (b393d37).
+- [ ] **Kiezen:** garantie van de werkbank naar de voorraad staat nog op 12 maanden, de online-
+      pagina begint op 6. De webshop zegt 24. Alles naar 24?
+- [ ] **Eigenaar: één los toestel echt online zetten** vanuit de winkelapp en kijken of het
+      goed op refuro.nl staat.
+
+---
+
 ## Inkoopregister, DOR en de telefoon (3 november 2026)
 
 Alles staat in `INKOOP-DOR-STAPPENPLAN.md`, met de bronnen.
