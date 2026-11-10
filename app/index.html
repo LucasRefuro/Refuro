@@ -15069,15 +15069,18 @@ function hwVenster(h){
     <div class="card breed">
       <h2><svg class="i"><use href="#i-laptop"/></svg>Gegevens</h2>
       <div class="grid">
-        <div><label>Merk</label><input id="hw_merk" value="${esc((h&&h.merk)||'')}" placeholder="Dell"></div>
-        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430"></div>
+        <div><label>Merk</label>${hwMerkKiezer((h&&h.merk)||'')}</div>
+        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430" onchange="hwKleurenLaden()"></div>
         <div><label>Staat</label><select id="hw_staat">
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
         </select></div>
         <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
         <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
-        <div id="hw_kleur_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Kleur</label><input id="hw_kleur" value="${esc((h&&h.specs&&h.specs.Kleur)||'')}" placeholder="Bijvoorbeeld Zwart"></div>
+        <div id="hw_kleur_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Kleur</label>
+          <select id="hw_kleur_kies" onchange="hwKleurKies()" hidden></select>
+          <input id="hw_kleur" value="${esc((h&&h.specs&&h.specs.Kleur)||'')}" placeholder="Bijvoorbeeld Zwart">
+          <span class="muted klein" id="hw_kleur_bezig"></span></div>
         <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
       </div>
       <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
@@ -15171,6 +15174,7 @@ function hwVenster(h){
      knop. Op de container (dedupt zichzelf bij herhaald openen, want hwStilPlan is een
      vaste functie-referentie). */
   d.addEventListener('change', hwStilPlan);
+  hwKleurenLaden();
   if(h) hwHistorieLaden(h.id);
 }
 function hwDetailMenu(ev, id){
@@ -15456,6 +15460,85 @@ function hwAccuVelden(){
 function hwKleurTelt(cat){ return /telefoon|tablet/i.test(String(cat||'')); }
 function hwKleurToon(){
   const vak=document.getElementById('hw_kleur_vak'); if(vak) vak.hidden=!hwKleurTelt(hwVeld('hw_cat'));
+  hwKleurenLaden();
+}
+
+/* ═══ Merk en kleur kiezen ═══
+   Het merk kies je uit een lijst (Ander merk: zelf typen). De kleur van een telefoon of
+   tablet kies je uit de kleuren die van dat model echt bestaan, met de naam die de
+   fabrikant gebruikt. Zo hoef je niet zelf op te zoeken of het "Zwart" of "Onyx Black"
+   heet, en vindt het ophalen van de fabrieksfoto's de goede set. De kleuren komen van de
+   edge-functie model-kleuren (gedeelde lijst, anders één keer opgezocht). Lukt dat niet,
+   dan typ je de kleur gewoon zelf, zoals eerst.
+   Het tekstveld hw_merk / hw_kleur blijft de waarde dragen; de keuzelijst zet hem daarin.
+   Zo leest de rest (opslaan, foto's ophalen) nog steeds gewoon dat veld. */
+const HW_MERKEN=['Apple','Samsung','Google','OnePlus','Xiaomi','Oppo','Motorola','Nothing','Fairphone','Sony','Huawei','Nokia',
+  'HP','Dell','Lenovo','Asus','Acer','Microsoft','MSI','Toshiba','Fujitsu','Medion','Razer','LG','Philips','BenQ'];
+function hwMerkKiezer(merk){
+  const bekend=HW_MERKEN.find(m=>m.toLowerCase()===String(merk||'').trim().toLowerCase())||'';
+  const anders=!!String(merk||'').trim() && !bekend;
+  return `<select id="hw_merk_kies" onchange="hwMerkKies()">
+      <option value="">Kies een merk</option>
+      ${HW_MERKEN.map(m=>`<option${m===bekend?' selected':''}>${esc(m)}</option>`).join('')}
+      <option value="__anders"${anders?' selected':''}>Ander merk</option>
+    </select>
+    <input id="hw_merk" value="${esc(bekend||merk||'')}" placeholder="Typ het merk" style="margin-top:8px"${anders?'':' hidden'} onchange="hwKleurenLaden()">`;
+}
+function hwMerkKies(){
+  const sel=document.getElementById('hw_merk_kies'), veld=document.getElementById('hw_merk');
+  if(!sel || !veld) return;
+  if(sel.value==='__anders'){
+    veld.hidden=false;
+    if(HW_MERKEN.includes(veld.value)) veld.value='';
+    veld.focus();
+  } else {
+    veld.hidden=true; veld.value=sel.value;
+  }
+  hwKleurenLaden();
+}
+const hwKleurCache={};
+let hwKleurVraag=0;
+async function hwKleurenLaden(){
+  const vak=document.getElementById('hw_kleur_vak'), sel=document.getElementById('hw_kleur_kies'),
+        veld=document.getElementById('hw_kleur'), bezig=document.getElementById('hw_kleur_bezig');
+  if(!vak || !sel || !veld || vak.hidden) return;
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
+  const mijn=++hwKleurVraag;
+  const toon=(lijst)=>{
+    if(mijn!==hwKleurVraag) return;                       // intussen een ander model gekozen
+    if(bezig) bezig.textContent='';
+    if(!lijst || !lijst.length){ sel.hidden=true; veld.hidden=false; return; }
+    const nu=veld.value.trim();
+    const raak=lijst.find(k=>k.toLowerCase()===nu.toLowerCase());
+    const eigen=!!nu && !raak;
+    sel.innerHTML=`<option value="">Kies een kleur</option>`+
+      lijst.map(k=>`<option${k===raak?' selected':''}>${esc(k)}</option>`).join('')+
+      `<option value="__anders"${eigen?' selected':''}>Andere kleur</option>`;
+    if(raak) veld.value=raak;
+    sel.hidden=false; veld.hidden=!eigen;
+  };
+  if(!merk || !model){ toon(null); return; }
+  const sleutel=(merk+'|'+model).toLowerCase();
+  if(hwKleurCache[sleutel]){ toon(hwKleurCache[sleutel]); return; }
+  if(bezig) bezig.textContent='Kleuren van dit model ophalen…';
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/model-kleuren',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+      body:JSON.stringify({merk, model, categorie:hwVeld('hw_cat')||'Telefoon'})
+    });
+    const uit=await res.json().catch(()=>({}));
+    const lijst=(res.ok && uit.ok && Array.isArray(uit.kleuren)) ? uit.kleuren : [];
+    if(lijst.length) hwKleurCache[sleutel]=lijst;
+    toon(lijst);
+  }catch(e){ toon(null); }
+}
+function hwKleurKies(){
+  const sel=document.getElementById('hw_kleur_kies'), veld=document.getElementById('hw_kleur');
+  if(!sel || !veld) return;
+  if(sel.value==='__anders'){ veld.hidden=false; veld.value=''; veld.focus(); }
+  else { veld.hidden=true; veld.value=sel.value; }
 }
 /* Alleen specs meesturen als de kleur echt veranderde. Anders schreef elke automatische
    opslag de hele specs terug, ook als de werkbank ze intussen had bijgewerkt. Bij een laptop

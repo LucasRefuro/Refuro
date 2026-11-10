@@ -38,6 +38,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
 | `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |
+| `model-kleuren` | nee | Welke kleuren er van een telefoonmodel bestaan, eerst in de gedeelde tabel `model_kleuren`, dan met Claude (`claude-opus-5-5`, officiële SDK, fallback bij weigering); vult de kleurkeuze in winkelapp en werkbank |
 | `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
 | `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
 | `refurbish-test` | ja | Neemt de functionele testuitslag aan van de telefoon, op dezelfde code-aanpak |

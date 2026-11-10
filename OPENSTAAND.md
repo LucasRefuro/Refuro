@@ -48,6 +48,11 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       (edge `webshop2-webhook`) bewust op 12 gelaten.
 - [ ] **Eigenaar: één los toestel echt online zetten** vanuit de winkelapp en kijken of het
       goed op refuro.nl staat.
+- [x] **Merk en kleur kiezen** (10 nov). Merk uit een lijst (Ander merk: typen). Kleur van een
+      telefoon of tablet uit de kleuren die van dat model bestaan (winkelapp: keuzelijst;
+      werkbank toevoegen en Online zetten: knoppen). Tabel `model_kleuren` (migratie gedraaid).
+- [ ] **Uitrollen (jouw akkoord): edge `model-kleuren`.** Nieuwe functie, code staat klaar.
+      Zonder deze verschijnen er geen kleuren en typ je de kleur zoals eerst.
 
 ---
 

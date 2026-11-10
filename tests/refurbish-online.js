@@ -243,6 +243,15 @@ setTimeout(async()=>{
   delete w.__db.webshop_grade_prijzen;
 
   // ── een Galaxy zonder kleur: de kleur hier invullen en meteen de foto's ophalen ──
+  const echteFetchTest=w.fetch;
+  w.fetch=async(u,o)=> String(u).includes('/model-kleuren')
+    ? {ok:true, json:async()=>({ok:true, kleuren:['Onyx Black','Marble Grey']})}
+    : echteFetchTest(u,o);
+  // Ook bij toevoegen: telefoon, merk en model, dan de kleuren als knoppen.
+  w.eval("soortKies('Telefoon'); document.getElementById('t_model').value='Samsung Galaxy S24'; kleurToevoegen()");
+  await new Promise(r=>setTimeout(r,30));
+  ok('toevoegen: kleuren van het model als knoppen', d().querySelectorAll('#t_kleur_keus .optieknop').length===2);
+  w.eval("document.getElementById('t_model').value=''; document.getElementById('t_kleur').value=''; soortKies('Laptop')");
   w.eval(`apparaten.push({id:'a10', team_id:'t1', code:'A0010', merk:'Samsung', model:'Galaxy S24', categorie:'Telefoon',
       specs:{}, status:'klaar', stap:'los', grade:'B', hardware_id:'hw10', checklist:[], defecten:[], goede_delen:[],
       aangemaakt_op:new Date().toISOString()});
@@ -251,6 +260,12 @@ setTimeout(async()=>{
     onlineZetten('a10')`);
   await new Promise(r=>setTimeout(r,80));
   ok('kleur ontbreekt: veld om hem in te vullen', !!d().getElementById('onl_kleur'));
+  // De kleuren van het model als knoppen: één tik vult het veld.
+  await new Promise(r=>setTimeout(r,30));
+  const knoppen=[...d().querySelectorAll('#onl_kleur_keus .optieknop')];
+  ok('kleur: knoppen met de kleuren van het model', knoppen.length===2 && /Marble Grey/.test(knoppen[1].textContent));
+  knoppen[1].click();
+  ok('kleur: tikken vult het veld', d().getElementById('onl_kleur').value==='Marble Grey' && knoppen[1].classList.contains('aan'));
   d().getElementById('onl_kleur').value='Zwart';
   w.__geschreven.length=0; w.__fetches.length=0;
   await w.eval("onlKleurZet(document.querySelector('#onl_kleur + button'))");
@@ -260,6 +275,7 @@ setTimeout(async()=>{
   const pf=w.__fetches.find(f=>f[0].includes('/productfotos'));
   ok('kleur: daarna meteen de foto\'s ophalen in die kleur', !!pf && JSON.parse(pf[1].body).kleur==='Zwart');
   w.eval("window.__db.refurbish_fotos=refurbish_fotos_bewaard");
+  w.fetch=echteFetchTest;
 
   // ── openen vanuit de winkelapp: ?online= met het id van de hardware-rij ──
   w.eval("onl=null; showTab('voorraad'); history.replaceState(null,'','/refurbish/?online=hw9'); uitAdres()");

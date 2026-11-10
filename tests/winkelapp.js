@@ -483,6 +483,37 @@ setTimeout(async()=>{
   ok('kleur: niet bij een laptop, en die van de werkbank blijft staan', d.getElementById('hw_kleur_vak').hidden && !('specs' in w.eval('hwFormRij()')));
   w.eval('sb.from=window.__sbFrom; hwSluit(); showTab("dashboard")');
 
+  // Merk uit een lijst, kleur uit de kleuren die van dat model bestaan.
+  w.__kleurVragen=[];
+  w.fetch=async(u,o)=>{
+    if(String(u).includes('/model-kleuren')){
+      const b=JSON.parse(o.body); w.__kleurVragen.push(b);
+      if(/kapot/i.test(b.model)) throw new Error('netwerk');
+      return {ok:true, json:async()=>({ok:true, kleuren:['Onyx Black','Marble Grey','Cobalt Violet','Amber Yellow']})};
+    }
+    return {ok:true, json:async()=>({ok:true})};
+  };
+  w.eval("hwVenster({id:'hw4', merk:'samsung', model:'Galaxy S24', categorie:'Telefoon', specs:{Kleur:'onyx black'}, fotos:[], kanalen:{}, status:'voorraad'})");
+  await new Promise(r=>setTimeout(r,30));
+  const ms=d.getElementById('hw_merk_kies'), ks=d.getElementById('hw_kleur_kies');
+  ok('merk: keuzelijst met het merk gekozen', ms && ms.value==='Samsung' && d.getElementById('hw_merk').hidden && d.getElementById('hw_merk').value==='Samsung');
+  ok('kleur: kleuren van dit model gevraagd', w.__kleurVragen.some(v=>v.merk==='Samsung' && v.model==='Galaxy S24'));
+  ok('kleur: keuzelijst met de kleuren van het model', !ks.hidden && ks.options.length===6 && /Marble Grey/.test(ks.textContent));
+  ok('kleur: eigen schrijfwijze wordt de officiële naam', ks.value==='Onyx Black' && d.getElementById('hw_kleur').value==='Onyx Black');
+  ks.value='Marble Grey'; w.eval('hwKleurKies()');
+  ok('kleur: kiezen zet hem in het toestel', w.eval('hwFormRij()').specs.Kleur==='Marble Grey');
+  ks.value='__anders'; w.eval('hwKleurKies()');
+  ok('kleur: andere kleur laat je zelf typen', !d.getElementById('hw_kleur').hidden);
+  ms.value='__anders'; w.eval('hwMerkKies()');
+  ok('merk: ander merk laat je zelf typen', !d.getElementById('hw_merk').hidden && d.getElementById('hw_merk').value==='');
+  ms.value='Apple'; w.eval('hwMerkKies()');
+  ok('merk: kiezen zet het merk', d.getElementById('hw_merk').value==='Apple' && d.getElementById('hw_merk').hidden);
+  w.eval("hwVenster({id:'hw5', merk:'Fairfoon', model:'Kapot 5', categorie:'Telefoon', specs:{Kleur:'Groen'}, fotos:[], kanalen:{}, status:'voorraad'})");
+  await new Promise(r=>setTimeout(r,30));
+  ok('merk: onbekend merk staat bij ander merk', d.getElementById('hw_merk_kies').value==='__anders' && !d.getElementById('hw_merk').hidden);
+  ok('kleur: lukt opzoeken niet, dan gewoon typen', d.getElementById('hw_kleur_kies').hidden && !d.getElementById('hw_kleur').hidden && d.getElementById('hw_kleur').value==='Groen');
+  w.eval('hwSluit(); showTab("dashboard")');
+
   // Online zetten vanuit de winkelapp: de pagina van het refurbish-deel in een venster,
   // zodat er één online-pagina is en niet twee die uit elkaar lopen.
   w.eval("abonnement={modules:['refurbish']}; hwData=[{id:'hw1', merk:'Dell', model:'Latitude 5430', status:'voorraad', kanalen:{}, fotos:[], specs:{}}]");
