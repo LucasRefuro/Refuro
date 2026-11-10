@@ -536,8 +536,11 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (jaNee(sp["Face ID"])) out.push(mfText("faceid", "Ja"));
   if (jaNee(sp["GSM-module"])) out.push(mfText("gsm", "Ja"));
 
-  const accu = refurbish?.accu;
-  if (accu != null && Number.isFinite(Number(accu))) out.push(mfInt("accu_gezondheid", Number(accu)));
+  // Via accuVan, net als per grade: de controle gaat voor, anders de accu op de hardware-
+  // rij. Eerst las dit alleen de controle, en dan kwam de accu van een los toegevoegd
+  // toestel (zonder werkbank) nooit op de webshop.
+  const accu = accuVan(h, refurbish).accu;
+  if (accu != null) out.push(mfInt("accu_gezondheid", accu));
 
   out.push(mfText("monteur", MONTEUR_TEKST));
 

@@ -14942,6 +14942,11 @@ function hwVenster(h){
         </select></div>
         <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
         <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
+        <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
+      </div>
+      <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
+        <label class="hkrij"><input type="checkbox" id="hw_doos" ${(h&&h.doos)?'checked':''}> Doos erbij</label>
+        <label class="hkrij"><input type="checkbox" id="hw_nieuweaccu" ${(h&&h.nieuwe_accu)?'checked':''} onchange="hwNieuweAccu(this)"> Nieuwe accu</label>
       </div>
       <details class="meeropties">
         <summary>Meer gegevens</summary>
@@ -14952,7 +14957,7 @@ function hwVenster(h){
               `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
           </select></div>
           <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
-          <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:12}"></div>
+          <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:24}"></div>
           <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje"></div>
           <div><label>Btw</label><select id="hw_marge">
             <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
@@ -15295,6 +15300,23 @@ async function hwHistorieLaden(id){
 }
 
 function hwVeld(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
+/* Accu en doos uit het formulier. Een nieuwe accu telt als 100%, net als aan de
+   refurbish-kant (naarVoorraad), want daar rekent de webshop mee. Geen getal is null,
+   nooit 0: een verzonnen accu op de webshop is een valse belofte. */
+function hwAccuVelden(){
+  const nieuw=!!(document.getElementById('hw_nieuweaccu')||{}).checked;
+  const n=Math.round(Number(hwVeld('hw_accu')));
+  return {
+    nieuwe_accu:nieuw,
+    accu: nieuw ? 100 : (hwVeld('hw_accu')!=='' && n>0 ? Math.min(n,100) : null),
+    doos:!!(document.getElementById('hw_doos')||{}).checked
+  };
+}
+function hwNieuweAccu(vink){
+  const v=document.getElementById('hw_accu'); if(!v) return;
+  if(vink.checked){ v.dataset.was=v.value; v.value='100'; v.disabled=true; }
+  else { v.disabled=false; v.value=v.dataset.was||''; }
+}
 function hwGetal(id){ const v=hwVeld(id); return v===''?null:Math.round(Number(v)*100)/100; }
 
 /* Leest het hardware-detailformulier uit tot een rij-object. Gedeeld door de Opslaan-
@@ -15314,6 +15336,7 @@ function hwFormRij(){
        hwMarge() dat de winst berekent. Naam gelijk aan de refurbish-kant. */
     marge: (document.getElementById('hw_marge')||{}).value!=='nee',
     plek: hwVeld('hw_plek')||null,
+    ...hwAccuVelden(),
     uitstalling: (document.getElementById('hw_uitstalling')||{}).value||null,
     titel:hwVeld('hw_titel')||null,
     omschrijving:hwVeld('hw_oms')||null,
@@ -15766,7 +15789,12 @@ function hwPrijsvoorstel(knop){
 function hwKopieer(){
   const t=hwVeld('hw_titel'), o=hwVeld('hw_oms');
   const prijs=hwGetal('hw_verkoop');
-  const tekst=[t, '', o, '', prijs!=null?'Prijs: '+euro(prijs):''].filter(x=>x!==null).join('\n');
+  const a=hwAccuVelden();
+  const extra=[a.nieuwe_accu?'Accu: nieuw':(a.accu!=null?'Accu: '+a.accu+'%':''), a.doos?'Met doos':''].filter(Boolean).join('\n');
+  const delen=[t, '', o];
+  if(extra) delen.push('', extra);
+  delen.push('', prijs!=null?'Prijs: '+euro(prijs):'');
+  const tekst=delen.join('\n');
   try{
     navigator.clipboard.writeText(tekst);
     toast('Gekopieerd, plak het in je advertentie', true);

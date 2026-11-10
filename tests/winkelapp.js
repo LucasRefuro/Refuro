@@ -425,6 +425,27 @@ setTimeout(async()=>{
   ok('versie: wel verversen op een rustig moment', w.__ververst===1);
   w.eval("versieNieuw=false; toonMeldingen()");
 
+  // Los een toestel toevoegen (zonder werkbank): standaard 24 maanden garantie, en de
+  // doos en de accu kun je meteen invullen.
+  w.eval('hwNieuw()');
+  ok('los toevoegen: standaard 24 maanden garantie', d.getElementById('hw_gar').value==='24');
+  ok('los toevoegen: vinkje voor de doos', !!d.getElementById('hw_doos'));
+  ok('los toevoegen: veld voor de accu', !!d.getElementById('hw_accu'));
+  d.getElementById('hw_accu').value='87'; d.getElementById('hw_doos').checked=true;
+  let rij=w.eval('hwFormRij()');
+  ok('los toevoegen: accu en doos gaan mee', rij.accu===87 && rij.doos===true && rij.nieuwe_accu===false && rij.garantie===24);
+  d.getElementById('hw_accu').value='';
+  ok('los toevoegen: geen accu is leeg, geen 0', w.eval('hwFormRij()').accu===null);
+  const nv=d.getElementById('hw_nieuweaccu'); nv.checked=true; w.eval('hwNieuweAccu(document.getElementById("hw_nieuweaccu"))');
+  rij=w.eval('hwFormRij()');
+  ok('los toevoegen: nieuwe accu telt als 100%', rij.accu===100 && rij.nieuwe_accu===true && d.getElementById('hw_accu').disabled);
+  nv.checked=false; w.eval('hwNieuweAccu(document.getElementById("hw_nieuweaccu"))');
+  ok('los toevoegen: nieuwe accu uit geeft het veld terug', !d.getElementById('hw_accu').disabled && w.eval('hwFormRij()').accu===null);
+  w.eval("hwVenster({id:'h-oud', model:'Latitude 5430', garantie:12, accu:91, doos:true, kanalen:{}, fotos:[], specs:{}, status:'voorraad'})");
+  ok('bestaand toestel houdt zijn eigen garantie', d.getElementById('hw_gar').value==='12');
+  ok('bestaand toestel toont accu en doos', d.getElementById('hw_accu').value==='91' && d.getElementById('hw_doos').checked);
+  w.eval('hwSluit(); showTab("dashboard")');
+
   // Webshop en labelprinter zijn koppelingen, geen modules.
   ok('webshop en labelprinter zijn geen module', w.eval("!MODULES.some(m=>m.id==='webshop'||m.id==='labelprinter')"));
   w.eval("showTab('dashboard')");

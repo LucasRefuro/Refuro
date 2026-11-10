@@ -5180,7 +5180,10 @@ async function ctrAfronden(knop){
        de uitslag van de controle staat dan al vast, en die mag niet verloren
        gaan als het aanmaken van de voorraadrij hapert. */
     let hwId=null;
-    if(status==='klaar') hwId=await naarVoorraad(Object.assign({}, a, {grade, specs, nieuwe_accu:!!ctr.nieuweAccu}));
+    /* accu en doos uit de controle meegeven: ctr.a is de rij van vóór deze controle, dus
+       zonder dit kreeg de voorraad de oude (vaak lege) accu en geen doos. */
+    if(status==='klaar') hwId=await naarVoorraad(Object.assign({}, a, {grade, specs, nieuwe_accu:!!ctr.nieuweAccu,
+      accu:Number(ctr.accu)||null, doos:!!ctr.doos}));
 
     /* Is bij de laatste stap gekozen waar hij heen moet, doe dat nu de hardware-rij
        bestaat. Aan een specifieke partner geven gaat vóór het eigen dashboard (ze
@@ -5500,6 +5503,8 @@ async function naarVoorraad(a){
     locatie_id:a.locatie_id||null,
     plek:a.plek||null,
     nieuwe_accu:!!a.nieuwe_accu,
+    // Doos erbij gaat mee, zodat de winkelapp en de verkoop het ook zien.
+    doos:!!a.doos,
     /* Accu% per exemplaar mee op de hardware-rij, zodat de webshop-push en de webhook de
        conditie per grade-front kunnen tonen/roteren zonder de werkbank-tabel te joinen.
        Nieuwe accu telt als 100%; anders de gemeten waarde (null = niet gemeten -> 'onbekend'). */

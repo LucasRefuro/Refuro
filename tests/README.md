@@ -29,6 +29,7 @@ npm test
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
 | `webshop-uitverkocht.js` | Het laatste exemplaar van een advertentie verkocht: het product blijft staan zonder voorraad (niet vermeld, of concept als je hem zelf offline haalt, of actief bij een open reservering), eerst voorraad 0 en dan de status, en dezelfde uitvoering krijgt later hetzelfde product terug |
+| `webshop-accu.js` | De accu op de productpagina, ook voor een toestel dat los is toegevoegd (controle gaat voor, anders de hardware-rij; nooit een verzonnen 0) |
 | `reservering-voorraad.js` | Een webshopreservering annuleren of laten vervallen: de voorraad van precies die grade-variant komt terug op Shopify (ook als de advertentie intussen opnieuw is aangemaakt, of op niet vermeld stond), een fout komt terug als zin in de winkelapp, en vervallen loopt elk uur vanzelf |
 | `leveranciers.js` | Dat het wachtwoord van Foneday en Mobileparts nooit in de sync, in state of in de browseropslag belandt, ook niet bij de verhuizing van een oud apparaat |
 | `mobiel.js` | De telefoon: elke tabel met drie of meer kolommen wordt een stapel kaartjes (kolomnaam op elke cel, ook bij later bijgetekende rijen), het vinkje in de kop blijft bereikbaar, en het menu is een Menu-knop met een lijst onder elkaar in plaats van een zijwaartse balk |
