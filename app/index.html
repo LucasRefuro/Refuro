@@ -15526,7 +15526,7 @@ function hwKaartData(h){
   const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?eur(Number(h.nieuwprijs)):null;
   const STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
   const staat=STAAT_KLANT[h.staat]||'Nette staat';
-  const g=(h.garantie!=null)?Number(h.garantie):12;
+  const g=(h.garantie!=null)?Number(h.garantie):24;
   const gar=[]; if(g>0) gar.push(g+' maanden garantie');
   gar.push('Technisch 100% gecontroleerd'); gar.push('Direct klaar voor gebruik');
   return { titel:[h.merk,h.model].filter(Boolean).join(' ')||'Toestel',

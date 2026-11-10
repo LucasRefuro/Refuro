@@ -169,7 +169,8 @@ setTimeout(async()=>{
   if(hw){
     ok('prijs mee', hw[2].verkoop===349);
     ok('grade mee', hw[2].staat==='A');
-    ok('garantie mee', hw[2].garantie===6);
+    // Standaard 24 maanden, net als de webshop belooft (was 6).
+    ok('garantie mee', hw[2].garantie===24);
     ok('titel en tekst mee', 'titel' in hw[2] && 'omschrijving' in hw[2]);
     ok('kanalen mee', hw[2].kanalen && hw[2].kanalen.winkel===true);
     ok('hoofdfoto vooraan', Array.isArray(hw[2].fotos) && hw[2].fotos.length===2);

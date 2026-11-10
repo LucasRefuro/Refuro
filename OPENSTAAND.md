@@ -40,10 +40,12 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Online zetten in de winkelapp:** knop op de hardwarepagina en in het Online-menu
       opent de refurbish-pagina als venster. Een los toestel neemt zijn eigen garantie,
       prijs, tekst en foto's mee.
-- [ ] **Uitrollen (jouw akkoord): edge `shopify`.** Zonder deze komt de accu van een los
-      toestel niet op de productpagina (wel per grade). Code staat klaar (b393d37).
-- [ ] **Kiezen:** garantie van de werkbank naar de voorraad staat nog op 12 maanden, de online-
-      pagina begint op 6. De webshop zegt 24. Alles naar 24?
+- [x] **Edge `shopify` v28 uitgerold** (10 nov, met akkoord). De accu van een los toestel komt
+      nu ook op de productpagina.
+- [x] **Overal 24 maanden garantie** (10 nov, eigenaar koos). Werkbank naar voorraad, de online-
+      pagina, de prijskaartjes en de standaard van `hardware.garantie` (migratie gedraaid). De twee
+      opgeslagen modeladvertenties stonden op 12 en zijn naar 24 gezet. Bundels voor de groothandel
+      (edge `webshop2-webhook`) bewust op 12 gelaten.
 - [ ] **Eigenaar: één los toestel echt online zetten** vanuit de winkelapp en kijken of het
       goed op refuro.nl staat.
 

@@ -2805,7 +2805,7 @@ function prijskaartHtml(bron){
      minder relevante velden zoals kleur of imei. */
   const sub=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien/i.test(v.sleutel))
     .slice(0,4).map(v=>specs[v.sleutel]).join(' | ');
-  const gar=Number(bron.garantie); const garMnd=(gar||gar===0)?gar:12;
+  const gar=Number(bron.garantie); const garMnd=(gar||gar===0)?gar:24;
   const np = bron.nieuwprijs!=null && bron.nieuwprijs!=='' ? Number(bron.nieuwprijs)
            : (a.nieuwprijs!=null?Number(a.nieuwprijs):null);
   const staatWoord = GRADE_STAAT[grade] || 'Nette staat';
@@ -2890,7 +2890,7 @@ function prijskaartVoor(id){
   if(prijs==null){ toast('Dit toestel heeft nog geen vraagprijs. Zet hem eerst online.','let-op'); return; }
   prijskaartVenster({ a, prijs,
     staat: hw.staat||a.grade||'B',
-    garantie: hw.garantie!=null?hw.garantie:12,
+    garantie: hw.garantie!=null?hw.garantie:24,
     nieuwprijs: hw.nieuwprijs!=null?hw.nieuwprijs:a.nieuwprijs });
 }
 
@@ -5507,7 +5507,8 @@ async function naarVoorraad(a){
        sleutel; zonder dit zou een telefoon van een andere kleur op één advertentie belanden. */
     serienummer:a.serienummer, specs:Object.assign({}, a.specs||{}, a.kleur?{Kleur:a.kleur}:{}),
     staat:a.grade||'B', inkoop:Number(a.inkoop)||0,
-    verkoop:null, garantie:12,
+    /* 24 maanden: dat belooft de webshop bovenaan elke pagina (10 nov 2026). */
+    verkoop:null, garantie:24,
     herkomst:[a.leverancier, a.code].filter(Boolean).join(' · ')||null,
     code:a.code,
     aangemaakt_door:(account&&account.id)||null,
@@ -5903,7 +5904,7 @@ function onlineZetten(id){
   if(bewaringEerst(a, ()=>onlineZetten(id))) return;
   onl={a, kanaal:'webshop', titel:'', tekst:'', zoekwoorden:[], fotocode:null,
        prijs:null, nieuwprijs:a.nieuwprijs!=null?a.nieuwprijs:null,
-       prijsBron:'', staat:a.grade||'B', garantie:6, marge:margeVan(a),
+       prijsBron:'', staat:a.grade||'B', garantie:24, marge:margeVan(a),
        kanalen:{webshop:true, winkel:true, marktplaats:false}, gevonden:[], fotos:[]};
   /* Los toegevoegd in de winkel (stap 'los'): wat daar al is ingevuld gaat voor. Vooral
      de garantie: die kies je bij los toevoegen bewust (standaard 24), en de advertentie
@@ -6270,7 +6271,7 @@ function tekenOnline(){
                 placeholder="Bijvoorbeeld 899" onchange="onlVeld()">
               <div class="grid" style="margin-top:12px">
                 <div><label>Garantie (maanden)</label>
-                  <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:12}" onchange="onlVeld()"></div>
+                  <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:24}" onchange="onlVeld()"></div>
                 <div><label>Btw</label><select id="onl_marge" onchange="onlVeld()">
                   <option value="ja"${onl.marge?' selected':''}>Margeregeling</option>
                   <option value="nee"${!onl.marge?' selected':''}>Normale btw (21%)</option>
@@ -6365,7 +6366,7 @@ function onlVeld(){
    ziet welke garantie en welke btw meegaan zonder hem open te klappen. */
 function onlDetailsSamenvatting(){
   if(!onl) return '';
-  const g=onl.garantie!=null?onl.garantie:12;
+  const g=onl.garantie!=null?onl.garantie:24;
   return [g+' maanden garantie', onl.marge?'margeregeling':'btw 21%', onl.nieuwprijs!=null?'nieuwprijs '+euro(onl.nieuwprijs):'']
     .filter(Boolean).join(' · ');
 }

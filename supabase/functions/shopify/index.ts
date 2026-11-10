@@ -88,7 +88,8 @@ async function ligtInWinkel(locatieId: string | null): Promise<boolean> {
 /* De accu en de conditie-items staan niet op de hardware-rij maar op de controle
    (refurbish_apparaten). Die halen we erbij zodat de accu-badge en de "wat wij
    zagen"-tekst op de productpagina kloppen. Geen controle gevonden (een toestel
-   dat handmatig in de voorraad is gezet)? Dan blijven die twee gewoon leeg. */
+   dat los in de voorraad is gezet)? Dan komt de accu van de hardware-rij (accuVan)
+   en is de toelichting de vaste zin per grade. */
 async function controleBij(hardwareId: string) {
   const { data } = await admin.from("refurbish_apparaten")
     .select("accu, checklist, grade, notitie").eq("hardware_id", hardwareId).limit(1);

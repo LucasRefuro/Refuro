@@ -545,7 +545,7 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   out.push(mfText("monteur", MONTEUR_TEKST));
 
   // Garantie alleen als hij echt > 0 is; anders laten we het metafield weg zodat het
-  // thema terugvalt op de standaard (12 maanden) en er nooit "0 maanden" verschijnt.
+  // thema terugvalt op de standaard (24 maanden) en er nooit "0 maanden" verschijnt.
   if (Number(h.garantie) > 0) out.push(mfInt("garantie_maanden", Number(h.garantie)));
 
   // Zelfde model, verschillende exemplaren horen op de collectiepagina bij elkaar.
