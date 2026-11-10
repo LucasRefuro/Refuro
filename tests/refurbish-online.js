@@ -242,6 +242,25 @@ setTimeout(async()=>{
   ok('los toestel: winkelfoto komt mee als foto van dit toestel', !!fi && fi[2].length===1 && fi[2][0].pad==='t1/hardware/hw9/1-0.jpg' && fi[2][0].apparaat_id==='a9');
   delete w.__db.webshop_grade_prijzen;
 
+  // ── een Galaxy zonder kleur: de kleur hier invullen en meteen de foto's ophalen ──
+  w.eval(`apparaten.push({id:'a10', team_id:'t1', code:'A0010', merk:'Samsung', model:'Galaxy S24', categorie:'Telefoon',
+      specs:{}, status:'klaar', stap:'los', grade:'B', hardware_id:'hw10', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()});
+    hardwares.push({id:'hw10', status:'voorraad', kanalen:{}, verkoop:399, garantie:24});
+    refurbish_fotos_bewaard=window.__db.refurbish_fotos; window.__db.refurbish_fotos=[];
+    onlineZetten('a10')`);
+  await new Promise(r=>setTimeout(r,80));
+  ok('kleur ontbreekt: veld om hem in te vullen', !!d().getElementById('onl_kleur'));
+  d().getElementById('onl_kleur').value='Zwart';
+  w.__geschreven.length=0; w.__fetches.length=0;
+  await w.eval("onlKleurZet(document.querySelector('#onl_kleur + button'))");
+  const kl=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].kleur);
+  ok('kleur: op het toestel bewaard', !!kl && kl[2].kleur==='Zwart');
+  ok('kleur: ook op de hardware-rij voor de webshop', w.__geschreven.some(g=>g[0]==='hardware' && g[1]==='update' && g[2].specs && g[2].specs.Kleur==='Zwart'));
+  const pf=w.__fetches.find(f=>f[0].includes('/productfotos'));
+  ok('kleur: daarna meteen de foto\'s ophalen in die kleur', !!pf && JSON.parse(pf[1].body).kleur==='Zwart');
+  w.eval("window.__db.refurbish_fotos=refurbish_fotos_bewaard");
+
   // ── openen vanuit de winkelapp: ?online= met het id van de hardware-rij ──
   w.eval("onl=null; showTab('voorraad'); history.replaceState(null,'','/refurbish/?online=hw9'); uitAdres()");
   await new Promise(r=>setTimeout(r,30));

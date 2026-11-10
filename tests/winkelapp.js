@@ -446,6 +446,43 @@ setTimeout(async()=>{
   ok('bestaand toestel toont accu en doos', d.getElementById('hw_accu').value==='91' && d.getElementById('hw_doos').checked);
   w.eval('hwSluit(); showTab("dashboard")');
 
+  // Fabrieksfoto's ophalen op de toestelpagina, met de kleur erbij voor een telefoon.
+  w.__fetchLijf=null; w.__modelRijen=[]; w.__fotoWeg=0; w.__opslagWeg=[];
+  w.fetch=async(u,o)=>{ if(String(u).includes('/productfotos')) w.__fetchLijf=JSON.parse(o.body); return {ok:true, json:async()=>({ok:true, opgeslagen:1})}; };
+  w.eval(`window.__sbFrom=window.__sbFrom||sb.from;
+    sb.from=(n)=>{ if(n!=='refurbish_fotos') return window.__sbFrom(n);
+      const api={select(){return api;}, is(){return api;}, ilike(){return api;}, order(){return api;},
+        delete(){ window.__fotoWeg++; return api; }, then(r){ r({data:window.__modelRijen, error:null}); }};
+      return api; };
+    sb.auth.getSession=async()=>({data:{session:{access_token:'t'}}});
+    sb.storage={from:()=>({getPublicUrl:(p)=>({data:{publicUrl:'https://x.supabase.co/storage/v1/object/public/refurbish-fotos/'+p}}),
+      remove:async(l)=>{ window.__opslagWeg.push(...l); return {}; }})};
+    vraagJaNee=async()=>true;`);
+  w.eval("hwVenster({id:'hw2', merk:'Samsung', model:'Galaxy S24', categorie:'Telefoon', specs:{}, fotos:[], kanalen:{}, status:'voorraad'})");
+  ok('kleur: veld staat er bij een telefoon', !d.getElementById('hw_kleur_vak').hidden);
+  ok('foto\'s: knop om op te halen', /Foto's ophalen/.test(d.getElementById('hwOphaalKnop').textContent));
+  await w.eval("hwFotosOphalen(null,false)");
+  ok('foto\'s: zonder kleur eerst de kleur vragen', !w.__fetchLijf && /kleur/i.test(d.getElementById('hwFotoHint').textContent));
+  d.getElementById('hw_kleur').value='Zwart';
+  w.__modelRijen=[{pad:'t1/model_Samsung-Galaxy_S24-Zwart/open-1.jpg', kleur:'Zwart'}, {pad:'t1/model_Samsung-Galaxy_S24-Groen/open-1.jpg', kleur:'Groen'}];
+  await w.eval("hwFotosOphalen(null,false)");
+  ok('foto\'s: ophalen met merk, model en kleur', w.__fetchLijf && w.__fetchLijf.actie==='automatisch' && w.__fetchLijf.kleur==='Zwart' && w.__fetchLijf.model==='Galaxy S24');
+  ok('foto\'s: alleen die in de goede kleur bij het toestel', w.eval('hwOpen.fotos.length')===1 && /Zwart/.test(w.eval('hwOpen.fotos[0]')));
+  ok('foto\'s: daarna opnieuw ophalen', /Opnieuw ophalen/.test(d.getElementById('hwOphaalKnop').textContent));
+  await w.eval("hwFotosOphalen(null,true)");
+  ok('foto\'s: opnieuw gooit de set van het model weg en haalt opnieuw', w.__fotoWeg===1 && w.eval('hwOpen.fotos.length')===1);
+  await w.eval('hwFotoVerwijder(0)');
+  ok('foto\'s: een fabrieksfoto weghalen laat het bestand staan', w.__opslagWeg.length===0 && w.eval('hwOpen.fotos.length')===0);
+  w.eval("hwOpen.fotos=['https://x.supabase.co/storage/v1/object/public/refurbish-fotos/t1/hardware/hw2/1-0.jpg']");
+  await w.eval('hwFotoVerwijder(0)');
+  ok('foto\'s: een eigen upload gaat wel uit de opslag', w.__opslagWeg.length===1 && /\/hardware\//.test(w.__opslagWeg[0]));
+  ok('kleur: gaat mee in de specs', w.eval('hwFormRij()').specs && w.eval('hwFormRij()').specs.Kleur==='Zwart');
+  w.eval("hwOpen.specs={Kleur:'Zwart'}");
+  ok('kleur: niet veranderd, dan geen specs mee', !('specs' in w.eval('hwFormRij()')));
+  w.eval("hwVenster({id:'hw3', merk:'HP', model:'EliteBook', categorie:'Laptop', specs:{Kleur:'Zilver'}, fotos:[], kanalen:{}, status:'voorraad'})");
+  ok('kleur: niet bij een laptop, en die van de werkbank blijft staan', d.getElementById('hw_kleur_vak').hidden && !('specs' in w.eval('hwFormRij()')));
+  w.eval('sb.from=window.__sbFrom; hwSluit(); showTab("dashboard")');
+
   // Online zetten vanuit de winkelapp: de pagina van het refurbish-deel in een venster,
   // zodat er één online-pagina is en niet twee die uit elkaar lopen.
   w.eval("abonnement={modules:['refurbish']}; hwData=[{id:'hw1', merk:'Dell', model:'Latitude 5430', status:'voorraad', kanalen:{}, fotos:[], specs:{}}]");

@@ -14506,10 +14506,95 @@ async function hwFotoVerwijder(i){
   /* Intussen kan het toestel dicht zijn of opnieuw geladen. Dan klopt de plek i
      niet meer, en zou je een andere foto weggooien. */
   if(!hwOpen||!Array.isArray(hwOpen.fotos)||hwOpen.fotos[i]!==url) return;
+  /* Alleen het bestand weggooien als het hier is geüpload (pad met /hardware/). Een
+     fabrieksfoto hoort bij het hele model en een werkbankfoto bij de controle; die
+     gebruiken andere toestellen ook. Eerst ging die mee de prullenbak in, en dan was
+     de foto bij elk ander toestel van dat model stuk. */
   const pad=hwFotoPad(url);
-  if(pad){ try{ await sb.storage.from('refurbish-fotos').remove([pad]); }catch(e){ console.error('foto wissen:',e); } }
+  if(pad && pad.includes('/hardware/')){ try{ await sb.storage.from('refurbish-fotos').remove([pad]); }catch(e){ console.error('foto wissen:',e); } }
   const urls=hwOpen.fotos.slice(); urls.splice(i,1);
   await hwFotosOpslaan(urls);
+}
+/* ═══ Fabrieksfoto's ophalen ═══
+   Dezelfde bron als Online zetten (edge productfotos, actie automatisch): Icecat, en bij een
+   Galaxy op kleur. Ze worden opgeslagen voor het hele model (bij een telefoon: model en
+   kleur), dus het volgende toestel van dat model heeft ze meteen. Hier zetten we ze daarna
+   bij dit toestel. Opnieuw ophalen gooit de set van dit model weg en zoekt opnieuw; de
+   bestanden blijven staan, want andere toestellen kunnen ze nog gebruiken. */
+function hwIsModelFoto(url){ const p=hwFotoPad(url)||''; return /^[^/]+\/model_/.test(p); }
+function hwFotoHintZet(t){ const e=document.getElementById('hwFotoHint'); if(e) e.textContent=t||''; }
+async function hwModelFotos(model, kleur, tel){
+  const {data}=await sb.from('refurbish_fotos').select('pad,kleur,volgorde')
+    .is('apparaat_id', null).ilike('model', model).order('volgorde');
+  let rijen=data||[];
+  if(tel){
+    /* Net als aan de werkbank (fotosInKleur): eerst de set in deze kleur, anders een set
+       zonder kleur. Een set in een andere kleur nooit: dan krijgt de koper iets anders. */
+    const kl=r=>String(r.kleur||'').trim().toLowerCase();
+    const inKleur=kleur ? rijen.filter(r=>kl(r)===kleur.toLowerCase()) : [];
+    rijen=inKleur.length ? inKleur : rijen.filter(r=>!kl(r));
+  }
+  return rijen.map(r=>sb.storage.from('refurbish-fotos').getPublicUrl(r.pad).data.publicUrl);
+}
+async function hwFotosOphalen(knop, opnieuw){
+  if(!hwOpen) return;
+  if(hwDirty || _vuil){ try{ await hwStilBewaar(); }catch(_e){} }
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), cat=hwVeld('hw_cat')||hwOpen.categorie||'';
+  const tel=/telefoon/i.test(cat);
+  const kleur=tel ? hwVeld('hw_kleur') : '';
+  if(!merk || !model){ toast('Vul eerst merk en model in','let-op'); return; }
+  if(tel && /apple|iphone/i.test(merk+' '+model)){
+    hwFotoHintZet("iPhones hebben geen vrije fabrieksfoto's. Maak ze één keer zelf met de camera.");
+    return;
+  }
+  if(tel && !kleur){
+    toast('Vul eerst de kleur in','let-op');
+    hwFotoHintZet("Fabrieksfoto's van een telefoon zoek ik op kleur. Vul de kleur in en druk nog een keer.");
+    const v=document.getElementById('hw_kleur'); if(v) v.focus();
+    return;
+  }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig met ophalen…'; }
+  try{
+    let fotos=(hwOpen.fotos||[]).slice();
+    if(opnieuw){
+      let q=sb.from('refurbish_fotos').delete().is('apparaat_id', null).ilike('model', model);
+      if(tel) q=q.ilike('kleur', kleur);
+      const {error}=await q;
+      if(error) console.error('oude modelfoto\'s weghalen:', error);
+      fotos=fotos.filter(u=>!hwIsModelFoto(u));
+    }
+    const {data:{session}}=await sb.auth.getSession();
+    const sp=hwOpen.specs||{};
+    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({actie:'automatisch', merk, model, categorie:cat, kleur,
+        productcode:sp.Artikelcode||sp.Modelnummer||'', ean:sp.EAN||sp.GTIN||''})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok || !uit.ok) throw new Error(uit.error||'Ophalen lukte niet');
+    const model_=await hwModelFotos(model, kleur, tel);
+    if(!model_.length){
+      if(opnieuw) await hwFotosOpslaan(fotos);
+      hwFotoHintZet(uit.reden==='kleur-nodig'
+        ? "Met deze kleur vond ik niets. Klopt de kleur? Schrijf hem zoals de fabrikant, bijvoorbeeld Onyx Black."
+        : "Voor dit model vond ik geen fabrieksfoto's. Klopt de naam? Anders maak je ze zelf met de camera.");
+      toast('Geen foto\'s gevonden','let-op');
+      return;
+    }
+    /* Nog geen eigen foto's: de fabrieksfoto's voorop (de eerste is de hoofdfoto). Wel eigen
+       foto's: die blijven voorop, de fabrieksfoto's komen erachter. */
+    const eigen=fotos.filter(u=>!hwIsModelFoto(u));
+    const nieuw=eigen.concat(model_.filter(u=>!eigen.includes(u)));
+    await hwFotosOpslaan(nieuw);
+    const k=document.getElementById('hwOphaalKnop'); if(k) k.textContent='Opnieuw ophalen';
+    hwFotoHintZet('Niet goed? Klopt het model of de kleur niet, pas dat eerst aan en haal ze opnieuw op.');
+    toast(model_.length+' fabrieksfoto'+(model_.length===1?'':'\'s')+' bij dit toestel gezet', true);
+  }catch(e){
+    toast(e.message||'Ophalen lukte niet','fout');
+  }finally{
+    if(knop){ knop.disabled=false; if(knop.textContent==='Bezig met ophalen…') knop.textContent=oud; }
+  }
 }
 async function hwFotoHoofd(i){
   if(!hwOpen||!Array.isArray(hwOpen.fotos)) return;
@@ -14992,6 +15077,7 @@ function hwVenster(h){
         </select></div>
         <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
         <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
+        <div id="hw_kleur_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Kleur</label><input id="hw_kleur" value="${esc((h&&h.specs&&h.specs.Kleur)||'')}" placeholder="Bijvoorbeeld Zwart"></div>
         <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
       </div>
       <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
@@ -15002,7 +15088,7 @@ function hwVenster(h){
         <summary>Meer gegevens</summary>
         <div class="grid">
           <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
-          <div><label>Categorie</label><select id="hw_cat">
+          <div><label>Categorie</label><select id="hw_cat" onchange="hwKleurToon()">
             ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
               `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
           </select></div>
@@ -15026,11 +15112,13 @@ function hwVenster(h){
       <h2><svg class="i"><use href="#i-camera"/></svg>Foto's</h2>
       <p class="muted klein" style="margin-top:-4px">De eerste foto is de hoofdfoto. Die staat bovenaan op de webshop.</p>
       <div class="hwfotos" id="hwFotoStrip">${hwFotoStripHtml(h)}</div>
-      <div class="row" style="gap:8px; margin-top:12px; align-items:center">
+      <div class="row" style="gap:8px; margin-top:12px; align-items:center; flex-wrap:wrap">
+        <button type="button" class="btn small" id="hwOphaalKnop" onclick="hwFotosOphalen(this, (hwOpen&&(hwOpen.fotos||[]).some(hwIsModelFoto)))">${(h.fotos||[]).some(hwIsModelFoto)?'Opnieuw ophalen':'Foto\'s ophalen'}</button>
         <label class="btn ghost small" style="cursor:pointer">Foto toevoegen<input type="file" accept="image/*" multiple hidden onchange="hwFotoToevoegen(this)"></label>
         <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Met camera<input type="file" accept="image/*" capture="environment" hidden onchange="hwFotoToevoegen(this)"></label>
         <span class="muted klein" id="hwFotoBezig"></span>
       </div>
+      <p class="muted klein" id="hwFotoHint" style="margin-top:8px">${(h.fotos||[]).some(hwIsModelFoto)?'Niet goed? Klopt het model of de kleur niet, pas dat eerst aan en haal ze opnieuw op.':''}</p>
     </div>`:''}
 
     <div class="card breed">
@@ -15362,6 +15450,25 @@ function hwAccuVelden(){
     doos:!!(document.getElementById('hw_doos')||{}).checked
   };
 }
+/* De kleur staat in specs.Kleur: zo heet hij ook aan de werkbank, de webshop zet hem in de
+   sleutel van de advertentie, en de fabrieksfoto's van een telefoon zoek je per kleur.
+   Alleen bij telefoon en tablet; bij een laptop zou een kleur de advertenties opsplitsen. */
+function hwKleurTelt(cat){ return /telefoon|tablet/i.test(String(cat||'')); }
+function hwKleurToon(){
+  const vak=document.getElementById('hw_kleur_vak'); if(vak) vak.hidden=!hwKleurTelt(hwVeld('hw_cat'));
+}
+/* Alleen specs meesturen als de kleur echt veranderde. Anders schreef elke automatische
+   opslag de hele specs terug, ook als de werkbank ze intussen had bijgewerkt. Bij een laptop
+   laten we een kleur van de werkbank met rust. */
+function hwKleurVeld(){
+  const veld=document.getElementById('hw_kleur');
+  if(!veld || !hwKleurTelt(hwVeld('hw_cat'))) return {};
+  const specs=Object.assign({}, (hwOpen&&hwOpen.specs)||{});
+  const k=veld.value.trim();
+  if(k===String(specs.Kleur||'').trim()) return {};
+  if(k) specs.Kleur=k; else delete specs.Kleur;
+  return {specs};
+}
 function hwNieuweAccu(vink){
   const v=document.getElementById('hw_accu'); if(!v) return;
   if(vink.checked){ v.dataset.was=v.value; v.value='100'; v.disabled=true; }
@@ -15387,6 +15494,7 @@ function hwFormRij(){
     marge: (document.getElementById('hw_marge')||{}).value!=='nee',
     plek: hwVeld('hw_plek')||null,
     ...hwAccuVelden(),
+    ...hwKleurVeld(),
     uitstalling: (document.getElementById('hw_uitstalling')||{}).value||null,
     titel:hwVeld('hw_titel')||null,
     omschrijving:hwVeld('hw_oms')||null,
@@ -15419,6 +15527,7 @@ async function hwStilBewaar(){
     staat:'grade', accu:'accu', nieuwe_accu:'nieuwe_accu', doos:'doos'};
   const spiegel={};
   Object.keys(SPIEGEL).forEach(k=>{ if(rij[k]!==undefined && (rij[k]??null)!==(hwOpen[k]??null)) spiegel[SPIEGEL[k]]=rij[k]; });
+  if(rij.specs){ const nk=rij.specs.Kleur||null, ok=((hwOpen.specs||{}).Kleur)||null; if(nk!==ok) spiegel.kleur=nk; }
   Object.assign(hwOpen, rij);
   const inHw=hwData.find(x=>x.id===id); if(inHw && inHw!==hwOpen) Object.assign(inHw, rij);
   const {error}=await sb.from('hardware').update(rij).eq('id',id);

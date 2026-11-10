@@ -6044,13 +6044,15 @@ async function fotosLaden(a, geenAuto){
    (dat dwingt onlPubliceren af: nooit zonder foto de webshop op). Per model, per sessie
    hooguit één keer: een gevonden set wordt bewaard en door elk volgend zelfde model
    hergebruikt, dus daarna is opnieuw proberen niet meer nodig. */
-async function fotosAutomatischMisschien(a){
+async function fotosAutomatischMisschien(a, forceer){
   if(!a || !a.merk || !a.model) return;
-  if((onl.fotos||[]).length) return;                 // er zijn al foto's
+  /* forceer: je vulde net de kleur in en vroeg er zelf om. Dan ook ophalen als het toestel
+     al losse foto's heeft (bijvoorbeeld uit de winkelapp). */
+  if(!forceer && (onl.fotos||[]).length) return;     // er zijn al foto's
   /* De kleur hoort bij de sleutel: een groene S23 die niets opleverde zegt niets over
      een zwarte. Bij een laptop is fotoKleur leeg, dus daar blijft de sleutel gelijk. */
   const sl=(a.merk+'|'+a.model+(fotoKleur(a)?'|'+fotoKleur(a):'')).toLowerCase();
-  if(autoFotoGeprobeerd.has(sl)) return;              // deze sessie al geprobeerd
+  if(!forceer && autoFotoGeprobeerd.has(sl)) return;  // deze sessie al geprobeerd
   autoFotoGeprobeerd.add(sl);
   onl.fotosBezig=true; tekenOnline();
   try{
@@ -6155,6 +6157,8 @@ function tekenOnline(){
           <p class="muted klein" style="margin-bottom:14px">Altijd dezelfde zes aanzichten, zodat je advertenties bij elkaar horen.</p>
           ${onl.fotosBezig?`<div class="fotobezig">Fabrieksfoto's van dit model ophalen&hellip;</div>`:''}
           ${(!onl.fotosBezig && compleet===0)?`<div class="fotohint">${esc(fotoHint(a))}</div>`:''}
+          ${(!onl.fotosBezig && compleet===0 && fotoKleurgebonden(a) && !fotoKleur(a) && !/apple|iphone/i.test((a.merk||'')+' '+(a.model||'')))
+            ? `<div class="row" style="gap:8px; margin:8px 0 4px"><input id="onl_kleur" placeholder="Kleur, bijvoorbeeld Zwart" style="max-width:220px" onkeydown="if(event.key==='Enter'){event.preventDefault(); onlKleurZet(this.nextElementSibling);}"><button type="button" class="btn small" onclick="onlKleurZet(this)">Foto's ophalen</button></div>`:''}
 
           <div class="fotorooster">${AANZICHTEN.concat(EXTRAS).map(v=>{
             const f=perAanzicht[v.id];
@@ -6593,6 +6597,30 @@ function fotoPlak(e){
       toast('Foto geplakt · geldt voor het hele model', true);
     }catch(err){ toast('Plakken lukte niet: '+err.message,'fout'); }
   })();
+}
+
+/* De kleur hier invullen als hij nog ontbreekt. Eerst zei de pagina "vul eerst de kleur
+   in" zonder plek om dat te doen; los toegevoegd in de winkel had je er geen veld voor.
+   Hij komt op het toestel (kleur) en op de hardware-rij (specs.Kleur), want de webshop
+   zet hem in de sleutel van de advertentie. Daarna meteen de foto's ophalen. */
+async function onlKleurZet(knop){
+  const v=document.getElementById('onl_kleur');
+  const k=String((v&&v.value)||'').trim();
+  if(!k){ toast('Vul de kleur in','let-op'); if(v) v.focus(); return; }
+  const a=onl.a;
+  await bezig(knop, async()=>{
+    const {error}=await sb.from('refurbish_apparaten').update({kleur:k, bijgewerkt_op:new Date().toISOString()}).eq('id', a.id);
+    if(error) throw new Error('De kleur opslaan lukte niet');
+    a.kleur=k;
+    if(a.hardware_id){
+      const {data}=await sb.from('hardware').select('specs').eq('id', a.hardware_id).maybeSingle();
+      const specs=Object.assign({}, (data&&data.specs)||{}, {Kleur:k});
+      await sb.from('hardware').update({specs, bijgewerkt_op:new Date().toISOString()}).eq('id', a.hardware_id);
+    }
+    onl.fotoReden='';
+    await fotosLaden(a, true);
+    await fotosAutomatischMisschien(a, true);
+  });
 }
 
 /* Wat er boven een lege fotokaart staat. Bij een iPhone bestaat er geen bron die we
