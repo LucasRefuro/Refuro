@@ -15061,10 +15061,14 @@ function hwVenster(h){
     </div>
 
     <div class="modules">
-    ${specrijen.length?`<div class="card breed">
+    ${(specrijen.length || (h && hwKleurTelt(h.categorie)))?`<div class="card breed">
       <h2><svg class="i"><use href="#i-layers"/></svg>Wat erin zit</h2>
-      <div style="overflow-x:auto"><table><tbody>${specrijen.map(([sk,sw])=>
-        `<tr><td class="muted" style="width:40%">${esc(sk)}</td><td><b>${esc(sw)}</b></td></tr>`).join('')}</tbody></table></div>
+      ${specrijen.length?`<div style="overflow-x:auto"><table><tbody>${specrijen.map(([sk,sw])=>
+        `<tr><td class="muted" style="width:40%">${esc(sk)}</td><td><b>${esc(sw)}</b></td></tr>`).join('')}</tbody></table></div>`
+        :'<p class="muted klein">Nog geen specificaties.</p>'}
+      ${(h && hwKleurTelt(h.categorie))?`<div class="row" style="gap:8px; margin-top:10px; align-items:center">
+        <button type="button" class="btn ghost small" onclick="hwSpecsOphalen(this, ${(h.specs&&h.specs.Chip)?'true':'false'})">${(h.specs&&h.specs.Chip)?'Specs opnieuw ophalen':'Specs ophalen'}</button>
+        <span class="muted klein" id="hwSpecsBezig"></span></div>`:''}
     </div>`:''}
     <div class="card breed">
       <h2><svg class="i"><use href="#i-laptop"/></svg>Gegevens</h2>
@@ -15074,7 +15078,7 @@ function hwVenster(h){
             `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
         </select></div>
         <div><label>Merk</label>${hwMerkKiezer((h&&h.merk)||'')}</div>
-        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430" onchange="hwSoortRaden(); hwKleurenLaden()"></div>
+        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430" onchange="hwSoortRaden(); hwKleurenLaden(); hwOpslagLaden()"></div>
         <div><label>Staat</label><select id="hw_staat">
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
@@ -15085,6 +15089,9 @@ function hwVenster(h){
           <select id="hw_kleur_kies" onchange="hwKleurKies()" hidden></select>
           <input id="hw_kleur" value="${esc((h&&h.specs&&h.specs.Kleur)||'')}" placeholder="Bijvoorbeeld Zwart">
           <span class="muted klein" id="hw_kleur_bezig"></span></div>
+        <div id="hw_opslag_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Opslag</label>
+          <select id="hw_opslag_kies" onchange="hwOpslagKies()" hidden></select>
+          <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB"></div>
         <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
       </div>
       <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
@@ -15174,7 +15181,10 @@ function hwVenster(h){
      knop. Op de container (dedupt zichzelf bij herhaald openen, want hwStilPlan is een
      vaste functie-referentie). */
   d.addEventListener('change', hwStilPlan);
+  hwNieuwFeiten=null;
   hwKleurenLaden();
+  hwOpslagLaden();
+  if(h && hwKleurTelt(h.categorie) && !(h.specs && h.specs.Chip)) hwSpecsOphalen(null, false, true);
   if(h) hwHistorieLaden(h.id);
 }
 function hwDetailMenu(ev, id){
@@ -15471,8 +15481,134 @@ function hwSoortRaden(){
   if(soort && sel.value!==soort){ sel.value=soort; hwKleurToon(); }
 }
 function hwKleurToon(){
-  const vak=document.getElementById('hw_kleur_vak'); if(vak) vak.hidden=!hwKleurTelt(hwVeld('hw_cat'));
+  const telt=hwKleurTelt(hwVeld('hw_cat'));
+  ['hw_kleur_vak','hw_opslag_vak'].forEach(id=>{ const vak=document.getElementById(id); if(vak) vak.hidden=!telt; });
   hwKleurenLaden();
+  hwOpslagLaden();
+}
+
+/* ═══ Specificaties van een telefoon of tablet ophalen ═══
+   Een los toegevoegd toestel had nooit specificaties: die kwamen alleen uit de controle aan de
+   werkbank. Op de webshop stond dan bij Specificaties alleen het artikelnummer. Nu haalt de
+   winkelapp de vaste modelfeiten op via model-specs (de gedeelde modellenlijst, anders één
+   keer opgezocht): chip, werkgeheugen, scherm, camera, netwerk, en zo verder.
+   De opslag zit daar bewust niet bij: die verschilt per exemplaar (128 of 256 GB) en staat in
+   de sleutel van de advertentie. Die kies je zelf uit de varianten van het model; alleen als
+   er maar één bestaat vullen we hem in.
+   Alleen lege velden worden gevuld. Wat de werkbank of jij al invulde, gaat voor. */
+const HW_FEITEN_TEL=['Chip','Werkgeheugen','Scherm','Camera','Netwerk','Besturingssysteem','Materiaal','Waterbestendig','SIM','Bouwjaar','Gewicht','Poorten'];
+const hwSpecsCache={};
+let hwNieuwFeiten=null;
+function hwModelSpecs(merk, model, cat){
+  const sl=(merk+'|'+model).toLowerCase();
+  if(!hwSpecsCache[sl]){
+    hwSpecsCache[sl]=(async()=>{
+      const {data:{session}}=await sb.auth.getSession();
+      const res=await fetch(SUPABASE_URL+'/functions/v1/model-specs',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+        body:JSON.stringify({merk, model, categorie:cat||'Telefoon'})
+      });
+      const uit=await res.json().catch(()=>({}));
+      if(!res.ok || !uit.ok) throw new Error(uit.error||'Opzoeken lukte niet');
+      return {specs:uit.specs||{}, opties:uit.opties||{}};
+    })().catch(e=>{ delete hwSpecsCache[sl]; throw e; });
+  }
+  return hwSpecsCache[sl];
+}
+function hwSpecFeiten(uit){
+  const sp=(uit&&uit.specs)||{}, feiten={};
+  HW_FEITEN_TEL.forEach(k=>{ const w=String(sp[k]||'').trim(); if(w) feiten[k]=w; });
+  const ops=((uit&&uit.opties&&uit.opties.Opslag)||[]);
+  if(ops.length===1) feiten.Opslag=ops[0];
+  return feiten;
+}
+async function hwSpecsOphalen(knop, opnieuw, stil){
+  if(!hwOpen) return;
+  if(!stil && (hwDirty || _vuil)){ try{ await hwStilBewaar(); }catch(_e){} }
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), cat=hwVeld('hw_cat')||hwOpen.categorie||'';
+  if(!merk || !model){ if(!stil) toast('Vul eerst merk en model in','let-op'); return; }
+  const id=hwOpen.id;
+  const bezig=document.getElementById('hwSpecsBezig');
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig met ophalen…'; }
+  if(bezig) bezig.textContent=stil?'Specificaties van dit model ophalen…':'';
+  try{
+    const feiten=hwSpecFeiten(await hwModelSpecs(merk, model, cat));
+    if(!hwOpen || hwOpen.id!==id) return;                  // intussen een ander toestel geopend
+    if(!Object.keys(feiten).length){ if(!stil) toast('Dit model ken ik niet. Vul de specificaties zelf in.','let-op'); return; }
+    const specs=Object.assign({}, hwOpen.specs||{});
+    let anders=false;
+    Object.keys(feiten).forEach(k=>{
+      if(opnieuw || !String(specs[k]||'').trim()){ if(specs[k]!==feiten[k]){ specs[k]=feiten[k]; anders=true; } }
+    });
+    if(!anders){ if(!stil) toast('De specificaties stonden er al', true); return; }
+    const {error}=await sb.from('hardware').update({specs, bijgewerkt_op:new Date().toISOString()}).eq('id', id);
+    if(error) throw new Error('Opslaan lukte niet');
+    hwOpen.specs=specs;
+    const rij=hwData.find(x=>x.id===id); if(rij) rij.specs=specs;
+    /* Ook op de werkbank-rij, maar alleen wat daar nog leeg is: Online zetten leest die rij, en
+       de controle-uitslag gaat voor. */
+    try{
+      const {data:ap}=await sb.from('refurbish_apparaten').select('id,specs').eq('hardware_id', id).maybeSingle();
+      if(ap){
+        const as=Object.assign({}, ap.specs||{});
+        Object.keys(feiten).forEach(k=>{ if(!String(as[k]||'').trim()) as[k]=feiten[k]; });
+        await sb.from('refurbish_apparaten').update({specs:as, bijgewerkt_op:new Date().toISOString()}).eq('id', ap.id);
+      }
+    }catch(_e){}
+    const online=hwOnline(hwOpen);
+    if(online) await hwWebshopBijwerken(id, 'prijs');
+    if(hwOpen && hwOpen.id===id && !hwDirty && !_vuil) hwVenster(hwOpen);
+    toast('Specificaties opgehaald'+(online?' en op de webshop gezet':''), true);
+  }catch(e){
+    if(!stil) toast(e.message||'Opzoeken lukte niet','fout');
+  }finally{
+    if(knop && document.body.contains(knop)){ knop.disabled=false; knop.textContent=oud; }
+    const b=document.getElementById('hwSpecsBezig'); if(b) b.textContent='';
+  }
+}
+/* De opslag kies je uit de varianten van het model, net als de kleur. */
+async function hwOpslagLaden(){
+  const vak=document.getElementById('hw_opslag_vak'), sel=document.getElementById('hw_opslag_kies'), veld=document.getElementById('hw_opslag');
+  if(!vak || !sel || !veld || vak.hidden) return;
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
+  if(!merk || !model){ sel.hidden=true; veld.hidden=false; return; }
+  let uit=null;
+  try{ uit=await hwModelSpecs(merk, model, hwVeld('hw_cat')); }catch(_e){}
+  if(hwVeld('hw_merk')!==merk || hwVeld('hw_model')!==model) return;   // intussen veranderd
+  if(!hwOpen) hwNieuwFeiten=uit ? hwSpecFeiten(uit) : null;
+  const lijst=((uit&&uit.opties&&uit.opties.Opslag)||[]);
+  if(!lijst.length){ sel.hidden=true; veld.hidden=false; return; }
+  const nu=veld.value.trim();
+  const raak=lijst.find(k=>k.toLowerCase().replace(/\s+/g,'')===nu.toLowerCase().replace(/\s+/g,''));
+  const eigen=!!nu && !raak;
+  sel.innerHTML=`<option value="">Kies de opslag</option>`+
+    lijst.map(k=>`<option${k===raak?' selected':''}>${esc(k)}</option>`).join('')+
+    `<option value="__anders"${eigen?' selected':''}>Andere opslag</option>`;
+  if(raak) veld.value=raak;
+  sel.hidden=false; veld.hidden=!eigen;
+}
+function hwOpslagKies(){
+  const sel=document.getElementById('hw_opslag_kies'), veld=document.getElementById('hw_opslag');
+  if(!sel || !veld) return;
+  if(sel.value==='__anders'){ veld.hidden=false; veld.value=''; veld.focus(); }
+  else { veld.hidden=true; veld.value=sel.value; }
+}
+/* Stil de webshop bijwerken: 'prijs' synchroniseert de advertentie opnieuw (specs, foto's,
+   voorraad), 'online' ook naar een nieuwe advertentie als de sleutel veranderde (kleur, opslag). */
+async function hwWebshopBijwerken(id, actie){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/shopify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+      body:JSON.stringify({actie, hardware_id:id})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(!res.ok || !uit.ok) throw new Error(uit.error||'De webshop gaf een fout');
+    if(uit.kanalen){ const r=hwData.find(x=>x.id===id); if(r) r.kanalen=uit.kanalen; if(hwOpen && hwOpen.id===id) hwOpen.kanalen=uit.kanalen; }
+    return true;
+  }catch(e){ toast('De webshop bijwerken lukte niet: '+e.message,'let-op'); return false; }
 }
 
 /* ═══ Merk en kleur kiezen ═══
@@ -15508,6 +15644,7 @@ function hwMerkKies(){
   }
   hwSoortRaden();
   hwKleurenLaden();
+  hwOpslagLaden();
 }
 const hwKleurCache={};
 let hwKleurVraag=0;
@@ -15557,13 +15694,16 @@ function hwKleurKies(){
    opslag de hele specs terug, ook als de werkbank ze intussen had bijgewerkt. Bij een laptop
    laten we een kleur van de werkbank met rust. */
 function hwKleurVeld(){
-  const veld=document.getElementById('hw_kleur');
-  if(!veld || !hwKleurTelt(hwVeld('hw_cat'))) return {};
-  const specs=Object.assign({}, (hwOpen&&hwOpen.specs)||{});
-  const k=veld.value.trim();
-  if(k===String(specs.Kleur||'').trim()) return {};
-  if(k) specs.Kleur=k; else delete specs.Kleur;
-  return {specs};
+  if(!document.getElementById('hw_kleur') || !hwKleurTelt(hwVeld('hw_cat'))) return {};
+  const oud=(hwOpen&&hwOpen.specs)||{};
+  /* Een nieuw toestel krijgt de opgehaalde modelfeiten (chip, scherm, camera...) meteen mee. */
+  const specs=Object.assign({}, hwOpen ? {} : (hwNieuwFeiten||{}), oud);
+  [['Kleur','hw_kleur'],['Opslag','hw_opslag']].forEach(([k,id])=>{
+    const e=document.getElementById(id); if(!e) return;
+    const w=e.value.trim();
+    if(w) specs[k]=w; else delete specs[k];
+  });
+  return JSON.stringify(specs)===JSON.stringify(oud) ? {} : {specs};
 }
 function hwNieuweAccu(vink){
   const v=document.getElementById('hw_accu'); if(!v) return;
@@ -15630,6 +15770,9 @@ async function hwStilBewaar(){
   if(error){ console.error('hardware auto-opslaan:', error); }
   else {
     hwDirty=false; _vuil=false;
+    /* Kleur of opslag veranderd terwijl hij online staat: die zitten in de sleutel van de
+       advertentie, dus hij hoort nu bij een andere. 'online' verhuist hem en werkt de oude bij. */
+    if(rij.specs && hwOnline(hwOpen)) hwWebshopBijwerken(id, 'online');
     /* Btw-regime en plek ook op het refurbish-toestel: de batchcijfers en het
        refurbish-label lezen die rij. Dit deed eerst alleen de Opslaan-knop, dus wie
        een veld wijzigde en gewoon terugging, had stilletjes twee verschillende

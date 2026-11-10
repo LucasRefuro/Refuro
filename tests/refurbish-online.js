@@ -284,6 +284,18 @@ setTimeout(async()=>{
   await w.eval('onlPubliceren(document.createElement("button"))');
   const pub=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='update' && g[2].specs).pop();
   ok('publiceren: kleur blijft in de specs van het toestel', !!pub && pub[2].specs.Kleur==='Zwart');
+  // En de specificaties die de winkelapp bij een los toestel ophaalde blijven ook staan.
+  w.__geschreven.length=0;
+  // Publiceren laadt alles opnieuw uit de (nagebootste) database; daar staan a10 en hw10 niet in.
+  w.eval(`apparaten.push({id:'a10', team_id:'t1', code:'A0010', merk:'Samsung', model:'Galaxy S24', categorie:'Telefoon', kleur:'Zwart',
+      specs:{}, status:'klaar', stap:'los', grade:'B', hardware_id:'hw10', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()});
+    hardwares.push({id:'hw10', status:'voorraad', kanalen:{}, verkoop:399, garantie:24, specs:{Chip:'Exynos 2400', Opslag:'256 GB', Kleur:'Zwart'}});
+    onlineZetten('a10')`);
+  await new Promise(r=>setTimeout(r,60));
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  const pub2=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='update' && g[2].specs).pop();
+  ok('publiceren: specs uit de winkelapp blijven staan', !!pub2 && pub2[2].specs.Chip==='Exynos 2400' && pub2[2].specs.Opslag==='256 GB' && pub2[2].specs.Kleur==='Zwart');
 
   // ── openen vanuit de winkelapp: ?online= met het id van de hardware-rij ──
   w.eval("onl=null; showTab('voorraad'); history.replaceState(null,'','/refurbish/?online=hw9'); uitAdres()");

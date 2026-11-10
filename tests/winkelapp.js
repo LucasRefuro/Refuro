@@ -514,6 +514,36 @@ setTimeout(async()=>{
   ok('kleur: lukt opzoeken niet, dan gewoon typen', d.getElementById('hw_kleur_kies').hidden && !d.getElementById('hw_kleur').hidden && d.getElementById('hw_kleur').value==='Groen');
   w.eval('hwSluit(); showTab("dashboard")');
 
+  // Specificaties van een telefoon: vanzelf opgehaald als ze ontbreken, de opslag kies je zelf,
+  // en staat hij online dan gaat het meteen naar de webshop.
+  w.__shop=[]; w.__geschreven.length=0;
+  w.eval('for(const k in hwSpecsCache) delete hwSpecsCache[k]');   // eerdere tests vroegen dit model al op
+  w.fetch=async(u,o)=>{
+    const b=o&&o.body?JSON.parse(o.body):{};
+    if(String(u).includes('/model-specs')) return {ok:true, json:async()=>({ok:true,
+      specs:{Chip:'Exynos 2400', Werkgeheugen:'8 GB', Scherm:'6,2 inch AMOLED', Netwerk:'5G', Opslag:'128 GB'},
+      opties:{Opslag:['128 GB','256 GB','512 GB']}})};
+    if(String(u).includes('/model-kleuren')) return {ok:true, json:async()=>({ok:true, kleuren:['Onyx Black','Marble Grey']})};
+    if(String(u).includes('/shopify')){ w.__shop.push(b.actie); return {ok:true, json:async()=>({ok:true})}; }
+    return {ok:true, json:async()=>({ok:true})};
+  };
+  w.eval("hwVenster({id:'hw6', code:'A0089', merk:'Samsung', model:'Galaxy S24', categorie:'Telefoon', specs:{Kleur:'Onyx Black', Werkgeheugen:'12 GB'}, fotos:[], kanalen:{shopify:{id:'gid://shopify/Product/9', sleutel:'samsung_galaxy-s24_onyx-black'}}, status:'voorraad', verkoop:349})");
+  await new Promise(r=>setTimeout(r,60));
+  const sp=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='update' && g[2].specs).pop();
+  ok('specs: ontbrekende specs vanzelf opgehaald', !!sp && sp[2].specs.Chip==='Exynos 2400' && sp[2].specs.Netwerk==='5G');
+  ok('specs: wat er al stond blijft staan', sp && sp[2].specs.Werkgeheugen==='12 GB' && sp[2].specs.Kleur==='Onyx Black');
+  ok('specs: opslag niet gegokt als er meer varianten zijn', sp && !sp[2].specs.Opslag);
+  ok('specs: online, dus de webshop meteen bijgewerkt', w.__shop.includes('prijs'));
+  const os=d.getElementById('hw_opslag_kies');
+  ok('opslag: kiezen uit de varianten van het model', os && !os.hidden && os.options.length===5 && /256 GB/.test(os.textContent));
+  os.value='256 GB'; w.eval('hwOpslagKies()');
+  ok('opslag: gekozen opslag gaat in de specs', w.eval('hwFormRij()').specs.Opslag==='256 GB');
+  w.__shop.length=0;
+  await w.eval('hwStilBewaar()');
+  await new Promise(r=>setTimeout(r,20));
+  ok('opslag: online en sleutel veranderd, dan naar de goede advertentie', w.__shop.includes('online'));
+  w.eval('hwSluit(); showTab("dashboard")');
+
   // Bij aanmaken staat de soort bovenaan, en een iPhone of Galaxy wordt vanzelf een telefoon,
   // zodat het kleurveld er meteen is.
   w.eval('hwNieuw()');

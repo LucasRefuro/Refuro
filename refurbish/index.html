@@ -1683,7 +1683,7 @@ async function allesLaden(){
     sb.from('refurbish_orders').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('hardware_modellen').select('*').order('keer_gebruikt',{ascending:false}).limit(600),
     sb.from('refurbish_instellingen').select('*').maybeSingle(),
-    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,omschrijving,garantie,fotos,inkoop,marge,partner_id')
+    sb.from('hardware').select('id,status,kanalen,locatie_id,verkoop,verkocht_op,verkocht_via,verkocht_betaal,titel,omschrijving,garantie,fotos,specs,inkoop,marge,partner_id')
       .order('aangemaakt_op',{ascending:false}).limit(1000),
     sb.from('refurbish_batches').select('*').order('aangemaakt_op',{ascending:false}),
     sb.from('refurbish_voorraad').select('*').order('naam'),
@@ -6824,6 +6824,19 @@ function fotoVerkleinen(bestand){
   });
 }
 
+/* De specs die bij publiceren op de hardware-rij komen. Eerst schreef publiceren de specs van
+   de werkbank-rij terug, en die mist wat de winkelapp ophaalde (de specificaties van een los
+   toegevoegde telefoon) en de kleur (die staat hier in een eigen kolom). Dan was het allebei
+   weg en stond de webshop leeg. Nu samengevoegd: bij een los toestel (stap 'los') gaat de
+   hardware-rij voor, anders de controle. De kleur van deze rij gaat altijd mee. */
+function onlSpecs(a){
+  const hw=hardwareVan(a)||{};
+  const specs = a.stap==='los'
+    ? Object.assign({}, a.specs||{}, hw.specs||{})
+    : Object.assign({}, hw.specs||{}, a.specs||{});
+  if(a.kleur) specs.Kleur=a.kleur;
+  return specs;
+}
 async function onlPubliceren(knop){
   onlBewaarVelden();
   const a=onl.a;
@@ -6864,10 +6877,7 @@ async function onlPubliceren(knop){
       garantie:Number(onl.garantie)||0,
       titel:onl.titel||null, omschrijving:onl.tekst||null,
       fotos:gesorteerd.map(f=>fotoUrl(f.pad)),
-      /* De kleur staat aan de werkbank in een eigen kolom, op de hardware-rij in specs.Kleur
-         (zie naarVoorraad). Zonder deze regel schreef publiceren de specs zonder kleur terug:
-         de kleur was weg en het toestel kwam onder een advertentie zonder kleur. */
-      specs:Object.assign({}, a.specs||{}, a.kleur?{Kleur:a.kleur}:{}), kanalen, nieuwe_accu:!!a.nieuwe_accu, marge:!!onl.marge,
+      specs:onlSpecs(a), kanalen, nieuwe_accu:!!a.nieuwe_accu, marge:!!onl.marge,
       nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
       bijgewerkt_op:new Date().toISOString()
     }).eq('id', hwId);

@@ -57,7 +57,13 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Publiceren wiste de kleur** (Online zetten schreef de specs zonder kleur terug). Opgelost.
 - [x] **Edge `shopify` v29 uitgerold** (10 nov, met akkoord). Foto's gaan ook naar een product dat al
       online stond zonder foto's; een oude advertentie wordt bijgewerkt als de kleur verandert.
-- [ ] **Eigenaar: de S24 (A0088) opnieuw online zetten**, met eerst de kleur weer gekozen.
+- [x] **S24 opnieuw online** (A0089, Onyx Black, met foto's). Kleurenlijst werkt (7 kleuren).
+- [x] **Specificaties van telefoons en tablets** (winkelapp): vanzelf opgehaald via model-specs als
+      ze ontbreken, knop Specs ophalen; opslag kies je uit de varianten; online toestel wordt meteen
+      bijgewerkt. Publiceren in Online zetten wist de specs en kleur van de winkelapp niet meer.
+- [ ] **Eigenaar: A0089 één keer openen** in Hardware (specs komen dan vanzelf) en de opslag kiezen.
+- [ ] **Thema: btw-regel** (refuro-webshop): bij margeregeling geen "Incl. btw", anders klein. Staat
+      op de preview-kopie samen met net verkocht en de grades; wacht op jouw ja voor live.
 
 ---
 
