@@ -16098,6 +16098,8 @@ function vandaagBestellen(){
    dan verschijnt hij gewoon weer. */
 function meldingenLijst(){
   const uit=[];
+  if(versieNieuw)
+    uit.push({id:'versie', ico:'i-download', kop:'Nieuwe versie van Storvo', groen:true, tekst:'Ververs om alles bij te werken.', knop:'Verversen', ga:'versieVerversen()', aantal:1});
   if(typeof pakketHerinneringNodig==='function' && mag('pakketten') && pakketHerinneringNodig())
     uit.push({id:'pakket', ico:'i-truck', kop:'Laatste dag van de maand', tekst:'Geef je pakketdienst-stats door.', knop:'Doorgeven', ga:"showTab('pakketten')", aantal:1});
   const u=vandaagBestellen();
@@ -16149,6 +16151,62 @@ function bestelBalkGa(){
   const u=vandaagBestellen();
   showTab(u.reps ? 'reparaties' : 'aanvragen');
 }
+
+/* ═══ Nieuwe versie: open tabbladen bijwerken ═══
+   Storvo ververste zichzelf nooit. De computer in de winkel heeft de app dagen open
+   staan en draaide dan de oude versie: nieuwe modules en menu's verschenen daar pas
+   na Cmd+R, en op de ene Mac zag het er anders uit dan op de andere. Daarom kijken we
+   af en toe of /app op de server veranderd is. De ETag van Vercel is de md5 van het
+   bestand, dus die verandert alleen als er echt iets nieuws staat.
+   De basis halen we NA het laden op, niet uit de pagina zelf: zo kan een herlaadlus
+   niet bestaan. Verversen doen we vanzelf alleen op een rustig moment (je komt terug
+   bij het tabblad of doet een paar minuten niets) en nooit met een gevuld mandje
+   (dat wordt niet bewaard), een open venster of getypte invoer die nog niet is
+   vastgelegd. Anders staat er een melding in de zijbalk. */
+/* var, geen let: meldingenLijst kan al draaien voordat het script hier is, en een let
+   die nog niet aan de beurt was geeft dan een fout in plaats van undefined. */
+var versieBasis=null, versieNieuw=false, versieLaatst=0, versieActie=Date.now();
+async function versieHaal(){
+  try{
+    const r=await fetch(location.pathname, {method:'HEAD', cache:'no-store'});
+    const e=r.ok && r.headers.get('etag');
+    return e ? e.replace(/^W\//,'') : null;
+  }catch(e){ return null; }
+}
+async function versieKijk(){
+  if(versieNieuw || Date.now()-versieLaatst<60000) return;
+  versieLaatst=Date.now();
+  const e=await versieHaal(); if(!e) return;
+  if(versieBasis===null){ versieBasis=e; return; }
+  if(e!==versieBasis){ versieNieuw=true; toonMeldingen(); }
+}
+function versieRustig(){
+  return !_vuil && !syncBezig && !(typeof mandje!=='undefined' && mandje.length)
+    && !document.querySelector('.overlay:not([hidden])');
+}
+function versieVerversen(){
+  try{ save(); }catch(e){}
+  syncFlush();
+  let n=0;
+  const wacht=setInterval(()=>{
+    if((!syncBezig && !syncWachtrij) || ++n>20){ clearInterval(wacht); location.reload(); }
+  }, 250);
+}
+function versieMisschienVerversen(){
+  if(versieNieuw && versieRustig()) versieVerversen();
+}
+['pointerdown','keydown'].forEach(t=>addEventListener(t, ()=>{ versieActie=Date.now(); }, true));
+addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState!=='visible') return;
+  versieMisschienVerversen();
+  versieKijk().then(versieMisschienVerversen);
+});
+addEventListener('focus', ()=>{ versieKijk(); });
+setInterval(()=>{
+  versieKijk();
+  if(Date.now()-versieActie>5*60000) versieMisschienVerversen();
+}, 5*60000);
+setTimeout(versieKijk, 3000);
 
 function toonAuthLogin(fout){
   /* Een echt <form> met username- en current-password-velden. Zo herkent iOS/

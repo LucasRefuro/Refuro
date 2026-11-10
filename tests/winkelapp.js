@@ -404,6 +404,27 @@ setTimeout(async()=>{
   ok('op de telefoon bovenin het Meer-vel', /5 reparaties/.test(d.getElementById('mobMeer').textContent));
   w.eval("mobMeerSluit(); state.reparaties=[]; localStorage.removeItem('storvo_melding_bestel'); toonMeldingen();");
 
+  // Een open tabblad haalt een nieuwe versie zelf op. Eerst draaide de winkel-Mac dagen
+  // de oude versie, en zag het er daar anders uit dan op een andere Mac.
+  w.__etag='"aaa"';
+  w.fetch=async()=>({ok:true, headers:{get:k=>k.toLowerCase()==='etag'?w.__etag:null}});
+  w.eval('versieBasis=null; versieNieuw=false; versieLaatst=0');
+  await w.eval('versieKijk()');
+  ok('versie: basis na het laden opgehaald', w.eval('versieBasis')==='"aaa"' && !w.eval('versieNieuw'));
+  w.__etag='W/"aaa"'; w.eval('versieLaatst=0'); await w.eval('versieKijk()');
+  ok('versie: zelfde inhoud gecomprimeerd is geen nieuwe versie', !w.eval('versieNieuw'));
+  w.__etag='"bbb"'; w.eval('versieLaatst=0'); await w.eval('versieKijk()');
+  ok('versie: nieuwe versie gezien', w.eval('versieNieuw')===true);
+  ok('versie: melding in de zijbalk', /Nieuwe versie van Storvo/.test(zm.textContent));
+  w.eval('window.__ververst=0; versieVerversen=()=>{ window.__ververst++; }');
+  w.eval("mandje=[{id:1}]; versieMisschienVerversen()");
+  ok('versie: niet verversen met iets in het mandje', w.__ververst===0);
+  w.eval("mandje=[]; _vuil=true; versieMisschienVerversen()");
+  ok('versie: niet verversen met getypte invoer', w.__ververst===0);
+  w.eval("_vuil=false; versieMisschienVerversen()");
+  ok('versie: wel verversen op een rustig moment', w.__ververst===1);
+  w.eval("versieNieuw=false; toonMeldingen()");
+
   // Webshop en labelprinter zijn koppelingen, geen modules.
   ok('webshop en labelprinter zijn geen module', w.eval("!MODULES.some(m=>m.id==='webshop'||m.id==='labelprinter')"));
   w.eval("showTab('dashboard')");
