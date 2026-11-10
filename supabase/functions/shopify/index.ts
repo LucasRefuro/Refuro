@@ -142,6 +142,17 @@ function gebruikTags(h: any): string[] {
   return [...t];
 }
 
+// Heeft het product al foto's? Bij twijfel (de vraag mislukt) zeggen we ja: liever geen
+// foto's meesturen dan ze dubbel op de pagina zetten.
+async function heeftMedia(gql: (q: string, v?: unknown) => Promise<any>, productId: string): Promise<boolean> {
+  try {
+    const d = await gql(`query($id: ID!) { product(id: $id) { media(first: 1) { nodes { id } } } }`, { id: productId });
+    return (d?.product?.media?.nodes || []).length > 0;
+  } catch (_e) {
+    return true;
+  }
+}
+
 /* ── één advertentie synchroniseren ──
    Het hart van de grade-varianten: alle beschikbare exemplaren van dezelfde uitvoering (sleutel)
    staan op ÉÉN Shopify-product met drie grade-varianten (Uitstekend/Zeer goed/Prima). De prijs per
@@ -153,15 +164,6 @@ function gebruikTags(h: any): string[] {
    variant kan terugvertalen en dezelfde uitvoering later hetzelfde product terugkrijgt.
    opties.verkocht: het laatste exemplaar ging weg door een verkoop (en niet doordat je hem zelf
    offline haalde); dan blijft de pagina bereikbaar met "Net verkocht". */
-async function heeftMedia(gql: (q: string, v?: unknown) => Promise<any>, productId: string): Promise<boolean> {
-  try {
-    const d = await gql(`query($id: ID!) { product(id: $id) { media(first: 1) { nodes { id } } } }`, { id: productId });
-    return (d?.product?.media?.nodes || []).length > 0;
-  } catch (_e) {
-    return true;   // twijfel: niets meesturen, liever geen dubbele foto's
-  }
-}
-
 async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string, opties: { verkocht?: boolean } = {}) {
   const gql = (q: string, v?: unknown) => graphql(k, q, v);
   const { data: exemplaren } = await admin.from("hardware")

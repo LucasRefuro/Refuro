@@ -51,14 +51,13 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Merk en kleur kiezen** (10 nov). Merk uit een lijst (Ander merk: typen). Kleur van een
       telefoon of tablet uit de kleuren die van dat model bestaan (winkelapp: keuzelijst;
       werkbank toevoegen en Online zetten: knoppen). Tabel `model_kleuren` (migratie gedraaid).
-- [ ] **Uitrollen (jouw akkoord): edge `model-kleuren`.** Nieuwe functie, code staat klaar.
-      Zonder deze verschijnen er geen kleuren en typ je de kleur zoals eerst.
+- [x] **Edge `model-kleuren` v1 uitgerold** (10 nov, met akkoord).
 - [x] **Kleur bij aanmaken:** "Wat voor toestel" staat nu bovenaan; een iPhone of Galaxy wordt
       vanzelf een telefoon, dan staat het kleurveld er meteen.
 - [x] **Publiceren wiste de kleur** (Online zetten schreef de specs zonder kleur terug). Opgelost.
-- [ ] **Uitrollen (jouw akkoord): edge `shopify` v29.** Foto's gaan nu ook naar een product dat al
-      online stond zonder foto's (de S24), en een oude advertentie wordt bijgewerkt als de kleur
-      verandert. Daarna de S24 één keer opnieuw online zetten.
+- [x] **Edge `shopify` v29 uitgerold** (10 nov, met akkoord). Foto's gaan ook naar een product dat al
+      online stond zonder foto's; een oude advertentie wordt bijgewerkt als de kleur verandert.
+- [ ] **Eigenaar: de S24 (A0088) opnieuw online zetten**, met eerst de kleur weer gekozen.
 
 ---
 
