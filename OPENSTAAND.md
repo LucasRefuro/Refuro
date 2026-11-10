@@ -62,8 +62,8 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       ze ontbreken, knop Specs ophalen; opslag kies je uit de varianten; online toestel wordt meteen
       bijgewerkt. Publiceren in Online zetten wist de specs en kleur van de winkelapp niet meer.
 - [ ] **Eigenaar: A0089 één keer openen** in Hardware (specs komen dan vanzelf) en de opslag kiezen.
-- [ ] **Thema: btw-regel** (refuro-webshop): bij margeregeling geen "Incl. btw", anders klein. Staat
-      op de preview-kopie samen met net verkocht en de grades; wacht op jouw ja voor live.
+- [x] **Thema live** (10 nov, met akkoord): net verkocht met vergelijkbare toestellen, de grades met
+      accu per staat, geen "Incl. btw" bij margeregeling, en geen fout meer bij een kaart zonder foto.
 
 ---
 
