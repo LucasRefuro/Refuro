@@ -276,6 +276,14 @@ setTimeout(async()=>{
   ok('kleur: daarna meteen de foto\'s ophalen in die kleur', !!pf && JSON.parse(pf[1].body).kleur==='Zwart');
   w.eval("window.__db.refurbish_fotos=refurbish_fotos_bewaard");
   w.fetch=echteFetchTest;
+  // Publiceren houdt de kleur op de hardware-rij. Eerst schreef het de specs zonder kleur
+  // terug, en kwam de S24 onder een advertentie zonder kleur.
+  w.__geschreven.length=0;
+  w.eval("onlineZetten('a10')");
+  await new Promise(r=>setTimeout(r,60));
+  await w.eval('onlPubliceren(document.createElement("button"))');
+  const pub=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='update' && g[2].specs).pop();
+  ok('publiceren: kleur blijft in de specs van het toestel', !!pub && pub[2].specs.Kleur==='Zwart');
 
   // ── openen vanuit de winkelapp: ?online= met het id van de hardware-rij ──
   w.eval("onl=null; showTab('voorraad'); history.replaceState(null,'','/refurbish/?online=hw9'); uitAdres()");

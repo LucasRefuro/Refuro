@@ -153,6 +153,15 @@ function gebruikTags(h: any): string[] {
    variant kan terugvertalen en dezelfde uitvoering later hetzelfde product terugkrijgt.
    opties.verkocht: het laatste exemplaar ging weg door een verkoop (en niet doordat je hem zelf
    offline haalde); dan blijft de pagina bereikbaar met "Net verkocht". */
+async function heeftMedia(gql: (q: string, v?: unknown) => Promise<any>, productId: string): Promise<boolean> {
+  try {
+    const d = await gql(`query($id: ID!) { product(id: $id) { media(first: 1) { nodes { id } } } }`, { id: productId });
+    return (d?.product?.media?.nodes || []).length > 0;
+  } catch (_e) {
+    return true;   // twijfel: niets meesturen, liever geen dubbele foto's
+  }
+}
+
 async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string, opties: { verkocht?: boolean } = {}) {
   const gql = (q: string, v?: unknown) => graphql(k, q, v);
   const { data: exemplaren } = await admin.from("hardware")
@@ -243,8 +252,12 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
     variants,
   };
   if (reg?.product_id) invoer.id = reg.product_id;
+  /* Foto's alleen meesturen als het product er nog geen heeft. Eerst gingen ze alleen mee
+     bij het aanmaken: stond een toestel al online zonder foto's (eerst online gezet, daarna
+     pas foto's opgehaald), dan bleef de webshoppagina voor altijd leeg. Heeft het product al
+     foto's, dan laten we ze staan: opnieuw meesturen zou ze bij elke sync opnieuw uploaden. */
   const files = fotosVan(rep);
-  if (files.length && !reg) invoer.files = files;
+  if (files.length && (!reg || !(await heeftMedia(gql, reg.product_id)))) invoer.files = files;
 
   const uit = await graphql(k, `
     mutation($input: ProductSetInput!) {
@@ -366,10 +379,18 @@ Deno.serve(async (req) => {
       if (h.verkoop == null) return fout("Vul eerst een vraagprijs in");
       const sleutel = webshopSleutel(h);
       const gLetter = gradeLetter(h.staat);
+      const oudeSleutel = kanalen.shopify?.sleutel || null;
       // Dit exemplaar koppelen aan de sleutel/grade, zodat de synchronisatie het meerekent.
       kanalen.shopify = { ...(kanalen.shopify || {}), sleutel, grade: gLetter };
       await admin.from("hardware").update({ kanalen, bijgewerkt_op: new Date().toISOString() }).eq("id", id);
       const r = await synchroniseerAdvertentie(k, acc.team_id, sleutel);
+      /* Veranderde de sleutel (kleur of specs aangepast), dan hoort dit toestel nu bij een
+         andere advertentie. De oude moet dan opnieuw gesynchroniseerd worden, anders blijft
+         hij met dit toestel op voorraad staan en verkoop je het twee keer. */
+      if (oudeSleutel && oudeSleutel !== sleutel) {
+        try { await synchroniseerAdvertentie(k, acc.team_id, oudeSleutel); }
+        catch (e) { console.error("oude advertentie bijwerken", oudeSleutel, e); }
+      }
       const { data: verse } = await admin.from("hardware").select("kanalen").eq("id", id).maybeSingle();
       return new Response(JSON.stringify({
         ok: true, kanalen: verse?.kanalen || kanalen,

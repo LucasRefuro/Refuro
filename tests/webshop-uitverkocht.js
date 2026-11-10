@@ -114,6 +114,14 @@ const variant=(n,aantal)=>({id:'gid://shopify/ProductVariant/'+n,
      /if \(r\.bestaat\)[\s\S]{0,300}return \{ leeg: true, bewaard: true/.test(sync));
   ok('met de hand verwijderd: opnieuw aanmaken', /bestaatProduct\(gql, reg\.product_id\)\)\) reg = null/.test(sync));
   ok('offline geeft door of het verkocht is', /synchroniseerAdvertentie\(k, acc\.team_id, sleutel, \{ verkocht: h\.status === "verkocht" \}\)/.test(idx));
+  // Foto's: eerst alleen bij het aanmaken. Stond hij al online zonder foto's, dan bleef de
+  // pagina leeg, ook na foto's ophalen en opnieuw online zetten (Galaxy S24, 10 nov).
+  ok('foto\'s ook naar een bestaand product zonder foto\'s',
+     /invoer\.files = files/.test(sync) && /!reg \|\| !\(await heeftMedia\(gql, reg\.product_id\)\)/.test(sync));
+  // Nieuwe sleutel (kleur aangepast): de oude advertentie opnieuw synchroniseren, anders
+  // blijft dit toestel daar op voorraad staan.
+  ok('oude advertentie bijgewerkt als de sleutel verandert',
+     /oudeSleutel && oudeSleutel !== sleutel[\s\S]{0,120}synchroniseerAdvertentie\(k, acc\.team_id, oudeSleutel\)/.test(idx));
 
   console.log(fout ? `\n${fout} FOUT` : '\nalles goed');
   process.removeAllListeners('beforeExit');

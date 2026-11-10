@@ -514,6 +514,21 @@ setTimeout(async()=>{
   ok('kleur: lukt opzoeken niet, dan gewoon typen', d.getElementById('hw_kleur_kies').hidden && !d.getElementById('hw_kleur').hidden && d.getElementById('hw_kleur').value==='Groen');
   w.eval('hwSluit(); showTab("dashboard")');
 
+  // Bij aanmaken staat de soort bovenaan, en een iPhone of Galaxy wordt vanzelf een telefoon,
+  // zodat het kleurveld er meteen is.
+  w.eval('hwNieuw()');
+  const cat=d.getElementById('hw_cat');
+  ok('aanmaken: soort staat bovenaan, niet onder meer gegevens', !!cat && !cat.closest('details'));
+  ok('aanmaken: bij een laptop geen kleurveld', d.getElementById('hw_kleur_vak').hidden);
+  d.getElementById('hw_merk_kies').value='Samsung'; w.eval('hwMerkKies()');
+  d.getElementById('hw_model').value='Galaxy S24'; w.eval('hwSoortRaden()');
+  ok('aanmaken: een Galaxy wordt een telefoon', cat.value==='Telefoon' && !d.getElementById('hw_kleur_vak').hidden);
+  w.eval('hwSluit(); hwNieuw()');
+  const cat2=d.getElementById('hw_cat'); cat2.value='Overig'; cat2.dataset.gekozen='1';
+  d.getElementById('hw_model').value='iPhone 13'; w.eval('hwSoortRaden()');
+  ok('aanmaken: zelf gekozen soort blijft staan', cat2.value==='Overig');
+  w.eval('hwSluit(); showTab("dashboard")');
+
   // Online zetten vanuit de winkelapp: de pagina van het refurbish-deel in een venster,
   // zodat er één online-pagina is en niet twee die uit elkaar lopen.
   w.eval("abonnement={modules:['refurbish']}; hwData=[{id:'hw1', merk:'Dell', model:'Latitude 5430', status:'voorraad', kanalen:{}, fotos:[], specs:{}}]");

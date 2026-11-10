@@ -6864,7 +6864,10 @@ async function onlPubliceren(knop){
       garantie:Number(onl.garantie)||0,
       titel:onl.titel||null, omschrijving:onl.tekst||null,
       fotos:gesorteerd.map(f=>fotoUrl(f.pad)),
-      specs:a.specs||{}, kanalen, nieuwe_accu:!!a.nieuwe_accu, marge:!!onl.marge,
+      /* De kleur staat aan de werkbank in een eigen kolom, op de hardware-rij in specs.Kleur
+         (zie naarVoorraad). Zonder deze regel schreef publiceren de specs zonder kleur terug:
+         de kleur was weg en het toestel kwam onder een advertentie zonder kleur. */
+      specs:Object.assign({}, a.specs||{}, a.kleur?{Kleur:a.kleur}:{}), kanalen, nieuwe_accu:!!a.nieuwe_accu, marge:!!onl.marge,
       nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
       bijgewerkt_op:new Date().toISOString()
     }).eq('id', hwId);

@@ -15069,8 +15069,12 @@ function hwVenster(h){
     <div class="card breed">
       <h2><svg class="i"><use href="#i-laptop"/></svg>Gegevens</h2>
       <div class="grid">
+        <div><label>Wat voor toestel</label><select id="hw_cat" onchange="this.dataset.gekozen='1'; hwKleurToon()">
+          ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
+            `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
+        </select></div>
         <div><label>Merk</label>${hwMerkKiezer((h&&h.merk)||'')}</div>
-        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430" onchange="hwKleurenLaden()"></div>
+        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430" onchange="hwSoortRaden(); hwKleurenLaden()"></div>
         <div><label>Staat</label><select id="hw_staat">
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
@@ -15091,10 +15095,6 @@ function hwVenster(h){
         <summary>Meer gegevens</summary>
         <div class="grid">
           <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
-          <div><label>Categorie</label><select id="hw_cat" onchange="hwKleurToon()">
-            ${['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'].map(c=>
-              `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
-          </select></div>
           <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
           <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:24}"></div>
           <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje"></div>
@@ -15458,6 +15458,18 @@ function hwAccuVelden(){
    sleutel van de advertentie, en de fabrieksfoto's van een telefoon zoek je per kleur.
    Alleen bij telefoon en tablet; bij een laptop zou een kleur de advertenties opsplitsen. */
 function hwKleurTelt(cat){ return /telefoon|tablet/i.test(String(cat||'')); }
+/* Bij een nieuw toestel raden we de soort uit het model, zolang je die niet zelf koos:
+   een iPhone of Galaxy is een telefoon, dan staat het kleurveld er meteen. Eerst stond de
+   soort op Laptop en verstopt onder Meer gegevens, dus bij aanmaken was er geen kleurveld. */
+function hwSoortRaden(){
+  const sel=document.getElementById('hw_cat');
+  if(!sel || hwOpen || sel.dataset.gekozen) return;
+  const t=(hwVeld('hw_merk')+' '+hwVeld('hw_model')).toLowerCase();
+  let soort='';
+  if(/\bipad\b|galaxy\s*tab|\btab\s*s\d|\bpixel\s*tablet/.test(t)) soort='Tablet';
+  else if(/\biphone\b|\bgalaxy\s*(s|a|z|m|note|xcover)\s*\d|\bgalaxy\s*z\s*(fold|flip)|\bpixel\s*\d|\boneplus\s*\d|\bfairphone\b/.test(t)) soort='Telefoon';
+  if(soort && sel.value!==soort){ sel.value=soort; hwKleurToon(); }
+}
 function hwKleurToon(){
   const vak=document.getElementById('hw_kleur_vak'); if(vak) vak.hidden=!hwKleurTelt(hwVeld('hw_cat'));
   hwKleurenLaden();
@@ -15494,6 +15506,7 @@ function hwMerkKies(){
   } else {
     veld.hidden=true; veld.value=sel.value;
   }
+  hwSoortRaden();
   hwKleurenLaden();
 }
 const hwKleurCache={};
