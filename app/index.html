@@ -7166,6 +7166,10 @@ async function printViaHelper(pngBase64, opts){
   catch(e){ throw new Error('Geen verbinding met de printhulp. Draait het op deze Mac? (Staat de QL-800 aan?)'); }
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'printen mislukt');
+  /* Deze Mac heeft een werkende labelprinter. Dan print los toevoegen meteen het label. Zonder
+     deze vlag vragen we niets aan 127.0.0.1: op een computer zonder printhulp gaf dat bij elk
+     nieuw toestel een fout of een toestemmingsvraag van de browser. */
+  try{ localStorage.setItem('storvoLabelPrinterOk','1'); }catch(_e){}
   return j;
 }
 function labelInstelling(){
@@ -7405,6 +7409,7 @@ async function labelVerbind(knop){
     if(s.ok){
       const mt=s.type==='0xa'?'doorlopend':(s.type==='0xb'?'vast formaat':s.type);
       if(st) st.textContent='Verbonden. Rol: '+s.breedte_mm+' mm, '+mt+'. Printer klaar.';
+      try{ localStorage.setItem('storvoLabelPrinterOk','1'); }catch(_e){}
       toast('Verbonden met de printer', true);
     }else{
       if(st) st.textContent='Printhulp draait, maar de printer reageert niet: '+(s.error||'onbekend')+'. Staat de QL-800 aan?';
@@ -14480,6 +14485,7 @@ async function hwFotosOpslaan(urls){
   if(error){ console.error('foto\'s opslaan:',error); toast('Foto opslaan mislukt','fout'); return; }
   hwOpen.fotos=urls;
   const strip=document.getElementById('hwFotoStrip'); if(strip) strip.innerHTML=hwFotoStripHtml(hwOpen);
+  hwModelSetKnopZet();
   const rij=hwData.find(x=>x.id===hwOpen.id); if(rij) rij.fotos=urls;
 }
 async function hwFotoToevoegen(input){
@@ -14543,10 +14549,11 @@ async function hwFotosOphalen(knop, opnieuw){
   const tel=/telefoon/i.test(cat);
   const kleur=tel ? hwVeld('hw_kleur') : '';
   if(!merk || !model){ toast('Vul eerst merk en model in','let-op'); return; }
-  if(tel && /apple|iphone/i.test(merk+' '+model)){
-    hwFotoHintZet("iPhones hebben geen vrije fabrieksfoto's. Maak ze één keer zelf met de camera.");
-    return;
-  }
+  /* Voor een iPhone bestaat geen vrije bron: Apple staat niet in de catalogus en de foto's van
+     Apple zelf mogen we niet gebruiken. Wel de set die de winkel zelf voor dit model en deze
+     kleur heeft gemaakt (zie hwFotosAlsModel). Daarom geen zoekvraag, maar wel die set. */
+  const apple=tel && /apple|iphone/i.test(merk+' '+model);
+  if(apple) opnieuw=false;                 // de set weggooien kan hier niet: er is niets om opnieuw te halen
   if(tel && !kleur){
     toast('Vul eerst de kleur in','let-op');
     hwFotoHintZet("Fabrieksfoto's van een telefoon zoek ik op kleur. Vul de kleur in en druk nog een keer.");
@@ -14563,22 +14570,27 @@ async function hwFotosOphalen(knop, opnieuw){
       if(error) console.error('oude modelfoto\'s weghalen:', error);
       fotos=fotos.filter(u=>!hwIsModelFoto(u));
     }
-    const {data:{session}}=await sb.auth.getSession();
-    const sp=hwOpen.specs||{};
-    const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({actie:'automatisch', merk, model, categorie:cat, kleur,
-        productcode:sp.Artikelcode||sp.Modelnummer||'', ean:sp.EAN||sp.GTIN||''})
-    });
-    const uit=await res.json().catch(()=>({}));
-    if(!res.ok || !uit.ok) throw new Error(uit.error||'Ophalen lukte niet');
+    let uit={};
+    if(!apple){
+      const {data:{session}}=await sb.auth.getSession();
+      const sp=hwOpen.specs||{};
+      const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+        body:JSON.stringify({actie:'automatisch', merk, model, categorie:cat, kleur,
+          productcode:sp.Artikelcode||sp.Modelnummer||'', ean:sp.EAN||sp.GTIN||''})
+      });
+      uit=await res.json().catch(()=>({}));
+      if(!res.ok || !uit.ok) throw new Error(uit.error||'Ophalen lukte niet');
+    }
     const model_=await hwModelFotos(model, kleur, tel);
     if(!model_.length){
       if(opnieuw) await hwFotosOpslaan(fotos);
-      hwFotoHintZet(uit.reden==='kleur-nodig'
+      hwFotoHintZet(apple
+        ? "Voor iPhones bestaat geen vrije bron. Maak één keer zelf mooie foto's en druk op "+hwModelSetTekst()+". Elk volgend toestel in deze kleur heeft ze dan vanzelf."
+        : uit.reden==='kleur-nodig'
         ? "Met deze kleur vond ik niets. Klopt de kleur? Schrijf hem zoals de fabrikant, bijvoorbeeld Onyx Black."
-        : "Voor dit model vond ik geen fabrieksfoto's. Klopt de naam? Anders maak je ze zelf met de camera.");
+        : "Voor dit model vond ik geen fabrieksfoto's. Klopt de naam? Anders maak je ze zelf en druk je op "+hwModelSetTekst()+".");
       toast('Geen foto\'s gevonden','let-op');
       return;
     }
@@ -14595,6 +14607,52 @@ async function hwFotosOphalen(knop, opnieuw){
   }finally{
     if(knop){ knop.disabled=false; if(knop.textContent==='Bezig met ophalen…') knop.textContent=oud; }
   }
+}
+/* Je eigen foto's van dit toestel worden de set van het hele model (bij een telefoon: model en
+   kleur). Dat is de weg voor iPhones, en voor elk model dat niet in de catalogus staat: één
+   mooi exemplaar fotograferen, daarna haalt Foto's ophalen ze voor elk volgend toestel op.
+   Het zijn je eigen foto's, dus er speelt geen recht van een ander. De edge maakt een kopie,
+   zodat een foto weghalen bij dit toestel de set niet sloopt. Alleen vrije plekken in de set. */
+const HW_SET_PLEKKEN=['open','dicht','toetsenbord','links','rechts','onderkant'];
+function hwEigenFotos(h){ return ((h&&h.fotos)||[]).filter(u=>(hwFotoPad(u)||'').includes('/hardware/')); }
+function hwModelSetTekst(){
+  const model=hwVeld('hw_model'), kleur=/telefoon/i.test(hwVeld('hw_cat')) ? hwVeld('hw_kleur') : '';
+  return 'Gebruik voor elke '+[model, kleur].filter(Boolean).join(' ');
+}
+function hwModelSetKnopZet(){
+  const k=document.getElementById('hwModelSetKnop'); if(!k) return;
+  k.hidden=!hwEigenFotos(hwOpen).length || !hwVeld('hw_model');
+  k.textContent=hwModelSetTekst();
+}
+async function hwFotosAlsModel(knop){
+  if(!hwOpen) return;
+  if(hwDirty || _vuil){ try{ await hwStilBewaar(); }catch(_e){} }
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), tel=/telefoon/i.test(hwVeld('hw_cat'));
+  const kleur=tel ? hwVeld('hw_kleur') : '';
+  if(!merk || !model){ toast('Vul eerst merk en model in','let-op'); return; }
+  if(tel && !kleur){ toast('Vul eerst de kleur in','let-op'); const v=document.getElementById('hw_kleur'); if(v) v.focus(); return; }
+  const eigen=hwEigenFotos(hwOpen);
+  if(!eigen.length){ toast('Maak eerst foto\'s van dit toestel','let-op'); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const {data:best}=await sb.from('refurbish_fotos').select('aanzicht,kleur').is('apparaat_id', null).ilike('model', model);
+    const bezet=new Set((best||[]).filter(r=>!tel || String(r.kleur||'').trim().toLowerCase()===kleur.toLowerCase()).map(r=>r.aanzicht));
+    const vrij=HW_SET_PLEKKEN.filter(a=>!bezet.has(a));
+    const {data:{session}}=await sb.auth.getSession();
+    let n=0;
+    for(let i=0;i<eigen.length && n<vrij.length;i++){
+      const res=await fetch(SUPABASE_URL+'/functions/v1/productfotos',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+        body:JSON.stringify({actie:'overnemen', heelModel:true, merk, model, kleur, aanzicht:vrij[n], url:eigen[i]})
+      });
+      const uit=await res.json().catch(()=>({}));
+      if(res.ok && uit.ok) n++;
+    }
+    if(n) toast(n===1?'1 foto geldt nu voor elke '+[model,kleur].filter(Boolean).join(' '):n+' foto\'s gelden nu voor elke '+[model,kleur].filter(Boolean).join(' '), true);
+    else toast(vrij.length?'Dat lukte niet':'Dit model had al een volledige set','let-op');
+  }catch(e){ toast(e.message||'Dat lukte niet','fout'); }
+  finally{ if(knop && document.body.contains(knop)){ knop.disabled=false; knop.textContent=oud; } }
 }
 async function hwFotoHoofd(i){
   if(!hwOpen||!Array.isArray(hwOpen.fotos)) return;
@@ -15055,6 +15113,7 @@ function hwVenster(h){
       ${h&&h.status!=='verkocht'&&hwOnlinePaginaMag()
         ? `<button class="btn" onclick="hwOnlinePagina('${h.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`:''}
       ${h?'':`<button class="btn actie" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Toestel opslaan</button>`}
+      ${h?`<button class="btn ghost" onclick="hwLabelPrinten('${h.id}', false, this)"><svg class="i s"><use href="#i-tag"/></svg>Label printen</button>`:''}
       ${h?`<button class="btn ghost" onclick="hwPrijskaart('${h.id}')"><svg class="i s"><use href="#i-tag"/></svg>Prijskaartje printen</button>`:''}
       ${h?`<button class="btn ghost" onclick="hwDetailMenu(event,'${h.id}')" aria-label="Meer acties"><svg class="i s"><use href="#i-more"/></svg>Meer</button>`:''}
       ${h?'<span class="muted klein">Wijzigingen worden vanzelf bewaard.</span>':''}
@@ -15126,6 +15185,7 @@ function hwVenster(h){
         <button type="button" class="btn small" id="hwOphaalKnop" onclick="hwFotosOphalen(this, (hwOpen&&(hwOpen.fotos||[]).some(hwIsModelFoto)))">${(h.fotos||[]).some(hwIsModelFoto)?'Opnieuw ophalen':'Foto\'s ophalen'}</button>
         <label class="btn ghost small" style="cursor:pointer">Foto toevoegen<input type="file" accept="image/*" multiple hidden onchange="hwFotoToevoegen(this)"></label>
         <label class="btn ghost small" style="cursor:pointer"><svg class="i s"><use href="#i-camera"/></svg>Met camera<input type="file" accept="image/*" capture="environment" hidden onchange="hwFotoToevoegen(this)"></label>
+        <button type="button" class="btn ghost small" id="hwModelSetKnop" onclick="hwFotosAlsModel(this)"${hwEigenFotos(h).length?'':' hidden'}>Gebruik voor elk toestel van dit model</button>
         <span class="muted klein" id="hwFotoBezig"></span>
       </div>
       <p class="muted klein" id="hwFotoHint" style="margin-top:8px">${(h.fotos||[]).some(hwIsModelFoto)?'Niet goed? Klopt het model of de kleur niet, pas dat eerst aan en haal ze opnieuw op.':''}</p>
@@ -15184,6 +15244,7 @@ function hwVenster(h){
   hwNieuwFeiten=null;
   hwKleurenLaden();
   hwOpslagLaden();
+  hwModelSetKnopZet();
   if(h && hwKleurTelt(h.categorie) && !(h.specs && h.specs.Chip)) hwSpecsOphalen(null, false, true);
   if(h) hwHistorieLaden(h.id);
 }
@@ -15797,6 +15858,7 @@ async function hwOpslaan(knop){
   if(!model){ toast('Vul in elk geval het model in','let-op'); return; }
   const rij=hwFormRij();
   const wasBestaand=!!hwOpen;   // hwSluit hieronder maakt hwOpen leeg
+  let nieuwId=null;
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Opslaan…'; }
   let fout=null;
   if(hwOpen){
@@ -15804,7 +15866,8 @@ async function hwOpslaan(knop){
   }else{
     rij.team_id=account.team_id;
     rij.aangemaakt_door=(account&&account.id)||null;
-    const {error}=await sb.from('hardware').insert(rij); fout=error;
+    const {data:nieuw, error}=await sb.from('hardware').insert(rij).select('id').single(); fout=error;
+    if(nieuw && nieuw.id) nieuwId=nieuw.id;
     /* Meteen ook in het refurbish-deel (Voorraad, Online zetten), met een A-nummer.
        Zie de migratie koppel_losse_hardware. Lukt dat niet, dan doet de refurbish-app
        het bij het laden alsnog. */
@@ -15825,7 +15888,113 @@ async function hwOpslaan(knop){
     if(sErr) console.error('refurbish marge/plek syncen:', sErr);
   }
   hwSluit(); await hwLaad(true);
+  /* Een nieuw toestel: meteen openen (foto's, online zetten) en, als deze Mac een werkende
+     labelprinter heeft, het label printen. Dat deed alleen de werkbank; los toegevoegd moest je
+     het label daarna nog ergens anders zien te maken. */
+  const n=nieuwId && hwData.find(x=>x.id===nieuwId);
+  if(n){
+    hwVenster(n);
+    let geprint=false;
+    try{ if(localStorage.getItem('storvoLabelPrinterOk')==='1') geprint=await hwLabelPrinten(n.id, true); }catch(_e){}
+    toast('Toestel toegevoegd'+(geprint?'. Label geprint.':''), true);
+    return;
+  }
   toast(wasBestaand?'Toestel bijgewerkt':'Toestel toegevoegd', true);
+}
+
+/* ═══ Toestellabel op de labelprinter ═══
+   Hetzelfde label als aan de werkbank (deviceLabelPng in het refurbish-deel): nummer groot,
+   merk en model met kleur, grade, de belangrijkste specs, accu, doos en prijs, en een QR.
+   Eerst kon je een los toegevoegd toestel alleen aan de werkbank labelen. De QR wijst naar
+   het toestel in het refurbish-deel (zoals elk toestellabel, de scanner kent die); zonder
+   werkbank-rij staat het nummer in de QR, dan vindt de zoekbalk hem. Heeft het toestel een
+   doos, dan komt er een kort dooslabel achteraan, net als aan de werkbank. */
+function hwLabelRegels(h){
+  const sp=h.specs||{}, tel=hwKleurTelt(h.categorie);
+  const sleutels=tel ? ['Opslag','Chip','Werkgeheugen','Scherm','Camera'] : ['Processor','Geheugen','Opslag','Videokaart','Scherm'];
+  const regels=sleutels.filter(k=>String(sp[k]||'').trim()).map(k=>k+': '+sp[k]);
+  if(h.nieuwe_accu) regels.push('Accu: nieuw (100%)'); else if(h.accu) regels.push('Accu: '+h.accu+'%');
+  const os=sp.Windows||sp.Besturingssysteem; if(os) regels.push(String(os));
+  if(h.doos) regels.push('Met doos');
+  return regels.slice(0, 8);
+}
+async function hwLabelPng(h, apparaatId){
+  await laadScript('/app/qrcode.min.js');
+  const {breedte}=labelInstelling();
+  const dpmm=11.81;
+  const W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm), Hmax=Math.round(130*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top';
+  const qrS=Math.round(16*dpmm);
+  if(typeof qrcode!=='undefined'){
+    const qr=qrcode(0,'M');
+    qr.addData(apparaatId ? location.origin+'/refurbish/?apparaat='+apparaatId : String(h.code||h.serienummer||h.id));
+    qr.make();
+    await new Promise(res=>{ const img=new Image(); img.onload=()=>{ ctx.drawImage(img, W-qrS-pad, pad, qrS, qrS); res(); }; img.onerror=()=>res(); img.src=qr.createDataURL(6,0); });
+  }
+  const qrOnder=pad+qrS, txtW=W-qrS-pad*2-Math.round(1.5*dpmm);
+  const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);
+  ctx.fillStyle='#000';
+  let y=pad;
+  ctx.font='800 '+Math.round(3.1*dpmm)+'px Arial';
+  y=labelWrap(ctx, String(h.code||''), pad, y, txtW, Math.round(3.6*dpmm), 1);
+  y+=Math.round(0.6*dpmm);
+  const kleur=(h.specs&&h.specs.Kleur)||'';
+  const mm=[h.merk,h.model].filter(Boolean).join(' ')+(kleur?' - '+kleur:'');
+  if(mm){ ctx.font='800 '+Math.round(3.5*dpmm)+'px Arial'; y=labelWrap(ctx, mm, pad, y, txtW, Math.round(4.0*dpmm), 2); }
+  if(h.staat){
+    y+=Math.round(0.4*dpmm);
+    ctx.font='800 '+Math.round(2.8*dpmm)+'px Arial';
+    y=labelWrap(ctx, 'Grade '+h.staat+(HW_STAAT[h.staat]?' · '+HW_STAAT[h.staat]:''), pad, y, breed(y), Math.round(3.3*dpmm), 1);
+  }
+  y+=Math.round(0.8*dpmm);
+  ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
+  for(const r of hwLabelRegels(h)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  if(h.verkoop!=null && h.verkoop!==''){
+    y+=Math.round(1.2*dpmm);
+    ctx.font='800 '+Math.round(5.6*dpmm)+'px Arial';
+    ctx.fillText(euro(h.verkoop), pad, y);
+    y+=Math.round(5.9*dpmm);
+  }
+  const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const o=out.getContext('2d'); o.fillStyle='#fff'; o.fillRect(0,0,W,Hc); o.drawImage(c,0,0,W,Hc,0,0,W,Hc);
+  return out.toDataURL('image/png').split(',')[1];
+}
+function hwDoosLabelPng(h){
+  const {breedte}=labelInstelling();
+  const dpmm=11.81, W=Math.round(breedte*dpmm), pad=Math.round(2*dpmm), Hmax=Math.round(60*dpmm);
+  const c=document.createElement('canvas'); c.width=W; c.height=Hmax;
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,Hmax); ctx.textBaseline='top'; ctx.fillStyle='#000';
+  let y=pad;
+  ctx.font='700 '+Math.round(2.5*dpmm)+'px Arial'; ctx.fillText('DOOS', pad, y); y+=Math.round(3.2*dpmm);
+  ctx.font='800 '+Math.round(7.5*dpmm)+'px Arial'; y=labelWrap(ctx, String(h.code||''), pad, y, W-2*pad, Math.round(8.0*dpmm), 1);
+  const kleur=(h.specs&&h.specs.Kleur)||'';
+  const mm=[h.merk,h.model].filter(Boolean).join(' ')+(kleur?' - '+kleur:'');
+  if(mm){ y+=Math.round(0.6*dpmm); ctx.font='500 '+Math.round(2.6*dpmm)+'px Arial'; y=labelWrap(ctx, mm, pad, y, W-2*pad, Math.round(3.2*dpmm), 2); }
+  const Hc=Math.min(Hmax, y+pad);
+  const out=document.createElement('canvas'); out.width=W; out.height=Hc;
+  const o=out.getContext('2d'); o.fillStyle='#fff'; o.fillRect(0,0,W,Hc); o.drawImage(c,0,0,W,Hc,0,0,W,Hc);
+  return out.toDataURL('image/png').split(',')[1];
+}
+async function hwLabelPrinten(id, stil, knop){
+  const h=(hwOpen&&hwOpen.id===id) ? hwOpen : hwData.find(x=>x.id===id);
+  if(!h) return false;
+  if(hwOpen && hwOpen.id===id && (hwDirty || _vuil)){ try{ await hwStilBewaar(); }catch(_e){} }
+  const oud=knop?knop.innerHTML:''; if(knop){ knop.disabled=true; knop.textContent='Bezig met printen…'; }
+  try{
+    let ap=null;
+    try{ const {data}=await sb.from('refurbish_apparaten').select('id').eq('hardware_id', id).maybeSingle(); ap=data; }catch(_e){}
+    const {breedte, tweekleuren}=labelInstelling();
+    await printViaHelper(await hwLabelPng(h, ap&&ap.id), {label:breedte, red:tweekleuren});
+    if(h.doos) await printViaHelper(hwDoosLabelPng(h), {label:breedte, red:tweekleuren});
+    if(ap) sb.from('refurbish_apparaten').update({gelabeld:true}).eq('id', ap.id).then(()=>{}, ()=>{});
+    if(!stil) toast('Label geprint', true);
+    return true;
+  }catch(e){
+    toast('Label printen lukte niet. Staat de printhulp aan? Test het bij Instellingen, Labelprinter.','fout');
+    return false;
+  }finally{ if(knop && document.body.contains(knop)){ knop.disabled=false; knop.innerHTML=oud; } }
 }
 
 /* Het klant-prijskaartje op A6 (105 bij 148 mm), staand. We TEKENEN het op een canvas

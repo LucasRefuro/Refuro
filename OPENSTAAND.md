@@ -62,6 +62,14 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       ze ontbreken, knop Specs ophalen; opslag kies je uit de varianten; online toestel wordt meteen
       bijgewerkt. Publiceren in Online zetten wist de specs en kleur van de winkelapp niet meer.
 - [ ] **Eigenaar: A0089 één keer openen** in Hardware (specs komen dan vanzelf) en de opslag kiezen.
+- [x] **iPhone-foto's** (12 nov): er is geen vrije bron (Apple niet in de catalogus). Foto's ophalen
+      gebruikt nu de eigen set van model en kleur; knop "Gebruik voor elke ..." maakt die set van je
+      eigen foto's (edge productfotos, actie overnemen). Daarna heeft elk volgend toestel ze vanzelf.
+- [x] **Toestellabel in de winkelapp** (12 nov): knop Label printen (zelfde label als de werkbank,
+      plus dooslabel). Los toevoegen opent het nieuwe toestel en print het label als deze Mac een
+      werkende printhulp heeft (vlag storvoLabelPrinterOk, gezet bij elke gelukte print of test).
+- [ ] **Eigenaar: één iPhone mooi fotograferen** en op "Gebruik voor elke ..." drukken; en één keer
+      Label printen testen vanuit Hardware.
 - [x] **Thema live** (10 nov, met akkoord): net verkocht met vergelijkbare toestellen, de grades met
       accu per staat, geen "Incl. btw" bij margeregeling, en geen fout meer bij een kaart zonder foto.
 

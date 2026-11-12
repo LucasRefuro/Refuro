@@ -544,6 +544,52 @@ setTimeout(async()=>{
   ok('opslag: online en sleutel veranderd, dan naar de goede advertentie', w.__shop.includes('online'));
   w.eval('hwSluit(); showTab("dashboard")');
 
+  // iPhone: geen vrije bron, dus geen zoekvraag, wel de eigen set van dit model en deze kleur.
+  w.__pf=[]; w.__setRijen=[];
+  w.fetch=async(u,o)=>{
+    const b=o&&o.body?JSON.parse(o.body):{};
+    if(String(u).includes('/productfotos')){ w.__pf.push(b); return {ok:true, json:async()=>({ok:true})}; }
+    return {ok:true, json:async()=>({ok:true})};
+  };
+  w.eval(`window.__sbFrom=window.__sbFrom||sb.from;
+    sb.from=(n)=>{ if(n!=='refurbish_fotos') return window.__sbFrom(n);
+      const api={select(){return api;}, is(){return api;}, ilike(){return api;}, order(){return api;},
+        delete(){ return api; }, then(r){ r({data:window.__setRijen, error:null}); }};
+      return api; };`);
+  w.eval("hwVenster({id:'hw7', code:'A0090', merk:'Apple', model:'iPhone 13', categorie:'Telefoon', specs:{Kleur:'Middernacht', Chip:'A15'}, fotos:[], kanalen:{}, status:'voorraad'})");
+  await w.eval("hwFotosOphalen(null,false)");
+  ok('iPhone: geen zoekvraag naar een bron die er niet is', !w.__pf.length);
+  ok('iPhone: zegt hoe je een eigen set maakt', /Gebruik voor elke iPhone 13 Middernacht/.test(d.getElementById('hwFotoHint').textContent));
+  w.__setRijen=[{pad:'t1/model_Apple-iPhone_13-Middernacht/open-1.jpg', kleur:'Middernacht'}];
+  await w.eval("hwFotosOphalen(null,false)");
+  ok('iPhone: de eigen set van dit model komt bij het toestel', w.eval('hwOpen.fotos.length')===1 && /Middernacht/.test(w.eval('hwOpen.fotos[0]')));
+  // Eigen foto's van dit toestel worden de set voor elk volgend toestel van dit model.
+  w.__setRijen=[]; w.__pf.length=0;
+  w.eval("hwOpen.fotos=['https://x.supabase.co/storage/v1/object/public/refurbish-fotos/t1/hardware/hw7/1-0.jpg']; hwModelSetKnopZet()");
+  ok('set: knop zichtbaar met model en kleur', !d.getElementById('hwModelSetKnop').hidden && /iPhone 13 Middernacht/.test(d.getElementById('hwModelSetKnop').textContent));
+  await w.eval("hwFotosAlsModel(null)");
+  ok('set: eigen foto gaat als modelfoto naar de opslag', w.__pf.length===1 && w.__pf[0].actie==='overnemen' && w.__pf[0].heelModel===true && w.__pf[0].kleur==='Middernacht' && w.__pf[0].aanzicht==='open' && /\/hardware\//.test(w.__pf[0].url));
+  w.eval('sb.from=window.__sbFrom');
+
+  // Toestellabel: ook vanuit de winkelapp, met een dooslabel erachter als er een doos bij zit.
+  w.__prints=[];
+  w.eval("printViaHelper=async(png,o)=>{ window.__prints.push(png); return {ok:true}; }; hwLabelPng=async(h,ap)=>'toestel:'+h.code; hwDoosLabelPng=(h)=>'doos:'+h.code;");
+  w.eval("hwOpen.doos=true");
+  const geprint=await w.eval("hwLabelPrinten('hw7', true)");
+  ok('label: toestellabel en dooslabel geprint', geprint===true && w.__prints.join(',')==='toestel:A0090,doos:A0090');
+  ok('label: knop op de toestelpagina', [...d.querySelectorAll('button')].some(b=>/Label printen/.test(b.textContent)));
+  ok('label: regels met opslag, chip en doos', /Chip: A15/.test(w.eval("hwLabelRegels(hwOpen).join('|')")) && /Met doos/.test(w.eval("hwLabelRegels(hwOpen).join('|')")));
+  // Los toevoegen met een werkende printer: het nieuwe toestel opent en het label komt eruit.
+  w.__prints.length=0;
+  w.eval(`localStorage.setItem('storvoLabelPrinterOk','1'); hwSluit(); hwNieuw();
+    window.__hwLaadEcht=window.__hwLaadEcht||hwLaad;
+    hwLaad=async()=>{ hwData=[{id:'x', code:'A0091', merk:'Apple', model:'iPhone 14', categorie:'Telefoon', specs:{}, fotos:[], kanalen:{}, status:'voorraad'}]; };`);
+  d.getElementById('hw_model').value='iPhone 14';
+  await w.eval('hwOpslaan(null)');
+  ok('los toevoegen: nieuw toestel opent meteen', w.eval('hwOpen && hwOpen.id')==='x');
+  ok('los toevoegen: label vanzelf geprint', w.__prints.join(',')==='toestel:A0091');
+  w.eval("hwLaad=window.__hwLaadEcht; localStorage.removeItem('storvoLabelPrinterOk'); hwSluit(); showTab('dashboard')");
+
   // Bij aanmaken staat de soort bovenaan, en een iPhone of Galaxy wordt vanzelf een telefoon,
   // zodat het kleurveld er meteen is.
   w.eval('hwNieuw()');
