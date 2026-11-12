@@ -70,6 +70,13 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       werkende printhulp heeft (vlag storvoLabelPrinterOk, gezet bij elke gelukte print of test).
 - [ ] **Eigenaar: één iPhone mooi fotograferen** en op "Gebruik voor elke ..." drukken; en één keer
       Label printen testen vanuit Hardware.
+- [x] **Telefoon toevoegen in vaste volgorde** (12 nov): soort, merk, model typen of kiezen (lijst,
+      nieuwste eerst), dan kleur en opslag van precies dat model. Modellenlijst = tabel
+      `model_kleuren` met kolommen opslag/volgorde/toon (migratie gedraaid): iPhone 8 t/m 18 Pro Max
+      en iPhone Duo, kleuren zoals Apple ze in Nederland noemt. Galaxy S24 heeft opslag erbij.
+- [x] **Plek in de winkel weg** uit het formulier; nieuw toestel krijgt "Ligt in" (winkel voorop).
+- [x] **Sticker met namen**: Kleur, Opslag, Staat, Accu, Doos, Garantie (laptop: specs en Windows).
+- [ ] **Later:** andere merken (Samsung, Google) ook als lijst; nu alleen wat al eens is opgezocht.
 - [x] **Thema live** (10 nov, met akkoord): net verkocht met vergelijkbare toestellen, de grades met
       accu per staat, geen "Incl. btw" bij margeregeling, en geen fout meer bij een kaart zonder foto.
 

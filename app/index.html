@@ -15137,13 +15137,8 @@ function hwVenster(h){
             `<option${((h&&h.categorie)||'Laptop')===c?' selected':''}>${c}</option>`).join('')}
         </select></div>
         <div><label>Merk</label>${hwMerkKiezer((h&&h.merk)||'')}</div>
-        <div><label>Model *</label><input id="hw_model" value="${esc((h&&h.model)||'')}" placeholder="Latitude 5430" onchange="hwSoortRaden(); hwKleurenLaden(); hwOpslagLaden()"></div>
-        <div><label>Staat</label><select id="hw_staat">
-          ${Object.keys(HW_STAAT).map(s=>
-            `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
-        </select></div>
-        <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
-        <div><label>Plek in de winkel</label><input id="hw_plek" value="${esc((h&&h.plek)||'')}" placeholder="Kast 2, plank 4"></div>
+        <div class="zoekveld"><label>Model *</label><input id="hw_model" autocomplete="off" value="${esc((h&&h.model)||'')}" placeholder="Typ het model, bijvoorbeeld iPhone 13"
+          oninput="hwModelTyp()" onfocus="hwModelTyp()" onblur="setTimeout(hwModelSluit,180)" onkeydown="hwModelToets(event)" onchange="hwModelGekozen()"><div class="zoeklijst" id="hwModelLijst" hidden></div></div>
         <div id="hw_kleur_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Kleur</label>
           <select id="hw_kleur_kies" onchange="hwKleurKies()" hidden></select>
           <input id="hw_kleur" value="${esc((h&&h.specs&&h.specs.Kleur)||'')}" placeholder="Bijvoorbeeld Zwart">
@@ -15151,7 +15146,15 @@ function hwVenster(h){
         <div id="hw_opslag_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Opslag</label>
           <select id="hw_opslag_kies" onchange="hwOpslagKies()" hidden></select>
           <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB"></div>
+        <div><label>Staat</label><select id="hw_staat">
+          ${Object.keys(HW_STAAT).map(s=>
+            `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
+        </select></div>
+        <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
         <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
+        ${(!h && hwLocaties.length)?`<div><label>Ligt in</label><select id="hw_loc_nieuw">
+          ${hwLocatiesWinkelEerst().map(l=>`<option value="${l.id}">${esc(l.naam)}</option>`).join('')}
+        </select></div>`:''}
       </div>
       <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
         <label class="hkrij"><input type="checkbox" id="hw_doos" ${(h&&h.doos)?'checked':''}> Doos erbij</label>
@@ -15635,7 +15638,10 @@ async function hwOpslagLaden(){
   const merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
   if(!merk || !model){ sel.hidden=true; veld.hidden=false; return; }
   let uit=null;
-  try{ uit=await hwModelSpecs(merk, model, hwVeld('hw_cat')); }catch(_e){}
+  await hwModellenLaden();
+  const rij=hwModelRij(merk, model);
+  if(rij && Array.isArray(rij.opslag) && rij.opslag.length) uit={opties:{Opslag:rij.opslag}};
+  else { try{ uit=await hwModelSpecs(merk, model, hwVeld('hw_cat')); }catch(_e){} }
   if(hwVeld('hw_merk')!==merk || hwVeld('hw_model')!==model) return;   // intussen veranderd
   if(!hwOpen) hwNieuwFeiten=uit ? hwSpecFeiten(uit) : null;
   const lijst=((uit&&uit.opties&&uit.opties.Opslag)||[]);
@@ -15707,6 +15713,59 @@ function hwMerkKies(){
   hwKleurenLaden();
   hwOpslagLaden();
 }
+/* ═══ Telefoonmodellen: typen of kiezen, dan kleur en opslag van dat model ═══
+   De tabel model_kleuren is de modellenlijst: per merk en model de kleuren en de opslag
+   (iPhone 8 tot en met de nieuwste staan erin, met de namen die Apple in Nederland gebruikt).
+   De winkelapp leest hem één keer. Kies je Apple, dan typ je "13 pro" en verschijnt de
+   iPhone 13 Pro; daarna staan de kleuren en de opslag van precies dat model klaar. Een model
+   dat er niet in staat typ je gewoon, dan zoeken de edge-functies kleur en opslag op. */
+let hwModellen=null, hwModellenBezig=null;
+function hwModellenLaden(){
+  if(hwModellen) return Promise.resolve(hwModellen);
+  if(!hwModellenBezig){
+    hwModellenBezig=(async()=>{
+      try{
+        const {data}=await sb.from('model_kleuren').select('merk,model,kleuren,opslag,volgorde,toon');
+        hwModellen=Array.isArray(data)?data:[];
+      }catch(_e){ hwModellen=[]; }
+      hwModellenBezig=null;
+      return hwModellen;
+    })();
+  }
+  return hwModellenBezig;
+}
+function hwModelRij(merk, model){
+  const m=String(merk||'').trim().toLowerCase(), mo=String(model||'').trim().toLowerCase();
+  return (hwModellen||[]).find(r=>String(r.merk||'').toLowerCase()===m && String(r.model||'').toLowerCase()===mo) || null;
+}
+function hwModelTyp(){
+  const veld=document.getElementById('hw_model'), lijst=document.getElementById('hwModelLijst');
+  if(!veld || !lijst) return;
+  if(!hwModellen){ hwModellenLaden().then(()=>{ if(document.activeElement===veld) hwModelTyp(); }); return; }
+  const merk=hwVeld('hw_merk').toLowerCase();
+  if(!merk){ hwModelSluit(); return; }
+  const q=tstNorm(veld.value.trim());
+  const bron=hwModellen.filter(r=>r.toon!==false && String(r.merk||'').toLowerCase()===merk)
+    .sort((a,b)=>(Number(b.volgorde)||0)-(Number(a.volgorde)||0) || String(a.model).localeCompare(String(b.model)));
+  const treffers=(q ? bron.filter(r=>tstNorm(r.model).includes(q)) : bron).slice(0,12).map(r=>r.model);
+  if(!treffers.length || (treffers.length===1 && treffers[0]===veld.value.trim())){ hwModelSluit(); return; }
+  lijst.hidden=false;
+  lijst.innerHTML=treffers.map(n=>zoekrijHtml(n,'hwModelKies')).join('');
+}
+function hwModelKies(naam){
+  const veld=document.getElementById('hw_model'); if(!veld) return;
+  veld.value=naam;
+  hwModelSluit();
+  /* Als een gewone wijziging: dat roept hwModelGekozen (onchange) aan en bewaart het toestel. */
+  veld.dispatchEvent(new Event('change', {bubbles:true}));
+}
+function hwModelSluit(){ const l=document.getElementById('hwModelLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
+function hwModelToets(e){ zoekToets(e,'hwModelLijst',hwModelSluit); }
+function hwModelGekozen(){ hwSoortRaden(); hwKleurenLaden(); hwOpslagLaden(); hwModelSetKnopZet(); }
+/* De winkel voorop in "Ligt in": daar ligt een los toegevoegd toestel bijna altijd. */
+function hwLocatiesWinkelEerst(){
+  return hwLocaties.slice().sort((a,b)=>(b.soort==='winkel')-(a.soort==='winkel') || (Number(a.volgorde)||0)-(Number(b.volgorde)||0));
+}
 const hwKleurCache={};
 let hwKleurVraag=0;
 async function hwKleurenLaden(){
@@ -15731,6 +15790,9 @@ async function hwKleurenLaden(){
   if(!merk || !model){ toon(null); return; }
   const sleutel=(merk+'|'+model).toLowerCase();
   if(hwKleurCache[sleutel]){ toon(hwKleurCache[sleutel]); return; }
+  await hwModellenLaden();
+  const rij=hwModelRij(merk, model);
+  if(rij && Array.isArray(rij.kleuren) && rij.kleuren.length){ hwKleurCache[sleutel]=rij.kleuren; toon(rij.kleuren); return; }
   if(bezig) bezig.textContent='Kleuren van dit model ophalen…';
   try{
     const {data:{session}}=await sb.auth.getSession();
@@ -15789,7 +15851,6 @@ function hwFormRij(){
     /* marge = het btw-regime (margeregeling of normaal), niet hetzelfde als
        hwMarge() dat de winst berekent. Naam gelijk aan de refurbish-kant. */
     marge: (document.getElementById('hw_marge')||{}).value!=='nee',
-    plek: hwVeld('hw_plek')||null,
     ...hwAccuVelden(),
     ...hwKleurVeld(),
     uitstalling: (document.getElementById('hw_uitstalling')||{}).value||null,
@@ -15816,7 +15877,7 @@ async function hwStilBewaar(){
   if(!hwOpen || !hwOpen.id) return {error:null};
   if(!hwVeld('hw_model')) return {error:null};        // model verplicht; nog niet compleet
   const rij=hwFormRij();
-  const oudMarge=hwOpen.marge, oudPlek=hwOpen.plek, id=hwOpen.id;
+  const oudMarge=hwOpen.marge, id=hwOpen.id;
   /* Wat je hier aanpast en ook op de werkbank-rij staat, gaat daar mee naartoe: de
      pagina Online zetten leest merk, model, grade, accu en doos van die rij. Alleen wat
      echt veranderde, zodat een controle-uitslag niet stil wordt overschreven. */
@@ -15838,9 +15899,9 @@ async function hwStilBewaar(){
        refurbish-label lezen die rij. Dit deed eerst alleen de Opslaan-knop, dus wie
        een veld wijzigde en gewoon terugging, had stilletjes twee verschillende
        waarden. Nu het automatisch opslaan het enige pad is, hoort het hier. */
-    if(rij.marge!==oudMarge || rij.plek!==oudPlek || Object.keys(spiegel).length){
+    if(rij.marge!==oudMarge || Object.keys(spiegel).length){
       const {error:sErr}=await sb.from('refurbish_apparaten')
-        .update(Object.assign({marge:rij.marge, plek:rij.plek}, spiegel, {bijgewerkt_op:new Date().toISOString()}))
+        .update(Object.assign({marge:rij.marge}, spiegel, {bijgewerkt_op:new Date().toISOString()}))
         .eq('hardware_id', id);
       if(sErr) console.error('refurbish marge/plek syncen:', sErr);
     }
@@ -15866,6 +15927,7 @@ async function hwOpslaan(knop){
   }else{
     rij.team_id=account.team_id;
     rij.aangemaakt_door=(account&&account.id)||null;
+    const loc=document.getElementById('hw_loc_nieuw'); if(loc && loc.value) rij.locatie_id=loc.value;
     const {data:nieuw, error}=await sb.from('hardware').insert(rij).select('id').single(); fout=error;
     if(nieuw && nieuw.id) nieuwId=nieuw.id;
     /* Meteen ook in het refurbish-deel (Voorraad, Online zetten), met een A-nummer.
@@ -15883,7 +15945,7 @@ async function hwOpslaan(knop){
      komt (dan matcht hardware_id nergens). */
   if(hwOpen){
     const {error:sErr}=await sb.from('refurbish_apparaten')
-      .update({marge:rij.marge, plek:rij.plek, bijgewerkt_op:new Date().toISOString()})
+      .update({marge:rij.marge, bijgewerkt_op:new Date().toISOString()})
       .eq('hardware_id', hwOpen.id);
     if(sErr) console.error('refurbish marge/plek syncen:', sErr);
   }
@@ -15909,14 +15971,22 @@ async function hwOpslaan(knop){
    het toestel in het refurbish-deel (zoals elk toestellabel, de scanner kent die); zonder
    werkbank-rij staat het nummer in de QR, dan vindt de zoekbalk hem. Heeft het toestel een
    doos, dan komt er een kort dooslabel achteraan, net als aan de werkbank. */
+/* Elke regel met zijn naam ervoor ("Kleur: Middernacht", "Opslag: 128 GB"): dan hoeft
+   niemand te raden wat een los woord of getal op de sticker betekent. Bij een telefoon wat
+   je bij de inname kiest (kleur, opslag) plus staat, accu, doos en garantie; bij een laptop
+   de specs die de prijs bepalen. */
 function hwLabelRegels(h){
   const sp=h.specs||{}, tel=hwKleurTelt(h.categorie);
-  const sleutels=tel ? ['Opslag','Chip','Werkgeheugen','Scherm','Camera'] : ['Processor','Geheugen','Opslag','Videokaart','Scherm'];
-  const regels=sleutels.filter(k=>String(sp[k]||'').trim()).map(k=>k+': '+sp[k]);
-  if(h.nieuwe_accu) regels.push('Accu: nieuw (100%)'); else if(h.accu) regels.push('Accu: '+h.accu+'%');
-  const os=sp.Windows||sp.Besturingssysteem; if(os) regels.push(String(os));
-  if(h.doos) regels.push('Met doos');
-  return regels.slice(0, 8);
+  const regels=[];
+  const zet=(naam, w)=>{ if(String(w==null?'':w).trim()) regels.push(naam+': '+w); };
+  if(tel){ zet('Kleur', sp.Kleur); zet('Opslag', sp.Opslag); }
+  else { zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Scherm', sp.Scherm); }
+  if(h.staat) zet('Staat', h.staat+(HW_STAAT[h.staat]?' · '+HW_STAAT[h.staat]:''));
+  if(h.nieuwe_accu) zet('Accu', 'nieuw (100%)'); else if(h.accu) zet('Accu', h.accu+'%');
+  if(!tel) zet('Windows', sp.Windows||sp.Besturingssysteem);
+  if(h.doos) zet('Doos', 'ja');
+  if(Number(h.garantie)>0) zet('Garantie', h.garantie+' maanden');
+  return regels.slice(0, 9);
 }
 async function hwLabelPng(h, apparaatId){
   await laadScript('/app/qrcode.min.js');
@@ -15939,14 +16009,8 @@ async function hwLabelPng(h, apparaatId){
   ctx.font='800 '+Math.round(3.1*dpmm)+'px Arial';
   y=labelWrap(ctx, String(h.code||''), pad, y, txtW, Math.round(3.6*dpmm), 1);
   y+=Math.round(0.6*dpmm);
-  const kleur=(h.specs&&h.specs.Kleur)||'';
-  const mm=[h.merk,h.model].filter(Boolean).join(' ')+(kleur?' - '+kleur:'');
+  const mm=[h.merk,h.model].filter(Boolean).join(' ');
   if(mm){ ctx.font='800 '+Math.round(3.5*dpmm)+'px Arial'; y=labelWrap(ctx, mm, pad, y, txtW, Math.round(4.0*dpmm), 2); }
-  if(h.staat){
-    y+=Math.round(0.4*dpmm);
-    ctx.font='800 '+Math.round(2.8*dpmm)+'px Arial';
-    y=labelWrap(ctx, 'Grade '+h.staat+(HW_STAAT[h.staat]?' · '+HW_STAAT[h.staat]:''), pad, y, breed(y), Math.round(3.3*dpmm), 1);
-  }
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
   for(const r of hwLabelRegels(h)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }

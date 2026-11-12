@@ -578,7 +578,10 @@ setTimeout(async()=>{
   const geprint=await w.eval("hwLabelPrinten('hw7', true)");
   ok('label: toestellabel en dooslabel geprint', geprint===true && w.__prints.join(',')==='toestel:A0090,doos:A0090');
   ok('label: knop op de toestelpagina', [...d.querySelectorAll('button')].some(b=>/Label printen/.test(b.textContent)));
-  ok('label: regels met opslag, chip en doos', /Chip: A15/.test(w.eval("hwLabelRegels(hwOpen).join('|')")) && /Met doos/.test(w.eval("hwLabelRegels(hwOpen).join('|')")));
+  w.eval("hwOpen.specs=Object.assign({}, hwOpen.specs, {Opslag:'128 GB'}); hwOpen.staat='A'; hwOpen.accu=88; hwOpen.garantie=24");
+  const lr=w.eval("hwLabelRegels(hwOpen).join('|')");
+  ok('label: alles met naam erbij', /Kleur: Middernacht/.test(lr) && /Opslag: 128 GB/.test(lr) && /Staat: A · /.test(lr) && /Accu: 88%/.test(lr) && /Doos: ja/.test(lr) && /Garantie: 24 maanden/.test(lr));
+  ok('label: bij een telefoon geen chip of scherm, wel wat je kiest', !/Chip:|Scherm:/.test(lr));
   // Los toevoegen met een werkende printer: het nieuwe toestel opent en het label komt eruit.
   w.__prints.length=0;
   w.eval(`localStorage.setItem('storvoLabelPrinterOk','1'); hwSluit(); hwNieuw();
@@ -589,6 +592,51 @@ setTimeout(async()=>{
   ok('los toevoegen: nieuw toestel opent meteen', w.eval('hwOpen && hwOpen.id')==='x');
   ok('los toevoegen: label vanzelf geprint', w.__prints.join(',')==='toestel:A0091');
   w.eval("hwLaad=window.__hwLaadEcht; localStorage.removeItem('storvoLabelPrinterOk'); hwSluit(); showTab('dashboard')");
+
+  // Telefoon, Apple, model typen of kiezen, dan de kleuren en de opslag van precies dat model
+  // uit de modellenlijst (model_kleuren), zonder iets op te hoeven zoeken.
+  w.__edge=[]; w.__geschreven.length=0;
+  w.fetch=async(u,o)=>{ w.__edge.push(String(u)); return {ok:true, json:async()=>({ok:true})}; };
+  w.eval(`window.__sbFrom=window.__sbFrom||sb.from;
+    sb.from=(n)=>{ if(n!=='model_kleuren') return window.__sbFrom(n);
+      const rijen=[
+        {merk:'Apple', model:'iPhone 13', kleuren:['Middernacht','Sterrenlicht','Blauw'], opslag:['128 GB','256 GB','512 GB'], volgorde:202102, toon:true},
+        {merk:'Apple', model:'iPhone 13 Pro', kleuren:['Grafiet','Sierrablauw'], opslag:['128 GB','1 TB'], volgorde:202103, toon:true},
+        {merk:'Apple', model:'iPhone SE 2020', kleuren:['Zwart'], opslag:['64 GB'], volgorde:202001, toon:false},
+        {merk:'Samsung', model:'Galaxy S24', kleuren:['Onyx Black'], opslag:['128 GB'], volgorde:202401, toon:true}];
+      const api={select(){return api;}, then(r){ r({data:rijen, error:null}); }};
+      return api; };
+    hwModellen=null;
+    hwLocaties=[{id:'m1',naam:'Magazijn',soort:'magazijn',volgorde:0},{id:'l1',naam:'Winkel',soort:'winkel',volgorde:1}];
+    hwSluit(); hwNieuw();`);
+  ok('invoer: geen plekveld meer', !d.getElementById('hw_plek'));
+  const ligt=d.getElementById('hw_loc_nieuw');
+  ok('invoer: ligt in, met de winkel voorop', !!ligt && ligt.value==='l1' && ligt.options[0].textContent==='Winkel');
+  d.getElementById('hw_cat').value='Telefoon'; d.getElementById('hw_cat').dataset.gekozen='1'; w.eval('hwKleurToon()');
+  d.getElementById('hw_merk_kies').value='Apple'; w.eval('hwMerkKies()');
+  const mv=d.getElementById('hw_model'); mv.value='13 pro';
+  await w.eval('hwModellenLaden()'); w.eval('hwModelTyp()');
+  const ml=d.getElementById('hwModelLijst');
+  ok('model: typen vindt het juiste model', !ml.hidden && ml.querySelectorAll('.zoekrij').length===1 && /iPhone 13 Pro/.test(ml.textContent));
+  mv.value='13'; w.eval('hwModelTyp()');
+  const namen=[...ml.querySelectorAll('.zoekrij')].map(b=>b.textContent.trim());
+  ok('model: nieuwste eerst, geen dubbele schrijfwijzen', namen.join('|')==='iPhone 13 Pro|iPhone 13');
+  mv.value=''; w.eval('hwModelTyp()');
+  ok('model: alleen modellen van dit merk', ![...ml.querySelectorAll('.zoekrij')].some(b=>/Galaxy/.test(b.textContent)) && !/SE 2020/.test(ml.textContent));
+  w.eval("hwModelKies('iPhone 13')");
+  await new Promise(r=>setTimeout(r,30));
+  const ks2=d.getElementById('hw_kleur_kies'), os2=d.getElementById('hw_opslag_kies');
+  ok('model: kleuren van dit model klaar', !ks2.hidden && /Sterrenlicht/.test(ks2.textContent) && !/Grafiet/.test(ks2.textContent));
+  ok('model: opslag van dit model klaar', !os2.hidden && /512 GB/.test(os2.textContent) && !/1 TB/.test(os2.textContent));
+  ok('model: kleur en opslag zonder iets op te zoeken', !w.__edge.some(u=>/model-kleuren|model-specs/.test(u)));
+  ks2.value='Middernacht'; w.eval('hwKleurKies()'); os2.value='128 GB'; w.eval('hwOpslagKies()');
+  w.eval("hwLaad=async()=>{}");
+  await w.eval('hwOpslaan(null)');
+  const ins=w.__geschreven.filter(g=>g[0]==='hardware' && g[1]==='insert').pop();
+  ok('opslaan: alles uit de invoer gaat mee', !!ins && ins[2].merk==='Apple' && ins[2].model==='iPhone 13' && ins[2].categorie==='Telefoon'
+     && ins[2].specs.Kleur==='Middernacht' && ins[2].specs.Opslag==='128 GB' && ins[2].locatie_id==='l1');
+  ok('opslaan: geen plek meer meegestuurd', !('plek' in ins[2]));
+  w.eval("hwLaad=window.__hwLaadEcht||hwLaad; sb.from=window.__sbFrom; hwModellen=null; hwSluit(); showTab('dashboard')");
 
   // Bij aanmaken staat de soort bovenaan, en een iPhone of Galaxy wordt vanzelf een telefoon,
   // zodat het kleurveld er meteen is.
