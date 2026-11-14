@@ -7,6 +7,8 @@
 //      onthouden alleen als het iets nieuws is, en het formulier vult hem bij model en opslag
 //      zonder wat je zelf typte te overschrijven
 //   3. de werkbank: het kaartje en de pagina Online zetten krijgen de bekende prijs
+//   4. de sticker (winkelapp en werkbank): de specs van het kaartje, de staat met dezelfde woorden,
+//      de verkoopprijs en de nieuwprijs eronder. We vangen wat er echt getekend wordt
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const os=require('os');
@@ -18,6 +20,20 @@ const bron=n=>path.join(__dirname,'..',n);
 let fout=0;
 const ok=(n,c)=>{ console.log((c?'ok   ':'FOUT ')+n); if(!c) fout++; };
 const wacht=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* jsdom heeft geen canvas. Deze vangt wat er op de sticker getekend wordt (fillText), zodat we
+   kunnen zien wat er echt op komt, niet alleen wat een hulpfunctie teruggeeft. */
+function tekenVanger(win){
+  win.__tekst=[];
+  win.HTMLCanvasElement.prototype.getContext=function(){
+    return {fillStyle:'', font:'', textBaseline:'', textAlign:'', strokeStyle:'', lineWidth:0, lineCap:'', lineJoin:'',
+      fillRect(){}, drawImage(){}, beginPath(){}, arc(){}, fill(){}, moveTo(){}, lineTo(){}, stroke(){},
+      measureText:(t)=>({width:String(t).length*8}),
+      fillText:(t)=>win.__tekst.push(String(t))};
+  };
+  win.HTMLCanvasElement.prototype.toDataURL=()=>'data:image/png;base64,AAAA';
+  win.Image=class{ set src(v){ setTimeout(()=>this.onload&&this.onload(),0); } };
+}
 
 /* Een nagebootste tabel model_nieuwprijzen die echt filtert (ilike = gelijk, hoofdletters tellen
    niet) en schrijft. Zonder filter zou een test met twee modellen niets bewijzen. */
@@ -196,6 +212,25 @@ window.supabase={createClient:()=>({
   ok('aanvullen: toestel dicht, nieuwprijs rechtstreeks op de rij', w.__hwUpd.length===1 && w.__hwUpd[0].nieuwprijs===1019 && w.eval("hwData[0].nieuwprijs")===1019);
   w.eval('sb.from=window.__vorigeFrom');
 
+  // De sticker van de winkelapp: alles van het kaartje, met de prijs en de nieuwprijs.
+  tekenVanger(w);
+  w.eval("laadScript=async()=>{}");
+  await w.eval(`hwLabelPng({code:'A0201', merk:'Apple', model:'iPhone 13', categorie:'Telefoon', staat:'B', accu:88, doos:true, garantie:24,
+    verkoop:299, nieuwprijs:null, specs:{Kleur:'Groen', Opslag:'128 GB'}}, null)`);
+  const st=w.__tekst.join('|');
+  ok('sticker: specs van het kaartje erop', /Kleur: Groen/.test(st) && /Opslag: 128GB/.test(st) && /Scherm: 6,1 inch Super Retina XDR OLED/.test(st) && /Netwerk: 5G/.test(st) && /Batterij: 88%/.test(st));
+  ok('sticker: staat met de woorden van het kaartje', /Staat: B · Nette staat/.test(st));
+  ok('sticker: doos en garantie', /Doos: ja/.test(st) && /Garantie: 24 maanden/.test(st));
+  ok('sticker: verkoopprijs en daaronder de nieuwprijs uit de lijst', /299/.test(st) && /Nieuwprijs: €\s?909,-/.test(st) && st.indexOf('299')<st.indexOf('Nieuwprijs'));
+  w.__tekst.length=0;
+  await w.eval(`hwLabelPng({code:'A0202', merk:'HP', model:'EliteBook 840 G8', categorie:'Laptop', staat:'C', accu:81, verkoop:399, nieuwprijs:1299,
+    specs:{Processor:'Intel Core i5', Geheugen:'16 GB', Opslag:'512 GB SSD'}}, null)`);
+  const sl=w.__tekst.join('|');
+  ok('sticker laptop: specs en staat met de woorden van het kaartje', /Processor: Intel Core i5/.test(sl) && /Staat: C · Gebruikt, maar goed/.test(sl) && /Accu: 81%/.test(sl) && !/Scherm: \d/.test(sl) && /Nieuwprijs/.test(sl));
+  w.__tekst.length=0;
+  await w.eval(`hwLabelPng({code:'A0203', merk:'Apple', model:'iPhone 13', categorie:'Telefoon', staat:'B', verkoop:1200, specs:{Opslag:'128 GB'}}, null)`);
+  ok('sticker: een nieuwprijs lager dan de prijs laten we weg', !/Nieuwprijs/.test(w.__tekst.join('|')));
+
   // ── 3. de werkbank ──
   const RMOCK=`<script>
 ${NP_TABEL}
@@ -255,6 +290,18 @@ window.supabase={createClient:()=>({
     onl={a:apparaten.find(a=>a.id==='p2'), nieuwprijs:null};`);
   await r.eval('onlNieuwprijsLater(onl.a)');
   ok('werkbank: later antwoord vult de lege nieuwprijs', r.eval('onl.nieuwprijs')===1019 && r.eval('onl.nieuwprijsAuto')===true);
+
+  // De sticker van de werkbank: hetzelfde.
+  tekenVanger(r);
+  r.eval(`laadScript=async()=>{}; window.qrcode=()=>({addData(){}, make(){}, createDataURL:()=>'data:,'});
+    apparaten.push({id:'p3', team_id:'t1', code:'A0103', merk:'Apple', model:'iPhone 13', categorie:'Telefoon', kleur:'Groen',
+      specs:{Opslag:'128 GB', IMEI:'356789012345678'}, grade:'B', accu:91, doos:true, verkoop:329, status:'klaar', checklist:[], defecten:[], goede_delen:[]});`);
+  await r.eval("deviceLabelPng(apparaten.find(a=>a.id==='p3'))");
+  const sw=r.__tekst.join('|');
+  ok('werkbank sticker: model met kleur en de grade met de woorden van het kaartje', /iPhone 13 - Groen/.test(sw) && /Grade B · Nette staat/.test(sw));
+  ok('werkbank sticker: specs van het kaartje erop', /Opslag: 128GB/.test(sw) && /Scherm: 6,1 inch Super Retina XDR OLED/.test(sw) && /Netwerk: 5G/.test(sw) && /Batterij: 91%/.test(sw) && /Met doos/.test(sw));
+  ok('werkbank sticker: geen IMEI', !/IMEI|356789012345678/.test(sw));
+  ok('werkbank sticker: verkoopprijs en de nieuwprijs eronder', /329/.test(sw) && /Nieuwprijs: €\s?909,-/.test(sw));
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nnieuwprijs in orde');
   process.exit(fout?1:0);

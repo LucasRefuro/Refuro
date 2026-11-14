@@ -113,6 +113,9 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       één keer op het web op, met bron. Hooguit eens per dertig dagen per model. Nog niet echt
       gedraaid: alle iPhones staan al in de lijst, en zonder inlog kan het niet. De eerste
       Galaxy die je toevoegt is de test; komt er niets, dan typ je hem en is hij onthouden.
+- [x] **De sticker van een telefoon** (winkelapp en werkbank) heeft nu alles van het kaartje: kleur,
+      opslag, scherm, netwerk, batterij, staat (dezelfde woorden als het kaartje), doos, garantie,
+      de verkoopprijs groot en de nieuwprijs eronder. Een lange regel mag over twee regels lopen.
 - [x] **De nieuwprijs gaat ook naar de webshop** (compareAtPrice), nu bij elke telefoon. Nagekeken:
       het thema toont hem als vergelijking met nieuw ("Ter vergelijking kost ditzelfde model nieuw
       rond ...", in de winkelwagen "Nieuw had dit ... gekost"), niet als korting van de winkel.

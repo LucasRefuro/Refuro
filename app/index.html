@@ -14232,6 +14232,9 @@ function moduleAan(naam){
   return !!(abonnement && Array.isArray(abonnement.modules) && abonnement.modules.includes(naam));
 }
 const HW_STAAT={A:'Als nieuw', B:'Gebruikt', C:'Zichtbare gebruikssporen'};
+/* Wat de klant leest, op het A6-kaartje en op de sticker (daar staat ook de prijs op). HW_STAAT
+   hierboven is de uitleg voor jezelf in het formulier. Gelijk aan GRADE_STAAT op de werkbank. */
+const HW_STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
 
 let hwLocaties=[];
 function hwLocatieNaam(h){
@@ -16256,17 +16259,24 @@ async function hwOpslaan(knop){
    werkbank-rij staat het nummer in de QR, dan vindt de zoekbalk hem. Heeft het toestel een
    doos, dan komt er een kort dooslabel achteraan, net als aan de werkbank. */
 /* Elke regel met zijn naam ervoor ("Kleur: Middernacht", "Opslag: 128 GB"): dan hoeft
-   niemand te raden wat een los woord of getal op de sticker betekent. Bij een telefoon wat
-   je bij de inname kiest (kleur, opslag) plus staat, accu, doos en garantie; bij een laptop
-   de specs die de prijs bepalen. */
+   niemand te raden wat een los woord of getal op de sticker betekent. Bij een telefoon alles
+   van het A6-kaartje (kleur, opslag, scherm, netwerk, batterij) plus staat, doos en garantie;
+   bij een laptop de specs die de prijs bepalen. De staat met de woorden van het kaartje. */
 function hwLabelRegels(h){
   const sp=h.specs||{}, tel=hwKleurTelt(h.categorie);
   const regels=[];
   const zet=(naam, w)=>{ if(String(w==null?'':w).trim()) regels.push(naam+': '+w); };
-  if(tel){ zet('Kleur', sp.Kleur); zet('Opslag', sp.Opslag); }
+  if(tel){
+    /* Dezelfde specs als op het A6-kaartje (scherm, opslag, 5G), elk met zijn naam ervoor.
+       Eerst stonden hier alleen kleur en opslag; de winkel wil alles erop. */
+    const t=hwTelKaart(h).delen;
+    zet('Kleur', sp.Kleur); zet('Opslag', t.opslag||sp.Opslag);
+    zet('Scherm', [t.inch, t.type].filter(Boolean).join(' ')); zet('Netwerk', t.net);
+  }
   else { zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Scherm', sp.Scherm); }
-  if(h.staat) zet('Staat', h.staat+(HW_STAAT[h.staat]?' · '+HW_STAAT[h.staat]:''));
-  if(h.nieuwe_accu) zet('Accu', 'nieuw (100%)'); else if(h.accu) zet('Accu', h.accu+'%');
+  if(h.staat) zet('Staat', h.staat+(HW_STAAT_KLANT[h.staat]?' · '+HW_STAAT_KLANT[h.staat]:''));
+  const accuNaam=tel?'Batterij':'Accu';    // "Batterijconditie" op het kaartje
+  if(h.nieuwe_accu) zet(accuNaam, 'nieuw (100%)'); else if(h.accu) zet(accuNaam, h.accu+'%');
   if(!tel) zet('Windows', sp.Windows||sp.Besturingssysteem);
   if(h.doos) zet('Doos', 'ja');
   if(Number(h.garantie)>0) zet('Garantie', h.garantie+' maanden');
@@ -16288,6 +16298,12 @@ async function hwLabelPng(h, apparaatId){
   }
   const qrOnder=pad+qrS, txtW=W-qrS-pad*2-Math.round(1.5*dpmm);
   const breed=(yy)=> yy<qrOnder ? txtW : (W-2*pad);
+  /* Een telefoon: scherm en netwerk uit de modellenlijst, en de nieuwprijs van model en opslag
+     als het toestel er zelf geen heeft. Net als het kaartje. */
+  const tel=hwKleurTelt(h.categorie);
+  if(tel){ try{ await hwModellenLaden(); }catch(_e){} }
+  let np=(h.nieuwprijs!=null && h.nieuwprijs!=='') ? Number(h.nieuwprijs) : null;
+  if(np==null && tel){ try{ const r=await nieuwprijsVan(h.merk, h.model, (h.specs||{}).Opslag, false); if(r) np=r.prijs; }catch(_e){} }
   ctx.fillStyle='#000';
   let y=pad;
   ctx.font='800 '+Math.round(3.1*dpmm)+'px Arial';
@@ -16297,12 +16313,20 @@ async function hwLabelPng(h, apparaatId){
   if(mm){ ctx.font='800 '+Math.round(3.5*dpmm)+'px Arial'; y=labelWrap(ctx, mm, pad, y, txtW, Math.round(4.0*dpmm), 2); }
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
-  for(const r of hwLabelRegels(h)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  // Twee regels per spec mogen: "Scherm: 6,1 inch Super Retina XDR OLED" past niet altijd op één.
+  for(const r of hwLabelRegels(h)){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 2); }
   if(h.verkoop!=null && h.verkoop!==''){
     y+=Math.round(1.2*dpmm);
     ctx.font='800 '+Math.round(5.6*dpmm)+'px Arial';
     ctx.fillText(euro(h.verkoop), pad, y);
     y+=Math.round(5.9*dpmm);
+    /* De nieuwprijs klein eronder, zoals op het kaartje. Alleen als hij hoger is, anders zegt
+       hij niets. */
+    if(np!=null && np>Number(h.verkoop)){
+      ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
+      ctx.fillText('Nieuwprijs: '+euro(np).replace(/,00$/,',-'), pad, y);
+      y+=Math.round(3.1*dpmm);
+    }
   }
   const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
   const out=document.createElement('canvas'); out.width=W; out.height=Hc;
@@ -16407,7 +16431,8 @@ function hwTelKaart(h){
   /* "iPhone 13" en "Galaxy S24" zeggen genoeg; "Apple iPhone 13" is dubbel. */
   const model=String(h.model||'').trim();
   const titel=/^(iphone|galaxy|pixel|ipad)\b/i.test(model) ? model : [h.merk, model].filter(Boolean).join(' ');
-  return {titel, samenvatting:[opslag, inch, type].filter(Boolean).join(' | '), specs};
+  return {titel, samenvatting:[opslag, inch, type].filter(Boolean).join(' | '), specs,
+          delen:{type, inch, opslag, net, accu}};   // los, voor de sticker (hwLabelRegels)
 }
 function hwKaartData(h){
   const specsObj=(h.specs&&typeof h.specs==='object')?h.specs:{};
@@ -16420,8 +16445,7 @@ function hwKaartData(h){
   const eur=n=>euro(n).replace(/,00$/,',-').replace(/\u20AC\s+/,'\u20AC');
   const prijs=h.verkoop!=null?eur(h.verkoop):'';
   const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?eur(Number(h.nieuwprijs)):null;
-  const STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
-  const staat=STAAT_KLANT[h.staat]||'Nette staat';
+  const staat=HW_STAAT_KLANT[h.staat]||'Nette staat';
   const g=(h.garantie!=null)?Number(h.garantie):24;
   const gar=[]; if(g>0) gar.push(g+' maanden garantie');
   gar.push('Technisch 100% gecontroleerd'); gar.push('Direct klaar voor gebruik');

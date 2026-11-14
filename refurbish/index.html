@@ -2590,9 +2590,28 @@ function labelWrap(ctx, tekst, x, y, maxW, regelH, maxRegels){
   if(regel) ctx.fillText(regel, x, y);
   return y+regelH;
 }
-function labelRegels(a){
+function labelRegels(a, info){
   const specs=a.specs||{};
   if(a.status==='repurpose'){ const g=a.goede_delen||[]; return g.length?['Nog goed: '+g.join(', ')]:['Niets meer bruikbaar']; }
+  /* Een telefoon: alles van het A6-kaartje (opslag, scherm, netwerk, batterij), elk met zijn
+     naam ervoor, plus doos en garantie. De kleur en de staat staan al hoger op de sticker. Eerst
+     stond hier alleen de opslag uit de controle; de winkel wil alles erop. info komt uit
+     modelInfoVan (deviceLabelPng haalt hem op). */
+  if(info && fotoKleurgebonden(a)){
+    const hw=(typeof hardwareVan==='function'?hardwareVan(a):null)||{};
+    const t=telKaartRegels(a, info, Object.assign({}, hw.specs||{}, specs)).delen;
+    const r=[];
+    if(t.opslag) r.push('Opslag: '+t.opslag);
+    if(t.type||t.inch) r.push('Scherm: '+[t.inch, t.type].filter(Boolean).join(' '));
+    if(t.net) r.push('Netwerk: '+t.net);
+    let accu=a.nieuwe_accu ? 'Batterij: nieuw (100%)' : (t.accu ? 'Batterij: '+t.accu+'%' : null);
+    if(a.accu_notitie) accu=(accu?accu+' · ':'Batterij: ')+a.accu_notitie;
+    if(accu) r.push(accu);
+    if(a.doos) r.push('Met doos');
+    if(Number(hw.garantie)>0) r.push('Garantie: '+hw.garantie+' maanden');
+    if(a.notitie) r.push(a.notitie);
+    return r;
+  }
   const p=(typeof CATEGORIE_PROFIEL!=='undefined'&&(CATEGORIE_PROFIEL[a.categorie]||CATEGORIE_PROFIEL.Laptop))||{specVelden:[]};
   // De echte specs (processor, geheugen, opslag, scherm...) uit het categorie-profiel; kleur,
   // imei en serienummer laten we weg want die horen niet op een verkoop-sticker. Tot 6 regels,
@@ -2625,6 +2644,12 @@ async function deviceLabelPng(a){
   const hw=(typeof hardwareVan==='function'?hardwareVan(a):null)||{};
   const grade=hw.staat||a.grade;
   const prijs=hw.verkoop!=null?hw.verkoop:(a.verkoop!=null?a.verkoop:null);
+  /* Een telefoon: scherm en netwerk uit de modellenlijst, en de nieuwprijs van model en opslag
+     als het toestel er zelf geen heeft. Net als het kaartje. */
+  const tel=fotoKleurgebonden(a);
+  const info=tel ? await modelInfoVan(a) : null;
+  let np=hw.nieuwprijs!=null ? Number(hw.nieuwprijs) : (a.nieuwprijs!=null ? Number(a.nieuwprijs) : null);
+  if(np==null && tel && prijs!=null){ try{ const r=await nieuwprijsVan(a.merk, a.model, opslagVan(a), false); if(r) np=r.prijs; }catch(_e){} }
   // QR rechtsboven, tekst links: geen leeg gat. Alles in zwart (de rol blijft wel in
   // tweekleuren-modus, want DK-22251 eist dat, maar we printen geen rood).
   const qrS=Math.round(16*dpmm);
@@ -2669,13 +2694,20 @@ async function deviceLabelPng(a){
   const extra=rep.concat([bat?('Batch '+(bat.code||bat.nummer||'')):null]).filter(Boolean);
   y+=Math.round(0.8*dpmm);
   ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
-  for(const r of extra.concat(labelRegels(a))){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 1); }
+  // Twee regels per spec mogen: "Scherm: 6,1 inch Super Retina XDR OLED" past niet altijd op één.
+  for(const r of extra.concat(labelRegels(a, info))){ y=labelWrap(ctx, r, pad, y, breed(y), Math.round(3.1*dpmm), 2); }
   // prijs groot, direct onder de specs
   if(prijs!=null && prijs!==''){
     y+=Math.round(1.2*dpmm);
     ctx.font='800 '+Math.round(5.6*dpmm)+'px Arial';
     ctx.fillText(euro(prijs), pad, y);
     y+=Math.round(5.9*dpmm);
+    /* De nieuwprijs klein eronder, zoals op het kaartje. Alleen als hij hoger is. */
+    if(np!=null && np>Number(prijs)){
+      ctx.font='500 '+Math.round(2.5*dpmm)+'px Arial';
+      ctx.fillText('Nieuwprijs: '+euro(np).replace(/,00$/,',-'), pad, y);
+      y+=Math.round(3.1*dpmm);
+    }
   }
   // afsnijden tot precies de inhoud (of tot onder de QR, wat lager ligt) + randje
   const Hc=Math.min(Hmax, Math.max(y, qrOnder)+pad);
@@ -2813,7 +2845,20 @@ function telKaartRegels(a, info, specs){
   if(accu) bullets.push('Batterijconditie: '+accu+'%');
   const model=String(a.model||'').trim();
   const titel=/^(iphone|galaxy|pixel|ipad)\b/i.test(model) ? model : [a.merk, model].filter(Boolean).join(' ');
-  return {titel, sub:[opslag, inch, type].filter(Boolean).join(' | '), bullets};
+  return {titel, sub:[opslag, inch, type].filter(Boolean).join(' | '), bullets,
+          delen:{type, inch, opslag, net, accu}};   // los, voor de sticker (labelRegels)
+}
+/* Scherm en netwerk van een telefoonmodel uit de modellenlijst, voor het kaartje en de sticker.
+   Per model één keer per sessie: een partij stickers vraagt het anders voor elk toestel. */
+const _modelInfoCache={};
+async function modelInfoVan(a){
+  const merk=String((a&&a.merk)||'').replace(/[%_]/g,''), model=String((a&&a.model)||'').replace(/[%_]/g,'');
+  const k=(merk+'|'+model).toLowerCase();
+  if(_modelInfoCache[k]) return _modelInfoCache[k];
+  try{
+    const {data}=await sb.from('model_kleuren').select('scherm,netwerk').ilike('merk', merk).ilike('model', model).maybeSingle();
+    return (_modelInfoCache[k]=data||{});
+  }catch(_e){ return {}; }
 }
 function prijskaartHtml(bron){
   const a=bron.a;
@@ -2868,13 +2913,7 @@ function prijskaartHtml(bron){
 /* Eén plek die het kaart-venster tekent, zodat de print-id maar één keer bestaat. */
 async function prijskaartVenster(bron){
   /* Bij een telefoon eerst scherm en netwerk uit de modellenlijst; lukt dat niet, dan uit de specs. */
-  if(fotoKleurgebonden(bron.a) && !bron.modelInfo){
-    try{
-      const {data}=await sb.from('model_kleuren').select('scherm,netwerk')
-        .ilike('merk', String(bron.a.merk||'').replace(/[%_]/g,'')).ilike('model', String(bron.a.model||'').replace(/[%_]/g,'')).maybeSingle();
-      bron.modelInfo=data||{};
-    }catch(_e){ bron.modelInfo={}; }
-  }
+  if(fotoKleurgebonden(bron.a) && !bron.modelInfo) bron.modelInfo=await modelInfoVan(bron.a);
   /* En een telefoon zonder nieuwprijs krijgt de bekende prijs van dit model met deze opslag.
      Alleen uit de tabel: het web op duurt te lang voor een klik. */
   const heeftNp=(bron.nieuwprijs!=null && bron.nieuwprijs!=='') || bron.a.nieuwprijs!=null;

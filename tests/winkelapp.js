@@ -580,8 +580,8 @@ setTimeout(async()=>{
   ok('label: knop op de toestelpagina', [...d.querySelectorAll('button')].some(b=>/Label printen/.test(b.textContent)));
   w.eval("hwOpen.specs=Object.assign({}, hwOpen.specs, {Opslag:'128 GB'}); hwOpen.staat='A'; hwOpen.accu=88; hwOpen.garantie=24");
   const lr=w.eval("hwLabelRegels(hwOpen).join('|')");
-  ok('label: alles met naam erbij', /Kleur: Middernacht/.test(lr) && /Opslag: 128 GB/.test(lr) && /Staat: A · /.test(lr) && /Accu: 88%/.test(lr) && /Doos: ja/.test(lr) && /Garantie: 24 maanden/.test(lr));
-  ok('label: bij een telefoon geen chip of scherm, wel wat je kiest', !/Chip:|Scherm:/.test(lr));
+  ok('label: alles met naam erbij', /Kleur: Middernacht/.test(lr) && /Opslag: 128GB/.test(lr) && /Staat: A · Als nieuw/.test(lr) && /Batterij: 88%/.test(lr) && /Doos: ja/.test(lr) && /Garantie: 24 maanden/.test(lr));
+  ok('label: bij een telefoon de specs van het kaartje, geen chip', !/Chip:/.test(lr));
   // Los toevoegen met een werkende printer: het nieuwe toestel opent en het label komt eruit.
   w.__prints.length=0;
   w.eval(`localStorage.setItem('storvoLabelPrinterOk','1'); hwSluit(); hwNieuw();
