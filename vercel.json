@@ -38,6 +38,7 @@
   ],
   "rewrites": [
     { "source": "/refurbish/test/:code", "destination": "/refurbish/test" },
+    { "source": "/rooster/:token", "destination": "/rooster" },
     { "source": "/r/:winkel/:code", "destination": "/r" },
     { "source": "/r/:winkel", "destination": "/r" },
     { "source": "/", "has": [{ "type": "host", "value": "refuro.storvo.app" }], "destination": "/r" },

@@ -48,6 +48,8 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `klantportaal` | ja | Inloglinks en uitnodigingen voor het klantportaal, in de huisstijl van de winkel. Controleert zelf wie er belt |
 | `imaging` | nee | Werkplaats-imaging: schiet via de FOG-API een deploy-taak in (config, test, images-sync, deploy, status) |
 | `leveranciers` | nee | Bewaart de inlog voor Foneday en Mobileparts, met het wachtwoord versleuteld. Geeft het nooit terug |
+| `rooster-link` | ja | Achter de twee vaste roosterlinks in de WhatsApp-groep (`/rooster/<token>`): beschikbaarheid doorgeven voor de komende week, en het rooster bekijken van weken die de eigenaar deelde. De link is het toegangsbewijs; met `inloggen_verplicht` alleen nog ingelogd en alleen voor jezelf. Uitrollen met verify_jwt uit |
+| `rooster-herinnering`, `rooster-mail` | nee | Oud: herinneringsmails en meldingen bij goedkeuren. De app roept ze niet meer aan; de herinnering verstuurt niets zolang `rooster_instelling` leeg is |
 
 "Openbaar" betekent dat de functie zonder inlog bereikbaar is. Die functies
 controleren zelf wie er belt, via een handtekening of een eigen controle.

@@ -1,5 +1,10 @@
 # Rooster-workflow, stand van zaken
 
+**Let op, 14 november 2026: dit is vervangen.** Goedkeuren en herinneringsmails zijn weg.
+Het rooster gaat nu via twee vaste links in de WhatsApp-groep (edge `rooster-link`,
+pagina `/rooster/<token>`, tabellen `rooster_links` en `rooster_weken`). Zie OPENSTAAND.md.
+Wat hieronder staat is de oude stand, ter geschiedenis.
+
 Kort overzicht van wat er is gebouwd en wat er nog moet. Bijgewerkt 19 september 2026.
 
 ## Het idee

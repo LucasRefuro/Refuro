@@ -80,6 +80,21 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Thema live** (10 nov, met akkoord): net verkocht met vergelijkbare toestellen, de grades met
       accu per staat, geen "Incl. btw" bij margeregeling, en geen fout meer bij een kaart zonder foto.
 
+## Rooster via de WhatsApp-groep (14 november 2026)
+
+- [x] **Twee vaste links** per winkel (tabel `rooster_links`, migratie gedraaid). Op zaterdag de
+      beschikbaarheid-link in de groep: je team tikt zijn naam aan en per dag kan of kan niet,
+      zonder in te loggen. Gaat altijd over de week die maandag begint.
+- [x] **Rooster delen per week** (tabel `rooster_weken`): pas na "Rooster delen" staat de week
+      achter de rooster-link. Daarna meteen de link klaar voor WhatsApp.
+- [x] **Inplannen kan altijd**, ook zonder doorgegeven beschikbaarheid.
+- [x] **Goedkeuren en herinneringsmails weg** uit de winkelapp. Doorgeven telt meteen.
+- [x] **Vinkje "Alleen met inloggen"** voor later; dan geeft ieder alleen voor zichzelf door.
+- [ ] **Edge `rooster-link` uitrollen** (verify_jwt uit). Wacht op akkoord van de eigenaar.
+      Zonder deze functie doen de links nog niets.
+- [ ] **Eigenaar: de beschikbaarheid-link één keer zelf openen** op de telefoon en iets doorgeven.
+- [ ] **Later opruimen:** de oude functies `rooster-herinnering` en `rooster-mail` (doen niets meer).
+
 ---
 
 ## Inkoopregister, DOR en de telefoon (3 november 2026)

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooster</title>
+<link rel="icon" href="/merk/merk.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/merk/app-icoon-180.png">
+<meta name="theme-color" content="#0B5B52">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Deze pagina opent je team via de link in de groep, meestal op de telefoon. Daarom één
+     kolom, grote knoppen en per dag maar één keuze: kan of kan niet. Zelfde kleuren als de
+     klantpagina (/r/). */
+  :root{
+    --accent:#0B5B52; --donker:#123F39; --bg:#F7F6F3; --tekst:#17201E;
+    --card:#FFFFFF; --rand:#ECEAE4; --zacht:#F0EEE8; --muted:#5B6663; --muted-l:#8A938F;
+    --groen:#1E9E6A; --groen-zacht:#E3F4EC; --groen-tekst:#177A51;
+    --rood:#D64545; --rood-zacht:#FAE4E4; --rood-tekst:#A33333;
+    --pil:100px; --radius:24px;
+    --schaduw:0 6px 24px rgba(23,32,30,.07);
+  }
+  [hidden]{display:none !important;}
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{overflow-x:clip;}
+  body{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--tekst); line-height:1.55; -webkit-font-smoothing:antialiased;
+    padding:24px 16px 48px; overflow-x:clip; max-width:100vw;}
+  .wrap{max-width:560px; margin:0 auto;}
+  h1,h2{font-family:'Sora',sans-serif; letter-spacing:-.01em;}
+  header{background:var(--donker); border-radius:var(--radius); padding:24px 26px; margin-bottom:18px; color:#fff;}
+  header h1{font-size:22px; font-weight:800;}
+  header .sub{font-size:14px; opacity:.8; margin-top:2px;}
+  .kaart{background:var(--card); border-radius:var(--radius); padding:22px 22px; margin-bottom:16px; box-shadow:var(--schaduw);}
+  .kaart h2{font-size:17px; font-weight:700; margin-bottom:14px;}
+  .muted{color:var(--muted);}
+  .klein{font-size:13.5px;}
+
+  .namen{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;}
+  .naamknop{border:1.5px solid var(--rand); background:var(--card); color:var(--tekst); border-radius:16px;
+    padding:14px 12px; font:inherit; font-weight:600; font-size:16px; cursor:pointer; text-align:center;}
+  .naamknop.aan{border-color:var(--accent); background:var(--groen-zacht); color:var(--accent);}
+
+  .dag{padding:12px 0; border-top:1px solid var(--rand);}
+  .dag:first-of-type{border-top:none; padding-top:0;}
+  .dagkop{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .dagnaam{flex:1; min-width:120px; font-weight:600;}
+  .dagnaam::first-letter, .roosterdag b::first-letter{text-transform:uppercase;}
+  .dagnaam span{display:block; font-weight:400; font-size:13px; color:var(--muted);}
+  .keuzes{display:flex; gap:8px;}
+  .keus{border:1.5px solid var(--rand); background:var(--card); color:var(--tekst); border-radius:var(--pil);
+    padding:9px 16px; font:inherit; font-weight:600; font-size:15px; cursor:pointer;}
+  .keus.kan.aan{background:var(--groen); border-color:var(--groen); color:#fff;}
+  .keus.niet.aan{background:var(--rood-zacht); border-color:var(--rood); color:var(--rood-tekst);}
+  .tijden{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap; font-size:14px;}
+  .tijden input{border:1.5px solid var(--rand); border-radius:12px; padding:8px 10px; font:inherit; font-size:15px; width:110px; background:var(--card); color:var(--tekst);}
+  .tijdlink{background:none; border:none; color:var(--accent); font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; padding:6px 0 0; text-decoration:underline;}
+
+  .btn{display:flex; align-items:center; justify-content:center; width:100%; border:none; border-radius:var(--pil);
+    background:var(--accent); color:#fff; font:inherit; font-weight:700; font-size:17px; padding:16px 20px; cursor:pointer;}
+  .btn:disabled{opacity:.6; cursor:default;}
+  .btn.ghost{background:var(--zacht); color:var(--tekst);}
+  .melding{border-radius:16px; padding:14px 16px; font-weight:600; margin-bottom:14px;}
+  .melding.goed{background:var(--groen-zacht); color:var(--groen-tekst);}
+  .melding.fout{background:var(--rood-zacht); color:var(--rood-tekst);}
+
+  .weekkop{font-family:'Sora',sans-serif; font-size:16px; font-weight:700; margin-bottom:10px;}
+  .roosterdag{padding:10px 0; border-top:1px solid var(--rand);}
+  .roosterdag:first-of-type{border-top:none; padding-top:0;}
+  .roosterdag b{display:block;}
+  .dienst{display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:3px 0;}
+  .dienst.ik{font-weight:700; color:var(--accent);}
+  .niemand{font-size:14px; color:var(--muted-l);}
+  button:focus-visible, input:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1 id="kop">Rooster</h1><div class="sub" id="subkop"></div></header>
+  <div id="inhoud"><div class="kaart"><p class="muted">Laden…</p></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://ugilfxqolemxwssbpdwu.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnaWxmeHFvbGVteHdzc2JwZHd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODk1NTUsImV4cCI6MjEwMTM2NTU1NX0.7q6R7J0_U0iU6AGlxFoBHpH22cRBlu8rL1aGt5rWOjY';
+/* Het token komt uit het pad (/rooster/<token>, vercel-rewrite) of uit ?t=. */
+const TOKEN=(function(){
+  const m=location.pathname.match(/\/rooster\/([a-f0-9]{32})\/?$/);
+  if(m) return m[1];
+  return (new URLSearchParams(location.search).get('t')||'').trim();
+})();
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let info=null, gekozen=null, keuze={}, tijdOpen={};
+
+/* Ingelogd? Alleen nodig als de winkel inloggen verplicht heeft gezet. De sessie deelt
+   deze pagina met de winkelapp (zelfde domein), dus wie daar ingelogd is, is het hier ook. */
+async function sessieToken(){
+  try{
+    if(!window.supabase) return null;
+    const sb=window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const {data:{session}}=await sb.auth.getSession();
+    return session ? session.access_token : null;
+  }catch(e){ return null; }
+}
+async function praat(lijf){
+  const t=await sessieToken();
+  const res=await fetch(SUPABASE_URL+'/functions/v1/rooster-link',{
+    method:'POST',
+    headers:Object.assign({'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY}, t?{'Authorization':'Bearer '+t}:{}),
+    body:JSON.stringify(Object.assign({token:TOKEN}, lijf))
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok || !uit.ok) throw new Error(uit.error||'Er ging iets mis. Probeer het zo nog eens.');
+  return uit;
+}
+function zet(html){ document.getElementById('inhoud').innerHTML=html; }
+function datumNL(ymd, opties){ return new Date(ymd+'T12:00:00').toLocaleDateString('nl-NL', opties); }
+/* Kort: "16 tot en met 22 november", of met twee maanden als de week over de maand loopt. */
+function weekTekst(dagen){
+  const zelfde=dagen[0].slice(0,7)===dagen[6].slice(0,7);
+  return (zelfde ? datumNL(dagen[0],{day:'numeric'}) : datumNL(dagen[0],{day:'numeric', month:'long'}))+' tot en met '+datumNL(dagen[6],{day:'numeric', month:'long'});
+}
+
+/* ── beschikbaarheid doorgeven ── */
+function tekenBeschikbaarheid(melding){
+  const d=info;
+  document.getElementById('kop').textContent='Wanneer kun je werken?';
+  document.getElementById('subkop').textContent=(d.winkel?d.winkel+' · ':'')+weekTekst(d.dagen);
+  if(!d.mensen.length){ zet('<div class="kaart"><p class="muted">Er staat nog niemand in het team. Vraag de eigenaar om je toe te voegen.</p></div>'); return; }
+  if(d.mensen.length===1 && !gekozen) kiesNaam(d.mensen[0].id, true);
+  let html='';
+  if(melding) html+=melding;
+  html+=`<div class="kaart"><h2>Wie ben je?</h2><div class="namen">${d.mensen.map(m=>
+    `<button type="button" class="naamknop${gekozen===m.id?' aan':''}" onclick="kiesNaam('${m.id}')">${esc(m.naam)}</button>`).join('')}</div></div>`;
+  if(gekozen){
+    html+=`<div class="kaart"><h2>Tik per dag aan of je kunt</h2>${d.dagen.map(ymd=>{
+      const k=keuze[ymd]||{};
+      const tijd=k.beschikbaar===true && (tijdOpen[ymd] || k.van || k.tot);
+      return `<div class="dag"><div class="dagkop">
+          <div class="dagnaam">${esc(datumNL(ymd,{weekday:'long'}))}<span>${esc(datumNL(ymd,{day:'numeric', month:'long'}))}</span></div>
+          <div class="keuzes">
+            <button type="button" class="keus kan${k.beschikbaar===true?' aan':''}" onclick="kiesDag('${ymd}', true)">Kan</button>
+            <button type="button" class="keus niet${k.beschikbaar===false?' aan':''}" onclick="kiesDag('${ymd}', false)">Kan niet</button>
+          </div></div>
+          ${k.beschikbaar===true ? (tijd
+            ? `<div class="tijden">Van <input type="time" id="van_${ymd}" value="${esc(k.van||'')}" onchange="zetTijd('${ymd}')"> tot <input type="time" id="tot_${ymd}" value="${esc(k.tot||'')}" onchange="zetTijd('${ymd}')"></div>`
+            : `<button type="button" class="tijdlink" onclick="tijdOpen['${ymd}']=true; tekenBeschikbaarheid()">Alleen een deel van de dag?</button>`) : ''}
+        </div>`;
+    }).join('')}
+    <p class="muted klein" style="margin:14px 0">Dagen die je niet aantikt tellen als "kan niet".</p>
+    <button type="button" class="btn" id="doorgeefKnop" onclick="doorgeven(this)">Doorgeven</button></div>`;
+  }
+  zet(html);
+}
+function kiesNaam(id, stil){
+  gekozen=id; keuze={}; tijdOpen={};
+  ((info.ingevuld||{})[id]||[]).forEach(r=>{ keuze[r.datum]={beschikbaar:r.beschikbaar!==false, van:r.van||'', tot:r.tot||''}; });
+  if(!stil) tekenBeschikbaarheid();
+}
+function kiesDag(ymd, kan){
+  const k=keuze[ymd]||{};
+  keuze[ymd]={beschikbaar:kan, van:kan?(k.van||''):'', tot:kan?(k.tot||''):''};
+  tekenBeschikbaarheid();
+}
+function zetTijd(ymd){
+  const k=keuze[ymd]||{beschikbaar:true};
+  k.van=(document.getElementById('van_'+ymd)||{}).value||'';
+  k.tot=(document.getElementById('tot_'+ymd)||{}).value||'';
+  keuze[ymd]=k;
+}
+async function doorgeven(knop){
+  if(!gekozen) return;
+  knop.disabled=true; knop.textContent='Bezig…';
+  const dagen=info.dagen.map(ymd=>{
+    const k=keuze[ymd]||{};
+    return {datum:ymd, beschikbaar:k.beschikbaar===true, van:k.beschikbaar===true?(k.van||null):null, tot:k.beschikbaar===true?(k.tot||null):null};
+  });
+  try{
+    await praat({actie:'doorgeven', account_id:gekozen, dagen});
+    const naam=(info.mensen.find(m=>m.id===gekozen)||{}).naam||'';
+    info.ingevuld=info.ingevuld||{};
+    info.ingevuld[gekozen]=dagen;
+    const aantal=dagen.filter(x=>x.beschikbaar).length;
+    tekenBeschikbaarheid(`<div class="melding goed">Bedankt${naam?', '+esc(naam):''}. Je beschikbaarheid staat erin (${aantal} ${aantal===1?'dag':'dagen'}). Aanpassen kan altijd: tik opnieuw en geef het nog een keer door.</div>`);
+    window.scrollTo(0,0);
+  }catch(e){
+    knop.disabled=false; knop.textContent='Doorgeven';
+    tekenBeschikbaarheid(`<div class="melding fout">${esc(e.message)}</div>`);
+  }
+}
+
+/* ── rooster bekijken ── */
+function tekenRooster(){
+  const d=info;
+  document.getElementById('kop').textContent='Rooster';
+  document.getElementById('subkop').textContent=d.winkel||'';
+  const titels=['Deze week','Volgende week'];
+  zet(d.weken.map((w,i)=>{
+    if(!w.gedeeld) return `<div class="kaart"><div class="weekkop">${titels[i]||''}</div><p class="muted">Het rooster voor deze week staat er nog niet.</p></div>`;
+    return `<div class="kaart"><div class="weekkop">${titels[i]||''} <span class="muted klein">${esc(weekTekst(w.dagen))}</span></div>${w.dagen.map(ymd=>{
+      const ds=w.diensten.filter(x=>x.datum===ymd);
+      return `<div class="roosterdag"><b>${esc(datumNL(ymd,{weekday:'long', day:'numeric', month:'long'}))}</b>${ds.length
+        ? ds.map(x=>`<div class="dienst${d.ik && x.account_id===d.ik?' ik':''}"><span>${esc(x.naam)}</span><span>${esc(x.van||'')}${x.tot?' tot '+esc(x.tot):''}</span></div>`).join('')
+        : '<div class="niemand">Niemand ingepland</div>'}</div>`;
+    }).join('')}</div>`;
+  }).join(''));
+}
+
+function tekenInloggen(){
+  document.getElementById('subkop').textContent=info&&info.winkel?info.winkel:'';
+  zet(`<div class="kaart"><h2>Log eerst in</h2><p class="muted" style="margin-bottom:16px">Log in bij Storvo met je eigen account en open deze link daarna nog een keer. Nog geen account? Vraag de eigenaar om een uitnodiging.</p><a class="btn" href="/app/">Inloggen</a></div>`);
+}
+
+async function start(){
+  if(!/^[a-f0-9]{32}$/.test(TOKEN)){ zet('<div class="kaart"><p class="muted">Deze link klopt niet. Vraag om de nieuwe link.</p></div>'); return; }
+  try{
+    info=await praat({actie:'info'});
+    if(info.inloggen) return tekenInloggen();
+    if(info.soort==='beschikbaarheid') return tekenBeschikbaarheid();
+    return tekenRooster();
+  }catch(e){
+    zet(`<div class="kaart"><p class="muted">${esc(e.message)}</p></div>`);
+  }
+}
+start();
+</script>
+</body>
+</html>

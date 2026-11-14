@@ -602,14 +602,18 @@
   }
   .roosterbalk{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; flex-wrap:wrap;}
   .rkop{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border:1px solid var(--border); border-radius:var(--radius-s); padding:12px 14px; margin-bottom:14px; font-size:14px; line-height:1.5;}
-  .rkop.wacht{display:block; background:var(--amber-soft); border-color:transparent;}
+  .rkop.gedeeld{background:var(--green-soft); border-color:transparent;}
+  .rkopknoppen{display:flex; gap:8px; flex:none; flex-wrap:wrap;}
   .rstatus{display:inline-block; font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; padding:2px 9px; border-radius:var(--pil); margin-right:8px; vertical-align:1px;}
   .rstatus.goed{background:var(--green-soft); color:var(--green-tekst);}
-  .rstatus.wacht{background:var(--amber-soft); color:var(--amber-tekst);}
-  .rstatus.af{background:var(--red-soft); color:var(--red-tekst);}
-  .rgoedrij{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid rgba(148,108,7,.2);}
-  .rgoedrij b{font-weight:700;}
-  .rgoedknoppen{display:flex; gap:8px; flex:none;}
+  /* De links voor de WhatsApp-groep, onder het planbord. */
+  .deelrij{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 0; border-top:1px solid var(--border);}
+  .deeltekst{flex:1; min-width:200px; font-size:14px; line-height:1.45;}
+  .deeltekst b{display:block; font-weight:700;}
+  .deeltekst span{color:var(--muted); font-size:13px;}
+  .deelknoppen{display:flex; gap:8px; flex-wrap:wrap;}
+  .deelvink{display:flex; align-items:center; gap:9px; margin:12px 0 0; cursor:pointer; font-size:13.5px; font-weight:600;}
+  .deellink{font-size:13px; word-break:break-all; background:var(--soft-2); border-radius:var(--radius-s); padding:10px 12px; margin-top:10px;}
   .roostergrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:12px;}
   /* ── Het planbord (beheerder): matrix op desktop, dagstrip op de telefoon ── */
   .pb-balk{display:flex; align-items:center; justify-content:flex-end; gap:14px; flex-wrap:wrap; margin:2px 0 14px;}
@@ -2179,7 +2183,7 @@
   body.metabobalk .topbar{top:var(--abohoogte);}
 
   /* Meldingen in de zijbalk, boven Simpel of Alles: wat er vandaag nog moet (bestellen,
-     rooster goedkeuren, pakketdiensten doorgeven). Dit stond eerst als balk over de hele
+     pakketdiensten doorgeven). Dit stond eerst als balk over de hele
      breedte bovenin elke pagina; dat drukte alles omlaag en was niet weg te klikken. Nu
      een rustig kaartje dat je per melding voor vandaag wegtikt. Op de telefoon staan ze
      bovenin het Meer-vel. De abobalk blijft bovenin: die gaat over betalen. */
@@ -3132,7 +3136,7 @@
     </div>
     <p class="muted" style="margin:0 0 14px" id="roosterUitleg">Geef per dag je beschikbaarheid door. De eigenaar plant het team in op basis daarvan.</p>
     <div id="roosterInhoud"><p class="muted">Laden…</p></div>
-    <div id="roosterHerinnering" hidden style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px"></div>
+    <div id="roosterDelen" hidden style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px"></div>
   </div>
   </div>
 </section>
@@ -4901,11 +4905,10 @@ async function uitbetalingTerug(id){
    schrijven tegelijk hun eigen beschikbaarheid, en de blob is last-write-wins. Ieder
    schrijft alleen zijn eigen beschikbaarheid (RLS); alleen eigenaar/beheerder plant in. */
 let roosterMaandag=null;
-let roosterData={besch:[], diensten:[]};
-/* Wie er op goedkeuring van een beheerder wacht, over deze en komende weken. Los
-   van roosterData omdat de balk op elke pagina moet werken, niet alleen op het
-   rooster zelf. Wordt bij inloggen en na een goedkeuring bijgewerkt. */
-let keurWacht={aantal:0, ids:[], week:null};
+let roosterData={besch:[], diensten:[], gedeeld:false};
+/* De twee vaste links van deze winkel (tabel rooster_links). Pas geladen als je de
+   roosterpagina opent, en alleen voor wie mag inplannen. */
+let roosterLinks=null;
 const DAG_KORT=['Ma','Di','Wo','Do','Vr','Za','Zo'];
 /* Vaste openingstijden van de winkel, per weekdag (index 0=maandag .. 6=zondag).
    null = gesloten. Zo zie je in het rooster meteen de hele dag met de tijden die
@@ -4957,37 +4960,112 @@ async function laadRooster(){
     roosterData.besch = b.data||[];
     roosterData.diensten = r.data||[];
   }catch(e){ inh.innerHTML='<p class="muted">Het rooster kon niet geladen worden.</p>'; return; }
-  tekenRooster();
-  tekenRoosterHerinnering();
-}
-/* Fase 4: de eigenaar kan personeel per e-mail laten herinneren om hun beschikbaarheid voor
-   de komende week in te vullen, X dagen vooraf. De Edge Function rooster-herinnering doet het
-   verzenden (dagelijkse cron); hier alleen de instelling. Alleen zichtbaar voor wie mag
-   inplannen. */
-async function tekenRoosterHerinnering(){
-  const el=document.getElementById('roosterHerinnering'); if(!el) return;
-  if(!roosterMagInplannen() || !account){ el.hidden=true; el.innerHTML=''; return; }
-  let inst={aan:false, herinner_dagen:3};
-  try{ const {data}=await sb.from('rooster_instelling').select('*').eq('team_id', account.team_id).maybeSingle(); if(data) inst=data; }catch(e){}
-  el.hidden=false;
-  el.innerHTML=`<div class="roosterlabel" style="margin-bottom:8px">Herinneringen</div>
-    <label style="display:flex; align-items:center; gap:9px; margin:0 0 10px; cursor:pointer; font-size:13.5px; font-weight:500">
-      <input type="checkbox" id="rhAan" ${inst.aan?'checked':''} onchange="roosterHerinneringOpslaan()"> Herinner personeel per e-mail om hun beschikbaarheid door te geven
-    </label>
-    <div class="row" style="align-items:center; gap:8px; flex-wrap:wrap">
-      <span class="muted klein">Stuur</span>
-      <input type="number" id="rhDagen" min="1" max="14" value="${Number(inst.herinner_dagen)||3}" style="width:64px" onchange="roosterHerinneringOpslaan()">
-      <span class="muted klein">dagen voor de nieuwe week, aan iedereen die nog niets invulde. Verstuurd vanaf je eigen mailadres.</span>
-    </div>`;
-}
-async function roosterHerinneringOpslaan(){
-  if(!account) return;
-  const aan=document.getElementById('rhAan').checked;
-  const dagen=Math.max(1, Math.min(14, Number(document.getElementById('rhDagen').value)||3));
+  /* Los van de rest: als dit niet lukt, kun je nog steeds plannen. */
+  roosterData.gedeeld=false;
   try{
-    await sb.from('rooster_instelling').upsert({team_id:account.team_id, aan, herinner_dagen:dagen, bijgewerkt_op:new Date().toISOString()}, {onConflict:'team_id'});
-    toast(aan?('Herinnering aan · '+dagen+' dagen vooraf'):'Herinnering uit', true);
-  }catch(e){ toast('Opslaan mislukte','fout'); }
+    const {data}=await sb.from('rooster_weken').select('gedeeld').eq('maandag', van).maybeSingle();
+    roosterData.gedeeld=!!(data && data.gedeeld);
+  }catch(e){}
+  tekenRooster();
+  tekenRoosterDelen();
+}
+/* ── Het rooster delen via de WhatsApp-groep ──
+   Twee vaste links: op zaterdag de beschikbaarheid-link in de groep, en als de week
+   gepland is de rooster-link. De pagina erachter is /rooster/<token>; de edge-functie
+   rooster-link doet het werk, zonder dat je team hoeft in te loggen. Eerst waren er
+   goedkeuren en herinneringsmails; dat was te veel gedoe voor een team van drie. */
+async function roosterLinksHaal(){
+  if(roosterLinks && roosterLinks.team_id===(account&&account.team_id)) return roosterLinks;
+  roosterLinks=null;
+  if(!account || !roosterMagInplannen()) return null;
+  let {data}=await sb.from('rooster_links').select('*').eq('team_id', account.team_id).maybeSingle();
+  if(!data){
+    /* De tokens maakt de database zelf (standaardwaarde). Maakt een tweede beheerder hem
+       op hetzelfde moment aan, dan mislukt deze insert; dan lezen we die van hem. */
+    const r=await sb.from('rooster_links').insert({team_id:account.team_id}).select().maybeSingle();
+    data=r.data;
+    if(!data){ const opnieuw=await sb.from('rooster_links').select('*').eq('team_id', account.team_id).maybeSingle(); data=opnieuw.data; }
+  }
+  roosterLinks=data||null;
+  return roosterLinks;
+}
+function roosterLinkUrl(soort){
+  if(!roosterLinks) return '';
+  return location.origin+'/rooster/'+(soort==='rooster' ? roosterLinks.token_rooster : roosterLinks.token_beschikbaarheid);
+}
+function roosterLinkTekst(soort){
+  const url=roosterLinkUrl(soort); if(!url) return '';
+  return soort==='rooster' ? 'Het rooster staat erin: '+url : 'Geef hier door wanneer je volgende week kunt: '+url;
+}
+/* WhatsApp opent met het bericht al klaar; je kiest daar zelf de groep. */
+function roosterNaarWhatsApp(soort){
+  const t=roosterLinkTekst(soort); if(!t) return;
+  window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank', 'noopener');
+}
+function roosterKopieer(soort){
+  const url=roosterLinkUrl(soort); if(!url) return;
+  kopieer(url, 'Link gekopieerd');
+}
+async function tekenRoosterDelen(){
+  const el=document.getElementById('roosterDelen'); if(!el) return;
+  if(!roosterMagInplannen() || !account){ el.hidden=true; el.innerHTML=''; return; }
+  try{ await roosterLinksHaal(); }catch(e){}
+  if(!roosterLinks){ el.hidden=true; el.innerHTML=''; return; }
+  const rij=(soort, kop, uitleg)=>`<div class="deelrij"><div class="deeltekst"><b>${kop}</b><span>${uitleg}</span></div>
+      <div class="deelknoppen"><button type="button" class="btn small" onclick="roosterNaarWhatsApp('${soort}')">WhatsApp</button><button type="button" class="btn small ghost" onclick="roosterKopieer('${soort}')">Kopieer</button></div></div>`;
+  el.hidden=false;
+  el.innerHTML=`<div class="roosterlabel" style="margin-bottom:4px">Links voor de groep</div>
+    ${rij('beschikbaarheid','Beschikbaarheid doorgeven','Stuur deze op zaterdag. Je team tikt aan wanneer ze volgende week kunnen.')}
+    ${rij('rooster','Rooster bekijken','Hier ziet je team de weken die jij deelde.')}
+    <label class="deelvink"><input type="checkbox" id="roosterInloggen" ${roosterLinks.inloggen_verplicht?'checked':''} onchange="roosterInloggenZet(this.checked)"> Alleen met inloggen</label>
+    <p class="muted klein" style="margin:4px 0 0 26px">Uit: iedereen met de link tikt zijn naam aan. Aan: je moet ingelogd zijn en geeft alleen voor jezelf door.</p>
+    <button type="button" class="btn ghost small" style="margin-top:12px" onclick="roosterLinksVernieuw()">Nieuwe links maken</button>`;
+}
+async function roosterInloggenZet(aan){
+  if(!account || !roosterLinks) return;
+  const {error}=await sb.from('rooster_links').update({inloggen_verplicht:aan, bijgewerkt_op:new Date().toISOString()}).eq('team_id', account.team_id);
+  if(error){ toast('Opslaan lukte niet','fout'); tekenRoosterDelen(); return; }
+  roosterLinks.inloggen_verplicht=aan;
+  toast(aan ? 'De links werken nu alleen met inloggen' : 'De links werken weer zonder inloggen', true);
+}
+/* Voor als een link bij de verkeerde mensen is beland. De oude links werken daarna niet
+   meer. Tokens zijn 32 willekeurige hextekens, net als wat de database zelf maakt. */
+function roosterNieuwToken(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'');
+  const b=new Uint8Array(16); crypto.getRandomValues(b);
+  return Array.from(b, x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function roosterLinksVernieuw(){
+  if(!account || !roosterLinks) return;
+  const ja=await vraagJaNee('De oude links werken daarna niet meer. Stuur de nieuwe in de groep.', {kop:'Nieuwe links maken?', ja:'Nieuwe links maken'});
+  if(!ja) return;
+  const patch={token_beschikbaarheid:roosterNieuwToken(), token_rooster:roosterNieuwToken(), bijgewerkt_op:new Date().toISOString()};
+  const {error}=await sb.from('rooster_links').update(patch).eq('team_id', account.team_id);
+  if(error){ toast('Dat lukte niet','fout'); return; }
+  Object.assign(roosterLinks, patch);
+  tekenRoosterDelen();
+  toast('Nieuwe links gemaakt', true);
+}
+/* Een week delen: pas dan staat hij achter de rooster-link. Een half rooster stuur je
+   niet rond. Na het delen meteen de link klaar om in de groep te zetten. */
+async function roosterWeekDelen(aan){
+  if(!roosterMagInplannen() || !account) return;
+  const maandag=roosterYmd(roosterDagen()[0]);
+  const {error}=await sb.from('rooster_weken').upsert({team_id:account.team_id, maandag, gedeeld:aan, gedeeld_op:aan?new Date().toISOString():null}, {onConflict:'team_id,maandag'});
+  if(error){ toast('Dat lukte niet','fout'); return; }
+  roosterData.gedeeld=aan;
+  tekenRooster();
+  if(aan) roosterLinkSturen('rooster', 'Gedeeld');
+  else toast('Je team ziet deze week niet meer', true);
+}
+async function roosterLinkSturen(soort, kop){
+  try{ await roosterLinksHaal(); }catch(e){}
+  const url=roosterLinkUrl(soort);
+  if(!url){ toast('De link kon niet geladen worden','fout'); return; }
+  roosterModal(kop||'Link voor de groep', `<p class="pv">${soort==='rooster'?'Je team ziet de week nu via deze link. Zet hem in de groep.':'Hier geeft je team door wanneer ze kunnen. Zet hem in de groep.'}</p><div class="deellink">${esc(url)}</div>`, [
+    {tekst:'WhatsApp', klasse:'actie', doe:()=>{ roosterNaarWhatsApp(soort); roosterModalDicht(); }},
+    {tekst:'Kopieer', klasse:'', doe:()=>{ roosterKopieer(soort); roosterModalDicht(); }}
+  ]);
 }
 function roosterNaam(id){ const m=teamLeden.find(x=>x.id===id); if(m) return m.naam; if(gebruiker&&gebruiker.id===id) return gebruiker.naam; return '?'; }
 
@@ -5018,56 +5096,31 @@ async function renderDashRooster(){
       <td>${wie}</td></tr>`;
   }).join('')}</tbody></table>`;
 }
-/* ── Doorgeven en goedkeuren ──
-   Personeel geeft de hele week in één keer door (elke dag krijgt status 'ingediend'),
-   een beheerder keurt goed of stuurt terug. De status leeft op de losse dagen; omdat
-   doorgeven alle zeven dagen tegelijk zet, zijn ze consistent. Wijzig je één dag, dan
-   valt die dag terug op 'concept' (zie zetBeschikbaar) en is de week weer een concept.
-   De eigenaar (Lucas) geeft niet door; hij springt hooguit bij. */
+/* ── Doorgeven ──
+   Personeel geeft de hele week in één keer door. Dat kan via de link in de groep
+   (/rooster/<token>) of hier in de app; allebei zetten ze de dagen op 'ingediend' en dan
+   kleurt het planbord ze meteen. Goedkeuren is er niet meer: de eigenaar plant gewoon in,
+   ook mensen die niets doorgaven. Oude rijen met 'goedgekeurd' tellen als doorgegeven.
+   De eigenaar geeft niet door; hij springt hooguit bij. */
 function roosterKandidaten(){
   return (teamLeden.length?teamLeden:(gebruiker?[{id:gebruiker.id,naam:gebruiker.naam,rol:gebruiker.rol}]:[])).filter(m=>m.rol!=='eigenaar');
 }
+/* Doorgegeven = alle zeven dagen staan erin (doorgeven vult lege dagen met "kan niet")
+   en geen enkele staat nog op concept. */
 function roosterWeekStatus(id){
   const r=(roosterData.besch||[]).filter(x=>x.account_id===id);   // besch is al beperkt tot de getoonde week
-  if(!r.length) return {status:'leeg', reden:''};
-  const st=r.map(x=>x.status||'concept');
-  const reden=(r.find(x=>x.afwijs_reden)||{}).afwijs_reden||'';
-  if(st.includes('afgekeurd')) return {status:'afgekeurd', reden};
-  if(st.every(s=>s==='goedgekeurd')) return {status:'goedgekeurd', reden:''};
-  if(st.every(s=>s==='ingediend')) return {status:'ingediend', reden:''};
-  return {status:'concept', reden:''};
+  if(!r.length) return {status:'leeg'};
+  const klaar=r.every(x=>x.status && x.status!=='concept');
+  return {status:(klaar && r.length>=7) ? 'doorgegeven' : 'concept'};
 }
-async function roosterMailRoep(payload){
-  try{
-    const {data:{session}}=await sb.auth.getSession(); if(!session) return;
-    await fetch(SUPABASE_URL+'/functions/v1/rooster-mail',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},body:JSON.stringify(payload)});
-  }catch(e){/* de mail is bijzaak; de status in de tabel staat al goed */}
-}
+/* Boven het planbord: is deze week al met het team gedeeld? */
 function roosterKopHtml(){
+  if(!roosterMagInplannen()) return '';
   const dagen=roosterDagen();
-  const verleden = roosterYmd(dagen[6]) < roosterYmd(new Date());
-  let uit='';
-  // Wie zelf doorgeeft: alleen wie NIET mag inplannen (een medewerker). Beheerders en de
-  // eigenaar plannen zelf via het bord; die geven geen beschikbaarheid door.
-  if(gebruiker && !roosterMagInplannen() && !verleden){
-    const ws=roosterWeekStatus(gebruiker.id);
-    let regel='', knop='';
-    if(ws.status==='goedgekeurd'){ regel='<span class="rstatus goed">Goedgekeurd</span>Je beschikbaarheid voor deze week is rond.'; }
-    else if(ws.status==='ingediend'){ regel='<span class="rstatus wacht">Doorgegeven</span>Wacht op goedkeuring. Aanpassen kan nog.'; knop='<button type="button" class="btn small ghost" onclick="roosterDoorgeven()">Opnieuw doorgeven</button>'; }
-    else if(ws.status==='afgekeurd'){ regel='<span class="rstatus af">Teruggestuurd</span>'+(ws.reden?('Reden: '+esc(ws.reden)):'Pas je beschikbaarheid aan en geef het opnieuw door.'); knop='<button type="button" class="btn small" onclick="roosterDoorgeven()">Opnieuw doorgeven</button>'; }
-    else { regel='Vul hieronder je dagen in en geef de week dan door.'; knop='<button type="button" class="btn small" onclick="roosterDoorgeven()">Deze week doorgeven</button>'; }
-    uit += `<div class="rkop"><div>${regel}</div>${knop}</div>`;
-  }
-  // Een beheerder: wie wacht er op goedkeuring (niet jezelf).
-  if(roosterMagInplannen()){
-    const wachten=roosterKandidaten().filter(m=>m.id!==(gebruiker&&gebruiker.id) && roosterWeekStatus(m.id).status==='ingediend');
-    if(wachten.length){
-      uit += `<div class="rkop wacht"><div class="roosterlabel" style="margin-bottom:8px">Wacht op jouw goedkeuring</div>${wachten.map(m=>
-        `<div class="rgoedrij"><b>${esc(m.naam)}</b><span class="rgoedknoppen"><button type="button" class="btn small" onclick="roosterGoedkeur('${m.id}',true)">Goedkeuren</button><button type="button" class="btn small ghost" onclick="roosterGoedkeur('${m.id}',false)">Terugsturen</button></span></div>`
-      ).join('')}</div>`;
-    }
-  }
-  return uit;
+  if(roosterYmd(dagen[6]) < roosterYmd(new Date())) return '';
+  if(roosterData.gedeeld) return `<div class="rkop gedeeld"><div><span class="rstatus goed">Gedeeld</span>Je team ziet deze week via de rooster-link. Wat je nu nog verandert, zien ze meteen.</div>
+    <span class="rkopknoppen"><button type="button" class="btn small ghost" onclick="roosterLinkSturen('rooster')">Link sturen</button><button type="button" class="btn small ghost" onclick="roosterWeekDelen(false)">Niet meer delen</button></span></div>`;
+  return `<div class="rkop"><div>Klaar met plannen? Deel de week, dan ziet je team hem via de rooster-link.</div><button type="button" class="btn small" onclick="roosterWeekDelen(true)">Rooster delen</button></div>`;
 }
 async function roosterDoorgeven(){
   if(!gebruiker) return;
@@ -5084,58 +5137,10 @@ async function roosterDoorgeven(){
   if(error){ toast('Doorgeven mislukte','fout'); return; }
   rows.forEach(r=>{ const i=(roosterData.besch||[]).findIndex(x=>x.account_id===r.account_id&&x.datum===r.datum); if(i>=0) roosterData.besch[i]=r; else roosterData.besch.push(r); });
   tekenRooster();
-  toast('Doorgegeven. De beheerder krijgt bericht.', true);
-  roosterMailRoep({actie:'doorgegeven', maandag:roosterYmd(dagen[0])});
-}
-async function roosterGoedkeur(accountId, ja){
-  if(!roosterMagInplannen()) return;
-  let reden=null;
-  if(!ja){ reden=await vraagTekst('Waarom stuur je het terug?', 'Dit komt in de mail naar de medewerker.', {ja:'Terugsturen'}); if(reden===null) return; reden=(reden||'').trim(); }
-  const dagen=roosterDagen();
-  const van=roosterYmd(dagen[0]), tot=roosterYmd(dagen[6]);
-  const patch = ja
-    ? {status:'goedgekeurd', beoordeeld_op:new Date().toISOString(), beoordeeld_door:(gebruiker?gebruiker.id:null), afwijs_reden:null}
-    : {status:'afgekeurd', beoordeeld_op:new Date().toISOString(), beoordeeld_door:(gebruiker?gebruiker.id:null), afwijs_reden:(reden||null)};
-  const {error}=await sb.from('beschikbaarheid').update(patch).eq('account_id',accountId).gte('datum',van).lte('datum',tot);
-  if(error){ toast('Lukte niet','fout'); return; }
-  (roosterData.besch||[]).forEach(x=>{ if(x.account_id===accountId){ x.status=patch.status; x.afwijs_reden=patch.afwijs_reden; } });
-  tekenRooster();
-  toast(ja?'Goedgekeurd':'Teruggestuurd', true);
-  roosterMailRoep({actie:(ja?'goedgekeurd':'afgekeurd'), maandag:van, account_id:accountId, reden:(reden||'')});
-  roosterKeurLaden().then(toonKeurBalk);      // de balk telt nu een inzending minder
-}
-
-/* ── Balk en popup: op elke pagina zien dat er iets op goedkeuring wacht ──
-   De balk staat bovenin (zoals de bestel- en abobalk) en verwijst naar het
-   rooster. De popup komt eenmaal per dag bij het inloggen. Alles hangt aan
-   keurWacht, dat los van de rooster-pagina wordt geladen. */
-async function roosterKeurLaden(){
-  keurWacht={aantal:0, ids:[], week:null};
-  if(!account || !roosterMagInplannen()) return;
-  const van=roosterYmd(roosterMaandagVan(new Date()));   // vanaf de maandag van deze week
-  try{
-    if(!teamLeden.length) await laadTeamLeden();
-    const {data}=await sb.from('beschikbaarheid').select('account_id,datum,status').eq('status','ingediend').gte('datum',van);
-    const mijnId=gebruiker&&gebruiker.id;
-    const ids=new Set(); let vroegste=null;
-    (data||[]).forEach(r=>{
-      if(r.account_id===mijnId) return;                  // je eigen inzending keur je niet zelf goed
-      ids.add(r.account_id);
-      const wk=roosterYmd(roosterMaandagVan(new Date(r.datum+'T12:00:00')));
-      if(!vroegste || wk<vroegste) vroegste=wk;
-    });
-    keurWacht={aantal:ids.size, ids:[...ids], week:vroegste};
-  }catch(e){/* stil: geen balk is beter dan een verkeerde balk */}
-}
-function toonKeurBalk(){ toonMeldingen(); }
-function keurBalkGa(){
-  /* Spring meteen naar de week waar de oudste inzending in zit, anders sta je op
-     deze week en zie je de wachtrij in de kop niet. */
-  if(keurWacht.week){ roosterMaandag=roosterMaandagVan(new Date(keurWacht.week+'T12:00:00')); }
-  showTab('rooster');
+  toast('Doorgegeven', true);
 }
 /* Voor de medewerker: drie dagen voor een nieuwe week ingaat, en hij gaf zijn
-   beschikbaarheid nog niet door, eenmaal een popup. De mail komt los daarvan. */
+   beschikbaarheid nog niet door, eenmaal een popup. */
 async function roosterInvulPopup(){
   if(!gebruiker || gebruiker.rol==='eigenaar') return;
   const now=new Date();
@@ -5167,9 +5172,8 @@ async function roosterInvulPopup(){
 }
 function invulOverlaySluit(van){ const o=document.getElementById('invulOverlay'); if(o) o.remove(); if(van){ roosterMaandag=roosterMaandagVan(new Date(van+'T12:00:00')); showTab('rooster'); } }
 /* Voor de beheerder: drie dagen voor een nieuwe week ingaat, een popup met wie er nog
-   niets invulde. Naast de mail die de cron stuurt. "Niets ingevuld" is hier hetzelfde
-   als in de herinnering-cron: geen enkele beschikbaarheid-rij voor die week, ongeacht
-   de status, zodat de mail en de popup het altijd eens zijn. */
+   niets invulde. "Niets ingevuld" = geen enkele beschikbaarheid-rij voor die week. Vanuit
+   de popup stuur je meteen de beschikbaarheid-link. */
 async function roosterNietIngevuldPopup(){
   if(!account || !roosterMagInplannen()) return;
   const now=new Date();
@@ -5196,23 +5200,18 @@ async function roosterNietIngevuldPopup(){
     <h3 style="margin:0 0 8px">Nog niet iedereen gaf zijn rooster door</h3>
     <p class="pv">De week van maandag ${esc(roosterKort(ma))} begint over ${totMa} dag${totMa>1?'en':''}. Deze teamleden gaven nog niks door: ${namen}.</p>
     <div class="acts" style="display:flex; gap:10px; margin-top:16px">
-      <button class="btn actie" onclick="nietinOverlaySluit('${van}')">Naar het rooster</button>
-      <button class="btn ghost" onclick="nietinOverlaySluit('')">Later</button>
+      <button class="btn actie" onclick="nietinOverlaySluit(''); roosterLinkSturen('beschikbaarheid')">Link sturen</button>
+      <button class="btn ghost" onclick="nietinOverlaySluit('${van}')">Naar het rooster</button>
     </div>
   </div>`;
   ov.addEventListener('click',e=>{ if(e.target===ov) nietinOverlaySluit(''); });
   document.body.appendChild(ov);
 }
 function nietinOverlaySluit(van){ const o=document.getElementById('nietinOverlay'); if(o) o.remove(); if(van){ roosterMaandag=roosterMaandagVan(new Date(van+'T12:00:00')); showTab('rooster'); } }
-/* Bij het inloggen alles ophalen en tonen: eerst de balk, dan (met een tik vertraging
-   zodat een eventueel proefscherm voorgaat) hooguit één popup per dag.
-   Eerst waren het er vier over hetzelfde onderwerp: de goedkeurbalk, een goedkeur-popup,
-   "nog niet iedereen" en "geef je rooster door". De balk blijft staan zolang er iets
-   wacht, dus de goedkeur-popup erbovenop is weggehaald. De andere twee gaan alleen de
-   laatste drie dagen voor een nieuwe week, en nooit meer dan één keer op een dag. */
+/* Bij het inloggen (met een tik vertraging zodat een eventueel proefscherm voorgaat)
+   hooguit één popup per dag, en alleen de laatste drie dagen voor een nieuwe week.
+   Eerst waren het er vier over hetzelfde onderwerp, met goedkeuren erbij; dat is weg. */
 async function roosterMeldingen(){
-  await roosterKeurLaden();
-  toonKeurBalk();
   setTimeout(async()=>{
     if(!mag('rooster')) return;   // module Rooster en uren staat uit
     const dag='storvo_rooster_por_'+new Date().toISOString().slice(0,10);
@@ -5541,9 +5540,7 @@ function roosterDoorgeefVoet(){
   if(roosterYmd(dagen[6]) < roosterYmd(new Date())) return '<div class="rvoet"><p class="muted klein">Deze week is voorbij.</p></div>';
   const ws=roosterWeekStatus(gebruiker.id);
   let status='', tekst='Week doorgeven', klasse='actie';
-  if(ws.status==='goedgekeurd'){ status='<span class="rstatus goed">Goedgekeurd</span>Je week is rond. Aanpassen kan nog.'; tekst='Opnieuw doorgeven'; klasse='ghost'; }
-  else if(ws.status==='ingediend'){ status='<span class="rstatus wacht">Doorgegeven</span>Wacht op goedkeuring. Aanpassen kan nog.'; tekst='Opnieuw doorgeven'; klasse='ghost'; }
-  else if(ws.status==='afgekeurd'){ status='<span class="rstatus af">Teruggestuurd</span>'+(ws.reden?('Reden: '+esc(ws.reden)):'Pas je week aan en geef opnieuw door.'); tekst='Opnieuw doorgeven'; }
+  if(ws.status==='doorgegeven'){ status='<span class="rstatus goed">Doorgegeven</span>De eigenaar ziet het meteen. Aanpassen kan altijd.'; tekst='Opnieuw doorgeven'; klasse='ghost'; }
   else{ status='Zet hierboven per dag of je kunt. Geef daarna je hele week door.'; }
   return `<div class="rvoet"><div class="rvoet-status">${status}</div>
     <button type="button" class="btn ${klasse}" onclick="roosterDoorgeven()">${tekst}</button></div>`;
@@ -5554,9 +5551,10 @@ async function zetBeschikbaar(ymd, veld, val){
   if(veld==='toggle') mij.beschikbaar = !(mij.beschikbaar!==false);
   else if(veld==='van') mij.van = val||null;
   else if(veld==='tot') mij.tot = val||null;
-  /* Wijzig je een dag, dan is een eerdere inzending of goedkeuring niet meer geldig:
-     die dag gaat terug naar concept. Je geeft de week daarna opnieuw door. */
-  const rij={account_id:gebruiker.id, datum:ymd, beschikbaar:mij.beschikbaar!==false, van:mij.van||null, tot:mij.tot||null, status:'concept', afwijs_reden:null};
+  /* Elke dag die je zet telt meteen: de eigenaar ziet hem direct op het planbord. Eerst
+     ging een gewijzigde dag terug naar concept tot je opnieuw doorgaf; zonder goedkeuren
+     heeft dat geen zin meer. Doorgeven vult daarna de dagen die je oversloeg. */
+  const rij={account_id:gebruiker.id, datum:ymd, beschikbaar:mij.beschikbaar!==false, van:mij.van||null, tot:mij.tot||null, status:'ingediend', afwijs_reden:null};
   const {error}=await sb.from('beschikbaarheid').upsert(rij,{onConflict:'account_id,datum'});
   if(error){ toast('Opslaan mislukte','fout'); return; }
   const idx=(roosterData.besch||[]).findIndex(x=>x.account_id===gebruiker.id&&x.datum===ymd);
@@ -6545,8 +6543,6 @@ function renderDashSimpel(){
   if(inrNieuw && mag('inruil')) taken+=`<a onclick="showTab('inruil')"><svg class="i"><use href="#i-recycle"/></svg>${inrNieuw} nieuwe inruilaanvra${inrNieuw===1?'ag':'gen'}</a>`;
   if(bestel) taken+=`<a onclick="showTab('bestellen')"><svg class="i"><use href="#i-cart"/></svg>${bestel} ding${bestel===1?'':'en'} vandaag bestellen</a>`;
   if(kasVol) taken+=`<a onclick="showTab('kassa')"><svg class="i"><use href="#i-cash"/></svg>Er zit te veel geld in de kassa</a>`;
-  if(typeof keurWacht!=='undefined' && keurWacht.aantal && mag('rooster') && typeof roosterMagInplannen==='function' && roosterMagInplannen())
-    taken+=`<a onclick="keurBalkGa()"><svg class="i"><use href="#i-clock"/></svg>Rooster goedkeuren: ${keurWacht.aantal} ${keurWacht.aantal===1?'teamlid wacht':'teamleden wachten'}</a>`;
   if(!taken) taken='<span class="rust">Niks dringends. Mooi.</span>';
   // De acties die jij het meest doet. Werkbank = laptops toevoegen, controleren, online
   // zetten en kaartjes uitdraaien (dat zit allemaal in de refurbish-werkbank).
@@ -12853,8 +12849,8 @@ const MODULES=[
    verdwijnt:['Mail onder Meer']},
   {id:'rooster', groep:'Team', naam:'Rooster en uren', ico:'i-clock', tabs:['rooster','uren'],
    uitleg:'Wie wanneer werkt, en de gewerkte uren.',
-   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De goedkeurmelding en herinneringen','Rooster op het dashboard'],
-   blijft:'Herinneringsmails naar je team gaan gewoon door.'},
+   verdwijnt:['Rooster in het menu en de onderbalk','Uren onder Meer','De popup over volgende week','Rooster op het dashboard'],
+   blijft:'De links die je in de groep zette blijven werken.'},
   {id:'team', groep:'Team', naam:'Team', ico:'i-users', tabs:['team'],
    uitleg:'Gebruikers, rollen en wie wat mag.',
    verdwijnt:['Team onder Meer'],
@@ -13020,7 +13016,6 @@ function mobTel(t){
   if(t==='aanvragen') return (typeof aanvLopend==='function')?aanvLopend().length:0;
   if(t==='voorraad') return (typeof bijvulLijst==='function')?bijvulLijst().length:0;
   if(t==='bestellen') return (typeof bestelLijst==='function')?bestelLijst().filter(p=>!p.besteld).length:0;
-  if(t==='rooster') return (typeof roosterMagInplannen==='function' && roosterMagInplannen() && keurWacht)?(keurWacht.aantal||0):0;
   return 0;
 }
 
@@ -13883,7 +13878,7 @@ async function ladAccountEnStart(session){
   renderInstellingen();
   toonAboBalk();
   toonBestelBalk();
-  roosterMeldingen();     /* balk plus popup voor goedkeuren en voor je eigen rooster */
+  roosterMeldingen();     /* hooguit één popup over de beschikbaarheid van volgende week */
   /* Verkopen van de Clover-terminal inboeken, nu en daarna elke paar minuten (de edge
      pollt Clover, deze app boekt de bonnen om). */
   if(typeof cloverBestellingenVerwerken==='function'){
@@ -13924,7 +13919,7 @@ function aboBewaking(){
     if(!account) return;
     await haalAbonnement();
     if(abonnement && abonnement.geblokkeerd){ syncStop(); toonSlot(); }
-    else { toonAboBalk(); proefNudge(); roosterKeurLaden().then(toonKeurBalk); }
+    else { toonAboBalk(); proefNudge(); }
   }, 30*60*1000);
 }
 
@@ -16781,10 +16776,6 @@ function meldingenLijst(){
     const nu=new Date(), voor1630 = nu.getHours()<16 || (nu.getHours()===16 && nu.getMinutes()<30);
     uit.push({id:'bestel', ico:'i-cart', kop: voor1630 ? 'Vandaag vóór 16:30 bestellen' : 'Nog te bestellen',
       tekst: delen.join(' en ')+(voor1630 ? ', dan is het morgen binnen.' : '.'), knop:'Bekijken', ga:'bestelBalkGa()', aantal:u.totaal});
-  }
-  if(typeof keurWacht!=='undefined' && keurWacht.aantal && typeof roosterMagInplannen==='function' && roosterMagInplannen() && mag('rooster')){
-    const n=keurWacht.aantal;
-    uit.push({id:'keur', ico:'i-users', kop:'Rooster', groen:true, tekst: n===1 ? '1 teamlid wacht op je goedkeuring.' : n+' teamleden wachten op je goedkeuring.', knop:'Bekijken', ga:'keurBalkGa()', aantal:n});
   }
   return uit.filter(m=>!meldingWeg(m));
 }
