@@ -113,9 +113,9 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       één keer op het web op, met bron. Hooguit eens per dertig dagen per model. Nog niet echt
       gedraaid: alle iPhones staan al in de lijst, en zonder inlog kan het niet. De eerste
       Galaxy die je toevoegt is de test; komt er niets, dan typ je hem en is hij onthouden.
-- [ ] **Let op:** de nieuwprijs gaat ook naar de webshop (als doorgestreepte vergelijkprijs). Dat
-      deed hij al als je hem typte; nu staat hij bij elke telefoon. Kijk of het thema hem als
-      "Nieuwprijs" toont en niet als korting.
+- [x] **De nieuwprijs gaat ook naar de webshop** (compareAtPrice), nu bij elke telefoon. Nagekeken:
+      het thema toont hem als vergelijking met nieuw ("Ter vergelijking kost ditzelfde model nieuw
+      rond ...", in de winkelwagen "Nieuw had dit ... gekost"), niet als korting van de winkel.
 
 ## Rooster via de WhatsApp-groep (14 november 2026)
 
