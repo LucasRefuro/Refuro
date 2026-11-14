@@ -328,7 +328,7 @@ setTimeout(async()=>{
   ok('naar reparatie: laptop krijgt laptoponderdelen', w.eval("defectDelen('Laptop').includes('Toetsenbord') && !defectDelen('Laptop').includes('Camera achter')"));
   ok('naar reparatie: onderdeel en notitie worden één regel',
     w.eval("defectTekst('Accu','houdt lading niet vast')")==='Accu: houdt lading niet vast' && w.eval("defectTekst('Accu','')")==='Accu' && w.eval("defectTekst('','oud veld')")==='oud veld');
-  w.eval("window.__prints=[]; qzPrintDeviceLabels=async(ids,stil,o)=>{ __prints.push({ids, o:o||{}}); return true; }");
+  w.eval("window.__qzEcht=qzPrintDeviceLabels; window.__prints=[]; qzPrintDeviceLabels=async(ids,stil,o)=>{ __prints.push({ids, o:o||{}}); return true; }");
   w.eval(`apparaten.push({id:'a11', team_id:'t1', code:'A0011', merk:'Apple', model:'iPhone 12 mini', categorie:'Telefoon',
       specs:{}, status:'klaar', stap:'af', grade:'A', hardware_id:'hw11', checklist:[], defecten:[], goede_delen:[], doos:true,
       aangemaakt_op:new Date().toISOString()});
@@ -363,6 +363,32 @@ setTimeout(async()=>{
   await wachtR(30);
   ok('ingebed: annuleren sluit het venster in de winkelapp', berichten.some(b=>b && b.storvo==='online-klaar'));
   w.eval("INGEBED=false; ingebedOpen=false; history.replaceState(null,'','/refurbish/')");
+
+  // Lukt printen niet, dan zegt de melding waarom. Eerst stond er alleen "printen lukte
+  // niet", terwijl de printhulp wist dat de printer niet in de Mac zat.
+  ok('printfout: printer niet in de Mac in gewone woorden',
+    w.eval("printFoutTekst('printer niet gevonden op USB (aan en aangesloten?)')")==='De labelprinter staat uit of zit niet in de Mac.');
+  ok('printfout: printhulp draait niet', /printhulp draait niet/.test(w.eval("printFoutTekst('Geen verbinding met de printhulp. Draait het op deze Mac?')")));
+  w.eval(`window.__echteTeken=deviceLabelPng; window.__echtePrint=printViaHelper;
+    deviceLabelPng=async()=>({data:'eHg='}); printViaHelper=async()=>{ throw new Error('printer niet gevonden op USB (aan en aangesloten?)'); };
+    qzPrintDeviceLabels=__qzEcht;`);
+  const po=await w.eval("(async()=>{ const o={zonderDoos:true}; const ok=await qzPrintDeviceLabels('a11', true, o); return {ok, fout:o.fout}; })()");
+  ok('printfout: de reden komt terug bij wie print', po.ok===false && po.fout==='De labelprinter staat uit of zit niet in de Mac.');
+  w.eval(`apparaten.push({id:'a13', team_id:'t1', code:'A0013', merk:'Apple', model:'iPhone XR', categorie:'Telefoon',
+      specs:{}, status:'klaar', stap:'af', grade:'B', hardware_id:'hw13', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()});
+    hardwares.push({id:'hw13', status:'voorraad', kanalen:{}, verkoop:249});`);
+  berichten.length=0;
+  w.eval("INGEBED=true; ingebedOpen=true");
+  const repFout=w.eval("appNaarReparatie('a13')");
+  await wachtR(20);
+  d().getElementById('def_notitie').value='80%';
+  d().querySelector('#vensterKnoppen .btn.actie').click();
+  await repFout; await wachtR(30);
+  const mFout=(berichten.find(b=>b && b.storvo==='online-klaar' && b.melding)||{}).melding||{};
+  ok('printfout: de winkelapp hoort waarom de sticker niet geprint is',
+    /Naar Te repareren: Accu: 80%\. Sticker niet geprint\. De labelprinter staat uit of zit niet in de Mac\./.test(mFout.tekst||''));
+  w.eval("INGEBED=false; ingebedOpen=false; deviceLabelPng=__echteTeken; printViaHelper=__echtePrint;");
 
   // ── het A6-kaartje van een telefoon: geen IMEI, alleen scherm, opslag, 5G en batterij ──
   const tk=w.eval(`(()=>{ const el=document.createElement('div');

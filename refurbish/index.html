@@ -2751,7 +2751,25 @@ async function qzPrintDeviceLabels(ids, stil, o){
     }
     if(!stil) toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
     return true;
-  }catch(e){ toast('Printen: '+e.message,'fout'); return false; }
+  }catch(e){ o.fout=printFoutTekst(e.message); toast('Niet geprint. '+o.fout,'fout'); return false; }
+}
+/* De reden in woorden die je aan de balie snapt. Eerst zei de reparatie alleen "printen
+   lukte niet", terwijl de printhulp precies wist dat de printer niet in de Mac zat. */
+function printFoutTekst(m){
+  m=String(m||'');
+  if(/niet gevonden op USB/i.test(m)) return 'De labelprinter staat uit of zit niet in de Mac.';
+  if(/Geen verbinding met de printhulp/i.test(m)) return 'De printhulp draait niet op deze computer.';
+  if(/printer meldde een fout/i.test(m)) return 'De printer meldt een fout. Kijk of de rol goed zit.';
+  return m || 'Printen lukte niet.';
+}
+/* Opnieuw de reparatiesticker, vanaf de reparatiepagina. Bijvoorbeeld als de printer net
+   uit stond toen je hem naar reparatie zette. */
+async function repSticker(id, knop){
+  const o={zonderDoos:true};
+  await bezig(knop, async()=>{
+    const ok=await qzPrintDeviceLabels(id, true, o);
+    if(ok) toast('Sticker geprint', true);
+  });
 }
 function labelsTonen(ids){
   const lijst=(Array.isArray(ids)?ids:[ids])
@@ -3334,8 +3352,9 @@ async function appNaarReparatie(id){
   if(bundelWas) await vbPrijsHerdelen(bundelWas);
   /* Wachten op de printer voordat een ingebed venster dichtgaat, anders breekt het
      printen halverwege af. Geen doossticker: de doos heeft er al een. */
-  const geprint=await qzPrintDeviceLabels(id, true, {zonderDoos:true}).catch(()=>false);
-  const melding='Naar Te repareren: '+r+(geprint?'':'. De sticker printen lukte niet, print hem bij het toestel.');
+  const po={zonderDoos:true};
+  const geprint=await qzPrintDeviceLabels(id, true, po).catch(()=>false);
+  const melding=['Naar Te repareren: '+r+'.'].concat(geprint?[]:['Sticker niet geprint.', po.fout, 'Print hem later op de reparatiepagina.']).filter(Boolean).join(' ');
   toast(melding, geprint?true:'let-op');
   if(INGEBED) return ingebedKlaar({tekst:melding, soort:geprint?true:'let-op'});
   appOpen(id);
@@ -3353,8 +3372,9 @@ async function repDefectErbij(id){
   if(error){ toast('Opslaan lukte niet','fout'); return; }
   a.defecten=defecten;
   tekenAlles();
-  const geprint=await qzPrintDeviceLabels(id, true, {zonderDoos:true}).catch(()=>false);
-  toast('Erbij gezet: '+keuze.tekst+(geprint?'':'. De sticker printen lukte niet.'), geprint?true:'let-op');
+  const po={zonderDoos:true};
+  const geprint=await qzPrintDeviceLabels(id, true, po).catch(()=>false);
+  toast(['Erbij gezet: '+keuze.tekst+'.'].concat(geprint?[]:['Sticker niet geprint.', po.fout]).filter(Boolean).join(' '), geprint?true:'let-op');
 }
 function tekenApparaat(){
   const el=document.getElementById('appPagina');
@@ -5622,7 +5642,10 @@ function tekenRepPagina(){
           <h2><svg class="i"><use href="#i-wrench"/></svg>Wat er mis is</h2>
           ${nodig.length ? nodig.map(d=>`<div class="clrij"><div class="clvraag">${esc(d)}</div></div>`).join('')
                          : '<p class="muted klein">Geen defecten genoteerd bij de controle.</p>'}
-          <button class="btn ghost small" style="margin-top:12px" onclick="repDefectErbij('${a.id}')"><svg class="i s"><use href="#i-plus"/></svg>Nog iets kapot</button>
+          <div class="row" style="gap:8px; flex-wrap:wrap; margin-top:12px">
+            <button class="btn ghost small" onclick="repDefectErbij('${a.id}')"><svg class="i s"><use href="#i-plus"/></svg>Nog iets kapot</button>
+            <button class="btn ghost small" onclick="repSticker('${a.id}', this)"><svg class="i s"><use href="#i-tag"/></svg>Sticker printen</button>
+          </div>
         </div>
 
         <div class="card">
