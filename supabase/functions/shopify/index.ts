@@ -15,7 +15,7 @@ import {
   admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
   bouwProductMetafields, bouwGradeMetafields, gradeWachtrij,
   webshopSleutel, gradeLetter, gradeSchat, GRADE_LETTERS, GRADE_NAAM,
-  toestelTitel, webshopZoektitel, webshopHandle,
+  toestelTitel, webshopZoektitel, webshopHandle, kleurHexVan,
 } from "../_gedeeld/shopify.ts";
 import { statusNaLaatste, zetUitverkocht, bestaatProduct } from "./uitverkocht.ts";
 
@@ -289,6 +289,9 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
     variants,
   };
   if (reg?.product_id) invoer.id = reg.product_id;
+  // De echte kleur van dit model, voor de stip bij de kleurkeuze (zie kleurHexVan).
+  const hex = await kleurHexVan(rep.merk, rep.model, rep.kleur || rep.specs?.Kleur);
+  if (hex) invoer.metafields.push({ namespace: "refuro", key: "kleur_hex", type: "single_line_text_field", value: hex });
   /* Foto's alleen meesturen als het product er nog geen heeft. Eerst gingen ze alleen mee
      bij het aanmaken: stond een toestel al online zonder foto's (eerst online gezet, daarna
      pas foto's opgehaald), dan bleef de webshoppagina voor altijd leeg. Heeft het product al
@@ -422,6 +425,8 @@ Deno.serve(async (req) => {
         const mf: any[] = [];
         if (kleur) mf.push({ ownerId: reg.product_id, namespace: "refuro", key: "kleur", type: "single_line_text_field", value: String(kleur) });
         if (sp.Opslag) mf.push({ ownerId: reg.product_id, namespace: "refuro", key: "opslag", type: "single_line_text_field", value: String(sp.Opslag) });
+        const hex = await kleurHexVan(h.merk, h.model, kleur);
+        if (hex) mf.push({ ownerId: reg.product_id, namespace: "refuro", key: "kleur_hex", type: "single_line_text_field", value: hex });
         if (mf.length) {
           const mu = await graphql(kk, `mutation($m: [MetafieldsSetInput!]!){ metafieldsSet(metafields: $m){ userErrors { field message } } }`, { m: mf });
           letOp(mu?.metafieldsSet, "Kleur en opslag");
@@ -443,6 +448,54 @@ Deno.serve(async (req) => {
       }
     }
     return new Response(JSON.stringify({ ok: true, uitslag }), { headers: cors });
+  }
+
+  /* De nieuwe accu als keuze op de productpagina (november 2026): telefoon 45 euro, laptop 89
+     euro. Dat zijn twee losse producten in Shopify; het thema zoekt ze op handle
+     (snippets/accu-keuze) en zet de gekozen accu als eigen regel in de winkelwagen, met de
+     variant van het toestel als verborgen eigenschap. Deze actie maakt ze aan of zet ze recht
+     (prijs, tekst), en is dus veilig om nog eens te draaien. Geen voorraad bijhouden en niet
+     verzenden: het is een klus die wij doen. Verborgen voor zoeken (seo.hidden), want alleen
+     samen met een toestel heeft hij zin. */
+  if (actie === "accu-producten") {
+    const kk = await koppelingVan(acc.team_id);
+    if (!kk) return fout("Er is nog geen webshop gekoppeld.", 409);
+    const ACCU = [
+      { handle: "nieuwe-accu-telefoon", titel: "Nieuwe accu voor je telefoon", prijs: 45, sku: "NIEUWE-ACCU-TELEFOON",
+        tekst: "<p>We plaatsen een nieuwe accu in je telefoon voordat hij de deur uit gaat. 100% capaciteit, met garantie. Je bestelling gaat dan binnen 1 tot 3 werkdagen de deur uit.</p>" },
+      { handle: "nieuwe-accu-laptop", titel: "Nieuwe accu voor je laptop", prijs: 89, sku: "NIEUWE-ACCU-LAPTOP",
+        tekst: "<p>We plaatsen een nieuwe accu in je laptop voordat hij de deur uit gaat. 100% capaciteit, met garantie. Je bestelling gaat dan binnen 1 tot 3 werkdagen de deur uit.</p>" },
+    ];
+    const gemaakt: any[] = [];
+    for (const a of ACCU) {
+      const d = await graphql(kk, `query($q: String!){ products(first: 1, query: $q){ nodes { id handle variants(first: 1){ nodes { id } } } } }`, { q: "handle:" + a.handle });
+      const bestaand = d?.products?.nodes?.[0] && d.products.nodes[0].handle === a.handle ? d.products.nodes[0] : null;
+      const variant: any = {
+        optionValues: [{ optionName: "Title", name: "Default Title" }],
+        price: String(a.prijs), sku: a.sku, inventoryPolicy: "CONTINUE", taxable: true,
+        inventoryItem: { tracked: false, requiresShipping: false },
+      };
+      if (bestaand?.variants?.nodes?.[0]?.id) variant.id = bestaand.variants.nodes[0].id;
+      const invoer: any = {
+        title: a.titel, handle: a.handle, descriptionHtml: a.tekst, vendor: "Refuro", productType: "Dienst",
+        status: "ACTIVE", tags: ["dienst", "nieuwe-accu"],
+        productOptions: [{ name: "Title", values: [{ name: "Default Title" }] }],
+        variants: [variant],
+        metafields: [{ namespace: "seo", key: "hidden", type: "number_integer", value: "1" }],
+      };
+      if (bestaand?.id) invoer.id = bestaand.id;
+      const uit = await graphql(kk, `
+        mutation($input: ProductSetInput!) {
+          productSet(input: $input, synchronous: true) { product { id handle } userErrors { field message } }
+        }`, { input: invoer });
+      const p = letOp(uit?.productSet, "De accu op de webshop zetten").product;
+      if (kk.publicatie_id && p?.id) {
+        const pub = await graphql(kk, `mutation($id: ID!, $input: [PublicationInput!]!){ publishablePublish(id: $id, input: $input){ userErrors { field message } } }`, { id: p.id, input: [{ publicationId: kk.publicatie_id }] });
+        letOp(pub?.publishablePublish, "De accu zichtbaar maken");
+      }
+      gemaakt.push({ handle: p?.handle, id: p?.id, prijs: a.prijs, nieuw: !bestaand });
+    }
+    return new Response(JSON.stringify({ ok: true, gemaakt }), { headers: cors });
   }
 
   /* Verzenden gaat over een BESTELLING, niet over een toestel. Daarom hier apart, nog

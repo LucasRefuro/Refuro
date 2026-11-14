@@ -417,6 +417,23 @@ export function webshopHandle(h: any) {
   return slug([toestelTitel(h.merk, h.model), ...uitvoeringDelen(h)].filter(Boolean).join(" ")).slice(0, 120);
 }
 
+/* De echte kleur van dit model als code, voor de stip bij de kleurkeuze op de webshop
+   (model_kleuren.kleur_hex, per model opgezocht: "Blauw" is bij een iPhone 12 een ander blauw
+   dan bij een iPhone 13). Geen code bekend: null, dan kiest het thema zelf een stip op naam. */
+export async function kleurHexVan(merk: unknown, model: unknown, kleur: unknown): Promise<string | null> {
+  const k = String(kleur ?? "").trim().toLowerCase();
+  if (!k || !model) return null;
+  const { data } = await admin.from("model_kleuren").select("kleur_hex")
+    .ilike("merk", String(merk ?? "")).ilike("model", String(model)).limit(5);
+  for (const r of (data || [])) {
+    const kaart = (r.kleur_hex && typeof r.kleur_hex === "object") ? r.kleur_hex : {};
+    for (const naam of Object.keys(kaart)) {
+      if (naam.toLowerCase() === k && /^#[0-9A-F]{6}$/i.test(String(kaart[naam]))) return String(kaart[naam]).toUpperCase();
+    }
+  }
+  return null;
+}
+
 // Wat een grade in het algemeen betekent. Staat vooraan in "wat wij zagen", en staat er
 // alleen als er van die grade nu niets op voorraad is. "Als nieuw" stond hier eerst, maar
 // dat woord verbiedt het merkboek van de webshop.
