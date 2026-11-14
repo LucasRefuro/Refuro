@@ -248,6 +248,7 @@ setTimeout(async()=>{
   ok('los toestel: modelfoto niet dubbel als losse foto', !w.__geschreven.some(g=>g[0]==='refurbish_fotos' && g[1]==='insert'));
   ok('online: dezelfde foto nooit twee keer in de lijst', /vanSet\.has\(f\.pad\)/.test(w.eval('fotosLaden.toString()')) && /gezien\.has\(f\.pad\)/.test(w.eval('fotosLaden.toString()')));
   ok('publiceren: nooit dezelfde URL twee keer', /new Set\(gesorteerd\.map\(f=>fotoUrl\(f\.pad\)\)\)/.test(w.eval('onlPubliceren.toString()')));
+  ok('publiceren: daarna de webshopfoto\'s gelijktrekken', /actie:'online'[\s\S]{0,1200}actie:'fotos', hardware_id:hwId/.test(w.eval('onlPubliceren.toString()')));
   delete w.__db.webshop_grade_prijzen;
 
   // ── een Galaxy zonder kleur: de kleur hier invullen en meteen de foto's ophalen ──

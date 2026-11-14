@@ -7109,6 +7109,19 @@ async function onlPubliceren(knop){
         const uit=await res.json().catch(()=>({}));
         if(!res.ok||!uit.ok) throw new Error(uit.error||'Shopify gaf een fout');
         webshop=' · staat op de webshop';
+        /* Dan de foto's van de advertentie gelijktrekken met wat hier staat (actie "fotos").
+           Een sync laat foto's die al op het product staan bewust staan. Komt dit toestel op een
+           product dat al bestond (eerder offline gehaald, of de foto's van het model zijn
+           vernieuwd), dan bleven de oude erop: zo stond de iPhone 17 met dubbele foto's online.
+           Lukt dit niet, dan staat hij wel online, alleen met de foto's van eerst. */
+        try{
+          await fetch(SUPABASE_URL+'/functions/v1/shopify',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+                     'Authorization':'Bearer '+session.access_token},
+            body:JSON.stringify({actie:'fotos', hardware_id:hwId})
+          });
+        }catch(e){ console.error('webshopfoto\'s gelijktrekken:', e); }
       }catch(e){
         ingebedMelding={tekst:'Opgeslagen, maar de webshop lukte niet: '+e.message, soort:'let-op'};
         await allesLaden(); showTab('voorraad');
