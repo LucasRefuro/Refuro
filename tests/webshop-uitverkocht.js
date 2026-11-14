@@ -117,7 +117,12 @@ const variant=(n,aantal)=>({id:'gid://shopify/ProductVariant/'+n,
   // Foto's: eerst alleen bij het aanmaken. Stond hij al online zonder foto's, dan bleef de
   // pagina leeg, ook na foto's ophalen en opnieuw online zetten (Galaxy S24, 10 nov).
   ok('foto\'s ook naar een bestaand product zonder foto\'s',
-     /invoer\.files = files/.test(sync) && /!reg \|\| !\(await heeftMedia\(gql, reg\.product_id\)\)/.test(sync));
+     /invoer\.files = files/.test(sync) && /!reg \|\| (opties\.nieuweFotos \|\| )?!\(await heeftMedia\(gql, reg\.product_id\)\)/.test(sync));
+  // Foto's vervangen (16 nov): een sync laat bestaande foto's staan, dus eerst de oude weg en
+  // dan de nieuwe erop. En nooit twee keer dezelfde URL (iPhone 17 stond er dubbel op).
+  ok('foto\'s vervangen: eerst de oude weg, dan de nieuwe erop',
+     /actie === "fotos"[\s\S]{0,700}mediaWeg\([\s\S]{0,200}nieuweFotos: true/.test(idx) && /productDeleteMedia[\s\S]{0,900}fileUpdate/.test(idx));
+  ok('nooit dezelfde foto twee keer naar de webshop', /\[\.\.\.new Set\(lijst\)\]/.test(idx));
   // Nieuwe sleutel (kleur aangepast): de oude advertentie opnieuw synchroniseren, anders
   // blijft dit toestel daar op voorraad staan.
   ok('oude advertentie bijgewerkt als de sleutel verandert',

@@ -240,6 +240,14 @@ setTimeout(async()=>{
   await w.eval("fotosVanWinkel(apparaten.find(a=>a.id==='a9'))");
   const fi=w.__geschreven.find(g=>g[0]==='refurbish_fotos' && g[1]==='insert');
   ok('los toestel: winkelfoto komt mee als foto van dit toestel', !!fi && fi[2].length===1 && fi[2][0].pad==='t1/hardware/hw9/1-0.jpg' && fi[2][0].apparaat_id==='a9');
+  // Een modelfoto in de winkel (uit de set van het model) komt NIET los mee: die komt al via de
+  // set, en los erbij stond hij twee keer op de webshop (iPhone 17, 16 nov).
+  w.__geschreven.length=0;
+  w.eval("hardwares.find(h=>h.id==='hw9').fotos=['https://x.supabase.co/storage/v1/object/public/refurbish-fotos/t1/model_Apple-iPhone_17-Zwart/open-1-a.jpg']");
+  await w.eval("fotosVanWinkel(apparaten.find(a=>a.id==='a9'))");
+  ok('los toestel: modelfoto niet dubbel als losse foto', !w.__geschreven.some(g=>g[0]==='refurbish_fotos' && g[1]==='insert'));
+  ok('online: dezelfde foto nooit twee keer in de lijst', /vanSet\.has\(f\.pad\)/.test(w.eval('fotosLaden.toString()')) && /gezien\.has\(f\.pad\)/.test(w.eval('fotosLaden.toString()')));
+  ok('publiceren: nooit dezelfde URL twee keer', /new Set\(gesorteerd\.map\(f=>fotoUrl\(f\.pad\)\)\)/.test(w.eval('onlPubliceren.toString()')));
   delete w.__db.webshop_grade_prijzen;
 
   // ── een Galaxy zonder kleur: de kleur hier invullen en meteen de foto's ophalen ──

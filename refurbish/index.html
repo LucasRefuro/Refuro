@@ -6104,12 +6104,14 @@ const autoFotoGeprobeerd = new Set();
 /* Een los toestel kan in de winkelapp al foto's hebben (hardware.fotos, in dezelfde opslag).
    Die zetten we als losse foto's bij dit toestel. Anders kent de online-pagina ze niet, en
    zou publiceren ze stil van de hardware-rij afhalen (die krijgt de foto's van hier). Op
-   pad vergeleken, dus nooit dubbel; een foto van buiten de opslag laten we staan. */
+   pad vergeleken, dus nooit dubbel; een foto van buiten de opslag laten we staan.
+   Een modelfoto (pad met /model_) slaan we over: die hoort bij de set van het model en komt
+   via fotosInKleur al mee. Als losse foto erbij stond elke foto twee keer op de webshop. */
 async function fotosVanWinkel(a){
   const hw=hardwareVan(a);
   const paden=((hw && Array.isArray(hw.fotos)) ? hw.fotos : [])
     .map(u=>{ const m=String(u||'').match(/\/refurbish-fotos\/([^?]+)/); return m ? decodeURIComponent(m[1]) : null; })
-    .filter(Boolean);
+    .filter(p=>p && !/^[^/]+\/model_/.test(p));
   if(!paden.length) return;
   const {data:er}=await sb.from('refurbish_fotos').select('pad').eq('apparaat_id', a.id);
   const al=new Set((er||[]).map(f=>f.pad));
@@ -6132,7 +6134,17 @@ async function fotosLaden(a, geenAuto){
   const {data}=await sb.from('refurbish_fotos').select('*')
     .or(orFilter)
     .order('volgorde');
-  onl.fotos=fotosInKleur(a, data||[]);
+  /* Nooit twee keer dezelfde foto. Staat een foto zowel los bij het toestel als in de set van
+     het model (een oude kopie uit de winkelapp), dan houden we de rij van de set: die weet
+     welk aanzicht het is en of het de hoofdfoto is. */
+  const lijst=fotosInKleur(a, data||[]);
+  const vanSet=new Set(lijst.filter(f=>!f.apparaat_id).map(f=>f.pad));
+  const gezien=new Set();
+  onl.fotos=lijst.filter(f=>{
+    if(f.apparaat_id && vanSet.has(f.pad)) return false;
+    if(gezien.has(f.pad)) return false;
+    gezien.add(f.pad); return true;
+  });
   /* Is er nog geen hoofdfoto gekozen, dan is dat de foto van voren: daar zie
      je het scherm op, en dat is de foto waar een koper op klikt. */
   if(onl.fotos.length && !onl.fotos.some(f=>f.hoofd)){
@@ -7056,7 +7068,7 @@ async function onlPubliceren(knop){
       verkoop:Number(onl.prijs)||0,
       garantie:Number(onl.garantie)||0,
       titel:onl.titel||null, omschrijving:onl.tekst||null,
-      fotos:gesorteerd.map(f=>fotoUrl(f.pad)),
+      fotos:[...new Set(gesorteerd.map(f=>fotoUrl(f.pad)))],   // nooit dezelfde foto twee keer
       specs:onlSpecs(a), kanalen, nieuwe_accu:!!a.nieuwe_accu, marge:!!onl.marge,
       nieuwprijs:onl.nieuwprijs!=null?Number(onl.nieuwprijs):null,
       bijgewerkt_op:new Date().toISOString()

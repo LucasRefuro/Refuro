@@ -69,7 +69,8 @@ function beschrijving(h: any) {
 
 function fotosVan(h: any) {
   const lijst = Array.isArray(h.fotos) ? h.fotos.filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
-  return lijst.slice(0, 10).map((u: string) => ({
+  // Nooit dezelfde foto twee keer: een dubbele URL gaf twee keer hetzelfde plaatje op de pagina.
+  return [...new Set(lijst)].slice(0, 10).map((u) => ({
     originalSource: u, alt: [h.merk, h.model].filter(Boolean).join(" "), contentType: "IMAGE",
   }));
 }
@@ -142,6 +143,30 @@ function gebruikTags(h: any): string[] {
   return [...t];
 }
 
+/* Alle foto's van een product weghalen, zodat de volgende synchronisatie de nieuwe set erop
+   zet. Nodig als de foto's van een model vervangen zijn (opnieuw ingekaderd, of er stond er
+   een dubbel op): een sync laat bestaande foto's anders bewust staan. productDeleteMedia is
+   door Shopify afgeschreven maar werkt nog met write_products; lukt hij niet, dan dezelfde
+   koppeling losmaken via fileUpdate (dat vraagt write_files). */
+async function mediaWeg(gql: (q: string, v?: unknown) => Promise<any>, productId: string): Promise<number> {
+  const d = await gql(`query($id: ID!) { product(id: $id) { media(first: 100) { nodes { id } } } }`, { id: productId });
+  const ids: string[] = (d?.product?.media?.nodes || []).map((n: any) => n.id).filter(Boolean);
+  if (!ids.length) return 0;
+  try {
+    const u = await gql(`mutation($p: ID!, $m: [ID!]!) {
+      productDeleteMedia(productId: $p, mediaIds: $m) { deletedMediaIds mediaUserErrors { field message } } }`, { p: productId, m: ids });
+    const f = u?.productDeleteMedia?.mediaUserErrors || [];
+    if (f.length) throw new Error(f.map((e: any) => e.message).join("; "));
+  } catch (e) {
+    console.error("productDeleteMedia, terugval op fileUpdate", e);
+    const u = await gql(`mutation($f: [FileUpdateInput!]!) { fileUpdate(files: $f) { userErrors { field message } } }`,
+      { f: ids.map((id) => ({ id, referencesToRemove: [productId] })) });
+    const f = u?.fileUpdate?.userErrors || [];
+    if (f.length) throw new Error("De oude foto's weghalen lukte niet: " + f.map((x: any) => x.message).join("; "));
+  }
+  return ids.length;
+}
+
 // Heeft het product al foto's? Bij twijfel (de vraag mislukt) zeggen we ja: liever geen
 // foto's meesturen dan ze dubbel op de pagina zetten.
 async function heeftMedia(gql: (q: string, v?: unknown) => Promise<any>, productId: string): Promise<boolean> {
@@ -164,7 +189,7 @@ async function heeftMedia(gql: (q: string, v?: unknown) => Promise<any>, product
    variant kan terugvertalen en dezelfde uitvoering later hetzelfde product terugkrijgt.
    opties.verkocht: het laatste exemplaar ging weg door een verkoop (en niet doordat je hem zelf
    offline haalde); dan blijft de pagina bereikbaar met "Net verkocht". */
-async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string, opties: { verkocht?: boolean } = {}) {
+async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string, opties: { verkocht?: boolean; nieuweFotos?: boolean } = {}) {
   const gql = (q: string, v?: unknown) => graphql(k, q, v);
   const { data: exemplaren } = await admin.from("hardware")
     .select("*").eq("team_id", teamId).eq("status", "voorraad").eq("kanalen->shopify->>sleutel", sleutel);
@@ -259,7 +284,8 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
      pas foto's opgehaald), dan bleef de webshoppagina voor altijd leeg. Heeft het product al
      foto's, dan laten we ze staan: opnieuw meesturen zou ze bij elke sync opnieuw uploaden. */
   const files = fotosVan(rep);
-  if (files.length && (!reg || !(await heeftMedia(gql, reg.product_id)))) invoer.files = files;
+  // nieuweFotos: de oude zijn net weggehaald (actie "fotos"); niet vragen, Shopify kan dat nog even niet weten.
+  if (files.length && (!reg || opties.nieuweFotos || !(await heeftMedia(gql, reg.product_id)))) invoer.files = files;
 
   const uit = await graphql(k, `
     mutation($input: ProductSetInput!) {
@@ -431,6 +457,18 @@ Deno.serve(async (req) => {
       const sleutel = kanalen.shopify?.sleutel || webshopSleutel(h);
       await synchroniseerAdvertentie(k, acc.team_id, sleutel);
       return new Response(JSON.stringify({ ok: true }), { headers: cors });
+    }
+
+    if (actie === "fotos") {
+      // De foto's van de advertentie vervangen door wat er nu bij het toestel staat (zie mediaWeg).
+      const sleutel = kanalen.shopify?.sleutel || null;
+      if (!sleutel) return new Response(JSON.stringify({ ok: true, overgeslagen: true }), { headers: cors });
+      const { data: reg } = await admin.from("webshop_producten").select("product_id")
+        .eq("team_id", acc.team_id).eq("sleutel", sleutel).maybeSingle();
+      let weg = 0;
+      if (reg?.product_id) weg = await mediaWeg((q, v) => graphql(k, q, v), reg.product_id);
+      await synchroniseerAdvertentie(k, acc.team_id, sleutel, { nieuweFotos: true });
+      return new Response(JSON.stringify({ ok: true, weg }), { headers: cors });
     }
 
     if (actie === "locatie") {
