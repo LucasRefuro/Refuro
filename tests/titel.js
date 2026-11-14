@@ -93,6 +93,7 @@ window.supabase={createClient:()=>({
   const ts=fs.readFileSync(bron('supabase/functions/shopify/index.ts'),'utf8');
   ok('webshop: titel is de modelnaam, zoektitel en link de hele uitvoering',
     /toestelTitel\(rep\.merk, rep\.model\)/.test(ts) && /seo: \{ title: webshopZoektitel\(rep\) \}/.test(ts) && /webshopHandle\(rep\)/.test(ts));
+  ok('webshop: altijd de modelnaam, nooit het titelveld van het toestel', !/rep\.titel|h\.titel/.test(ts) && /const titel = toestelTitel\(h\.merk, h\.model\)/.test(ts));
   ok('webshop: kleur gaat mee voor het label', /mfText\("kleur", kleur\)/.test(sh));
 
   // Het formulier: titel leeg laten geeft de modelnaam.
@@ -103,7 +104,7 @@ window.supabase={createClient:()=>({
   ok('formulier: lege titel wordt de modelnaam', w.eval('hwFormRij().titel')==='iPhone 11');
   zet('hw_titel','Mijn eigen titel');
   ok('formulier: een eigen titel blijft', w.eval('hwFormRij().titel')==='Mijn eigen titel');
-  ok('formulier: uitleg onder het veld', /Kleur en opslag zet de webshop eronder/.test(d.getElementById('hw_titel').nextElementSibling.textContent));
+  ok('formulier: uitleg onder het veld', /Op de webshop staat altijd de modelnaam/.test(d.getElementById('hw_titel').nextElementSibling.textContent));
   const schrijf=w.eval('hwTekstSchrijven.toString()');
   ok('AI: schrijft de titel niet meer', !/uit\.titel/.test(schrijf) && /toestelTitel/.test(schrijf));
   ok('kaartje: zelfde titel', w.eval("hwTelKaart({merk:'Apple', model:'iPhone 12', specs:{}}).titel")==='iPhone 12');
@@ -154,7 +155,7 @@ window.supabase={createClient:()=>({
   r.eval("onlineZetten('p1')");
   await wacht(80);
   ok('online zetten: begint met de modelnaam', r.eval('onl && onl.titel')==='iPhone 11' && r.document.getElementById('onl_titel').value==='iPhone 11');
-  ok('online zetten: uitleg onder het veld', /Kleur en opslag zet de webshop eronder/.test(r.document.getElementById('onl_titel').nextElementSibling.textContent));
+  ok('online zetten: uitleg onder het veld', /Op de webshop staat altijd de modelnaam/.test(r.document.getElementById('onl_titel').nextElementSibling.textContent));
   // Advertentie schrijven: de AI geeft een titel terug, die gebruiken we niet.
   r.fetch=async()=>({ok:true, json:async()=>({ok:true, titel:'Apple iPhone 11 -,64GB', tekst:'Nette telefoon.', zoekwoorden:[]})});
   r.eval("sb.auth.getSession=async()=>({data:{session:{access_token:'x'}}})");

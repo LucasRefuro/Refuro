@@ -15369,7 +15369,7 @@ function hwVenster(h){
       <div class="veldkop"><label>Titel voor online</label>
         ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_titel\', this)">Kopiëren</button>':''}</div>
       <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="${esc((h&&toestelTitel(h.merk,h.model))||'Bijvoorbeeld iPhone 11')}">
-      <p class="muted klein">Alleen de modelnaam. Kleur en opslag zet de webshop eronder.</p>
+      <p class="muted klein">Op de webshop staat altijd de modelnaam. Kleur en opslag komen eronder.</p>
       <div class="veldkop"><label>Omschrijving</label>
         ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_oms\', this)">Kopiëren</button>':''}</div>
       <textarea id="hw_oms" rows="5" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>

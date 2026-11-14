@@ -266,10 +266,12 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
     return v;
   });
 
-  /* De titel is de kale modelnaam (zie toestelTitel); kleur en opslag zet het thema als labels
-     eronder. Een titel die de winkelier zelf typte gaat voor. Google en de adresbalk krijgen de
-     volledige uitvoering, anders heten vier advertenties hetzelfde. */
-  const titel = String(rep.titel || "").trim() || toestelTitel(rep.merk, rep.model);
+  /* De titel is altijd de kale modelnaam (zie toestelTitel); kleur en opslag zet het thema als
+     labels eronder. Bewust niet het titelveld van het toestel: een Storvo-venster dat nog openstond
+     van voor deze wijziging bleef daar AI-titels in zetten ("Apple iPhone 13 - Middernacht, 128 GB"),
+     en de winkelier wil op de webshop elke titel gelijk. Google en de adresbalk krijgen de volledige
+     uitvoering, anders heten vier advertenties hetzelfde. */
+  const titel = toestelTitel(rep.merk, rep.model);
   const handle = webshopHandle(rep);
   const nieuweHandle = !!handle && (!reg || reg.handle !== handle);
   const controle = await controleBij(rep.id);
@@ -384,15 +386,23 @@ Deno.serve(async (req) => {
     if (!kk) return fout("Er is nog geen webshop gekoppeld.", 409);
     const { data: regs } = await admin.from("webshop_producten").select("*").eq("team_id", acc.team_id);
     const uitslag: any[] = [];
+    let alle: any[] | null = null;
     for (const reg of (regs || [])) {
       try {
         // Een exemplaar van deze advertentie: liefst een dat nog te koop is, anders het laatst bijgewerkte.
         const { data: rijen } = await admin.from("hardware").select("*")
           .eq("team_id", acc.team_id).eq("kanalen->shopify->>sleutel", reg.sleutel)
           .order("bijgewerkt_op", { ascending: false }).limit(20);
-        const h = (rijen || []).find((r: any) => r.status === "voorraad") || (rijen || [])[0];
+        let h = (rijen || []).find((r: any) => r.status === "voorraad") || (rijen || [])[0];
+        /* Een uitverkochte advertentie heeft geen gekoppeld toestel meer: bij verkopen gaat de
+           koppeling eraf. Dan het verkochte toestel met dezelfde uitvoering zoeken. */
+        if (!h) {
+          if (!alle) alle = (await admin.from("hardware").select("*").eq("team_id", acc.team_id)
+            .order("bijgewerkt_op", { ascending: false }).limit(5000)).data || [];
+          h = alle.find((x: any) => webshopSleutel(x) === reg.sleutel);
+        }
         if (!h) { uitslag.push({ sleutel: reg.sleutel, overgeslagen: "geen toestel" }); continue; }
-        const titel = String(h.titel || "").trim() || toestelTitel(h.merk, h.model);
+        const titel = toestelTitel(h.merk, h.model);
         const handle = webshopHandle(h);
         const product: any = { id: reg.product_id, title: titel, seo: { title: webshopZoektitel(h) } };
         if (handle && reg.handle !== handle) { product.handle = handle; product.redirectNewHandle = true; }
