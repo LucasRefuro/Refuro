@@ -16033,7 +16033,9 @@ function hwModelTyp(){
   const q=tstNorm(veld.value.trim());
   const bron=hwModellen.filter(r=>r.toon!==false && String(r.merk||'').toLowerCase()===merk)
     .sort((a,b)=>(Number(b.volgorde)||0)-(Number(a.volgorde)||0) || String(a.model).localeCompare(String(b.model)));
-  const treffers=(q ? bron.filter(r=>tstNorm(r.model).includes(q)) : bron).slice(0,12).map(r=>r.model);
+  /* Alle modellen, nieuwste bovenaan; de lijst scrolt zelf (max-height). Eerst waren het er
+     twaalf, en dan hield Apple op bij de iPhone 16 Plus: oudere iPhones kon je niet kiezen. */
+  const treffers=(q ? bron.filter(r=>tstNorm(r.model).includes(q)) : bron).map(r=>r.model);
   if(!treffers.length || (treffers.length===1 && treffers[0]===veld.value.trim())){ hwModelSluit(); return; }
   lijst.hidden=false;
   lijst.innerHTML=treffers.map(n=>zoekrijHtml(n,'hwModelKies')).join('');
