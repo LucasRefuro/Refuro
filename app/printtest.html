@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>Printtest</title>
+<!-- Tijdelijke testpagina: kan Safari vanaf storvo.app de printhulp op deze Mac bereiken,
+     ook vanuit een venster (iframe)? Stuurt een lege opdracht; er wordt niets geprint. -->
+<p id="u">Even testen...</p>
+<script>
+(async()=>{
+  const binnen=location.search.includes('binnen');
+  const r=[binnen?'iframe':'pagina'];
+  try{ await fetch('https://127.0.0.1:9909/status'); r.push('GET ok'); }catch(e){ r.push('GET fout: '+e.message); }
+  try{ const x=await fetch('https://127.0.0.1:9909/print',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({png:'', kopieen:binnen?'iframe-test':'pagina-test'})});
+       r.push('POST ok '+(await x.text()).slice(0,80)); }catch(e){ r.push('POST fout: '+e.name+' '+e.message); }
+  document.getElementById('u').textContent=r.join(' | ');
+  if(!binnen){ const f=document.createElement('iframe'); f.src='/app/printtest.html?binnen=1'; f.style.cssText='width:100%;height:80px;border:1px solid #ccc'; document.body.appendChild(f); }
+})();
+</script>
