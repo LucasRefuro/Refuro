@@ -90,8 +90,9 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Inplannen kan altijd**, ook zonder doorgegeven beschikbaarheid.
 - [x] **Goedkeuren en herinneringsmails weg** uit de winkelapp. Doorgeven telt meteen.
 - [x] **Vinkje "Alleen met inloggen"** voor later; dan geeft ieder alleen voor zichzelf door.
-- [ ] **Edge `rooster-link` uitrollen** (verify_jwt uit). Wacht op akkoord van de eigenaar.
-      Zonder deze functie doen de links nog niets.
+- [x] **Edge `rooster-link` v1 uitgerold** (14 nov, met akkoord, verify_jwt uit). Getest: info,
+      rooster, kapotte link, vreemde naam en kijken-maar-niet-doorgeven geven het goede antwoord.
+      De links van Refuro zijn aangemaakt.
 - [ ] **Eigenaar: de beschikbaarheid-link één keer zelf openen** op de telefoon en iets doorgeven.
 - [ ] **Later opruimen:** de oude functies `rooster-herinnering` en `rooster-mail` (doen niets meer).
 
