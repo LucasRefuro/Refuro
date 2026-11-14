@@ -384,6 +384,39 @@ export function webshopSleutel(h: any) {
   return deel.filter(Boolean).map((s: any) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).join("_");
 }
 
+/* De titel op de webshop: alleen de modelnaam, "iPhone 11". Kleur en opslag staan als labels
+   direct eronder (metafields kleur en opslag, het thema tekent ze). Eerst schreef de AI de
+   titel, en zo kwamen er dingen online als "Apple iPhone 11 -,64GB" of "Apple iPhone XR wit -
+   betrouwbare smartphone voor dagelijks gebruik". Het merk valt weg waar de modelnaam het al
+   zegt: niemand zoekt "Apple iPhone". Dezelfde regel staat in de winkelapp en de werkbank
+   (toestelTitel); verander je hem, doe het dan op alle drie de plekken. */
+const EIGEN_NAAM = /^(iphone|ipad|ipod|macbook|imac|mac\s?mini|mac\s?studio|mac\s?pro|apple\s?watch|airpods|galaxy|pixel)\b/i;
+export function toestelTitel(merk: unknown, model: unknown) {
+  const mk = String(merk ?? "").trim().replace(/\s+/g, " ");
+  let md = String(model ?? "").trim().replace(/\s+/g, " ");
+  if (mk && md.toLowerCase().startsWith(mk.toLowerCase() + " ")) md = md.slice(mk.length + 1).trim();
+  if (!md) return mk;
+  return EIGEN_NAAM.test(md) ? md : (mk ? mk + " " + md : md);
+}
+
+/* De zichtbare titel is kort, maar Google en de link in de adresbalk krijgen de hele
+   uitvoering: "iPhone 11 64 GB Zwart refurbished" en /products/iphone-11-64-gb-zwart. Anders
+   heten vier advertenties "iPhone 11" en maakt Shopify er iphone-11-1 tot en met -4 van. */
+function uitvoeringDelen(h: any) {
+  const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
+  const kleur = h.kleur || sp.Kleur || "";
+  const cat = h.categorie || "Laptop";
+  if (cat === "Laptop" || cat === "Desktop") return [sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag];
+  return [sp.Opslag, kleur];
+}
+export function webshopZoektitel(h: any) {
+  const delen = [toestelTitel(h.merk, h.model), ...uitvoeringDelen(h)].filter(Boolean).map((s) => String(s).trim());
+  return (delen.join(" ") + " refurbished").replace(/\s+/g, " ").slice(0, 70);
+}
+export function webshopHandle(h: any) {
+  return slug([toestelTitel(h.merk, h.model), ...uitvoeringDelen(h)].filter(Boolean).join(" ")).slice(0, 120);
+}
+
 // Wat een grade in het algemeen betekent. Staat vooraan in "wat wij zagen", en staat er
 // alleen als er van die grade nu niets op voorraad is. "Als nieuw" stond hier eerst, maar
 // dat woord verbiedt het merkboek van de webshop.
@@ -506,6 +539,10 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (sp.Geheugen) out.push(mfText("ram", sp.Geheugen));
   else if (sp.Werkgeheugen) out.push(mfText("ram", sp.Werkgeheugen));
   if (sp.Opslag) out.push(mfText("opslag", sp.Opslag));
+  // De kleur staat niet meer in de titel, dus het thema zet hem als label onder de titel.
+  // Op de hardware-rij staat hij in specs.Kleur; een refurbish-apparaat heeft een eigen kolom.
+  const kleur = h.kleur || sp.Kleur;
+  if (kleur) out.push(mfText("kleur", kleur));
   // Het scherm: laptop en telefoon hebben "Scherm"; een monitor beschrijft het
   // met losse velden (maat, paneel, resolutie, verversing). Die plakken we tot
   // een leesbare regel voor dezelfde scherm-chip.

@@ -150,14 +150,16 @@ const fouten=[]; w.onerror=m=>fouten.push(String(m));
   await w.eval("hwNieuwAanvullen('n1')");
   ok('aanvullen: eerst specs, dan de tekst', w.__volgorde.indexOf('specs')>-1 && w.__volgorde.indexOf('specs')<w.__volgorde.indexOf('tekst'));
   ok('aanvullen: iPhone haalt de set, geen zoekvraag', !w.__volgorde.includes('productfotos') && w.eval('hwOpen.fotos.length')===2);
-  ok('aanvullen: de tekst staat in het formulier en is bewaard', d.getElementById('hw_titel').value==='iPhone 13 128GB Groen' && d.getElementById('hw_oms').value==='Een fijne telefoon.' && w.__volgorde.includes('bewaar'));
+  ok('aanvullen: de tekst staat in het formulier en is bewaard, de titel is de modelnaam', d.getElementById('hw_titel').value==='iPhone 13' && d.getElementById('hw_oms').value==='Een fijne telefoon.' && w.__volgorde.includes('bewaar'));
   ok('aanvullen: de statusregel is weer leeg', d.getElementById('hwAanvulHint').textContent==='');
   // Zelf al iets getypt: dan laat de stille tekst dat staan.
   d.getElementById('hw_titel').value='Eigen titel';
   await w.eval("hwTekstSchrijven('n1', true)");
   ok('aanvullen: wat je zelf typte blijft staan', d.getElementById('hw_titel').value==='Eigen titel');
+  d.getElementById('hw_oms').value='Eigen tekst';
   await w.eval("hwTekstSchrijven('n1', false)");
-  ok('knop Schrijf: overschrijft wel', d.getElementById('hw_titel').value==='iPhone 13 128GB Groen');
+  // De titel schrijft de AI niet meer (die is altijd de modelnaam); de tekst overschrijft de knop wel.
+  ok('knop Schrijf: tekst overschrijft wel, de titel blijft', d.getElementById('hw_oms').value==='Een fijne telefoon.' && d.getElementById('hw_titel').value==='Eigen titel');
   ok('opslaan van een nieuw toestel start het aanvullen', /hwNieuwAanvullen\(n\.id\)/.test(w.eval('hwOpslaan.toString()')));
   // Al een titel of foto's: dan niets opnieuw.
   w.__volgorde.length=0;

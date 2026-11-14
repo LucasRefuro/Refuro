@@ -15,6 +15,7 @@ import {
   admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
   bouwProductMetafields, bouwGradeMetafields, gradeWachtrij,
   webshopSleutel, gradeLetter, gradeSchat, GRADE_LETTERS, GRADE_NAAM,
+  toestelTitel, webshopZoektitel, webshopHandle,
 } from "../_gedeeld/shopify.ts";
 import { statusNaLaatste, zetUitverkocht, bestaatProduct } from "./uitverkocht.ts";
 
@@ -265,10 +266,17 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
     return v;
   });
 
-  const titel = rep.titel || [rep.merk, rep.model].filter(Boolean).join(" ");
+  /* De titel is de kale modelnaam (zie toestelTitel); kleur en opslag zet het thema als labels
+     eronder. Een titel die de winkelier zelf typte gaat voor. Google en de adresbalk krijgen de
+     volledige uitvoering, anders heten vier advertenties hetzelfde. */
+  const titel = String(rep.titel || "").trim() || toestelTitel(rep.merk, rep.model);
+  const handle = webshopHandle(rep);
+  const nieuweHandle = !!handle && (!reg || reg.handle !== handle);
   const controle = await controleBij(rep.id);
   const invoer: any = {
     title: titel,
+    seo: { title: webshopZoektitel(rep) },
+    ...(nieuweHandle ? { handle, ...(reg ? { redirectNewHandle: true } : {}) } : {}),
     descriptionHtml: beschrijving(rep),
     vendor: rep.merk || "Storvo",
     productType: rep.categorie || "Laptop",
@@ -287,14 +295,22 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
   // nieuweFotos: de oude zijn net weggehaald (actie "fotos"); niet vragen, Shopify kan dat nog even niet weten.
   if (files.length && (!reg || opties.nieuweFotos || !(await heeftMedia(gql, reg.product_id)))) invoer.files = files;
 
-  const uit = await graphql(k, `
+  const zet = (inv: any) => graphql(k, `
     mutation($input: ProductSetInput!) {
       productSet(input: $input, synchronous: true) {
         product { id handle title onlineStoreUrl
           variants(first: 10) { nodes { id selectedOptions { name value } } } }
         userErrors { field message }
       }
-    }`, { input: invoer });
+    }`, { input: inv });
+  let uit = await zet(invoer);
+  /* Is de nette link al bezet (een oud product met dezelfde naam), dan zonder: een lelijkere
+     link is beter dan een toestel dat niet online komt. */
+  const fouten = uit?.productSet?.userErrors || [];
+  if (nieuweHandle && fouten.length && fouten.some((f: any) => /handle/i.test(String(f.field || "") + " " + String(f.message || "")))) {
+    delete invoer.handle; delete invoer.redirectNewHandle;
+    uit = await zet(invoer);
+  }
   const p = letOp(uit?.productSet, "Het bijwerken op de webshop").product;
   if (!p?.id) throw new Error("Shopify gaf geen product terug");
 
@@ -356,6 +372,68 @@ Deno.serve(async (req) => {
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
   const actie = String(lijf?.actie || "");
+
+  /* Titels bijwerken voor alles wat al op de webshop staat (november 2026). De titel werd de kale
+     modelnaam ("iPhone 11") met kleur en opslag als labels eronder. Nieuwe en gesynchroniseerde
+     advertenties krijgen dat vanzelf; dit zet het in één keer goed voor de rest, ook voor een
+     uitverkochte advertentie die als "net verkocht" blijft staan. Bewust geen volledige sync:
+     die zet de voorraad opnieuw en daar willen we hier niet aan komen. Alleen titel, zoektitel,
+     link (met een doorverwijzing vanaf de oude) en de kleur voor het label. */
+  if (actie === "titels") {
+    const kk = await koppelingVan(acc.team_id);
+    if (!kk) return fout("Er is nog geen webshop gekoppeld.", 409);
+    const { data: regs } = await admin.from("webshop_producten").select("*").eq("team_id", acc.team_id);
+    const uitslag: any[] = [];
+    for (const reg of (regs || [])) {
+      try {
+        // Een exemplaar van deze advertentie: liefst een dat nog te koop is, anders het laatst bijgewerkte.
+        const { data: rijen } = await admin.from("hardware").select("*")
+          .eq("team_id", acc.team_id).eq("kanalen->shopify->>sleutel", reg.sleutel)
+          .order("bijgewerkt_op", { ascending: false }).limit(20);
+        const h = (rijen || []).find((r: any) => r.status === "voorraad") || (rijen || [])[0];
+        if (!h) { uitslag.push({ sleutel: reg.sleutel, overgeslagen: "geen toestel" }); continue; }
+        const titel = String(h.titel || "").trim() || toestelTitel(h.merk, h.model);
+        const handle = webshopHandle(h);
+        const product: any = { id: reg.product_id, title: titel, seo: { title: webshopZoektitel(h) } };
+        if (handle && reg.handle !== handle) { product.handle = handle; product.redirectNewHandle = true; }
+        const zet = (pr: any) => graphql(kk, `
+          mutation($product: ProductUpdateInput!) {
+            productUpdate(product: $product) { product { id handle onlineStoreUrl } userErrors { field message } }
+          }`, { product: pr });
+        let uit = await zet(product);
+        const f = uit?.productUpdate?.userErrors || [];
+        if (product.handle && f.some((e: any) => /handle/i.test(String(e.field || "") + " " + String(e.message || "")))) {
+          delete product.handle; delete product.redirectNewHandle;
+          uit = await zet(product);
+        }
+        const p = letOp(uit?.productUpdate, "Titel bijwerken").product;
+        const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
+        const kleur = h.kleur || sp.Kleur;
+        const mf: any[] = [];
+        if (kleur) mf.push({ ownerId: reg.product_id, namespace: "refuro", key: "kleur", type: "single_line_text_field", value: String(kleur) });
+        if (sp.Opslag) mf.push({ ownerId: reg.product_id, namespace: "refuro", key: "opslag", type: "single_line_text_field", value: String(sp.Opslag) });
+        if (mf.length) {
+          const mu = await graphql(kk, `mutation($m: [MetafieldsSetInput!]!){ metafieldsSet(metafields: $m){ userErrors { field message } } }`, { m: mf });
+          letOp(mu?.metafieldsSet, "Kleur en opslag");
+        }
+        const url = p?.onlineStoreUrl || (p?.handle ? `https://${kk.domein}/products/${p.handle}` : reg.url);
+        await admin.from("webshop_producten").update({ handle: p?.handle || reg.handle, url, bijgewerkt_op: new Date().toISOString() })
+          .eq("team_id", acc.team_id).eq("sleutel", reg.sleutel);
+        // De link op elk toestel van deze advertentie ook, anders opent Storvo de oude (die wel doorverwijst).
+        for (const r of (rijen || [])) {
+          const ek = (r.kanalen && typeof r.kanalen === "object") ? { ...r.kanalen } : {};
+          if (ek.shopify && ek.shopify.url !== url) {
+            ek.shopify = { ...ek.shopify, url };
+            await admin.from("hardware").update({ kanalen: ek }).eq("id", r.id);
+          }
+        }
+        uitslag.push({ sleutel: reg.sleutel, titel, handle: p?.handle || null });
+      } catch (e) {
+        uitslag.push({ sleutel: reg.sleutel, fout: String((e as any)?.message || e) });
+      }
+    }
+    return new Response(JSON.stringify({ ok: true, uitslag }), { headers: cors });
+  }
 
   /* Verzenden gaat over een BESTELLING, niet over een toestel. Daarom hier apart, nog
      voor de hardware_id-controle. We halen de fulfillmentOrders van de order op en

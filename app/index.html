@@ -15368,7 +15368,8 @@ function hwVenster(h){
       </div>`:''}
       <div class="veldkop"><label>Titel voor online</label>
         ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_titel\', this)">Kopiëren</button>':''}</div>
-      <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="Dell Latitude 5430 · i5 · 16 GB · 512 GB SSD">
+      <input id="hw_titel" value="${esc((h&&h.titel)||'')}" placeholder="${esc((h&&toestelTitel(h.merk,h.model))||'Bijvoorbeeld iPhone 11')}">
+      <p class="muted klein">Alleen de modelnaam. Kleur en opslag zet de webshop eronder.</p>
       <div class="veldkop"><label>Omschrijving</label>
         ${h?'<button class="btn ghost small" onclick="hwKopieerVeld(\'hw_oms\', this)">Kopiëren</button>':''}</div>
       <textarea id="hw_oms" rows="5" placeholder="Wordt gebruikt op de webshop en om te kopiëren naar Marktplaats">${esc((h&&h.omschrijving)||'')}</textarea>
@@ -16270,7 +16271,8 @@ function hwFormRij(){
     ...hwAccuVelden(),
     ...hwKleurVeld(),
     uitstalling: (document.getElementById('hw_uitstalling')||{}).value||null,
-    titel:hwVeld('hw_titel')||null,
+    /* Leeg = de kale modelnaam (toestelTitel), net als op de webshop. */
+    titel:hwVeld('hw_titel')||toestelTitel(hwVeld('hw_merk'), hwVeld('hw_model'))||null,
     omschrijving:hwVeld('hw_oms')||null,
     bijgewerkt_op:new Date().toISOString()
   };
@@ -16538,6 +16540,19 @@ function hwSamenvatting(sp){
    specificaties. Eerst kwamen hier de eerste zes specs van de laptop-weg (chip, camera,
    materiaal...), en een samenvatting die naar een processor zocht. Scherm en netwerk komen
    uit de modellenlijst (model_kleuren, met de naam die Apple gebruikt), anders uit de specs. */
+/* De titel van een toestel: alleen de modelnaam, "iPhone 11". Kleur en opslag zet de webshop
+   als labels eronder, dus die horen niet in de titel. Eerst schreef de AI de titel, en zo kwamen
+   er titels online als "Apple iPhone 11 -,64GB". Het merk valt weg waar de modelnaam het al zegt:
+   niemand zoekt "Apple iPhone". Dezelfde regel staat in de andere app en in de webshopkoppeling
+   (supabase/functions/_gedeeld/shopify.ts); verander je hem, doe het dan op alle drie de plekken. */
+const EIGEN_NAAM=/^(iphone|ipad|ipod|macbook|imac|mac\s?mini|mac\s?studio|mac\s?pro|apple\s?watch|airpods|galaxy|pixel)\b/i;
+function toestelTitel(merk, model){
+  const mk=String(merk??'').trim().replace(/\s+/g,' ');
+  let md=String(model??'').trim().replace(/\s+/g,' ');
+  if(mk && md.toLowerCase().startsWith(mk.toLowerCase()+' ')) md=md.slice(mk.length+1).trim();
+  if(!md) return mk;
+  return EIGEN_NAAM.test(md) ? md : (mk ? mk+' '+md : md);
+}
 function hwTelKaart(h){
   const sp=(h.specs&&typeof h.specs==='object')?h.specs:{};
   const rij=hwModelRij(h.merk, h.model)||{};
@@ -16559,8 +16574,7 @@ function hwTelKaart(h){
   if(net) specs.push(net);
   if(accu) specs.push('Batterijconditie: '+accu+'%');
   /* "iPhone 13" en "Galaxy S24" zeggen genoeg; "Apple iPhone 13" is dubbel. */
-  const model=String(h.model||'').trim();
-  const titel=/^(iphone|galaxy|pixel|ipad)\b/i.test(model) ? model : [h.merk, model].filter(Boolean).join(' ');
+  const titel=toestelTitel(h.merk, h.model);
   return {titel, samenvatting:[opslag, inch, type].filter(Boolean).join(' | '), specs,
           delen:{type, inch, opslag, net, accu}};   // los, voor de sticker (hwLabelRegels)
 }
@@ -16857,12 +16871,15 @@ async function hwTekstSchrijven(id, stil){
   if(!res.ok||!uit.ok) throw new Error(uit.error||'Het schrijven lukte niet');
   if(hwOpen && hwOpen.id===id){
     const t=document.getElementById('hw_titel'), o=document.getElementById('hw_oms');
-    if(t&&uit.titel&&(!stil||!t.value.trim())) t.value=uit.titel;
+    /* De titel schrijft de AI niet meer: dat is altijd de kale modelnaam (toestelTitel). */
+    const nt=toestelTitel(hwVeld('hw_merk'), hwVeld('hw_model'));
+    if(t&&nt&&!t.value.trim()) t.value=nt;
     if(o&&uit.omschrijving&&(!stil||!o.value.trim())) o.value=uit.omschrijving;
     await hwStilBewaar();   // meteen bewaren; anders staat de AI-tekst alleen op je scherm
   }else{
     const h=hwData.find(x=>x.id===id), patch={};
-    if(uit.titel && !(h&&String(h.titel||'').trim())) patch.titel=uit.titel;
+    const nt=h ? toestelTitel(h.merk, h.model) : '';
+    if(nt && !(h&&String(h.titel||'').trim())) patch.titel=nt;
     if(uit.omschrijving && !(h&&String(h.omschrijving||'').trim())) patch.omschrijving=uit.omschrijving;
     if(Object.keys(patch).length){
       const {error}=await sb.from('hardware').update(patch).eq('id', id);

@@ -2547,6 +2547,19 @@ async function printViaHelper(pngBase64, opts){
 /* De naam van een toestel zoals we die aan de winkelier en de klant tonen: merk model,
    en bij telefoons de kleur erachter. Eén plek, zodat de kleur overal meekomt (lijsten,
    detail, prijskaartje). Niet gebruiken in invoervelden of zoekopdrachten. */
+/* De titel van een toestel: alleen de modelnaam, "iPhone 11". Kleur en opslag zet de webshop
+   als labels eronder, dus die horen niet in de titel. Eerst schreef de AI de titel, en zo kwamen
+   er titels online als "Apple iPhone 11 -,64GB". Het merk valt weg waar de modelnaam het al zegt:
+   niemand zoekt "Apple iPhone". Dezelfde regel staat in de andere app en in de webshopkoppeling
+   (supabase/functions/_gedeeld/shopify.ts); verander je hem, doe het dan op alle drie de plekken. */
+const EIGEN_NAAM=/^(iphone|ipad|ipod|macbook|imac|mac\s?mini|mac\s?studio|mac\s?pro|apple\s?watch|airpods|galaxy|pixel)\b/i;
+function toestelTitel(merk, model){
+  const mk=String(merk??'').trim().replace(/\s+/g,' ');
+  let md=String(model??'').trim().replace(/\s+/g,' ');
+  if(mk && md.toLowerCase().startsWith(mk.toLowerCase()+' ')) md=md.slice(mk.length+1).trim();
+  if(!md) return mk;
+  return EIGEN_NAAM.test(md) ? md : (mk ? mk+' '+md : md);
+}
 function toestelNaam(a){
   return [a.merk,a.model].filter(Boolean).join(' ')+(a.kleur?' - '+a.kleur:'');
 }
@@ -2862,8 +2875,7 @@ function telKaartRegels(a, info, specs){
   if(opslag) bullets.push('Opslag: '+opslag);
   if(net) bullets.push(net);
   if(accu) bullets.push('Batterijconditie: '+accu+'%');
-  const model=String(a.model||'').trim();
-  const titel=/^(iphone|galaxy|pixel|ipad)\b/i.test(model) ? model : [a.merk, model].filter(Boolean).join(' ');
+  const titel=toestelTitel(a.merk, a.model);
   return {titel, sub:[opslag, inch, type].filter(Boolean).join(' | '), bullets,
           delen:{type, inch, opslag, net, accu}};   // los, voor de sticker (labelRegels)
 }
@@ -6235,6 +6247,9 @@ function onlineZetten(id){
     if(hw.omschrijving) onl.tekst=hw.omschrijving;
     if(hw.garantie!=null){ onl.garantie=Number(hw.garantie); onl.eigenGarantie=true; }
   }
+  /* De titel is de kale modelnaam (toestelTitel); kleur en opslag zet de webshop eronder.
+     Daarom niet meer de titel van een eerdere advertentie: die was vaak door de AI geschreven. */
+  if(!String(onl.titel||'').trim()) onl.titel=toestelTitel(a.merk, a.model);
   if(INGEBED){ ingebedOpen=true; document.body.classList.add('ingebedklaar'); }
   showTab('online');
   fotosLaden(a);
@@ -6484,12 +6499,13 @@ function tekenOnline(){
           <div class="row" style="margin-bottom:14px">
             <button class="btn actie small" onclick="onlSchrijf(this)">
               <svg class="i s"><use href="#i-sparkles"/></svg>Advertentie schrijven</button>
-            ${onl.titel?`<button class="btn ghost small" onclick="onlSchrijf(this)">Opnieuw</button>`:''}
+            ${onl.tekst?`<button class="btn ghost small" onclick="onlSchrijf(this)">Opnieuw</button>`:''}
           </div>
 
           <div class="veldkop"><label>Titel</label>
             ${onl.titel?`<button class="btn ghost small" onclick="onlKopieer('onl_titel', this)">Kopiëren</button>`:''}</div>
-          <input id="onl_titel" value="${esc(onl.titel)}" onchange="onlBewaarVelden()" placeholder="Wordt geschreven zodra je op de knop drukt">
+          <input id="onl_titel" value="${esc(onl.titel)}" onchange="onlBewaarVelden()" placeholder="${esc(toestelTitel(onl.a.merk, onl.a.model)||'Bijvoorbeeld iPhone 11')}">
+          <p class="muted klein">Alleen de modelnaam. Kleur en opslag zet de webshop eronder.</p>
 
           <div class="veldkop"><label>Tekst</label>
             ${onl.tekst?`<button class="btn ghost small" onclick="onlKopieer('onl_tekst', this)">Kopiëren</button>`:''}</div>
@@ -7093,7 +7109,9 @@ async function onlSchrijf(knop){
     });
     const uit=await res.json().catch(()=>({}));
     if(!res.ok||!uit.ok) throw new Error(uit.error||'Het schrijven mislukte');
-    onl.titel=uit.titel||''; onl.tekst=uit.tekst||'';
+    /* Alleen de tekst. De titel blijft de modelnaam: de AI maakte er "Apple iPhone 11 -,64GB" van. */
+    if(!String(onl.titel||'').trim()) onl.titel=toestelTitel(onl.a.merk, onl.a.model);
+    onl.tekst=uit.tekst||'';
     onl.zoekwoorden=uit.zoekwoorden||[];
     tekenOnline();
     toast('Geschreven. Kijk hem even na.', true);
