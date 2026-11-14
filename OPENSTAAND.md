@@ -5,6 +5,27 @@ er niet in staat is af.
 
 ---
 
+## Webshop: titels, kleurkeuze en nieuwe accu (14 november 2026)
+
+Live. Titel is overal de kale modelnaam, met kleur en opslag als labels eronder. Op de
+productpagina een kleurkeuze, een accukeuze (telefoon 45 euro, laptop 89 euro), drie
+dienstrijen met zijmenu's en het blok met nakijkpunten. Een bestelling met nieuwe accu zet het
+toestel op de werkbank bij Te repareren, mailt info@refuro.nl en geeft een pop-up in Storvo.
+
+- [ ] **"Op 50 punten getest" klopt niet voor laptops.** De controle kijkt een laptop op 19
+      punten na, een telefoon op 27. De productpagina toont nu het echte getal, maar de
+      themainstelling `testpunten` (50) staat nog in de staat-tab en mogelijk op andere pagina's.
+      Kiezen: het getal eerlijk maken, of de controle voor laptops uitbreiden.
+- [ ] **Vijf oude, verborgen webshopproducten** houden hun oude titel: daar hangt geen toestel
+      meer aan in Storvo. Weggooien in Shopify of zo laten.
+- [ ] **Kleur en opslag in de checkout.** De winkelwagen toont ze, de checkout en de
+      orderbevestiging alleen de titel en de staat.
+- [ ] **Eigenaar: een testbestelling met nieuwe accu** doen (en annuleren), om de mail, de
+      pop-up en Te repareren in het echt te zien.
+- [ ] **Preview-thema "Preview titels (Claude)"** (#186703151369) mag weg in Shopify.
+
+---
+
 ## Na het versimpelplan (27 oktober tot 2 november 2026)
 
 Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan bovenin

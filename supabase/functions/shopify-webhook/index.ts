@@ -85,6 +85,92 @@ function geld(w: any) {
   return isNaN(n) ? null : n;
 }
 
+/* ── de nieuwe accu ──
+   Op de productpagina kan de klant een nieuwe accu kiezen (telefoon 45 euro, laptop 89 euro,
+   november 2026). Dat is een eigen regel in de bestelling met sku NIEUWE-ACCU-..., en als
+   verborgen eigenschap _voor_variant de variant van het toestel. Dat toestel moet eerst langs de
+   werkbank: we zetten het bij Te repareren met de klus Accu, zodat niemand hem zonder nieuwe accu
+   verstuurt. De klus is een gewone regel bij defecten (zoals de controle ze schrijft), met het
+   bestelnummer erin; daaraan zien we bij een volgende melding van dezelfde bestelling dat hij er
+   al staat. Een toestel dat los in de winkel is toegevoegd heeft ook een werkbankrij (stap los),
+   dus die vinden we ook. */
+function isAccuRegel(r: any) {
+  return /^NIEUWE-ACCU/i.test(String(r?.sku || ""));
+}
+function accuKlusTekst(nummer: string) {
+  return `Accu: nieuwe accu plaatsen, webshopbestelling ${nummer}. Daarna verzenden.`;
+}
+async function accuKlus(teamId: string, hardwareId: string, nummer: string, weg: boolean) {
+  const { data: rijen } = await admin.from("refurbish_apparaten")
+    .select("id, status, defecten").eq("team_id", teamId).eq("hardware_id", hardwareId).limit(1);
+  const a = rijen?.[0];
+  if (!a) return false;
+  const tekst = accuKlusTekst(nummer);
+  const defecten: any[] = Array.isArray(a.defecten) ? a.defecten.slice() : [];
+  const heeft = defecten.includes(tekst);
+  if (weg) {
+    // Geannuleerd: onze klus eraf. Was dat de enige klus, dan is hij weer klaar.
+    if (!heeft) return true;
+    const rest = defecten.filter((d) => d !== tekst);
+    await admin.from("refurbish_apparaten").update({
+      defecten: rest, ...(a.status === "te_repareren" && !rest.length ? { status: "klaar" } : {}),
+      bijgewerkt_op: new Date().toISOString(),
+    }).eq("id", a.id);
+    return true;
+  }
+  if (heeft && a.status === "te_repareren") return true;
+  if (!heeft) defecten.push(tekst);
+  await admin.from("refurbish_apparaten").update({
+    status: "te_repareren", defecten, bijgewerkt_op: new Date().toISOString(),
+  }).eq("id", a.id);
+  return true;
+}
+
+/* Een mail naar de winkel bij elke nieuwe bestelling, met de nieuwe accu groot bovenaan als die
+   erbij zit. De eigenaar wilde dat het niet te missen is: een telefoon die zonder nieuwe accu de
+   deur uit gaat, is een klant die betaald heeft voor iets wat hij niet krijgt. Ontvanger: het
+   geheim WEBSHOP_MELDING_NAAR, anders info@refuro.nl (net als de inruilaanvragen). Lukt de mail
+   niet, dan staat de bestelling er gewoon; dit mag de verwerking nooit breken. */
+function veilig(x: unknown) {
+  return String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+}
+async function mailBestelling(rij: any) {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return;
+  const naar = Deno.env.get("WEBSHOP_MELDING_NAAR") || "info@refuro.nl";
+  const van = Deno.env.get("RESEND_FROM") || "Storvo <welkom@storvo.app>";
+  const euro = (n: unknown) => n == null ? "" : "€ " + Number(n).toFixed(2).replace(".", ",");
+  const metAccu = !!rij.nieuwe_accu;
+  const accuToestellen = (rij.toestellen || []).filter((t: any) => t?.nieuwe_accu);
+  const accuBlok = metAccu ? `
+    <div style="background:#E8421A;color:#fff;border-radius:16px;padding:18px 20px;margin:0 0 18px">
+      <div style="font-size:22px;font-weight:700;margin-bottom:6px">NIEUWE ACCU ERIN</div>
+      <div style="font-size:15px;line-height:1.5">Eerst de accu vervangen, daarna verzenden. De klant rekent op 1 tot 3 werkdagen.
+      ${accuToestellen.length ? "<br><b>Toestel:</b> " + accuToestellen.map((t: any) => veilig(t.naam) + (t.code ? " (" + veilig(t.code) + ")" : "")).join(", ") + ". Staat in Storvo bij Te repareren." : ""}</div>
+    </div>` : "";
+  const regels = (rij.regels || []).map((r: any) =>
+    `<tr><td style="padding:6px 0">${r.aantal > 1 ? veilig(r.aantal) + "× " : ""}${r.accu ? "<b>" + veilig(r.titel) + "</b>" : veilig(r.titel)}${r.voor ? "<br><span style=\"color:#555\">Voor: " + veilig(r.voor) + "</span>" : ""}</td><td style="padding:6px 0;text-align:right;white-space:nowrap">${euro(r.bedrag)}</td></tr>`).join("");
+  const toestellen = (rij.toestellen || []).map((t: any) => veilig(t.naam) + (t.code ? " (" + veilig(t.code) + ")" : "") + (t.nieuwe_accu ? " <b>met nieuwe accu</b>" : "")).join("<br>");
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#1B2254;max-width:560px">
+      ${accuBlok}
+      <h2 style="margin:0 0 6px">Nieuwe bestelling ${veilig(rij.nummer || "")}</h2>
+      <p style="margin:0 0 14px">${veilig(rij.klant || rij.email || "Onbekende klant")} · ${euro(rij.bedrag)}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">${regels}</table>
+      ${toestellen ? `<p style="margin:16px 0 0;font-size:14px"><b>Uit de voorraad:</b><br>${toestellen}</p>` : ""}
+      ${rij.beheer_url ? `<p style="margin:18px 0 0"><a href="${veilig(rij.beheer_url)}">Openen in Shopify</a></p>` : ""}
+    </div>`;
+  const onderwerp = (metAccu ? "NIEUWE ACCU ERIN · " : "") + "Nieuwe bestelling " + (rij.nummer || "");
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: van, to: [naar], reply_to: rij.email || undefined, subject: onderwerp, html }),
+    });
+    if (!r.ok) console.error("shopify-webhook: mail niet verstuurd", r.status, await r.text());
+  } catch (e) { console.error("shopify-webhook: mail niet verstuurd", e); }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return klaar("Alleen POST", 405);
 
@@ -148,6 +234,7 @@ Deno.serve(async (req) => {
           lineItems(first: 100) {
             nodes {
               title sku quantity
+              customAttributes { key value }
               originalTotalSet { shopMoney { amount } }
               product { id }
               variant { id }
@@ -204,12 +291,14 @@ Deno.serve(async (req) => {
      bestelde aantallen, zodat een tweede melding niet stiekem een tweede toestel meepakt. */
   const gevonden: { id: string; naam: string; code: string | null; variant?: string | null }[] = [];
   const gedaan = new Set<string>();
-  const totaalNodig = regels.reduce((n: number, r: any) => n + Math.max(1, Math.floor(Number(r?.quantity) || 1)), 0);
+  // Een nieuwe accu is een klus, geen toestel: die telt hier niet mee.
+  const totaalNodig = regels.filter((r: any) => !isAccuRegel(r)).reduce((n: number, r: any) => n + Math.max(1, Math.floor(Number(r?.quantity) || 1)), 0);
   const alGedaanIds = new Set<string>(eerderToestellen.map((t: any) => t?.id).filter(Boolean));
   let toegewezen = eerderToestellen.length;
 
   for (const r of regels) {
     if (geannuleerd) continue;             // een annulering loopt via de bewaarde bestelling hieronder
+    if (isAccuRegel(r)) continue;          // de nieuwe accu: zie hieronder
     if (toegewezen >= totaalNodig) break;  // genoeg toestellen aan de bestelling; niets dubbels
 
     const variantId = r?.variant?.id || null;
@@ -291,6 +380,24 @@ Deno.serve(async (req) => {
     }
   }
 
+  /* Welk toestel krijgt de nieuwe accu? De verborgen eigenschap _voor_variant wijst de variant
+     aan; staat er maar één toestel in de bestelling, dan is het die. Bij een annulering gaat de
+     klus er weer af (het toestel ging hierboven al terug op voorraad). */
+  let metAccu = false;
+  for (const r of regels.filter(isAccuRegel)) {
+    metAccu = true;
+    const attrs: any[] = Array.isArray(r?.customAttributes) ? r.customAttributes : [];
+    const voorVariant = String(attrs.find((x: any) => x?.key === "_voor_variant")?.value || "");
+    let t = voorVariant
+      ? toestellenSamen.find((x: any) => x?.variant && String(x.variant).split("/").pop() === voorVariant)
+      : null;
+    if (!t && toestellenSamen.length === 1) t = toestellenSamen[0];
+    if (!t) { console.error("shopify-webhook: nieuwe accu zonder toestel in", order.name); continue; }
+    t.nieuwe_accu = true;
+    try { await accuKlus(kop.team_id, t.id, order.name || String(bestellingId), geannuleerd); }
+    catch (e) { console.error("shopify-webhook: accuklus", t.id, e); }
+  }
+
   /* ── de bestelling zelf bewaren ──
      Zodat je in Storvo ziet wat er besteld is en niet alleen dat er iets uit de
      voorraad verdwenen is. */
@@ -305,11 +412,17 @@ Deno.serve(async (req) => {
     valuta: order.totalPriceSet?.shopMoney?.currencyCode || kop.valuta || null,
     status: geannuleerd ? "geannuleerd" : (verzonden ? "verzonden" : (betaald ? "betaald" : "open")),
     betaald, verzonden, geannuleerd,
-    regels: regels.map((r: any) => ({
-      titel: r.title, sku: r.sku || null, aantal: r.quantity,
-      bedrag: geld(r.originalTotalSet),
-    })),
+    regels: regels.map((r: any) => {
+      const voor = (Array.isArray(r?.customAttributes) ? r.customAttributes : [])
+        .find((x: any) => x?.key && !String(x.key).startsWith("_"))?.value || null;
+      return {
+        titel: r.title, sku: r.sku || null, aantal: r.quantity,
+        bedrag: geld(r.originalTotalSet),
+        ...(isAccuRegel(r) ? { accu: true, voor } : {}),
+      };
+    }),
     toestellen: toestellenSamen,
+    nieuwe_accu: metAccu,
     beheer_url: `https://${kop.domein}/admin/orders/${nummer}`,
     geplaatst_op: order.createdAt || new Date().toISOString(),
     bijgewerkt_op: new Date().toISOString(),
@@ -319,6 +432,8 @@ Deno.serve(async (req) => {
     await admin.from("webshop_bestellingen").update(rij).eq("id", bestaand.id);
   } else {
     await admin.from("webshop_bestellingen").insert(rij);
+    // Alleen bij de eerste melding van een bestelling, anders mail je hem bij betaald nog eens.
+    if (!geannuleerd) await mailBestelling(rij);
   }
 
   return klaar();

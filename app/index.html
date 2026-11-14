@@ -514,6 +514,13 @@
   .bststatus.geannuleerd{background:var(--red-soft); color:var(--red-tekst);}
   .bstnieuwvlag{font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
     padding:3px 9px; border-radius:var(--pil); background:var(--navy); color:#fff;}
+  /* Een bestelling met nieuwe accu: groot en rood, want zonder nieuwe accu verzenden is een
+     klant die betaald heeft voor iets wat hij niet krijgt. */
+  .bstaccu{margin-top:12px; padding:12px 14px; border-radius:12px; background:var(--red-soft);
+    color:var(--red-tekst); font-size:13.5px; line-height:1.45;}
+  .bstaccu b{display:block; font-size:15px; font-weight:800; letter-spacing:.03em; margin-bottom:2px;}
+  .bstregels .r.accu{color:var(--red-tekst); font-weight:700;}
+  .bstpop .bstregels{margin-top:12px;}
   /* Details van een inruilaanvraag: twee kolommen label-en-waarde, op smal scherm
      onder elkaar. Het label is grijs en smal zodat de waarden netjes uitlijnen. */
   .inr-details{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 22px;
@@ -11820,13 +11827,15 @@ function renderBestellingen(){
         <span class="bstbedrag">${x.bedrag!=null?euro(x.bedrag):'—'}</span>
       </div>
 
+      ${x.nieuwe_accu && !x.geannuleerd ? bstAccuBlok(x) : ''}
+
       <div class="bstregels">${regels.map(r=>`
-        <div class="r"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}</span>
+        <div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span>
           ${r.sku?`<span class="mono">${esc(r.sku)}</span>`:''}</div>`).join('')
         || '<div class="r">Geen regels meegekomen</div>'}</div>
 
       ${toestellen.length?`<div class="bsttoestellen">${toestellen.map(t=>`
-        <span class="kan shop">${esc(t.naam)}${t.code?' · '+esc(t.code):''}</span>`).join('')}
+        <span class="kan shop">${esc(t.naam)}${t.code?' · '+esc(t.code):''}${t.nieuwe_accu?' · nieuwe accu':''}</span>`).join('')}
         <span class="muted klein">uit je voorraad gehaald</span></div>`:''}
 
       <div class="bstvoet">
@@ -11842,6 +11851,72 @@ function renderBestellingen(){
     </div>`;
   }).join('');
 }
+/* Een bestelling met nieuwe accu (de klant koos hem op de productpagina, 45 euro bij een telefoon
+   en 89 bij een laptop). De melding van Shopify zette het toestel al bij Te repareren op de
+   werkbank; hier staat het groot, zodat niemand hem zonder nieuwe accu verstuurt. */
+function bstAccuBlok(x){
+  const t=(x.toestellen||[]).filter(y=>y && y.nieuwe_accu);
+  const welk=t.length ? t.map(y=>esc(y.naam)+(y.code?' ('+esc(y.code)+')':'')).join(', ') : '';
+  return `<div class="bstaccu"><b>Nieuwe accu erin</b>
+    Eerst de accu vervangen, daarna verzenden. De klant rekent op 1 tot 3 werkdagen.${welk?'<br>'+welk+' staat bij Te repareren in het refurbish-deel.':''}</div>`;
+}
+
+/* ═══ Pop-up bij een nieuwe webshopbestelling ═══
+   De eigenaar wilde een bestelling niet pas zien als hij toevallig de pagina Bestellingen opent.
+   Elke minuut kijken we of er iets nieuws is (nog niet gezien, niet geannuleerd, van de laatste
+   twee dagen; oudere bestellingen hebben al lang hun bolletje in het menu). Per browser onthouden
+   we welke we al lieten zien, anders komt dezelfde pop-up elke minuut terug. Eén tegelijk. */
+let bstPopOpen=false;
+function bstPopGezien(){
+  try{ return JSON.parse(localStorage.getItem('storvo_bst_popup')||'[]'); }catch(_e){ return []; }
+}
+function bstPopOnthoud(id){
+  try{ const l=bstPopGezien().filter(x=>x!==id); l.push(id); localStorage.setItem('storvo_bst_popup', JSON.stringify(l.slice(-200))); }catch(_e){}
+}
+async function bstPopupControle(){
+  if(bstPopOpen || !account || document.hidden) return;
+  const link=document.getElementById('webshopLink');
+  if(!link || link.hidden) return;
+  const sinds=new Date(Date.now()-2*86400000).toISOString();
+  let data=null;
+  try{
+    ({data}=await sb.from('webshop_bestellingen').select('*')
+      .eq('gezien',false).eq('geannuleerd',false).gte('geplaatst_op',sinds)
+      .order('geplaatst_op',{ascending:true}).limit(10));
+  }catch(_e){ return; }
+  const al=bstPopGezien();
+  const x=(data||[]).find(b=>!al.includes(b.id));
+  if(!x) return;
+  bstPopOnthoud(x.id);
+  bstPopup(x);
+  // Ook de lijst en het bolletje bijwerken, zodat die meteen kloppen.
+  try{ bstLaad(true); }catch(_e){}
+}
+function bstPopup(x){
+  bstPopOpen=true;
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='bstPopup';
+  const regels=(x.regels||[]).map(r=>`<div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span></div>`).join('');
+  ov.innerHTML=`<div class="popup jnpop bstpop" role="dialog" aria-modal="true">
+    <h3>Nieuwe bestelling ${esc(x.nummer||'')}</h3>
+    <p class="pv">${esc(x.klant||x.email||'Onbekende klant')}${x.bedrag!=null?' · '+euro(x.bedrag):''}</p>
+    ${x.nieuwe_accu?bstAccuBlok(x):''}
+    <div class="bstregels">${regels}</div>
+    <div class="acts">
+      <button class="btn actie" id="bstPopNaar">Naar de bestelling</button>
+      <button class="btn ghost" id="bstPopDicht">Later</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const dicht=()=>{ ov.remove(); bstPopOpen=false; };
+  ov.querySelector('#bstPopNaar').onclick=()=>{ dicht(); showTab('webshop'); };
+  ov.querySelector('#bstPopDicht').onclick=dicht;
+  ov.onclick=e=>{ if(e.target===ov) dicht(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') dicht(); });
+  const knop=ov.querySelector('#bstPopNaar'); if(knop) knop.focus();
+}
+setInterval(()=>{ bstPopupControle(); }, 60000);
+
 /* Een webshopbestelling vanuit Storvo afronden: markeer hem als verzonden bij Shopify.
    Shopify stuurt daarna zelf ORDERS_FULFILLED terug, waarmee de status bevestigd wordt.
    Werkt pas nadat de webshop een keer opnieuw is gekoppeld met het verzend-recht. */
@@ -14225,7 +14300,7 @@ async function webshopLink(){
   try{ const {data}=await sb.rpc('webshop_gekoppeld'); gekoppeld = data===true; }catch(e){}
   const heeft = gekoppeld;
   l.hidden = !heeft || !mag('webshop');
-  if(heeft) bstLaad(true);
+  if(heeft){ bstLaad(true); setTimeout(bstPopupControle, 4000); }
 }
 
 function moduleAan(naam){
