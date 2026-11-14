@@ -121,6 +121,8 @@ const fouten=[]; w.onerror=m=>fouten.push(String(m));
       remove:async(l)=>{ window.__weg.push(...l); return {}; }, getPublicUrl:(p)=>({data:{publicUrl:p}})})};`);
   await w.eval('(i)=>mfImporteer(i)')({files:[bestand('iphone-13/pink/iphone-13_pink_01.jpg'), bestand('iphone-13/pink/iphone-13_pink_02.jpg'), bestand('iphone-13/pink/iphone-13_pink_03.jpg')], value:''});
   ok('import: mislukte set laat niets achter', w.__fotoRijen.length===0 && w.__weg.length===2 && /iphone-13\/pink/.test(d.getElementById('mfVoortgang').textContent));
+  ok('import: daarna mag de app weer verversen', w.eval('mfBezig')===false);
+  ok('import: tijdens de import ververst de app niet vanzelf', /mfBezig/.test(w.eval('versieRustig.toString()')));
   ok('plek: ook uit de bestandsnaam', JSON.stringify(w.eval("mfPlek({name:'iphone-15-pro_white-titanium_03.jpg'})"))==='{"model":"iphone-15-pro","kleur":"white-titanium"}');
 
   // ── 2. de hoofdfoto van een set komt voorop bij het toestel ──

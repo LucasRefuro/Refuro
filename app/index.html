@@ -14667,6 +14667,7 @@ async function hwFotosAlsModel(knop){
    Het uploaden gaat met je eigen inlog, net als een gewone foto: alleen in je eigen winkel.
    Een set die er al is slaan we over, dus nog een keer dezelfde map kiezen kan geen kwaad. */
 const MF_AANZICHTEN=['open','dicht','toetsenbord','links','rechts','onderkant'];
+var mfBezig=false;   // var: versieRustig leest hem, ook als dit blok nog niet gedraaid heeft
 const MF_KLEUR_EN={black:'Zwart', white:'Wit', blue:'Blauw', green:'Groen', yellow:'Geel', purple:'Paars',
   pink:'Roze', red:'Rood', 'product-red':'(PRODUCT)RED', coral:'Koraal', gold:'Goud', silver:'Zilver',
   'space-gray':'Spacegrijs', 'space-grey':'Spacegrijs', 'midnight-green':'Middernachtgroen', graphite:'Grafiet',
@@ -14720,6 +14721,11 @@ async function mfImporteer(input){
     sets.get(sl).bestanden.push(f);
   });
   if(!sets.size){ zeg('In deze map vond ik geen foto\'s per model en kleur.'); return; }
+  mfBezig=true;
+  try{ await mfSetsImporteren(sets, hoofdKeus, zeg); }
+  finally{ mfBezig=false; }
+}
+async function mfSetsImporteren(sets, hoofdKeus, zeg){
   const {data:best}=await sb.from('refurbish_fotos').select('model,kleur').is('apparaat_id', null);
   const bestaand=new Set((best||[]).map(r=>mfNorm(r.model)+'|'+mfNorm(r.kleur)));
   let nieuw=0, fotos=0, al=0, gedaan=0;
@@ -17028,6 +17034,7 @@ async function versieKijk(){
 }
 function versieRustig(){
   return !_vuil && !syncBezig && !(typeof mandje!=='undefined' && mandje.length)
+    && !(typeof mfBezig!=='undefined' && mfBezig)        // een foto-import loopt nog
     && !document.querySelector('.overlay:not([hidden])');
 }
 function versieVerversen(){
