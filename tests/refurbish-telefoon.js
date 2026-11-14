@@ -136,6 +136,15 @@ setTimeout(async()=>{
     ctr.antwoord['Werkt de camera achter?']='Niet aanwezig';`);
   ok('tablet: niet-aanwezige feature telt niet als defect', w.eval("ctrDefecten().length")===0);
   ok('tablet: een Nee telt wel als defect', (()=>{ w.eval("ctr.antwoord['Werken alle knoppen?']='Nee'"); return w.eval("ctrDefecten().length")===1; })());
+  // Toch eerst naar reparatie: een onderdeel uit de lijst met een notitie, in plaats van
+  // een leeg tekstveld.
+  ok('toch naar reparatie: keuzelijst met de onderdelen van de categorie',
+    /<select id="c_extra_deel"[\s\S]*Accu[\s\S]*Iets anders/.test(w.eval('ctrExtraRepVeld()')));
+  w.eval("ctr.antwoord['Werken alle knoppen?']='Ja'; ctrExtraDeel('Accu'); ctrExtraReparatie('loopt snel leeg')");
+  ok('toch naar reparatie: onderdeel en notitie worden een defect',
+    w.eval("JSON.stringify(ctrDefecten())")===JSON.stringify([{vraag:'Accu: loopt snel leeg', deel:'Accu'}]));
+  w.eval("ctrExtraDeel(''); ctrExtraReparatie('')");
+  ok('toch naar reparatie: niets gekozen is geen defect', w.eval("ctrDefecten().length")===0);
 
   // Desktop: ethernet en wifi/bluetooth gesplitst, wifi mag ontbreken.
   w.eval("ctr={a:{categorie:'Desktop'}}");

@@ -319,6 +319,51 @@ setTimeout(async()=>{
   ok('ingebed: gaat niet naar een andere refurbish-pagina', w.eval('tab')==='online');
   w.eval('INGEBED=false; ingebedOpen=false');
 
+  // ── naar reparatie: onderdeel uit een lijst, een notitie erbij, en een reparatiesticker ──
+  // Eerst was het een leeg tekstveld. Nu kies je accu, scherm, camera... uit de onderdelen
+  // die de controle van die categorie kent.
+  const wachtR=ms=>new Promise(r=>setTimeout(r,ms));
+  ok('naar reparatie: telefoon heeft accu en scherm bovenaan, camera erin, iets anders onderaan',
+    w.eval("(()=>{ const l=defectDelen('Telefoon'); return l[0]==='Accu' && l[1]==='Scherm' && l.includes('Camera achter') && l[l.length-1]==='Iets anders'; })()"));
+  ok('naar reparatie: laptop krijgt laptoponderdelen', w.eval("defectDelen('Laptop').includes('Toetsenbord') && !defectDelen('Laptop').includes('Camera achter')"));
+  ok('naar reparatie: onderdeel en notitie worden één regel',
+    w.eval("defectTekst('Accu','houdt lading niet vast')")==='Accu: houdt lading niet vast' && w.eval("defectTekst('Accu','')")==='Accu' && w.eval("defectTekst('','oud veld')")==='oud veld');
+  w.eval("window.__prints=[]; qzPrintDeviceLabels=async(ids,stil,o)=>{ __prints.push({ids, o:o||{}}); return true; }");
+  w.eval(`apparaten.push({id:'a11', team_id:'t1', code:'A0011', merk:'Apple', model:'iPhone 12 mini', categorie:'Telefoon',
+      specs:{}, status:'klaar', stap:'af', grade:'A', hardware_id:'hw11', checklist:[], defecten:[], goede_delen:[], doos:true,
+      aangemaakt_op:new Date().toISOString()});
+    hardwares.push({id:'hw11', status:'voorraad', kanalen:{}, verkoop:299});`);
+  w.__geschreven.length=0;
+  const repKlaar=w.eval("appNaarReparatie('a11')");
+  await wachtR(20);
+  const defSel=d().getElementById('def_deel');
+  ok('naar reparatie: keuzelijst met de onderdelen van een telefoon', !!defSel && [...defSel.options].some(o=>o.value==='Camera voor'));
+  // Iets anders zonder notitie: dan weet degene die repareert niet wat hij moet doen.
+  defSel.value='Iets anders'; d().querySelector('#vensterKnoppen .btn.actie').click();
+  ok('naar reparatie: iets anders vraagt om een notitie', !!d().getElementById('def_deel'));
+  defSel.value='Scherm'; d().getElementById('def_notitie').value='lijntje links';
+  d().querySelector('#vensterKnoppen .btn.actie').click();
+  await repKlaar;
+  const repUpd=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].status==='te_repareren');
+  ok('naar reparatie: naar Te repareren met onderdeel en notitie', !!repUpd && repUpd[2].defecten.includes('Scherm: lijntje links'));
+  ok('naar reparatie: meteen een reparatiesticker, geen tweede doossticker',
+    w.__prints.length===1 && w.__prints[0].ids==='a11' && w.__prints[0].o.zonderDoos===true);
+
+  // Vanuit de winkelapp (Hardware, Meer): ?reparatie= met de hardware-rij opent hetzelfde
+  // venster, ingebed. Annuleren sluit het venster in de winkelapp.
+  w.eval(`apparaten.push({id:'a12', team_id:'t1', code:'A0012', merk:'Apple', model:'iPhone 13', categorie:'Telefoon',
+      specs:{}, status:'klaar', stap:'los', grade:'B', hardware_id:'hw12', checklist:[], defecten:[], goede_delen:[],
+      aangemaakt_op:new Date().toISOString()});
+    hardwares.push({id:'hw12', status:'voorraad', kanalen:{}, verkoop:349});`);
+  berichten.length=0;
+  w.eval("INGEBED=true; ingebedOpen=false; history.replaceState(null,'','/refurbish/?reparatie=hw12'); uitAdres()");
+  await wachtR(20);
+  ok('ingebed: ?reparatie= opent het venster met de onderdelen', !!d().getElementById('def_deel'));
+  [...d().querySelectorAll('#vensterKnoppen .btn')].pop().click();
+  await wachtR(30);
+  ok('ingebed: annuleren sluit het venster in de winkelapp', berichten.some(b=>b && b.storvo==='online-klaar'));
+  w.eval("INGEBED=false; ingebedOpen=false; history.replaceState(null,'','/refurbish/')");
+
   // ── het A6-kaartje van een telefoon: geen IMEI, alleen scherm, opslag, 5G en batterij ──
   const tk=w.eval(`(()=>{ const el=document.createElement('div');
     el.innerHTML=prijskaartHtml({a:{merk:'Apple', model:'iPhone 13', categorie:'Telefoon', kleur:'Groen', accu:88, grade:'B', notitie:'krasje',

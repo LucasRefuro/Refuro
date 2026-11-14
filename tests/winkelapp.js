@@ -698,6 +698,18 @@ setTimeout(async()=>{
   ok('terug: het product staat nog open na online zetten', !d.getElementById('hwDetail').hidden);
   w.eval('hwSluit()'); await wacht(80);
   ok('terug: Terug naar Hardware haalt de stap van het product weg', stap()===null && d.getElementById('hwDetail').hidden);
+  // Naar reparatie op een product: hetzelfde venster van de werkbank, met ?reparatie=.
+  w.eval("hwData=[hwTerug]; hwVenster(hwData[0]); hwDetailMenu({stopPropagation(){}, currentTarget:document.body, target:document.body, clientX:10, clientY:10}, 'hw1')");
+  ok('naar reparatie: staat onder Meer bij een product', /Naar reparatie/.test((d.getElementById('rijMenu')||{}).textContent||''));
+  w.eval('sluitRijMenu()');
+  await w.eval("hwNaarReparatie('hw1')");
+  const repVenster=d.getElementById('hwOnlineVenster');
+  ok('naar reparatie: venster met de werkbank', !!repVenster && /^\/refurbish\/\?reparatie=hw1&ingebed=1$/.test(repVenster.querySelector('iframe').getAttribute('src'))
+    && /Naar reparatie/.test(repVenster.querySelector('.hwonlinekop').textContent));
+  w.dispatchEvent(new w.MessageEvent('message', {data:{storvo:'online-klaar', melding:{tekst:'Naar Te repareren: Accu', soort:true}}, origin:'https://storvo.app'}));
+  await wacht(80);
+  ok('naar reparatie: klaar sluit het venster', !d.getElementById('hwOnlineVenster'));
+  w.eval('hwSluit()'); await wacht(80);
   // Een nieuw formulier krijgt geen stap: terug zou het stil weggooien.
   w.eval('hwNieuw()');
   ok('terug: nieuw toestel geeft geen stap', stap()===null);

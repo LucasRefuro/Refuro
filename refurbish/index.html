@@ -1520,7 +1520,7 @@ function sessieBewaar(){
       s.ctr={ id:ctr.a.id, bijgewerkt_op:ctr.a.bijgewerkt_op, stap:ctr.stap, pad:ctr.pad, punten:ctr.punten,
         antwoord:ctr.antwoord, notities:ctr.notities, delen:ctr.delen, specs:ctr.specs,
         accu:ctr.accu, accuVoor:ctr._accuVoor, accuVervangen:ctr.accuVervangen, nieuweAccu:ctr.nieuweAccu,
-        accuNotitie:ctr.accuNotitie, extraReparatie:ctr.extraReparatie,
+        accuNotitie:ctr.accuNotitie, extraReparatie:ctr.extraReparatie, extraDeel:ctr.extraDeel,
         notitie:ctr.notitie, opties:ctr.opties, varianten:ctr.varianten, specsBron:ctr.specsBron,
         testcode:ctr.testcode, testqr:ctr.testqr };
     }
@@ -1537,7 +1537,7 @@ function ctrHerstel(snap, a){
     accuVervangen:!!snap.accuVervangen, nieuweAccu:!!snap.nieuweAccu,
     accuNotitie:snap.accuNotitie!=null?snap.accuNotitie:(a.accu_notitie||''),
     notitie:snap.notitie!=null?snap.notitie:(a.notitie||''),
-    extraReparatie:snap.extraReparatie||'',
+    extraReparatie:snap.extraReparatie||'', extraDeel:snap.extraDeel||'',
     opties:snap.opties||{}, varianten:snap.varianten||[], specsBron:snap.specsBron||'', _accuVoor:snap.accuVoor,
     testcode:snap.testcode||null, testqr:snap.testqr||null,
     pad:Array.isArray(snap.pad)?snap.pad:[], tijdEinde:null
@@ -2737,7 +2737,8 @@ async function boxLabelPng(a){
   const octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,W,Hc); octx.drawImage(c,0,0,W,Hc,0,0,W,Hc);
   return { data:out.toDataURL('image/png').split(',')[1], hoogte:Math.round(Hc/dpmm) };
 }
-async function qzPrintDeviceLabels(ids, stil){
+async function qzPrintDeviceLabels(ids, stil, o){
+  o=o||{};
   const lijst=(Array.isArray(ids)?ids:[ids]).map(id=>apparaten.find(a=>a.id===id)).filter(Boolean);
   if(!lijst.length){ if(!stil) toast('Geen apparaten om te printen','let-op'); return false; }
   const {breedte, tweekleuren}=labelInstelling();
@@ -2746,7 +2747,7 @@ async function qzPrintDeviceLabels(ids, stil){
       const {data}=await deviceLabelPng(a);
       await printViaHelper(data, {label:breedte, red:tweekleuren});
       // Doos erbij: meteen een extra genummerd dooslabel voor op de doos.
-      if(a.doos){ const box=await boxLabelPng(a); await printViaHelper(box.data, {label:breedte, red:tweekleuren}); }
+      if(a.doos && !o.zonderDoos){ const box=await boxLabelPng(a); await printViaHelper(box.data, {label:breedte, red:tweekleuren}); }
     }
     if(!stil) toast(lijst.length+' label'+(lijst.length===1?'':'s')+' geprint', true);
     return true;
@@ -3226,20 +3227,90 @@ async function appOpnieuwTesten(id){
   toast('Terug naar Te controleren. Je kunt opnieuw testen.', true);
   appOpen(id);
 }
+/* ═══ Wat is er kapot ═══
+   Eerst typte je de reden in een leeg veld. Nu kies je het onderdeel uit een lijst (accu,
+   scherm, camera...) en zet je er kort bij wat er mis is. Klikken gaat sneller dan typen,
+   en op de reparatiesticker en bij Te repareren staat dan hetzelfde woord als in de
+   controle. De lijst komt uit de controle van de categorie (CATEGORIE_PROFIEL), dus een
+   telefoon krijgt telefoononderdelen en een laptop laptoponderdelen. */
+const DEFECT_ANDERS='Iets anders';
+function defectDelen(cat){
+  const p=CATEGORIE_PROFIEL[cat]||CATEGORIE_PROFIEL.Laptop;
+  const uit=[];
+  (p.hardware||[]).forEach(q=>{ if(q.deel && !uit.includes(q.deel)) uit.push(q.deel); });
+  /* Accu en scherm gaan het vaakst stuk, die bovenaan. */
+  const voor=['Accu','Scherm'].filter(d=>uit.includes(d));
+  return voor.concat(uit.filter(d=>!voor.includes(d)), ['Behuizing', DEFECT_ANDERS]);
+}
+/* Wat er als defect wordt bewaard: "Accu: houdt lading niet vast", of alleen "Accu".
+   Alleen een notitie (oude sessie, of geen onderdeel gekozen) telt ook: liever te veel
+   naar reparatie dan iets wat je typte stil laten vallen. */
+function defectTekst(deel, notitie){
+  const n=String(notitie||'').trim();
+  if(!deel) return n;
+  if(deel===DEFECT_ANDERS) return n||DEFECT_ANDERS;
+  return n ? deel+': '+n : deel;
+}
+function defectOpties(cat, gekozen){
+  return defectDelen(cat).map(d=>`<option value="${esc(d)}"${d===gekozen?' selected':''}>${esc(d)}</option>`).join('');
+}
+/* Het venster: onderdeel kiezen en een notitie. Geeft {deel, notitie, tekst} terug, of
+   null als je annuleert. Bij "Iets anders" is de notitie verplicht, anders weet degene
+   die repareert niet wat hij moet doen. */
+function defectVenster(a, o){
+  o=o||{};
+  return new Promise(res=>{
+    let klaar=false;
+    const kies=w=>{ if(klaar) return; klaar=true; if(document.getElementById('venster')===ov) sluit(); res(w); };
+    const doe=()=>{
+      const deel=document.getElementById('def_deel').value;
+      const inp=document.getElementById('def_notitie');
+      const nt=inp.value.trim();
+      if(deel===DEFECT_ANDERS && !nt){ toast('Schrijf kort op wat er mis is','let-op'); inp.focus(); return; }
+      kies({deel, notitie:nt, tekst:defectTekst(deel, nt)});
+    };
+    venster(esc(o.kop||'Naar reparatie'), `${o.uitleg?`<p class="pv">${esc(o.uitleg)}</p>`:''}
+      <label for="def_deel">Wat is er kapot?</label>
+      <select id="def_deel">${defectOpties(a.categorie||'Laptop', 'Accu')}</select>
+      <label for="def_notitie" style="margin-top:14px">Notitie</label>
+      <input id="def_notitie" maxlength="60" placeholder="Wat is er mis? Bijvoorbeeld: houdt lading niet vast" autocomplete="off">`,
+      [{tekst:o.ja||'Naar reparatie', klasse:'actie', doe}]);
+    const ov=document.getElementById('venster');
+    vensterNee(ov, ()=>kies(null));
+    const inp=document.getElementById('def_notitie');
+    if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doe(); } });
+    const sel=document.getElementById('def_deel');
+    try{ if(sel) sel.focus(); }catch(_e){}
+  });
+}
+/* Ingebed in de winkelapp (Naar reparatie vanaf Hardware) gaat het venster na afloop
+   dicht met een melding voor de winkelapp. Hier niet ingebed: dan doet dit niets. */
+function ingebedKlaar(melding){
+  if(!INGEBED) return;
+  if(melding) ingebedMelding=melding;
+  ingebedSluit();
+}
+
 /* Een toestel dat al op voorraad ligt toch naar reparatie: bijvoorbeeld omdat je de
    accu wilt vervangen of een mankement vond. Zelfde opruimen als opnieuw-testen (van de
-   webshop, het portaal en uit de bundel), maar het gaat naar Te repareren met de reden
-   erbij als defect. Na de reparatie komt het via de gewone weg weer op voorraad. */
+   webshop, het portaal en uit de bundel), maar het gaat naar Te repareren met het defect
+   erbij, en er komt meteen een reparatiesticker uit de printer: de oude voorraadsticker
+   met prijs klopt dan niet meer. Na de reparatie komt het via de gewone weg weer op
+   voorraad, met een nieuwe sticker. */
 async function appNaarReparatie(id){
-  const a=apparaten.find(x=>x.id===id); if(!a) return;
-  if(!await bewaringOk(a)) return;
+  const a=apparaten.find(x=>x.id===id); if(!a) return ingebedKlaar({tekst:'Dit toestel staat niet in de werkbank.', soort:'let-op'});
+  if(a.status==='te_repareren') return ingebedKlaar({tekst:'Hij staat al bij Te repareren.', soort:'let-op'});
+  if(!OP_VOORRAAD.includes(a.status)) return ingebedKlaar({tekst:'Dit toestel is nog niet gecontroleerd. Doe dat eerst op de werkbank.', soort:'let-op'});
+  if(!await bewaringOk(a)) return ingebedKlaar();
   const h=hardwareVan(a);
-  if(h && h.partner_id){ toast('Dit toestel is aan een partner toegewezen. Haal het eerst terug voor je het naar reparatie zet.','let-op'); return; }
-  /* Eén venster in plaats van twee: de reden én de waarschuwing samen. */
-  const reden=await vraagTekst('Naar reparatie', 'Wat moet er gebeuren? Hij gaat van de webshop, het portaal en uit een bundel af.',
-    {placeholder:'Bijvoorbeeld: nieuwe accu, scherm vervangen', ja:'Naar reparatie'});
-  if(reden===null) return;
-  const r=(reden||'').trim();
+  if(h && h.partner_id){
+    const t='Dit toestel is aan een partner toegewezen. Haal het eerst terug voor je het naar reparatie zet.';
+    toast(t,'let-op'); return ingebedKlaar({tekst:t, soort:'let-op'});
+  }
+  /* Eén venster: wat er kapot is én de waarschuwing samen. */
+  const keuze=await defectVenster(a, {uitleg:'Hij gaat van de webshop, het portaal en uit een bundel af. Er komt een reparatiesticker uit de printer.'});
+  if(!keuze) return ingebedKlaar();
+  const r=keuze.tekst;
   const bundelWas=a.voorraad_batch_id;
   if(h){
     try{
@@ -3258,11 +3329,32 @@ async function appNaarReparatie(id){
   if(!defecten.length) defecten.push('Handmatig naar reparatie');
   const {error}=await sb.from('refurbish_apparaten')
     .update({status:'te_repareren', defecten, voorraad_batch_id:null, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
-  if(error){ toast('Mislukt','fout'); return; }
+  if(error){ toast('Naar reparatie lukte niet','fout'); return ingebedKlaar({tekst:'Naar reparatie lukte niet. Probeer het nog eens.', soort:'fout'}); }
   await allesLaden();
   if(bundelWas) await vbPrijsHerdelen(bundelWas);
-  toast('Naar Te repareren gezet'+(r?': '+r:''), true);
+  /* Wachten op de printer voordat een ingebed venster dichtgaat, anders breekt het
+     printen halverwege af. Geen doossticker: de doos heeft er al een. */
+  const geprint=await qzPrintDeviceLabels(id, true, {zonderDoos:true}).catch(()=>false);
+  const melding='Naar Te repareren: '+r+(geprint?'':'. De sticker printen lukte niet, print hem bij het toestel.');
+  toast(melding, geprint?true:'let-op');
+  if(INGEBED) return ingebedKlaar({tekst:melding, soort:geprint?true:'let-op'});
   appOpen(id);
+}
+/* Bij een reparatie kom je soms nog iets tegen: dat zet je erbij, met een nieuwe
+   sticker, zodat op het toestel staat wat er echt moet gebeuren. */
+async function repDefectErbij(id){
+  const a=apparaten.find(x=>x.id===id); if(!a) return;
+  const keuze=await defectVenster(a, {kop:'Nog iets kapot', ja:'Erbij zetten', uitleg:'Er komt een nieuwe reparatiesticker uit de printer.'});
+  if(!keuze) return;
+  const defecten=(Array.isArray(a.defecten)?a.defecten.slice():[]);
+  if(defecten.includes(keuze.tekst)){ toast('Dat staat er al','let-op'); return; }
+  defecten.push(keuze.tekst);
+  const {error}=await sb.from('refurbish_apparaten').update({defecten, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Opslaan lukte niet','fout'); return; }
+  a.defecten=defecten;
+  tekenAlles();
+  const geprint=await qzPrintDeviceLabels(id, true, {zonderDoos:true}).catch(()=>false);
+  toast('Erbij gezet: '+keuze.tekst+(geprint?'':'. De sticker printen lukte niet.'), geprint?true:'let-op');
 }
 function tekenApparaat(){
   const el=document.getElementById('appPagina');
@@ -3765,7 +3857,7 @@ function appOpen(id){
     specs:Object.assign({}, a.specs||{}),
     accu:a.accu!=null?String(a.accu):'', accuVervangen:false,
     nieuweAccu:!!a.nieuwe_accu, accuNotitie:a.accu_notitie||'',
-    notitie:a.notitie||'', extraReparatie:'', opties:{}, doos:!!a.doos,
+    notitie:a.notitie||'', extraReparatie:'', extraDeel:'', opties:{}, doos:!!a.doos,
     /* Het pad tot hier uit het profiel halen, niet de vaste laptoplijst: een
        desktop heeft er een blokkers-stap voor, die anders uit de tijdlijn en de
        terugknop wegvalt. Tot en met de Windows-stap, want daarna land je op
@@ -4003,6 +4095,8 @@ function ctrVeldBewaar(){
   if(not) ctr.notitie=not.value;
   const er=document.getElementById('c_extra_rep');
   if(er) ctr.extraReparatie=er.value;
+  const ed=document.getElementById('c_extra_deel');
+  if(ed) ctr.extraDeel=ed.value;
 }
 function ctrSpecsUitVelden(){
   const uit={};
@@ -5042,16 +5136,25 @@ function ctrNotitieVeld(){
    dan als een tweede notitieveld. Het hoort bij het afronden: de grade staat, en dan
    kies je of hij naar de voorraad gaat of eerst naar de werkbank. */
 function ctrExtraRepVeld(){
-  return `<details class="meeropties" data-sleutel="ctr_extrarep_${esc(ctr.a.id)}"${(ctr.extraReparatie||'').trim()?' data-open':''}>
+  const deel=ctr.extraDeel||'', nt=ctr.extraReparatie||'';
+  return `<details class="meeropties" data-sleutel="ctr_extrarep_${esc(ctr.a.id)}"${(deel||nt.trim())?' data-open':''}>
     <summary>Toch eerst naar reparatie?</summary>
     <div class="meerinhoud">
-      <input id="c_extra_rep" maxlength="80" value="${esc(ctr.extraReparatie||'')}"
-        placeholder="Bijvoorbeeld: nieuwe accu, scherm vervangen" oninput="ctrExtraReparatie(this.value)">
-      <p class="muted klein" style="margin-top:6px">Vul in wat er moet gebeuren. Dan gaat hij naar Te repareren in plaats van naar de voorraad. Leeg laten als alles goed is.</p>
+      <label for="c_extra_deel">Wat is er kapot?</label>
+      <select id="c_extra_deel" onchange="ctrExtraDeel(this.value)">
+        <option value="">Niets, alles is goed</option>
+        ${defectOpties(ctrCat(), deel)}
+      </select>
+      <label for="c_extra_rep" style="margin-top:12px">Notitie</label>
+      <input id="c_extra_rep" maxlength="60" value="${esc(nt)}"
+        placeholder="Wat is er mis? Bijvoorbeeld: houdt lading niet vast" oninput="ctrExtraReparatie(this.value)">
+      <p class="muted klein" style="margin-top:6px">Kies je iets, dan gaat hij naar Te repareren in plaats van naar de voorraad, en komt er een reparatiesticker uit de printer.</p>
     </div>
   </details>`;
 }
-function ctrExtraReparatie(v){ ctr.extraReparatie=String(v||'').slice(0,80); sessieBewaar(); }
+/* Alleen onthouden, niet hertekenen: dan zou je plek in de stap en je focus weg zijn. */
+function ctrExtraDeel(v){ ctr.extraDeel=String(v||''); sessieBewaar(); }
+function ctrExtraReparatie(v){ ctr.extraReparatie=String(v||'').slice(0,60); sessieBewaar(); }
 function ctrNotitieTel(){
   const e=document.getElementById('c_notitie'), t=document.getElementById('notitieTel');
   if(!e||!t) return;
@@ -5265,7 +5368,9 @@ function ctrDefecten(){
   const uit=[];
   prof().hardware.forEach(q=>{ if(ctr.antwoord[q.v]==='Nee') uit.push({vraag:q.v, deel:q.deel}); });
   if(ctr.accuVervangen) uit.push({vraag:'Accu vervangen, capaciteit te laag', deel:'Accu'});
-  if((ctr.extraReparatie||'').trim()) uit.push({vraag:ctr.extraReparatie.trim(), deel:null});   // handmatig: toch naar reparatie
+  /* Handmatig toch naar reparatie: een onderdeel uit de lijst, met of zonder notitie. */
+  const extra=defectTekst(ctr.extraDeel, ctr.extraReparatie);
+  if(extra) uit.push({vraag:extra, deel:(ctr.extraDeel && ctr.extraDeel!==DEFECT_ANDERS)?ctr.extraDeel:null});
   const sv=prof().specVragen;
   Object.keys(sv).forEach(k=>{
     if(!ctr.specs[k]) return;
@@ -5517,6 +5622,7 @@ function tekenRepPagina(){
           <h2><svg class="i"><use href="#i-wrench"/></svg>Wat er mis is</h2>
           ${nodig.length ? nodig.map(d=>`<div class="clrij"><div class="clvraag">${esc(d)}</div></div>`).join('')
                          : '<p class="muted klein">Geen defecten genoteerd bij de controle.</p>'}
+          <button class="btn ghost small" style="margin-top:12px" onclick="repDefectErbij('${a.id}')"><svg class="i s"><use href="#i-plus"/></svg>Nog iets kapot</button>
         </div>
 
         <div class="card">
@@ -10799,6 +10905,16 @@ function uitAdres(){
     const a=apparaten.find(x=>x.id===on || x.hardware_id===on);
     if(a){ onlineZetten(a.id); return; }
     if(INGEBED){ ingebedMelding={tekst:'Dit toestel staat niet in de voorraad.', soort:'let-op'}; ingebedSluit(); return; }
+  }
+  /* Naar reparatie vanuit de winkelapp (Hardware, Meer): hetzelfde venster als hier, zodat
+     er één weg naar reparatie is. Ingebed blijft de werkbank zelf onzichtbaar; je ziet
+     alleen het venster, en klaar of annuleren sluit het in de winkelapp. */
+  const rp=p.get('reparatie');
+  if(rp){
+    if(INGEBED) ingebedOpen=true;
+    const a=apparaten.find(x=>x.id===rp || x.hardware_id===rp);
+    if(a){ appNaarReparatie(a.id); return; }
+    if(INGEBED){ ingebedMelding={tekst:'Dit toestel staat niet in de werkbank.', soort:'let-op'}; ingebedSluit(); return; }
   }
   const id=p.get('apparaat');
   if(!id) return;

@@ -22,7 +22,7 @@ npm test
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
 | `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
 | `refurbish-uitlezen.js` | De PowerShell-regel voor accu en specs: het script (alleen ASCII, nooit exit), Vercel als platte tekst, de regel op de testpagina en het .bat-vangnet |
-| `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen |
+| `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen. Naar reparatie: onderdeel uit de lijst van de categorie, notitie erbij, reparatiesticker zonder tweede doossticker, en ingebed vanuit de winkelapp |
 | `productfotos-telefoon.js` | Fabrieksfoto's voor telefoons: de Galaxy-codes voor Icecat, dat een telefoon alleen de set in zijn eigen kleur ziet, de iPhone-uitleg en de knop Voor het hele model. En dat een laptop alles houdt zoals het was |
 | `refurbish-pagina.js` | De apparaatpagina, donoren en onderdelen per soort |
 | `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |

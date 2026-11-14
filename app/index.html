@@ -14987,26 +14987,32 @@ addEventListener('popstate', e=>{
    hardwarepagina (iframe, zelfde domein, dus je bent er al ingelogd). Klaar of terug:
    het venster stuurt een bericht en wij sluiten het. Een los toegevoegd toestel krijgt
    eerst zijn werkbank-rij, anders kent de pagina hem niet. Alleen met de refurbish-
-   module en toegang daartoe; zonder blijft het menu zoals het was. */
+   module en toegang daartoe; zonder blijft het menu zoals het was.
+   Naar reparatie (Meer, op een product) gaat op dezelfde manier: het venster van de
+   werkbank, met ?reparatie= in plaats van ?online=. Dan is er één weg naar reparatie,
+   met dezelfde lijst onderdelen en dezelfde reparatiesticker. */
 function hwOnlinePaginaMag(){
   const envOk = (typeof gebruiker==='undefined' || !gebruiker) ? true : heeftOmgeving(gebruiker,'refurbish');
   return moduleAan('refurbish') && envOk;
 }
-async function hwOnlinePagina(id){
+function hwOnlinePagina(id){ return hwWerkbankVenster(id, 'online'); }
+function hwNaarReparatie(id){ return hwWerkbankVenster(id, 'reparatie'); }
+async function hwWerkbankVenster(id, soort){
   const h=hwData.find(x=>x.id===id) || (hwOpen&&hwOpen.id===id?hwOpen:null);
-  if(!hwOnlinePaginaMag()){ hwBewerk(id); return; }
+  if(!hwOnlinePaginaMag()){ if(soort==='online') hwBewerk(id); return; }
+  const titel = soort==='reparatie' ? 'Naar reparatie' : 'Online zetten';
   terugStap('hwOnline');   /* meteen, nog binnen je tik; zie Terug van de browser */
   if(hwDirty || _vuil){ try{ await hwStilBewaar(); }catch(_e){} }
   try{ await sb.rpc('koppel_losse_hardware'); }catch(_e){}
   hwOnlineSluit(null, true);
   const v=document.createElement('div');
   v.className='overlay hwonlinevenster'; v.id='hwOnlineVenster';
-  v.setAttribute('role','dialog'); v.setAttribute('aria-label','Online zetten');
+  v.setAttribute('role','dialog'); v.setAttribute('aria-label',titel);
   v.innerHTML=`<div class="hwonlinekop">
-      <b>Online zetten${h?' · '+esc([h.merk,h.model].filter(Boolean).join(' ')):''}</b>
+      <b>${titel}${h?' · '+esc([h.merk,h.model].filter(Boolean).join(' ')):''}</b>
       <button type="button" class="btn ghost small" onclick="hwOnlineSluit()">Sluiten</button>
     </div>
-    <iframe class="hwonlineframe" title="Online zetten" src="/refurbish/?online=${encodeURIComponent(id)}&ingebed=1"></iframe>`;
+    <iframe class="hwonlineframe" title="${titel}" src="/refurbish/?${soort==='reparatie'?'reparatie':'online'}=${encodeURIComponent(id)}&ingebed=1"></iframe>`;
   document.body.appendChild(v);
   document.body.style.overflow='hidden';
 }
@@ -15455,6 +15461,7 @@ function hwDetailMenu(ev, id){
     {ico:'i-right', label:'Toewijzen aan partner', fn:()=>hwWijsToe(id), verborgen:!eigenaarKan},
     {ico:'i-link', label:(h.kanalen&&h.kanalen.partner)?'Uit partner-dashboard halen':'Zichtbaar in partner-dashboard',
       fn:()=>hwDashboard(id, !(h.kanalen&&h.kanalen.partner), null), verborgen:!eigenaarKan},
+    {ico:'i-wrench', label:'Naar reparatie', fn:()=>hwNaarReparatie(id), verborgen:!(h.status!=='verkocht' && !h.partner_id && hwOnlinePaginaMag())},
     {ico:'i-card', label:'Factuur maken', fn:()=>facVanHardware(id), verborgen:!mag('facturen')},
     {ico:'i-trash', label:'Verwijderen', danger:true, fn:()=>hwVerwijder(id)}
   ]);
