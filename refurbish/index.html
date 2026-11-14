@@ -3011,6 +3011,43 @@ async function nieuwprijsOnthoud(merk, model, opslag, prijs){
   if(error){ console.error('nieuwprijs onthouden:', error); return false; }
   return true;
 }
+/* ═══ Vraagprijs per model, opslag en grade ═══
+   Wat je voor een iPhone 12 mini met 128 GB in grade A vraagt, vraag je de volgende keer weer.
+   In model_vraagprijzen, per winkel, zonder kleur: webshop_grade_prijzen onthoudt per
+   advertentie en daar zit de kleur in, dus een witte kreeg de prijs van de zwarte niet.
+   Telefoons en tablets; bij een laptop doet de advertentie dat al (geen kleur in de sleutel).
+   Zelfde regels als in de winkelapp (vraagprijsVan daar). */
+const _vpCache={};
+function vpTelt(a){ return /telefoon|tablet/i.test(String((a&&a.categorie)||'')); }
+async function vpRijen(merk, model){
+  const k=(merk+'|'+model).toLowerCase();
+  if(_vpCache[k]) return _vpCache[k];
+  try{
+    const {data, error}=await sb.from('model_vraagprijzen').select('id,opslag,grade,prijs').ilike('merk', merk).ilike('model', model);
+    if(error) return [];
+    return (_vpCache[k]=data||[]);
+  }catch(_e){ return []; }
+}
+async function vraagprijsVan(merk, model, opslag, grade){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase();
+  if(!merk || !model || !op || !['A','B','C'].includes(g)) return null;
+  const r=(await vpRijen(merk, model)).find(x=>x.opslag===op && x.grade===g);
+  return r ? {prijs:Number(r.prijs)} : null;
+}
+async function vraagprijsOnthoud(merk, model, opslag, grade, prijs){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase();
+  prijs=Math.round(Number(prijs)*100)/100;
+  if(!merk || !model || !op || !['A','B','C'].includes(g) || !(prijs>0) || prijs>=10000 || !account || !account.team_id) return false;
+  const oud=(await vpRijen(merk, model)).find(x=>x.opslag===op && x.grade===g);
+  if(oud && Number(oud.prijs)===prijs) return false;
+  const nu=new Date().toISOString();
+  const {error}=oud
+    ? await sb.from('model_vraagprijzen').update({prijs, bijgewerkt_op:nu}).eq('id', oud.id)
+    : await sb.from('model_vraagprijzen').insert({team_id:account.team_id, merk, model, opslag:op, grade:g, prijs, bijgewerkt_op:nu});
+  delete _vpCache[(merk+'|'+model).toLowerCase()];
+  if(error){ console.error('vraagprijs onthouden:', error); return false; }
+  return true;
+}
 
 /* Het prijskaartje als PDF in een nieuw tabblad openen (of downloaden als de pop-up
    geblokkeerd is), zodat je het vanuit de PDF-viewer print. window.print() gaf in Safari
@@ -6300,6 +6337,14 @@ async function fotosLaden(a, geenAuto){
      exemplaar de oude advertentie hergebruikt. Eerst uit de model-opslag, anders uit
      een eerder online gezet exemplaar van hetzelfde model. Maar één keer (onl._adGeladen),
      zodat een hertekening (bv. na foto's laden) je eigen wijzigingen niet terugdraait. */
+  /* De vraagprijs die je eerder voor dit model, deze opslag en deze grade gebruikte. Gaat voor
+     de prijs van de advertentie hieronder: daar telt de kleur mee, hier niet. */
+  if(onl.prijs==null && vpTelt(a)){
+    try{
+      const r=await vraagprijsVan(a.merk, a.model, opslagVan(a), onl.staat||a.grade||'B');
+      if(r && onl.prijs==null && onl.a===a){ onl.prijs=r.prijs; onl.prijsBron='Je vraagprijs van de vorige keer voor dit model, deze opslag en grade '+(onl.staat||a.grade||'B')+'.'; }
+    }catch(_e){}
+  }
   try{
     onl.sleutel=webshopSleutel(a);
     const {data:gp}=await sb.from('webshop_grade_prijzen')
@@ -6784,6 +6829,11 @@ async function gradePrijsOpslaan(knop){
   if(gp.A==null && gp.B==null && gp.C==null){ toast('Vul minstens één grade-prijs in','let-op'); return; }
   await bezig(knop, async()=>{
     await onlAdBewaren();
+    /* Zelf ingevulde grade-prijzen gelden ook voor de volgende telefoon van dit model en deze
+       opslag, welke kleur hij ook heeft. */
+    if(vpTelt(onl.a)){
+      for(const g of ['A','B','C']){ if(gp[g]!=null && gp[g]!==''){ try{ await vraagprijsOnthoud(onl.a.merk, onl.a.model, opslagVan(onl.a), g, gp[g]); }catch(_e){} } }
+    }
     toast('Advertentie en prijzen opgeslagen voor dit model', true);
   });
 }
@@ -7203,6 +7253,9 @@ async function onlPubliceren(knop){
       bijgewerkt_op:new Date().toISOString()
     }).eq('id', hwId);
     if(error) throw new Error('Publiceren mislukt: '+error.message);
+    /* De vraagprijs onthouden voor het volgende toestel van dit model, deze opslag en grade.
+       Best-effort: mag het publiceren niet breken. */
+    if(vpTelt(a)){ try{ await vraagprijsOnthoud(a.merk, a.model, opslagVan(a), onl.staat||a.grade, onl.prijs); }catch(_e){} }
 
     /* De btw-keuze en de nieuwprijs horen ook op het toestel zelf: de
        batchcijfers en een latere heropening lezen die, niet de hardware-rij.

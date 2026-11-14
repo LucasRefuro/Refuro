@@ -15310,12 +15310,12 @@ function hwVenster(h){
           <span class="muted klein" id="hw_kleur_bezig"></span></div>
         <div id="hw_opslag_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Opslag</label>
           <select id="hw_opslag_kies" onchange="hwOpslagKies()" hidden></select>
-          <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB" onchange="hwNieuwprijsVul()"></div>
-        <div><label>Staat</label><select id="hw_staat">
+          <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB" onchange="hwNieuwprijsVul(); hwVraagprijsVul()"></div>
+        <div><label>Staat</label><select id="hw_staat" onchange="hwVraagprijsVul()">
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
         </select></div>
-        <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald"></div>
+        <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald" oninput="hwVraagprijsGetypt(this)" onchange="hwVraagprijsBewaar()"><p class="muted klein" id="hw_verkoop_bron"></p></div>
         <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
         ${(!h && hwLocaties.length)?`<div><label>Ligt in</label><select id="hw_loc_nieuw">
           ${hwLocatiesWinkelEerst().map(l=>`<option value="${l.id}">${esc(l.naam)}</option>`).join('')}
@@ -15843,6 +15843,7 @@ async function hwSpecsOphalen(knop, opnieuw, stil){
 async function hwOpslagLaden(){
   await hwOpslagLadenNu();
   hwNieuwprijsVul();
+  hwVraagprijsVul();
 }
 async function hwOpslagLadenNu(){
   const vak=document.getElementById('hw_opslag_vak'), sel=document.getElementById('hw_opslag_kies'), veld=document.getElementById('hw_opslag');
@@ -15873,6 +15874,7 @@ function hwOpslagKies(){
   if(sel.value==='__anders'){ veld.hidden=false; veld.value=''; veld.focus(); }
   else { veld.hidden=true; veld.value=sel.value; }
   hwNieuwprijsVul();
+  hwVraagprijsVul();
 }
 
 /* ═══ Nieuwprijs per model en opslag ═══
@@ -15995,6 +15997,84 @@ async function hwNieuwprijsBewaar(){
     const u=document.getElementById('hw_nieuwprijs_bron'); if(u && document.body.contains(veld)) u.textContent='Onthouden voor dit model met deze opslag.';
   }
 }
+/* ═══ Vraagprijs per model, opslag en grade ═══
+   Wat je vraagt voor een iPhone 12 mini met 128 GB in grade A, vraag je de volgende keer weer.
+   Dus onthouden we het per model, opslag en grade (de kleur telt niet, net als bij de
+   nieuwprijs) in model_vraagprijzen, alleen voor je eigen winkel. Typ je een vraagprijs, dan
+   onthouden we die; voeg je een toestel toe, dan staat hij er al. Telefoons en tablets: bij
+   een laptop hangt de prijs van meer af, en dat onthoudt Online zetten per advertentie.
+   Dezelfde regels staan in het refurbish-deel (Online zetten). */
+const _vpCache={};
+async function vpRijen(merk, model){
+  const k=(merk+'|'+model).toLowerCase();
+  if(_vpCache[k]) return _vpCache[k];
+  try{
+    const {data, error}=await sb.from('model_vraagprijzen').select('id,opslag,grade,prijs').ilike('merk', merk).ilike('model', model);
+    if(error) return [];
+    return (_vpCache[k]=data||[]);
+  }catch(_e){ return []; }
+}
+async function vraagprijsVan(merk, model, opslag, grade){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase();
+  if(!merk || !model || !op || !['A','B','C'].includes(g)) return null;
+  const r=(await vpRijen(merk, model)).find(x=>x.opslag===op && x.grade===g);
+  return r ? {prijs:Number(r.prijs)} : null;
+}
+/* Niets nieuws (zelfde prijs als onthouden)? Dan schrijven we niets. */
+async function vraagprijsOnthoud(merk, model, opslag, grade, prijs){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase();
+  prijs=Math.round(Number(prijs)*100)/100;
+  if(!merk || !model || !op || !['A','B','C'].includes(g) || !(prijs>0) || prijs>=10000 || !account || !account.team_id) return false;
+  const oud=(await vpRijen(merk, model)).find(x=>x.opslag===op && x.grade===g);
+  if(oud && Number(oud.prijs)===prijs) return false;
+  const nu=new Date().toISOString();
+  const {error}=oud
+    ? await sb.from('model_vraagprijzen').update({prijs, bijgewerkt_op:nu}).eq('id', oud.id)
+    : await sb.from('model_vraagprijzen').insert({team_id:account.team_id, merk, model, opslag:op, grade:g, prijs, bijgewerkt_op:nu});
+  delete _vpCache[(merk+'|'+model).toLowerCase()];
+  if(error){ console.error('vraagprijs onthouden:', error); return false; }
+  return true;
+}
+/* Het veld Vraagprijs, zoals de nieuwprijs: data-auto = wij vulden hem in, dus hij verandert
+   mee als je model, opslag of grade wijzigt. Wat je zelf typt, blijft staan. */
+function hwVraagprijsVul(){ return hwVraagprijsVulNu(); }
+async function hwVraagprijsVulNu(){
+  const veld=document.getElementById('hw_verkoop');
+  if(!veld || !hwKleurTelt(hwVeld('hw_cat')) || (hwOpen && hwOpen.status==='verkocht')) return null;
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), opslag=hwVeld('hw_opslag'), grade=hwVeld('hw_staat');
+  const sleutel=[merk, model, opslag, grade].join('|').toLowerCase();
+  veld.dataset.voor=sleutel;
+  const uitleg=document.getElementById('hw_verkoop_bron');
+  const zeg=t=>{ if(uitleg) uitleg.textContent=t; };
+  const r=await vraagprijsVan(merk, model, opslag, grade);
+  if(!document.body.contains(veld) || veld.dataset.voor!==sleutel) return r;
+  if(veld.value.trim() && veld.dataset.auto!=='1'){
+    if(r && Number(veld.value)===r.prijs){ veld.dataset.auto='1'; zeg('Je vraagprijs van de vorige keer.'); }
+    return r;
+  }
+  if(!r){
+    if(veld.dataset.auto==='1'){ veld.value=''; delete veld.dataset.auto; if(hwOpen) hwStilPlan(); }
+    zeg(''); return null;
+  }
+  if(veld.value!==String(r.prijs)){ veld.value=String(r.prijs); veld.dataset.auto='1'; if(hwOpen) hwStilPlan(); }
+  zeg('Je vraagprijs van de vorige keer.');
+  return r;
+}
+function hwVraagprijsGetypt(veld){
+  delete veld.dataset.auto;
+  const u=document.getElementById('hw_verkoop_bron'); if(u) u.textContent='';
+}
+async function hwVraagprijsBewaar(){
+  const veld=document.getElementById('hw_verkoop');
+  if(!veld || veld.dataset.auto==='1' || !veld.value.trim() || !hwKleurTelt(hwVeld('hw_cat'))) return;
+  let merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
+  const rij=hwModelRij(merk, model); if(rij){ merk=rij.merk; model=rij.model; }   // de schrijfwijze van de lijst
+  if(await vraagprijsOnthoud(merk, model, hwVeld('hw_opslag'), hwVeld('hw_staat'), veld.value)){
+    const u=document.getElementById('hw_verkoop_bron');
+    if(u && document.body.contains(veld)) u.textContent='Onthouden voor dit model met deze opslag en grade.';
+  }
+}
+
 /* Stil de webshop bijwerken: 'prijs' synchroniseert de advertentie opnieuw (specs, foto's,
    voorraad), 'online' ook naar een nieuwe advertentie als de sleutel veranderde (kleur, opslag). */
 async function hwWebshopBijwerken(id, actie){
