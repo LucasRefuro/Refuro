@@ -80,6 +80,21 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Thema live** (10 nov, met akkoord): net verkocht met vergelijkbare toestellen, de grades met
       accu per staat, geen "Incl. btw" bij margeregeling, en geen fout meer bij een kaart zonder foto.
 
+## iPhone-foto's ingekaderd zoals de S24 (16 november 2026)
+
+- [x] **Alle iPhone-sets opnieuw ingekaderd**: wit doek 3:2 (1500x1000), heel toestel gecentreerd op
+      80% van de hoogte, net als de Galaxy S24-set. Close-ups (toestel loopt van de foto af) staan
+      tegen die kant. 168 sets, 568 foto's; 10 foto's weggelaten (alleen nog een egaal vlak).
+      Werkwijze en lijsten: `scripts/fotos-inkaderen.py` en `storvo-hoofdfotos.json` in de fotomap.
+- [x] **Dubbele foto's op de webshop** (iPhone 17): online zetten nam de modelfoto's die al bij het
+      toestel stonden nog een keer los mee. Opgelost, en online zetten trekt de webshopfoto's nu
+      gelijk (edge shopify v30, actie "fotos").
+- [x] **Foto's wissen deed niets**: de opslag had geen leesregel, dus remove() vond niets en wiste
+      niets, zonder fout. Leesregel voor de eigen winkelmap toegevoegd (migratie gedraaid).
+- [ ] **Eigenaar: de iPhone 17 (A0098) opnieuw online zetten** op de werkbank. Hij is op 14 november
+      in de winkelapp verwijderd en van de webshop gehaald; het werkbank-toestel staat er nog.
+- [x] **Modelkeuze**: alle modellen staan nu in de lijst, niet alleen de nieuwste twaalf.
+
 ## Telefoon toevoegen, iPhone-foto's en het A6-kaartje (15 november 2026)
 
 - [x] **Na Opslaan vult een nieuw toestel zichzelf aan:** eerst de specificaties, dan de
