@@ -2787,9 +2787,37 @@ async function ondLabelsPrint(ids){
    toestel zelf. Daarom geen QR of interne code zoals op de werksticker, maar de
    prijs groot met de grade, de belangrijkste specs en de garantie. */
 const GRADE_STAAT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
+/* Een telefoon op het kaartje zoals de winkel hem in Canva maakte: "128GB | 6,1 inch | Super
+   Retina XDR OLED" onder de titel en alleen scherm, opslag, 5G en batterijconditie. Eerst
+   kwamen hier de velden van de controle op het kaartje, en dus ook het IMEI: dat hoort niet
+   bij de klant. Scherm en netwerk komen uit de modellenlijst (bron.modelInfo, zie
+   prijskaartVenster), anders uit de specs. Zelfde regels als hwTelKaart in de winkelapp. */
+function telKaartRegels(a, info, specs){
+  const sp=specs||{}; info=info||{};
+  const scherm=String(info.scherm||sp.Scherm||'').trim();
+  const im=scherm.match(/(\d{1,2}(?:[,.]\d{1,2})?)\s*(?:inch|"|\u2033)/i);
+  const inch=im ? im[1].replace('.',',')+' inch' : '';
+  let type='';
+  if(info.scherm) type=String(info.scherm).replace(/^\s*\d{1,2}(?:[,.]\d{1,2})?\s*(?:inch|"|\u2033)\s*/i,'').trim();
+  else {
+    const m=scherm.match(/(super retina xdr|super retina hd|liquid retina hd|liquid retina|retina hd|dynamic amoled 2x|dynamic amoled|super amoled|amoled|p?oled|lcd)/i);
+    type=m ? m[1].replace(/\b(oled|lcd|amoled)\b/ig, x=>x.toUpperCase()) : '';
+  }
+  const opslag=String(sp.Opslag||'').replace(/(\d)\s+(GB|TB)\b/i,'$1$2').trim();
+  const net=(String(info.netwerk||sp.Netwerk||'').match(/\b[45]G\b/i)||[''])[0].toUpperCase();
+  const accu=a.nieuwe_accu ? 100 : (Number(a.accu)||null);
+  const bullets=[];
+  if(type||inch) bullets.push([type, inch].filter(Boolean).join(' '));
+  if(opslag) bullets.push('Opslag: '+opslag);
+  if(net) bullets.push(net);
+  if(accu) bullets.push('Batterijconditie: '+accu+'%');
+  const model=String(a.model||'').trim();
+  const titel=/^(iphone|galaxy|pixel|ipad)\b/i.test(model) ? model : [a.merk, model].filter(Boolean).join(' ');
+  return {titel, sub:[opslag, inch, type].filter(Boolean).join(' | '), bullets};
+}
 function prijskaartHtml(bron){
   const a=bron.a;
-  const specs=a.specs||{};
+  const specs=Object.assign({}, ((hardwareVan(a)||{}).specs)||{}, a.specs||{});
   const grade=bron.staat||a.grade||'B';
   /* De specs uit het profiel van de categorie, zodat elk soort toestel zijn eigen
      specs op het kaartje krijgt. De bullets tonen "Sleutel: waarde"; de accu en
@@ -2804,8 +2832,11 @@ function prijskaartHtml(bron){
   if(a.notitie) bullets.push(a.notitie);
   /* De samenvattingsregel onder de titel: een paar kernspecs kort, zonder de
      minder relevante velden zoals kleur of imei. */
-  const sub=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien/i.test(v.sleutel))
+  let sub=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien/i.test(v.sleutel))
     .slice(0,4).map(v=>specs[v.sleutel]).join(' | ');
+  let titel=toestelNaam(a);
+  const tel=fotoKleurgebonden(a) ? telKaartRegels(a, bron.modelInfo, specs) : null;
+  if(tel){ bullets.length=0; bullets.push(...tel.bullets); sub=tel.sub; titel=tel.titel; }
   const gar=Number(bron.garantie); const garMnd=(gar||gar===0)?gar:24;
   const np = bron.nieuwprijs!=null && bron.nieuwprijs!=='' ? Number(bron.nieuwprijs)
            : (a.nieuwprijs!=null?Number(a.nieuwprijs):null);
@@ -2814,10 +2845,10 @@ function prijskaartHtml(bron){
   const garanties=[];
   if(garMnd>0) garanties.push(garMnd+' maanden garantie');
   garanties.push('Technisch 100% gecontroleerd');
-  if(a.nieuwe_accu) garanties.push('Batterij in nieuwstaat');
+  if(a.nieuwe_accu && !tel) garanties.push('Batterij in nieuwstaat');
   garanties.push('Direct klaar voor gebruik');
   return `<div class="speckaart">
-    <div class="sk-titel">${esc(toestelNaam(a))}</div>
+    <div class="sk-titel">${esc(titel)}</div>
     ${sub?`<div class="sk-sub">${esc(sub)}</div>`:''}
     <div class="sk-midden">
       <div class="sk-band">Specificaties</div>
@@ -2835,7 +2866,15 @@ function prijskaartHtml(bron){
 }
 
 /* Eén plek die het kaart-venster tekent, zodat de print-id maar één keer bestaat. */
-function prijskaartVenster(bron){
+async function prijskaartVenster(bron){
+  /* Bij een telefoon eerst scherm en netwerk uit de modellenlijst; lukt dat niet, dan uit de specs. */
+  if(fotoKleurgebonden(bron.a) && !bron.modelInfo){
+    try{
+      const {data}=await sb.from('model_kleuren').select('scherm,netwerk')
+        .ilike('merk', String(bron.a.merk||'').replace(/[%_]/g,'')).ilike('model', String(bron.a.model||'').replace(/[%_]/g,'')).maybeSingle();
+      bron.modelInfo=data||{};
+    }catch(_e){ bron.modelInfo={}; }
+  }
   venster('Prijskaartje', `
     <p class="pv">Open het kaartje als PDF en print het op A6. Leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
     <div class="prijskaart-vel" id="prijsVel">${prijskaartHtml(bron)}</div>

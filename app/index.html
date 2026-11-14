@@ -3588,6 +3588,13 @@
       <button class="btn" onclick="voegModelToe()">Model toevoegen</button>
       <button class="btn secondary" onclick="vulAlleModellen()"><svg class="i s"><use href="#i-phone"/></svg>Alle iPhone en Samsung modellen toevoegen</button>
     </div>
+    <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:18px">
+      <h3 style="margin:0 0 6px">Fabrieksfoto's per model en kleur</h3>
+      <p class="muted" style="margin:0 0 12px; max-width:70ch">Kies een map met per model een map, en daarin per kleur een map met foto's. Bijvoorbeeld iphone-13 en daarin green. Daarna haalt een nieuw toestel ze vanzelf op, met de goede hoofdfoto.</p>
+      <label class="btn secondary" for="mfMap"><svg class="i s"><use href="#i-camera"/></svg>Map kiezen</label>
+      <input type="file" id="mfMap" webkitdirectory multiple hidden onchange="mfImporteer(this)">
+      <p class="muted klein" id="mfVoortgang" style="margin:10px 0 0"></p>
+    </div>
   </div>
 
   <div class="card" id="inst-cats"hidden>
@@ -14525,9 +14532,10 @@ async function hwFotoVerwijder(i){
 function hwIsModelFoto(url){ const p=hwFotoPad(url)||''; return /^[^/]+\/model_/.test(p); }
 function hwFotoHintZet(t){ const e=document.getElementById('hwFotoHint'); if(e) e.textContent=t||''; }
 async function hwModelFotos(model, kleur, tel){
-  const {data}=await sb.from('refurbish_fotos').select('pad,kleur,volgorde')
+  const {data}=await sb.from('refurbish_fotos').select('pad,kleur,volgorde,hoofd')
     .is('apparaat_id', null).ilike('model', model).order('volgorde');
-  let rijen=data||[];
+  /* De hoofdfoto van de set voorop: die wordt bij het toestel en op de webshop de eerste. */
+  let rijen=(data||[]).slice().sort((a,b)=>(b.hoofd?1:0)-(a.hoofd?1:0));
   if(tel){
     /* Net als aan de werkbank (fotosInKleur): eerst de set in deze kleur, anders een set
        zonder kleur. Een set in een andere kleur nooit: dan krijgt de koper iets anders. */
@@ -14537,20 +14545,21 @@ async function hwModelFotos(model, kleur, tel){
   }
   return rijen.map(r=>sb.storage.from('refurbish-fotos').getPublicUrl(r.pad).data.publicUrl);
 }
-async function hwFotosOphalen(knop, opnieuw){
+async function hwFotosOphalen(knop, opnieuw, stil){
   if(!hwOpen) return;
+  const melding=(t,soort)=>{ if(!stil) toast(t,soort); };
   if(hwDirty || _vuil){ try{ await hwStilBewaar(); }catch(_e){} }
   const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), cat=hwVeld('hw_cat')||hwOpen.categorie||'';
   const tel=/telefoon/i.test(cat);
   const kleur=tel ? hwVeld('hw_kleur') : '';
-  if(!merk || !model){ toast('Vul eerst merk en model in','let-op'); return; }
-  /* Voor een iPhone bestaat geen vrije bron: Apple staat niet in de catalogus en de foto's van
-     Apple zelf mogen we niet gebruiken. Wel de set die de winkel zelf voor dit model en deze
-     kleur heeft gemaakt (zie hwFotosAlsModel). Daarom geen zoekvraag, maar wel die set. */
+  if(!merk || !model){ melding('Vul eerst merk en model in','let-op'); return; }
+  /* Voor een iPhone zoeken we niet bij een bron: Apple staat niet in de catalogus. Wel de set
+     die de winkel zelf voor dit model en deze kleur heeft gezet: eigen foto's (zie
+     hwFotosAlsModel) of een map die bij Instellingen, Modellen is geïmporteerd (mfImporteer). */
   const apple=tel && /apple|iphone/i.test(merk+' '+model);
   if(apple) opnieuw=false;                 // de set weggooien kan hier niet: er is niets om opnieuw te halen
   if(tel && !kleur){
-    toast('Vul eerst de kleur in','let-op');
+    melding('Vul eerst de kleur in','let-op');
     hwFotoHintZet("Fabrieksfoto's van een telefoon zoek ik op kleur. Vul de kleur in en druk nog een keer.");
     const v=document.getElementById('hw_kleur'); if(v) v.focus();
     return;
@@ -14582,11 +14591,11 @@ async function hwFotosOphalen(knop, opnieuw){
     if(!model_.length){
       if(opnieuw) await hwFotosOpslaan(fotos);
       hwFotoHintZet(apple
-        ? "Voor iPhones bestaat geen vrije bron. Maak één keer zelf mooie foto's en druk op "+hwModelSetTekst()+". Elk volgend toestel in deze kleur heeft ze dan vanzelf."
+        ? "Voor deze iPhone in deze kleur is er nog geen foto-set. Zet ze erin bij Instellingen, Modellen, of maak zelf mooie foto's en druk op "+hwModelSetTekst()+"."
         : uit.reden==='kleur-nodig'
         ? "Met deze kleur vond ik niets. Klopt de kleur? Schrijf hem zoals de fabrikant, bijvoorbeeld Onyx Black."
         : "Voor dit model vond ik geen fabrieksfoto's. Klopt de naam? Anders maak je ze zelf en druk je op "+hwModelSetTekst()+".");
-      toast('Geen foto\'s gevonden','let-op');
+      melding('Geen foto\'s gevonden','let-op');
       return;
     }
     /* Nog geen eigen foto's: de fabrieksfoto's voorop (de eerste is de hoofdfoto). Wel eigen
@@ -14596,9 +14605,9 @@ async function hwFotosOphalen(knop, opnieuw){
     await hwFotosOpslaan(nieuw);
     const k=document.getElementById('hwOphaalKnop'); if(k) k.textContent='Opnieuw ophalen';
     hwFotoHintZet('Niet goed? Klopt het model of de kleur niet, pas dat eerst aan en haal ze opnieuw op.');
-    toast(model_.length+' fabrieksfoto'+(model_.length===1?'':'\'s')+' bij dit toestel gezet', true);
+    melding(model_.length+' fabrieksfoto'+(model_.length===1?'':'\'s')+' bij dit toestel gezet', true);
   }catch(e){
-    toast(e.message||'Ophalen lukte niet','fout');
+    melding(e.message||'Ophalen lukte niet','fout');
   }finally{
     if(knop){ knop.disabled=false; if(knop.textContent==='Bezig met ophalen…') knop.textContent=oud; }
   }
@@ -14648,6 +14657,113 @@ async function hwFotosAlsModel(knop){
     else toast(vrij.length?'Dat lukte niet':'Dit model had al een volledige set','let-op');
   }catch(e){ toast(e.message||'Dat lukte niet','fout'); }
   finally{ if(knop && document.body.contains(knop)){ knop.disabled=false; knop.textContent=oud; } }
+}
+/* ═══ Fabrieksfoto's importeren: een map per model, daarin een map per kleur ═══
+   Bijvoorbeeld iphone-13/green/iphone-13_green_01.jpg. De mapnamen mogen Engels zijn
+   (green, midnight, sierra-blue); we zoeken het model en de kleur op in de modellenlijst
+   (model_kleuren), zodat de set precies heet zoals je hem bij het toevoegen kiest. Staat er
+   een bestand storvo-hoofdfotos.json in de map, dan zegt dat welke foto per set de hoofdfoto
+   wordt (voor en achter samen, anders de achterkant); anders de eerste op naam.
+   Het uploaden gaat met je eigen inlog, net als een gewone foto: alleen in je eigen winkel.
+   Een set die er al is slaan we over, dus nog een keer dezelfde map kiezen kan geen kwaad. */
+const MF_AANZICHTEN=['open','dicht','toetsenbord','links','rechts','onderkant'];
+const MF_KLEUR_EN={black:'Zwart', white:'Wit', blue:'Blauw', green:'Groen', yellow:'Geel', purple:'Paars',
+  pink:'Roze', red:'Rood', 'product-red':'(PRODUCT)RED', coral:'Koraal', gold:'Goud', silver:'Zilver',
+  'space-gray':'Spacegrijs', 'space-grey':'Spacegrijs', 'midnight-green':'Middernachtgroen', graphite:'Grafiet',
+  'pacific-blue':'Oceaanblauw', midnight:'Middernacht', starlight:'Sterrenlicht', 'sierra-blue':'Sierrablauw',
+  'alpine-green':'Alpengroen', 'deep-purple':'Dieppaars', 'space-black':'Spacezwart',
+  'black-titanium':'Zwart titanium', 'blue-titanium':'Blauw titanium', 'natural-titanium':'Naturel titanium',
+  'white-titanium':'Wit titanium', 'desert-titanium':'Woestijntitanium', teal:'Blauwgroen', ultramarine:'Ultramarijn',
+  lavender:'Lavendel', 'mist-blue':'Nevelblauw', sage:'Saliegroen', 'cosmic-orange':'Kosmisch oranje',
+  'deep-blue':'Diepblauw', 'soft-pink':'Zachtroze', 'cloud-white':'Wolkenwit', 'light-gold':'Lichtgoud',
+  'sky-blue':'Hemelsblauw', burgundy:'Bordeauxrood', glacier:'Gletsjer'};
+function mfNorm(t){ return String(t||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+/* "iphone-16-pro-max" is de iPhone 16 Pro Max, "iphone-se-2020" de iPhone SE (2020). Een alias
+   (toon uit) alleen als er geen gewone naam is. */
+function mfModelVan(map){
+  const n=mfNorm(map);
+  const rijen=(hwModellen||[]).filter(r=>mfNorm(r.model)===n || mfNorm(String(r.merk||'')+r.model)===n);
+  return rijen.find(r=>r.toon!==false) || rijen[0] || null;
+}
+function mfKleurVan(rij, map){
+  const lijst=Array.isArray(rij&&rij.kleuren)?rij.kleuren:[];
+  for(const k of [map, MF_KLEUR_EN[String(map||'').toLowerCase()]]){
+    if(!k) continue;
+    const raak=lijst.find(x=>mfNorm(x)===mfNorm(k)); if(raak) return raak;
+  }
+  return null;
+}
+/* Model en kleur van een bestand: uit de mappen (map kiezen), of uit de naam als de browser
+   geen mappen meegeeft (iphone-13_green_01.jpg). */
+function mfPlek(f){
+  const delen=String(f.webkitRelativePath||'').split('/');
+  if(delen.length>=3) return {model:delen[delen.length-3], kleur:delen[delen.length-2]};
+  const m=String(f.name||'').match(/^(.+)_([^_]+)_\d+\.\w+$/);
+  return m ? {model:m[1], kleur:m[2]} : null;
+}
+async function mfImporteer(input){
+  const bestanden=Array.prototype.slice.call((input&&input.files)||[]);
+  if(input) input.value='';
+  const uit=document.getElementById('mfVoortgang');
+  const zeg=t=>{ if(uit) uit.textContent=t; };
+  if(!account || !bestanden.length) return;
+  await hwModellenLaden();
+  let hoofdKeus={};
+  const lijst=bestanden.find(f=>/^storvo-hoofdfotos\.json$/i.test(f.name));
+  if(lijst){ try{ const j=JSON.parse(await lijst.text()); hoofdKeus=(j&&j.hoofdfoto)||j||{}; }catch(_e){} }
+  const sets=new Map();
+  bestanden.forEach(f=>{
+    if(!/\.(jpe?g|png|webp)$/i.test(f.name)) return;
+    const pl=mfPlek(f); if(!pl) return;
+    const sl=pl.model+'/'+pl.kleur;
+    if(!sets.has(sl)) sets.set(sl, {sl, model:pl.model, kleur:pl.kleur, bestanden:[]});
+    sets.get(sl).bestanden.push(f);
+  });
+  if(!sets.size){ zeg('In deze map vond ik geen foto\'s per model en kleur.'); return; }
+  const {data:best}=await sb.from('refurbish_fotos').select('model,kleur').is('apparaat_id', null);
+  const bestaand=new Set((best||[]).map(r=>mfNorm(r.model)+'|'+mfNorm(r.kleur)));
+  let nieuw=0, fotos=0, al=0, gedaan=0;
+  const onbekend=[];
+  for(const st of sets.values()){
+    gedaan++;
+    zeg('Bezig: set '+gedaan+' van '+sets.size+'. Laat dit scherm open.');
+    const rij=mfModelVan(st.model), kleur=rij && mfKleurVan(rij, st.kleur);
+    if(!rij || !kleur){ onbekend.push(st.sl); continue; }
+    if(bestaand.has(mfNorm(rij.model)+'|'+mfNorm(kleur))){ al++; continue; }
+    const rijtje=st.bestanden.slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const hi=rijtje.findIndex(f=>f.name===hoofdKeus[st.sl]);
+    if(hi>0) rijtje.unshift(rijtje.splice(hi,1)[0]);
+    const map=('model_'+rij.merk+'-'+rij.model+'-'+kleur).replace(/[^\w.-]+/g,'_');
+    const rijen=[], paden=[];
+    try{
+      /* allSettled en niet all: bij een fout wachten we tot elke upload klaar is, anders komt
+         een trage upload pas na het opruimen binnen en blijft hij als los bestand staan. */
+      const uitslag=await Promise.allSettled(rijtje.map(async(f,i)=>{
+        const aanzicht=MF_AANZICHTEN[i]||'overig';
+        const ext=(f.name.match(/\.(\w+)$/)||['','jpg'])[1].toLowerCase();
+        const pad=account.team_id+'/'+map+'/'+aanzicht+'-'+Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
+        const {error}=await sb.storage.from('refurbish-fotos').upload(pad, f, {contentType:f.type||'image/jpeg', upsert:false});
+        if(error) throw error;
+        paden.push(pad);
+        rijen.push({team_id:account.team_id, apparaat_id:null, merk:rij.merk, model:rij.model, kleur,
+          aanzicht, pad, volgorde:i, hoofd:i===0});
+      }));
+      const mis=uitslag.find(u=>u.status==='rejected');
+      if(mis) throw mis.reason;
+      const {error}=await sb.from('refurbish_fotos').insert(rijen);
+      if(error) throw error;
+      bestaand.add(mfNorm(rij.model)+'|'+mfNorm(kleur));
+      nieuw++; fotos+=rijen.length;
+    }catch(e){
+      console.error('modelfoto\'s importeren', st.sl, e);
+      if(paden.length){ try{ await sb.storage.from('refurbish-fotos').remove(paden); }catch(_e){} }
+      onbekend.push(st.sl);
+    }
+  }
+  zeg('Klaar. '+nieuw+' set'+(nieuw===1?'':'s')+' met '+fotos+' foto\'s erbij.'+
+    (al?' '+al+' stond'+(al===1?'':'en')+' er al.':'')+
+    (onbekend.length?' Niet gelukt of niet herkend: '+onbekend.slice(0,8).join(', ')+(onbekend.length>8?' en nog '+(onbekend.length-8):'')+'.':''));
+  if(nieuw) toast(nieuw+' foto-sets geïmporteerd', true);
 }
 async function hwFotoHoofd(i){
   if(!hwOpen||!Array.isArray(hwOpen.fotos)) return;
@@ -15081,6 +15197,7 @@ function hwVenster(h){
         <button class="btn ghost small" onclick="hwSluit()"><svg class="i s"><use href="#i-left"/></svg>Terug naar Hardware</button>
         <h1 style="margin:10px 0 0">${titel}</h1>
         ${h?`<p class="muted klein" style="margin-top:4px">Toegevoegd ${hwWanneer(h)}${hwWie(h)?' door '+esc(hwWie(h)):''}${h.herkomst?' · '+esc(h.herkomst):''}</p>`:''}
+        ${h?'<p class="muted klein" id="hwAanvulHint" style="margin-top:2px"></p>':''}
       </div>
       ${h?`<div class="row" style="gap:8px; align-items:center; flex-direction:row; width:auto; flex-wrap:wrap">
         <span class="chip">${esc(statusLabel)}</span>
@@ -15243,8 +15360,29 @@ function hwVenster(h){
   hwKleurenLaden();
   hwOpslagLaden();
   hwModelSetKnopZet();
-  if(h && hwKleurTelt(h.categorie) && !(h.specs && h.specs.Chip)) hwSpecsOphalen(null, false, true);
+  hwSpecsBelofte=null;   // nooit wachten op de specs van een ander toestel
+  if(h && hwKleurTelt(h.categorie) && !(h.specs && h.specs.Chip)) hwSpecsBelofte=hwSpecsOphalen(null, false, true);
   if(h) hwHistorieLaden(h.id);
+}
+/* Een nieuw toestel vult zichzelf aan: specificaties, fabrieksfoto's en een advertentietekst.
+   Eerst moest je daarvoor drie knoppen vinden; nu gebeurt het meteen na Opslaan, op de
+   achtergrond. Alles stil: lukt iets niet, dan staan de knoppen er nog. De tekst pas na de
+   specs, anders schrijft hij zonder te weten wat erin zit. Sluit je het toestel intussen,
+   dan stoppen de foto's (die horen bij het open formulier), de tekst gaat wel door. */
+let hwSpecsBelofte=null;
+async function hwNieuwAanvullen(id){
+  const open=()=>!!(hwOpen && hwOpen.id===id);
+  const hint=t=>{ const e=document.getElementById('hwAanvulHint'); if(e && open()) e.textContent=t||''; };
+  hint('Specificaties ophalen…');
+  try{ if(hwSpecsBelofte) await hwSpecsBelofte; }catch(_e){}
+  hint('Foto\'s ophalen…');      // het venster kan na de specs opnieuw getekend zijn
+  try{ if(open() && !((hwOpen.fotos||[]).length)) await hwFotosOphalen(null, false, true); }catch(_e){}
+  const h=open() ? hwOpen : hwData.find(x=>x.id===id);
+  if(h && !String(h.titel||'').trim() && !String(h.omschrijving||'').trim()){
+    hint('Advertentietekst schrijven…');
+    try{ await hwTekstSchrijven(id, true); }catch(_e){}
+  }
+  hint('');
 }
 function hwDetailMenu(ev, id){
   const h=hwData.find(x=>x.id===id) || hwOpen; if(!h) return;
@@ -15720,7 +15858,7 @@ function hwModellenLaden(){
   if(!hwModellenBezig){
     hwModellenBezig=(async()=>{
       try{
-        const {data}=await sb.from('model_kleuren').select('merk,model,kleuren,opslag,volgorde,toon');
+        const {data}=await sb.from('model_kleuren').select('merk,model,kleuren,opslag,volgorde,toon,scherm,netwerk');
         hwModellen=Array.isArray(data)?data:[];
       }catch(_e){ hwModellen=[]; }
       hwModellenBezig=null;
@@ -15954,6 +16092,7 @@ async function hwOpslaan(knop){
     let geprint=false;
     try{ if(localStorage.getItem('storvoLabelPrinterOk')==='1') geprint=await hwLabelPrinten(n.id, true); }catch(_e){}
     toast('Toestel toegevoegd'+(geprint?'. Label geprint.':''), true);
+    hwNieuwAanvullen(n.id);
     return;
   }
   toast(wasBestaand?'Toestel bijgewerkt':'Toestel toegevoegd', true);
@@ -16090,9 +16229,40 @@ function hwSamenvatting(sp){
   if(sc){ delen.push(sc.replace(/\s*inch\b/i,'"').replace(/(\d)\s*"/,'$1"')); }
   return delen.filter(Boolean).slice(0,4).join('   |   ');
 }
+/* Een telefoon op het kaartje zoals de winkel hem in Canva maakte: "128GB | 6,1 inch | Super
+   Retina XDR OLED" onder de titel, en alleen scherm, opslag, 5G en batterijconditie als
+   specificaties. Eerst kwamen hier de eerste zes specs van de laptop-weg (chip, camera,
+   materiaal...), en een samenvatting die naar een processor zocht. Scherm en netwerk komen
+   uit de modellenlijst (model_kleuren, met de naam die Apple gebruikt), anders uit de specs. */
+function hwTelKaart(h){
+  const sp=(h.specs&&typeof h.specs==='object')?h.specs:{};
+  const rij=hwModelRij(h.merk, h.model)||{};
+  const scherm=String(rij.scherm||sp.Scherm||'').trim();
+  const im=scherm.match(/(\d{1,2}(?:[,.]\d{1,2})?)\s*(?:inch|"|\u2033)/i);
+  const inch=im ? im[1].replace('.',',')+' inch' : '';
+  let type='';
+  if(rij.scherm) type=String(rij.scherm).replace(/^\s*\d{1,2}(?:[,.]\d{1,2})?\s*(?:inch|"|\u2033)\s*/i,'').trim();
+  else {
+    const m=scherm.match(/(super retina xdr|super retina hd|liquid retina hd|liquid retina|retina hd|dynamic amoled 2x|dynamic amoled|super amoled|amoled|p?oled|lcd)/i);
+    type=m ? m[1].replace(/\b(oled|lcd|amoled)\b/ig, x=>x.toUpperCase()) : '';
+  }
+  const opslag=String(sp.Opslag||'').replace(/(\d)\s+(GB|TB)\b/i,'$1$2').trim();
+  const net=(String(rij.netwerk||sp.Netwerk||'').match(/\b[45]G\b/i)||[''])[0].toUpperCase();
+  const accu=h.nieuwe_accu ? 100 : (Number(h.accu)||null);
+  const specs=[];
+  if(type||inch) specs.push([type, inch].filter(Boolean).join(' '));
+  if(opslag) specs.push('Opslag: '+opslag);
+  if(net) specs.push(net);
+  if(accu) specs.push('Batterijconditie: '+accu+'%');
+  /* "iPhone 13" en "Galaxy S24" zeggen genoeg; "Apple iPhone 13" is dubbel. */
+  const model=String(h.model||'').trim();
+  const titel=/^(iphone|galaxy|pixel|ipad)\b/i.test(model) ? model : [h.merk, model].filter(Boolean).join(' ');
+  return {titel, samenvatting:[opslag, inch, type].filter(Boolean).join(' | '), specs};
+}
 function hwKaartData(h){
   const specsObj=(h.specs&&typeof h.specs==='object')?h.specs:{};
-  const specs=Object.entries(specsObj)
+  const tel=hwKleurTelt(h.categorie) ? hwTelKaart(h) : null;
+  const specs=tel ? tel.specs : Object.entries(specsObj)
     .filter(([k,w])=>String(w||'').trim() && !/serien|imei|kleur|servicetag/i.test(k))
     .map(([k,w])=>k+': '+w).slice(0,6);   // max 6, anders past het niet op A6
   /* Prijs strak als "\u20AC499,-" (geen spatie na het euroteken, zoals op het Canva-kaartje);
@@ -16105,8 +16275,8 @@ function hwKaartData(h){
   const g=(h.garantie!=null)?Number(h.garantie):24;
   const gar=[]; if(g>0) gar.push(g+' maanden garantie');
   gar.push('Technisch 100% gecontroleerd'); gar.push('Direct klaar voor gebruik');
-  return { titel:[h.merk,h.model].filter(Boolean).join(' ')||'Toestel',
-           samenvatting:hwSamenvatting(specsObj), specs, prijs, np, staat, gar };
+  return { titel:(tel ? tel.titel : [h.merk,h.model].filter(Boolean).join(' '))||'Toestel',
+           samenvatting:tel ? tel.samenvatting : hwSamenvatting(specsObj), specs, prijs, np, staat, gar };
 }
 /* De kaart op een canvas tekenen, ware A6-grootte (105x148mm) bij ~305 dpi. Alles in
    millimeters (PX px per mm); punten -> px via 0.3528mm/pt. Vinkjes tekenen we met
@@ -16200,6 +16370,7 @@ async function hwPrijskaart(id){
      Safari het niet meer als klik en blokkeert het de pop-up. Lukt openen niet, dan
      downloaden we de PDF gewoon. */
   const win=window.open('', '_blank');
+  try{ await hwModellenLaden(); }catch(_e){}   // scherm en netwerk van een telefoon
   try{ await jspdfKlaar(); }
   catch(e){ if(win) win.close(); toast('Kon de PDF-maker niet laden. Check je internet.','fout'); return; }
   const PX=12, cv=document.createElement('canvas');
@@ -16363,25 +16534,39 @@ async function hwSyncWinkel(id){
 }
 
 /* ---------- AI-teksten ---------- */
+/* stil = vanzelf na het toevoegen: dan alleen invullen wat nog leeg is, want intussen kun je
+   zelf al iets getypt hebben. Met de knop overschrijft hij wel: daar vroeg je om. */
+async function hwTekstSchrijven(id, stil){
+  const {data:{session}}=await sb.auth.getSession();
+  const res=await fetch(SUPABASE_URL+'/functions/v1/hardware-tekst',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+             'Authorization':'Bearer '+((session&&session.access_token)||'')},
+    body:JSON.stringify({hardware_id:id})
+  });
+  const uit=await res.json().catch(()=>({}));
+  if(!res.ok||!uit.ok) throw new Error(uit.error||'Het schrijven lukte niet');
+  if(hwOpen && hwOpen.id===id){
+    const t=document.getElementById('hw_titel'), o=document.getElementById('hw_oms');
+    if(t&&uit.titel&&(!stil||!t.value.trim())) t.value=uit.titel;
+    if(o&&uit.omschrijving&&(!stil||!o.value.trim())) o.value=uit.omschrijving;
+    await hwStilBewaar();   // meteen bewaren; anders staat de AI-tekst alleen op je scherm
+  }else{
+    const h=hwData.find(x=>x.id===id), patch={};
+    if(uit.titel && !(h&&String(h.titel||'').trim())) patch.titel=uit.titel;
+    if(uit.omschrijving && !(h&&String(h.omschrijving||'').trim())) patch.omschrijving=uit.omschrijving;
+    if(Object.keys(patch).length){
+      const {error}=await sb.from('hardware').update(patch).eq('id', id);
+      if(!error && h) Object.assign(h, patch);
+    }
+  }
+  return uit;
+}
 async function hwSchrijf(knop){
   if(!hwOpen) return;
   const oud=knop.textContent; knop.disabled=true; knop.textContent='Schrijven…';
-  try{
-    const {data:{session}}=await sb.auth.getSession();
-    const res=await fetch(SUPABASE_URL+'/functions/v1/hardware-tekst',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
-               'Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({hardware_id:hwOpen.id})
-    });
-    const uit=await res.json().catch(()=>({}));
-    if(!res.ok||!uit.ok) throw new Error(uit.error||'Het schrijven lukte niet');
-    const t=document.getElementById('hw_titel'), o=document.getElementById('hw_oms');
-    if(t&&uit.titel) t.value=uit.titel;
-    if(o&&uit.omschrijving) o.value=uit.omschrijving;
-    await hwStilBewaar();   // meteen bewaren; anders staat de AI-tekst alleen op je scherm
-    toast('Tekst geschreven, kijk hem even na', true);
-  }catch(e){ toast(e.message,'fout'); }
+  try{ await hwTekstSchrijven(hwOpen.id, false); toast('Tekst geschreven, kijk hem even na', true); }
+  catch(e){ toast(e.message,'fout'); }
   knop.disabled=false; knop.textContent=oud;
 }
 

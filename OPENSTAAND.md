@@ -80,6 +80,29 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
 - [x] **Thema live** (10 nov, met akkoord): net verkocht met vergelijkbare toestellen, de grades met
       accu per staat, geen "Incl. btw" bij margeregeling, en geen fout meer bij een kaart zonder foto.
 
+## Telefoon toevoegen, iPhone-foto's en het A6-kaartje (15 november 2026)
+
+- [x] **Na Opslaan vult een nieuw toestel zichzelf aan:** eerst de specificaties, dan de
+      fabrieksfoto's (iPhone: de set van model en kleur), dan de advertentietekst. Een regel
+      bovenin zegt wat hij doet. Je eigen tekst wordt niet overschreven.
+- [x] **Fabrieksfoto's importeren** bij Instellingen, Modellen: kies een map met per model een map
+      en per kleur een map. Engelse namen worden de Nederlandse kleur uit de modellenlijst.
+      `storvo-hoofdfotos.json` in de map zegt per set welke foto de hoofdfoto is (voor en achter
+      samen, anders de achterkant). Voor de map van de eigenaar (168 sets, 578 foto's) is die
+      lijst gemaakt door elke set na te lopen.
+- [ ] **Eigenaar: de iPhone-map één keer importeren.** Instellingen, Modellen, Map kiezen, de map
+      "Iphone fotos" uit iCloud. Laat het scherm open tot er "Klaar" staat. Nog een keer kiezen
+      kan geen kwaad: sets die er al zijn worden overgeslagen. Uploaden vanaf hier ging niet
+      zonder jouw inlog; een serverfunctie die zonder inlog in de opslag schrijft is bewust niet
+      gebouwd.
+- [x] **A6-kaartje van een telefoon** (winkelapp en werkbank) zoals het Canva-voorbeeld: titel
+      "iPhone 13", "128GB | 6,1 inch | Super Retina XDR OLED", en alleen scherm, opslag, 5G en
+      batterijconditie. Het IMEI stond op het werkbank-kaartje; dat is eraf.
+- [x] **Scherm en netwerk per iPhone** in `model_kleuren` (migratie gedraaid). iPhone 18 Pro,
+      18 Pro Max en Duo bewust leeg (nog niet zeker); dan pakt het kaartje de specs.
+- [ ] **Later:** de nieuwprijs vult zich niet vanzelf. Een verkeerde nieuwprijs op een kaartje is
+      misleidend, dus die vul je zelf in (of we zetten de echte Apple-prijzen erin als je wilt).
+
 ## Rooster via de WhatsApp-groep (14 november 2026)
 
 - [x] **Twee vaste links** per winkel (tabel `rooster_links`, migratie gedraaid). Op zaterdag de

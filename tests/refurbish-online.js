@@ -310,6 +310,22 @@ setTimeout(async()=>{
   ok('ingebed: gaat niet naar een andere refurbish-pagina', w.eval('tab')==='online');
   w.eval('INGEBED=false; ingebedOpen=false');
 
+  // ── het A6-kaartje van een telefoon: geen IMEI, alleen scherm, opslag, 5G en batterij ──
+  const tk=w.eval(`(()=>{ const el=document.createElement('div');
+    el.innerHTML=prijskaartHtml({a:{merk:'Apple', model:'iPhone 13', categorie:'Telefoon', kleur:'Groen', accu:88, grade:'B', notitie:'krasje',
+      specs:{Opslag:'128 GB', Kleur:'Groen', IMEI:'356789012345678'}}, prijs:299, staat:'B', garantie:24, nieuwprijs:909,
+      modelInfo:{scherm:'6,1 inch Super Retina XDR OLED', netwerk:'5G'}});
+    return {titel:el.querySelector('.sk-titel').textContent, sub:el.querySelector('.sk-sub').textContent,
+      specs:[...el.querySelectorAll('.sk-specs li')].map(l=>l.textContent), tekst:el.textContent}; })()`);
+  ok('kaartje telefoon: titel zonder merk en kleur', tk.titel==='iPhone 13');
+  ok('kaartje telefoon: regel zoals in Canva', tk.sub==='128GB | 6,1 inch | Super Retina XDR OLED');
+  ok('kaartje telefoon: vier regels', JSON.stringify(tk.specs)===JSON.stringify(['Super Retina XDR OLED 6,1 inch','Opslag: 128GB','5G','Batterijconditie: 88%']));
+  ok('kaartje telefoon: geen IMEI en geen interne notitie', !/IMEI|3567890|krasje/.test(tk.tekst));
+  const lk=w.eval(`(()=>{ const el=document.createElement('div');
+    el.innerHTML=prijskaartHtml({a:{merk:'Dell', model:'Latitude 5430', categorie:'Laptop', grade:'B', specs:{Processor:'i5-1245U', Geheugen:'16 GB', Opslag:'256 GB SSD'}}, prijs:449, staat:'B', garantie:24});
+    return el.querySelector('.sk-titel').textContent+'|'+[...el.querySelectorAll('.sk-specs li')].map(l=>l.textContent).join(','); })()`);
+  ok('kaartje laptop: blijft zoals hij was', /^Dell Latitude 5430\|/.test(lk) && /Processor: i5-1245U/.test(lk));
+
   console.log(fout? '\n'+fout+' FOUTEN' : '\nalles goed');
   process.exit(fout?1:0);
 },450);
