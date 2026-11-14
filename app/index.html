@@ -15263,7 +15263,7 @@ function hwVenster(h){
           <span class="muted klein" id="hw_kleur_bezig"></span></div>
         <div id="hw_opslag_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Opslag</label>
           <select id="hw_opslag_kies" onchange="hwOpslagKies()" hidden></select>
-          <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB"></div>
+          <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB" onchange="hwNieuwprijsVul()"></div>
         <div><label>Staat</label><select id="hw_staat">
           ${Object.keys(HW_STAAT).map(s=>
             `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
@@ -15284,7 +15284,7 @@ function hwVenster(h){
           <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
           <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
           <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:24}"></div>
-          <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje"></div>
+          <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje" oninput="hwNieuwprijsGetypt(this)" onchange="hwNieuwprijsBewaar()"><p class="muted klein" id="hw_nieuwprijs_bron"></p></div>
           <div><label>Btw</label><select id="hw_marge">
             <option value="ja"${(!h||h.marge!==false)?' selected':''}>Margeregeling</option>
             <option value="nee"${(h&&h.marge===false)?' selected':''}>Normale btw (21%)</option>
@@ -15387,6 +15387,23 @@ async function hwNieuwAanvullen(id){
   if(h && !String(h.titel||'').trim() && !String(h.omschrijving||'').trim()){
     hint('Advertentietekst schrijven…');
     try{ await hwTekstSchrijven(id, true); }catch(_e){}
+  }
+  /* De nieuwprijs. Meestal stond hij er al bij het kiezen van de opslag. Was hij nog aan het
+     opzoeken toen je opsloeg, dan wachten we daar hier op. Is het toestel intussen dicht, dan
+     zetten we hem rechtstreeks op de rij, maar alleen als daar nog niets staat. */
+  const nu=open() ? hwOpen : hwData.find(x=>x.id===id);
+  if(nu && hwKleurTelt(nu.categorie) && nu.nieuwprijs==null && nu.status!=='verkocht'){
+    hint('Nieuwprijs opzoeken…');
+    try{
+      if(open()) await hwNieuwprijsVul();
+      else {
+        const r=await nieuwprijsVan(nu.merk, nu.model, (nu.specs||{}).Opslag, true);
+        if(r){
+          const {error}=await sb.from('hardware').update({nieuwprijs:r.prijs}).eq('id', id).is('nieuwprijs', null);
+          if(!error) nu.nieuwprijs=r.prijs;
+        }
+      }
+    }catch(_e){}
   }
   hint('');
 }
@@ -15770,8 +15787,13 @@ async function hwSpecsOphalen(knop, opnieuw, stil){
     const b=document.getElementById('hwSpecsBezig'); if(b) b.textContent='';
   }
 }
-/* De opslag kies je uit de varianten van het model, net als de kleur. */
+/* De opslag kies je uit de varianten van het model, net als de kleur. Daarna de nieuwprijs:
+   die hangt van model en opslag af. */
 async function hwOpslagLaden(){
+  await hwOpslagLadenNu();
+  hwNieuwprijsVul();
+}
+async function hwOpslagLadenNu(){
   const vak=document.getElementById('hw_opslag_vak'), sel=document.getElementById('hw_opslag_kies'), veld=document.getElementById('hw_opslag');
   if(!vak || !sel || !veld || vak.hidden) return;
   const merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
@@ -15799,6 +15821,128 @@ function hwOpslagKies(){
   if(!sel || !veld) return;
   if(sel.value==='__anders'){ veld.hidden=false; veld.value=''; veld.focus(); }
   else { veld.hidden=true; veld.value=sel.value; }
+  hwNieuwprijsVul();
+}
+
+/* ═══ Nieuwprijs per model en opslag ═══
+   "Nieuwprijs: €909,-" op het kaartje en in de webshop is wat het toestel nieuw kostte in
+   Nederland bij de introductie. Die hangt af van model en opslag, niet van de kleur. De tabel
+   model_nieuwprijzen heeft per model en opslag een prijs: zonder team_id de vaste lijst (alle
+   iPhones, zie de migratie), met team_id wat deze winkel zelf invulde. De eigen prijs wint.
+   Staat er niets, dan zoekt de edge-functie model-nieuwprijs hem één keer op het web op.
+   Typ je zelf een andere prijs, dan onthouden we die voor het volgende toestel van hetzelfde
+   model met dezelfde opslag. Dezelfde regels staan in het refurbish-deel. */
+const _nwCache={}, _nwZoekt={}, _nwGezocht=new Set();
+function nwOpslag(s){ const m=String(s||'').match(/(\d+(?:[.,]\d+)?)\s*(GB|TB)\b/i); return m ? m[1].replace(',','.')+m[2].toUpperCase() : ''; }
+function nwSchoon(s){ return String(s||'').trim().replace(/[%_]/g,''); }   // % en _ zijn jokers voor ilike
+async function nwRijen(merk, model){
+  const k=(merk+'|'+model).toLowerCase();
+  if(_nwCache[k]) return _nwCache[k];
+  /* Lukt het lezen niet, dan geen nieuwprijs (en niets onthouden: de volgende keer opnieuw).
+     Nooit een fout gooien: dit draait mee bij het kiezen van de opslag. */
+  try{
+    const {data, error}=await sb.from('model_nieuwprijzen').select('id,team_id,opslag,prijs').ilike('merk', merk).ilike('model', model);
+    if(error) return [];
+    return (_nwCache[k]=data||[]);
+  }catch(_e){ return []; }
+}
+async function nwOpzoeken(merk, model){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/model-nieuwprijs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+      body:JSON.stringify({merk, model})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(res.ok && uit.ok && Array.isArray(uit.prijzen) && uit.prijzen.length) delete _nwCache[(merk+'|'+model).toLowerCase()];
+  }catch(_e){}
+}
+/* {prijs, eigen} of null. opzoeken: mag het web op als de tabel niets heeft (duurt even).
+   Per model één zoektocht tegelijk, en per sessie één keer: wie tijdens het zoeken ook vraagt,
+   wacht op dezelfde. */
+async function nieuwprijsVan(merk, model, opslag, opzoeken){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag);
+  if(!merk || !model || !op) return null;
+  const kies=lijst=>{ const r=lijst.filter(x=>x.opslag===op); return r.find(x=>x.team_id)||r.find(x=>!x.team_id)||null; };
+  let r=kies(await nwRijen(merk, model));
+  if(!r && opzoeken){
+    const k=(merk+'|'+model).toLowerCase();
+    if(!_nwZoekt[k] && !_nwGezocht.has(k)){
+      _nwGezocht.add(k);
+      _nwZoekt[k]=nwOpzoeken(merk, model).finally(()=>{ delete _nwZoekt[k]; });
+    }
+    if(_nwZoekt[k]){ await _nwZoekt[k]; r=kies(await nwRijen(merk, model)); }
+  }
+  return r ? {prijs:Number(r.prijs), eigen:!!r.team_id} : null;
+}
+/* Een zelf ingevulde nieuwprijs onthouden voor dit model en deze opslag. Niets nieuws (gelijk
+   aan je eigen prijs, of zonder eigen prijs gelijk aan de lijst)? Dan schrijven we niets. */
+async function nieuwprijsOnthoud(merk, model, opslag, prijs){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag);
+  prijs=Math.round(Number(prijs)*100)/100;
+  if(!merk || !model || !op || !(prijs>0) || !account || !account.team_id) return false;
+  const lijst=await nwRijen(merk, model);
+  const eigen=lijst.find(x=>x.team_id && x.opslag===op), alg=lijst.find(x=>!x.team_id && x.opslag===op);
+  if(eigen ? Number(eigen.prijs)===prijs : (alg && Number(alg.prijs)===prijs)) return false;
+  const nu=new Date().toISOString();
+  const {error}=eigen
+    ? await sb.from('model_nieuwprijzen').update({prijs, bijgewerkt_op:nu}).eq('id', eigen.id)
+    : await sb.from('model_nieuwprijzen').insert({team_id:account.team_id, merk, model, opslag:op, prijs, bron:'winkel', bijgewerkt_op:nu});
+  delete _nwCache[(merk+'|'+model).toLowerCase()];
+  if(error){ console.error('nieuwprijs onthouden:', error); return false; }
+  return true;
+}
+/* Het veld Nieuwprijs in het toestelformulier. data-auto betekent: wij vulden hem in, dus hij
+   verandert mee als je een ander model of andere opslag kiest. Wat je zelf typt, blijft staan.
+   Een verkocht toestel laten we met rust: dat kaartje is al geprint. */
+let hwNieuwprijsBelofte=null;
+function hwNieuwprijsVul(){ return (hwNieuwprijsBelofte=hwNieuwprijsVulNu()); }
+async function hwNieuwprijsVulNu(){
+  const veld=document.getElementById('hw_nieuwprijs');
+  if(!veld || !hwKleurTelt(hwVeld('hw_cat')) || (hwOpen && hwOpen.status==='verkocht')) return null;
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), opslag=hwVeld('hw_opslag');
+  const sleutel=[merk, model, opslag].join('|').toLowerCase();
+  veld.dataset.voor=sleutel;
+  const uitleg=document.getElementById('hw_nieuwprijs_bron');
+  const zeg=t=>{ if(uitleg) uitleg.textContent=t; };
+  const vanOns=r=>zeg(r ? (r.eigen?'Jouw prijs van de vorige keer.':'Vanzelf ingevuld: de prijs bij de introductie.') : '');
+  const nogDit=()=>document.body.contains(veld) && veld.dataset.voor===sleutel;
+  const zelfGetypt=()=>!!veld.value.trim() && veld.dataset.auto!=='1';
+  let r=await nieuwprijsVan(merk, model, opslag, false);
+  if(!nogDit()) return r;
+  if(zelfGetypt()){
+    /* Staat er de bekende prijs (eerder door ons ingevuld en bewaard)? Dan mag hij voortaan
+       weer mee veranderen. */
+    if(r && Number(veld.value)===r.prijs){ veld.dataset.auto='1'; vanOns(r); }
+    return r;
+  }
+  if(!r && hwModelRij(merk, model)){
+    zeg('Nieuwprijs opzoeken…');
+    r=await nieuwprijsVan(merk, model, opslag, true);
+    if(!nogDit()) return r;
+    if(zelfGetypt()){ zeg(''); return r; }   // intussen zelf getypt
+  }
+  if(!r){
+    if(veld.dataset.auto==='1'){ veld.value=''; delete veld.dataset.auto; if(hwOpen) hwStilPlan(); }
+    zeg(''); return null;
+  }
+  if(veld.value!==String(r.prijs)){ veld.value=String(r.prijs); veld.dataset.auto='1'; if(hwOpen) hwStilPlan(); }
+  vanOns(r);
+  return r;
+}
+function hwNieuwprijsGetypt(veld){
+  delete veld.dataset.auto;
+  const u=document.getElementById('hw_nieuwprijs_bron'); if(u) u.textContent='';
+}
+async function hwNieuwprijsBewaar(){
+  const veld=document.getElementById('hw_nieuwprijs');
+  if(!veld || veld.dataset.auto==='1' || !veld.value.trim() || !hwKleurTelt(hwVeld('hw_cat'))) return;
+  let merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
+  const rij=hwModelRij(merk, model); if(rij){ merk=rij.merk; model=rij.model; }   // de schrijfwijze van de lijst
+  if(await nieuwprijsOnthoud(merk, model, hwVeld('hw_opslag'), veld.value)){
+    const u=document.getElementById('hw_nieuwprijs_bron'); if(u && document.body.contains(veld)) u.textContent='Onthouden voor dit model met deze opslag.';
+  }
 }
 /* Stil de webshop bijwerken: 'prijs' synchroniseert de advertentie opnieuw (specs, foto's,
    voorraad), 'online' ook naar een nieuwe advertentie als de sleutel veranderde (kleur, opslag). */
@@ -16377,6 +16521,11 @@ async function hwPrijskaart(id){
      downloaden we de PDF gewoon. */
   const win=window.open('', '_blank');
   try{ await hwModellenLaden(); }catch(_e){}   // scherm en netwerk van een telefoon
+  /* Een telefoon zonder nieuwprijs (bijvoorbeeld van voor de lijst): de bekende prijs van dit
+     model met deze opslag. Alleen uit de tabel; het web op duurt te lang voor een klik. */
+  if(h.nieuwprijs==null && hwKleurTelt(h.categorie)){
+    try{ const r=await nieuwprijsVan(h.merk, h.model, hwVeld('hw_opslag')||(h.specs||{}).Opslag, false); if(r) h.nieuwprijs=r.prijs; }catch(_e){}
+  }
   try{ await jspdfKlaar(); }
   catch(e){ if(win) win.close(); toast('Kon de PDF-maker niet laden. Check je internet.','fout'); return; }
   const PX=12, cv=document.createElement('canvas');

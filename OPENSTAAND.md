@@ -100,8 +100,22 @@ Het versimpelplan is uitgevoerd; de stand en de bewuste afwijkingen staan boveni
       batterijconditie. Het IMEI stond op het werkbank-kaartje; dat is eraf.
 - [x] **Scherm en netwerk per iPhone** in `model_kleuren` (migratie gedraaid). iPhone 18 Pro,
       18 Pro Max en Duo bewust leeg (nog niet zeker); dan pakt het kaartje de specs.
-- [ ] **Later:** de nieuwprijs vult zich niet vanzelf. Een verkeerde nieuwprijs op een kaartje is
-      misleidend, dus die vul je zelf in (of we zetten de echte Apple-prijzen erin als je wilt).
+- [x] **Staat op het kaartje per grade** (stond er al): A "Als nieuw", B "Nette staat", C "Gebruikt,
+      maar goed". Zo in de winkelapp en op de werkbank.
+- [x] **Nieuwprijs per model en opslag** (16 november, tabel `model_nieuwprijzen`, migratie gedraaid).
+      De kleur telt niet. Alle 136 combinaties van iPhone en opslag in de modellenlijst hebben de
+      prijs van apple.com/nl op de dag van de introductie (Web Archive, nagekeken tegen iCulture).
+      Niet de prijs van nu: Apple verhoogde op 9 september 2026 de prijzen van toestellen die nog te
+      koop waren. Het formulier vult hem bij model en opslag; wat je zelf typt blijft staan en
+      onthouden we voor je winkel (die wint dan van de lijst). Werkbank: Online zetten en het
+      kaartje doen hetzelfde.
+- [x] **Een model zonder prijs** (andere merken, nieuwe modellen) zoekt de edge `model-nieuwprijs`
+      één keer op het web op, met bron. Hooguit eens per dertig dagen per model. Nog niet echt
+      gedraaid: alle iPhones staan al in de lijst, en zonder inlog kan het niet. De eerste
+      Galaxy die je toevoegt is de test; komt er niets, dan typ je hem en is hij onthouden.
+- [ ] **Let op:** de nieuwprijs gaat ook naar de webshop (als doorgestreepte vergelijkprijs). Dat
+      deed hij al als je hem typte; nu staat hij bij elke telefoon. Kijk of het thema hem als
+      "Nieuwprijs" toont en niet als korting.
 
 ## Rooster via de WhatsApp-groep (14 november 2026)
 

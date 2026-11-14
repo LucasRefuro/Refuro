@@ -39,6 +39,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |
 | `model-kleuren` | nee | Welke kleuren er van een telefoonmodel bestaan, eerst in de gedeelde tabel `model_kleuren`, dan met Claude (`claude-opus-5-5`, officiële SDK, fallback bij weigering); vult de kleurkeuze in winkelapp en werkbank |
+| `model-nieuwprijs` | nee | De nieuwprijs (introductieprijs in Nederland) per opslag van een model dat nog niet in `model_nieuwprijzen` staat. Zoekt met Claude (`claude-opus-5-5`, web search, fallback bij weigering) en bewaart alleen prijzen met bron. Alleen modellen uit `model_kleuren`, hooguit eens per dertig dagen per model (`nieuwprijs_gezocht_op`, ook het slot). De iPhones staan al in de tabel |
 | `advertentie` | nee | Schrijft de advertentie volgens het sjabloon van de winkel |
 | `refurbish-foto` | ja | Neemt foto's aan van de telefoon, op een code die een half uur geldig is |
 | `refurbish-test` | ja | Neemt de functionele testuitslag aan van de telefoon, op dezelfde code-aanpak |

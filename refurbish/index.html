@@ -2875,11 +2875,85 @@ async function prijskaartVenster(bron){
       bron.modelInfo=data||{};
     }catch(_e){ bron.modelInfo={}; }
   }
+  /* En een telefoon zonder nieuwprijs krijgt de bekende prijs van dit model met deze opslag.
+     Alleen uit de tabel: het web op duurt te lang voor een klik. */
+  const heeftNp=(bron.nieuwprijs!=null && bron.nieuwprijs!=='') || bron.a.nieuwprijs!=null;
+  if(fotoKleurgebonden(bron.a) && !heeftNp){
+    try{ const r=await nieuwprijsVan(bron.a.merk, bron.a.model, opslagVan(bron.a), false); if(r) bron.nieuwprijs=r.prijs; }catch(_e){}
+  }
   venster('Prijskaartje', `
     <p class="pv">Open het kaartje als PDF en print het op A6. Leg het bij het toestel in de winkel. Alleen wat de klant moet weten, geen QR of interne code.</p>
     <div class="prijskaart-vel" id="prijsVel">${prijskaartHtml(bron)}</div>
   `, [{tekst:'Openen als PDF', klasse:'actie', doe:(kn)=>prijskaartPdf(bron, kn)}], 'groot');
 }
+/* ═══ Nieuwprijs per model en opslag ═══
+   Wat het toestel nieuw kostte in Nederland bij de introductie ("Nieuwprijs: €909,-" op het
+   kaartje en in de webshop). Die hangt af van model en opslag, niet van de kleur. De tabel
+   model_nieuwprijzen: zonder team_id de vaste lijst (alle iPhones), met team_id wat deze winkel
+   zelf invulde, en die wint. Staat er niets, dan zoekt de edge-functie model-nieuwprijs hem één
+   keer op het web op. Zelfde regels als in de winkelapp (nieuwprijsVan daar). */
+const _nwCache={}, _nwZoekt={}, _nwGezocht=new Set();
+function nwOpslag(s){ const m=String(s||'').match(/(\d+(?:[.,]\d+)?)\s*(GB|TB)\b/i); return m ? m[1].replace(',','.')+m[2].toUpperCase() : ''; }
+function nwSchoon(s){ return String(s||'').trim().replace(/[%_]/g,''); }   // % en _ zijn jokers voor ilike
+/* De opslag van een toestel: wat de werkbank erbij schreef, anders wat de winkelapp weet. */
+function opslagVan(a){
+  const hw=hardwareVan(a)||{};
+  return ((a&&a.specs)||{}).Opslag || (hw.specs||{}).Opslag || '';
+}
+async function nwRijen(merk, model){
+  const k=(merk+'|'+model).toLowerCase();
+  if(_nwCache[k]) return _nwCache[k];
+  /* Lukt het lezen niet, dan geen nieuwprijs (en niets onthouden: de volgende keer opnieuw).
+     Nooit een fout gooien: dit draait mee bij het kiezen van de opslag. */
+  try{
+    const {data, error}=await sb.from('model_nieuwprijzen').select('id,team_id,opslag,prijs').ilike('merk', merk).ilike('model', model);
+    if(error) return [];
+    return (_nwCache[k]=data||[]);
+  }catch(_e){ return []; }
+}
+async function nwOpzoeken(merk, model){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/model-nieuwprijs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+      body:JSON.stringify({merk, model})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(res.ok && uit.ok && Array.isArray(uit.prijzen) && uit.prijzen.length) delete _nwCache[(merk+'|'+model).toLowerCase()];
+  }catch(_e){}
+}
+async function nieuwprijsVan(merk, model, opslag, opzoeken){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag);
+  if(!merk || !model || !op) return null;
+  const kies=lijst=>{ const r=lijst.filter(x=>x.opslag===op); return r.find(x=>x.team_id)||r.find(x=>!x.team_id)||null; };
+  let r=kies(await nwRijen(merk, model));
+  if(!r && opzoeken){
+    const k=(merk+'|'+model).toLowerCase();
+    if(!_nwZoekt[k] && !_nwGezocht.has(k)){
+      _nwGezocht.add(k);
+      _nwZoekt[k]=nwOpzoeken(merk, model).finally(()=>{ delete _nwZoekt[k]; });
+    }
+    if(_nwZoekt[k]){ await _nwZoekt[k]; r=kies(await nwRijen(merk, model)); }
+  }
+  return r ? {prijs:Number(r.prijs), eigen:!!r.team_id} : null;
+}
+async function nieuwprijsOnthoud(merk, model, opslag, prijs){
+  merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag);
+  prijs=Math.round(Number(prijs)*100)/100;
+  if(!merk || !model || !op || !(prijs>0) || !account || !account.team_id) return false;
+  const lijst=await nwRijen(merk, model);
+  const eigen=lijst.find(x=>x.team_id && x.opslag===op), alg=lijst.find(x=>!x.team_id && x.opslag===op);
+  if(eigen ? Number(eigen.prijs)===prijs : (alg && Number(alg.prijs)===prijs)) return false;
+  const nu=new Date().toISOString();
+  const {error}=eigen
+    ? await sb.from('model_nieuwprijzen').update({prijs, bijgewerkt_op:nu}).eq('id', eigen.id)
+    : await sb.from('model_nieuwprijzen').insert({team_id:account.team_id, merk, model, opslag:op, prijs, bron:'winkel', bijgewerkt_op:nu});
+  delete _nwCache[(merk+'|'+model).toLowerCase()];
+  if(error){ console.error('nieuwprijs onthouden:', error); return false; }
+  return true;
+}
+
 /* Het prijskaartje als PDF in een nieuw tabblad openen (of downloaden als de pop-up
    geblokkeerd is), zodat je het vanuit de PDF-viewer print. window.print() gaf in Safari
    verkleurde kaartjes; dit is dezelfde betrouwbare weg als de A6-kaart in de winkelapp. */
@@ -6071,6 +6145,16 @@ async function fotosLaden(a, geenAuto){
       }
     }
   }catch(e){ onl.gradePrijzen=null; }
+  /* Een telefoon zonder nieuwprijs: de bekende prijs van dit model met deze opslag (eigen
+     prijs van de winkel, anders de lijst). Staat hij nergens, dan op de achtergrond het web op;
+     komt er dan iets terug, dan vullen we het veld alsnog, als het nog leeg is. */
+  if(onl.nieuwprijs==null && fotoKleurgebonden(a)){
+    try{
+      const r=await nieuwprijsVan(a.merk, a.model, opslagVan(a), false);
+      if(r && onl.nieuwprijs==null && onl.a===a){ onl.nieuwprijs=r.prijs; onl.nieuwprijsAuto=true; }
+      else if(!r) onlNieuwprijsLater(a);
+    }catch(_e){}
+  }
   /* Nog geen foto's? Dan proberen we ze bij het openen automatisch bij de fabrikant
      (Icecat) op te halen. geenAuto voorkomt dat een herla-actie dat opnieuw aftrapt. */
   if(!geenAuto) fotosAutomatischMisschien(a);
@@ -6307,12 +6391,12 @@ function tekenOnline(){
               <option value="C"${(onl.staat||onl.a.grade)==='C'?' selected':''}>C · zichtbare sporen</option>
             </select></div>
 
-          <details class="meeropties" data-sleutel="onl_details"${onl.nieuwprijs!=null?' data-open':''}>
+          <details class="meeropties" data-sleutel="onl_details"${onl.nieuwprijs!=null && !onl.nieuwprijsAuto?' data-open':''}>
             <summary>Details <span class="muted" id="onlDetailsSam">${esc(onlDetailsSamenvatting())}</span></summary>
             <div class="meerinhoud">
               <label>Nieuwprijs <span class="muted klein">toont de korting op het kaartje</span></label>
               <input id="onl_nieuwprijs" type="number" step="0.01" value="${onl.nieuwprijs!=null?onl.nieuwprijs:''}"
-                placeholder="Bijvoorbeeld 899" onchange="onlVeld()">
+                placeholder="Bijvoorbeeld 899" onchange="onlVeld(); onlNieuwprijsBewaar()">
               <div class="grid" style="margin-top:12px">
                 <div><label>Garantie (maanden)</label>
                   <input id="onl_garantie" type="number" min="0" value="${onl.garantie!=null?onl.garantie:24}" onchange="onlVeld()"></div>
@@ -6397,6 +6481,24 @@ function onlBewaarVelden(){
   if(t) onl.titel=t.value;
   if(x) onl.tekst=x.value;
   onlVeld();
+}
+/* Het web gaf (na een tijdje) een nieuwprijs: in het veld zetten als het nog leeg is en je nog
+   op dezelfde pagina staat. Geen hertekening: die zou je invoer in andere velden weggooien. */
+async function onlNieuwprijsLater(a){
+  const r=await nieuwprijsVan(a.merk, a.model, opslagVan(a), true);
+  if(!r || !onl || onl.a!==a || onl.nieuwprijs!=null) return;
+  const np=document.getElementById('onl_nieuwprijs');
+  if(np && np.value.trim()) return;
+  onl.nieuwprijs=r.prijs; onl.nieuwprijsAuto=true;
+  if(np) np.value=String(r.prijs);
+  const sam=document.getElementById('onlDetailsSam');
+  if(sam) sam.textContent=onlDetailsSamenvatting();
+}
+/* Een zelf getypte nieuwprijs onthouden voor dit model met deze opslag (zie nieuwprijsOnthoud). */
+function onlNieuwprijsBewaar(){
+  if(!onl || !onl.a || !fotoKleurgebonden(onl.a)) return;
+  onl.nieuwprijsAuto=false;
+  if(onl.nieuwprijs!=null) nieuwprijsOnthoud(onl.a.merk, onl.a.model, opslagVan(onl.a), onl.nieuwprijs);
 }
 function onlVeld(){
   const p=document.getElementById('onl_prijs');
