@@ -18,7 +18,7 @@ npm test
 
 | Bestand | Wat het nakijkt |
 |---|---|
-| `winkelapp.js` | Hardwarepagina, Simpel of Alles, het reparatiebord, automatisch opslaan van een toestel, de Uren-pagina, het eigen ja/nee-venster |
+| `winkelapp.js` | Hardwarepagina, Simpel of Alles, het reparatiebord, automatisch opslaan van een toestel, de Uren-pagina, het eigen ja/nee-venster, en terug van de browser (sluit eerst Online zetten, dan het product, en blijft in de winkelapp) |
 | `refurbish-controle.js` | Het stappenpad met alle vertakkingen: reset, geheugen, slopen, grade |
 | `refurbish-accu-windows.js` | De accugrens, het Windows-pad met wachtscherm en de uitvoeringen |
 | `refurbish-uitlezen.js` | De PowerShell-regel voor accu en specs: het script (alleen ASCII, nooit exit), Vercel als platte tekst, de regel op de testpagina en het .bat-vangnet |

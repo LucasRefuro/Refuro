@@ -674,6 +674,35 @@ setTimeout(async()=>{
   ok('online zetten: zonder refurbish-module geen venster', !w.eval('hwOnlinePaginaMag()'));
   w.eval("abonnement={modules:['refurbish']}; hwData=[]; showTab('dashboard')");
 
+  // Terug van de browser (pijl, terugvegen) bleef niet in de winkelapp: na Online zetten
+  // stond je ineens in het refurbish-deel, de pagina waar je daarvoor was. Nu sluit terug
+  // eerst het venster, dan het product, en pas daarna ga je de winkelapp uit.
+  const wacht=ms=>new Promise(r=>setTimeout(r,ms));
+  const stap=()=>(w.history.state && w.history.state.storvo) || null;
+  const hwTerug={id:'hw1', merk:'Dell', model:'Latitude 5430', status:'voorraad', kanalen:{}, fotos:[], specs:{}};
+  w.hwTerug=hwTerug;
+  w.eval("hwData=[hwTerug]; showTab('hardware'); hwVenster(hwData[0])");
+  ok('terug: een product open is een stap', stap()==='hwDetail');
+  await w.eval("hwOnlinePagina('hw1')");
+  ok('terug: het venster Online zetten is nog een stap', stap()==='hwOnline');
+  w.history.back(); await wacht(80);
+  ok('terug: eerst gaat het venster dicht, het product blijft', !d.getElementById('hwOnlineVenster') && !d.getElementById('hwDetail').hidden);
+  w.history.back(); await wacht(80);
+  ok('terug: daarna gaat het product dicht, je blijft op Hardware', d.getElementById('hwDetail').hidden && !d.getElementById('tab-hardware').hidden);
+  // Sluiten met een knop haalt de eigen stap weer weg, zodat terug daarna niet "niets" doet.
+  w.eval("hwData=[hwTerug]; hwVenster(hwData[0])");
+  await w.eval("hwOnlinePagina('hw1')");
+  w.dispatchEvent(new w.MessageEvent('message', {data:{storvo:'online-klaar', melding:{tekst:'Opgeslagen', soort:true}}, origin:'https://storvo.app'}));
+  await wacht(80);
+  ok('terug: klaar met online zetten haalt de stap van het venster weg', !d.getElementById('hwOnlineVenster') && stap()==='hwDetail');
+  ok('terug: het product staat nog open na online zetten', !d.getElementById('hwDetail').hidden);
+  w.eval('hwSluit()'); await wacht(80);
+  ok('terug: Terug naar Hardware haalt de stap van het product weg', stap()===null && d.getElementById('hwDetail').hidden);
+  // Een nieuw formulier krijgt geen stap: terug zou het stil weggooien.
+  w.eval('hwNieuw()');
+  ok('terug: nieuw toestel geeft geen stap', stap()===null);
+  w.eval("hwSluit(); hwData=[]; showTab('dashboard')");
+
   // Webshop en labelprinter zijn koppelingen, geen modules.
   ok('webshop en labelprinter zijn geen module', w.eval("!MODULES.some(m=>m.id==='webshop'||m.id==='labelprinter')"));
   w.eval("showTab('dashboard')");

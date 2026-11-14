@@ -14947,6 +14947,39 @@ function hwKopieerVan(id){
   try{ navigator.clipboard.writeText(tekst); toast('Gekopieerd, plak het in je advertentie', true); }
   catch(e){ toast('Kopiëren lukte niet','fout'); }
 }
+/* ═══ Terug van de browser ═══
+   De winkelapp is één pagina: wisselen tussen schermen maakt geen stap in de geschiedenis
+   van de browser. Terug (de pijl, terugvegen op de trackpad, de knop van een muis) sprong
+   daardoor de hele winkelapp uit, naar wat je daarvoor open had. Kwam je uit het
+   refurbish-deel, dan stond je na Online zetten ineens weer daar.
+   Daarom krijgen de productpagina en het venster Online zetten elk een eigen stap. Terug
+   sluit dan eerst het venster, daarna het product, en pas dan verlaat je de winkelapp.
+   Sluit je ze met een knop, dan halen we onze stap zelf weer weg (history.back).
+   Bij elke stap terug kijken we welke lagen bij de stap horen waar je nu staat, en wat er
+   niet bij hoort gaat dicht. Bewust geen teller van "deze terug kwam van ons": een terug
+   die de browser samenvoegt of laat vallen zet zo'n teller scheef, en dan deed jouw
+   terug daarna ineens niets meer. Dat gebeurde in de test al bij de eerste versie.
+   De stap maken we meteen bij je tik: Chrome slaat stappen die zonder tik zijn gemaakt
+   over bij terug. */
+try{ if(history.state && history.state.storvo) history.replaceState(null, ''); }catch(_e){}   /* na verversen: oude stap telt niet */
+function terugStap(soort){
+  try{ if(!history.state || history.state.storvo!==soort) history.pushState({storvo:soort}, ''); }catch(_e){}
+}
+function terugWeg(soort){
+  try{ if(history.state && history.state.storvo===soort) history.back(); }catch(_e){}
+}
+addEventListener('popstate', e=>{
+  const nu=(e.state && e.state.storvo) || null;
+  if(nu!=='hwOnline' && document.getElementById('hwOnlineVenster')) hwOnlineSluit();
+  const d=document.getElementById('hwDetail');
+  if(!nu && d && !d.hidden){
+    /* Ben je intussen naar een ander scherm gegaan, dan is terug: het product weer laten zien. */
+    const sec=document.getElementById('tab-hardware');
+    if(sec && sec.hidden){ showTab('hardware'); return; }
+    hwSluit();
+  }
+});
+
 /* ═══ Online zetten als venster ═══
    De pagina Online zetten (foto's per aanzicht, scherm recht, achtergrond, fabrieksfoto's,
    tekst, prijs, grade) staat in het refurbish-deel. In plaats van een tweede versie te
@@ -14962,6 +14995,7 @@ function hwOnlinePaginaMag(){
 async function hwOnlinePagina(id){
   const h=hwData.find(x=>x.id===id) || (hwOpen&&hwOpen.id===id?hwOpen:null);
   if(!hwOnlinePaginaMag()){ hwBewerk(id); return; }
+  terugStap('hwOnline');   /* meteen, nog binnen je tik; zie Terug van de browser */
   if(hwDirty || _vuil){ try{ await hwStilBewaar(); }catch(_e){} }
   try{ await sb.rpc('koppel_losse_hardware'); }catch(_e){}
   hwOnlineSluit(null, true);
@@ -14980,7 +15014,8 @@ function hwOnlineSluit(melding, stil){
   const v=document.getElementById('hwOnlineVenster'); if(!v) return;
   v.remove();
   document.body.style.overflow='';
-  if(stil) return;
+  if(stil) return;   /* stil = een nieuw venster vervangt het oude; de stap blijft dan */
+  terugWeg('hwOnline');
   if(melding && melding.tekst) toast(melding.tekst, melding.soort===true ? true : melding.soort);
   hwLaad(true).then(()=>{ if(hwOpen && hwOpen.id){ const n=hwData.find(x=>x.id===hwOpen.id); if(n) hwVenster(n); } });
 }
@@ -15194,6 +15229,9 @@ function hwVenster(h){
   hwOpen=h;
   const d=document.getElementById('hwDetail'); if(!d) return;
   const lv=document.getElementById('hwLijstWeergave'); if(lv) lv.hidden=true;
+  /* Een bestaand product krijgt een stap terug. Een nieuw formulier niet: terug zou dat
+     stil weggooien, en nu waarschuwt de browser nog bij het verlaten. */
+  if(d.hidden && h && h.id) terugStap('hwDetail');
   d.hidden=false;
   const k=(h&&h.kanalen)||{};
   const titel = h ? (esc([h.merk,h.model].filter(Boolean).join(' '))||'Toestel') : 'Toestel toevoegen';
@@ -15433,9 +15471,12 @@ function hwSluit(){
   if(hwDirty && hwOpen && hwOpen.id && document.getElementById('hw_model')) hwStilBewaar();
   hwDirty=false;
   const o=document.getElementById('hwOverlay'); if(o) o.remove();
-  const d=document.getElementById('hwDetail'); if(d){ d.hidden=true; d.innerHTML=''; }
+  const d=document.getElementById('hwDetail');
+  const wasOpen=!!(d && !d.hidden);
+  if(d){ d.hidden=true; d.innerHTML=''; }
   const lv=document.getElementById('hwLijstWeergave'); if(lv) lv.hidden=false;
   hwOpen=null;
+  if(wasOpen) terugWeg('hwDetail');
 }
 
 /* Een toestel toewijzen aan een partner: hij krijgt er een kopie van in zijn eigen
