@@ -36,7 +36,11 @@ const STANDAARD_SJABLOON = `{openingszin van maximaal 12 woorden: voor wie deze 
 
 {alinea van twee tot drie zinnen: waar dit toestel goed voor is en waar minder, eerlijk en in gewone taal}
 
-{een zin over refurbished: nagekeken en getest, met garantie, en eerlijk over de staat ({grade})}`;
+{een zin over refurbished: nagekeken en getest, met garantie, en eerlijk over de staat ({staat}: Uitstekend, Zeer goed of Prima)}`;
+
+// De namen die de winkel en de webshop gebruiken. De letter A/B/C kwam anders letterlijk in de
+// tekst ("in grade A"), terwijl de staatpagina juist uitlegt waarom we geen letters gebruiken.
+const STAATNAAM: Record<string, string> = { A: "Uitstekend", B: "Zeer goed", C: "Prima" };
 
 const STAAT: Record<string, string> = {
   A: "als nieuw, nauwelijks gebruikssporen",
@@ -104,7 +108,7 @@ Deno.serve(async (req) => {
 Merk: ${a.merk || "onbekend"}
 Model: ${a.model}
 Categorie: ${a.categorie || "Laptop"}
-Grade: ${a.grade || "B"} (${STAAT[a.grade] || "gebruikt"})
+Staat: ${STAATNAAM[a.grade] || "Zeer goed"} (${STAAT[a.grade] || "gebruikt"})
 ${a.accu ? `Accucapaciteit: ${a.accu}% van nieuw` : ""}
 ${a.notitie ? `Bijzonderheid: ${a.notitie}` : ""}
 ${specregels ? "Specificaties:\n" + specregels : "Geen specificaties bekend."}
@@ -131,7 +135,7 @@ Belangrijk over de inhoud:
   Face ID, geen vingerafdruk), geen poorten, geen toetsenbordverlichting, geen 5G,
   tenzij het letterlijk bij de specificaties hierboven staat. Face ID bestaat alleen
   bij Apple; noem dat dus nooit bij een ander merk.
-- Verzin NOOIT exemplaar-specifieke feiten. De staat (grade ${a.grade || "B"}), het
+- Verzin NOOIT exemplaar-specifieke feiten. De staat (${STAATNAAM[a.grade] || "Zeer goed"}), het
   accupercentage, de opslag en een eventuele bijzonderheid komen alleen uit de gegevens
   hierboven; die zijn leidend en verander je niet.
 - Herhaal de specificatielijst niet als opsomming; die staat al apart op de pagina.
@@ -139,6 +143,14 @@ Belangrijk over de inhoud:
   gebruik niet: "zonder omhaal", "zonder onnodige ballast", "meer dan voldoende",
   "of je nu ... of ...", "in een notendop", "het beste van twee werelden",
   "ontworpen voor wie". Korte, gewone zinnen.
+- Noem de staat alleen met de naam Uitstekend, Zeer goed of Prima. Nooit "grade A", "B" of "C".
+- Geen gedachtestreepjes (– of —). Gebruik een punt of een komma.
+- Beloof niets over water, vallen of stoten. Schade door water of een val valt niet onder
+  de garantie; een IP-waarde mag je noemen als hij bij de specificaties staat, meer niet.
+- Zeg niets over hoe oud of nieuw het model is, tenzij het jaar bij de gegevens staat. Noem
+  een nieuw model dus nooit "minder recent".
+- Schrijf foutloos Nederlands. Let op: "het nieuwste model" (niet "de"), "extra's",
+  "meegaat", "een telefoon voor elke dag" (geen samenstellingen als "gebruiktelefoon").
 
 Antwoord uitsluitend met JSON:
 {"titel":"...","tekst":"...","zoekwoorden":["...","..."]}
