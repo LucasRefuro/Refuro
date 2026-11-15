@@ -21,16 +21,15 @@ Laptops: 74 uit Storvo (reserve in `reserve_laptops_20261115_*`), 5 webshopprodu
       met Higgsfield (nano_banana_pro oogt het echtst); de eigenaar vindt ze nog niet goed.
 - [x] **Besparingsblok op de home** rekent nu zelf met een toestel dat te koop is (liefst vanaf
       300 euro, nu de iPhone 16 Pro Max), met een knop ernaartoe.
-- [ ] **Twee adressen voor dezelfde staatpagina**: de footer stuurt nu naar
-      `/pages/staat-uitgelegd`. Eigenaar: in Shopify (Online winkel, Pagina's) de pagina
-      `de-staat-uitgelegd` weggooien en een doorverwijzing maken (Navigatie, URL-omleidingen);
-      de koppeling mag geen pagina's of menu's aanpassen.
+- [x] **Dubbele staatpagina** `de-staat-uitgelegd` weggegooid (15 november); het footermenu wijst naar
+      `/pages/staat-uitgelegd`.
 - [x] **Titels**: collecties MacBooks en Windows-laptops, product Galaxy Tab A11 (type Tablet).
       De Galaxy Tab heeft nog geen tekst.
-- [ ] **Eigenaar: testbundel V0001** op de tweede webshop (groothandel) staat nog online, met 0
-      laptops erin. In Storvo bij Bundels offline halen (de koppeling van die winkel werkt anders).
+- [x] **Testbundel V0001** van de tweede webshop gehaald en uit Storvo verwijderd (reserve in
+      `reserve_testbundel_20261115`).
 - [ ] **Opruimen**: edge `tijdelijk-laptops-offline` (doet niets meer, mag weg in het dashboard),
-      reservetabellen `reserve_laptops_20261115_*` en `reserve_omschrijving_20261115` zodra
+      reservetabellen `reserve_laptops_20261115_*`, `reserve_omschrijving_20261115` en
+      `reserve_testbundel_20261115` zodra
       niemand ze terug wil, testthema #186703151369.
 - [x] **"Meest gekozen"** klopt (eigenaar). Het kaartje met monteur en QR-code naar het testrapport
       bestond niet; overal weggehaald, ook de testrapporten op de accountpagina.
