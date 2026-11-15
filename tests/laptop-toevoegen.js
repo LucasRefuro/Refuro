@@ -98,6 +98,10 @@ const SPECS={ok:true, bron:'lijst',
   ok('foto-code: een ander model telt niet, en zonder cijfers kunnen we het niet zeggen', !cz.titelPastBij('Lenovo IdeaPad 3 15IML05','V320-17IKB') && !cz.titelPastBij('Apple MacBook Air','MacBook Air'));
   ok('foto-code: codes schoon, uniek, geen zinnen', JSON.stringify(cz.schoneCodes([{code:'81AH0011MH'},{code:'81ah0011mh'},{code:'81AH 0012 MH'},{code:'6F6Z2EA#ABH'},{code:'abc'},{code:'een hele zin met 1 code'},{code:'GEENCIJFERS'}]))
     ==='["81AH0011MH","81AH0012MH","6F6Z2EA#ABH"]');
+  const lijst=[{model:'ThinkPad Yoga 370'},{model:'yoga'},{model:'Thinkpad x13 Yoga Gen2'},{model:'20SM'},{model:'ThinkBook 15-IIL 20SM'}];
+  ok('modellenlijst: getypt met extra code vindt de nette naam', (cz.kiesModelRij(lijst,'Thinkpad yoga 370 tp00078b')||{}).model==='ThinkPad Yoga 370');
+  ok('modellenlijst: precies gaat voor', (cz.kiesModelRij(lijst,'thinkbook 15-iil 20sm')||{}).model==='ThinkBook 15-IIL 20SM');
+  ok('modellenlijst: een ander model haakt niet aan', cz.kiesModelRij(lijst,'ThinkPad Yoga 260')===null && cz.kiesModelRij(lijst,'')===null);
 
   // ── de winkelapp laden ──
   const html=fs.readFileSync(bron('app/index.html'),'utf8')
@@ -274,6 +278,13 @@ const SPECS={ok:true, bron:'lijst',
   ok('foto-edge: alleen als de titel van Icecat bij het model past', /if \(!titelPastBij\(uit\.titel, rij\.model\)\)/.test(pfn));
   ok('foto-edge: de code die werkt wordt onthouden', /update\(\{ icecat_code: c \}\)/.test(pfn));
   ok('foto-edge: telefoons zoeken niet op het web naar codes', /if \(telefoon\) \{\s*gevonden = await zoekIcecat/.test(pfn));
+  ok('foto-edge: zoekt iemand anders net, dan wachten op diens code', /if \(!slot\?\.length\) \{\s*const code = await wachtOpCode\(rij\.id\)/.test(pfn) && /bron: "icecat-gewacht"/.test(pfn));
+  ok('foto-edge: na wachten niet nog eens opslaan', /if \(bron === "icecat-gewacht"\)/.test(pfn) && /if \(aanwezig\) return klaar\(\{ opgeslagen: 0, aanwezig/.test(pfn));
+  ok('foto-edge: niets gevonden laat dat weten aan wie wacht', /update\(\{ icecat_code: "" \}\)/.test(pfn) && /if \(data\?\.icecat_code === ""\) return null/.test(pfn));
+  ok('foto-edge: welke aanzichten er al zijn pas na het zoeken', pfn.indexOf('const bezet') > pfn.indexOf('if (bron === "icecat-gewacht")'));
+  ok('foto-edge: de nette naam uit de lijst ook bij extra tekst', /kiesModelRij\(data \|\| \[\], n\)/.test(pfn));
+  const rfb=fs.readFileSync(bron('refurbish/index.html'),'utf8');
+  ok('online zetten: herladen als de foto\'s er al staan', /uit\.opgeslagen \|\| uit\.aanwezig/.test(rfb));
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nlaptop-toevoegen in orde');
   process.exit(fout?1:0);

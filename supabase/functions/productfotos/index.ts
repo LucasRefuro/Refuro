@@ -34,7 +34,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { galaxyKandidaten, isGalaxy, kleurVan } from "./galaxy.ts";
-import { titelPastBij, schoneCodes } from "./codes.ts";
+import { titelPastBij, schoneCodes, kiesModelRij } from "./codes.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -291,10 +291,29 @@ async function modelRij(merk: string, model: string) {
   // % en _ zijn jokertekens voor ilike; een modelnaam heeft ze niet.
   const m = merk.replace(/[%_]/g, ""), n = model.replace(/[%_]/g, "");
   if (!m || !n) return null;
+  // Alle modellen van dit merk, en dan in de code kiezen: de lijst heeft de nette naam, de winkel
+  // typt soms meer (kiesModelRij in codes.ts).
   const { data } = await admin.from("hardware_modellen")
     .select("id, merk, model, icecat_code, icecat_gezocht_op")
-    .ilike("merk", m).ilike("model", n).limit(1);
-  return data?.[0] || null;
+    .ilike("merk", m).limit(1000);
+  return kiesModelRij(data || [], n);
+}
+
+// Zoekt een ander scherm op dit moment de code van dit model? Bij het aanmaken vragen de winkelapp
+// en Online zetten vaak binnen een paar seconden allebei om foto's. Eerst kreeg de tweede dan meteen
+// "niets gevonden" (het slot was bezet), en die lege uitkomst zag je. Nu wacht de tweede op de
+// eerste, hooguit ruim een minuut. icecat_code "" betekent: gezocht en niets gevonden.
+async function wachtOpCode(id: string): Promise<string | null> {
+  for (let i = 0; i < 25; i++) {
+    const { data } = await admin.from("hardware_modellen")
+      .select("icecat_code, icecat_gezocht_op").eq("id", id).maybeSingle();
+    if (data?.icecat_code) return data.icecat_code;
+    if (data?.icecat_code === "") return null;
+    const sinds = data?.icecat_gezocht_op ? Date.now() - Date.parse(data.icecat_gezocht_op) : Infinity;
+    if (!(sinds < 120_000)) return null;
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  return null;
 }
 
 // Claude zoekt op het web een paar artikelcodes van dit model. Alleen codes die hij op een pagina
@@ -391,12 +410,21 @@ async function zoekLaptop(
   if (gevonden.fotos.length || !magOpzoeken || !rij) return { gevonden, bron: "icecat" };
 
   const grens = new Date(Date.now() - DAGEN_TUSSEN_ZOEKEN * 864e5).toISOString();
+  // Het slot pakken. Een oude "niets gevonden" ("") gaat eraf, zodat wie wacht niet denkt dat het al
+  // klaar is.
   const { data: slot } = await admin.from("hardware_modellen")
-    .update({ icecat_gezocht_op: new Date().toISOString() })
+    .update({ icecat_gezocht_op: new Date().toISOString(), icecat_code: null })
     .eq("id", rij.id)
     .or(`icecat_gezocht_op.is.null,icecat_gezocht_op.lt."${grens}"`)
     .select("id");
-  if (!slot?.length) return { gevonden, bron: "icecat" };
+  if (!slot?.length) {
+    const code = await wachtOpCode(rij.id);
+    if (code) {
+      const uit = await icecatVraag(gebruiker, `&Brand=${encodeURIComponent(p.merk)}&ProductCode=${encodeURIComponent(code)}`, `gewacht ${code}`);
+      if (typeof uit === "object") return { gevonden: { ...uit, gevonden: code }, bron: "icecat-gewacht" };
+    }
+    return { gevonden, bron: "icecat" };
+  }
 
   let opgezocht: string[] = [];
   try {
@@ -420,6 +448,8 @@ async function zoekLaptop(
     if (error) console.error("icecat_code bewaren", error);
     return { gevonden: { ...uit, gevonden: c }, bron: "icecat-opgezocht" };
   }
+  // Niets gevonden: dat zeggen we tegen wie er nog op wacht.
+  await admin.from("hardware_modellen").update({ icecat_code: "" }).eq("id", rij.id).is("icecat_code", null);
   return { gevonden, bron: "icecat" };
 }
 
@@ -472,10 +502,6 @@ async function automatisch(lijf: any, teamId: string) {
   const gebruiker = icecatGebruiker();
   console.log("automatisch: icecat-gebruiker", gebruiker === OPEN_ICECAT ? "(open standaard)" : "(eigen account)");
 
-  // Welke aanzichten heeft dit model al als fabrieksfoto? Die niet nog eens opslaan.
-  const { data: best } = await modelfotosVan(teamId, model, telefoon ? kleur : null);
-  const bezet = new Set((best || []).map((r: any) => r.aanzicht));
-
   let gevonden = { fotos: [] as any[], titel: null as string | null, gevonden: null as string | null };
   let bron = "icecat";
   if (telefoon && isGalaxy(merk, model)) {
@@ -500,6 +526,24 @@ async function automatisch(lijf: any, teamId: string) {
   console.log("automatisch:", bron, "gaf", gevonden.fotos.length, "foto's, match op", gevonden.gevonden);
   if (!gevonden.fotos.length) return klaar({ opgeslagen: 0, reden: "niet-gevonden" });
 
+  // We wachtten op een ander scherm dat dit model net zocht. Dat slaat de foto's nu op; wachten tot
+  // ze er staan (twee keer hetzelfde aantal), niet nog eens opslaan. Was het een andere winkel (die
+  // slaat ze bij zichzelf op), dan staat er bij ons niets en slaan we ze hieronder zelf op.
+  if (bron === "icecat-gewacht") {
+    let aanwezig = 0;
+    for (let i = 0; i < 10; i++) {
+      const { data: nu } = await modelfotosVan(teamId, model, telefoon ? kleur : null);
+      const n = (nu || []).length;
+      if (n && n === aanwezig) break;
+      aanwezig = n;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    if (aanwezig) return klaar({ opgeslagen: 0, aanwezig, bron, titel: gevonden.titel, code: gevonden.gevonden });
+  }
+  // Welke aanzichten dit model nu al heeft: pas na het zoeken gekeken, want dat kan even duren.
+  const { data: best } = await modelfotosVan(teamId, model, telefoon ? kleur : null);
+  const bezet = new Set((best || []).map((r: any) => r.aanzicht));
+
   // De vrije aanzicht-slots in de vaste volgorde (open eerst = hoofdfoto).
   const vrij = OPSLAG_VOLGORDE.filter((a) => !bezet.has(a));
   let opgeslagen = 0;
@@ -514,7 +558,7 @@ async function automatisch(lijf: any, teamId: string) {
     }
   }
   console.log("automatisch: opgeslagen", opgeslagen);
-  return klaar({ opgeslagen, bron, titel: gevonden.titel, code: gevonden.gevonden });
+  return klaar({ opgeslagen, aanwezig: bezet.size + opgeslagen, bron, titel: gevonden.titel, code: gevonden.gevonden });
 }
 
 // De eigen foto's van één toestel worden de fabrieksfoto's van het hele model (bij een

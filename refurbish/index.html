@@ -6463,9 +6463,11 @@ async function fotosAutomatischMisschien(a, forceer){
     /* Waarom er niets kwam (een iPhone, of een Galaxy zonder kleur): dat zegt de hint
        erbij, zodat je weet wat je nu moet doen. */
     onl.fotoReden=(uit&&uit.reden)||'';
-    if(res.ok && uit.ok && uit.opgeslagen){
+    /* aanwezig: de foto's stonden er al, of een ander scherm (de winkelapp, net na Opslaan) zette ze
+       er tegelijk neer. Dan alleen herladen. */
+    if(res.ok && uit.ok && (uit.opgeslagen || uit.aanwezig)){
       await fotosLaden(a, true);                       // herladen, niet opnieuw proberen
-      toast(uit.opgeslagen+' fabrieksfoto'+(uit.opgeslagen===1?'':'s')+' opgehaald voor dit model', true);
+      if(uit.opgeslagen) toast(uit.opgeslagen+' fabrieksfoto'+(uit.opgeslagen===1?'':'s')+' opgehaald voor dit model', true);
     }else{
       tekenOnline();                                   // toont de vangnet-hint (maak een telefoonfoto)
     }

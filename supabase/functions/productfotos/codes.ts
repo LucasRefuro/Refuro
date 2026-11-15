@@ -49,3 +49,21 @@ export function schoneCodes(lijst: unknown): string[] {
   }
   return uit;
 }
+
+// Het model in de modellenlijst (hardware_modellen) bij wat er getypt is. De lijst schrijft de
+// nette naam ("ThinkPad Yoga 370"), de winkel typt soms meer ("Thinkpad yoga 370 tp00078b"). Eerst
+// precies (zonder hoofdletters, spaties en streepjes); anders de langste naam uit de lijst die in het
+// getypte staat. Die moet een cijfer hebben en minstens vier tekens, anders past "yoga" op elke Yoga.
+function vlak(s: unknown): string {
+  return String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+export function kiesModelRij<T extends { model: string }>(rijen: T[], model: unknown): T | null {
+  const doel = vlak(model);
+  if (!doel) return null;
+  const precies = rijen.find((r) => vlak(r.model) === doel);
+  if (precies) return precies;
+  const binnen = rijen
+    .filter((r) => { const v = vlak(r.model); return v.length >= 4 && /\d/.test(v) && doel.includes(v); })
+    .sort((a, b) => vlak(b.model).length - vlak(a.model).length);
+  return binnen[0] || null;
+}
