@@ -5,6 +5,22 @@ er niet in staat is af.
 
 ---
 
+## Rooster en laptops toevoegen (15 november 2026, avond)
+
+Live. Rooster: beschikbaarheid vier weken vooruit, planbord op de telefoon als hele week, Zet in
+je agenda op de rooster-link, bijhangen-venster springt niet meer vanzelf open. Laptops: in de
+winkelapp (Hardware, Toestel toevoegen) tik je processor, geheugen, opslag, scherm en Windows aan;
+bouwjaar, gewicht, poorten, foto's en de nieuwprijs van die uitvoering haalt Storvo op (tabel
+`laptop_nieuwprijzen`, model-nieuwprijs v2). De werkbank blijft zoals hij was.
+
+- [ ] **Eigenaar: één laptop toevoegen in de winkelapp** en kijken of de knoppen, de foto's en de
+      nieuwprijs kloppen. Per model haalt Storvo de uitvoeringen de eerste keer nog op (81 van de
+      82 laptopmodellen in de lijst hebben ze nog niet); dat duurt even, daarna gaat het meteen.
+- [ ] **Nieuwprijs van een laptop nakijken**: zakelijke laptops staan niet altijd met een prijs op
+      het web. Niet gevonden is leeg; typ hem dan zelf, dan onthoudt Storvo hem per uitvoering.
+
+---
+
 ## Webshop feedback v2 en v3 (15 november 2026, middag)
 
 Live: timer met dagen (zonder seconden), koopbalk faded, slotblok "Dit wordt 'm", productpagina
