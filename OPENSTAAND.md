@@ -46,7 +46,7 @@ Laptops: 74 uit Storvo (reserve in `reserve_laptops_20261115_*`), 5 webshopprodu
 - [ ] **Opruimen**: edge `tijdelijk-laptops-offline` (doet niets meer, mag weg in het dashboard),
       reservetabellen `reserve_laptops_20261115_*`, `reserve_omschrijving_20261115` en
       `reserve_testbundel_20261115` zodra
-      niemand ze terug wil, testthema #186703151369.
+      niemand ze terug wil.
 - [x] **"Meest gekozen"** klopt (eigenaar). Het kaartje met monteur en QR-code naar het testrapport
       bestond niet; overal weggehaald, ook de testrapporten op de accountpagina.
 - [x] **Laptop-adviseur**: alleen nog bij laptopcollecties; elders WhatsApp en bellen.
@@ -86,7 +86,9 @@ openingstijden, de koopbalk staat onderin op telefoon en desktop, en "50 punten"
       Shopify URL-doorverwijzing).
 - [ ] **Eigenaar: een testbestelling met nieuwe accu** doen (en annuleren), om de mail, de
       pop-up en Te repareren in het echt te zien.
-- [ ] **Preview-thema "Preview titels (Claude)"** (#186703151369) mag weg in Shopify.
+- [x] **Testthema's weg** (15 november): Preview cookie, net verkocht, titels en homepage. Alles
+      daaruit stond al live, behalve de reparatie-hub van oktober (snellinks en vragen); die staat
+      nog in `~/refuro-live-theme/sections/reparatie.liquid` en `templates/page.reparatie.json`.
 
 ---
 
