@@ -18,6 +18,13 @@ bouwjaar, gewicht, poorten, foto's en de nieuwprijs van die uitvoering haalt Sto
       82 laptopmodellen in de lijst hebben ze nog niet); dat duurt even, daarna gaat het meteen.
 - [ ] **Nieuwprijs van een laptop nakijken**: zakelijke laptops staan niet altijd met een prijs op
       het web. Niet gevonden is leeg; typ hem dan zelf, dan onthoudt Storvo hem per uitvoering.
+- [x] **Vraagprijs en modellen van laptops onthouden** (16 nov, commit 94505f9). De vraagprijs per
+      uitvoering (processor, geheugen, opslag) en staat, in de winkelapp en bij Online zetten; 17
+      prijzen stonden er meteen in. Het modelveld toont bij een laptop de modellen die we kennen,
+      een nieuw model komt er vanzelf bij. "Meer gegevens" staat open, boven de specs.
+- [ ] **Eigenaar: modellenlijst opschonen?** In `hardware_modellen` staan tikfouten en rommel van
+      vroeger ("Palvilion", "idealpad", "[Geen sticker met naam]", "xxxxxx", "test"). De rommel
+      wordt al niet getoond; de tikfouten wel. Alleen samenvoegen of weghalen met een ja.
 
 ---
 
