@@ -19,10 +19,14 @@
 // met de link erbij (bron_url, zodat iemand het kan nakijken), en schonePrijzen gooit weg wat
 // niet klopt. Liever geen prijs dan een gok: dan typt de winkelier hem zelf, en die onthouden we.
 // Er gaat alleen merk, model en opslag mee, niets over de winkel of de klant.
+//
+// Laptops en desktops (soort "laptop", sinds november 2026): per uitvoering (processor, geheugen,
+// opslag) in de tabel laptop_nieuwprijzen, alleen voor modellen uit hardware_modellen. Zelfde
+// regels: eens per dertig dagen per uitvoering, met bron, en liever niets dan een gok.
 
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { normOpslag, schonePrijzen } from "./prijzen.ts";
+import { normOpslag, schonePrijzen, uitvoeringSleutel, schoneLaptopPrijs } from "./prijzen.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -45,9 +49,54 @@ function klaar(uit: Record<string, unknown>) {
 
 const DAGEN_TUSSEN_ZOEKEN = 30;
 
-async function zoekPrijzen(merk: string, model: string, gevraagd: string[]) {
+// Zoekt met Claude op het web en geeft terug wat hij met het gereedschap inleverde (of null).
+// Telefoon en laptop gebruiken dezelfde lus, elk met hun eigen vraag en gereedschap.
+async function vraagMetZoeken(vraag: string, bewaren: any): Promise<any | null> {
   const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")!, timeout: 120_000, maxRetries: 1 });
+  const tools = [
+    { type: "web_search_20260209", name: "web_search", max_uses: 6,
+      user_location: { type: "approximate", country: "NL" } },
+    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 4 },
+    bewaren,
+  ];
 
+  let messages: any[] = [{ role: "user", content: vraag }];
+  // Een paar rondes: de zoektocht kan pauzeren (pause_turn, dan hervat de server hem als we
+  // het antwoord terugsturen), of eindigen zonder het gereedschap (dan vragen we er één keer om).
+  let aangespoord = false;
+  for (let ronde = 0; ronde < 5; ronde++) {
+    // Opus 5.5 met de standaard denkdiepte: zoeken en twee bronnen naast elkaar leggen.
+    // fallbacks "default": weigert het model om een veiligheidsreden, dan beantwoordt een
+    // ander model de vraag in dezelfde aanroep (zie model-kleuren).
+    const res: any = await client.beta.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 16000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      output_config: { effort: "medium" },
+      tools,
+      messages,
+    } as any);
+
+    if (res.stop_reason === "refusal") return null;
+    const roep = (res.content || []).find((b: any) => b.type === "tool_use" && b.name === bewaren.name);
+    if (roep) return roep.input ?? null;
+    if (res.stop_reason === "pause_turn") {
+      messages = [...messages, { role: "assistant", content: res.content }];
+      continue;
+    }
+    if (res.stop_reason === "end_turn" && !aangespoord) {
+      aangespoord = true;
+      messages = [...messages, { role: "assistant", content: res.content },
+        { role: "user", content: `Roep nu ${bewaren.name} aan met wat je in een bron zag.` }];
+      continue;
+    }
+    break;
+  }
+  return null;
+}
+
+async function zoekPrijzen(merk: string, model: string, gevraagd: string[]) {
   // Een eigen gereedschap om het antwoord in te leveren, met een vast schema (strict). Geen
   // output_config.format: de zoekresultaten komen met bronvermeldingen terug, en die gaan
   // niet samen met een vast antwoordformaat.
@@ -96,47 +145,107 @@ je, laat hem dan weg. Een lege lijst is ook een goed antwoord.
 
 Roep aan het eind prijzen_bewaren aan.`;
 
-  const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: 6,
-      user_location: { type: "approximate", country: "NL" } },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 4 },
-    bewaren,
-  ];
+  const inv = await vraagMetZoeken(vraag, bewaren);
+  return inv ? schonePrijzen(inv.prijzen, gevraagd) : [];
+}
 
-  let messages: any[] = [{ role: "user", content: vraag }];
-  // Een paar rondes: de zoektocht kan pauzeren (pause_turn, dan hervat de server hem als we
-  // het antwoord terugsturen), of eindigen zonder het gereedschap (dan vragen we er één keer om).
-  let aangespoord = false;
-  for (let ronde = 0; ronde < 5; ronde++) {
-    // Opus 5.5 met de standaard denkdiepte: zoeken en twee bronnen naast elkaar leggen.
-    // fallbacks "default": weigert het model om een veiligheidsreden, dan beantwoordt een
-    // ander model de vraag in dezelfde aanroep (zie model-kleuren).
-    const res: any = await client.beta.messages.create({
-      model: "claude-opus-5-5",
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: "medium" },
-      tools,
-      messages,
-    } as any);
+// ── Laptops en desktops: één uitvoering ──
+async function zoekLaptopPrijs(merk: string, model: string, u: { processor: string; geheugen: string; opslag: string; scherm: string }) {
+  const bewaren = {
+    name: "prijs_bewaren",
+    description: "Lever de gevonden nieuwprijs in. Eén keer, aan het eind. Zag je hem niet in een bron, zet dan gevonden op false.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        gevonden: { type: "boolean" },
+        prijs: { type: "number", description: "Hele euro's, inclusief btw. 0 als je niets vond." },
+        bron_url: { type: "string", description: "De pagina waar je deze prijs zag. Leeg als je niets vond." },
+      },
+      required: ["gevonden", "prijs", "bron_url"],
+      additionalProperties: false,
+    },
+  };
+  const vraag = `Wat kostte deze laptop nieuw in Nederland, in precies deze uitvoering?
 
-    if (res.stop_reason === "refusal") return [];
-    const roep = (res.content || []).find((b: any) => b.type === "tool_use" && b.name === "prijzen_bewaren");
-    if (roep) return schonePrijzen(roep.input?.prijzen, gevraagd);
-    if (res.stop_reason === "pause_turn") {
-      messages = [...messages, { role: "assistant", content: res.content }];
-      continue;
-    }
-    if (res.stop_reason === "end_turn" && !aangespoord) {
-      aangespoord = true;
-      messages = [...messages, { role: "assistant", content: res.content },
-        { role: "user", content: "Roep nu prijzen_bewaren aan met de prijzen die je in een bron zag." }];
-      continue;
-    }
-    break;
+Merk: ${merk}
+Model: ${model}
+Processor: ${u.processor}
+Geheugen: ${u.geheugen}
+Opslag: ${u.opslag}${u.scherm ? `
+Scherm: ${u.scherm}` : ""}
+
+Ik wil de adviesprijs van de fabrikant in Nederland toen deze uitvoering te koop kwam, in hele euro's
+inclusief btw. Goede bronnen: de Nederlandse webwinkel van de fabrikant (ook in het Web Archive), het
+persbericht, of Tweakers Pricewatch (de prijs in de eerste weken). Zakelijke laptops staan vaak alleen
+bij de fabrikant of bij Tweakers. Staat er alleen een prijs zonder btw, reken hem dan om met 21 procent.
+
+Niet goed: een prijs uit België of Duitsland, een refurbished of tweedehands prijs, of een andere
+uitvoering (een andere processor, minder geheugen of minder opslag). Dezelfde uitvoering met een ander
+scherm mag, als je de precieze niet vindt.
+
+Zag je de prijs niet in een bron, zet dan gevonden op false. Geen prijs is beter dan een gok.
+
+Roep aan het eind prijs_bewaren aan.`;
+  return schoneLaptopPrijs(await vraagMetZoeken(vraag, bewaren));
+}
+
+async function laptopNieuwprijs(merk: string, model: string, lijf: any) {
+  const processor = String(lijf?.processor || "").trim().slice(0, 90);
+  const geheugen = String(lijf?.geheugen || "").trim().slice(0, 40);
+  const opslag = String(lijf?.opslag || "").trim().slice(0, 60);
+  const scherm = String(lijf?.scherm || "").trim().slice(0, 90);
+  const sleutel = uitvoeringSleutel(processor, geheugen, opslag);
+  if (!sleutel) return fout("Vul eerst processor, geheugen en opslag in");
+
+  // Alleen modellen uit de modellenlijst: een getypt model kan een typefout zijn, en elk
+  // zoekwerk kost geld. De schrijfwijze van de lijst is ook die van de prijsrij.
+  const { data: modellen } = await admin.from("hardware_modellen")
+    .select("merk, model").ilike("merk", merk).ilike("model", model).limit(1);
+  const m = modellen?.[0];
+  if (!m) return klaar({ prijs: null, bron: "onbekend" });
+
+  const { data: rijen } = await admin.from("laptop_nieuwprijzen")
+    .select("id, prijs, gezocht_op").is("team_id", null)
+    .ilike("merk", m.merk).ilike("model", m.model).eq("uitvoering", sleutel).limit(1);
+  const bekend = rijen?.[0];
+  if (bekend && bekend.prijs != null) return klaar({ prijs: Number(bekend.prijs), bron: "lijst" });
+  if (!Deno.env.get("ANTHROPIC_API_KEY")) return klaar({ prijs: null, bron: "lijst" });
+
+  // Het slot: een lege rij (prijs nog leeg) met gezocht_op. Bestaat hij al en zocht iemand de
+  // laatste dertig dagen, dan zoeken we niet nog eens; ook niet als twee mensen tegelijk vragen.
+  const nu = new Date().toISOString();
+  let id = "";
+  if (bekend) {
+    const grens = new Date(Date.now() - DAGEN_TUSSEN_ZOEKEN * 864e5).toISOString();
+    const { data: slot } = await admin.from("laptop_nieuwprijzen").update({ gezocht_op: nu })
+      .eq("id", bekend.id).is("prijs", null)
+      .or(`gezocht_op.is.null,gezocht_op.lt."${grens}"`).select("id");
+    if (!slot?.length) return klaar({ prijs: null, bron: "niet gevonden" });
+    id = bekend.id;
+  } else {
+    const { data: nieuw } = await admin.from("laptop_nieuwprijzen").upsert({
+      team_id: null, merk: m.merk, model: m.model, uitvoering: sleutel,
+      processor, geheugen, opslag, prijs: null, gezocht_op: nu,
+    }, { onConflict: "team_id,merk,model,uitvoering", ignoreDuplicates: true }).select("id");
+    if (!nieuw?.length) return klaar({ prijs: null, bron: "lijst" });   // een ander zoekt hem al
+    id = nieuw[0].id;
   }
-  return [];
+
+  try {
+    const gevonden = await zoekLaptopPrijs(m.merk, m.model, { processor, geheugen, opslag, scherm });
+    if (!gevonden) return klaar({ prijs: null, bron: "niet gevonden" });
+    const { error } = await admin.from("laptop_nieuwprijzen").update({
+      prijs: gevonden.prijs, bron: "opgezocht", bron_url: gevonden.bron_url, bijgewerkt_op: new Date().toISOString(),
+    }).eq("id", id);
+    if (error) console.error("model-nieuwprijs laptop bewaren", error);
+    return klaar({ prijs: gevonden.prijs, bron: "opgezocht" });
+  } catch (e) {
+    console.error("model-nieuwprijs laptop", e);
+    // Mislukt (time-out, geen verbinding): het slot terug, zodat het de volgende keer weer mag.
+    await admin.from("laptop_nieuwprijzen").update({ gezocht_op: null }).eq("id", id).is("prijs", null);
+    return fout("Het opzoeken lukte nu niet", 502);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -159,6 +268,7 @@ Deno.serve(async (req) => {
   const merk = String(lijf?.merk || "").trim().replace(/[%_]/g, "").slice(0, 60);
   const model = String(lijf?.model || "").trim().replace(/[%_]/g, "").slice(0, 120);
   if (!merk || !model) return fout("Vul eerst merk en model in");
+  if (String(lijf?.soort || "") === "laptop") return await laptopNieuwprijs(merk, model, lijf);
 
   const { data: modellen } = await admin.from("model_kleuren")
     .select("id, merk, model, opslag, nieuwprijs_gezocht_op").ilike("merk", merk).ilike("model", model).limit(1);

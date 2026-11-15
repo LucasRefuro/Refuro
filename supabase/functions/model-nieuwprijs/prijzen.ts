@@ -40,3 +40,33 @@ export function schonePrijzen(lijst: unknown, gevraagd: string[]) {
   }
   return uit;
 }
+
+// ── Laptops en desktops ──
+// De nieuwprijs van een laptop hangt af van de uitvoering: een EliteBook 840 G10 met een i5 en
+// 8 GB kostte iets anders dan met een i7 en 32 GB. De sleutel van een uitvoering is daarom
+// processor, geheugen en opslag, zo geschreven dat "Intel Core i5-1335U" en "i5-1335U" hetzelfde
+// zijn, en "16 GB DDR5" en "16GB" ook. Het scherm telt niet mee: dat scheelt meestal weinig, en
+// anders vinden we bijna nooit een prijs. De winkelapp heeft precies dezelfde rekenregel
+// (nwlSleutel); tests/laptop-toevoegen.js legt ze naast elkaar.
+export function laptopProcessor(s: unknown): string {
+  return String(s ?? "").toLowerCase()
+    .replace(/®|™|\((?:r|tm)\)/g, " ")
+    .replace(/\b(intel|amd|apple|qualcomm|core|processor)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+export function uitvoeringSleutel(processor: unknown, geheugen: unknown, opslag: unknown): string {
+  const p = laptopProcessor(processor), g = normOpslag(geheugen), o = normOpslag(opslag);
+  return p && g && o ? p + "|" + g + "|" + o : "";
+}
+
+// Wat Claude voor één uitvoering teruggeeft, schoon: alleen als hij hem echt zag, een heel bedrag
+// tussen 150 en 8000 euro (daarbuiten is het een leesfout), met de link van de bron.
+export function schoneLaptopPrijs(r: unknown): { prijs: number; bron_url: string } | null {
+  if (!r || (r as any).gevonden !== true) return null;
+  const prijs = Math.round(Number((r as any).prijs));
+  const url = String((r as any).bron_url ?? "").trim();
+  if (!Number.isFinite(prijs) || prijs < 150 || prijs > 8000) return null;
+  if (!/^https?:\/\/\S+$/i.test(url)) return null;
+  return { prijs, bron_url: url.slice(0, 500) };
+}

@@ -804,6 +804,12 @@
   .hkkop{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
     color:var(--muted-l); margin-bottom:8px;}
   .hkrij{display:flex; align-items:center; gap:10px; padding:5px 0; font-size:14px;}
+  /* Laptop toevoegen in de winkelapp: de uitvoering aantikken, zoals aan de werkbank. */
+  .lapspecs{display:grid; gap:14px; margin:6px 0 16px;}
+  .lapspec{min-width:0;}
+  .optieknoppen{display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 8px;}
+  .optieknop{border:1.5px solid var(--border); background:var(--card); color:var(--text); border-radius:var(--pil); padding:6px 12px; font-family:inherit; font-size:13px; font-weight:600; line-height:1.3; cursor:pointer; text-align:left;}
+  .optieknop.aan{background:var(--green-soft); border-color:var(--green); color:var(--green-tekst);}
   .hkrij input[type=checkbox]{width:auto;}
 
   /* de pakketkeuze */
@@ -15638,13 +15644,13 @@ function hwVenster(h){
     </div>
 
     <div class="modules">
-    ${(specrijen.length || (h && hwKleurTelt(h.categorie)))?`<div class="card breed">
+    ${(specrijen.length || (h && (hwKleurTelt(h.categorie) || hwSpecSoort(h.categorie))))?`<div class="card breed">
       <h2><svg class="i"><use href="#i-layers"/></svg>Wat erin zit</h2>
       ${specrijen.length?`<div style="overflow-x:auto"><table><tbody>${specrijen.map(([sk,sw])=>
         `<tr><td class="muted" style="width:40%">${esc(sk)}</td><td><b>${esc(sw)}</b></td></tr>`).join('')}</tbody></table></div>`
         :'<p class="muted klein">Nog geen specificaties.</p>'}
-      ${(h && hwKleurTelt(h.categorie))?`<div class="row" style="gap:8px; margin-top:10px; align-items:center">
-        <button type="button" class="btn ghost small" onclick="hwSpecsOphalen(this, ${(h.specs&&h.specs.Chip)?'true':'false'})">${(h.specs&&h.specs.Chip)?'Specs opnieuw ophalen':'Specs ophalen'}</button>
+      ${(h && (hwKleurTelt(h.categorie) || hwSpecSoort(h.categorie)))?`<div class="row" style="gap:8px; margin-top:10px; align-items:center">
+        <button type="button" class="btn ghost small" onclick="hwSpecsOphalen(this, ${hwHeeftFeiten(h)?'true':'false'})">${hwHeeftFeiten(h)?'Specs opnieuw ophalen':'Specs ophalen'}</button>
         <span class="muted klein" id="hwSpecsBezig"></span></div>`:''}
     </div>`:''}
     <div class="card breed">
@@ -15674,6 +15680,7 @@ function hwVenster(h){
           ${hwLocatiesWinkelEerst().map(l=>`<option value="${l.id}">${esc(l.naam)}</option>`).join('')}
         </select></div>`:''}
       </div>
+      <div class="lapspecs" id="hw_lapspecs"${hwSpecSoort((h&&h.categorie)||'Laptop')?'':' hidden'}>${hwLapVeldenHtml(h)}</div>
       <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
         <label class="hkrij"><input type="checkbox" id="hw_doos" ${(h&&h.doos)?'checked':''}> Doos erbij</label>
         <label class="hkrij"><input type="checkbox" id="hw_nieuweaccu" ${(h&&h.nieuwe_accu)?'checked':''} onchange="hwNieuweAccu(this)"> Nieuwe accu</label>
@@ -15769,6 +15776,8 @@ function hwVenster(h){
   hwModelSetKnopZet();
   hwSpecsBelofte=null;   // nooit wachten op de specs van een ander toestel
   if(h && hwKleurTelt(h.categorie) && !(h.specs && h.specs.Chip)) hwSpecsBelofte=hwSpecsOphalen(null, false, true);
+  if(h && hwSpecSoort(h.categorie) && !hwHeeftFeiten(h)) hwSpecsBelofte=hwSpecsOphalen(null, false, true);
+  hwLapOptiesLaden();
   if(h) hwHistorieLaden(h.id);
 }
 /* Een nieuw toestel vult zichzelf aan: specificaties, fabrieksfoto's en een advertentietekst.
@@ -15793,12 +15802,14 @@ async function hwNieuwAanvullen(id){
      opzoeken toen je opsloeg, dan wachten we daar hier op. Is het toestel intussen dicht, dan
      zetten we hem rechtstreeks op de rij, maar alleen als daar nog niets staat. */
   const nu=open() ? hwOpen : hwData.find(x=>x.id===id);
-  if(nu && hwKleurTelt(nu.categorie) && nu.nieuwprijs==null && nu.status!=='verkocht'){
+  if(nu && (hwKleurTelt(nu.categorie) || hwSpecSoort(nu.categorie)) && nu.nieuwprijs==null && nu.status!=='verkocht'){
     hint('Nieuwprijs opzoeken…');
     try{
       if(open()) await hwNieuwprijsVul();
       else {
-        const r=await nieuwprijsVan(nu.merk, nu.model, (nu.specs||{}).Opslag, true);
+        const r=hwSpecSoort(nu.categorie)
+          ? await nieuwprijsLaptopVan(nu.merk, nu.model, nu.specs, true)
+          : await nieuwprijsVan(nu.merk, nu.model, (nu.specs||{}).Opslag, true);
         if(r){
           const {error}=await sb.from('hardware').update({nieuwprijs:r.prijs}).eq('id', id).is('nieuwprijs', null);
           if(!error) nu.nieuwprijs=r.prijs;
@@ -16106,10 +16117,16 @@ function hwSoortRaden(){
   if(soort && sel.value!==soort){ sel.value=soort; hwKleurToon(); }
 }
 function hwKleurToon(){
-  const telt=hwKleurTelt(hwVeld('hw_cat'));
+  const cat=hwVeld('hw_cat'), telt=hwKleurTelt(cat);
   ['hw_kleur_vak','hw_opslag_vak'].forEach(id=>{ const vak=document.getElementById(id); if(vak) vak.hidden=!telt; });
+  const lap=document.getElementById('hw_lapspecs');
+  if(lap){
+    lap.hidden=!hwSpecSoort(cat);
+    lap.querySelectorAll('.lapspec').forEach((el,i)=>{ el.hidden=!hwLapVeldAan(HW_LAP_VELDEN[i], cat); });
+  }
   hwKleurenLaden();
   hwOpslagLaden();
+  hwLapOptiesLaden();
 }
 
 /* ═══ Specificaties van een telefoon of tablet ophalen ═══
@@ -16122,6 +16139,91 @@ function hwKleurToon(){
    er maar één bestaat vullen we hem in.
    Alleen lege velden worden gevuld. Wat de werkbank of jij al invulde, gaat voor. */
 const HW_FEITEN_TEL=['Chip','Werkgeheugen','Scherm','Camera','Netwerk','Besturingssysteem','Materiaal','Waterbestendig','SIM','Bouwjaar','Gewicht','Poorten'];
+
+/* ═══ Laptops en desktops: de uitvoering zelf, de rest ophalen ═══
+   Een laptop toevoegen kon eerst alleen goed aan de werkbank, met de hele controle erbij. De
+   eigenaar wilde alleen het deel specs, foto's en nieuwprijs, en dat in de winkelapp (november
+   2026). Wat in deze laptop zit weet alleen jij: van één model bestaan tien processors en vier
+   schermen. Dus die tik je aan uit de uitvoeringen van het model (model-specs, de gedeelde
+   modellenlijst), of je typt ze. De vaste modelfeiten (bouwjaar, gewicht, materiaal, poorten, en
+   de videokaart als het model er maar één heeft) haalt Storvo zelf op, net als de fabrieksfoto's
+   en de nieuwprijs van deze uitvoering. Dezelfde sleutels als aan de werkbank (SPEC_VELDEN in het
+   refurbish-deel), zodat Online zetten, het label en de webshop ze lezen. Het scherm alleen bij
+   een laptop. Windows tik je aan uit drie vaste keuzes; dat zegt het model niet. */
+const HW_LAP_VELDEN=[
+  {sleutel:'Processor', id:'hw_sp_cpu',    hint:'Bijvoorbeeld Intel Core i5-1335U'},
+  {sleutel:'Geheugen',  id:'hw_sp_ram',    hint:'Bijvoorbeeld 16 GB'},
+  {sleutel:'Opslag',    id:'hw_sp_ssd',    hint:'Bijvoorbeeld 512 GB SSD'},
+  {sleutel:'Scherm',    id:'hw_sp_scherm', hint:'Bijvoorbeeld 14 inch Full HD', alleenLaptop:true},
+  {sleutel:'Windows',   id:'hw_sp_win',    hint:'Bijvoorbeeld Windows 11 Pro', vast:['Windows 11 Pro','Windows 11 Home','Windows 10 Pro']}
+];
+const HW_FEITEN_LAPTOP=['Bouwjaar','Gewicht','Materiaal','Poorten'];
+function hwSpecSoort(cat){ return /^(laptop|desktop)$/i.test(String(cat||'').trim()); }
+function hwLapVeldAan(v, cat){ return !!v && (!v.alleenLaptop || /^laptop$/i.test(String(cat||'').trim())); }
+/* Heeft dit toestel de vaste modelfeiten al? Dan halen we ze niet bij elk openen opnieuw op. */
+function hwHeeftFeiten(h){
+  const sp=(h&&h.specs)||{};
+  return hwKleurTelt(h&&h.categorie) ? !!sp.Chip : !!(sp.Bouwjaar||sp.Poorten||sp.Gewicht||sp.Materiaal);
+}
+function hwLapSpecs(){ const o={}; HW_LAP_VELDEN.forEach(v=>{ o[v.sleutel]=hwVeld(v.id); }); return o; }
+let hwLapOpt={}, hwLapVraag=0;
+function hwLapVeldenHtml(h){
+  const sp=(h&&h.specs)||{}, cat=(h&&h.categorie)||'Laptop';
+  return `<p class="muted klein" style="margin:0">Tik aan wat erin zit. De rest haalt Storvo zelf op. <span id="hw_lap_bezig"></span></p>`+
+    HW_LAP_VELDEN.map(v=>`<div class="lapspec"${hwLapVeldAan(v, cat)?'':' hidden'}>
+      <label for="${v.id}">${v.sleutel}</label>
+      <div class="optieknoppen" id="${v.id}_opties" hidden></div>
+      <input id="${v.id}" value="${esc(sp[v.sleutel]||'')}" placeholder="${esc(v.hint)}" autocomplete="off" oninput="hwLapTeken()" onchange="hwNieuwprijsVul()">
+    </div>`).join('');
+}
+/* De knoppen per veld: de uitvoeringen van het model (of de vaste keuzes van Windows). Wat in het
+   veld staat licht op. */
+function hwLapTeken(){
+  HW_LAP_VELDEN.forEach(v=>{
+    const box=document.getElementById(v.id+'_opties'), e=document.getElementById(v.id);
+    if(!box || !e) return;
+    const nu=e.value.trim().toLowerCase();
+    const lijst=v.vast || hwLapOpt[v.sleutel] || [];
+    box.innerHTML=lijst.map((o,i)=>`<button type="button" class="optieknop${String(o).toLowerCase()===nu?' aan':''}" onclick="hwLapKies('${v.id}',${i})">${esc(o)}</button>`).join('');
+    box.hidden=!lijst.length;
+  });
+}
+/* Aantikken zet het veld; nog een keer tikken maakt het weer leeg. De change-gebeurtenis bewaart
+   (hwStilPlan op het formulier) en zoekt de nieuwprijs van deze uitvoering. */
+function hwLapKies(id, i){
+  const v=HW_LAP_VELDEN.find(x=>x.id===id), e=document.getElementById(id);
+  if(!v || !e) return;
+  const o=(v.vast || hwLapOpt[v.sleutel] || [])[i];
+  if(o==null) return;
+  e.value = e.value.trim().toLowerCase()===String(o).toLowerCase() ? '' : o;
+  hwLapTeken();
+  e.dispatchEvent(new Event('change', {bubbles:true}));
+}
+/* De uitvoeringen van het gekozen model ophalen. Heeft een veld er maar één en is het nog leeg,
+   dan vullen we hem in. Bij een nieuw toestel gaan de vaste modelfeiten meteen mee bij opslaan. */
+async function hwLapOptiesLaden(){
+  const vak=document.getElementById('hw_lapspecs');
+  if(!vak || vak.hidden) return;
+  const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), cat=hwVeld('hw_cat');
+  const mijn=++hwLapVraag;
+  const zeg=t=>{ const e=document.getElementById('hw_lap_bezig'); if(e) e.textContent=t||''; };
+  if(!merk || !model){ hwLapOpt={}; hwLapTeken(); zeg(''); return; }
+  zeg('Uitvoeringen van dit model ophalen…');
+  let uit=null;
+  try{ uit=await hwModelSpecs(merk, model, cat); }catch(_e){}
+  if(mijn!==hwLapVraag || !document.body.contains(vak)) return;   // intussen een ander model of dicht
+  hwLapOpt=(uit&&uit.opties)||{};
+  zeg(uit ? '' : 'Dit model ken ik nog niet. Typ wat erin zit.');
+  let gevuld=false;
+  HW_LAP_VELDEN.forEach(v=>{
+    const e=document.getElementById(v.id), lijst=hwLapOpt[v.sleutel]||[];
+    if(e && !e.value.trim() && lijst.length===1 && hwLapVeldAan(v, cat)){ e.value=lijst[0]; gevuld=true; }
+  });
+  if(!hwOpen) hwNieuwFeiten=uit ? hwSpecFeiten(uit, cat) : null;
+  hwLapTeken();
+  if(gevuld && hwOpen) hwStilPlan();
+  hwNieuwprijsVul();
+}
 const hwSpecsCache={};
 let hwNieuwFeiten=null;
 function hwModelSpecs(merk, model, cat){
@@ -16141,8 +16243,17 @@ function hwModelSpecs(merk, model, cat){
   }
   return hwSpecsCache[sl];
 }
-function hwSpecFeiten(uit){
+function hwSpecFeiten(uit, cat){
   const sp=(uit&&uit.specs)||{}, feiten={};
+  if(hwSpecSoort(cat)){
+    /* Bij een laptop alleen de vaste modelfeiten. Processor, geheugen, opslag en scherm tik je
+       zelf aan; de videokaart nemen we alleen als het model er maar één heeft. */
+    HW_FEITEN_LAPTOP.forEach(k=>{ const w=String(sp[k]||'').trim(); if(w) feiten[k]=w; });
+    const gpu=((uit&&uit.opties&&uit.opties.Videokaart)||[]);
+    const g=String(gpu.length===1 ? gpu[0] : (gpu.length ? '' : (sp.Videokaart||''))).trim();
+    if(g) feiten.Videokaart=g;
+    return feiten;
+  }
   HW_FEITEN_TEL.forEach(k=>{ const w=String(sp[k]||'').trim(); if(w) feiten[k]=w; });
   const ops=((uit&&uit.opties&&uit.opties.Opslag)||[]);
   if(ops.length===1) feiten.Opslag=ops[0];
@@ -16158,7 +16269,7 @@ async function hwSpecsOphalen(knop, opnieuw, stil){
   const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig met ophalen…'; }
   if(bezig) bezig.textContent=stil?'Specificaties van dit model ophalen…':'';
   try{
-    const feiten=hwSpecFeiten(await hwModelSpecs(merk, model, cat));
+    const feiten=hwSpecFeiten(await hwModelSpecs(merk, model, cat), cat);
     if(!hwOpen || hwOpen.id!==id) return;                  // intussen een ander toestel geopend
     if(!Object.keys(feiten).length){ if(!stil) toast('Dit model ken ik niet. Vul de specificaties zelf in.','let-op'); return; }
     const specs=Object.assign({}, hwOpen.specs||{});
@@ -16300,6 +16411,77 @@ async function nieuwprijsOnthoud(merk, model, opslag, prijs){
   if(error){ console.error('nieuwprijs onthouden:', error); return false; }
   return true;
 }
+/* ═══ Nieuwprijs van een laptop of desktop, per uitvoering ═══
+   Bij een laptop hangt de nieuwprijs af van processor, geheugen en opslag. Tabel
+   laptop_nieuwprijzen, dezelfde regels als hierboven: de eigen prijs wint, anders de gedeelde
+   lijst, anders zoekt model-nieuwprijs (soort laptop) hem één keer op. Een rij van de lijst zonder
+   prijs betekent: gezocht en niets gevonden. nwlSleutel is dezelfde rekenregel als
+   uitvoeringSleutel in model-nieuwprijs/prijzen.ts; tests/laptop-toevoegen.js legt ze naast elkaar. */
+const _nwlCache={}, _nwlZoekt={}, _nwlGezocht=new Set();
+function nwlProcessor(s){
+  return String(s||'').toLowerCase()
+    .replace(/®|™|\((?:r|tm)\)/g,' ')
+    .replace(/\b(intel|amd|apple|qualcomm|core|processor)\b/g,' ')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim();
+}
+function nwlSleutel(sp){
+  sp=sp||{};
+  const p=nwlProcessor(sp.Processor), g=nwOpslag(sp.Geheugen), o=nwOpslag(sp.Opslag);
+  return (p && g && o) ? p+'|'+g+'|'+o : '';
+}
+async function nwlRijen(merk, model){
+  const k=(merk+'|'+model).toLowerCase();
+  if(_nwlCache[k]) return _nwlCache[k];
+  try{
+    const {data, error}=await sb.from('laptop_nieuwprijzen').select('id,team_id,uitvoering,prijs').ilike('merk', merk).ilike('model', model);
+    if(error) return [];
+    return (_nwlCache[k]=data||[]);
+  }catch(_e){ return []; }
+}
+async function nwlOpzoeken(merk, model, sp){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const res=await fetch(SUPABASE_URL+'/functions/v1/model-nieuwprijs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+((session&&session.access_token)||'')},
+      body:JSON.stringify({soort:'laptop', merk, model, processor:sp.Processor||'', geheugen:sp.Geheugen||'', opslag:sp.Opslag||'', scherm:sp.Scherm||''})
+    });
+    const uit=await res.json().catch(()=>({}));
+    if(res.ok && uit.ok && uit.prijs!=null) delete _nwlCache[(merk+'|'+model).toLowerCase()];
+  }catch(_e){}
+}
+async function nieuwprijsLaptopVan(merk, model, sp, opzoeken){
+  merk=nwSchoon(merk); model=nwSchoon(model); const sl=nwlSleutel(sp);
+  if(!merk || !model || !sl) return null;
+  const kies=lijst=>{ const r=lijst.filter(x=>x.uitvoering===sl && x.prijs!=null); return r.find(x=>x.team_id)||r.find(x=>!x.team_id)||null; };
+  let r=kies(await nwlRijen(merk, model));
+  if(!r && opzoeken){
+    const k=(merk+'|'+model+'|'+sl).toLowerCase();
+    if(!_nwlZoekt[k] && !_nwlGezocht.has(k)){
+      _nwlGezocht.add(k);
+      _nwlZoekt[k]=nwlOpzoeken(merk, model, sp).finally(()=>{ delete _nwlZoekt[k]; });
+    }
+    if(_nwlZoekt[k]){ await _nwlZoekt[k]; r=kies(await nwlRijen(merk, model)); }
+  }
+  return r ? {prijs:Number(r.prijs), eigen:!!r.team_id} : null;
+}
+async function nieuwprijsLaptopOnthoud(merk, model, sp, prijs){
+  merk=nwSchoon(merk); model=nwSchoon(model); sp=sp||{}; const sl=nwlSleutel(sp);
+  prijs=Math.round(Number(prijs)*100)/100;
+  if(!merk || !model || !sl || !(prijs>0) || prijs>=20000 || !account || !account.team_id) return false;
+  const lijst=await nwlRijen(merk, model);
+  const eigen=lijst.find(x=>x.team_id && x.uitvoering===sl), alg=lijst.find(x=>!x.team_id && x.uitvoering===sl && x.prijs!=null);
+  if(eigen ? Number(eigen.prijs)===prijs : (alg && Number(alg.prijs)===prijs)) return false;
+  const nu=new Date().toISOString();
+  const {error}=eigen
+    ? await sb.from('laptop_nieuwprijzen').update({prijs, bijgewerkt_op:nu}).eq('id', eigen.id)
+    : await sb.from('laptop_nieuwprijzen').insert({team_id:account.team_id, merk, model, uitvoering:sl,
+        processor:sp.Processor||null, geheugen:sp.Geheugen||null, opslag:sp.Opslag||null, prijs, bron:'winkel', bijgewerkt_op:nu});
+  delete _nwlCache[(merk+'|'+model).toLowerCase()];
+  if(error){ console.error('nieuwprijs laptop onthouden:', error); return false; }
+  return true;
+}
 /* Het veld Nieuwprijs in het toestelformulier. data-auto betekent: wij vulden hem in, dus hij
    verandert mee als je een ander model of andere opslag kiest. Wat je zelf typt, blijft staan.
    Een verkocht toestel laten we met rust: dat kaartje is al geprint. */
@@ -16307,16 +16489,20 @@ let hwNieuwprijsBelofte=null;
 function hwNieuwprijsVul(){ return (hwNieuwprijsBelofte=hwNieuwprijsVulNu()); }
 async function hwNieuwprijsVulNu(){
   const veld=document.getElementById('hw_nieuwprijs');
-  if(!veld || !hwKleurTelt(hwVeld('hw_cat')) || (hwOpen && hwOpen.status==='verkocht')) return null;
+  const cat=hwVeld('hw_cat'), lap=hwSpecSoort(cat);
+  if(!veld || !(hwKleurTelt(cat) || lap) || (hwOpen && hwOpen.status==='verkocht')) return null;
   const merk=hwVeld('hw_merk'), model=hwVeld('hw_model'), opslag=hwVeld('hw_opslag');
-  const sleutel=[merk, model, opslag].join('|').toLowerCase();
+  /* Een laptop per uitvoering (processor, geheugen, opslag), een telefoon per opslag. */
+  const lapSp=lap ? hwLapSpecs() : null;
+  const van=zoek=> lap ? nieuwprijsLaptopVan(merk, model, lapSp, zoek) : nieuwprijsVan(merk, model, opslag, zoek);
+  const sleutel=[merk, model, lap ? nwlSleutel(lapSp) : opslag].join('|').toLowerCase();
   veld.dataset.voor=sleutel;
   const uitleg=document.getElementById('hw_nieuwprijs_bron');
   const zeg=t=>{ if(uitleg) uitleg.textContent=t; };
   const vanOns=r=>zeg(r ? (r.eigen?'Jouw prijs van de vorige keer.':'Vanzelf ingevuld: de prijs bij de introductie.') : '');
   const nogDit=()=>document.body.contains(veld) && veld.dataset.voor===sleutel;
   const zelfGetypt=()=>!!veld.value.trim() && veld.dataset.auto!=='1';
-  let r=await nieuwprijsVan(merk, model, opslag, false);
+  let r=await van(false), gezocht=false;
   if(!nogDit()) return r;
   if(zelfGetypt()){
     /* Staat er de bekende prijs (eerder door ons ingevuld en bewaard)? Dan mag hij voortaan
@@ -16324,15 +16510,15 @@ async function hwNieuwprijsVulNu(){
     if(r && Number(veld.value)===r.prijs){ veld.dataset.auto='1'; vanOns(r); }
     return r;
   }
-  if(!r && hwModelRij(merk, model)){
+  if(!r && (lap ? !!nwlSleutel(lapSp) : hwModelRij(merk, model))){
     zeg('Nieuwprijs opzoeken…');
-    r=await nieuwprijsVan(merk, model, opslag, true);
+    r=await van(true); gezocht=true;
     if(!nogDit()) return r;
     if(zelfGetypt()){ zeg(''); return r; }   // intussen zelf getypt
   }
   if(!r){
     if(veld.dataset.auto==='1'){ veld.value=''; delete veld.dataset.auto; if(hwOpen) hwStilPlan(); }
-    zeg(''); return null;
+    zeg(gezocht && lap ? 'Geen nieuwprijs gevonden. Typ hem zelf, dan onthoud ik hem.' : ''); return null;
   }
   if(veld.value!==String(r.prijs)){ veld.value=String(r.prijs); veld.dataset.auto='1'; if(hwOpen) hwStilPlan(); }
   vanOns(r);
@@ -16344,7 +16530,14 @@ function hwNieuwprijsGetypt(veld){
 }
 async function hwNieuwprijsBewaar(){
   const veld=document.getElementById('hw_nieuwprijs');
-  if(!veld || veld.dataset.auto==='1' || !veld.value.trim() || !hwKleurTelt(hwVeld('hw_cat'))) return;
+  if(!veld || veld.dataset.auto==='1' || !veld.value.trim()) return;
+  if(hwSpecSoort(hwVeld('hw_cat'))){
+    if(await nieuwprijsLaptopOnthoud(hwVeld('hw_merk'), hwVeld('hw_model'), hwLapSpecs(), veld.value)){
+      const u=document.getElementById('hw_nieuwprijs_bron'); if(u && document.body.contains(veld)) u.textContent='Onthouden voor deze uitvoering.';
+    }
+    return;
+  }
+  if(!hwKleurTelt(hwVeld('hw_cat'))) return;
   let merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
   const rij=hwModelRij(merk, model); if(rij){ merk=rij.merk; model=rij.model; }   // de schrijfwijze van de lijst
   if(await nieuwprijsOnthoud(merk, model, hwVeld('hw_opslag'), veld.value)){
@@ -16531,7 +16724,7 @@ function hwModelKies(naam){
 }
 function hwModelSluit(){ const l=document.getElementById('hwModelLijst'); if(l){ l.hidden=true; l.innerHTML=''; } }
 function hwModelToets(e){ zoekToets(e,'hwModelLijst',hwModelSluit); }
-function hwModelGekozen(){ hwSoortRaden(); hwKleurenLaden(); hwOpslagLaden(); hwModelSetKnopZet(); }
+function hwModelGekozen(){ hwSoortRaden(); hwKleurenLaden(); hwOpslagLaden(); hwLapOptiesLaden(); hwModelSetKnopZet(); }
 /* De winkel voorop in "Ligt in": daar ligt een los toegevoegd toestel bijna altijd. */
 function hwLocatiesWinkelEerst(){
   return hwLocaties.slice().sort((a,b)=>(b.soort==='winkel')-(a.soort==='winkel') || (Number(a.volgorde)||0)-(Number(b.volgorde)||0));
@@ -16587,7 +16780,21 @@ function hwKleurKies(){
    opslag de hele specs terug, ook als de werkbank ze intussen had bijgewerkt. Bij een laptop
    laten we een kleur van de werkbank met rust. */
 function hwKleurVeld(){
-  if(!document.getElementById('hw_kleur') || !hwKleurTelt(hwVeld('hw_cat'))) return {};
+  const cat=hwVeld('hw_cat');
+  /* Laptop of desktop: de aangetikte uitvoering. Een leeg veld haalt de spec weg; een veld dat bij
+     deze soort niet hoort (scherm bij een desktop) laten we met rust. */
+  if(hwSpecSoort(cat) && document.getElementById('hw_sp_cpu')){
+    const oud=(hwOpen&&hwOpen.specs)||{};
+    const specs=Object.assign({}, hwOpen ? {} : (hwNieuwFeiten||{}), oud);
+    HW_LAP_VELDEN.forEach(v=>{
+      if(!hwLapVeldAan(v, cat)) return;
+      const w=hwVeld(v.id);
+      if(w) specs[v.sleutel]=w; else delete specs[v.sleutel];
+    });
+    if(/touch/i.test(specs.Scherm||'')) specs.Touchscreen='ja';
+    return JSON.stringify(specs)===JSON.stringify(oud) ? {} : {specs};
+  }
+  if(!document.getElementById('hw_kleur') || !hwKleurTelt(cat)) return {};
   const oud=(hwOpen&&hwOpen.specs)||{};
   /* Een nieuw toestel krijgt de opgehaalde modelfeiten (chip, scherm, camera...) meteen mee. */
   const specs=Object.assign({}, hwOpen ? {} : (hwNieuwFeiten||{}), oud);
@@ -16648,7 +16855,7 @@ async function hwStilBewaar(){
   if(!hwOpen || !hwOpen.id) return {error:null};
   if(!hwVeld('hw_model')) return {error:null};        // model verplicht; nog niet compleet
   const rij=hwFormRij();
-  const oudMarge=hwOpen.marge, id=hwOpen.id;
+  const oudMarge=hwOpen.marge, id=hwOpen.id, oudSpecs=Object.assign({}, hwOpen.specs||{});
   /* Wat je hier aanpast en ook op de werkbank-rij staat, gaat daar mee naartoe: de
      pagina Online zetten leest merk, model, grade, accu en doos van die rij. Alleen wat
      echt veranderde, zodat een controle-uitslag niet stil wordt overschreven. */
@@ -16675,6 +16882,21 @@ async function hwStilBewaar(){
         .update(Object.assign({marge:rij.marge}, spiegel, {bijgewerkt_op:new Date().toISOString()}))
         .eq('hardware_id', id);
       if(sErr) console.error('refurbish marge/plek syncen:', sErr);
+    }
+    /* Laptop-specs die je hier aantikt ook op de werkbank-rij: Online zetten leest die. Alleen
+       de velden die nu veranderden, zodat de rest van een controle-uitslag blijft staan. */
+    if(rij.specs && hwSpecSoort(rij.categorie)){
+      const anders=Object.keys(Object.assign({}, oudSpecs, rij.specs)).filter(k=>String(oudSpecs[k]??'')!==String(rij.specs[k]??''));
+      if(anders.length){
+        try{
+          const {data:ap}=await sb.from('refurbish_apparaten').select('id,specs').eq('hardware_id', id).maybeSingle();
+          if(ap){
+            const as=Object.assign({}, ap.specs||{});
+            anders.forEach(k=>{ if(String(rij.specs[k]??'').trim()) as[k]=rij.specs[k]; else delete as[k]; });
+            await sb.from('refurbish_apparaten').update({specs:as, bijgewerkt_op:new Date().toISOString()}).eq('id', ap.id);
+          }
+        }catch(_e){}
+      }
     }
   }
   return {error};
