@@ -61,8 +61,13 @@ openingstijden, de koopbalk staat onderin op telefoon en desktop, en "50 punten"
       de echte punten.
 - [ ] **Vijf oude, verborgen webshopproducten** houden hun oude titel: daar hangt geen toestel
       meer aan in Storvo. Weggooien in Shopify of zo laten.
-- [ ] **Kleur en opslag in de checkout.** De winkelwagen toont ze, de checkout en de
-      orderbevestiging alleen de titel en de staat.
+- [x] **Kleur en opslag in de checkout.** GEDAAN (15 nov, thema ee8045d): kleur en opslag gaan
+      als eigenschap mee op de regel en staan in de checkout. Het formulier stuurde tot nu toe
+      helemaal geen eigenschappen mee, dus ook "Ophalen in de winkel" kwam nooit in de bestelling;
+      dat werkt nu ook. De bevestigingsmail (Instellingen, Meldingen, Bestelbevestiging; een eigen
+      Nederlandse versie) laat de eigenschappen nu onder de staat zien.
+- [x] **Oud adres /pages/de-staat-uitgelegd** stuurt door naar /pages/staat-uitgelegd (301,
+      Shopify URL-doorverwijzing).
 - [ ] **Eigenaar: een testbestelling met nieuwe accu** doen (en annuleren), om de mail, de
       pop-up en Te repareren in het echt te zien.
 - [ ] **Preview-thema "Preview titels (Claude)"** (#186703151369) mag weg in Shopify.
