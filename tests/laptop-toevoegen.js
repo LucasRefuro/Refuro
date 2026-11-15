@@ -88,6 +88,16 @@ const SPECS={ok:true, bron:'lijst',
   ok('schoon: niet gevonden is niets', pz.schoneLaptopPrijs({gevonden:false, prijs:1899, bron_url:url})===null);
   ok('schoon: zonder bron, of een gek bedrag, is niets', pz.schoneLaptopPrijs({gevonden:true, prijs:1899, bron_url:''})===null
     && pz.schoneLaptopPrijs({gevonden:true, prijs:189900, bron_url:url})===null && pz.schoneLaptopPrijs({gevonden:true, prijs:49, bron_url:url})===null);
+  // De controle of een gevonden Icecat-product echt dit model is (productfotos/codes.ts).
+  const tmp2=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'storvo-')),'codes.mts');
+  fs.writeFileSync(tmp2, fs.readFileSync(bron('supabase/functions/productfotos/codes.ts'),'utf8'));
+  const cz=await import('file://'+tmp2);
+  ok('foto-code: de titel van Icecat past bij het model', cz.titelPastBij('Lenovo V320 Notebook 43,9 cm (17.3") Full HD Intel Core i5-8250U','V320-17IKB')
+    && cz.titelPastBij('HP EliteBook 840 G10 Laptop 35,6 cm','EliteBook 840 G10') && cz.titelPastBij('Lenovo ThinkPad E15 Gen 2 (Intel) Notebook','ThinkPad E15 Gen 2'));
+  ok('foto-code: een andere generatie telt niet', !cz.titelPastBij('HP EliteBook 840 G8 Laptop','EliteBook 840 G10') && !cz.titelPastBij('Lenovo ThinkPad E15 Gen 3','ThinkPad E15 Gen 2'));
+  ok('foto-code: een ander model telt niet, en zonder cijfers kunnen we het niet zeggen', !cz.titelPastBij('Lenovo IdeaPad 3 15IML05','V320-17IKB') && !cz.titelPastBij('Apple MacBook Air','MacBook Air'));
+  ok('foto-code: codes schoon, uniek, geen zinnen', JSON.stringify(cz.schoneCodes([{code:'81AH0011MH'},{code:'81ah0011mh'},{code:'81AH 0012 MH'},{code:'6F6Z2EA#ABH'},{code:'abc'},{code:'een hele zin met 1 code'},{code:'GEENCIJFERS'}]))
+    ==='["81AH0011MH","81AH0012MH","6F6Z2EA#ABH"]');
 
   // ── de winkelapp laden ──
   const html=fs.readFileSync(bron('app/index.html'),'utf8')
@@ -198,8 +208,10 @@ const SPECS={ok:true, bron:'lijst',
   ok('desktop: wel het blok, geen scherm', !blok.hidden && d.getElementById('hw_sp_scherm').closest('.lapspec').hidden);
   const dsp=JSON.parse(w.eval('JSON.stringify(hwKleurVeld().specs||{})'));
   ok('desktop: scherm gaat niet mee bij opslaan, de rest wel', !('Scherm' in dsp) && dsp.Processor==='Intel Core i7-1355U');
+  ok('artikelcode: het vak staat er bij een desktop en laptop', !d.getElementById('hw_artikel_vak').hidden);
   zet('hw_cat','Telefoon'); w.eval('hwKleurToon()');
   ok('telefoon: geen laptopblok, wel kleur en opslag', blok.hidden && !d.getElementById('hw_kleur_vak').hidden && !d.getElementById('hw_opslag_vak').hidden);
+  ok('artikelcode: bij een telefoon niet', d.getElementById('hw_artikel_vak').hidden);
   w.eval('hwSluit()');
 
   // ── 4. een bestaande laptop ──
@@ -224,6 +236,26 @@ const SPECS={ok:true, bron:'lijst',
   const apUp=w.__schrijf.filter(x=>x[0]==='refurbish_apparaten' && x[1]==='update').pop();
   ok('bestaand: en naar de werkbank-rij (Online zetten leest die)', !!apUp && apUp[2].specs.Processor==='Intel Core i7-1365U');
   ok('bestaand: de rest van de werkbank-rij blijft staan', !!apUp && apUp[2].specs.Accu==='Ontwerp 50 Wh' && apUp[2].specs.Windows==='Windows 11 Pro 23H2' && !('Geheugen' in apUp[2].specs));
+
+  // Foto's ophalen: zonder code wijst de uitleg naar de sticker, met code gaat die mee.
+  w.__fotoAntw={ok:true, opgeslagen:0, reden:'niet-gevonden'};
+  const oudFetch=w.fetch;
+  w.fetch=async(u,o)=>{ if(String(u).includes('/productfotos')){ w.__vragen.push(['productfotos', JSON.parse(o.body)]); return {ok:true, json:async()=>w.__fotoAntw}; } return oudFetch(u,o); };
+  await w.eval('hwFotosOphalen(null, false, true)');
+  let pf=w.__vragen.filter(v=>v[0]==='productfotos').pop();
+  ok('foto\'s: zonder code de modelnaam en de soort mee', !!pf && pf[1].actie==='automatisch' && pf[1].model==='EliteBook 840 G10' && pf[1].categorie==='Laptop' && pf[1].productcode==='');
+  ok('foto\'s: niets gevonden, dan wijst de uitleg naar de sticker', /artikelcode van de sticker/.test(d.getElementById('hwFotoHint').textContent));
+  d.getElementById('hw_sp_artikel').value=' 81AH 0011MH ';
+  d.getElementById('hw_sp_artikel').dispatchEvent(new w.Event('change', {bubbles:true}));
+  await w.eval('hwFotosOphalen(null, false, true)');
+  pf=w.__vragen.filter(v=>v[0]==='productfotos').pop();
+  ok('foto\'s: de code van de sticker gaat mee, zonder spaties', pf[1].productcode==='81AH0011MH');
+  ok('artikelcode: bewaard bij de specs', JSON.parse(w.eval('JSON.stringify(hwOpen.specs)')).Artikelcode==='81AH0011MH');
+  w.fetch=oudFetch;
+  w.eval('hwSluit()'); await wacht(60);
+  w.eval(`hwData=[${JSON.stringify(Object.assign({}, bestaand, {id:'hw2', specs:Object.assign({}, bestaand.specs, {Artikelcode:'6F6Z2EA#ABH; 8A3D'})}))}]; hwVenster(hwData[0]);`);
+  await wacht(20);
+  ok('artikelcode: twee codes van de werkbank blijven zoals ze stonden', w.eval('hwKleurVeld().specs')===undefined && d.getElementById('hw_sp_artikel').value==='6F6Z2EA#ABH; 8A3D');
   w.eval('hwSluit()');
 
   // ── 5. de edge-functie ──
@@ -235,7 +267,14 @@ const SPECS={ok:true, bron:'lijst',
   ok('edge: alleen in de gedeelde lijst, nooit in de prijs van een winkel', /team_id: null, merk: m\.merk/.test(fn) && !/team_id: (account|wie)/.test(fn));
   ok('edge: mislukt, dan het slot terug', /update\(\{ gezocht_op: null \}\)/.test(fn));
   ok('edge: telefoons zoeken nog steeds op dezelfde manier', /from\("model_kleuren"\)/.test(fn) && /schonePrijzen\(inv\.prijzen, gevraagd\)/.test(fn));
+  const pfn=fs.readFileSync(bron('supabase/functions/productfotos/index.ts'),'utf8');
+  ok('foto-edge: eerst de onthouden code van het model', /\[p\.productcode, rij\?\.icecat_code\]/.test(pfn));
+  ok('foto-edge: opzoeken alleen bij een laptop uit de lijst', /isLaptop\(lijf\?\.categorie\)/.test(pfn) && /!magOpzoeken \|\| !rij/.test(pfn));
+  ok('foto-edge: eens per dertig dagen per model, met slot', /icecat_gezocht_op\.is\.null,icecat_gezocht_op\.lt\./.test(pfn));
+  ok('foto-edge: alleen als de titel van Icecat bij het model past', /if \(!titelPastBij\(uit\.titel, rij\.model\)\)/.test(pfn));
+  ok('foto-edge: de code die werkt wordt onthouden', /update\(\{ icecat_code: c \}\)/.test(pfn));
+  ok('foto-edge: telefoons zoeken niet op het web naar codes', /if \(telefoon\) \{\s*gevonden = await zoekIcecat/.test(pfn));
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nlaptop-toevoegen in orde');
   process.exit(fout?1:0);
-})().catch(e=>{ console.log('FOUT', e.message); process.exit(1); });
+})().catch(e=>{ console.log('FOUT', e.message, (e.stack||'').split('\n').slice(0,4).join(' | ')); process.exit(1); });

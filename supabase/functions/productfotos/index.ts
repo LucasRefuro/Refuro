@@ -24,9 +24,17 @@
 //   alsModel    - de eigen foto's van een toestel kopiëren naar de set van het
 //                 hele model (bij een telefoon: model en kleur).
 //   (geen actie)- alleen zoeken en de gevonden foto's teruggeven.
+//
+// Laptops zonder artikelcode (los toegevoegd in de winkelapp, november 2026): Icecat vindt ze niet
+// op de modelnaam. Dan proberen we eerst de code die we voor dit model al eens vonden
+// (hardware_modellen.icecat_code), en anders zoekt Claude één keer per model een paar artikelcodes
+// op het web op. Een code telt alleen als de titel die Icecat erbij geeft bij de modelnaam past
+// (codes.ts). De code die werkt, onthouden we voor elk volgend toestel van dit model.
 
+import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { galaxyKandidaten, isGalaxy, kleurVan } from "./galaxy.ts";
+import { titelPastBij, schoneCodes } from "./codes.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -274,6 +282,147 @@ async function zoekGalaxy(
   return { fotos: [] as any[], titel: null as string | null, gevonden: null as string | null };
 }
 
+// ── Laptops: de artikelcode zelf opzoeken ──
+const DAGEN_TUSSEN_ZOEKEN = 30;
+function isLaptop(categorie: unknown) {
+  return /laptop|notebook|desktop/i.test(String(categorie || ""));
+}
+async function modelRij(merk: string, model: string) {
+  // % en _ zijn jokertekens voor ilike; een modelnaam heeft ze niet.
+  const m = merk.replace(/[%_]/g, ""), n = model.replace(/[%_]/g, "");
+  if (!m || !n) return null;
+  const { data } = await admin.from("hardware_modellen")
+    .select("id, merk, model, icecat_code, icecat_gezocht_op")
+    .ilike("merk", m).ilike("model", n).limit(1);
+  return data?.[0] || null;
+}
+
+// Claude zoekt op het web een paar artikelcodes van dit model. Alleen codes die hij op een pagina
+// bij precies dit model zag; de controle tegen de titel van Icecat doet de rest.
+async function codesOpzoeken(merk: string, model: string): Promise<string[]> {
+  const sleutel = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!sleutel) return [];
+  const client = new Anthropic({ apiKey: sleutel, timeout: 90_000, maxRetries: 1 });
+  const bewaren = {
+    name: "codes_bewaren",
+    description: "Lever de gevonden artikelcodes in. Eén keer, aan het eind. Alleen codes die je op een pagina bij precies dit model zag.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        codes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string", description: "De artikelcode van de fabrikant (MPN, part number)" },
+              bron_url: { type: "string", description: "De pagina waar je hem zag" },
+            },
+            required: ["code", "bron_url"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["codes"],
+      additionalProperties: false,
+    },
+  };
+  const vraag = `Zoek artikelcodes van deze laptop: de code van de fabrikant waarmee je één uitvoering
+bestelt (MPN of part number). Bij Lenovo is dat zoiets als 81AH0011MH, bij HP een productnummer zoals
+6F6Z2EA, bij Dell staat hij op de site van Dell of op Icecat.
+
+Merk: ${merk}
+Model: ${model}
+
+Elke uitvoering van precies dit model is goed: de foto's zijn voor alle uitvoeringen hetzelfde. Een
+ander model of een andere generatie is niet goed.
+
+Goede bronnen: icecat.biz, de site van de fabrikant (psref.lenovo.com, support.hp.com, dell.com) en
+Tweakers Pricewatch. Geef alleen codes die je op een pagina bij precies dit model zag, met die pagina
+erbij. Hooguit vijf. Een lege lijst is ook een goed antwoord.
+
+Roep aan het eind codes_bewaren aan.`;
+  const tools = [
+    { type: "web_search_20260209", name: "web_search", max_uses: 5 },
+    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 3 },
+    bewaren,
+  ];
+  let messages: any[] = [{ role: "user", content: vraag }];
+  let aangespoord = false;
+  for (let ronde = 0; ronde < 5; ronde++) {
+    const res: any = await client.beta.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 8000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      output_config: { effort: "low" },
+      tools,
+      messages,
+    } as any);
+    if (res.stop_reason === "refusal") return [];
+    const roep = (res.content || []).find((b: any) => b.type === "tool_use" && b.name === "codes_bewaren");
+    if (roep) return schoneCodes(roep.input?.codes);
+    if (res.stop_reason === "pause_turn") {
+      messages = [...messages, { role: "assistant", content: res.content }];
+      continue;
+    }
+    if (res.stop_reason === "end_turn" && !aangespoord) {
+      aangespoord = true;
+      messages = [...messages, { role: "assistant", content: res.content },
+        { role: "user", content: "Roep nu codes_bewaren aan met de codes die je zag." }];
+      continue;
+    }
+    break;
+  }
+  return [];
+}
+
+// Een laptop zoeken: eigen code en de onthouden code van het model eerst, dan de modelnaam, en pas
+// als dat niets geeft (en het mag) een opgezochte code. Alleen voor modellen uit de lijst, en per
+// model hooguit eens per dertig dagen het web op.
+async function zoekLaptop(
+  gebruiker: string,
+  p: { merk: string; model: string; ean?: string; productcode?: string },
+  magOpzoeken: boolean,
+) {
+  const rij = await modelRij(p.merk, p.model);
+  const codes = [p.productcode, rij?.icecat_code].filter(Boolean).join(";");
+  const gevonden = await zoekIcecat(gebruiker, { ...p, productcode: codes });
+  if (gevonden.fotos.length || !magOpzoeken || !rij) return { gevonden, bron: "icecat" };
+
+  const grens = new Date(Date.now() - DAGEN_TUSSEN_ZOEKEN * 864e5).toISOString();
+  const { data: slot } = await admin.from("hardware_modellen")
+    .update({ icecat_gezocht_op: new Date().toISOString() })
+    .eq("id", rij.id)
+    .or(`icecat_gezocht_op.is.null,icecat_gezocht_op.lt."${grens}"`)
+    .select("id");
+  if (!slot?.length) return { gevonden, bron: "icecat" };
+
+  let opgezocht: string[] = [];
+  try {
+    opgezocht = await codesOpzoeken(rij.merk, rij.model);
+  } catch (e) {
+    console.error("codes opzoeken", (e as Error)?.message);
+    // Mislukt (time-out, geen verbinding): het slot terug, zodat het de volgende keer weer mag.
+    await admin.from("hardware_modellen").update({ icecat_gezocht_op: rij.icecat_gezocht_op }).eq("id", rij.id);
+    return { gevonden, bron: "icecat" };
+  }
+  console.log("codes opgezocht", rij.model, opgezocht.join(","));
+  for (const c of opgezocht) {
+    const uit = await icecatVraag(gebruiker, `&Brand=${encodeURIComponent(p.merk)}&ProductCode=${encodeURIComponent(c)}`, `opgezocht ${c}`);
+    if (uit === "fout") break;
+    if (uit === "nee") continue;
+    if (!titelPastBij(uit.titel, rij.model)) {
+      console.log("past niet bij het model", c, uit.titel);
+      continue;
+    }
+    const { error } = await admin.from("hardware_modellen").update({ icecat_code: c }).eq("id", rij.id);
+    if (error) console.error("icecat_code bewaren", error);
+    return { gevonden: { ...uit, gevonden: c }, bron: "icecat-opgezocht" };
+  }
+  return { gevonden, bron: "icecat" };
+}
+
 // Een telefoon kies je in een kleur, en een foto in de verkeerde kleur is erger dan
 // geen foto. Daarom hoort een modelfoto van een telefoon bij model én kleur. Een
 // laptop ziet er per model hetzelfde uit; daar speelt de kleur niet mee en blijft
@@ -339,8 +488,14 @@ async function automatisch(lijf: any, teamId: string) {
     }
   }
   if (!gevonden.fotos.length) {
-    gevonden = await zoekIcecat(gebruiker, { merk, model, ean, productcode });
-    bron = "icecat";
+    if (telefoon) {
+      gevonden = await zoekIcecat(gebruiker, { merk, model, ean, productcode });
+      bron = "icecat";
+    } else {
+      const z = await zoekLaptop(gebruiker, { merk, model, ean, productcode }, isLaptop(lijf?.categorie));
+      gevonden = z.gevonden;
+      bron = z.bron;
+    }
   }
   console.log("automatisch:", bron, "gaf", gevonden.fotos.length, "foto's, match op", gevonden.gevonden);
   if (!gevonden.fotos.length) return klaar({ opgeslagen: 0, reden: "niet-gevonden" });
@@ -450,11 +605,11 @@ Deno.serve(async (req) => {
   const model = String(lijf?.model || "").trim();
   if (!merk || !model) return fout("Vul merk en model in");
 
-  const gevonden = await zoekIcecat(gebruiker, {
-    merk, model,
-    ean: String(lijf?.ean || lijf?.gtin || ""),
-    productcode: String(lijf?.productcode || ""),
-  });
+  // Een laptop: ook de onthouden code van het model, en opzoeken als de soort meekomt.
+  const vraagP = { merk, model, ean: String(lijf?.ean || lijf?.gtin || ""), productcode: String(lijf?.productcode || "") };
+  const gevonden = isTelefoon(lijf?.categorie)
+    ? await zoekIcecat(gebruiker, vraagP)
+    : (await zoekLaptop(gebruiker, vraagP, isLaptop(lijf?.categorie))).gevonden;
   if (!gevonden.fotos.length) {
     return new Response(JSON.stringify({
       ok: true, bron: "icecat", fotos: [],

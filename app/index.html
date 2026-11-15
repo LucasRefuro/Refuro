@@ -14944,7 +14944,7 @@ async function hwFotosOphalen(knop, opnieuw, stil){
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
         body:JSON.stringify({actie:'automatisch', merk, model, categorie:cat, kleur,
-          productcode:sp.Artikelcode||sp.Modelnummer||'', ean:sp.EAN||sp.GTIN||''})
+          productcode:hwArtikelcode()||sp.Artikelcode||sp.Modelnummer||'', ean:sp.EAN||sp.GTIN||''})
       });
       uit=await res.json().catch(()=>({}));
       if(!res.ok || !uit.ok) throw new Error(uit.error||'Ophalen lukte niet');
@@ -14956,6 +14956,8 @@ async function hwFotosOphalen(knop, opnieuw, stil){
         ? "Voor deze iPhone in deze kleur is er nog geen foto-set. Zet ze erin bij Instellingen, Modellen, of maak zelf mooie foto's en druk op "+hwModelSetTekst()+"."
         : uit.reden==='kleur-nodig'
         ? "Met deze kleur vond ik niets. Klopt de kleur? Schrijf hem zoals de fabrikant, bijvoorbeeld Onyx Black."
+        : (hwSpecSoort(cat) && !hwVeld('hw_sp_artikel'))
+        ? "Voor dit model vond ik geen fabrieksfoto's. Typ de artikelcode van de sticker onder de laptop bij Meer gegevens en druk nog een keer. Of maak zelf foto's en druk op "+hwModelSetTekst()+"."
         : "Voor dit model vond ik geen fabrieksfoto's. Klopt de naam? Anders maak je ze zelf en druk je op "+hwModelSetTekst()+".");
       melding('Geen foto\'s gevonden','let-op');
       return;
@@ -15689,6 +15691,7 @@ function hwVenster(h){
         <summary>Meer gegevens</summary>
         <div class="grid">
           <div><label>Serienummer</label><input id="hw_serie" value="${esc((h&&h.serienummer)||'')}" placeholder="Servicetag of IMEI"></div>
+          <div id="hw_artikel_vak"${hwSpecSoort((h&&h.categorie)||'Laptop')?'':' hidden'}><label for="hw_sp_artikel">Artikelcode</label><input id="hw_sp_artikel" value="${esc(((h&&h.specs)||{}).Artikelcode||'')}" placeholder="Van de sticker onder de laptop, bijvoorbeeld 81AH0011MH" autocomplete="off"><p class="muted klein">Hiermee vindt Storvo de fabrieksfoto's precies. Leeg laten mag.</p></div>
           <div><label>Inkoopprijs</label><input id="hw_inkoop" type="number" step="0.01" value="${(h&&h.inkoop)||0}"></div>
           <div><label>Garantie (maanden)</label><input id="hw_gar" type="number" min="0" value="${(h&&h.garantie!=null)?h.garantie:24}"></div>
           <div><label>Nieuwprijs (optioneel)</label><input id="hw_nieuwprijs" type="number" step="0.01" value="${(h&&h.nieuwprijs!=null)?h.nieuwprijs:''}" placeholder="Toont de korting op het kaartje" oninput="hwNieuwprijsGetypt(this)" onchange="hwNieuwprijsBewaar()"><p class="muted klein" id="hw_nieuwprijs_bron"></p></div>
@@ -16124,6 +16127,7 @@ function hwKleurToon(){
     lap.hidden=!hwSpecSoort(cat);
     lap.querySelectorAll('.lapspec').forEach((el,i)=>{ el.hidden=!hwLapVeldAan(HW_LAP_VELDEN[i], cat); });
   }
+  const art=document.getElementById('hw_artikel_vak'); if(art) art.hidden=!hwSpecSoort(cat);
   hwKleurenLaden();
   hwOpslagLaden();
   hwLapOptiesLaden();
@@ -16165,6 +16169,10 @@ function hwHeeftFeiten(h){
   const sp=(h&&h.specs)||{};
   return hwKleurTelt(h&&h.categorie) ? !!sp.Chip : !!(sp.Bouwjaar||sp.Poorten||sp.Gewicht||sp.Materiaal);
 }
+/* De artikelcode uit het vak: spaties in een code weg ("81AH 0011 MH" wordt 81AH0011MH), meerdere
+   codes blijven gescheiden door een puntkomma, zoals de werkbank ze schrijft. */
+function hwArtikelSchoon(s){ return String(s||'').split(/[;,]/).map(x=>x.replace(/\s+/g,'')).filter(Boolean).join(';'); }
+function hwArtikelcode(){ return hwArtikelSchoon(hwVeld('hw_sp_artikel')); }
 function hwLapSpecs(){ const o={}; HW_LAP_VELDEN.forEach(v=>{ o[v.sleutel]=hwVeld(v.id); }); return o; }
 let hwLapOpt={}, hwLapVraag=0;
 function hwLapVeldenHtml(h){
@@ -16792,6 +16800,13 @@ function hwKleurVeld(){
       if(w) specs[v.sleutel]=w; else delete specs[v.sleutel];
     });
     if(/touch/i.test(specs.Scherm||'')) specs.Touchscreen='ja';
+    /* De artikelcode van de sticker: daarmee vindt productfotos de fabrieksfoto's precies. */
+    if(document.getElementById('hw_sp_artikel')){
+      const ac=hwArtikelcode();
+      /* Onveranderd laten wat er al stond (de werkbank schrijft soms "code1; code2"). */
+      if(ac===hwArtikelSchoon(oud.Artikelcode)) { /* niets */ }
+      else if(ac) specs.Artikelcode=ac; else delete specs.Artikelcode;
+    }
     return JSON.stringify(specs)===JSON.stringify(oud) ? {} : {specs};
   }
   if(!document.getElementById('hw_kleur') || !hwKleurTelt(cat)) return {};
