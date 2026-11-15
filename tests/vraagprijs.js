@@ -4,8 +4,11 @@
 //   1. de winkelapp: vraagprijsVan vindt de prijs van model, opslag en grade (kleur telt niet),
 //      onthouden alleen als het iets nieuws is, en het formulier vult hem bij een nieuw toestel
 //      zonder wat je zelf typte te overschrijven; een andere grade geeft een andere prijs
-//   2. de werkbank: Online zetten vult de vraagprijs van een toestel in een andere kleur, en
-//      publiceren en grade-prijzen opslaan onthouden hem
+//   2. een laptop of desktop: per uitvoering (processor, geheugen, opslag) en grade, in dezelfde
+//      tabel met de kolom uitvoering; zonder volledige uitvoering niets
+//   3. de werkbank: Online zetten vult de vraagprijs van een toestel in een andere kleur of van
+//      een laptop met dezelfde uitvoering, en publiceren en grade-prijzen opslaan onthouden hem;
+//      de sleutel van een uitvoering is in beide apps precies dezelfde
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const path=require('path');
@@ -23,7 +26,9 @@ const VP_TABEL=`
 window.__vp=[
   {id:'v1', team_id:'t1', merk:'Apple', model:'iPhone 12 mini', opslag:'128GB', grade:'A', prijs:239},
   {id:'v2', team_id:'t1', merk:'Apple', model:'iPhone 12 mini', opslag:'128GB', grade:'B', prijs:219},
-  {id:'v3', team_id:'t1', merk:'Apple', model:'iPhone 12 mini', opslag:'64GB', grade:'A', prijs:209}
+  {id:'v3', team_id:'t1', merk:'Apple', model:'iPhone 12 mini', opslag:'64GB', grade:'A', prijs:209},
+  {id:'v4', team_id:'t1', merk:'Dell', model:'Latitude 3410', opslag:'256GB', grade:'B', uitvoering:'i5 10210u|8GB|256GB', prijs:340},
+  {id:'v5', team_id:'t1', merk:'Dell', model:'Latitude 3410', opslag:'256GB', grade:'B', uitvoering:'i5 10210u|16GB|256GB', prijs:375}
 ];
 window.__vpSchrijf=[];
 window.__vpTabel=function(){
@@ -78,6 +83,9 @@ window.supabase={createClient:()=>({
   ok('van: andere opslag, andere prijs', (await w.eval("vraagprijsVan('Apple','iPhone 12 mini','64 GB','A')")).prijs===209);
   ok('van: niet onthouden is niets', await w.eval("vraagprijsVan('Apple','iPhone 12 mini','256 GB','A')")===null);
   ok('van: zonder opslag of grade niets', await w.eval("vraagprijsVan('Apple','iPhone 12 mini','','A')")===null && await w.eval("vraagprijsVan('Apple','iPhone 12 mini','128 GB','')")===null);
+  ok('van: een laptop per uitvoering', (await w.eval("vraagprijsVan('Dell','Latitude 3410','256 GB SSD','B','i5 10210u|8GB|256GB')")).prijs===340
+    && (await w.eval("vraagprijsVan('dell','latitude 3410','256GB','B','i5 10210u|16GB|256GB')")).prijs===375);
+  ok('van: een laptopprijs is nooit een prijs per opslag', await w.eval("vraagprijsVan('Dell','Latitude 3410','256 GB','B')")===null);
 
   ok('onthoud: zelfde prijs schrijft niets', await w.eval("vraagprijsOnthoud('Apple','iPhone 12 mini','128 GB','A',239)")===false && w.__vpSchrijf.length===0);
   ok('onthoud: nieuwe prijs werkt de oude bij, geen tweede rij', await w.eval("vraagprijsOnthoud('Apple','iPhone 12 mini','128 GB','A',229)")===true &&
@@ -116,10 +124,31 @@ window.supabase={createClient:()=>({
   zet('hw_opslag','128 GB');
   await w.eval('hwVraagprijsVul()');
   ok('formulier: wat je typte overschrijven we niet', vp.value==='269');
-  // Een laptop: niets.
+  // Een laptop: per uitvoering en grade.
   vp.value=''; delete vp.dataset.auto;
-  zet('hw_cat','Laptop');
-  ok('formulier: een laptop krijgt geen vraagprijs per opslag', await w.eval('hwVraagprijsVul()')===null && vp.value==='');
+  zet('hw_cat','Laptop'); zet('hw_merk','Dell'); zet('hw_model','Latitude 3410'); zet('hw_staat','B');
+  ok('laptop: zonder uitvoering nog niets', await w.eval('hwVraagprijsVul()')===null && vp.value==='');
+  zet('hw_sp_cpu','Intel Core i5-10210U'); zet('hw_sp_ram','8 GB'); zet('hw_sp_ssd','256 GB SSD');
+  await w.eval('hwVraagprijsVul()');
+  ok('laptop: deze uitvoering en grade, vraagprijs staat er', vp.value==='340' && vp.dataset.auto==='1' && /vorige keer/.test(d.getElementById('hw_verkoop_bron').textContent));
+  zet('hw_sp_ram','16 GB');
+  await w.eval('hwVraagprijsVul()');
+  ok('laptop: meer geheugen, andere prijs', vp.value==='375');
+  zet('hw_staat','A');
+  await w.eval('hwVraagprijsVul()');
+  ok('laptop: andere grade, niets onthouden, ons getal gaat weg', vp.value==='' && !vp.dataset.auto);
+  vp.value='420'; vp.dispatchEvent(new w.Event('input'));
+  const lapVoor=w.__vpSchrijf.length;
+  await w.eval('hwVraagprijsBewaar()');
+  const lapIns=w.__vpSchrijf[lapVoor];
+  ok('laptop: zelf getypt wordt onthouden voor deze uitvoering en grade', w.__vpSchrijf.length===lapVoor+1 && lapIns[0]==='insert' && lapIns[1].uitvoering==='i5 10210u|16GB|256GB'
+    && lapIns[1].opslag==='256GB' && lapIns[1].grade==='A' && lapIns[1].prijs===420 && lapIns[1].model==='Latitude 3410');
+  ok('laptop: en zegt dat', /deze uitvoering/.test(d.getElementById('hw_verkoop_bron').textContent));
+  ok('laptop: de specvelden vullen de vraagprijs', /hwVraagprijsVul\(\)/.test(d.getElementById('hw_sp_cpu').getAttribute('onchange'))
+    && /hwVraagprijsVul\(\)/.test(w.eval('hwLapOptiesLaden.toString()')));
+  vp.value=''; delete vp.dataset.auto;
+  zet('hw_cat','Monitor');
+  ok('monitor: geen vraagprijs onthouden', await w.eval('hwVraagprijsVul()')===null && vp.value==='');
   ok('formulier: velden roepen de functies aan', /hwVraagprijsGetypt\(this\)/.test(vp.getAttribute('oninput')) && /hwVraagprijsBewaar\(\)/.test(vp.getAttribute('onchange'))
     && /hwVraagprijsVul\(\)/.test(d.getElementById('hw_staat').getAttribute('onchange')) && /hwVraagprijsVul\(\)/.test(d.getElementById('hw_opslag').getAttribute('onchange')));
   ok('formulier: opslag kiezen vult de vraagprijs', /hwVraagprijsVul\(\)/.test(w.eval('hwOpslagKies.toString()')) && /hwVraagprijsVul\(\)/.test(w.eval('hwOpslagLaden.toString()')));
@@ -177,12 +206,31 @@ window.supabase={createClient:()=>({
   r.eval("onlineZetten('p1')");
   await wacht(80);
   ok('online zetten: vraagprijs van hetzelfde model in een andere kleur', r.eval('onl && onl.prijs')===239 && /vorige keer/.test(r.eval('onl.prijsBron')||''));
-  ok('online zetten: publiceren onthoudt de vraagprijs', /vraagprijsOnthoud\(a\.merk, a\.model, opslagVan\(a\), onl\.staat\|\|a\.grade, onl\.prijs\)/.test(r.eval('onlPubliceren.toString()')));
-  ok('online zetten: grade-prijzen opslaan onthoudt ze per grade', /vraagprijsOnthoud\(onl\.a\.merk, onl\.a\.model, opslagVan\(onl\.a\), g, gp\[g\]\)/.test(r.eval('gradePrijsOpslaan.toString()')));
+  ok('online zetten: publiceren onthoudt de vraagprijs', /const vs=vpSleutel\(a\)/.test(r.eval('onlPubliceren.toString()'))
+    && /vraagprijsOnthoud\(a\.merk, a\.model, vs\.opslag, onl\.staat\|\|a\.grade, onl\.prijs, vs\.uitvoering\)/.test(r.eval('onlPubliceren.toString()')));
+  ok('online zetten: grade-prijzen opslaan onthoudt ze per grade', /const vs=vpSleutel\(onl\.a\)/.test(r.eval('gradePrijsOpslaan.toString()'))
+    && /vraagprijsOnthoud\(onl\.a\.merk, onl\.a\.model, vs\.opslag, g, gp\[g\], vs\.uitvoering\)/.test(r.eval('gradePrijsOpslaan.toString()')));
   ok('werkbank: onthouden schrijft opslag en grade', await r.eval("vraagprijsOnthoud('Apple','iPhone 12 mini','128 GB','C',189)")===true &&
     r.__vpSchrijf.length===1 && r.__vpSchrijf[0][1].opslag==='128GB' && r.__vpSchrijf[0][1].grade==='C' && r.__vpSchrijf[0][1].team_id==='t1');
-  // Een laptop: de advertentie doet dat al, hier niets.
-  ok('werkbank: een laptop telt niet', r.eval("vpTelt({categorie:'Laptop'})")===false && r.eval("vpTelt({categorie:'Tablet'})")===true);
+  // Een laptop: per uitvoering, uit de specs van de werkbank.
+  ok('werkbank: een laptop zonder specs telt niet, een monitor nooit', r.eval("vpTelt({categorie:'Laptop'})")===false && r.eval("vpTelt({categorie:'Monitor', specs:{Opslag:'256 GB'}})")===false
+    && r.eval("vpTelt({categorie:'Tablet'})")===true);
+  ok('werkbank: een laptop met processor, geheugen en opslag wel', JSON.stringify(r.eval("vpSleutel({categorie:'Laptop', specs:{Processor:'Intel Core i5-10210U', Geheugen:'8 GB', Opslag:'256 GB SSD'}})"))
+    ==='{"opslag":"256 GB SSD","uitvoering":"i5 10210u|8GB|256GB"}');
+  ok('werkbank: een MacBook met chip en werkgeheugen ook', r.eval("vpSleutel({categorie:'Laptop', specs:{Chip:'Apple M1', Werkgeheugen:'8 GB', Opslag:'256 GB'}}).uitvoering")==='m1|8GB|256GB');
+  const proeven=[['Intel® Core™ i7-1365U vPro','32 GB DDR5','1 TB PCIe NVMe SSD'],['AMD Ryzen 7 PRO 7840U','64 GB','2 TB'],['Apple M3 Pro','18 GB','512 GB'],
+    ['Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz','8,0 GB','256 GB'],['i5-8350U','8 GB','256 GB SSD'],['','16 GB','512 GB']];
+  ok('sleutel: werkbank en winkelapp rekenen precies hetzelfde', proeven.every(([p,g,o])=>{
+    const sp=JSON.stringify({Processor:p, Geheugen:g, Opslag:o});
+    return r.eval(`nwlSleutel(${sp})`)===w.eval(`nwlSleutel(${sp})`);
+  }));
+  r.eval(`apparaten.push({id:'p2', team_id:'t1', code:'A0102', merk:'Dell', model:'Latitude 3410', categorie:'Laptop',
+    specs:{Processor:'Intel Core i5-10210U', Geheugen:'8 GB', Opslag:'256 GB SSD'}, grade:'B', accu:88, status:'klaar', checklist:[], defecten:[], goede_delen:[]})`);
+  r.eval("onlineZetten('p2')");
+  await wacht(80);
+  ok('online zetten: een laptop krijgt de vraagprijs van deze uitvoering', r.eval('onl && onl.prijs')===340 && /deze uitvoering/.test(r.eval('onl.prijsBron')||''));
+  ok('werkbank: een laptop onthouden schrijft de uitvoering', await r.eval("vraagprijsOnthoud('Dell','Latitude 3410','256 GB SSD','A',389,'i5 10210u|8GB|256GB')")===true &&
+    r.__vpSchrijf.length===2 && r.__vpSchrijf[1][1].uitvoering==='i5 10210u|8GB|256GB' && r.__vpSchrijf[1][1].opslag==='256GB' && r.__vpSchrijf[1][1].grade==='A');
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\nvraagprijs in orde');
   process.exit(fout?1:0);

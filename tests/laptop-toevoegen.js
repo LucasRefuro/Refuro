@@ -9,6 +9,9 @@
 //   3. de nieuwprijs per uitvoering: één keer opzoeken, wat je typt onthouden
 //   4. een bestaande laptop: een aangetikte spec gaat ook naar de werkbank-rij, en alleen die
 //   5. de edge-functie: alleen modellen uit de lijst, met slot, nooit in de prijs van een winkel
+//   6. de modellenlijst bij typen: laptops uit de gedeelde lijst plus eigen toestellen, zonder
+//      rommel, en een nieuw model wordt onthouden (model_onthouden) bij opslaan of wijzigen
+//   7. Meer gegevens staat open, boven de specs
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
 const os=require('os');
@@ -57,7 +60,7 @@ window.supabase={createClient:()=>({
         onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
         getUser:async()=>({data:{user:null}})},
   from:(n)=>_tabel(n),
-  rpc:async()=>({data:[]}),
+  rpc:async(n,a)=>{ (window.__rpc=window.__rpc||[]).push([n,a]); return {data:[]}; },
   storage:{from:()=>({upload:async()=>({error:null}), remove:async()=>({}), getPublicUrl:(p)=>({data:{publicUrl:p}})})},
   channel:()=>({on(){return this;},subscribe(){return this;},send(){},unsubscribe(){}}),
   removeChannel(){}
@@ -152,6 +155,9 @@ const SPECS={ok:true, bron:'lijst',
   ok('nieuw: vijf velden, met het scherm', ['hw_sp_cpu','hw_sp_ram','hw_sp_ssd','hw_sp_scherm','hw_sp_win'].every(id=>!!d.getElementById(id))
     && !d.getElementById('hw_sp_scherm').closest('.lapspec').hidden);
   ok('nieuw: Windows heeft meteen zijn drie keuzes', d.querySelectorAll('#hw_sp_win_opties .optieknop').length===3);
+  ok('meer gegevens: niets meer dichtgeklapt in het formulier', !d.querySelector('#hwDetail details.meeropties'));
+  ok('meer gegevens: serienummer, inkoop en nieuwprijs staan boven de specs', ['hw_serie','hw_sp_artikel','hw_inkoop','hw_gar','hw_nieuwprijs','hw_marge','hw_uitstalling']
+    .every(id=>!!d.getElementById(id) && (d.getElementById(id).compareDocumentPosition(blok) & w.Node.DOCUMENT_POSITION_FOLLOWING)));
   zet('hw_merk','HP'); zet('hw_model','EliteBook 840 G10');
   await w.eval('hwLapOptiesLaden()');
   const knoppen=id=>[...d.querySelectorAll('#'+id+'_opties .optieknop')];
@@ -218,6 +224,44 @@ const SPECS={ok:true, bron:'lijst',
   ok('artikelcode: bij een telefoon niet', d.getElementById('hw_artikel_vak').hidden);
   w.eval('hwSluit()');
 
+  // ── 6. de modellenlijst bij een laptop ──
+  w.__tab.hardware_modellen=[
+    {merk:'HP', model:'EliteBook 840 G7', categorie:'Laptop', keer_gebruikt:12},
+    {merk:'hp', model:'elitebook 850 g8', categorie:'Laptop', keer_gebruikt:4},
+    {merk:'HP', model:'ProBook 450 G8', categorie:'Laptop', keer_gebruikt:8},
+    {merk:'HP', model:'EliteDesk 800 G4', categorie:'Desktop', keer_gebruikt:20},
+    {merk:'Lenovo', model:'[Geen sticker met naam]', categorie:'Laptop', keer_gebruikt:2},
+    {merk:'Lenovo', model:'xxxxxx', categorie:'Laptop', keer_gebruikt:1},
+    {merk:'Lenovo', model:'V320-17IKB', categorie:'Laptop', keer_gebruikt:3}];
+  w.eval(`hwData=[{id:'e8', merk:'HP', model:'EliteBook 850 G8', categorie:'Laptop', specs:{}, fotos:[], kanalen:{}, status:'voorraad'}];
+    hwLapModellen=null; hwVenster(null);`);
+  await wacht(30);
+  const mv=d.getElementById('hw_model');
+  const rijen=()=>[...d.querySelectorAll('#hwModelLijst .zrnaam')].map(x=>x.textContent);
+  ok('modellenlijst: het voorbeeld past bij een laptop', /EliteBook/.test(mv.placeholder));
+  zet('hw_merk','HP');
+  await w.eval('hwLapModellenLaden()');
+  w.eval('hwModelTyp()');
+  ok('modellenlijst: laptops van dit merk, meest gebruikt eerst', rijen().join('|')==='EliteBook 840 G7|ProBook 450 G8|EliteBook 850 G8');
+  ok('modellenlijst: geen desktops bij een laptop, elk model één keer en netjes geschreven', !rijen().includes('EliteDesk 800 G4') && rijen().filter(n=>/850/.test(n)).length===1);
+  mv.value='850'; w.eval('hwModelTyp()');
+  ok('modellenlijst: typen zoekt mee', rijen().join('|')==='EliteBook 850 G8');
+  zet('hw_merk','Lenovo'); mv.value=''; w.eval('hwModelTyp()');
+  ok('modellenlijst: rommel van vroeger staat er niet in', rijen().join('|')==='V320-17IKB');
+  zet('hw_cat','Desktop'); w.eval('hwKleurToon()'); zet('hw_merk','HP'); mv.value=''; w.eval('hwModelTyp()');
+  ok('modellenlijst: bij een desktop de desktops', rijen().join('|')==='EliteDesk 800 G4' && /OptiPlex/.test(mv.placeholder));
+  zet('hw_cat','Laptop'); w.eval('hwKleurToon()');
+  ok('modellenlijst: de nette naam terug, met het gekozen merk', JSON.stringify(w.eval("hwLapModelRij('HP','elitebook 850 g8','Laptop')"))==='{"merk":"HP","model":"EliteBook 850 G8"}');
+  w.__rpc=[];
+  ok('onthouden: een nieuw laptopmodel gaat naar de gedeelde lijst', await w.eval("hwModelOnthoud('HP','ZBook Firefly 14 G9','Laptop')")===true
+    && w.__rpc.length===1 && w.__rpc[0][0]==='model_onthouden' && w.__rpc[0][1].merk_in==='HP' && w.__rpc[0][1].model_in==='ZBook Firefly 14 G9' && w.__rpc[0][1].categorie_in==='Laptop');
+  mv.value=''; w.eval('hwModelTyp()');
+  ok('onthouden: en staat meteen in de lijst', rijen().includes('ZBook Firefly 14 G9'));
+  ok('onthouden: rommel en telefoons niet', await w.eval("hwModelOnthoud('HP','xxxxxx','Laptop')")===false
+    && await w.eval("hwModelOnthoud('Apple','iPhone 13','Telefoon')")===false && w.__rpc.length===1);
+  ok('onthouden: bij opslaan van een nieuw toestel', /if\(!fout\) hwModelOnthoud\(rij\.merk, rij\.model, rij\.categorie\)/.test(w.eval('hwOpslaan.toString()')));
+  w.eval('hwSluit()');
+
   // ── 4. een bestaande laptop ──
   const bestaand={id:'hw1', merk:'HP', model:'EliteBook 840 G10', categorie:'Laptop', staat:'A', status:'voorraad', nieuwprijs:1500, fotos:[], kanalen:{},
     specs:{Processor:'Intel Core i5-1335U', Geheugen:'16 GB', Opslag:'512 GB SSD', Scherm:'14 inch WUXGA', Windows:'Windows 11 Pro 23H2', Bouwjaar:'2023'}};
@@ -260,6 +304,17 @@ const SPECS={ok:true, bron:'lijst',
   w.eval(`hwData=[${JSON.stringify(Object.assign({}, bestaand, {id:'hw2', specs:Object.assign({}, bestaand.specs, {Artikelcode:'6F6Z2EA#ABH; 8A3D'})}))}]; hwVenster(hwData[0]);`);
   await wacht(20);
   ok('artikelcode: twee codes van de werkbank blijven zoals ze stonden', w.eval('hwKleurVeld().specs')===undefined && d.getElementById('hw_sp_artikel').value==='6F6Z2EA#ABH; 8A3D');
+  w.eval('hwSluit()'); await wacht(60);
+
+  // Het model van een bestaande laptop veranderen: het nieuwe model ook in de lijst, één keer.
+  w.__rpc=[];
+  w.eval(`hwData=[${JSON.stringify(Object.assign({}, bestaand, {id:'hw3'}))}]; hwVenster(hwData[0]);`);
+  await wacht(20);
+  zet('hw_model','EliteBook 845 G10');
+  await w.eval('hwStilBewaar()');
+  ok('model veranderd: het nieuwe model gaat naar de lijst', w.__rpc.some(x=>x[0]==='model_onthouden' && x[1].model_in==='EliteBook 845 G10' && x[1].merk_in==='HP'));
+  await w.eval('hwStilBewaar()');
+  ok('model veranderd: niet nog eens als er niets veranderde', w.__rpc.filter(x=>x[0]==='model_onthouden').length===1);
   w.eval('hwSluit()');
 
   // ── 5. de edge-functie ──
