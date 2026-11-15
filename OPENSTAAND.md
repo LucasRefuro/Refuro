@@ -32,9 +32,8 @@ Laptops: 74 uit Storvo (reserve in `reserve_laptops_20261115_*`), 5 webshopprodu
 - [ ] **Opruimen**: edge `tijdelijk-laptops-offline` (doet niets meer, mag weg in het dashboard),
       reservetabellen `reserve_laptops_20261115_*` en `reserve_omschrijving_20261115` zodra
       niemand ze terug wil, testthema #186703151369.
-- [ ] **"Meest gekozen"** boven Zeer goed op de productpagina en de bewijsregel op Hoe werkt
-      refurbished ("kaartje met de naam van de monteur en een QR-code naar het testrapport"):
-      alleen laten staan als het klopt.
+- [x] **"Meest gekozen"** klopt (eigenaar). Het kaartje met monteur en QR-code naar het testrapport
+      bestond niet; overal weggehaald, ook de testrapporten op de accountpagina.
 - [x] **Laptop-adviseur**: alleen nog bij laptopcollecties; elders WhatsApp en bellen.
 
 ---
