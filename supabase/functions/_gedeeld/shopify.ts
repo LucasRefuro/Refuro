@@ -487,13 +487,21 @@ export function accuVan(h: any, controle: any) {
    webshopverkoop of reservering. De webhook hoeft de advertentie dan niet opnieuw te
    synchroniseren; dat zou de voorraad absoluut zetten en in het venster voordat een verkoop
    verwerkt is een verkocht toestel weer te koop zetten. */
-export function gradeWachtrij(exemplaren: any[], controles: Record<string, any>) {
+/* winkel: ligt dit exemplaar nu in de winkel (een locatie van soort "winkel")? Dan kan de klant
+   hem vandaag ophalen; ligt hij op kantoor of in de werkplaats, dan pas een openingsdag later
+   (snippets/ophaalmoment in het thema, wens eigenaar november 2026). Per exemplaar en niet per
+   product: bij een Dell met drie in de winkel en twee op kantoor gaat het om het toestel dat
+   deze klant krijgt. Zonder winkelIds (oude aanroep) blijft het veld weg en kijkt het thema
+   naar het product. */
+export function gradeWachtrij(exemplaren: any[], controles: Record<string, any>, winkelIds?: Set<string>) {
   return exemplaren.slice()
     .sort((a, b) => String(a.aangemaakt_op || "").localeCompare(String(b.aangemaakt_op || "")))
     .map((h) => {
       const c = controles[h.id] || null;
       const a = accuVan(h, c);
-      return { code: h.code ? String(h.code) : null, accu: a.accu, nieuw: a.nieuw, cycli: a.cycli, tekst: staatToelichting(h, c) };
+      const uit: any = { code: h.code ? String(h.code) : null, accu: a.accu, nieuw: a.nieuw, cycli: a.cycli, tekst: staatToelichting(h, c) };
+      if (winkelIds) uit.winkel = !!h.locatie_id && winkelIds.has(String(h.locatie_id));
+      return uit;
     });
 }
 

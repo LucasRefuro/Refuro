@@ -76,15 +76,14 @@ function fotosVan(h: any) {
   }));
 }
 
-/* Ligt dit toestel op de winkellocatie, of in het magazijn of de werkplaats? Dat
-   bepaalt op de productpagina of "ophalen in de winkel" aangeklikt mag worden.
-   We schrijven het als metafield refuro.winkelvoorraad (1 of 0); het thema leest
-   dat en zet de ophaaloptie aan of grijs. Soort "winkel" is de fysieke winkel. */
-async function ligtInWinkel(locatieId: string | null): Promise<boolean> {
-  if (!locatieId) return false;
-  const { data: loc } = await admin.from("hardware_locaties")
-    .select("soort").eq("id", locatieId).maybeSingle();
-  return loc?.soort === "winkel";
+/* Welke locaties van deze winkel zijn de winkel zelf (soort "winkel"), en niet het kantoor, het
+   magazijn of de werkplaats? Dat bepaalt op de productpagina wanneer je kunt ophalen. Op het
+   product als metafield refuro.winkelvoorraad (1 als er één in de winkel ligt) en per exemplaar
+   in de wachtrij (gradeWachtrij), zodat het thema per staat kijkt naar het toestel dat de klant
+   krijgt. Eén vraag per synchronisatie in plaats van één per toestel. */
+async function winkelLocaties(teamId: string): Promise<Set<string>> {
+  const { data } = await admin.from("hardware_locaties").select("id").eq("team_id", teamId).eq("soort", "winkel");
+  return new Set((data || []).map((l: any) => String(l.id)));
 }
 
 /* De accu en de conditie-items staan niet op de hardware-rij maar op de controle
@@ -246,7 +245,8 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
   const geschat = gradeSchat(gradeLetter(rep.staat), Number(rep.verkoop) || 0);
   for (const g of GRADE_LETTERS) if (prijzen[g] == null) prijzen[g] = geschat[g];
 
-  const inWinkel = (await Promise.all(beschikbaar.map((e: any) => ligtInWinkel(e.locatie_id)))).some(Boolean);
+  const winkelIds = await winkelLocaties(teamId);
+  const inWinkel = beschikbaar.some((e: any) => !!e.locatie_id && winkelIds.has(String(e.locatie_id)));
   const nieuwprijs = rep.nieuwprijs != null && rep.nieuwprijs !== "" ? Number(rep.nieuwprijs) : null;
   const bestaandeVar: Record<string, string> = (reg?.varianten && typeof reg.varianten === "object") ? reg.varianten : {};
 
@@ -332,7 +332,7 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
      we alleen dit over en blijft het online zetten zelf werken. */
   const controles = await controlesBij(beschikbaar.map((e: any) => e.id));
   const gradeMf = GRADE_LETTERS.filter((g) => variantIds[g])
-    .flatMap((g) => bouwGradeMetafields(variantIds[g], g, gradeWachtrij(perGrade[g] || [], controles)));
+    .flatMap((g) => bouwGradeMetafields(variantIds[g], g, gradeWachtrij(perGrade[g] || [], controles, winkelIds)));
   let gradeInfo = true;
   try {
     const mu = await graphql(k, `mutation($m: [MetafieldsSetInput!]!){ metafieldsSet(metafields: $m){ userErrors { field message } } }`, { m: gradeMf });
@@ -367,9 +367,48 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
   return { leeg: false, product_id: p.id, nummer, url, beheer, zichtbaar, collecties, variantIds, gradeInfo } as any;
 }
 
+/* Alles opnieuw synchroniseren: elke advertentie met toestellen op voorraad, in porties (vanaf,
+   aantal), zodat een grote winkel binnen de tijd van een edge-functie blijft. Nodig als er een veld
+   bij komt dat het thema leest, zoals waar elk toestel ligt (november 2026). Een advertentie zonder
+   voorraad slaan we over: daar zou een sync de status van "net verkocht" kunnen veranderen. */
+async function allesSynchroniseren(teamId: string, vanaf: number, aantal: number) {
+  const k = await koppelingVan(teamId);
+  if (!k) throw new Error("Er is nog geen webshop gekoppeld.");
+  const { data: regs } = await admin.from("webshop_producten").select("sleutel").eq("team_id", teamId).order("sleutel");
+  const lijst = (regs || []).map((r: any) => r.sleutel).filter(Boolean);
+  const stuk = lijst.slice(vanaf, vanaf + aantal);
+  const uitslag: any[] = [];
+  for (const sleutel of stuk) {
+    try {
+      const { count } = await admin.from("hardware").select("id", { count: "exact", head: true })
+        .eq("team_id", teamId).eq("status", "voorraad").eq("kanalen->shopify->>sleutel", sleutel);
+      if (!count) { uitslag.push({ sleutel, overgeslagen: "geen voorraad" }); continue; }
+      const r = await synchroniseerAdvertentie(k, teamId, sleutel);
+      uitslag.push({ sleutel, ok: true, gradeInfo: r.gradeInfo !== false });
+    } catch (e) {
+      uitslag.push({ sleutel, fout: String((e as any)?.message || e) });
+    }
+  }
+  return { totaal: lijst.length, vanaf, volgende: vanaf + stuk.length < lijst.length ? vanaf + stuk.length : null, uitslag };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
+
+  /* De cron (X-Cron-Secret, zoals mail-sync en clover-inkomend) mag alleen "alles", voor één team. */
+  const cronSecret = Deno.env.get("MAIL_CRON_SECRET");
+  if (cronSecret && (req.headers.get("x-cron-secret") || "") === cronSecret) {
+    let cl: any;
+    try { cl = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
+    if (cl?.actie !== "alles" || !cl?.team_id) return fout("Onbekende actie");
+    try {
+      const uit = await allesSynchroniseren(String(cl.team_id), Math.max(0, Number(cl.vanaf) || 0), Math.min(40, Math.max(1, Number(cl.aantal) || 12)));
+      return new Response(JSON.stringify({ ok: true, ...uit }), { headers: cors });
+    } catch (e) {
+      return fout(e instanceof Error ? e.message : "Synchroniseren lukte niet", 502);
+    }
+  }
 
   const acc = await wieBelt(req);
   if (!acc) return fout("Niet ingelogd", 401);
@@ -377,6 +416,16 @@ Deno.serve(async (req) => {
   let lijf: any;
   try { lijf = await req.json(); } catch { return fout("Onleesbaar verzoek"); }
   const actie = String(lijf?.actie || "");
+
+  if (actie === "alles") {
+    if (!["eigenaar", "beheerder"].includes(String(acc.rol))) return fout("Niet bevoegd", 403);
+    try {
+      const uit = await allesSynchroniseren(acc.team_id, Math.max(0, Number(lijf?.vanaf) || 0), Math.min(40, Math.max(1, Number(lijf?.aantal) || 12)));
+      return new Response(JSON.stringify({ ok: true, ...uit }), { headers: cors });
+    } catch (e) {
+      return fout(e instanceof Error ? e.message : "Synchroniseren lukte niet", 502);
+    }
+  }
 
   /* Titels bijwerken voor alles wat al op de webshop staat (november 2026). De titel werd de kale
      modelnaam ("iPhone 11") met kleur en opslag als labels eronder. Nieuwe en gesynchroniseerde
@@ -613,8 +662,8 @@ Deno.serve(async (req) => {
     }
 
     if (actie === "locatie") {
-      // Na een verplaatsing de ophaal-indicator (winkelvoorraad) bijwerken. Bij het gegroepeerde
-      // product doen we dat via een volledige synchronisatie (winkelvoorraad = ligt er één in de winkel).
+      // Na een verplaatsing bijwerken waar de toestellen liggen: op het product (winkelvoorraad) en
+      // per exemplaar in de wachtrij. Bij het gegroepeerde product via een volledige synchronisatie.
       const sleutel = kanalen.shopify?.sleutel || null;
       if (!sleutel) return new Response(JSON.stringify({ ok: true, overgeslagen: true }), { headers: cors });
       await synchroniseerAdvertentie(k, acc.team_id, sleutel);
