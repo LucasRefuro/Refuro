@@ -44,6 +44,13 @@
     padding:14px 12px; font:inherit; font-weight:600; font-size:16px; cursor:pointer; text-align:center;}
   .naamknop.aan{border-color:var(--accent); background:var(--groen-zacht); color:var(--accent);}
 
+  .weken{display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:10px;}
+  .weekknop{border:1.5px solid var(--rand); background:var(--card); color:var(--tekst); border-radius:16px;
+    padding:12px 10px; font:inherit; cursor:pointer; text-align:center; display:flex; flex-direction:column; gap:2px;}
+  .weekknop b{font-size:16px; font-weight:700;}
+  .weekknop span{font-size:13px; color:var(--muted);}
+  .weekknop .vink{color:var(--groen-tekst); font-weight:700;}
+  .weekknop.aan{border-color:var(--accent); background:var(--groen-zacht);}
   .dag{padding:12px 0; border-top:1px solid var(--rand);}
   .dag:first-of-type{border-top:none; padding-top:0;}
   .dagkop{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
@@ -74,6 +81,10 @@
   .dienst{display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:3px 0;}
   .dienst.ik{font-weight:700; color:var(--accent);}
   .niemand{font-size:14px; color:var(--muted-l);}
+  .mijndienst{display:flex; justify-content:space-between; gap:10px; font-size:15px; padding:6px 0; border-top:1px solid var(--rand);}
+  .mijndienst:first-of-type{border-top:none;}
+  .mijndienst span:first-child::first-letter{text-transform:uppercase;}
+  .agendaknoppen{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
   button:focus-visible, input:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
 </style>
 </head>
@@ -95,6 +106,10 @@ const TOKEN=(function(){
 })();
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let info=null, gekozen=null, keuze={}, tijdOpen={};
+/* Meerdere weken vooruit (november 2026). weekI is de week die je nu invult; veranderd
+   onthoudt in welke weken je iets aantikte, zodat Doorgeven die allemaal meestuurt en een
+   week niet stil blijft liggen als je tussendoor naar een andere week springt. */
+let weekI=0, veranderd={};
 
 /* Ingelogd? Alleen nodig als de winkel inloggen verplicht heeft gezet. De sessie deelt
    deze pagina met de winkelapp (zelfde domein), dus wie daar ingelogd is, is het hier ook. */
@@ -125,19 +140,38 @@ function weekTekst(dagen){
   return (zelfde ? datumNL(dagen[0],{day:'numeric'}) : datumNL(dagen[0],{day:'numeric', month:'long'}))+' tot en met '+datumNL(dagen[6],{day:'numeric', month:'long'});
 }
 
+/* Weeknummer zoals op de kalender (ISO: de week van de donderdag). */
+function weekNr(ymd){
+  const d=new Date(ymd+'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7)+3);
+  const jan4=new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  return 1+Math.round(((d-jan4)/864e5-3+((jan4.getUTCDay()+6)%7))/7);
+}
+/* De weken uit de server; een oudere server stuurde alleen maandag en dagen. */
+function weken(){ return (info.weken&&info.weken.length) ? info.weken : [{maandag:info.maandag||info.dagen[0], dagen:info.dagen}]; }
+function huidig(){ return weken()[weekI]||weken()[0]; }
+function weekVan(ymd){ return weken().find(w=>w.dagen.includes(ymd)); }
+function gegeven(w){ return ((info.ingevuld||{})[gekozen]||[]).some(r=>w.dagen.includes(r.datum)); }
+function kiesWeek(i){ weekI=i; tekenBeschikbaarheid(); }
+
 /* ── beschikbaarheid doorgeven ── */
 function tekenBeschikbaarheid(melding){
   const d=info;
+  const wk=huidig();
   document.getElementById('kop').textContent='Wanneer kun je werken?';
-  document.getElementById('subkop').textContent=(d.winkel?d.winkel+' · ':'')+weekTekst(d.dagen);
+  document.getElementById('subkop').textContent=(d.winkel?d.winkel+' · ':'')+weekTekst(wk.dagen);
   if(!d.mensen.length){ zet('<div class="kaart"><p class="muted">Er staat nog niemand in het team. Vraag de eigenaar om je toe te voegen.</p></div>'); return; }
   if(d.mensen.length===1 && !gekozen) kiesNaam(d.mensen[0].id, true);
   let html='';
   if(melding) html+=melding;
   html+=`<div class="kaart"><h2>Wie ben je?</h2><div class="namen">${d.mensen.map(m=>
     `<button type="button" class="naamknop${gekozen===m.id?' aan':''}" onclick="kiesNaam('${m.id}')">${esc(m.naam)}</button>`).join('')}</div></div>`;
+  if(gekozen && weken().length>1){
+    html+=`<div class="kaart"><h2>Welke week?</h2><div class="weken">${weken().map((w,i)=>
+      `<button type="button" class="weekknop${i===weekI?' aan':''}" onclick="kiesWeek(${i})"><b>Week ${weekNr(w.maandag)}</b><span>${esc(datumNL(w.dagen[0],{day:'numeric'})+' tot '+datumNL(w.dagen[6],{day:'numeric', month:'short'}))}</span>${gegeven(w)?'<span class="vink">Doorgegeven</span>':''}</button>`).join('')}</div></div>`;
+  }
   if(gekozen){
-    html+=`<div class="kaart"><h2>Tik per dag aan of je kunt</h2>${d.dagen.map(ymd=>{
+    html+=`<div class="kaart"><h2>Tik per dag aan of je kunt</h2>${wk.dagen.map(ymd=>{
       const k=keuze[ymd]||{};
       const tijd=k.beschikbaar===true && (tijdOpen[ymd] || k.van || k.tot);
       return `<div class="dag"><div class="dagkop">
@@ -157,13 +191,14 @@ function tekenBeschikbaarheid(melding){
   zet(html);
 }
 function kiesNaam(id, stil){
-  gekozen=id; keuze={}; tijdOpen={};
+  gekozen=id; keuze={}; tijdOpen={}; veranderd={}; weekI=0;
   ((info.ingevuld||{})[id]||[]).forEach(r=>{ keuze[r.datum]={beschikbaar:r.beschikbaar!==false, van:r.van||'', tot:r.tot||''}; });
   if(!stil) tekenBeschikbaarheid();
 }
 function kiesDag(ymd, kan){
   const k=keuze[ymd]||{};
   keuze[ymd]={beschikbaar:kan, van:kan?(k.van||''):'', tot:kan?(k.tot||''):''};
+  const w=weekVan(ymd); if(w) veranderd[w.maandag]=true;
   tekenBeschikbaarheid();
 }
 function zetTijd(ymd){
@@ -171,40 +206,107 @@ function zetTijd(ymd){
   k.van=(document.getElementById('van_'+ymd)||{}).value||'';
   k.tot=(document.getElementById('tot_'+ymd)||{}).value||'';
   keuze[ymd]=k;
+  const w=weekVan(ymd); if(w) veranderd[w.maandag]=true;
 }
 async function doorgeven(knop){
   if(!gekozen) return;
   knop.disabled=true; knop.textContent='Bezig…';
-  const dagen=info.dagen.map(ymd=>{
-    const k=keuze[ymd]||{};
-    return {datum:ymd, beschikbaar:k.beschikbaar===true, van:k.beschikbaar===true?(k.van||null):null, tot:k.beschikbaar===true?(k.tot||null):null};
-  });
+  /* De week die openstaat, plus elke andere week waarin je iets aantikte. Eén verzoek per
+     week, want de server neemt een week tegelijk aan. */
+  const lijst=weken().filter((w,i)=>i===weekI || veranderd[w.maandag]);
+  const gelukt=[];
   try{
-    await praat({actie:'doorgeven', account_id:gekozen, dagen});
+    for(const w of lijst){
+      const dagen=w.dagen.map(ymd=>{
+        const k=keuze[ymd]||{};
+        return {datum:ymd, beschikbaar:k.beschikbaar===true, van:k.beschikbaar===true?(k.van||null):null, tot:k.beschikbaar===true?(k.tot||null):null};
+      });
+      await praat({actie:'doorgeven', account_id:gekozen, maandag:w.maandag, dagen});
+      info.ingevuld=info.ingevuld||{};
+      info.ingevuld[gekozen]=((info.ingevuld[gekozen])||[]).filter(r=>!w.dagen.includes(r.datum)).concat(dagen);
+      delete veranderd[w.maandag];
+      gelukt.push({w, aantal:dagen.filter(x=>x.beschikbaar).length});
+    }
     const naam=(info.mensen.find(m=>m.id===gekozen)||{}).naam||'';
-    info.ingevuld=info.ingevuld||{};
-    info.ingevuld[gekozen]=dagen;
-    const aantal=dagen.filter(x=>x.beschikbaar).length;
-    tekenBeschikbaarheid(`<div class="melding goed">Bedankt${naam?', '+esc(naam):''}. Je beschikbaarheid staat erin (${aantal} ${aantal===1?'dag':'dagen'}). Aanpassen kan altijd: tik opnieuw en geef het nog een keer door.</div>`);
+    const aantal=gelukt.reduce((s,x)=>s+x.aantal,0);
+    const veel=weken().length>1;
+    const welke=gelukt.map(x=>weekNr(x.w.maandag));
+    const wat=veel ? ('Week '+(welke.length>1 ? welke.slice(0,-1).join(', ')+' en '+welke[welke.length-1]+' staan' : welke[0]+' staat')+' erin')
+                   : 'Je beschikbaarheid staat erin';
+    // Door naar de eerstvolgende week die je nog niet doorgaf.
+    const volgende=weken().findIndex((w,i)=>i>weekI && !gegeven(w));
+    let verder=' Aanpassen kan altijd: tik opnieuw en geef het nog een keer door.';
+    if(volgende>=0){ weekI=volgende; verder=' Nu week '+weekNr(weken()[volgende].maandag)+'.'; }
+    tekenBeschikbaarheid(`<div class="melding goed">Bedankt${naam?', '+esc(naam):''}. ${wat} (${aantal} ${aantal===1?'dag':'dagen'}).${esc(verder)}</div>`);
     window.scrollTo(0,0);
   }catch(e){
     knop.disabled=false; knop.textContent='Doorgeven';
-    tekenBeschikbaarheid(`<div class="melding fout">${esc(e.message)}</div>`);
+    const half=gelukt.length ? ' Week '+gelukt.map(x=>weekNr(x.w.maandag)).join(' en ')+' staat er wel in.' : '';
+    tekenBeschikbaarheid(`<div class="melding fout">${esc(e.message+half)}</div>`);
   }
 }
 
 /* ── rooster bekijken ── */
+/* Wie ben je: ingelogd weet de server het (ik), anders tik je je naam aan. Die onthouden we
+   op deze telefoon, zodat je hem de volgende week niet opnieuw hoeft te kiezen. */
+const IK_SLEUTEL='storvo_rooster_ik_'+TOKEN.slice(0,8);
+function mijnId(){
+  if(info.ik) return info.ik;
+  try{ return localStorage.getItem(IK_SLEUTEL)||''; }catch(e){ return ''; }
+}
+function kiesMij(id){
+  try{ if(id) localStorage.setItem(IK_SLEUTEL, id); else localStorage.removeItem(IK_SLEUTEL); }catch(e){}
+  tekenRooster();
+}
+function agendaUrl(id){
+  return SUPABASE_URL+'/functions/v1/rooster-link?token='+encodeURIComponent(TOKEN)+'&wie='+encodeURIComponent(id);
+}
+/* Met inloggen verplicht mag de gewone link niet; dan halen we het bestand ingelogd op en
+   bieden het aan als download. */
+async function agendaIngelogd(knop){
+  knop.disabled=true;
+  try{
+    const uit=await praat({actie:'agenda'});
+    const url=URL.createObjectURL(new Blob([uit.ics],{type:'text/calendar'}));
+    const a=document.createElement('a'); a.href=url; a.download='rooster.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ alert(e.message); }
+  knop.disabled=false;
+}
+/* Zet in je agenda: bovenaan zodra je het rooster opent en je ingepland staat. */
+function agendaKaart(){
+  const alle=info.weken.filter(w=>w.gedeeld).flatMap(w=>w.diensten);
+  if(!alle.length) return '';
+  const ik=mijnId();
+  const namen=[];
+  alle.forEach(x=>{ if(!namen.some(n=>n.id===x.account_id)) namen.push({id:x.account_id, naam:x.naam}); });
+  if(!ik || (!info.ik && !namen.some(n=>n.id===ik))){
+    return `<div class="kaart"><h2>Zet je diensten in je agenda</h2><p class="muted klein" style="margin-bottom:14px">Tik je naam aan.</p><div class="namen">${namen.map(n=>
+      `<button type="button" class="naamknop" onclick="kiesMij('${esc(n.id)}')">${esc(n.naam)}</button>`).join('')}</div></div>`;
+  }
+  const mijn=alle.filter(x=>x.account_id===ik);
+  const naam=(namen.find(n=>n.id===ik)||{}).naam||'';
+  const anders=info.ik?'':`<button type="button" class="btn ghost" onclick="kiesMij('')">Niet ${esc(naam||'jij')}? Kies je naam</button>`;
+  if(!mijn.length) return `<div class="kaart"><h2>Jouw diensten</h2><p class="muted">Je staat deze weken niet ingepland.</p><div class="agendaknoppen">${anders}</div></div>`;
+  const knop=info.verplicht
+    ? `<button type="button" class="btn" onclick="agendaIngelogd(this)">Zet in je agenda</button>`
+    : `<a class="btn" href="${esc(agendaUrl(ik))}">Zet in je agenda</a>`;
+  return `<div class="kaart"><h2>Jouw diensten${naam?', '+esc(naam):''}</h2>${mijn.map(x=>
+    `<div class="mijndienst"><span>${esc(datumNL(x.datum,{weekday:'long', day:'numeric', month:'long'}))}</span><span>${esc(x.van||'')}${x.tot?' tot '+esc(x.tot):''}</span></div>`).join('')}
+    <div class="agendaknoppen">${knop}${anders}</div></div>`;
+}
 function tekenRooster(){
   const d=info;
   document.getElementById('kop').textContent='Rooster';
   document.getElementById('subkop').textContent=d.winkel||'';
   const titels=['Deze week','Volgende week'];
-  zet(d.weken.map((w,i)=>{
+  const ik=mijnId();
+  zet(agendaKaart()+d.weken.map((w,i)=>{
     if(!w.gedeeld) return `<div class="kaart"><div class="weekkop">${titels[i]||''}</div><p class="muted">Het rooster voor deze week staat er nog niet.</p></div>`;
     return `<div class="kaart"><div class="weekkop">${titels[i]||''} <span class="muted klein">${esc(weekTekst(w.dagen))}</span></div>${w.dagen.map(ymd=>{
       const ds=w.diensten.filter(x=>x.datum===ymd);
       return `<div class="roosterdag"><b>${esc(datumNL(ymd,{weekday:'long', day:'numeric', month:'long'}))}</b>${ds.length
-        ? ds.map(x=>`<div class="dienst${d.ik && x.account_id===d.ik?' ik':''}"><span>${esc(x.naam)}</span><span>${esc(x.van||'')}${x.tot?' tot '+esc(x.tot):''}</span></div>`).join('')
+        ? ds.map(x=>`<div class="dienst${ik && x.account_id===ik?' ik':''}"><span>${esc(x.naam)}</span><span>${esc(x.van||'')}${x.tot?' tot '+esc(x.tot):''}</span></div>`).join('')
         : '<div class="niemand">Niemand ingepland</div>'}</div>`;
     }).join('')}</div>`;
   }).join(''));

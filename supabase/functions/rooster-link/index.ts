@@ -2,8 +2,9 @@
 //
 // De winkel heeft twee vaste links (tabel rooster_links), die hij elke week in de
 // WhatsApp-groep zet:
-//   beschikbaarheid  je tikt je naam aan en geeft door wanneer je kunt (de komende week)
-//   rooster          je ziet wie wanneer werkt, maar alleen van weken die de eigenaar deelde
+//   beschikbaarheid  je tikt je naam aan en geeft door wanneer je kunt (de komende vier weken)
+//   rooster          je ziet wie wanneer werkt, maar alleen van weken die de eigenaar deelde,
+//                    en zet je eigen diensten met één knop in je agenda (GET, zie onder)
 // Zolang inloggen_verplicht uit staat, werkt alles met alleen de link. Staat hij aan, dan
 // moet je ingelogd zijn en geef je alleen je eigen beschikbaarheid door.
 //
@@ -11,12 +12,12 @@
 // zelf: het token, dat de naam bij dit team hoort, en dat de dagen in de goede week vallen.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { vandaagNL, maandagVan, komendeMaandag, weekDagen, plusDagen, schoneDagen, geldigToken } from "./week.ts";
+import { vandaagNL, maandagVan, doorgeefMaandagen, weekDagen, plusDagen, schoneDagen, geldigToken, agendaIcs } from "./week.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Content-Type": "application/json",
 };
 
@@ -66,6 +67,41 @@ async function teamMensen(teamId: string) {
     .sort((a: any, b: any) => a.naam.localeCompare(b.naam, "nl"));
 }
 
+// Deze en volgende week, met de diensten van de weken die de eigenaar deelde.
+async function gedeeldeWeken(teamId: string) {
+  const deze = maandagVan(vandaagNL());
+  const maandagen = [deze, plusDagen(deze, 7)];
+  const { data: wkn } = await admin.from("rooster_weken")
+    .select("maandag, gedeeld").eq("team_id", teamId).in("maandag", maandagen);
+  const mensen = await teamMensen(teamId);
+  const naamVan = new Map(mensen.map((m: any) => [m.id, m.naam]));
+  const weken = [];
+  for (const maandag of maandagen) {
+    const gedeeld = !!(wkn || []).find((w: any) => w.maandag === maandag && w.gedeeld);
+    const dagen = weekDagen(maandag);
+    let diensten: any[] = [];
+    if (gedeeld) {
+      const { data } = await admin.from("rooster")
+        .select("id, account_id, datum, van, tot")
+        .eq("team_id", teamId).gte("datum", dagen[0]).lte("datum", dagen[6])
+        .order("datum").order("van");
+      // De notitie bij een dienst laten we weg: die schrijft de eigenaar voor zichzelf.
+      diensten = (data || []).map((d: any) => ({
+        id: d.id, naam: naamVan.get(d.account_id) || "Teamlid", account_id: d.account_id,
+        datum: d.datum, van: d.van, tot: d.tot,
+      }));
+    }
+    weken.push({ maandag, dagen, gedeeld, diensten });
+  }
+  return weken;
+}
+
+async function agendaVoor(teamId: string, accountId: string) {
+  const weken = await gedeeldeWeken(teamId);
+  const mijn = weken.flatMap((w: any) => w.diensten).filter((d: any) => d.account_id === accountId);
+  return agendaIcs(mijn, await winkelNaam(teamId));
+}
+
 async function winkelNaam(teamId: string) {
   const { data } = await admin.from("klanten").select("naam").eq("id", teamId).maybeSingle();
   return data?.naam || "";
@@ -73,6 +109,30 @@ async function winkelNaam(teamId: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  // Zet in je agenda: de knop op de rooster-pagina is een gewone link hierheen, zodat de
+  // telefoon het agendabestand zelf opent (op een iPhone "Voeg alles toe"). Een bestand dat
+  // de pagina zelf maakt, belandt op een iPhone eerst in Downloads. Alleen met de rooster-link
+  // en alleen als inloggen niet verplicht is; anders vraagt de pagina het met POST op.
+  if (req.method === "GET") {
+    const tekstKop = { "Content-Type": "text/plain; charset=utf-8" };
+    const u = new URL(req.url);
+    const link = await linkVan(String(u.searchParams.get("token") || ""));
+    const wie = String(u.searchParams.get("wie") || "");
+    if (!link || link.soort !== "rooster" || !UUID.test(wie)) return new Response("Deze link werkt niet meer.", { status: 404, headers: tekstKop });
+    if (link.inloggen_verplicht) return new Response("Log in en open het rooster opnieuw.", { status: 401, headers: tekstKop });
+    try {
+      const ics = await agendaVoor(link.team_id, wie);
+      return new Response(ics, { headers: {
+        "Content-Type": "text/calendar; charset=utf-8",
+        "Content-Disposition": 'inline; filename="rooster.ics"',
+        "Cache-Control": "no-store",
+      } });
+    } catch (e) {
+      console.error("rooster-link agenda", e);
+      return new Response("Er ging iets mis. Probeer het zo nog eens.", { status: 500, headers: tekstKop });
+    }
+  }
   if (req.method !== "POST") return fout("Alleen POST", 405);
 
   let lijf: any;
@@ -94,25 +154,36 @@ Deno.serve(async (req) => {
   try {
     // ── beschikbaarheid ──
     if (link.soort === "beschikbaarheid") {
-      const maandag = komendeMaandag(vandaagNL());
-      const dagen = weekDagen(maandag);
+      // Meerdere weken vooruit (doorgeefMaandagen). Een inzending gaat over één week tegelijk.
+      const maandagen = doorgeefMaandagen(vandaagNL());
+      const weken = maandagen.map((m) => ({ maandag: m, dagen: weekDagen(m) }));
+      const eerste = weken[0].dagen[0];
+      const laatste = weken[weken.length - 1].dagen[6];
 
       if (actie === "info") {
         let mensen = await teamMensen(link.team_id);
         if (ik) mensen = mensen.filter((m: any) => m.id === ik.id);
         const { data: besch } = await admin.from("beschikbaarheid")
           .select("account_id, datum, beschikbaar, van, tot")
-          .eq("team_id", link.team_id).gte("datum", dagen[0]).lte("datum", dagen[6]);
+          .eq("team_id", link.team_id).gte("datum", eerste).lte("datum", laatste);
         const ids = new Set(mensen.map((m: any) => m.id));
         const ingevuld: Record<string, any[]> = {};
         for (const b of (besch || [])) {
           if (!ids.has(b.account_id)) continue;
           (ingevuld[b.account_id] ||= []).push({ datum: b.datum, beschikbaar: b.beschikbaar, van: b.van, tot: b.tot });
         }
-        return klaar({ soort: "beschikbaarheid", winkel, maandag, dagen, mensen, ingevuld });
+        // maandag en dagen (de eerste week) blijven erbij voor een pagina die nog van voor de
+        // weken komt en in iemands browser openstaat.
+        return klaar({ soort: "beschikbaarheid", winkel, maandag: weken[0].maandag, dagen: weken[0].dagen, weken, mensen, ingevuld });
       }
 
       if (actie === "doorgeven") {
+        // Zonder maandag (oude pagina) is het de komende week. Een maandag die niet meer in
+        // het rijtje valt (pagina bleef over het weekend open) weigeren we met uitleg, in
+        // plaats van de dagen stil weg te gooien.
+        const gevraagd = String(lijf?.maandag || "");
+        if (gevraagd && !maandagen.includes(gevraagd)) return fout("Deze week kun je niet meer doorgeven. Open de link opnieuw.");
+        const maandag = gevraagd || maandagen[0];
         const accountId = String(lijf?.account_id || "");
         if (!UUID.test(accountId)) return fout("Kies eerst je naam");
         if (ik && ik.id !== accountId) return fout("Je kunt alleen je eigen beschikbaarheid doorgeven", 403);
@@ -134,32 +205,11 @@ Deno.serve(async (req) => {
     }
 
     // ── rooster bekijken ──
+    // Met inloggen verplicht haalt de pagina het agendabestand hier op (voor jezelf).
+    if (actie === "agenda" && ik) return klaar({ ics: await agendaVoor(link.team_id, ik.id) });
     if (actie !== "info") return fout("Met deze link kun je alleen kijken", 403);
-    const deze = maandagVan(vandaagNL());
-    const maandagen = [deze, plusDagen(deze, 7)];
-    const { data: wkn } = await admin.from("rooster_weken")
-      .select("maandag, gedeeld").eq("team_id", link.team_id).in("maandag", maandagen);
-    const mensen = await teamMensen(link.team_id);
-    const naamVan = new Map(mensen.map((m: any) => [m.id, m.naam]));
-    const weken = [];
-    for (const maandag of maandagen) {
-      const gedeeld = !!(wkn || []).find((w: any) => w.maandag === maandag && w.gedeeld);
-      const dagen = weekDagen(maandag);
-      let diensten: any[] = [];
-      if (gedeeld) {
-        const { data } = await admin.from("rooster")
-          .select("account_id, datum, van, tot")
-          .eq("team_id", link.team_id).gte("datum", dagen[0]).lte("datum", dagen[6])
-          .order("datum").order("van");
-        // De notitie bij een dienst laten we weg: die schrijft de eigenaar voor zichzelf.
-        diensten = (data || []).map((d: any) => ({
-          naam: naamVan.get(d.account_id) || "Teamlid", account_id: d.account_id,
-          datum: d.datum, van: d.van, tot: d.tot,
-        }));
-      }
-      weken.push({ maandag, dagen, gedeeld, diensten });
-    }
-    return klaar({ soort: "rooster", winkel, weken, ik: ik ? ik.id : null });
+    const weken = await gedeeldeWeken(link.team_id);
+    return klaar({ soort: "rooster", winkel, weken, ik: ik ? ik.id : null, verplicht: !!link.inloggen_verplicht });
   } catch (e) {
     console.error("rooster-link", e);
     return fout(e instanceof Error ? e.message : "Er ging iets mis", 500);

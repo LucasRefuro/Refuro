@@ -37,6 +37,17 @@ export function komendeMaandag(vandaag: string): string {
   return plusDagen(maandagVan(vandaag), 7);
 }
 
+// Hoeveel weken je met de beschikbaarheid-link vooruit kunt doorgeven. Eerst was het alleen
+// de komende week; de eigenaar wilde dat je meer weken in één keer kunt invullen (november
+// 2026). Vier is ruim genoeg om een vakantie door te geven en kort genoeg om te overzien.
+export const DOORGEEF_WEKEN = 4;
+
+// De maandagen die je kunt doorgeven: de komende week en de weken erna.
+export function doorgeefMaandagen(vandaag: string, aantal: number = DOORGEEF_WEKEN): string[] {
+  const eerste = komendeMaandag(vandaag);
+  return Array.from({ length: aantal }, (_, i) => plusDagen(eerste, 7 * i));
+}
+
 export function weekDagen(maandag: string): string[] {
   return [0, 1, 2, 3, 4, 5, 6].map((i) => plusDagen(maandag, i));
 }
@@ -58,6 +69,44 @@ export function schoneDagen(dagen: unknown, maandag: string) {
     uit.push({ datum, beschikbaar, van, tot });
   }
   return uit;
+}
+
+// Je eigen diensten als agendabestand (.ics), voor de knop Zet in je agenda op de
+// rooster-link. Tijden zonder tijdzone ("zwevend"): de telefoon leest ze als zijn eigen
+// tijd, en dat is in Nederland precies wat de winkel bedoelt. Een dienst zonder tijden wordt
+// een hele dag. De UID komt van de dienst zelf, zodat een agenda die het bestand nog eens
+// krijgt de dienst kan herkennen in plaats van hem dubbel te zetten.
+export function agendaIcs(
+  diensten: { id?: string; datum: string; van?: string | null; tot?: string | null }[],
+  winkel: string,
+  nu: Date = new Date(),
+): string {
+  const tekst = (s: string) => String(s || "").replace(/\\/g, "\\\\").replace(/([;,])/g, "\\$1").replace(/\r?\n/g, "\\n");
+  const dag = (ymd: string) => ymd.replace(/-/g, "");
+  const tijd = (t: string) => t.replace(":", "") + "00";
+  const stempel = nu.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const titel = "Werken" + (winkel ? " bij " + winkel : "");
+  const regels = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Storvo//Rooster//NL", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  for (const d of diensten) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.datum)) continue;
+    // Eerste vijf tekens: ook "10:00:00" (als de kolom ooit een tijdtype wordt) is dan 10:00.
+    const van = TIJD.test(String(d.van || "").slice(0, 5)) ? String(d.van).slice(0, 5) : "";
+    const tot = TIJD.test(String(d.tot || "").slice(0, 5)) ? String(d.tot).slice(0, 5) : "";
+    regels.push("BEGIN:VEVENT");
+    regels.push("UID:" + (d.id || d.datum + "-" + van) + "@storvo.app");
+    regels.push("DTSTAMP:" + stempel);
+    if (van) {
+      regels.push("DTSTART:" + dag(d.datum) + "T" + tijd(van));
+      regels.push("DTEND:" + dag(d.datum) + "T" + tijd(tot && tot > van ? tot : van));
+    } else {
+      regels.push("DTSTART;VALUE=DATE:" + dag(d.datum));
+      regels.push("DTEND;VALUE=DATE:" + dag(plusDagen(d.datum, 1)));
+    }
+    regels.push("SUMMARY:" + tekst(titel));
+    regels.push("END:VEVENT");
+  }
+  regels.push("END:VCALENDAR");
+  return regels.join("\r\n") + "\r\n";
 }
 
 // Een link-token is 32 hexadecimale tekens (een uuid zonder streepjes). Alles anders is geen

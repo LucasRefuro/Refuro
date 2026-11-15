@@ -56,6 +56,10 @@ setTimeout(()=>{
   // ── winkel laag maar er ligt genoeg achter → bijvullen, niet bestellen ──
   w.eval("state.producten=[{id:'a',naam:'Hoesje',cat:1,winkel:1,voorraad:5,schap:3,minOver:2}];");
   ok('laag rek met over staat op de bijvullijst', w.eval("bijvulLijst().some(p=>p.id==='a')"));
+  // Het venster Bijhangen uit het magazijn springt niet meer vanzelf open (wens eigenaar,
+  // november 2026); alleen als je op de knop drukt.
+  w.eval("try{localStorage.removeItem('storvo_hang_gezien');}catch(e){} hangHerinnering();");
+  ok('bijhangen: geen venster vanzelf', !/openBijhangen\(\)/.test(w.eval("hangHerinnering.toString()")) && !w.document.getElementById('hangOverlay'));
   ok('en niet op de bestellijst', w.eval("!bestelLijst().some(p=>p.id==='a')"));
 
   // ── over op/onder z'n minimum → bestellen, met het juiste aantal ──

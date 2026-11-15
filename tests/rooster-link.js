@@ -36,6 +36,17 @@ const TOKEN='0123456789abcdef0123456789abcdef';
   ok('over de jaargrens', wk.komendeMaandag('2026-12-31')==='2027-01-04');
   const dagen=wk.weekDagen('2026-11-16');
   ok('een week is maandag tot en met zondag', dagen.length===7 && dagen[0]==='2026-11-16' && dagen[6]==='2026-11-22');
+  const mdn=wk.doorgeefMaandagen('2026-11-14');
+  ok('doorgeven: vier weken vooruit, vanaf de komende week', mdn.join(',')==='2026-11-16,2026-11-23,2026-11-30,2026-12-07' && wk.DOORGEEF_WEKEN===4);
+  ok('doorgeven: op maandag schuift het rijtje een week op', wk.doorgeefMaandagen('2026-11-16')[0]==='2026-11-23');
+  const ics=wk.agendaIcs([
+    {id:'d1', datum:'2026-11-16', van:'12:00', tot:'17:30'},
+    {id:'d2', datum:'2026-11-18', van:null, tot:null},
+    {datum:'kapot', van:'10:00'}], 'Refuro, Rijen', new Date('2026-11-15T10:00:00Z'));
+  ok('agenda: een afspraak per dienst, kapotte valt weg', (ics.match(/BEGIN:VEVENT/g)||[]).length===2 && /^BEGIN:VCALENDAR\r\n/.test(ics) && /END:VCALENDAR\r\n$/.test(ics));
+  ok('agenda: begin en eind op de goede tijd', /DTSTART:20261116T120000\r\nDTEND:20261116T173000/.test(ics));
+  ok('agenda: zonder tijden een hele dag', /DTSTART;VALUE=DATE:20261118\r\nDTEND;VALUE=DATE:20261119/.test(ics));
+  ok('agenda: titel met de winkel, komma netjes', /SUMMARY:Werken bij Refuro\\, Rijen/.test(ics) && /UID:d1@storvo\.app/.test(ics));
 
   const schoon=wk.schoneDagen([
     {datum:'2026-11-16', beschikbaar:true, van:'10:00', tot:'14:30'},
@@ -62,8 +73,15 @@ const TOKEN='0123456789abcdef0123456789abcdef';
   ok('edge: met inloggen alleen je eigen beschikbaarheid', /ik && ik\.id !== accountId/.test(edge));
   ok('edge: doorgeven telt meteen (ingediend)', /status: "ingediend"/.test(edge));
   ok('edge: rooster alleen van gedeelde weken', /if \(gedeeld\)/.test(edge));
-  ok('edge: notitie bij een dienst blijft binnen', /select\("account_id, datum, van, tot"\)/.test(edge) && !/notitie"/.test(edge.replace(/\/\/.*$/gm,'')));
+  ok('edge: notitie bij een dienst blijft binnen', /select\("id, account_id, datum, van, tot"\)/.test(edge) && !/notitie"/.test(edge.replace(/\/\/.*$/gm,'')));
   ok('edge: met de rooster-link kun je alleen kijken', /Met deze link kun je alleen kijken/.test(edge));
+  ok('edge: info stuurt de weken mee', /weken, mensen, ingevuld/.test(edge));
+  ok('edge: een week buiten het rijtje wordt geweigerd', /!maandagen\.includes\(gevraagd\)/.test(edge) && /Deze week kun je niet meer doorgeven/.test(edge));
+  ok('edge: zonder maandag de komende week (oude pagina)', /gevraagd \|\| maandagen\[0\]/.test(edge));
+  ok('edge: agenda als echt agendabestand', /"Content-Type": "text\/calendar; charset=utf-8"/.test(edge) && /req\.method === "GET"/.test(edge));
+  ok('edge: agenda alleen met de rooster-link', /link\.soort !== "rooster" \|\| !UUID\.test\(wie\)/.test(edge));
+  ok('edge: agenda niet via de gewone link als inloggen verplicht is', /if \(link\.inloggen_verplicht\) return new Response\("Log in/.test(edge));
+  ok('edge: ingelogd alleen je eigen agenda', /actie === "agenda" && ik\) return klaar\(\{ ics: await agendaVoor\(link\.team_id, ik\.id\)/.test(edge));
 
   const vc=JSON.parse(fs.readFileSync(bron('vercel.json'),'utf8'));
   ok('vercel: /rooster/<token> opent de pagina', (vc.rewrites||[]).some(r=>r.source==='/rooster/:token' && r.destination==='/rooster'));
@@ -123,6 +141,35 @@ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:nu
   ok('pagina: bedankt met je naam', /Bedankt, Tim/.test((d.querySelector('.melding.goed')||{}).textContent||''));
   ok('pagina: het blijft staan na doorgeven', d.querySelectorAll('.dag')[0].querySelector('.keus.kan.aan'));
 
+  // Meerdere weken: weekknoppen, een andere week invullen, beide weken gaan mee.
+  const wk2=wk.weekDagen('2026-11-23'), wk3=wk.weekDagen('2026-11-30');
+  w=pagina({info:{ok:true, soort:'beschikbaarheid', winkel:'Refuro', maandag:week[0], dagen:week,
+      weken:[{maandag:week[0], dagen:week},{maandag:wk2[0], dagen:wk2},{maandag:wk3[0], dagen:wk3}], mensen,
+      ingevuld:{[mensen[0].id]:[{datum:wk3[1], beschikbaar:true, van:null, tot:null}]}},
+    doorgeven:{ok:true, opgeslagen:7}});
+  await wacht(60); d=w.document;
+  ok('weken: eerst je naam, geen weekknoppen', !d.querySelector('.weekknop'));
+  d.querySelectorAll('.naamknop')[0].click();
+  const wkn=[...d.querySelectorAll('.weekknop')];
+  ok('weken: een knop per week met het weeknummer', wkn.length===3 && /Week 47/.test(wkn[0].textContent) && /Week 49/.test(wkn[2].textContent));
+  ok('weken: de eerste week staat open', wkn[0].classList.contains('aan') && d.querySelectorAll('.dag').length===7);
+  ok('weken: eerder doorgegeven week heeft een vinkje', /Doorgegeven/.test(wkn[2].textContent) && !/Doorgegeven/.test(wkn[0].textContent));
+  d.querySelectorAll('.dag')[0].querySelector('.keus.kan').click();
+  d.querySelectorAll('.weekknop')[1].click();
+  ok('weken: andere week gekozen', d.querySelectorAll('.weekknop')[1].classList.contains('aan') && /23 tot en met 29 november/.test(d.getElementById('subkop').textContent));
+  ok('weken: dagen van die week', d.querySelectorAll('.dag').length===7 && !d.querySelector('.dag .keus.kan.aan'));
+  d.querySelectorAll('.dag')[4].querySelector('.keus.kan').click();
+  const voor=w.__vragen.length;
+  d.getElementById('doorgeefKnop').click();
+  await wacht(40);
+  const wkVragen=w.__vragen.slice(voor).filter(v=>v.lijf.actie==='doorgeven');
+  ok('weken: beide aangetikte weken gaan mee, elk apart', wkVragen.length===2 && wkVragen.map(v=>v.lijf.maandag).sort().join(',')===week[0]+','+wk2[0]);
+  const v1=wkVragen.find(v=>v.lijf.maandag===week[0]), v2=wkVragen.find(v=>v.lijf.maandag===wk2[0]);
+  ok('weken: per week de eigen zeven dagen', v1 && v2 && v1.lijf.dagen[0].datum===week[0] && v1.lijf.dagen[0].beschikbaar===true && v2.lijf.dagen[4].datum===wk2[4] && v2.lijf.dagen[4].beschikbaar===true && v2.lijf.dagen[0].beschikbaar===false);
+  ok('weken: week 49 (niet aangeraakt) blijft zoals hij was', !wkVragen.some(v=>v.lijf.maandag===wk3[0]));
+  ok('weken: bedankt noemt de weken', /Week 47 en 48 staan erin/.test((d.querySelector('.melding.goed')||{}).textContent||''));
+  ok('weken: vinkjes bij de doorgegeven weken', [...d.querySelectorAll('.weekknop')].every(k=>/Doorgegeven/.test(k.textContent)));
+
   // Al ingevuld: je ziet terug wat je eerder doorgaf.
   w=pagina({info:{ok:true, soort:'beschikbaarheid', winkel:'Refuro', maandag:week[0], dagen:week, mensen,
     ingevuld:{[mensen[0].id]:[{datum:week[2], beschikbaar:true, van:'10:00', tot:null}]}}});
@@ -152,6 +199,17 @@ window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:nu
   ok('rooster: gedeelde week met wie werkt', /Sara/.test(d.body.textContent) && /10:00 tot 17:00/.test(d.body.textContent));
   ok('rooster: lege dagen zeggen het', d.querySelectorAll('.niemand').length===6);
   ok('rooster: niet gedeelde week nog niet zichtbaar', /staat er nog niet/.test(d.body.textContent));
+  ok('agenda: eerst je naam kiezen', /Zet je diensten in je agenda/.test(d.body.textContent) && !d.querySelector('a.btn[href*="rooster-link"]'));
+  const mijnKnop=[...d.querySelectorAll('.naamknop')].find(b=>b.textContent==='Sara');
+  ok('agenda: alleen namen die ingepland zijn', d.querySelectorAll('.naamknop').length===1 && !!mijnKnop);
+  mijnKnop.click();
+  const agKnop=d.querySelector('a.btn[href*="rooster-link"]');
+  ok('agenda: knop Zet in je agenda met token en naam', !!agKnop && /Zet in je agenda/.test(agKnop.textContent) && agKnop.getAttribute('href').includes('token='+TOKEN) && agKnop.getAttribute('href').includes('wie='+mensen[0].id));
+  ok('agenda: je eigen dienst staat erbij', d.querySelectorAll('.mijndienst').length===1 && /10:00 tot 17:00/.test(d.querySelector('.mijndienst').textContent));
+  ok('agenda: je eigen dienst in het rooster vetgedrukt', !!d.querySelector('.dienst.ik'));
+  ok('agenda: naam onthouden op deze telefoon', w.localStorage.getItem('storvo_rooster_ik_'+TOKEN.slice(0,8))===mensen[0].id);
+  [...d.querySelectorAll('.btn.ghost')].find(b=>/Kies je naam/.test(b.textContent)).click();
+  ok('agenda: andere naam kiezen kan', !!d.querySelector('.naamknop') && !d.querySelector('.mijndienst'));
 
   // Inloggen verplicht.
   w=pagina({info:{ok:true, soort:'beschikbaarheid', winkel:'Refuro', inloggen:true}});
@@ -252,6 +310,19 @@ window.supabase={createClient:()=>({
   ok('app: gedeeld staat in beeld', /Gedeeld/.test(a.eval('roosterKopHtml()')) && /Niet meer delen/.test(a.eval('roosterKopHtml()')));
   await a.eval("roosterWeekDelen(false)");
   ok('app: niet meer delen', a.__geschreven.filter(x=>x[0]==='rooster_weken').pop()[2].gedeeld===false && !a.eval('roosterData.gedeeld'));
+
+  // Het planbord op de telefoon: de hele week onder elkaar, niet meer een dag per keer.
+  a.eval(`(function(){ const dg=roosterDagen().map(roosterYmd);
+    roosterData={besch:[{account_id:'m1', datum:dg[2], beschikbaar:true, status:'ingediend'}],
+      diensten:[{id:'d1', account_id:'m1', datum:dg[0], van:'12:00', tot:'17:30', pauze_min:0}], gedeeld:false};
+    tekenRooster(); })()`);
+  const mob=ad.querySelector('#roosterInhoud .pb-mobiel');
+  const pan=mob?[...mob.querySelectorAll('.dagpaneel')]:[];
+  ok('planbord telefoon: zeven dagen onder elkaar', pan.length===7 && !mob.querySelector('.dagstrip'));
+  ok('planbord telefoon: maandag bovenaan, zondag onderaan', /^Maandag/.test(pan[0].querySelector('.dp-kop b').textContent) && /^Zondag/.test(pan[6].querySelector('.dp-kop b').textContent));
+  ok('planbord telefoon: dienst staat bij de goede dag', /Sara/.test(pan[0].querySelector('.dp-dienst').textContent) && !pan[1].querySelector('.dp-dienst'));
+  ok('planbord telefoon: wie kan staat erbij', /Sara/.test(pan[2].querySelector('.inplanrij').textContent));
+  ok('planbord telefoon: gesloten dag is een smalle regel', pan[6].classList.contains('dicht') && /Gesloten/.test(pan[6].textContent) && !pan[6].querySelector('.inplanrij'));
 
   // Een medewerker ziet geen deelknoppen en hoeft niets goed te laten keuren.
   a.eval("gebruiker={id:'m1', naam:'Sara', rol:'medewerker', tabs:null}; roosterLinks=null;");

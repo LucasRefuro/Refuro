@@ -681,6 +681,12 @@
   .ds-stip.goed{background:var(--green);}
   .ds-stip.leeg{background:var(--amber);}
   .dagpaneel{border:1px solid var(--border); border-radius:var(--radius-s); padding:14px 16px;}
+  .pb-dagen{display:flex; flex-direction:column; gap:12px;}
+  .dagpaneel.vandaag{border-color:var(--green);}
+  .dagpaneel.dicht{background:var(--soft); padding:10px 16px;}
+  .dp-kop{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+  .dp-kop b{font-size:15px;}
+  .dagpaneel.dicht .dp-kop{margin-bottom:0;}
   .dp-dienst{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--border);}
   .dp-dienst:first-of-type{border-top:0;}
   .dp-acts{flex:none;}
@@ -4625,9 +4631,10 @@ function pctHtml(nu,vorig){
   const tekst = ap>=1000 ? '>999%' : ap.toFixed(0)+'%';
   return `<span class="pct ${p>=0?'up':'down'}" title="t.o.v. vorige week">${p>=0?'▲':'▼'} ${tekst}</span>`;
 }
-/* Bij het openen van het dashboard vragen we één keer per dag aandacht voor
-   wat er nog opgehangen moet worden. Vaker is zeuren; nooit is te makkelijk
-   te vergeten, en dan blijft de doos achter staan.                          */
+/* Wat er nog opgehangen moet worden staat als kaartje op het dashboard. Tot
+   november 2026 sprong daarnaast één keer per dag het venster Bijhangen uit
+   het magazijn vanzelf open; de eigenaar wilde dat niet meer. Het kaartje en
+   de knop Nu bijhangen blijven, het venster komt alleen nog als je erom vraagt. */
 function hangHerinnering(){
   const kaart=document.getElementById('hangKaart');
   const lijst=bijvulLijst();
@@ -4636,13 +4643,6 @@ function hangHerinnering(){
     const t=document.getElementById('hangKaartTel');
     if(t) t.textContent = lijst.length ? '('+lijst.length+' product'+(lijst.length===1?'':'en')+')' : '';
   }
-  if(!lijst.length) return;
-  const vandaag=new Date().toISOString().slice(0,10);
-  let gezien=null;
-  try{ gezien=localStorage.getItem('storvo_hang_gezien'); }catch(e){}
-  if(gezien===vandaag) return;
-  try{ localStorage.setItem('storvo_hang_gezien', vandaag); }catch(e){}
-  setTimeout(()=>{ if(bijvulLijst().length) openBijhangen(); }, 500);
 }
 
 /* ═══════════════ TAKEN EN PLANNING ═══════════════
@@ -4989,6 +4989,7 @@ let roosterData={besch:[], diensten:[], gedeeld:false};
    roosterpagina opent, en alleen voor wie mag inplannen. */
 let roosterLinks=null;
 const DAG_KORT=['Ma','Di','Wo','Do','Vr','Za','Zo'];
+const DAG_LANG=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
 /* Vaste openingstijden van de winkel, per weekdag (index 0=maandag .. 6=zondag).
    null = gesloten. Zo zie je in het rooster meteen de hele dag met de tijden die
    ertoe doen. Wijzig je de openingstijden, dan pas je ze hier aan. */
@@ -5074,7 +5075,7 @@ function roosterLinkUrl(soort){
 }
 function roosterLinkTekst(soort){
   const url=roosterLinkUrl(soort); if(!url) return '';
-  return soort==='rooster' ? 'Het rooster staat erin: '+url : 'Geef hier door wanneer je volgende week kunt: '+url;
+  return soort==='rooster' ? 'Het rooster staat erin: '+url : 'Geef hier door wanneer je kunt, voor de komende weken: '+url;
 }
 /* WhatsApp opent met het bericht al klaar; je kiest daar zelf de groep. */
 function roosterNaarWhatsApp(soort){
@@ -5094,7 +5095,7 @@ async function tekenRoosterDelen(){
       <div class="deelknoppen"><button type="button" class="btn small" onclick="roosterNaarWhatsApp('${soort}')">WhatsApp</button><button type="button" class="btn small ghost" onclick="roosterKopieer('${soort}')">Kopieer</button></div></div>`;
   el.hidden=false;
   el.innerHTML=`<div class="roosterlabel" style="margin-bottom:4px">Links voor de groep</div>
-    ${rij('beschikbaarheid','Beschikbaarheid doorgeven','Stuur deze op zaterdag. Je team tikt aan wanneer ze volgende week kunnen.')}
+    ${rij('beschikbaarheid','Beschikbaarheid doorgeven','Je team tikt aan wanneer ze kunnen, tot vier weken vooruit.')}
     ${rij('rooster','Rooster bekijken','Hier ziet je team de weken die jij deelde.')}
     <label class="deelvink"><input type="checkbox" id="roosterInloggen" ${roosterLinks.inloggen_verplicht?'checked':''} onchange="roosterInloggenZet(this.checked)"> Alleen met inloggen</label>
     <p class="muted klein" style="margin:4px 0 0 26px">Uit: iedereen met de link tikt zijn naam aan. Aan: je moet ingelogd zijn en geeft alleen voor jezelf door.</p>
@@ -5408,9 +5409,6 @@ function tekenRoosterBord(){
   const vandaag=roosterYmd(new Date());
   const mensen=roosterBordMensen();
   const kostenAan=roosterKostenZichtbaar();
-  if(!roosterDagMobiel || !dagen.some(d=>roosterYmd(d)===roosterDagMobiel)){
-    roosterDagMobiel = dagen.some(d=>roosterYmd(d)===vandaag) ? vandaag : roosterYmd(dagen[0]);
-  }
   // Weektotaal voor in de balk.
   let weekU=0, weekK=0;
   mensen.forEach(m=>{ const u=roosterWeekUren(m.id); weekU+=u; if(kostenAan && !roosterOpPercentage(m.id)) weekK+=((typeof loonTarief==='function')?loonTarief(m.id):0)*u; });
@@ -5442,36 +5440,30 @@ function tekenRoosterBord(){
     ${rijen}
   </div>`;
 
-  // ── Mobiel: dagstrip + dagpaneel ──
-  const strip=dagen.map((d,i)=>{ const ymd=roosterYmd(d); const open=OPENINGSTIJDEN[i];
-    const iemand=mensen.some(m=>roosterCelDiensten(m.id,ymd).length);
-    const stip = !open ? '' : (iemand?'<span class="ds-stip goed"></span>':'<span class="ds-stip leeg"></span>');
-    return `<button type="button" class="ds-dag${ymd===roosterDagMobiel?' aan':''}" onclick="roosterKiesDag('${ymd}')"><b>${DAG_KORT[i]}</b><span>${d.getDate()}</span>${stip}</button>`;
-  }).join('');
-  const di=dagen.findIndex(d=>roosterYmd(d)===roosterDagMobiel);
-  const dOpen=OPENINGSTIJDEN[di<0?0:di];
-  const dYmd=roosterDagMobiel;
-  const paneelDiensten=mensen.map(m=>{ const ds=roosterCelDiensten(m.id,dYmd); if(!ds.length) return '';
-    return ds.map(x=>`<div class="dp-dienst"><span><b>${esc(m.naam)}</b> <span class="muted klein">${esc((x.van||'')+(x.tot?'–'+x.tot:''))}${(Number(x.pauze_min)||0)>0?' · '+x.pauze_min+'m pauze':''}</span></span>
-      <span class="dp-acts"><button type="button" class="btn ghost small" onclick="roosterDienstOpen('${x.id}')">Aanpassen</button></span></div>`).join('');
-  }).join('');
-  const vrijChips=mensen.map(m=>{ if(roosterCelDiensten(m.id,dYmd).length) return ''; const bs=roosterBeschikStatus(m.id,dYmd);
-    return `<button type="button" class="inplanchip${bs==='kan'?'':' geen'}" onclick="roosterSnelPlan('${dYmd}','${m.id}')">${bs==='kan'?'● ':''}${esc(m.naam)}</button>`;
-  }).join('');
-  const dagU=mensen.reduce((s,m)=>s+roosterCelDiensten(m.id,dYmd).reduce((a,x)=>a+dienstUren(x),0),0);
-  const paneel=`<div class="dagstrip">${strip}</div>
-    <div class="dagpaneel">
-      <div class="openrij${dOpen?'':' dicht'}">${dOpen?('Open '+dOpen.van+'–'+dOpen.tot):'Gesloten'}</div>
-      <div class="roosterlabel" style="margin-top:12px">Ingepland</div>
-      ${paneelDiensten||'<p class="beschhint">Nog niemand ingepland.</p>'}
-      <div class="roosterlabel" style="margin-top:14px">Wie kan er nog</div>
-      <div class="inplanrij">${vrijChips||'<span class="muted klein">Iedereen staat al ingepland.</span>'}</div>
+  /* ── Mobiel: de hele week onder elkaar ──
+     Eerst was dit een dagstrip met één dag groot eronder. De eigenaar wilde de week in
+     één keer zien, net als op de computer: maandag, daaronder dinsdag, enzovoort. Een
+     gesloten dag is één smalle regel, zodat de open dagen de ruimte krijgen. */
+  const dagPaneel=(d,i)=>{ const ymd=roosterYmd(d); const open=OPENINGSTIJDEN[i];
+    const kop=`<div class="dp-kop"><b>${DAG_LANG[i]} ${roosterKort(d)}</b><span class="muted klein">${open?esc('Open '+open.van+'–'+open.tot):'Gesloten'}</span></div>`;
+    if(!open) return `<div class="dagpaneel dicht${ymd===vandaag?' vandaag':''}">${kop}</div>`;
+    const diensten=mensen.map(m=>roosterCelDiensten(m.id,ymd).map(x=>`<div class="dp-dienst"><span><b>${esc(m.naam)}</b> <span class="muted klein">${esc((x.van||'')+(x.tot?'–'+x.tot:''))}${(Number(x.pauze_min)||0)>0?' · '+x.pauze_min+'m pauze':''}</span></span>
+      <span class="dp-acts"><button type="button" class="btn ghost small" onclick="roosterDienstOpen('${x.id}')">Aanpassen</button></span></div>`).join('')).join('');
+    const vrij=mensen.map(m=>{ if(roosterCelDiensten(m.id,ymd).length) return ''; const bs=roosterBeschikStatus(m.id,ymd);
+      return `<button type="button" class="inplanchip${bs==='kan'?'':' geen'}" onclick="roosterSnelPlan('${ymd}','${m.id}')">${bs==='kan'?'● ':''}${esc(m.naam)}</button>`;
+    }).join('');
+    const dagU=mensen.reduce((s,m)=>s+roosterCelDiensten(m.id,ymd).reduce((a,x)=>a+dienstUren(x),0),0);
+    return `<div class="dagpaneel${ymd===vandaag?' vandaag':''}">${kop}
+      ${diensten||'<p class="beschhint pb-leeg">Nog niemand ingepland.</p>'}
+      <div class="roosterlabel" style="margin-top:12px">Wie kan er nog</div>
+      <div class="inplanrij">${vrij||'<span class="muted klein">Iedereen staat al ingepland.</span>'}</div>
       <div class="dp-totaal">${dagU?urenKort(dagU):'0 u'} deze dag</div>
     </div>`;
+  };
+  const paneel=`<div class="pb-dagen">${dagen.map(dagPaneel).join('')}</div>`;
 
   inh.innerHTML=`${roosterKopHtml()}${kopExtra}<div class="pb-desktop">${matrix}</div><div class="pb-mobiel">${paneel}</div>`;
 }
-function roosterKiesDag(ymd){ roosterDagMobiel=ymd; tekenRoosterBord(); }
 /* Snel plannen: klik een lege cel of een chip. Slimme tijden uit de doorgegeven
    beschikbaarheid, anders de openingstijden. Pauze standaard 0; die stel je in de
    dienst-kaart bij. Hergebruikt de bestaande insert-logica. */
