@@ -5,6 +5,40 @@ er niet in staat is af.
 
 ---
 
+## Webshop feedback v2 en v3 (15 november 2026, middag)
+
+Live: timer met dagen (zonder seconden), koopbalk faded, slotblok "Dit wordt 'm", productpagina
+met titel boven de foto en eerst kiezen, knop "Ophalen in de winkel" in plaats van keuzerondjes,
+accu in de hoofdprijs, staat in een andere kleur kiesbaar, werkplaats op de home, "Deze week
+binnengekomen" kiest zelf, Staat uitgelegd en Hoe werkt refurbished in de huisstijl, vergelijker
+op de telefoon, echte winkelfoto, taal en beloftes door de hele shop, productteksten verbeterd.
+Laptops: 74 uit Storvo (reserve in `reserve_laptops_20261115_*`), 5 webshopproducten op concept.
+
+- [ ] **WhatsApp-nummer**: de eigenaar wil WhatsApp erbij ("Bel of app ons" staat op veel
+      plekken, maar er is geen nummer of link). Nummer nodig, dan in de thema-instelling
+      `whatsapp` en een knop.
+- [ ] **Foto's stuk voor stuk** met de eigenaar nalopen: werkplaats (home), nakijken, detail,
+      drie toestellen (Staat uitgelegd), werkbank en inpakken (Hoe werkt refurbished). Gemaakt
+      met Higgsfield (nano_banana_pro oogt het echtst); de eigenaar vindt ze nog niet goed.
+- [ ] **Besparingsblok op de home** rekent met een MacBook Pro die er niet is. Kiezen: echte
+      cijfers van een toestel dat er wel is, of het blok automatisch laten rekenen.
+- [ ] **Twee adressen voor dezelfde staatpagina** (`/pages/staat-uitgelegd` en
+      `/pages/de-staat-uitgelegd`, de footer linkt naar de tweede). Eén houden, de andere
+      doorsturen (Shopify admin).
+- [ ] **Shopify admin**: collectietitels "Macbooks" naar "MacBooks", "Windows Laptops" naar
+      "Windows-laptops"; "Galaxy Tab a11" naar "Galaxy Tab A11" (en een tekst erbij).
+- [ ] **Testbundel V0001** op de tweede webshop (groothandel) staat nog online, met 0 laptops
+      erin. Offline halen of weggooien.
+- [ ] **Opruimen**: edge `tijdelijk-laptops-offline` (doet niets meer, mag weg in het dashboard),
+      reservetabellen `reserve_laptops_20261115_*` en `reserve_omschrijving_20261115` zodra
+      niemand ze terug wil, testthema #186703151369.
+- [ ] **"Meest gekozen"** boven Zeer goed op de productpagina en de bewijsregel op Hoe werkt
+      refurbished ("kaartje met de naam van de monteur en een QR-code naar het testrapport"):
+      alleen laten staan als het klopt.
+- [ ] **Laptop-adviseur** gaat alleen over laptops, terwijl de collectie telefoons ernaar linkt.
+
+---
+
 ## Inruilprijzen, ophalen, koopbalk en de nakijkpunten (15 november 2026)
 
 Live. Inruilen op de webshop werkt nu zoals Odido: zoeken, dan gaat hij aan, is er iets kapot,
