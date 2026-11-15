@@ -28,6 +28,11 @@ window.__db={
     {id:'l1', team_id:'t1', naam:'Magazijn', soort:'magazijn', volgorde:0},
     {id:'l2', team_id:'t1', naam:'Winkel', soort:'winkel', volgorde:1}
   ],
+  inruil_prijzen:[
+    {merk:'Apple iPhone', model:'iPhone 13', opslag:'256GB', prijs_nieuw:180, prijs_goed:160, prijs_gebruikt:120, prijs_kapot:70, prijs_dood:40, actief:true},
+    {merk:'Apple iPhone', model:'iPhone 13', opslag:'128GB', prijs_nieuw:150, prijs_goed:140, prijs_gebruikt:100, prijs_kapot:60, prijs_dood:null, actief:true},
+    {merk:'Apple iPhone', model:'iPhone 13 Pro Max', opslag:'256GB', prijs_nieuw:400, prijs_goed:360, prijs_gebruikt:300, prijs_kapot:150, prijs_dood:80, actief:true}
+  ],
   hardware_modellen:[
     {id:'m1', merk:'HP', model:'ZBook 15 G6 Mobile', categorie:'Laptop',
      specs:{Processor:'Intel Core i7-9750H', Geheugen:'16 GB'}, keer_gebruikt:5},
@@ -74,6 +79,30 @@ setTimeout(async()=>{
   ok('inkoopbatches weg', !d.getElementById('tab-inkoop'));
   ok('menuknop toevoegen', !!d.querySelector('aside nav button[data-tab="toevoegen"]'));
   ok('modellen geladen', w.eval('modellen.length')===2);
+
+  // Inname aan de balie: de inruilprijzen van het getypte model verschijnen, kleinste opslag
+  // eerst, en het langste model wint (iPhone 13 is niet iPhone 13 Pro Max).
+  {
+    d.getElementById('t_model').value='Apple iPhone 13';
+    await w.eval('iprHulpTeken()');
+    const vak=d.getElementById('t_iprHulp');
+    ok('inruilhulp: zichtbaar bij een bekend model', vak && !vak.hidden);
+    const rijen=[...vak.querySelectorAll('.ipr-hulp__rij')];
+    ok('inruilhulp: twee opslagen, 128GB eerst', rijen.length===2 && rijen[0].textContent.includes('128GB'));
+    ok('inruilhulp: geen Pro Max bij iPhone 13', !vak.textContent.includes('360'));
+    ok('inruilhulp: leeg bedrag geen knop', rijen[0].querySelectorAll('.ipr-hulp__keus').length===4);
+    const goed=[...rijen[0].querySelectorAll('.ipr-hulp__keus')].find(k=>k.textContent.includes('Goed'));
+    goed.click();
+    ok('inruilhulp: tikken zet de inkoopprijs', d.getElementById('t_inkoop').value==='140' && goed.classList.contains('aan'));
+    d.getElementById('t_model').value='Apple iPhone 13 Pro Max';
+    await w.eval('iprHulpTeken()');
+    ok('inruilhulp: Pro Max eigen bedragen', vak.textContent.includes('360') && vak.querySelectorAll('.ipr-hulp__rij').length===1);
+    d.getElementById('t_model').value='HP ZBook';
+    await w.eval('iprHulpTeken()');
+    ok('inruilhulp: weg bij een model zonder prijzen', vak.hidden);
+    d.getElementById('t_model').value='';
+    d.getElementById('t_inkoop').value='0';
+  }
 
   d.getElementById('t_model').value='zbook';
   w.eval('modelTyp()');

@@ -699,6 +699,18 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
 .zrnaam{font-weight:600; font-size:14px;}
 .zrbij{margin-left:auto; font-size:12px; color:var(--muted-l); text-align:right;}
 
+/* inruilprijzen bij de inname: tik een bedrag en het staat in de inkoopprijs */
+.ipr-hulp{margin-top:14px; padding:14px 16px; border-radius:14px; background:var(--soft);}
+.ipr-hulp__kop{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:10px; font-size:14px;}
+.ipr-hulp__rij{display:flex; align-items:flex-start; gap:12px; padding:6px 0;}
+.ipr-hulp__rij+.ipr-hulp__rij{border-top:1px solid var(--border);}
+.ipr-hulp__opslag{flex:none; width:64px; font-weight:600; font-size:13px; padding-top:7px;}
+.ipr-hulp__keuzes{display:flex; flex-wrap:wrap; gap:6px;}
+.ipr-hulp__keus{border:1.5px solid var(--border); background:var(--card); border-radius:999px; padding:5px 11px; font-size:13px; cursor:pointer; font-family:inherit; color:inherit;}
+.ipr-hulp__keus b{margin-left:4px;}
+.ipr-hulp__keus:hover{border-color:var(--groen);}
+.ipr-hulp__keus.aan{background:var(--groen); border-color:var(--groen); color:#fff;}
+
 .leeg{text-align:center; padding:40px 20px; color:var(--muted);}
 .leeg .i{width:34px; height:34px; margin-bottom:12px; color:var(--muted-l);}
 
@@ -989,6 +1001,9 @@ textarea{font-family:inherit; font-size:14px; line-height:1.6; resize:vertical;}
               <div><label>Inkoopprijs per stuk</label><input id="t_inkoop" type="number" step="0.01" value="0"></div>
               <div><label>Leverancier</label><input id="t_lev" placeholder="Waar komt het vandaan"></div>
             </div>
+            <!-- Bij een inname aan de balie: wat je volgens je eigen inruilprijzen betaalt
+                 (winkelapp, Inruilprijzen). Verschijnt zodra het model bekend is. -->
+            <div class="ipr-hulp" id="t_iprHulp" hidden></div>
 
             <!-- Bewijs van inkoop: een factuur, of een inkoopverklaring bij een contante
                  inkoop van een particulier. We houden de keuze vast en zetten het bewijs ná
@@ -1998,6 +2013,7 @@ function splitsModel(tekst){
 }
 
 function modelTyp(){
+  iprHulpTeken();
   const veld=document.getElementById('t_model');
   const lijst=document.getElementById('modelLijstje');
   const q=String(veld.value||'').trim().toLowerCase();
@@ -2019,6 +2035,7 @@ function modelPak(i){
   if(m.categorie){ soortNu=m.categorie; tekenSoorten(); }
   document.getElementById('modelLijstje').hidden=true;
   modelHint();
+  iprHulpTeken();
 }
 function modelToets(e){
   const lijst=document.getElementById('modelLijstje');
@@ -9563,6 +9580,62 @@ function batPerStuk(b){
   const n=Number(b&&b.aantal)||0;
   return n>0 ? Math.round((Number(b.inkoopprijs)||0)/n*100)/100 : 0;
 }
+/* Inname aan de balie met de inruilprijzen (november 2026). De winkel zet in de winkelapp per
+   model, opslag en staat wat hij betaalt; de webshop rekent daarmee. Hier tonen we diezelfde
+   bedragen zodra het getypte model ermee overeenkomt, zodat je aan de balie niet hoeft te
+   rekenen of te zoeken. Tikken zet het bedrag in de inkoopprijs; aanpassen kan altijd nog.
+   Het langste model wint, anders zou "iPhone 13" ook bij "iPhone 13 Pro Max" verschijnen. */
+const IPR_HULP_STATEN=[['nieuw','Als nieuw'],['goed','Goed'],['gebruikt','Gebruikt'],['kapot','Kapot'],['dood','Gaat niet aan']];
+let iprHulpRijen=null, iprHulpLaden=null;
+function iprHulpOphalen(){
+  if(iprHulpRijen) return Promise.resolve(iprHulpRijen);
+  if(!iprHulpLaden){
+    iprHulpLaden=Promise.resolve(sb.from('inruil_prijzen')
+      .select('merk,model,opslag,prijs_nieuw,prijs_goed,prijs_gebruikt,prijs_kapot,prijs_dood,actief')
+      .eq('actief', true))
+      .then(r=>{ iprHulpRijen=(r&&r.data)||[]; return iprHulpRijen; })
+      .catch(()=>{ iprHulpLaden=null; return []; });
+  }
+  return iprHulpLaden;
+}
+function iprHulpZoek(rijen, tekst){
+  const n=x=>String(x||'').toLowerCase().replace(/\s+/g,' ').trim();
+  const q=n(tekst);
+  if(q.length<3) return [];
+  let beste=[], lengte=0;
+  rijen.forEach(r=>{
+    const m=n(r.model); if(!m) return;
+    if(q===m || q.endsWith(' '+m) || q===n(r.merk+' '+r.model)){
+      if(m.length>lengte){ beste=[r]; lengte=m.length; }
+      else if(m.length===lengte) beste.push(r);
+    }
+  });
+  const gb=o=>{ const g=String(o||'').match(/(\d+)\s*(GB|TB)/i); return g ? Number(g[1])*(g[2].toUpperCase()==='TB'?1024:1) : 0; };
+  return beste.sort((a,b)=>gb(a.opslag)-gb(b.opslag));
+}
+async function iprHulpTeken(){
+  const vak=document.getElementById('t_iprHulp'); if(!vak) return;
+  const tekst=v('t_model');
+  const rijen=iprHulpZoek(await iprHulpOphalen(), tekst);
+  if(v('t_model')!==tekst) return;
+  const metBedrag=rijen.filter(r=>IPR_HULP_STATEN.some(([st])=>r['prijs_'+st]!=null));
+  if(!metBedrag.length){ vak.hidden=true; vak.innerHTML=''; return; }
+  const nu=Number(v('t_inkoop'))||0;
+  vak.innerHTML=`<div class="ipr-hulp__kop"><b>Inruilprijs ${esc(metBedrag[0].model)}</b><span class="muted klein">Tik op een bedrag, dan staat het in de inkoopprijs.</span></div>`+
+    metBedrag.map(r=>`<div class="ipr-hulp__rij"><span class="ipr-hulp__opslag">${esc(r.opslag||'')}</span><div class="ipr-hulp__keuzes">${
+      IPR_HULP_STATEN.filter(([st])=>r['prijs_'+st]!=null).map(([st,naam])=>{
+        const b=Number(r['prijs_'+st]);
+        return `<button type="button" class="ipr-hulp__keus${nu===b?' aan':''}" onclick="iprHulpKies(this,${b})">${esc(naam)}<b>€${b}</b></button>`;
+      }).join('')}</div></div>`).join('');
+  vak.hidden=false;
+  // Bij een inname aan de balie meteen open; bij gewoon toevoegen blijft het blok dicht.
+  const meer=document.getElementById('t_inkoop_meer'); if(meer && innameOpen) meer.open=true;
+}
+function iprHulpKies(knop, bedrag){
+  const inp=document.getElementById('t_inkoop'); if(inp) inp.value=bedrag;
+  document.querySelectorAll('#t_iprHulp .ipr-hulp__keus').forEach(k=>k.classList.toggle('aan', k===knop));
+}
+
 /* Bij Toevoegen: kies je een batch, dan vullen we de inkoopprijs per stuk én de
    leverancier automatisch in vanuit die partij. */
 function batVulInkoop(){

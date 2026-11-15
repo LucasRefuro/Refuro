@@ -14,28 +14,28 @@ binnengekomen" kiest zelf, Staat uitgelegd en Hoe werkt refurbished in de huisst
 op de telefoon, echte winkelfoto, taal en beloftes door de hele shop, productteksten verbeterd.
 Laptops: 74 uit Storvo (reserve in `reserve_laptops_20261115_*`), 5 webshopproducten op concept.
 
-- [ ] **WhatsApp-nummer**: de eigenaar wil WhatsApp erbij ("Bel of app ons" staat op veel
-      plekken, maar er is geen nummer of link). Nummer nodig, dan in de thema-instelling
-      `whatsapp` en een knop.
+- [x] **WhatsApp**: nummer 31161234334 in de thema-instelling `whatsapp`; de knoppen op contact,
+      productpagina, collecties en reparatie staan aan.
 - [ ] **Foto's stuk voor stuk** met de eigenaar nalopen: werkplaats (home), nakijken, detail,
       drie toestellen (Staat uitgelegd), werkbank en inpakken (Hoe werkt refurbished). Gemaakt
       met Higgsfield (nano_banana_pro oogt het echtst); de eigenaar vindt ze nog niet goed.
-- [ ] **Besparingsblok op de home** rekent met een MacBook Pro die er niet is. Kiezen: echte
-      cijfers van een toestel dat er wel is, of het blok automatisch laten rekenen.
-- [ ] **Twee adressen voor dezelfde staatpagina** (`/pages/staat-uitgelegd` en
-      `/pages/de-staat-uitgelegd`, de footer linkt naar de tweede). Eén houden, de andere
-      doorsturen (Shopify admin).
-- [ ] **Shopify admin**: collectietitels "Macbooks" naar "MacBooks", "Windows Laptops" naar
-      "Windows-laptops"; "Galaxy Tab a11" naar "Galaxy Tab A11" (en een tekst erbij).
-- [ ] **Testbundel V0001** op de tweede webshop (groothandel) staat nog online, met 0 laptops
-      erin. Offline halen of weggooien.
+- [x] **Besparingsblok op de home** rekent nu zelf met een toestel dat te koop is (liefst vanaf
+      300 euro, nu de iPhone 16 Pro Max), met een knop ernaartoe.
+- [ ] **Twee adressen voor dezelfde staatpagina**: de footer stuurt nu naar
+      `/pages/staat-uitgelegd`. Eigenaar: in Shopify (Online winkel, Pagina's) de pagina
+      `de-staat-uitgelegd` weggooien en een doorverwijzing maken (Navigatie, URL-omleidingen);
+      de koppeling mag geen pagina's of menu's aanpassen.
+- [x] **Titels**: collecties MacBooks en Windows-laptops, product Galaxy Tab A11 (type Tablet).
+      De Galaxy Tab heeft nog geen tekst.
+- [ ] **Eigenaar: testbundel V0001** op de tweede webshop (groothandel) staat nog online, met 0
+      laptops erin. In Storvo bij Bundels offline halen (de koppeling van die winkel werkt anders).
 - [ ] **Opruimen**: edge `tijdelijk-laptops-offline` (doet niets meer, mag weg in het dashboard),
       reservetabellen `reserve_laptops_20261115_*` en `reserve_omschrijving_20261115` zodra
       niemand ze terug wil, testthema #186703151369.
 - [ ] **"Meest gekozen"** boven Zeer goed op de productpagina en de bewijsregel op Hoe werkt
       refurbished ("kaartje met de naam van de monteur en een QR-code naar het testrapport"):
       alleen laten staan als het klopt.
-- [ ] **Laptop-adviseur** gaat alleen over laptops, terwijl de collectie telefoons ernaar linkt.
+- [x] **Laptop-adviseur**: alleen nog bij laptopcollecties; elders WhatsApp en bellen.
 
 ---
 
@@ -53,19 +53,11 @@ openingstijden, de koopbalk staat onderin op telefoon en desktop, en "50 punten"
       de prijs zelf na uit de tabel en zet staat, wat kapot is en langsbrengen of opsturen erbij.
 - [ ] **Feestdagen dicht?** Ophalen behandelt Koningsdag, tweede paas- en pinksterdag en
       Hemelvaart als gesloten. Is de winkel dan open, dan staat er een dag te laat.
-- [ ] **HP ProBook 650 G5 heeft geen producttype** in Shopify: daardoor geen nakijklijst en
+- [x] **(vervallen, laptops offline) HP ProBook 650 G5 heeft geen producttype** in Shopify: daardoor geen nakijklijst en
       geen getal op die productpagina.
-- [ ] **Inname aan de balie** gebruikt de inruilprijzen nog niet (alleen de webshop).
-
----
-
-## Webshop: titels, kleurkeuze en nieuwe accu (14 november 2026)
-
-Live. Titel is overal de kale modelnaam, met kleur en opslag als labels eronder. Op de
-productpagina een kleurkeuze, een accukeuze (telefoon 45 euro, laptop 89 euro), drie
-dienstrijen met zijmenu's en het blok met nakijkpunten. Een bestelling met nieuwe accu zet het
-toestel op de werkbank bij Te repareren, mailt info@refuro.nl en geeft een pop-up in Storvo.
-
+- [x] **Inname aan de balie** gebruikt de inruilprijzen (15 november): in de refurbish-app
+      verschijnen onder Inkoopprijs de bedragen per opslag en staat zodra het model bekend is;
+      tikken zet het bedrag erin.
 - [x] **"Op 50 punten getest" klopt niet voor laptops.** GEDAAN (15 nov): productpagina telt
       de echte lijst (snippets/nakijkpunten), algemene plekken zonder getal, procespagina met
       de echte punten.
@@ -331,8 +323,8 @@ repo `refuro-webshop`.
       van de edge getest, `thema geldig`, `npm test` groen. Nog te doen: theme push + Storvo
       live, dan end-to-end testen. Optioneel: kasboek-regel bij afrekenen (nu telt de verkoop
       via hardware.verkocht) + `RESERVERING_DAGEN`/`RESERVERING_NAAR` in Supabase.
-- [ ] **Productpagina + winkelmandje eerlijk maken** over de ophaal-keuze (nu toont het
-      winkelmandje er niks over; definitieve keuze valt pas bij het afrekenen).
+- [x] **Productpagina eerlijk over ophalen**: sinds 15 november een eigen knop "Ophalen in de
+      winkel" die Levering = Ophalen meegeeft; de winkelwagen toont die eigenschap.
 
 ### Bugs / kwaliteit
 - [x] **Clover pin: 0% vs 21% btw (marge) voor toestellen.** GEDAAN (29 sep). De Clover-
