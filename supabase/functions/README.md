@@ -35,6 +35,7 @@ supabase functions download <naam> --project-ref ugilfxqolemxwssbpdwu
 | `shopify` | nee | Zet een toestel op de webshop of haalt hem eraf. Is het laatste exemplaar verkocht, dan blijft de pagina bestaan zonder voorraad en uit de lijsten (status niet vermeld), zodat de link werkt en het thema vergelijkbare toestellen aanraadt |
 | `shopify-webhook` | ja | Shopify meldt hier dat er iets verkocht is |
 | `reservering` | ja | Reserveren op de webshop (publiek), afrekenen en annuleren vanuit de winkelapp, en elk uur verlopen reserveringen vrijgeven (pg_cron met `MAIL_CRON_SECRET`). Zet daarbij de voorraad van die grade op Shopify terug |
+| `inruil-aanvraag` | ja | Inruilen op de webshop. GET geeft de inruilprijzen (tabel `inruil_prijzen`, actieve regels van de winkel, twee minuten cache). POST neemt een aanvraag aan, rekent de prijs zelf na uit dezelfde tabel, bewaart hem in `webshop_inruil_aanvragen` en mailt de winkel en de klant. Uitrollen met verify_jwt uit |
 | `hardware-tekst` | nee | Schrijft titel en omschrijving voor een tweedehands toestel |
 | `admin-modules` | nee | Bijkoopmodules per winkel aan- en uitzetten |
 | `model-specs` | nee | Zoekt specificaties bij een model, eerst in de lijst, dan met AI |

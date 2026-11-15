@@ -170,6 +170,7 @@ wordt. Alleen de service_role kan erbij. Laat dat zo.
 | `voorraad_verplaatsingen` | wie heeft wat waarheen gebracht |
 | `winkel_koppelingen` | de webshopkoppeling per winkel (versleuteld) |
 | `webshop_bestellingen` | wat er online besteld is |
+| `inruil_prijzen` | wat de winkel betaalt per model, opslag en staat; de webshop leest het |
 
 RLS staat overal aan en werkt via de hulpfunctie `my_team_id()`.
 

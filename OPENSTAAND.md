@@ -5,6 +5,26 @@ er niet in staat is af.
 
 ---
 
+## Inruilprijzen, ophalen, koopbalk en de nakijkpunten (15 november 2026)
+
+Live. Inruilen op de webshop werkt nu zoals Odido: zoeken, dan gaat hij aan, is er iets kapot,
+hoe ziet hij eruit, en dan langsbrengen of opsturen. De prijzen vul je zelf in Storvo in:
+Verkoop, Inruil en inname, Inruilprijzen (tabel `inruil_prijzen`). De eerste vulling is een
+voorstel uit de oude lijst; grijs = nog niet nagekeken. Ophalen in de winkel volgt de
+openingstijden, de koopbalk staat onderin op telefoon en desktop, en "50 punten" is overal weg.
+
+- [ ] **Eigenaar: de inruilprijzen nalopen** (344 regels, 5 staten). Grijs is een voorstel.
+      Nieuwe modellen (iPhone 18, Galaxy S26 en zo) toevoegen met Model toevoegen.
+- [ ] **Eigenaar: een echte test-inruilaanvraag** doen en in Storvo bekijken: de server rekent
+      de prijs zelf na uit de tabel en zet staat, wat kapot is en langsbrengen of opsturen erbij.
+- [ ] **Feestdagen dicht?** Ophalen behandelt Koningsdag, tweede paas- en pinksterdag en
+      Hemelvaart als gesloten. Is de winkel dan open, dan staat er een dag te laat.
+- [ ] **HP ProBook 650 G5 heeft geen producttype** in Shopify: daardoor geen nakijklijst en
+      geen getal op die productpagina.
+- [ ] **Inname aan de balie** gebruikt de inruilprijzen nog niet (alleen de webshop).
+
+---
+
 ## Webshop: titels, kleurkeuze en nieuwe accu (14 november 2026)
 
 Live. Titel is overal de kale modelnaam, met kleur en opslag als labels eronder. Op de
@@ -12,10 +32,9 @@ productpagina een kleurkeuze, een accukeuze (telefoon 45 euro, laptop 89 euro), 
 dienstrijen met zijmenu's en het blok met nakijkpunten. Een bestelling met nieuwe accu zet het
 toestel op de werkbank bij Te repareren, mailt info@refuro.nl en geeft een pop-up in Storvo.
 
-- [ ] **"Op 50 punten getest" klopt niet voor laptops.** De controle kijkt een laptop op 19
-      punten na, een telefoon op 27. De productpagina toont nu het echte getal, maar de
-      themainstelling `testpunten` (50) staat nog in de staat-tab en mogelijk op andere pagina's.
-      Kiezen: het getal eerlijk maken, of de controle voor laptops uitbreiden.
+- [x] **"Op 50 punten getest" klopt niet voor laptops.** GEDAAN (15 nov): productpagina telt
+      de echte lijst (snippets/nakijkpunten), algemene plekken zonder getal, procespagina met
+      de echte punten.
 - [ ] **Vijf oude, verborgen webshopproducten** houden hun oude titel: daar hangt geen toestel
       meer aan in Storvo. Weggooien in Shopify of zo laten.
 - [ ] **Kleur en opslag in de checkout.** De winkelwagen toont ze, de checkout en de

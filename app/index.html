@@ -529,6 +529,29 @@
   .inr-details > div > span:first-child{color:var(--muted); font-weight:600; flex:none; min-width:74px;}
   .inr-details .mono{word-break:break-all;}
   @media(max-width:640px){ .inr-details{grid-template-columns:1fr;} }
+  /* Inruilprijzen: een rij per model en opslag, een vakje per staat. Grijs schuin = voorstel,
+     nog niet door de winkelier bevestigd. Een rood randje = duurder dan een betere staat. */
+  .ipr-kaartrij{display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px;}
+  .ipr-voortgang{margin-top:14px; display:flex; flex-direction:column; gap:6px; font-size:13.5px; font-weight:600;}
+  .ipr-voortgang .ipr-staaf{height:8px; border-radius:99px; background:var(--soft-2); overflow:hidden; max-width:420px;}
+  .ipr-voortgang .ipr-staaf i{display:block; height:100%; background:var(--green); border-radius:99px;}
+  .ipr-balk{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:4px 0 14px;}
+  .ipr-balk #iprZoek{flex:1 1 200px; max-width:320px;}
+  .ipr-nieuwvelden{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 14px;}
+  @media(max-width:640px){ .ipr-nieuwvelden{grid-template-columns:1fr;} }
+  .ipr-tabel th.ipr-st, .ipr-tabel td.ipr-st{text-align:right; white-space:nowrap;}
+  .ipr-tabel td.ipr-model{white-space:nowrap;}
+  .ipr-tabel th, .ipr-tabel td{padding-left:6px; padding-right:6px;}
+  .ipr-tabel td.ipr-model b{font-weight:700;}
+  .ipr-tabel td.ipr-model .ipr-opslag{color:var(--muted); font-weight:600; margin-left:6px;}
+  .ipr-vak{display:inline-flex; align-items:center; gap:3px;}
+  .ipr-vak span{color:var(--muted); font-size:13px;}
+  .ipr-vak input{width:64px; padding:7px 7px; text-align:right; font-variant-numeric:tabular-nums;}
+  .ipr-voorstel .ipr-vak input{color:var(--muted); font-style:italic;}
+  .ipr-vak input.ipr-raar{border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset;}
+  .ipr-acties{display:flex; gap:6px; justify-content:flex-end; white-space:nowrap;}
+  .ipr-klaar{display:inline-flex; align-items:center; gap:5px; color:var(--green); font-weight:600; font-size:13px;}
+  .ipr-tabel tr.ipr-net td{background:var(--soft-2); transition:background .6s;}
   /* De locatieknoppen zitten in een span zodat ze in één keer te vervangen
      zijn; display:contents zorgt dat ze toch gewoon meedoen in de rij. */
   #hwLocFilters{display:contents;}
@@ -2990,11 +3013,50 @@
     <p class="muted" style="margin-bottom:12px; max-width:78ch">Koop je een toestel van een klant? Vul het toestel en het bedrag in en laat de verklaring tekenen. Het toestel staat daarna klaar in de werkbank.</p>
     <a class="btn actie" href="/refurbish/?inname=1" target="_blank" rel="noopener"><svg class="i s"><use href="#i-recycle"/></svg>Inname starten</a>
   </div>
+  <div class="card breed" id="iprKaart">
+    <h2><svg class="i"><use href="#i-cash"/></svg>Inruilprijzen</h2>
+    <p class="muted" style="margin-bottom:12px; max-width:78ch">Wat je betaalt voor een toestel, per staat. Dit ziet de klant op de webshop als hij zijn toestel wil inruilen.</p>
+    <div class="ipr-kaartrij">
+      <button class="btn actie" onclick="showTab('inruilprijzen')"><svg class="i s"><use href="#i-cash"/></svg>Prijzen invullen</button>
+      <span class="muted" id="iprKaartStand"></span>
+    </div>
+  </div>
   <div class="kpis uitgebreid" id="inrKpis"></div>
   <div class="card breed">
     <h2><svg class="i"><use href="#i-recycle"/></svg>Aanvragen<span class="muted klein" id="inrTelling" style="margin-left:8px"></span></h2>
     <div id="inrLijst">Bezig met laden…</div>
   </div>
+</section>
+
+<!-- INRUILPRIJZEN: wat de winkel betaalt per model, opslag en staat. De webshop leest dit
+     via de Edge Function inruil-aanvraag (GET). Tabel inruil_prijzen. -->
+<section id="tab-inruilprijzen" hidden>
+  <button class="terugknop" onclick="showTab('inruil')"><svg class="i s"><use href="#i-left"/></svg>Terug naar inruil</button>
+  <div class="pagehead"><h1>Inruilprijzen</h1></div>
+  <div class="card breed">
+    <p class="muted" style="max-width:72ch">Per model en opslag een bedrag voor elke staat. Dit ziet de klant op de webshop. Een leeg vakje betekent: daar noemen we geen bedrag.</p>
+    <p class="muted" style="max-width:72ch; margin-top:6px">Grijze bedragen zijn een voorstel. Pas je iets aan of tik je op Klopt, dan is die regel nagekeken.</p>
+    <div class="ipr-voortgang" id="iprVoortgang"></div>
+  </div>
+  <div class="ipr-balk">
+    <div class="periodesel" id="iprSoorten"></div>
+    <input id="iprZoek" type="search" placeholder="Zoek een model" autocomplete="off" oninput="iprZoekTyp()">
+    <button class="btn actie" onclick="iprNieuwOpen()"><svg class="i s"><use href="#i-plus"/></svg>Model toevoegen</button>
+  </div>
+  <div class="card breed" id="iprNieuw" hidden>
+    <h2><svg class="i"><use href="#i-plus"/></svg>Model toevoegen</h2>
+    <div class="ipr-nieuwvelden">
+      <div><label for="iprNieuwMerk">Groep</label><input id="iprNieuwMerk" autocomplete="off" placeholder="bijv. Apple iPhone"></div>
+      <div><label for="iprNieuwModel">Model</label><input id="iprNieuwModel" autocomplete="off" placeholder="bijv. iPhone 18 Pro"></div>
+      <div><label for="iprNieuwOpslag">Opslag</label><input id="iprNieuwOpslag" autocomplete="off" placeholder="bijv. 256GB, 512GB, 1TB"></div>
+    </div>
+    <p class="muted klein" style="margin-top:8px">Meer opslag tegelijk? Zet er een komma tussen. Geen opslag, zoals bij een horloge? Laat het leeg.</p>
+    <div class="ipr-kaartrij" style="margin-top:12px">
+      <button class="btn actie" onclick="iprNieuwBewaar()">Toevoegen</button>
+      <button class="btn ghost" onclick="iprNieuwSluit()">Annuleren</button>
+    </div>
+  </div>
+  <div id="iprLijst">Bezig met laden…</div>
 </section>
 
 <!-- VOORRAAD -->
@@ -4318,7 +4380,7 @@ function showTab(t){
      blijft dan oplichten. */
   let menu = t;
   if(t==='nieuw'||t==='catalogus') menu='producten';
-  else if(t==='facturen'||t==='inruil'||t==='verkopen') menu='verkoop';   /* de verkoop-hub */
+  else if(t==='facturen'||t==='inruil'||t==='inruilprijzen'||t==='verkopen') menu='verkoop';   /* de verkoop-hub */
   else if(t==='scan'||t==='voorraad'||t==='bestellen') menu='producten';   /* de voorraad-hub */
   else if(HUB_TABS.includes(t)) menu='meer';
   document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
@@ -4326,8 +4388,10 @@ function showTab(t){
      knop actief. */
   const kSub=document.getElementById('verkoopSub');
   if(kSub){
-    kSub.hidden = !['verkoop','inruil','verkopen'].includes(t);
-    kSub.querySelectorAll('button').forEach(b=>{ b.classList.toggle('active', b.dataset.vsub===t); b.hidden=!mag(b.dataset.vsub); });
+    kSub.hidden = !['verkoop','inruil','inruilprijzen','verkopen'].includes(t);
+    /* De prijzenpagina hoort bij Inruil; die knop blijft dan oplichten. */
+    const vsubNu = t==='inruilprijzen' ? 'inruil' : t;
+    kSub.querySelectorAll('button').forEach(b=>{ b.classList.toggle('active', b.dataset.vsub===vsubNu); b.hidden=!mag(b.dataset.vsub); });
   }
   const vSub=document.getElementById('voorraadSub');
   if(vSub){
@@ -4361,6 +4425,7 @@ function showTab(t){
   if(t==='hardware') hwLaad();
   if(t==='webshop'){ bstLaad(); rsvLaad(); }
   if(t==='inruil') inrLaad();
+  if(t==='inruilprijzen') iprLaad();
   if(t==='aanvragen') renderAanvragen();
   if(t==='kassa') renderKassa();
   if(t==='bestellen') renderBestellen();
@@ -11980,6 +12045,7 @@ async function inrLaad(stil){
   inrData=data||[];
   renderInruil();
   inrBadge();
+  iprKaartStand();
 }
 
 function inrBadge(){
@@ -12045,6 +12111,9 @@ function renderInruil(){
       </div>
 
       <div class="inr-details">
+        ${rj.staat_naam?`<div><span>Staat</span>${esc(rj.staat_naam)}</div>`:''}
+        ${rj.kapot?`<div><span>Kapot</span>${esc(rj.kapot)}</div>`:''}
+        ${rj.soort?`<div><span>Inleveren</span>${rj.inleveren==='winkel'?'Brengt hem langs':'Stuurt hem op'}</div>`:''}
         ${x.accu?`<div><span>Accu</span>${esc(x.accu)}</div>`:''}
         ${x.email?`<div><span>E-mail</span><a href="mailto:${esc(x.email)}">${esc(x.email)}</a></div>`:''}
         ${x.adres?`<div><span>Adres</span>${esc(x.adres)}</div>`:''}
@@ -12081,6 +12150,223 @@ async function inrStatus(id,status){
   if(error){ toast('Bijwerken mislukt','fout'); return; }
   const x=inrData.find(a=>a.id===id); if(x){ x.status=status; x.gezien=true; }
   renderInruil(); inrBadge();
+}
+
+/* ---------- inruilprijzen ----------
+
+   Wat de winkel betaalt voor een toestel, per model, opslag en staat (tabel inruil_prijzen).
+   De webshop leest dit via de Edge Function inruil-aanvraag en stelt de klant de vragen zoals
+   Odido: gaat hij aan, is er iets kapot, hoe ziet hij eruit. Elk antwoord hoort bij één kolom
+   hier. De functie rekent bij een aanvraag de prijs ook zelf na uit deze tabel.
+
+   Opslaan gebeurt per vakje als je het verlaat, zonder de lijst opnieuw te tekenen: anders
+   ben je je cursor kwijt terwijl je een rij afloopt (zie de valkuil in CLAUDE.md). Enter
+   springt naar het volgende vakje, zodat je snel een hele groep kunt invullen.
+
+   De eerste vulling was een voorstel (nagekeken = false, grijs). Een bedrag aanpassen of op
+   Klopt tikken maakt de regel nagekeken. Zo zie je wat je al gehad hebt. */
+const IPR_STATEN=[['nieuw','Als nieuw'],['goed','Goed'],['gebruikt','Gebruikt'],['kapot','Kapot'],['dood','Gaat niet aan']];
+const IPR_SOORTEN=[['telefoon','Telefoon'],['tablet','Tablet'],['laptop','Laptop'],['smartwatch','Horloge']];
+let iprData=[], iprSoort='telefoon', iprZoekTerm='', _iprZoekKlok=null;
+
+async function iprLaad(){
+  const vak=document.getElementById('iprLijst');
+  if(vak) vak.innerHTML='Bezig met laden…';
+  const {data,error}=await sb.from('inruil_prijzen').select('*').order('volgorde').limit(2000);
+  if(error){
+    if(vak) vak.innerHTML='<p class="muted">De prijzen laden lukte niet. Probeer het zo nog eens.</p>';
+    return;
+  }
+  iprData=data||[];
+  iprTeken();
+}
+
+/* Hoeveel regels al nagekeken zijn, voor de balk bovenaan en de kaart op de inruilpagina. */
+function iprVoortgang(){
+  const n=iprData.length, k=iprData.filter(r=>r.nagekeken).length;
+  const vak=document.getElementById('iprVoortgang');
+  if(vak) vak.innerHTML=n
+    ? `<span>${k} van ${n} nagekeken</span><div class="ipr-staaf"><i style="width:${Math.round(k/n*100)}%"></i></div>`
+    : '';
+}
+async function iprKaartStand(){
+  const kaart=document.getElementById('iprKaart');
+  if(kaart) kaart.hidden=!mag('inruilprijzen');
+  const vak=document.getElementById('iprKaartStand');
+  if(!vak || !mag('inruilprijzen')) return;
+  const {data,error}=await sb.from('inruil_prijzen').select('nagekeken').limit(2000);
+  if(error || !data) { vak.textContent=''; return; }
+  const k=data.filter(r=>r.nagekeken).length;
+  vak.textContent=!data.length ? 'Nog geen prijzen.' : k===data.length ? 'Alles nagekeken.' : `${k} van ${data.length} nagekeken`;
+}
+
+function iprZoekTyp(){
+  clearTimeout(_iprZoekKlok);
+  _iprZoekKlok=setTimeout(()=>{
+    iprZoekTerm=(document.getElementById('iprZoek').value||'').trim().toLowerCase();
+    iprTeken();
+  },150);
+}
+function iprSoortKies(s){ iprSoort=s; iprTeken(); }
+
+/* Een bedrag hoort niet hoger te zijn dan bij een betere staat. Dat kan, maar is meestal een
+   tikfout; het vakje krijgt dan een rood randje. */
+function iprRaar(r, staat){
+  const i=IPR_STATEN.findIndex(s=>s[0]===staat), v=r['prijs_'+staat];
+  if(v==null || i<=0) return false;
+  for(let j=i-1;j>=0;j--){ const b=r['prijs_'+IPR_STATEN[j][0]]; if(b!=null) return v>b; }
+  return false;
+}
+function iprActies(r){
+  return (r.nagekeken
+      ? '<span class="ipr-klaar"><svg class="i s"><use href="#i-check"/></svg>Nagekeken</span>'
+      : `<button class="btn ghost small" onclick="iprKlopt('${r.id}')">Klopt</button>`)
+    +`<button class="btn ghost small icoknop" title="Uit de lijst halen" aria-label="Uit de lijst halen" onclick="iprWeg('${r.id}')"><svg class="i s"><use href="#i-trash"/></svg></button>`;
+}
+function iprRijStijl(tr, r){
+  tr.classList.toggle('ipr-voorstel', !r.nagekeken);
+  tr.querySelectorAll('input[data-staat]').forEach(inp=>inp.classList.toggle('ipr-raar', iprRaar(r, inp.dataset.staat)));
+  const ac=tr.querySelector('.ipr-acties'); if(ac) ac.innerHTML=iprActies(r);
+}
+
+function iprTeken(){
+  const soorten=document.getElementById('iprSoorten');
+  if(soorten) soorten.innerHTML=IPR_SOORTEN.map(([id,naam])=>{
+    const rijen=iprData.filter(r=>r.soort===id), k=rijen.filter(r=>r.nagekeken).length;
+    return `<button class="${id===iprSoort&&!iprZoekTerm?'active':''}" onclick="iprSoortKies('${id}')">${naam} <span class="muted klein">${k}/${rijen.length}</span></button>`;
+  }).join('');
+  iprVoortgang();
+  const vak=document.getElementById('iprLijst'); if(!vak) return;
+
+  /* Zoeken kijkt in alle soorten; anders vind je een iPad niet terwijl Telefoon aan staat. */
+  const rijen=iprData.filter(r=> iprZoekTerm
+    ? (r.model+' '+r.merk+' '+r.opslag).toLowerCase().includes(iprZoekTerm)
+    : r.soort===iprSoort);
+  if(!rijen.length){
+    vak.innerHTML=`<p class="muted">${iprZoekTerm?'Geen model gevonden.':'Nog geen modellen. Tik op Model toevoegen.'}</p>`;
+    return;
+  }
+  const groepen=[];
+  rijen.forEach(r=>{
+    const sleutel=r.soort+'|'+r.merk;
+    let g=groepen.find(x=>x.sleutel===sleutel);
+    if(!g){ g={sleutel, merk:r.merk, rijen:[]}; groepen.push(g); }
+    g.rijen.push(r);
+  });
+  vak.innerHTML=groepen.map(g=>{
+    const k=g.rijen.filter(r=>r.nagekeken).length;
+    return `<div class="card breed">
+      <h2>${esc(g.merk)}<span class="muted klein" style="margin-left:8px">${k} van ${g.rijen.length} nagekeken</span></h2>
+      <div class="tabelrol"><table class="resptab ipr-tabel">
+        <thead><tr><th>Model</th>${IPR_STATEN.map(s=>`<th class="ipr-st">${s[1]}</th>`).join('')}<th></th></tr></thead>
+        <tbody>${g.rijen.map(r=>`<tr data-id="${r.id}" class="${r.nagekeken?'':'ipr-voorstel'}">
+          <td class="celtitel ipr-model"><b>${esc(r.model)}</b>${r.opslag?`<span class="ipr-opslag">${esc(r.opslag)}</span>`:''}</td>
+          ${IPR_STATEN.map(([st,naam])=>{
+            const v=r['prijs_'+st];
+            return `<td class="ipr-st" data-label="${naam}"><label class="ipr-vak"><span>€</span><input inputmode="numeric" autocomplete="off" data-staat="${st}" value="${v==null?'':v}" class="${iprRaar(r,st)?'ipr-raar':''}" aria-label="${esc(r.model+' '+r.opslag)}, ${naam}" onchange="iprZet(this)" onkeydown="iprToets(event)"></label></td>`;
+          }).join('')}
+          <td><div class="ipr-acties">${iprActies(r)}</div></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+}
+
+/* Enter springt naar het volgende vakje, zoals in een rekenblad. Het verlaten slaat op. */
+function iprToets(e){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  const alle=[...document.querySelectorAll('#iprLijst input[data-staat]')];
+  const volgende=alle[alle.indexOf(e.target)+1];
+  if(volgende){ volgende.focus(); volgende.select(); } else e.target.blur();
+}
+
+async function iprZet(inp){
+  const tr=inp.closest('tr'); if(!tr) return;
+  const r=iprData.find(x=>x.id===tr.dataset.id); if(!r) return;
+  const veld='prijs_'+inp.dataset.staat;
+  const ruw=String(inp.value||'').replace(/[^\d]/g,'');
+  const waarde=ruw==='' ? null : Math.min(9999, parseInt(ruw,10));
+  inp.value=waarde==null?'':String(waarde);
+  const oud=r[veld], oudNk=r.nagekeken;
+  if(oud===waarde && oudNk) return;
+  r[veld]=waarde; r.nagekeken=true;
+  iprRijStijl(tr, r);
+  const {error}=await sb.from('inruil_prijzen')
+    .update({[veld]:waarde, nagekeken:true, bijgewerkt_op:new Date().toISOString()}).eq('id',r.id);
+  if(error){
+    r[veld]=oud; r.nagekeken=oudNk;
+    if(document.activeElement!==inp) inp.value=oud==null?'':String(oud);
+    iprRijStijl(tr, r);
+    toast('Opslaan lukte niet. Probeer het nog eens.','fout');
+    return;
+  }
+  tr.classList.add('ipr-net'); setTimeout(()=>tr.classList.remove('ipr-net'),700);
+  iprVoortgang();
+}
+
+async function iprKlopt(id){
+  const r=iprData.find(x=>x.id===id); if(!r) return;
+  const {error}=await sb.from('inruil_prijzen').update({nagekeken:true, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Opslaan lukte niet. Probeer het nog eens.','fout'); return; }
+  r.nagekeken=true;
+  const tr=document.querySelector(`#iprLijst tr[data-id="${id}"]`);
+  if(tr) iprRijStijl(tr, r);
+  iprVoortgang();
+}
+
+async function iprWeg(id){
+  const r=iprData.find(x=>x.id===id); if(!r) return;
+  const ja=await vraagJaNee('Dan staat dit model niet meer op de webshop bij Inruilen.',
+    {kop:`${r.model}${r.opslag?' '+r.opslag:''} uit de lijst halen?`, ja:'Weghalen', gevaar:true});
+  if(!ja) return;
+  const {error}=await sb.from('inruil_prijzen').delete().eq('id',id);
+  if(error){ toast('Weghalen lukte niet.','fout'); return; }
+  iprData=iprData.filter(x=>x.id!==id);
+  iprTeken();
+  toast('Weggehaald.');
+}
+
+function iprNieuwOpen(){
+  const k=document.getElementById('iprNieuw'); if(!k) return;
+  k.hidden=false;
+  const eerste=iprData.find(r=>r.soort===iprSoort);
+  const merk=document.getElementById('iprNieuwMerk');
+  if(merk && !merk.value) merk.value=eerste ? eerste.merk : '';
+  const m=document.getElementById('iprNieuwModel'); if(m) m.focus();
+}
+function iprNieuwSluit(){
+  const k=document.getElementById('iprNieuw'); if(k) k.hidden=true;
+  ['iprNieuwModel','iprNieuwOpslag'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+}
+/* "256 gb, 1tb" wordt ["256GB","1TB"]. Leeg is één regel zonder opslag. */
+function iprOpslagLijst(tekst){
+  const delen=String(tekst||'').split(/[;,\/]+/).map(s=>s.replace(/\s+/g,'').toUpperCase()).filter(Boolean);
+  return delen.length ? delen : [''];
+}
+async function iprNieuwBewaar(){
+  const merk=(document.getElementById('iprNieuwMerk').value||'').trim();
+  const model=(document.getElementById('iprNieuwModel').value||'').trim();
+  const opslagen=iprOpslagLijst(document.getElementById('iprNieuwOpslag').value);
+  if(!merk || !model){ toast('Vul een groep en een model in.','fout'); return; }
+  if(opslagen.some(o=>o && !/^[0-9.]+(GB|TB)$/.test(o))){ toast('Schrijf de opslag als 128GB of 1TB.','fout'); return; }
+  /* Bovenaan zijn groep: nieuwe modellen zijn meestal de nieuwste. */
+  const groep=iprData.filter(r=>r.soort===iprSoort && r.merk===merk);
+  const basis=groep.length ? Math.min(...groep.map(r=>r.volgorde)) : (iprData.length ? Math.max(...iprData.map(r=>r.volgorde))+100 : 10);
+  const nieuw=opslagen.map((o,i)=>({team_id:account.team_id, soort:iprSoort, merk, model, opslag:o,
+    nagekeken:true, volgorde:basis-opslagen.length+i}));
+  const {data,error}=await sb.from('inruil_prijzen').insert(nieuw).select();
+  if(error){
+    toast(String(error.code)==='23505' ? 'Dit model staat er al.' : 'Toevoegen lukte niet.','fout');
+    return;
+  }
+  iprData=iprData.concat(data||[]).sort((a,b)=>a.volgorde-b.volgorde);
+  iprNieuwSluit();
+  iprZoekTerm=''; const z=document.getElementById('iprZoek'); if(z) z.value='';
+  iprTeken();
+  toast('Toegevoegd. Vul nu de prijzen in.');
+  const eerste=data&&data[0] ? document.querySelector(`#iprLijst tr[data-id="${data[0].id}"] input[data-staat]`) : null;
+  if(eerste){ try{ eerste.scrollIntoView({block:'center'}); }catch(e){} eerste.focus(); }
 }
 
 /* ---------- reserveringen (betaal in de winkel) ----------
@@ -12873,7 +13159,7 @@ async function web2Los2(knop){
 const HUB_TABS=['uren','inkopen','pakketten','vastelasten','rapport','team','partners','mail'];
 const ROL_TABS={
   eigenaar:null,
-  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
+  beheerder:['dashboard','scan','verkoop','reparaties','producten','nieuw','aanvragen','voorraad','hardware','webshop','inruil','inruilprijzen','kassa','bestellen','uren','rooster','verkopen','inkopen','pakketten','vastelasten','rapport','facturen','instellingen','team','meer'],
   medewerker:['scan','verkoop','reparaties','aanvragen','producten','nieuw','voorraad','hardware','webshop','inruil','kassa','bestellen','uren','rooster','verkopen','meer']
 };
 /* ═══════════════ MODULES AAN EN UIT ═══════════════
@@ -12912,9 +13198,9 @@ const MODULES=[
    uitleg:'Laptops en toestellen, elk met een eigen nummer. Uit de werkbank of zelf toegevoegd.',
    verdwijnt:['Hardware in het menu','De wijzer op Producten'],
    blijft:'Toestellen blijven vindbaar en verkoopbaar bij Verkoop, ook via de pin.'},
-  {id:'inruil', groep:'Hardware', naam:'Inruil en inname', ico:'i-recycle', tabs:['inruil'],
+  {id:'inruil', groep:'Hardware', naam:'Inruil en inname', ico:'i-recycle', tabs:['inruil','inruilprijzen'],
    uitleg:'Toestellen inkopen van klanten, aan de balie of via de webshop.',
-   verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen'],
+   verdwijnt:['Inruil onder Verkoop','De inruil-tegel','Meldingen van nieuwe aanvragen','De pagina Inruilprijzen'],
    blijft:'Inruilaanvragen uit de webshop komen gewoon binnen.'},
   {id:'pakketten', groep:'Winkel', naam:'Pakketdiensten', ico:'i-truck', tabs:['pakketten'],
    uitleg:'PostNL aan de balie en wat je verdient aan pakketten.',
