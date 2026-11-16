@@ -520,6 +520,13 @@
     color:var(--red-tekst); font-size:13.5px; line-height:1.45;}
   .bstaccu b{display:block; font-size:15px; font-weight:800; letter-spacing:.03em; margin-bottom:2px;}
   .bstregels .r.accu{color:var(--red-tekst); font-weight:700;}
+  /* Klaar voor gebruik: geen haast zoals de accu, wel iets om niet te vergeten bij het ophalen. */
+  .bstklaar{margin-top:12px; padding:12px 14px; border-radius:12px; background:var(--blauw-soft);
+    color:var(--blauw-tekst); font-size:13.5px; line-height:1.45;}
+  .bstklaar b{display:block; font-size:15px; font-weight:800; margin-bottom:2px;}
+  /* Extra's bij een toestel (Instellingen, Webshop): prijs-invoer smal, zodat de rij past. */
+  .wsxprijs{max-width:110px;}
+  .wsxprijzen{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .bstpop .bstregels{margin-top:12px;}
   /* Details van een inruilaanvraag: twee kolommen label-en-waarde, op smal scherm
      onder elkaar. Het label is grijs en smal zodat de waarden netjes uitlijnen. */
@@ -3914,6 +3921,10 @@
     <p class="muted" style="margin-bottom:20px; max-width:78ch">Koppel je Shopify-webshop, dan zet je een toestel met één knop online, gaat hij er vanzelf weer af zodra hij verkocht is, en zie je hier wat er besteld wordt. Zonder koppeling verkoop je een laptop twee keer en mag je een klant bellen dat het toch niet doorgaat.</p>
     <div id="shopVak">Bezig met kijken…</div>
 
+    <div class="hkkop" style="margin-top:26px">Extra's bij een toestel</div>
+    <p class="muted" style="margin:6px 0 14px; max-width:78ch">Glas, een hoesje, een snellader en meer, die een klant op de webshop bij een toestel kan aanvinken. Het is dezelfde voorraad als in je winkel. Verkoop je er een aan de balie, dan gaat hij online ook van de voorraad af.</p>
+    <div id="extrasVak"></div>
+
     <div class="hkkop" style="margin-top:26px">Tweede webshop (groothandel, voor bundels)</div>
     <p class="muted" style="margin:6px 0 14px; max-width:78ch">Een aparte Shopify-winkel waar je hele bundels laptops als een lot verkoopt. De bundels zelf maak en beheer je in de refurbish-app. Koppelen gaat met een app uit het Dev Dashboard van die winkel (Client ID en Client secret).</p>
     <div id="shop2Vak">Bezig met kijken…</div>
@@ -4330,7 +4341,7 @@ function betaalNaam(b){ return b==='pin'?'pin':b==='cash'?'cash met bon':b==='ca
    elke toetsaanslag (zie de input-listener onderaan de sync) en gewist zodra er iets
    wordt opgeslagen. Voedt de "niet-opgeslagen wijzigingen"-waarschuwing bij afsluiten. */
 let _vuil=false;
-function save(){ _vuil=false; localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); }
+function save(){ _vuil=false; localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); if(typeof wsExtrasNaOpslaan==='function') wsExtrasNaOpslaan(); }
 
 /* ===== Concept-vangnet: een half ingevuld formulier (reparatie-intake, inkoop, factuur)
    overleeft een crash of herlaad. We bewaren de velden per sleutel in localStorage, zetten
@@ -11795,7 +11806,7 @@ document.querySelectorAll('#instTabs button[data-s]').forEach(b=>b.addEventListe
   });
   if(b.dataset.s==='modules') renderModules();
   if(b.dataset.s==='labelprinter') renderLabelprinter();
-  if(b.dataset.s==='webshop'){ shopStatus(); web2Status(); }
+  if(b.dataset.s==='webshop'){ shopStatus(); web2Status(); wsExtrasRender(); }
   if(b.dataset.s==='clover') cloverStatus();
   if(b.dataset.s==='leveranciers') lvLaad();
   if(b.dataset.s==='factuur') facBedrijfVul();
@@ -11891,6 +11902,7 @@ function renderBestellingen(){
       </div>
 
       ${x.nieuwe_accu && !x.geannuleerd ? bstAccuBlok(x) : ''}
+      ${!x.geannuleerd ? bstKlaarBlok(x) : ''}
 
       <div class="bstregels">${regels.map(r=>`
         <div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span>
@@ -11922,6 +11934,17 @@ function bstAccuBlok(x){
   const welk=t.length ? t.map(y=>esc(y.naam)+(y.code?' ('+esc(y.code)+')':'')).join(', ') : '';
   return `<div class="bstaccu"><b>Nieuwe accu erin</b>
     Eerst de accu vervangen, daarna verzenden. De klant rekent op 1 tot 3 werkdagen.${welk?'<br>'+welk+' staat bij Te repareren in het refurbish-deel.':''}</div>`;
+}
+
+/* De klant koos "klaar voor gebruik" bij ophalen in de winkel: toestel instellen en de gegevens
+   overzetten als hij komt. Het staat er los van de regels, zodat je het ziet als je de bestelling
+   klaarlegt en niet pas als de klant aan de balie staat. */
+function bstKlaarBlok(x){
+  const k=(x.extras||[]).filter(e=>e && e.sleutel==='klaar');
+  if(!k.length) return '';
+  const welk=k.map(e=>e.label).filter(Boolean).join(', ');
+  return `<div class="bstklaar"><b>Klaar voor gebruik${welk?' ('+esc(welk)+')':''}</b>
+    Als de klant komt ophalen: toestel instellen en de gegevens overzetten. Reken op een half uur.</div>`;
 }
 
 /* ═══ Pop-up bij een nieuwe webshopbestelling ═══
@@ -12533,6 +12556,205 @@ function shopTerugkomst(){
   }catch(e){}
   return `<div class="shopuitslag ${stand==='gelukt'?'':'fout'}">${esc(melding ||
     (stand==='gelukt'?'De webshop is gekoppeld.':'Het koppelen is niet gelukt.'))}</div>`;
+}
+
+/* ═══ Extra's bij een toestel (webshop) ═══
+   Stekker, glas, hoesje, beschermset, muis, sleeve en "klaar voor gebruik": de klant vinkt ze op
+   de webshop aan bij een toestel. Wat er is, wat het kost en welke producten erin zitten staat in
+   de tabel webshop_extras. De voorraad is die van je producten hier (op barcode), want de eigenaar
+   wil één voorraad voor winkel en webshop (november 2026).
+
+   Twee richtingen:
+   1. Hier naar de webshop. Na elke opslag kijken we of de voorraad van een product in een extra
+      veranderde (verkoop, inscannen, bijvullen, terugdraaien; elke weg eindigt in save()). Zo
+      ja, dan sturen we de stand naar de edge, die het online zet. Bewust niet aan elke plek
+      gehangen waar voorraad verandert, zoals Clover: daar zijn er acht van en er komen er bij.
+      De edge trekt een webshopverkoop die hier nog niet is afgeboekt er eerst af.
+   2. De webshop naar hier. Een verkochte extra komt via de webhook in webshop_bestellingen.extras.
+      Wij halen hem van de voorraad. Eerst claimen we de boeking in de tabel (extras_boeking van leeg
+      naar 'af', voorwaardelijk); alleen wie die update terugkrijgt boekt. Een vinkje in de blob kan
+      verdwijnen (laatste schrijver wint), dan boek je twee keer af. Geannuleerd na afboeken: de
+      voorraad komt terug ('af' naar 'terug').
+
+   Een deel van een extra (het glas, het hoesje) kan meerdere barcodes hebben: wat al in de winkel
+   ligt en de Xssive van de inkooplijst. Afboeken gaat uit het eerste met voorraad; de edge rekent
+   net zo. */
+let wsExtras=null;                 /* rijen uit webshop_extras; null = nog niet geladen */
+let _wsxStand=null;                /* de voorraad die we het laatst doorgaven, per barcode */
+let _wsxWacht=new Set(), _wsxTimer=null;
+async function wsExtrasLaad(){
+  try{
+    const {data,error}=await sb.from('webshop_extras').select('*').order('volgorde',{ascending:true});
+    if(!error) wsExtras=data||[];
+  }catch(e){}
+  return wsExtras;
+}
+function wsxDelen(v){ return Array.isArray(v && v.delen) ? v.delen.map(d=>Array.isArray(d)?d.map(String):[]) : []; }
+function wsxBarcodes(x){ const s=new Set(); (x.varianten||[]).forEach(v=>wsxDelen(v).forEach(d=>d.forEach(b=>s.add(b)))); return s; }
+function wsxProduct(bc){ return (state.producten||[]).find(p=>String(p.barcode||'')===String(bc)) || null; }
+function wsxVoorraad(){
+  const k={};
+  (wsExtras||[]).forEach(x=>wsxBarcodes(x).forEach(bc=>{ const p=wsxProduct(bc); k[bc]=p?Math.max(0, Math.floor(Number(p.voorraad)||0)):0; }));
+  return k;
+}
+/* Hoeveel van deze uitvoering kun je verkopen: van elk deel minstens één. null = een dienst. */
+function wsxAantal(v, kaart){
+  const delen=wsxDelen(v);
+  if(!delen.length) return null;
+  return Math.min(...delen.map(d=>d.reduce((n,b)=>n+(kaart[b]||0),0)));
+}
+async function wsxStuur(sleutels){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error('Niet ingelogd');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/webshop-extras',{method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify({actie:'extras', voorraad:wsxVoorraad(), sleutels:sleutels||null})});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok || !j.ok) throw new Error(j.error || 'De webshop gaf geen antwoord');
+  return j;
+}
+function wsExtrasNaOpslaan(){
+  if(!wsExtras || !wsExtras.length) return;
+  const nu=wsxVoorraad();
+  if(_wsxStand==null){ _wsxStand=nu; return; }
+  const anders=Object.keys(nu).filter(bc=>nu[bc]!==_wsxStand[bc]);
+  if(!anders.length) return;
+  wsExtras.forEach(x=>{ const b=wsxBarcodes(x); if(anders.some(bc=>b.has(bc))) _wsxWacht.add(x.sleutel); });
+  if(_wsxTimer) clearTimeout(_wsxTimer);
+  /* Even wachten: een bon met drie regels is drie keer opslaan, en één bericht is genoeg. */
+  _wsxTimer=setTimeout(()=>{
+    _wsxTimer=null;
+    const sleutels=[..._wsxWacht]; _wsxWacht.clear();
+    if(!sleutels.length) return;
+    const stand=wsxVoorraad();
+    /* Pas na een gelukt bericht onthouden, anders probeert de volgende opslag het opnieuw. */
+    wsxStuur(sleutels).then(()=>{ _wsxStand=stand; }, e=>{ console.error('extras naar de webshop:', e); sleutels.forEach(k=>_wsxWacht.add(k)); });
+  }, 2000);
+}
+/* Eén deel van de voorraad halen (verkocht) of terugzetten (geannuleerd). */
+function wsxBoekDeel(deel, n, terug, nummer){
+  const prods=deel.map(wsxProduct).filter(Boolean);
+  if(!prods.length) return [];
+  const log=(p,k,m)=>{ state.log.unshift({id:uid(), t:Date.now(), naam:p.naam, m, v:p.voorraad, aantal:k, pid:p.id, bron:'webshop '+(nummer||'')}); state.log=state.log.slice(0,50); };
+  if(terug){ const p=prods[0]; p.voorraad=(p.voorraad||0)+n; log(p,n,'in'); return [p]; }
+  let rest=n; const geraakt=[];
+  for(const p of prods){
+    if(rest<=0) break;
+    const k=Math.min(rest, Math.max(0, Math.floor(Number(p.voorraad)||0)));
+    if(k>0){ haalUitVoorraad(p,k); log(p,k,'uit'); rest-=k; geraakt.push(p); }
+  }
+  /* Online verkocht terwijl het hier op nul stond: toch boeken, dan zie je dat hij nog ontbreekt. */
+  if(rest>0){ haalUitVoorraad(prods[0],rest); log(prods[0],rest,'uit'); geraakt.push(prods[0]); }
+  return geraakt;
+}
+async function wsExtrasBoeken(){
+  if(!account) return 0;
+  let rijen=[];
+  try{
+    const r=await sb.from('webshop_bestellingen').select('id,nummer,extras,extras_boeking,geannuleerd')
+      .or('and(extras_boeking.is.null,geannuleerd.eq.false),and(extras_boeking.eq.af,geannuleerd.eq.true)');
+    rijen=(r.data||[]).filter(b=>Array.isArray(b.extras) && b.extras.some(e=>e && Array.isArray(e.delen) && e.delen.length));
+  }catch(e){ return 0; }
+  let n=0; const geraakt=new Set();
+  for(const b of rijen){
+    /* De database filtert dit al; hier nog eens, want een geannuleerde bestelling die nooit is
+       afgeboekt mag nooit alsnog van de voorraad. */
+    if(b.geannuleerd ? b.extras_boeking!=='af' : b.extras_boeking!=null) continue;
+    const terug=!!b.geannuleerd;
+    let q=sb.from('webshop_bestellingen').update({extras_boeking: terug?'terug':'af'}).eq('id', b.id);
+    q = terug ? q.eq('extras_boeking','af') : q.is('extras_boeking', null);
+    let claim=null;
+    try{ ({data:claim}=await q.select('id')); }catch(e){ continue; }
+    if(!claim || !claim.length) continue;      /* een ander apparaat was eerst */
+    b.extras.forEach(e=>{
+      const k=Math.max(1, Math.floor(Number(e.aantal)||1));
+      wsxDelen(e).forEach(d=>wsxBoekDeel(d, k, terug, b.nummer).forEach(p=>geraakt.add(p)));
+    });
+    n++;
+  }
+  if(n){
+    save();
+    geraakt.forEach(p=>{ if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p); });
+    try{ if(typeof renderVoorraad==='function') renderVoorraad(); }catch(e){}
+  }
+  return n;
+}
+async function wsExtrasStart(){
+  await wsExtrasLaad();
+  if(!wsExtras || !wsExtras.length) return;
+  _wsxStand=wsxVoorraad();
+  wsExtrasBoeken();
+  if(window._wsxLus) clearInterval(window._wsxLus);
+  window._wsxLus=setInterval(()=>{ if(account) wsExtrasBoeken(); }, 3*60*1000);
+}
+
+/* Het kaartje in Instellingen, Webshop: per extra de prijs, hoeveel uitvoeringen er liggen,
+   en aan of uit. Welke producten bij welk model horen staat in de tabel; dat verandert zelden. */
+function wsxVoorraadTekst(x, kaart){
+  if(x.soort==='dienst') return 'Een dienst, altijd te koop';
+  const vs=x.varianten||[];
+  const op=vs.filter(v=>(wsxAantal(v,kaart)||0)>0);
+  if(vs.length===1){ const a=wsxAantal(vs[0],kaart)||0; return a ? a+' op voorraad' : 'Niet op voorraad'; }
+  return op.length+' van de '+vs.length+' op voorraad';
+}
+async function wsExtrasRender(){
+  const vak=document.getElementById('extrasVak'); if(!vak) return;
+  if(wsExtras==null) await wsExtrasLaad();
+  if(!wsExtras || !wsExtras.length){ vak.innerHTML='<p class="muted">Nog geen extra\'s.</p>'; return; }
+  const kaart=wsxVoorraad();
+  vak.innerHTML=`<table>
+    <thead><tr><th>Extra</th><th>Prijs</th><th>Voorraad</th><th>Online</th></tr></thead>
+    <tbody>${wsExtras.map(x=>{
+      const vs=x.varianten||[];
+      const eigenPrijs=vs.some(v=>v.prijs!=null);
+      const prijzen= eigenPrijs
+        ? `<div class="wsxprijzen">${vs.map((v,i)=>`<label class="klein">${esc(v.label)} <input class="wsxprijs" id="wsxp_${esc(x.sleutel)}_${i}" type="number" min="0" step="0.05" value="${Number(v.prijs??x.prijs)}" onchange="wsxPrijs('${esc(x.sleutel)}', this.value, ${i})"></label>`).join('')}</div>`
+        : `<input class="wsxprijs" id="wsxp_${esc(x.sleutel)}" type="number" min="0" step="0.05" value="${Number(x.prijs)}" onchange="wsxPrijs('${esc(x.sleutel)}', this.value, null)">`;
+      const mist = x.soort==='artikel' && vs.length>1 ? vs.filter(v=>!(wsxAantal(v,kaart)>0)).map(v=>v.label) : [];
+      return `<tr>
+        <td><b>${esc(x.naam)}</b>${x.alleen_ophalen?'<div class="muted klein">Alleen bij ophalen in de winkel</div>':''}
+          ${mist.length?`<div class="muted klein">Nog niet op voorraad: ${esc(mist.join(', '))}</div>`:''}</td>
+        <td>${prijzen}</td>
+        <td>${esc(wsxVoorraadTekst(x,kaart))}</td>
+        <td><label class="klein"><input type="checkbox" id="wsxa_${esc(x.sleutel)}"${x.actief?' checked':''} onchange="wsxActief('${esc(x.sleutel)}', this.checked)"> Aan</label></td>
+      </tr>`;
+    }).join('')}</tbody></table>
+    <div class="acts2" style="margin-top:14px">
+      <button class="btn actie" onclick="wsxNaarWebshop(this)"><svg class="i s"><use href="#i-globe"/></svg>Op de webshop zetten</button>
+    </div>`;
+  if(typeof rolTabellen==='function') rolTabellen();
+}
+async function wsxBewaar(x, wijziging, melding){
+  const {error}=await sb.from('webshop_extras').update(Object.assign({bijgewerkt_op:new Date().toISOString()}, wijziging)).eq('id', x.id);
+  if(error){ toast('Opslaan lukte niet','fout'); return false; }
+  Object.assign(x, wijziging);
+  try{ await wsxStuur([x.sleutel]); toast(melding+', ook op de webshop', true); }
+  catch(e){ toast(melding+'. De webshop deed niet mee: '+e.message, 'let-op'); }
+  return true;
+}
+async function wsxPrijs(sleutel, waarde, i){
+  const x=(wsExtras||[]).find(y=>y.sleutel===sleutel); if(!x) return;
+  const n=Math.round(Number(waarde)*100)/100;
+  if(!(n>=0) || waarde===''){ toast('Vul een prijs in','let-op'); wsExtrasRender(); return; }
+  if(i==null) return wsxBewaar(x, {prijs:n}, 'Prijs aangepast');
+  const varianten=(x.varianten||[]).map((v,j)=>j===i ? Object.assign({}, v, {prijs:n}) : v);
+  return wsxBewaar(x, {varianten}, 'Prijs aangepast');
+}
+async function wsxActief(sleutel, aan){
+  const x=(wsExtras||[]).find(y=>y.sleutel===sleutel); if(!x) return;
+  await wsxBewaar(x, {actief:!!aan}, aan?'Staat aan':'Staat uit');
+}
+async function wsxNaarWebshop(knop){
+  if(knop) knop.disabled=true;
+  try{
+    const j=await wsxStuur(null);
+    _wsxStand=wsxVoorraad();
+    const mis=(j.uitslag||[]).filter(u=>!u.ok);
+    if(mis.length) toast(mis.length+' extra\'s lukten niet: '+mis.map(u=>u.fout).join(' · '), 'fout');
+    else toast('Alle extra\'s staan op de webshop', true);
+    await wsExtrasLaad(); wsExtrasRender();
+  }catch(e){ toast(e.message,'fout'); }
+  if(knop) knop.disabled=false;
 }
 
 /* ═══ Clover (de pin) koppelen en producten pushen ═══
@@ -14252,6 +14474,7 @@ async function ladAccountEnStart(session){
     if(window._cloverTimerLus) clearInterval(window._cloverTimerLus);
     window._cloverTimerLus=setInterval(()=>{ if(account) cloverBestellingenVerwerken(); }, 3*60*1000);
   }
+  if(typeof wsExtrasStart==='function') wsExtrasStart();
   moduleLinks();
   hwLaad(true);
   proefNudge();

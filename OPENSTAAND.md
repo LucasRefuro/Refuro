@@ -5,6 +5,32 @@ er niet in staat is af.
 
 ---
 
+## Extra's bij een toestel op de webshop (16 november 2026)
+
+Glas, hoesje, beschermset, snellader, muis, laptophoes en "klaar voor gebruik", die de klant
+op de webshop bij een toestel aanvinkt. Eén voorraad voor winkel en webshop.
+
+- [x] **Storvo-kant gebouwd.** Tabel `webshop_extras` (prijs, aan/uit, per model welke barcodes
+      erin zitten), edge `webshop-extras` (zet ze in Shopify met de voorraad uit de winkelapp),
+      webhook herkent `EXTRA-`-regels, winkelapp boekt webshopverkopen af (claim in
+      `webshop_bestellingen.extras_boeking`) en stuurt een voorraadwijziging na elke opslag door.
+      Kaartje in Instellingen, Webshop. Test: `tests/webshop-extras.js`.
+- [ ] **Thema (webshop-chat).** Vinkjes op de productpagina (nooit vooraf aangevinkt), regel
+      "Vergeten?" voor de stekker in het mandje, "klaar voor gebruik" alleen bij ophalen. Het thema
+      leest het metafield `refuro.extra` van de producten met tag `extra`. Pas als dat live staat:
+      de extra's aanzetten in Instellingen, Webshop (staan nu op uit, dus concept in Shopify).
+- [ ] **Eigenaar: accuprijs.** Je zet originele accu's, dus de nieuwe accu (nu € 45) moet omhoog.
+      Geef de prijs tot en met iPhone 15 en vanaf iPhone 16 (Samsung: S23 en nieuwer is de hoge).
+      Daarna splitsen we de accu in twee prijzen.
+- [ ] **Eigenaar: prijs bij een toestel of winkelprijs?** In de winkel kost glas € 15,95 en een
+      bumper case € 19,95. Online bij een toestel: glas € 9,95, hoesje € 12,95, set € 19,95. Zelfde
+      voorraad, andere prijs. Bewuste korting bij een toestel, of gelijk trekken?
+- [ ] **Eigenaar: inkopen.** Inkooplijst (Xssive via MondiParts, muis en sleeve via OneStopMobile)
+      staat in `Claude outputs/extras-bij-toestellen-onderzoek.md`. Een extra verschijnt pas online
+      als het product is ingescand.
+- Later: iPad-hoes en horlogebandjes bij het eerste iPad of horloge. Verzekering via een partner.
+  Office en McAfee bewust niet.
+
 ## Rooster en laptops toevoegen (15 november 2026, avond)
 
 Live. Rooster: beschikbaarheid vier weken vooruit, planbord op de telefoon als hele week, Zet in

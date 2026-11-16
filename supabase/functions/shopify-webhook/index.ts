@@ -97,6 +97,13 @@ function geld(w: any) {
 function isAccuRegel(r: any) {
   return /^NIEUWE-ACCU/i.test(String(r?.sku || ""));
 }
+/* Een extra bij een toestel (stekker, glas, hoesje, klaar voor gebruik): de sku begint met EXTRA-
+   (de functie webshop-extras zet ze zo op de webshop). Geen toestel, dus hij telt niet mee bij het zoeken naar
+   het verkochte exemplaar. Anders vraagt een bestelling van een telefoon met een glas om twee
+   toestellen, en pakt een vervolgmelding er misschien een tweede bij. */
+function isExtraRegel(r: any) {
+  return /^EXTRA-/i.test(String(r?.sku || ""));
+}
 function accuKlusTekst(nummer: string) {
   return `Accu: nieuwe accu plaatsen, webshopbestelling ${nummer}. Daarna verzenden.`;
 }
@@ -292,13 +299,14 @@ Deno.serve(async (req) => {
   const gevonden: { id: string; naam: string; code: string | null; variant?: string | null }[] = [];
   const gedaan = new Set<string>();
   // Een nieuwe accu is een klus, geen toestel: die telt hier niet mee.
-  const totaalNodig = regels.filter((r: any) => !isAccuRegel(r)).reduce((n: number, r: any) => n + Math.max(1, Math.floor(Number(r?.quantity) || 1)), 0);
+  const totaalNodig = regels.filter((r: any) => !isAccuRegel(r) && !isExtraRegel(r)).reduce((n: number, r: any) => n + Math.max(1, Math.floor(Number(r?.quantity) || 1)), 0);
   const alGedaanIds = new Set<string>(eerderToestellen.map((t: any) => t?.id).filter(Boolean));
   let toegewezen = eerderToestellen.length;
 
   for (const r of regels) {
     if (geannuleerd) continue;             // een annulering loopt via de bewaarde bestelling hieronder
     if (isAccuRegel(r)) continue;          // de nieuwe accu: zie hieronder
+    if (isExtraRegel(r)) continue;         // een extra: zie hieronder
     if (toegewezen >= totaalNodig) break;  // genoeg toestellen aan de bestelling; niets dubbels
 
     const variantId = r?.variant?.id || null;
@@ -398,6 +406,33 @@ Deno.serve(async (req) => {
     catch (e) { console.error("shopify-webhook: accuklus", t.id, e); }
   }
 
+  /* ── de extra's ──
+     Welke extra en welke uitvoering: we zoeken de sku op in webshop_extras.shopify_varianten. De
+     delen (welke producten erin zitten) gaan mee, zodat de winkelapp ze van de voorraad haalt. Dat
+     doet de winkelapp zelf en niet deze functie: de voorraad staat in de winkeldata-blob, en daar
+     schrijven vanaf hier botst met een openstaande winkelapp die de oude stand terugzet.
+     extras_boeking blijft leeg; de winkelapp claimt de boeking (zie de migratie webshop_extras). */
+  const extras: any[] = [];
+  const extraRegels = regels.filter(isExtraRegel);
+  if (extraRegels.length) {
+    const { data: lijst } = await admin.from("webshop_extras")
+      .select("sleutel, naam, soort, varianten, shopify_varianten").eq("team_id", kop.team_id);
+    for (const r of extraRegels) {
+      const sku = String(r?.sku || "");
+      let hit: any = null;
+      for (const x of lijst || []) {
+        const sv = (x.shopify_varianten && typeof x.shopify_varianten === "object") ? x.shopify_varianten : {};
+        const label = Object.keys(sv).find((l) => String(sv[l]?.sku || "").toUpperCase() === sku.toUpperCase());
+        if (label == null) continue;
+        const v = (Array.isArray(x.varianten) ? x.varianten : []).find((v: any) => String(v?.label) === label);
+        hit = { sleutel: x.sleutel, naam: x.naam, soort: x.soort, label, delen: Array.isArray(v?.delen) ? v.delen : [] };
+        break;
+      }
+      if (!hit) { console.error("shopify-webhook: extra", sku, "niet gevonden in webshop_extras"); hit = { sleutel: null, naam: r?.title || sku, soort: "artikel", label: null, delen: [] }; }
+      extras.push({ ...hit, sku, aantal: Math.max(1, Math.floor(Number(r?.quantity) || 1)) });
+    }
+  }
+
   /* ── de bestelling zelf bewaren ──
      Zodat je in Storvo ziet wat er besteld is en niet alleen dat er iets uit de
      voorraad verdwenen is. */
@@ -419,10 +454,12 @@ Deno.serve(async (req) => {
         titel: r.title, sku: r.sku || null, aantal: r.quantity,
         bedrag: geld(r.originalTotalSet),
         ...(isAccuRegel(r) ? { accu: true, voor } : {}),
+        ...(isExtraRegel(r) ? { extra: true, voor } : {}),
       };
     }),
     toestellen: toestellenSamen,
     nieuwe_accu: metAccu,
+    extras,
     beheer_url: `https://${kop.domein}/admin/orders/${nummer}`,
     geplaatst_op: order.createdAt || new Date().toISOString(),
     bijgewerkt_op: new Date().toISOString(),
