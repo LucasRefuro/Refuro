@@ -11932,7 +11932,9 @@ function renderBestellingen(){
 function bstAccuBlok(x){
   const t=(x.toestellen||[]).filter(y=>y && y.nieuwe_accu);
   const welk=t.length ? t.map(y=>esc(y.naam)+(y.code?' ('+esc(y.code)+')':'')).join(', ') : '';
-  return `<div class="bstaccu"><b>Nieuwe accu erin</b>
+  /* De klant betaalde 95 euro voor een originele accu: dat moet je zien, anders gaat er een OEM in. */
+  const origineel=t.some(y=>y.accu_origineel) || (x.regels||[]).some(r=>r && r.accu_origineel);
+  return `<div class="bstaccu"><b>${origineel?'Originele accu erin':'Nieuwe accu erin'}</b>
     Eerst de accu vervangen, daarna verzenden. De klant rekent op 1 tot 3 werkdagen.${welk?'<br>'+welk+' staat bij Te repareren in het refurbish-deel.':''}</div>`;
 }
 
@@ -11940,11 +11942,21 @@ function bstAccuBlok(x){
    overzetten als hij komt. Het staat er los van de regels, zodat je het ziet als je de bestelling
    klaarlegt en niet pas als de klant aan de balie staat. */
 function bstKlaarBlok(x){
-  const k=(x.extras||[]).filter(e=>e && e.sleutel==='klaar');
-  if(!k.length) return '';
-  const welk=k.map(e=>e.label).filter(Boolean).join(', ');
-  return `<div class="bstklaar"><b>Klaar voor gebruik${welk?' ('+esc(welk)+')':''}</b>
+  const ex=(x.extras||[]).filter(Boolean);
+  const k=ex.filter(e=>e.sleutel==='klaar');
+  /* Office en McAfee zijn een code: die koop je bij de groothandel en stuur je de klant. */
+  const codes=ex.filter(e=>e.soort==='dienst' && e.sleutel!=='klaar');
+  let html='';
+  if(k.length){
+    const welk=k.map(e=>e.label).filter(Boolean).join(', ');
+    html+=`<div class="bstklaar"><b>Klaar voor gebruik${welk?' ('+esc(welk)+')':''}</b>
     Als de klant komt ophalen: toestel instellen en de gegevens overzetten. Reken op een half uur.</div>`;
+  }
+  if(codes.length){
+    html+=`<div class="bstklaar"><b>Code sturen</b>
+    ${esc(codes.map(e=>e.naam).join(', '))}. Koop de code en stuur hem naar de klant, of zet hem erop bij het ophalen.</div>`;
+  }
+  return html;
 }
 
 /* ═══ Pop-up bij een nieuwe webshopbestelling ═══

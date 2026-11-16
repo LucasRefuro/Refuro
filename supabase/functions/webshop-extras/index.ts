@@ -88,8 +88,13 @@ async function wieBelt(req: Request) {
    Afboeken gaat steeds uit het eerste alternatief met voorraad; de winkelapp doet het net zo.
 
    Het thema leest het metafield refuro.extra (bij welk soort toestel, welke modellen per
-   uitvoering) en toont alleen wat bij het toestel past en er is. Verborgen voor zoeken, net als
-   de nieuwe accu: los heeft het geen zin. Een uitgezette extra wordt een concept. */
+   uitvoering) en toont alleen wat bij het toestel past en er is. Verborgen voor zoeken: los heeft
+   het geen zin. Een uitgezette extra wordt een concept.
+
+   De nieuwe accu staat hier ook (rijen met een eigen handle en sku-voorvoegsel, zie de migratie
+   webshop_extras_foto_accu). Die houdt zijn oude handle (nieuwe-accu-telefoon) en sku
+   (NIEUWE-ACCU-...), want daar zoeken het thema en de webhook op. De actie accu-producten in de
+   functie shopify zet er nog de oude ene prijs van 45 euro neer; die niet meer draaien. */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fout("Alleen POST", 405);
@@ -139,6 +144,9 @@ Deno.serve(async (req) => {
     if (!varianten.length) continue;
     try {
       const dienst = x.soort === "dienst";
+      const handle = String(x.handle || "extra-" + x.sleutel);
+      const voorvoegsel = String(x.sku_voorvoegsel || "EXTRA-" + x.sleutel).toUpperCase();
+      const isAccu = /^NIEUWE-ACCU/.test(voorvoegsel);
       const enkel = varianten.length === 1;
       const optie = enkel ? "Title" : "Uitvoering";
       const bestaand: Record<string, any> = (x.shopify_varianten && typeof x.shopify_varianten === "object") ? x.shopify_varianten : {};
@@ -146,9 +154,9 @@ Deno.serve(async (req) => {
       let productId: string | null = x.shopify_product_id || null;
       if (productId && !(await bestaatProduct((q: string, v?: unknown) => graphql(kk, q, v), productId))) productId = null;
       if (!productId) {
-        const d = await graphql(kk, `query($q: String!){ products(first: 1, query: $q){ nodes { id handle } } }`, { q: "handle:extra-" + x.sleutel });
+        const d = await graphql(kk, `query($q: String!){ products(first: 1, query: $q){ nodes { id handle } } }`, { q: "handle:" + handle });
         const n = d?.products?.nodes?.[0];
-        if (n && n.handle === "extra-" + x.sleutel) productId = n.id;
+        if (n && n.handle === handle) productId = n.id;
       }
 
       const vs = varianten.map((v: any) => {
@@ -156,7 +164,7 @@ Deno.serve(async (req) => {
         const r: any = {
           optionValues: [{ optionName: optie, name: enkel ? "Default Title" : label }],
           price: Number(v?.prijs ?? x.prijs).toFixed(2),
-          sku: ("EXTRA-" + x.sleutel + "-" + slug(label)).toUpperCase().slice(0, 100),
+          sku: (voorvoegsel + "-" + slug(label)).toUpperCase().slice(0, 100),
           taxable: true,
         };
         if (dienst) {
@@ -173,16 +181,28 @@ Deno.serve(async (req) => {
 
       const voorThema = {
         sleutel: x.sleutel, soort: x.soort, voor: x.voor || [], alleen_ophalen: !!x.alleen_ophalen,
-        varianten: varianten.map((v: any) => ({
-          label: String(v?.label || "Standaard"), modellen: Array.isArray(v?.modellen) ? v.modellen : [],
-          ...(Array.isArray(v?.inch) ? { inch: v.inch } : {}), ...(v?.categorie ? { categorie: v.categorie } : {}),
-        })),
+        // Alles van de uitvoering behalve de barcodes en de prijs (die staat op de variant zelf):
+        // label, modellen, inch, categorie, accu (oem of origineel).
+        varianten: varianten.map((v: any) => {
+          const { delen: _d, prijs: _p, ...rest } = (v && typeof v === "object") ? v : {};
+          return { ...rest, label: String(v?.label || "Standaard"), modellen: Array.isArray(v?.modellen) ? v.modellen : [] };
+        }),
       };
+      /* De foto voor het kaartje op de productpagina. Alleen meesturen als het product er nog
+         geen heeft, anders uploadt elke voorraadwijziging hem opnieuw. */
+      let fotoMee = false;
+      if (x.foto) {
+        if (!productId) fotoMee = true;
+        else {
+          const m = await graphql(kk, `query($id: ID!){ product(id: $id){ media(first: 1){ nodes { id } } } }`, { id: productId });
+          fotoMee = !(m?.product?.media?.nodes || []).length;
+        }
+      }
       const invoer: any = {
-        title: x.naam, handle: "extra-" + x.sleutel,
+        title: x.naam, handle,
         descriptionHtml: x.omschrijving ? "<p>" + html(String(x.omschrijving)) + "</p>" : "",
-        vendor: "Refuro", productType: "Extra", status: x.actief ? "ACTIVE" : "DRAFT",
-        tags: ["extra", "extra-" + x.sleutel, ...(dienst ? ["dienst"] : [])],
+        vendor: "Refuro", productType: isAccu ? "Dienst" : "Extra", status: x.actief ? "ACTIVE" : "DRAFT",
+        tags: isAccu ? ["dienst", "nieuwe-accu"] : ["extra", "extra-" + x.sleutel, ...(dienst ? ["dienst"] : [])],
         productOptions: [{ name: optie, values: vs.map((v: any) => ({ name: v.optionValues[0].name })) }],
         variants: vs,
         metafields: [
@@ -191,13 +211,17 @@ Deno.serve(async (req) => {
         ],
       };
       if (productId) invoer.id = productId;
-      const uit = await graphql(kk, `
+      const zet = (inv: any) => graphql(kk, `
         mutation($input: ProductSetInput!) {
           productSet(input: $input, synchronous: true) {
             product { id handle variants(first: 100) { nodes { id sku } } }
             userErrors { field message }
           }
-        }`, { input: invoer });
+        }`, { input: inv });
+      let uit = await zet(fotoMee ? { ...invoer, files: [{ originalSource: x.foto, contentType: "IMAGE", alt: x.naam }] } : invoer);
+      /* Weigert Shopify de foto (de leverancier blokkeert het ophalen), dan zonder foto. Een extra
+         zonder plaatje is beter dan geen extra. */
+      if (fotoMee && Array.isArray(uit?.productSet?.userErrors) && uit.productSet.userErrors.length) uit = await zet(invoer);
       const p = letOp(uit?.productSet, "Extra op de webshop zetten").product;
       if (kk.publicatie_id && p?.id && x.actief) {
         const pub = await graphql(kk, `mutation($id: ID!, $input: [PublicationInput!]!){ publishablePublish(id: $id, input: $input){ userErrors { field message } } }`, { id: p.id, input: [{ publicationId: kk.publicatie_id }] });

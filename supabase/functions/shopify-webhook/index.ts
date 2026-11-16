@@ -86,33 +86,38 @@ function geld(w: any) {
 }
 
 /* ── de nieuwe accu ──
-   Op de productpagina kan de klant een nieuwe accu kiezen (telefoon 45 euro, laptop 89 euro,
-   november 2026). Dat is een eigen regel in de bestelling met sku NIEUWE-ACCU-..., en als
-   verborgen eigenschap _voor_variant de variant van het toestel. Dat toestel moet eerst langs de
-   werkbank: we zetten het bij Te repareren met de klus Accu, zodat niemand hem zonder nieuwe accu
-   verstuurt. De klus is een gewone regel bij defecten (zoals de controle ze schrijft), met het
-   bestelnummer erin; daaraan zien we bij een volgende melding van dezelfde bestelling dat hij er
-   al staat. Een toestel dat los in de winkel is toegevoegd heeft ook een werkbankrij (stap los),
-   dus die vinden we ook. */
+   Op de productpagina kan de klant een nieuwe accu kiezen (november 2026; telefoon OEM 39 of 49
+   euro of origineel 95, laptop 89; de prijzen staan in webshop_extras). Dat is een eigen regel in
+   de bestelling met sku NIEUWE-ACCU-..., en als verborgen eigenschap _voor_variant de variant van
+   het toestel. Dat toestel moet eerst langs de werkbank: we zetten het bij Te repareren met de
+   klus Accu, zodat niemand hem zonder nieuwe accu verstuurt. De klus is een gewone regel bij
+   defecten (zoals de controle ze schrijft), met het bestelnummer erin; daaraan zien we bij een
+   volgende melding van dezelfde bestelling dat hij er al staat. Een toestel dat los in de winkel
+   is toegevoegd heeft ook een werkbankrij (stap los), dus die vinden we ook. */
 function isAccuRegel(r: any) {
   return /^NIEUWE-ACCU/i.test(String(r?.sku || ""));
 }
 /* Een extra bij een toestel (stekker, glas, hoesje, klaar voor gebruik): de sku begint met EXTRA-
-   (de functie webshop-extras zet ze zo op de webshop). Geen toestel, dus hij telt niet mee bij het zoeken naar
-   het verkochte exemplaar. Anders vraagt een bestelling van een telefoon met een glas om twee
-   toestellen, en pakt een vervolgmelding er misschien een tweede bij. */
+   (de functie webshop-extras zet ze zo op de webshop). Geen toestel, dus hij telt niet mee bij
+   het zoeken naar het verkochte exemplaar. Anders vraagt een bestelling van een telefoon met een
+   glas om twee toestellen, en pakt een vervolgmelding er misschien een tweede bij. */
 function isExtraRegel(r: any) {
   return /^EXTRA-/i.test(String(r?.sku || ""));
 }
-function accuKlusTekst(nummer: string) {
-  return `Accu: nieuwe accu plaatsen, webshopbestelling ${nummer}. Daarna verzenden.`;
+/* Sinds november 2026 kiest de klant een OEM-accu of een originele (sku eindigt op -ORIGINEEL).
+   Wie hem plaatst moet dat weten: de klant betaalde voor de originele. Daarom staat het in de klus. */
+function isOrigineel(r: any) {
+  return /ORIGINEEL/i.test(String(r?.sku || ""));
 }
-async function accuKlus(teamId: string, hardwareId: string, nummer: string, weg: boolean) {
+function accuKlusTekst(nummer: string, origineel = false) {
+  return `Accu: nieuwe ${origineel ? "ORIGINELE " : ""}accu plaatsen, webshopbestelling ${nummer}. Daarna verzenden.`;
+}
+async function accuKlus(teamId: string, hardwareId: string, nummer: string, weg: boolean, origineel = false) {
   const { data: rijen } = await admin.from("refurbish_apparaten")
     .select("id, status, defecten").eq("team_id", teamId).eq("hardware_id", hardwareId).limit(1);
   const a = rijen?.[0];
   if (!a) return false;
-  const tekst = accuKlusTekst(nummer);
+  const tekst = accuKlusTekst(nummer, origineel);
   const defecten: any[] = Array.isArray(a.defecten) ? a.defecten.slice() : [];
   const heeft = defecten.includes(tekst);
   if (weg) {
@@ -148,15 +153,16 @@ async function mailBestelling(rij: any) {
   const van = Deno.env.get("RESEND_FROM") || "Storvo <welkom@storvo.app>";
   const euro = (n: unknown) => n == null ? "" : "€ " + Number(n).toFixed(2).replace(".", ",");
   const metAccu = !!rij.nieuwe_accu;
+  const origineel = (rij.regels || []).some((r: any) => r?.accu_origineel);
   const accuToestellen = (rij.toestellen || []).filter((t: any) => t?.nieuwe_accu);
   const accuBlok = metAccu ? `
     <div style="background:#E8421A;color:#fff;border-radius:16px;padding:18px 20px;margin:0 0 18px">
-      <div style="font-size:22px;font-weight:700;margin-bottom:6px">NIEUWE ACCU ERIN</div>
+      <div style="font-size:22px;font-weight:700;margin-bottom:6px">${origineel ? "ORIGINELE ACCU ERIN" : "NIEUWE ACCU ERIN"}</div>
       <div style="font-size:15px;line-height:1.5">Eerst de accu vervangen, daarna verzenden. De klant rekent op 1 tot 3 werkdagen.
       ${accuToestellen.length ? "<br><b>Toestel:</b> " + accuToestellen.map((t: any) => veilig(t.naam) + (t.code ? " (" + veilig(t.code) + ")" : "")).join(", ") + ". Staat in Storvo bij Te repareren." : ""}</div>
     </div>` : "";
   const regels = (rij.regels || []).map((r: any) =>
-    `<tr><td style="padding:6px 0">${r.aantal > 1 ? veilig(r.aantal) + "× " : ""}${r.accu ? "<b>" + veilig(r.titel) + "</b>" : veilig(r.titel)}${r.voor ? "<br><span style=\"color:#555\">Voor: " + veilig(r.voor) + "</span>" : ""}</td><td style="padding:6px 0;text-align:right;white-space:nowrap">${euro(r.bedrag)}</td></tr>`).join("");
+    `<tr><td style="padding:6px 0">${r.aantal > 1 ? veilig(r.aantal) + "× " : ""}${r.accu ? "<b>" + veilig(r.titel) + "</b>" : veilig(r.titel)}${r.uitvoering ? " (" + veilig(r.uitvoering) + ")" : ""}${r.voor ? "<br><span style=\"color:#555\">Voor: " + veilig(r.voor) + "</span>" : ""}</td><td style="padding:6px 0;text-align:right;white-space:nowrap">${euro(r.bedrag)}</td></tr>`).join("");
   const toestellen = (rij.toestellen || []).map((t: any) => veilig(t.naam) + (t.code ? " (" + veilig(t.code) + ")" : "") + (t.nieuwe_accu ? " <b>met nieuwe accu</b>" : "")).join("<br>");
   const html = `
     <div style="font-family:Arial,sans-serif;color:#1B2254;max-width:560px">
@@ -167,7 +173,7 @@ async function mailBestelling(rij: any) {
       ${toestellen ? `<p style="margin:16px 0 0;font-size:14px"><b>Uit de voorraad:</b><br>${toestellen}</p>` : ""}
       ${rij.beheer_url ? `<p style="margin:18px 0 0"><a href="${veilig(rij.beheer_url)}">Openen in Shopify</a></p>` : ""}
     </div>`;
-  const onderwerp = (metAccu ? "NIEUWE ACCU ERIN · " : "") + "Nieuwe bestelling " + (rij.nummer || "");
+  const onderwerp = (metAccu ? (origineel ? "ORIGINELE ACCU ERIN · " : "NIEUWE ACCU ERIN · ") : "") + "Nieuwe bestelling " + (rij.nummer || "");
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -240,7 +246,7 @@ Deno.serve(async (req) => {
           totalPriceSet { shopMoney { amount currencyCode } }
           lineItems(first: 100) {
             nodes {
-              title sku quantity
+              title variantTitle sku quantity
               customAttributes { key value }
               originalTotalSet { shopMoney { amount } }
               product { id }
@@ -402,7 +408,8 @@ Deno.serve(async (req) => {
     if (!t && toestellenSamen.length === 1) t = toestellenSamen[0];
     if (!t) { console.error("shopify-webhook: nieuwe accu zonder toestel in", order.name); continue; }
     t.nieuwe_accu = true;
-    try { await accuKlus(kop.team_id, t.id, order.name || String(bestellingId), geannuleerd); }
+    if (isOrigineel(r)) t.accu_origineel = true;
+    try { await accuKlus(kop.team_id, t.id, order.name || String(bestellingId), geannuleerd, isOrigineel(r)); }
     catch (e) { console.error("shopify-webhook: accuklus", t.id, e); }
   }
 
@@ -453,7 +460,8 @@ Deno.serve(async (req) => {
       return {
         titel: r.title, sku: r.sku || null, aantal: r.quantity,
         bedrag: geld(r.originalTotalSet),
-        ...(isAccuRegel(r) ? { accu: true, voor } : {}),
+        ...(r.variantTitle && r.variantTitle !== "Default Title" ? { uitvoering: r.variantTitle } : {}),
+        ...(isAccuRegel(r) ? { accu: true, voor, ...(isOrigineel(r) ? { accu_origineel: true } : {}) } : {}),
         ...(isExtraRegel(r) ? { extra: true, voor } : {}),
       };
     }),

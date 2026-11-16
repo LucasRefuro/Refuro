@@ -7,21 +7,26 @@ er niet in staat is af.
 
 ## Extra's bij een toestel op de webshop (16 november 2026)
 
-Glas, hoesje, beschermset, snellader, muis, laptophoes en "klaar voor gebruik", die de klant
-op de webshop bij een toestel aanvinkt. Eén voorraad voor winkel en webshop.
+Glas, hoesje, beschermset, snellader, muis, laptophoes, Office Home 2024, McAfee en "klaar voor
+gebruik", die de klant op de webshop bij een toestel kiest. Eén voorraad voor winkel en webshop.
+Als kaartjes met foto (keuze eigenaar). Ook de nieuwe accu staat nu in deze tabel: OEM 39 euro tot
+en met iPhone 15 (Samsung tot en met S22), OEM 49 euro daarboven, origineel 95 euro (iets meer
+verborgen), laptop 89 euro. Bij de OEM-accu één korte zin dat het geen Apple-onderdeel is.
 
 - [x] **Storvo-kant gebouwd.** Tabel `webshop_extras` (prijs, aan/uit, per model welke barcodes
       erin zitten), edge `webshop-extras` (zet ze in Shopify met de voorraad uit de winkelapp),
       webhook herkent `EXTRA-`-regels, winkelapp boekt webshopverkopen af (claim in
       `webshop_bestellingen.extras_boeking`) en stuurt een voorraadwijziging na elke opslag door.
       Kaartje in Instellingen, Webshop. Test: `tests/webshop-extras.js`.
-- [ ] **Thema (webshop-chat).** Vinkjes op de productpagina (nooit vooraf aangevinkt), regel
-      "Vergeten?" voor de stekker in het mandje, "klaar voor gebruik" alleen bij ophalen. Het thema
-      leest het metafield `refuro.extra` van de producten met tag `extra`. Pas als dat live staat:
-      de extra's aanzetten in Instellingen, Webshop (staan nu op uit, dus concept in Shopify).
-- [ ] **Eigenaar: accuprijs.** Je zet originele accu's, dus de nieuwe accu (nu € 45) moet omhoog.
-      Geef de prijs tot en met iPhone 15 en vanaf iPhone 16 (Samsung: S23 en nieuwer is de hoge).
-      Daarna splitsen we de accu in twee prijzen.
+- [x] **Office, McAfee, foto's en de accu (16 nov, avond).** Rijen office (149) en mcafee (27,95)
+      als dienst (code sturen; staat bij de bestelling). Accu-rijen met eigen handle en sku, zodat
+      thema en webhook blijven werken; de webhook zet ORIGINELE in de werkbank-klus en de mail.
+- [ ] **Thema (webshop-chat).** Kaartjes met foto op de productpagina (nooit vooraf aangevinkt),
+      regel "Vergeten?" voor de stekker in het mandje, "klaar voor gebruik" alleen bij ophalen.
+      Accu-keuze: OEM-variant op model (lijst in de eerste variant), originele accu als kleine
+      link. Het thema leest het metafield `refuro.extra`. Pas als dat live staat: de extra's
+      aanzetten en "Op de webshop zetten" in Instellingen, Webshop. Tot die tijd staat de accu nog
+      op 45 euro met één prijs. De actie `accu-producten` in de functie shopify niet meer draaien.
 - [ ] **Eigenaar: prijs bij een toestel of winkelprijs?** In de winkel kost glas € 15,95 en een
       bumper case € 19,95. Online bij een toestel: glas € 9,95, hoesje € 12,95, set € 19,95. Zelfde
       voorraad, andere prijs. Bewuste korting bij een toestel, of gelijk trekken?

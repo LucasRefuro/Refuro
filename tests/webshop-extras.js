@@ -22,7 +22,12 @@ const EXTRAS=[
   {id:'x3', sleutel:'glas', naam:'Screenprotector van gehard glas', soort:'artikel', voor:['Telefoon'], prijs:9.95, actief:true, volgorde:3, alleen_ophalen:false,
    varianten:[{label:'iPhone 13', modellen:['iPhone 13'], delen:[['GLAS13','GLAS13X']]}]},
   {id:'x4', sleutel:'klaar', naam:'Klaar voor gebruik', soort:'dienst', voor:['Telefoon','Laptop'], prijs:19, actief:true, volgorde:7, alleen_ophalen:true,
-   varianten:[{label:'Telefoon', modellen:[], categorie:'Telefoon', prijs:19, delen:[]},{label:'Laptop', modellen:[], categorie:'Laptop', prijs:29, delen:[]}]}
+   varianten:[{label:'Telefoon', modellen:[], categorie:'Telefoon', prijs:19, delen:[]},{label:'Laptop', modellen:[], categorie:'Laptop', prijs:29, delen:[]}]},
+  {id:'x5', sleutel:'accu-telefoon', naam:'Nieuwe accu voor je telefoon', soort:'dienst', voor:['Telefoon'], prijs:39, actief:true, volgorde:20, alleen_ophalen:false,
+   handle:'nieuwe-accu-telefoon', sku_voorvoegsel:'NIEUWE-ACCU-TELEFOON',
+   varianten:[{label:'OEM tot en met iPhone 15', prijs:39, accu:'oem', modellen:['iPhone 12'], delen:[]},
+              {label:'OEM vanaf iPhone 16', prijs:49, accu:'oem', modellen:[], delen:[]},
+              {label:'Origineel', prijs:95, accu:'origineel', modellen:[], delen:[]}]}
 ];
 const PRODUCTEN=[
   {id:1, barcode:'STEK',    naam:'Xssive 20W',        voorraad:3, winkel:1},
@@ -107,7 +112,7 @@ setTimeout(async()=>{
 
   // ── 1. hoeveel er te koop is ──
   await w.eval('wsExtrasLaad()');
-  ok('extras geladen', w.eval('wsExtras.length')===4);
+  ok('extras geladen', w.eval('wsExtras.length')===5);
   const kaart=w.eval('wsxVoorraad()');
   ok('voorraad per barcode uit je producten', kaart.STEK===3 && kaart.GLAS13===1 && kaart.HOES13===2);
   ok('onbekende barcode telt als nul', kaart.HOES11===0);
@@ -179,7 +184,15 @@ setTimeout(async()=>{
   // ── 6. klaar voor gebruik valt op bij de bestelling ──
   const blok=w.eval("bstKlaarBlok({extras:[{sleutel:'klaar', label:'Telefoon'}]})");
   ok('klaar voor gebruik staat bij de bestelling', /Klaar voor gebruik \(Telefoon\)/.test(blok) && /gegevens overzetten/.test(blok));
-  ok('zonder die dienst geen blok', w.eval("bstKlaarBlok({extras:[{sleutel:'glas'}]})")==='');
+  ok('zonder die dienst geen blok', w.eval("bstKlaarBlok({extras:[{sleutel:'glas', soort:'artikel'}]})")==='');
+  const code=w.eval("bstKlaarBlok({extras:[{sleutel:'office', soort:'dienst', naam:'Office Home 2024'}]})");
+  ok('Office: de code sturen staat bij de bestelling', /Code sturen/.test(code) && /Office Home 2024/.test(code));
+  ok('een originele accu valt op bij de bestelling', /Originele accu erin/.test(w.eval("bstAccuBlok({toestellen:[{naam:'iPhone 12', nieuwe_accu:true, accu_origineel:true}], regels:[]})")));
+  ok('een OEM-accu blijft gewoon nieuwe accu', /Nieuwe accu erin/.test(w.eval("bstAccuBlok({toestellen:[{naam:'iPhone 12', nieuwe_accu:true}], regels:[]})")));
+
+  // ── de accu met drie prijzen in hetzelfde kaartje ──
+  await w.eval('wsExtrasRender()');
+  ok('accu met drie prijzen in het kaartje', d().getElementById('wsxp_accu-telefoon_2') && d().getElementById('wsxp_accu-telefoon_2').value==='95');
 
   ok('geen fouten onderweg', fouten.length===0);
   if(fouten.length) console.log('   ', fouten.slice(0,3).join(' | '));
