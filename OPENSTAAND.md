@@ -22,9 +22,10 @@ bouwjaar, gewicht, poorten, foto's en de nieuwprijs van die uitvoering haalt Sto
       uitvoering (processor, geheugen, opslag) en staat, in de winkelapp en bij Online zetten; 17
       prijzen stonden er meteen in. Het modelveld toont bij een laptop de modellen die we kennen,
       een nieuw model komt er vanzelf bij. "Meer gegevens" staat open, boven de specs.
-- [ ] **Eigenaar: modellenlijst opschonen?** In `hardware_modellen` staan tikfouten en rommel van
-      vroeger ("Palvilion", "idealpad", "[Geen sticker met naam]", "xxxxxx", "test"). De rommel
-      wordt al niet getoond; de tikfouten wel. Alleen samenvoegen of weghalen met een ja.
+- [x] **Modellenlijst opgeschoond** (16 nov, migratie `20261116220000`): tikfouten samengevoegd
+      (Palvilion, idealpad, F51UA), hoofdletters goed (EliteBook, ProBook, ThinkPad, IdeaPad),
+      "iPhone 12 - Blauw" naar Apple iPhone 12, rommel weg. A0129 heet nu Pavilion (ook de
+      webshopsleutel), A0124/A0125/A0130 met de goede hoofdletters; advertenties bijgewerkt.
 
 ---
 
@@ -50,10 +51,11 @@ Laptops: 74 uit Storvo (reserve in `reserve_laptops_20261115_*`), 5 webshopprodu
       De Galaxy Tab heeft nog geen tekst.
 - [x] **Testbundel V0001** van de tweede webshop gehaald en uit Storvo verwijderd (reserve in
       `reserve_testbundel_20261115`).
-- [ ] **Opruimen**: edge `tijdelijk-laptops-offline` (doet niets meer, mag weg in het dashboard),
-      reservetabellen `reserve_laptops_20261115_*`, `reserve_omschrijving_20261115` en
-      `reserve_testbundel_20261115` zodra
-      niemand ze terug wil.
+- [x] **Opruimen** (16 nov): de reservetabellen staan in schema `archief` (niet weg, wel uit beeld;
+      weggooien later met `drop table archief.<naam>`). Alle 10 verborgen concepten in Shopify
+      weggegooid (op verzoek, ook Galaxy Tab A11 en ProBook 650 G5), registraties in Storvo mee.
+- [ ] **Eigenaar: edge `tijdelijk-laptops-offline` weggooien** in het Supabase-dashboard (Edge
+      Functions). Doet niets en vraagt inloggen; kan alleen met jouw login.
 - [x] **"Meest gekozen"** klopt (eigenaar). Het kaartje met monteur en QR-code naar het testrapport
       bestond niet; overal weggehaald, ook de testrapporten op de accountpagina.
 - [x] **Laptop-adviseur**: alleen nog bij laptopcollecties; elders WhatsApp en bellen.
@@ -82,8 +84,7 @@ openingstijden, de koopbalk staat onderin op telefoon en desktop, en "50 punten"
 - [x] **"Op 50 punten getest" klopt niet voor laptops.** GEDAAN (15 nov): productpagina telt
       de echte lijst (snippets/nakijkpunten), algemene plekken zonder getal, procespagina met
       de echte punten.
-- [ ] **Vijf oude, verborgen webshopproducten** houden hun oude titel: daar hangt geen toestel
-      meer aan in Storvo. Weggooien in Shopify of zo laten.
+- [x] **Vijf oude, verborgen webshopproducten**: weggegooid (16 nov, samen met de andere concepten).
 - [x] **Kleur en opslag in de checkout.** GEDAAN (15 nov, thema ee8045d): kleur en opslag gaan
       als eigenschap mee op de regel en staan in de checkout. Het formulier stuurde tot nu toe
       helemaal geen eigenschappen mee, dus ook "Ophalen in de winkel" kwam nooit in de bestelling;
