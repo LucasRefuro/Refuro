@@ -81,6 +81,19 @@ setTimeout(async()=>{
   ok('vandaag toegevoegd', /Latitude 5430/.test(d.getElementById('vandaagLijst').innerHTML));
   ok('nummer op de regel', /A0001/.test(d.getElementById('vandaagLijst').innerHTML));
   ok('grade in de voorraadlijst', /gradepil/.test(d.getElementById('voorraadLijst').innerHTML));
+  // Verkocht: een webshopverkoop met een nieuwe accu ligt nog op de werkbank. Hij mag niet uit
+  // beeld verdwijnen (eigenaar, november 2026), maar staat in de tab Verkocht met wat er nog moet.
+  w.eval(`apparaten.push({id:'a9', team_id:'t1', code:'A0118', merk:'Apple', model:'iPhone 17', categorie:'Telefoon',
+      specs:{Opslag:'256 GB'}, grade:'B', status:'te_repareren', hardware_id:'h9', checklist:[], defecten:[], goede_delen:[]});
+    hardwares.push({id:'h9', status:'verkocht', verkoop:729, verkocht_op:'2026-11-16T18:19:44Z', verkocht_via:'webshop', kanalen:{}});
+    tekenVoorraad();`);
+  ok('verkocht: niet in de gewone voorraadlijst', !/A0118/.test(d.getElementById('voorraadLijst').innerHTML));
+  ok('verkocht: eigen knop met telling', /Verkocht <span class="filtertel">1<\/span>/.test(d.getElementById('voorraadFilter').innerHTML));
+  w.eval("vrFilter('verkocht')");
+  const vk=d.getElementById('voorraadLijst').innerHTML;
+  ok('verkocht: staat in de tab, met datum, via en prijs', /A0118/.test(vk) && /16 nov\.? 2026/.test(vk) && /Webshop/.test(vk) && /729,00/.test(vk));
+  ok('verkocht: zegt wat er nog moet gebeuren', /Te repareren/.test(vk));
+  w.eval("vrFilter('alles')");
   ok('controlelijst', /Latitude 5430/.test(d.getElementById('ctrLijst').innerHTML));
   ok('reparatielijst', /EliteBook/.test(d.getElementById('repLijst').innerHTML));
   ok('onderdelen per soort geteld', /Toetsenbord/.test(d.getElementById('deelLijst').innerHTML));

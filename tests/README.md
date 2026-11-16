@@ -25,7 +25,7 @@ npm test
 | `refurbish-online.js` | Online zetten: advertentie met sjabloon, de zes foto's, de kanalen. Naar reparatie: onderdeel uit de lijst van de categorie, notitie erbij, reparatiesticker zonder tweede doossticker, en ingebed vanuit de winkelapp |
 | `productfotos-telefoon.js` | Fabrieksfoto's voor telefoons: de Galaxy-codes voor Icecat, dat een telefoon alleen de set in zijn eigen kleur ziet, de iPhone-uitleg en de knop Voor het hele model. En dat een laptop alles houdt zoals het was |
 | `refurbish-pagina.js` | De apparaatpagina, donoren en onderdelen per soort |
-| `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel |
+| `refurbish-werkstroom.js` | Reparatie, onderdelen en de overdracht naar de winkel; een verkocht toestel staat in de tab Verkocht (datum, via, prijs, wat er nog moet) en niet meer in de gewone voorraad |
 | `refurbish-toevoegen.js` | Toevoegen, de modellenlijst en wat er op het label komt te staan |
 | `refurbish-zicht.js` | Of het juiste scherm zichtbaar is: ingelogd, uitgelogd, en zonder de module |
 | `webshop-uitverkocht.js` | Het laatste exemplaar van een advertentie verkocht: het product blijft staan zonder voorraad (niet vermeld, of concept als je hem zelf offline haalt, of actief bij een open reservering), eerst voorraad 0 en dan de status, en dezelfde uitvoering krijgt later hetzelfde product terug |

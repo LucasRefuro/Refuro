@@ -5981,6 +5981,15 @@ function vrRijen(){
   return apparaten.filter(a=>OP_VOORRAAD.includes(a.status) &&
     !(a.status==='overgedragen' && !a.hardware_id) && !isVerkocht(a));
 }
+/* Verkocht: elk toestel waarvan de voorraadrij op verkocht staat, nieuwste verkoop bovenaan. Eerst
+   viel een verkocht toestel hier stil uit de lijst en leek het weg (eigenaar, november 2026: "er is
+   net een iPhone 17 gekocht"). Ook als hij nog op de werkbank ligt, bijvoorbeeld voor een nieuwe
+   accu die de klant erbij kocht: dan staat dat erbij. */
+function vrVerkocht(){
+  const t=a=>String((hardwareVan(a)||{}).verkocht_op||'');
+  return apparaten.filter(isVerkocht).sort((a,b)=>t(b).localeCompare(t(a)));
+}
+const VERKOCHT_VIA={webshop:'Webshop', winkel:'Winkel', marktplaats:'Marktplaats', partner:'Partner'};
 
 function tekenVoorraadFilters(extraBalk){
   const el=document.getElementById('voorraadFilter'); if(!el) return;
@@ -5988,7 +5997,8 @@ function tekenVoorraadFilters(extraBalk){
   const knoppen=[{f:'alles', n:'Alles', t:rijen.length}]
     .concat(locaties.map(l=>({f:'loc:'+l.id, n:l.naam,
       t:rijen.filter(a=>plekVan(a)===l.id).length})))
-    .concat([{f:'offline', n:'Nog niet online', t:rijen.filter(a=>!staatOnline(a)).length}]);
+    .concat([{f:'offline', n:'Nog niet online', t:rijen.filter(a=>!staatOnline(a)).length},
+             {f:'verkocht', n:'Verkocht', t:vrVerkocht().length}]);
   if(!knoppen.some(k=>k.f===vrFilterNu)) vrFilterNu='alles';
   el.innerHTML=knoppen.map(k=>`
     <button class="${vrFilterNu===k.f?'active':''}" onclick="vrFilter('${k.f}')">
@@ -5999,6 +6009,7 @@ function vrFilter(f){ vrFilterNu=f; tekenVoorraad(); }
 
 function tekenVoorraad(){
   const el=document.getElementById('voorraadLijst'); if(!el){ tekenVoorraadFilters(); return; }
+  if(vrFilterNu==='verkocht') return tekenVerkocht(el);
   let rijen=vrRijen();
   if(vrFilterNu.startsWith('loc:')) rijen=rijen.filter(a=>plekVan(a)===vrFilterNu.slice(4));
   if(vrFilterNu==='offline')        rijen=rijen.filter(a=>!staatOnline(a));
@@ -6050,6 +6061,36 @@ function tekenVoorraad(){
         </tr>`;}).join('')}</tbody></table></div>`
     : leeg('i-shop', vrFilterNu==='alles'?'Nog niets op voorraad':'Niets in deze lijst',
         'Zodra een controle goed afloopt komt het apparaat hier te staan, op de plek waar je hem hebt neergelegd.'));
+}
+
+/* De tab Verkocht in Voorraad: wanneer, waar en voor hoeveel. Ligt hij nog op de werkbank (een
+   nieuwe accu, een reparatie), dan zegt de laatste kolom wat er nog moet gebeuren. */
+function tekenVerkocht(el){
+  let rijen=vrVerkocht().filter(past);
+  const toe=lijstToepassen('voorraad', rijen); rijen=toe.rijen.slice().sort((a,b)=>
+    String((hardwareVan(b)||{}).verkocht_op||'').localeCompare(String((hardwareVan(a)||{}).verkocht_op||'')));
+  tekenVoorraadFilters();
+  el.innerHTML=toe.balk + (rijen.length
+    ? `<div class="tabelrol"><table>
+        <thead><tr><th>Nummer</th><th>Apparaat</th><th>Grade</th><th>Verkocht</th><th>Via</th>
+          <th class="num">Prijs</th><th>Nog te doen</th></tr></thead>
+        <tbody>${rijen.map(a=>{
+          const h=hardwareVan(a)||{};
+          const op=h.verkocht_op ? new Date(h.verkocht_op).toLocaleDateString('nl-NL',{day:'numeric', month:'short', year:'numeric'}) : '';
+          const via=VERKOCHT_VIA[h.verkocht_via]||(h.verkocht_via?String(h.verkocht_via):'');
+          const werk=OP_VOORRAAD.includes(a.status) ? '<span class="muted klein">niets</span>'
+            : `<span class="st ${esc(a.status)}">${esc(STATUS[a.status]||a.status)}</span>`;
+          return `<tr class="klikbaar" onclick="appPagina('${a.id}')">
+          <td class="mono">${esc(a.code||'—')}</td>
+          <td><b>${esc(toestelNaam(a))}</b>
+              <div class="muted klein">${esc(Object.values(a.specs||{}).slice(0,3).join(' · ')||a.categorie||'')}</div></td>
+          <td>${a.grade?`<span class="gradepil">${esc(a.grade)}</span>`:'—'}</td>
+          <td>${esc(op)||'<span class="muted klein">onbekend</span>'}</td>
+          <td>${esc(via)||'<span class="muted klein">onbekend</span>'}</td>
+          <td class="num">${h.verkoop!=null?euro(h.verkoop):'—'}</td>
+          <td>${werk}</td>
+        </tr>`;}).join('')}</tbody></table></div>`
+    : leeg('i-shop','Nog niets verkocht','Verkoop je een toestel, in de winkel of op de webshop, dan staat hij hier.'));
 }
 
 /* Een toestel uit de voorraad zichtbaar maken op de pagina "Online zetten" van het
