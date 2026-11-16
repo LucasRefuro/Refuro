@@ -15406,12 +15406,21 @@ function renderHardware(){
   const opVoorraad=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg');
   const onderweg=hwData.filter(h=>h.status==='onderweg');
   const waarde=opVoorraad.reduce((n,h)=>n+(Number(h.inkoop)||0),0);
+  /* Verkoopwaarde: wat de voorraad opbrengt als alles voor de vraagprijs weggaat. Een
+     toestel zonder vraagprijs telt niet mee. We zeggen erbij hoeveel dat er zijn, anders
+     lijkt het getal kleiner dan het is. Staat ook in Simpel: vraagprijzen zijn niet geheim,
+     de inkoop wel (november 2026: "bij de hardware wil ik zien wat de verkoopwaarde is"). */
+  const metPrijs=opVoorraad.filter(h=>Number(h.verkoop)>0);
+  const verkoopwaarde=metPrijs.reduce((n,h)=>n+Number(h.verkoop),0);
+  const zonderPrijs=opVoorraad.length-metPrijs.length;
   const online=opVoorraad.filter(h=>hwOnlineWaar(h).length).length;
   const oud=opVoorraad.filter(h=>hwDagen(h)>=30).length;
   const k=document.getElementById('hwKpis');
   if(k) k.innerHTML=
     `<div class="kpi"><div class="l">Op voorraad</div><div class="v">${opVoorraad.length}</div></div>`+
     `<div class="kpi uitgebreid"><div class="l">Ingekocht voor</div><div class="v">${euro(waarde)}</div></div>`+
+    `<div class="kpi"><div class="l">Verkoopwaarde</div><div class="v"><span class="bedrag">${euro(verkoopwaarde)}</span></div>`+
+      (zonderPrijs?`<div class="kpimeta"><span class="muted klein">${zonderPrijs} nog zonder prijs</span></div>`:'')+`</div>`+
     `<div class="kpi"><div class="l">Staat online</div><div class="v">${online}</div></div>`+
     `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`+
     (onderweg.length?`<div class="kpi hwattentie"><div class="l">Nog inscannen</div><div class="v">${onderweg.length}</div></div>`:'');

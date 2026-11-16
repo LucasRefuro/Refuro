@@ -83,6 +83,15 @@ setTimeout(async()=>{
   ok('kpi op voorraad 2', />2</.test(kpis));
   ok('kpi ingekocht voor 135', /135,00/.test(kpis));
   ok('kpi staat online 1', /Staat online/.test(kpis));
+  // verkoopwaarde: de vraagprijzen van wat op voorraad ligt (349 + 249), het verkochte telt niet
+  ok('kpi verkoopwaarde 598', /Verkoopwaarde/.test(kpis) && /598,00/.test(kpis));
+  ok('verkoopwaarde ook in Simpel (niet uitgebreid)', !/kpi uitgebreid"><div class="l">Verkoopwaarde/.test(kpis));
+  ok('geen melding als alles een prijs heeft', !/zonder prijs/.test(kpis));
+  w.eval("hwData.find(x=>x.id==='h2').verkoop=null; renderHardware();");
+  const kpisZonder=d.getElementById('hwKpis').innerHTML;
+  ok('zonder vraagprijs telt niet mee', /349,00/.test(kpisZonder) && !/598,00/.test(kpisZonder));
+  ok('zegt hoeveel er nog zonder prijs zijn', /1 nog zonder prijs/.test(kpisZonder));
+  w.eval("hwData.find(x=>x.id==='h2').verkoop=249; renderHardware();");
 
   w.eval("hwFilterNu='verkocht'; renderHardware();");
   ok('filter verkocht toont MacBook', /MacBook Air/.test(d.getElementById('hwLijst').innerHTML));
