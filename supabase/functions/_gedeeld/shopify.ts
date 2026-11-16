@@ -341,7 +341,20 @@ export const MONTEUR_TEKST = "ons team";
 // dan valt het thema terug op de letter zelf.
 export function staatCode(staat: string) {
   const s = String(staat || "").toUpperCase();
-  return s === "A" ? "uitstekend" : s === "B" ? "zeer_goed" : s === "C" ? "prima" : "";
+  return s === "A" ? "uitstekend" : s === "B" ? "zeer_goed" : s === "C" ? "prima" : s === "N" ? "nieuw" : "";
+}
+
+/* ── nieuw en touch (november 2026, wens eigenaar) ──
+   Staat N = een nieuw product: geen A, B of C, maar één variant "Nieuw" op een eigen advertentie,
+   met de tag "nieuw" in plaats van "refurbished" en zonder nieuwprijs-vergelijking of accu. Het
+   thema leest refuro.staat = "nieuw". Een touch-laptop is een andere uitvoering dan dezelfde
+   zonder touch (hij kost meer), dus touch zit in de sleutel. */
+export function isNieuw(h: any) {
+  return String(h?.staat ?? h?.grade ?? "").toUpperCase() === "N";
+}
+export function heeftTouch(h: any) {
+  const sp = (h?.specs && typeof h.specs === "object") ? h.specs : {};
+  return /^(ja|1|true|waar)$/i.test(String(sp.Touchscreen ?? "").trim());
 }
 
 /* ── grade-varianten ──
@@ -349,10 +362,10 @@ export function staatCode(staat: string) {
    thema toont; de grade-kiezer leidt de code ook uit de naam af ("Zeer goed" -> zeer_goed),
    dus de naam is genoeg. */
 export const GRADE_LETTERS = ["A", "B", "C"];
-export const GRADE_NAAM: Record<string, string> = { A: "Uitstekend", B: "Zeer goed", C: "Prima" };
+export const GRADE_NAAM: Record<string, string> = { A: "Uitstekend", B: "Zeer goed", C: "Prima", N: "Nieuw" };
 export function gradeLetter(staat: unknown) {
   const s = String(staat ?? "B").toUpperCase();
-  return (s === "A" || s === "B" || s === "C") ? s : "B";
+  return (s === "A" || s === "B" || s === "C" || s === "N") ? s : "B";
 }
 
 /* Verhouding tussen de grades (anker Zeer goed/B); vanuit één ingevulde grade de andere twee
@@ -379,8 +392,9 @@ export function webshopSleutel(h: any) {
   const cat = h.categorie || "Laptop";
   const deel: any[] = [h.merk, h.model, kleur];
   if (cat === "Telefoon" || cat === "Tablet") deel.push(sp.Opslag);
-  else if (cat === "Laptop" || cat === "Desktop") deel.push(sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag);
+  else if (cat === "Laptop" || cat === "Desktop") deel.push(sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag, heeftTouch(h) ? "touch" : "");
   else deel.push(sp.Opslag);
+  if (isNieuw(h)) deel.push("nieuw");
   return deel.filter(Boolean).map((s: any) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).join("_");
 }
 
@@ -406,15 +420,15 @@ function uitvoeringDelen(h: any) {
   const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
   const kleur = h.kleur || sp.Kleur || "";
   const cat = h.categorie || "Laptop";
-  if (cat === "Laptop" || cat === "Desktop") return [sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag];
+  if (cat === "Laptop" || cat === "Desktop") return [sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag, heeftTouch(h) ? "touch" : ""];
   return [sp.Opslag, kleur];
 }
 export function webshopZoektitel(h: any) {
   const delen = [toestelTitel(h.merk, h.model), ...uitvoeringDelen(h)].filter(Boolean).map((s) => String(s).trim());
-  return (delen.join(" ") + " refurbished").replace(/\s+/g, " ").slice(0, 70);
+  return (delen.join(" ") + (isNieuw(h) ? " nieuw" : " refurbished")).replace(/\s+/g, " ").slice(0, 70);
 }
 export function webshopHandle(h: any) {
-  return slug([toestelTitel(h.merk, h.model), ...uitvoeringDelen(h)].filter(Boolean).join(" ")).slice(0, 120);
+  return slug([toestelTitel(h.merk, h.model), ...uitvoeringDelen(h), isNieuw(h) ? "nieuw" : ""].filter(Boolean).join(" ")).slice(0, 120);
 }
 
 /* De echte kleur van dit model als code, voor de stip bij de kleurkeuze op de webshop
@@ -441,12 +455,14 @@ export const GRADE_TEKST: Record<string, string> = {
   A: "Nauwelijks gebruikssporen. Je moet ze echt zoeken.",
   B: "Lichte gebruikssporen, netjes verzorgd. Werkt precies zoals het hoort.",
   C: "Zichtbare gebruikssporen, maar werkt helemaal naar behoren.",
+  N: "Nieuw en ongebruikt.",
 };
 
 // "Wat wij zagen": eerst de conditie-items die de winkelier bij de controle zelf
 // heeft ingevuld (Behuizing, Scherm, Toetsenbord, Scharnieren), anders een vaste
 // zin per grade. Zo staat er altijd iets echts, niet alleen "grade A".
 export function staatToelichting(h: any, refurbish: any) {
+  if (isNieuw(h)) return GRADE_TEKST.N;
   const CONDITIE = ["behuizing", "scherm", "toetsenbord", "scharnieren en deksel", "scharnieren", "deksel", "onderkant", "poorten"];
   const delen: string[] = [];
   const opening = GRADE_TEKST[String(h.staat || "").toUpperCase()];
@@ -600,8 +616,8 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
 
   // Via accuVan, net als per grade: de controle gaat voor, anders de accu op de hardware-
   // rij. Eerst las dit alleen de controle, en dan kwam de accu van een los toegevoegd
-  // toestel (zonder werkbank) nooit op de webshop.
-  const accu = accuVan(h, refurbish).accu;
+  // toestel (zonder werkbank) nooit op de webshop. Een nieuw product heeft geen accu-meting.
+  const accu = isNieuw(h) ? null : accuVan(h, refurbish).accu;
   if (accu != null) out.push(mfInt("accu_gezondheid", accu));
 
   out.push(mfText("monteur", MONTEUR_TEKST));
@@ -615,8 +631,9 @@ export function bouwProductMetafields(h: any, refurbish: any, inWinkel: boolean)
   if (mk) out.push(mfText("model_key", mk));
   // Het btw-regime voor de administratie; op de webshop staat de prijs altijd inclusief.
   out.push(mfText("btw", h.marge === false ? "normaal" : "marge"));
-  // De nieuwprijs voedt de doorstreepprijs en de "onder de nieuwprijs"-regel.
-  if (h.nieuwprijs != null && h.nieuwprijs !== "") {
+  // De nieuwprijs voedt de doorstreepprijs en de "onder de nieuwprijs"-regel. Niet bij een nieuw
+  // product: "Nieuw 909, je bespaart" naast een nieuw toestel klopt niet.
+  if (!isNieuw(h) && h.nieuwprijs != null && h.nieuwprijs !== "") {
     out.push({ namespace: "refuro", key: "nieuwprijs", type: "number_decimal", value: String(Number(h.nieuwprijs)) });
   }
   return out;

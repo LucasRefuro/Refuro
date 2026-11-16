@@ -15,7 +15,7 @@ import {
   admin, cors, fout, wieBelt, graphql, letOp, koppelingVan,
   bouwProductMetafields, bouwGradeMetafields, gradeWachtrij,
   webshopSleutel, gradeLetter, gradeSchat, GRADE_LETTERS, GRADE_NAAM,
-  toestelTitel, webshopZoektitel, webshopHandle, kleurHexVan,
+  toestelTitel, webshopZoektitel, webshopHandle, kleurHexVan, isNieuw,
 } from "../_gedeeld/shopify.ts";
 import { statusNaLaatste, zetUitverkocht, bestaatProduct } from "./uitverkocht.ts";
 
@@ -232,7 +232,11 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
   // product-id dat niet meer bestaat.
   if (reg?.product_id && !(await bestaatProduct(gql, reg.product_id))) reg = null;
 
-  const perGrade: Record<string, any[]> = { A: [], B: [], C: [] };
+  /* Een nieuw product (staat N, zie isNieuw) heeft één variant "Nieuw" in plaats van drie grades.
+     De sleutel bevat "nieuw", dus nieuw en refurbished komen nooit op dezelfde advertentie. */
+  const nieuwAd = beschikbaar.some((e: any) => isNieuw(e));
+  const letters = nieuwAd ? ["N"] : GRADE_LETTERS;
+  const perGrade: Record<string, any[]> = nieuwAd ? { N: [] } : { A: [], B: [], C: [] };
   for (const e of beschikbaar) (perGrade[gradeLetter(e.staat)] || (perGrade[gradeLetter(e.staat)] = [])).push(e);
 
   // Representatief exemplaar: het oudste beschikbare (voor titel, tekst, foto's, staat-toelichting).
@@ -244,16 +248,18 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
   const prijzen: Record<string, number | null> = gpRij ? { A: gpRij.prijs_a, B: gpRij.prijs_b, C: gpRij.prijs_c } : { A: null, B: null, C: null };
   const geschat = gradeSchat(gradeLetter(rep.staat), Number(rep.verkoop) || 0);
   for (const g of GRADE_LETTERS) if (prijzen[g] == null) prijzen[g] = geschat[g];
+  // Nieuw: gewoon de vraagprijs van het toestel, geen grades om te schatten.
+  if (nieuwAd) prijzen.N = Number(rep.verkoop) || 0;
 
   const winkelIds = await winkelLocaties(teamId);
   const inWinkel = beschikbaar.some((e: any) => !!e.locatie_id && winkelIds.has(String(e.locatie_id)));
   const nieuwprijs = rep.nieuwprijs != null && rep.nieuwprijs !== "" ? Number(rep.nieuwprijs) : null;
   const bestaandeVar: Record<string, string> = (reg?.varianten && typeof reg.varianten === "object") ? reg.varianten : {};
 
-  const variants = GRADE_LETTERS.map((g) => {
+  const variants = letters.map((g) => {
     const prijs = prijzen[g] != null ? Number(prijzen[g]) : 0;
     const aantal = (perGrade[g] || []).length;
-    const vergelijk = nieuwprijs != null && nieuwprijs > prijs ? String(nieuwprijs) : undefined;
+    const vergelijk = !nieuwAd && nieuwprijs != null && nieuwprijs > prijs ? String(nieuwprijs) : undefined;
     const v: any = {
       optionValues: [{ optionName: "Staat", name: GRADE_NAAM[g] }],
       price: String(prijs),
@@ -283,9 +289,9 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
     vendor: rep.merk || "Storvo",
     productType: rep.categorie || "Laptop",
     status: "ACTIVE",
-    tags: ["refurbished", rep.code || "", ...gebruikTags(rep)].filter(Boolean),
+    tags: [nieuwAd ? "nieuw" : "refurbished", rep.code || "", ...gebruikTags(rep)].filter(Boolean),
     metafields: bouwProductMetafields(rep, controle, inWinkel),
-    productOptions: [{ name: "Staat", values: GRADE_LETTERS.map((g) => ({ name: GRADE_NAAM[g] })) }],
+    productOptions: [{ name: "Staat", values: letters.map((g) => ({ name: GRADE_NAAM[g] })) }],
     variants,
   };
   if (reg?.product_id) invoer.id = reg.product_id;
@@ -319,7 +325,7 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
   const p = letOp(uit?.productSet, "Het bijwerken op de webshop").product;
   if (!p?.id) throw new Error("Shopify gaf geen product terug");
 
-  const naamNaarGrade: Record<string, string> = { "Uitstekend": "A", "Zeer goed": "B", "Prima": "C" };
+  const naamNaarGrade: Record<string, string> = { "Uitstekend": "A", "Zeer goed": "B", "Prima": "C", "Nieuw": "N" };
   const variantIds: Record<string, string> = {};
   for (const vn of (p?.variants?.nodes || [])) {
     const staatW = (vn.selectedOptions || []).find((o: any) => o.name === "Staat")?.value || "";
@@ -331,7 +337,7 @@ async function synchroniseerAdvertentie(k: any, teamId: string, sleutel: string,
      productSet: heeft de winkel voor deze velden een definitie met een ander type, dan slaan
      we alleen dit over en blijft het online zetten zelf werken. */
   const controles = await controlesBij(beschikbaar.map((e: any) => e.id));
-  const gradeMf = GRADE_LETTERS.filter((g) => variantIds[g])
+  const gradeMf = letters.filter((g) => variantIds[g])
     .flatMap((g) => bouwGradeMetafields(variantIds[g], g, gradeWachtrij(perGrade[g] || [], controles, winkelIds)));
   let gradeInfo = true;
   try {

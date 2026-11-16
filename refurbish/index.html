@@ -2589,9 +2589,13 @@ function webshopSleutel(a){
   const kleur=a.kleur||sp.Kleur||'';
   const cat=a.categorie||'Laptop';
   const deel=[a.merk, a.model, kleur];
+  /* Touch en nieuw krijgen een eigen advertentie (november 2026); gelijk aan webshopSleutel in
+     _gedeeld/shopify.ts (heeftTouch, isNieuw), tests/nieuw-touch.js legt ze naast elkaar. */
+  const touch=/^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim());
   if(cat==='Telefoon'||cat==='Tablet') deel.push(sp.Opslag);
-  else if(cat==='Laptop'||cat==='Desktop') deel.push(sp.Processor||sp.Chip, sp.Geheugen||sp.Werkgeheugen, sp.Opslag);
+  else if(cat==='Laptop'||cat==='Desktop') deel.push(sp.Processor||sp.Chip, sp.Geheugen||sp.Werkgeheugen, sp.Opslag, touch?'touch':'');
   else deel.push(sp.Opslag);
+  if(String(a.staat||a.grade||'').toUpperCase()==='N') deel.push('nieuw');
   return deel.filter(Boolean).map(s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')).join('_');
 }
 /* Verhouding tussen de grades (anker = Zeer goed / B): Uitstekend iets duurder, Prima iets
@@ -2867,7 +2871,7 @@ async function ondLabelsPrint(ids){
 /* Het klant-prijskaartje hoort naast het toestel in de winkel, niet op het
    toestel zelf. Daarom geen QR of interne code zoals op de werksticker, maar de
    prijs groot met de grade, de belangrijkste specs en de garantie. */
-const GRADE_STAAT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
+const GRADE_STAAT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed', N:'Nieuw'};
 /* Een telefoon op het kaartje zoals de winkel hem in Canva maakte: "128GB | 6,1 inch | Super
    Retina XDR OLED" onder de titel en alleen scherm, opslag, 5G en batterijconditie. Eerst
    kwamen hier de velden van de controle op het kaartje, en dus ook het IMEI: dat hoort niet
@@ -3072,7 +3076,8 @@ function vpSleutel(a){
   if(!/^(laptop|desktop)$/i.test(cat.trim())) return null;
   const sp=Object.assign({}, (hardwareVan(a)||{}).specs||{}, (a&&a.specs)||{});
   const uv=nwlSleutel({Processor:sp.Processor||sp.Chip, Geheugen:sp.Geheugen||sp.Werkgeheugen, Opslag:sp.Opslag});
-  return uv ? {opslag:sp.Opslag, uitvoering:uv} : null;
+  const touch=/^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim());
+  return uv ? {opslag:sp.Opslag, uitvoering:uv+(touch?'|touch':'')} : null;
 }
 function vpTelt(a){ return !!vpSleutel(a); }
 async function vpRijen(merk, model){
@@ -3087,14 +3092,14 @@ async function vpRijen(merk, model){
 function vpRaak(x, op, g, uv){ return x.opslag===op && x.grade===g && String(x.uitvoering||'')===uv; }
 async function vraagprijsVan(merk, model, opslag, grade, uitvoering){
   merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase(), uv=String(uitvoering||'');
-  if(!merk || !model || !op || !['A','B','C'].includes(g)) return null;
+  if(!merk || !model || !op || !['A','B','C','N'].includes(g)) return null;
   const r=(await vpRijen(merk, model)).find(x=>vpRaak(x, op, g, uv));
   return r ? {prijs:Number(r.prijs)} : null;
 }
 async function vraagprijsOnthoud(merk, model, opslag, grade, prijs, uitvoering){
   merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase(), uv=String(uitvoering||'');
   prijs=Math.round(Number(prijs)*100)/100;
-  if(!merk || !model || !op || !['A','B','C'].includes(g) || !(prijs>0) || prijs>=10000 || !account || !account.team_id) return false;
+  if(!merk || !model || !op || !['A','B','C','N'].includes(g) || !(prijs>0) || prijs>=10000 || !account || !account.team_id) return false;
   const oud=(await vpRijen(merk, model)).find(x=>vpRaak(x, op, g, uv));
   if(oud && Number(oud.prijs)===prijs) return false;
   const nu=new Date().toISOString();
@@ -6728,10 +6733,11 @@ function tekenOnline(){
           ${onl.a.inkoop?`<p class="muted klein" style="margin-top:6px">Ingekocht voor ${euro(onl.a.inkoop)}${
             onl.prijs?' · winst '+euro((Number(onl.prijs)||0)-(Number(onl.a.inkoop)||0)):''}</p>`:''}
 
-          <div style="margin-top:14px"><label>Grade</label><select id="onl_staat" onchange="onlVraagprijs()">
+          <div style="margin-top:14px"><label>Grade</label><select id="onl_staat" onchange="onlVraagprijs(); onlNieuwToon()">
               <option value="A"${(onl.staat||onl.a.grade)==='A'?' selected':''}>A · als nieuw</option>
               <option value="B"${(onl.staat||onl.a.grade||'B')==='B'?' selected':''}>B · gebruikt</option>
               <option value="C"${(onl.staat||onl.a.grade)==='C'?' selected':''}>C · zichtbare sporen</option>
+              <option value="N"${(onl.staat||onl.a.grade)==='N'?' selected':''}>Nieuw, ongebruikt</option>
             </select></div>
 
           <details class="meeropties" data-sleutel="onl_details"${onl.nieuwprijs!=null && !onl.nieuwprijsAuto?' data-open':''}>
@@ -6752,7 +6758,8 @@ function tekenOnline(){
             </div>
           </details>
 
-          <details class="meeropties" data-sleutel="onl_gradeprijzen">
+          <p class="muted klein" id="onlNieuwUitleg" style="margin-top:12px"${(onl.staat||onl.a.grade)==='N'?'':' hidden'}>Nieuw: op de webshop een eigen advertentie met alleen "Nieuw" en deze vraagprijs, geen grades.</p>
+          <details class="meeropties" data-sleutel="onl_gradeprijzen"${(onl.staat||onl.a.grade)==='N'?' hidden':''}>
             <summary>Meer prijsopties <span class="muted">prijs per grade op de webshop</span></summary>
             <div class="meerinhoud">
               <div class="veldkop" style="margin-top:0"><label>Grade-prijzen</label>
@@ -6897,6 +6904,12 @@ function gradePrijsVeld(){
 /* De vraagprijs is het anker: verandert hij (of de grade), dan volgen de grade-prijzen
    mee. Zo blijven ze niet op oude opgeslagen waarden staan. Een handmatige aanpassing
    in een grade-veld blijft staan tot je de vraagprijs weer wijzigt. */
+/* Nieuw gekozen: de grade-prijzen horen er dan niet bij (de webshop toont alleen "Nieuw"). */
+function onlNieuwToon(){
+  const nieuw=(document.getElementById('onl_staat')||{}).value==='N';
+  const gp=document.querySelector('details[data-sleutel="onl_gradeprijzen"]'); if(gp) gp.hidden=nieuw;
+  const u=document.getElementById('onlNieuwUitleg'); if(u) u.hidden=!nieuw;
+}
 function onlVraagprijs(){
   onlVeld();
   if(onl.prijs!=null && onl.prijs!==''){

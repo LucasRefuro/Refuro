@@ -818,6 +818,7 @@
   .optieknop{border:1.5px solid var(--border); background:var(--card); color:var(--text); border-radius:var(--pil); padding:6px 12px; font-family:inherit; font-size:13px; font-weight:600; line-height:1.3; cursor:pointer; text-align:left;}
   .optieknop.aan{background:var(--green-soft); border-color:var(--green); color:var(--green-tekst);}
   .hkrij input[type=checkbox]{width:auto;}
+  .laptouch{margin-top:2px; font-weight:600;}
 
   /* de pakketkeuze */
   /* Twee klassen in plaats van één, anders wint de bredere .popup-regel
@@ -14827,10 +14828,18 @@ async function webshopLink(){
 function moduleAan(naam){
   return !!(abonnement && Array.isArray(abonnement.modules) && abonnement.modules.includes(naam));
 }
-const HW_STAAT={A:'Als nieuw', B:'Gebruikt', C:'Zichtbare gebruikssporen'};
+/* N = een nieuw product (november 2026, wens eigenaar): geen grade, geen accu, op de webshop een
+   eigen advertentie met "Nieuw" (edge shopify, isNieuw). */
+const HW_STAAT={A:'Als nieuw', B:'Gebruikt', C:'Zichtbare gebruikssporen', N:'Nieuw, ongebruikt'};
 /* Wat de klant leest, op het A6-kaartje en op de sticker (daar staat ook de prijs op). HW_STAAT
    hierboven is de uitleg voor jezelf in het formulier. Gelijk aan GRADE_STAAT op de werkbank. */
-const HW_STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed'};
+const HW_STAAT_KLANT={A:'Als nieuw', B:'Nette staat', C:'Gebruikt, maar goed', N:'Nieuw'};
+function hwIsNieuw(){ return hwVeld('hw_staat')==='N'; }
+/* Bij een nieuw product hoort geen accuconditie en geen "nieuwe accu": die verdwijnen dan. */
+function hwStaatToon(){
+  const nieuw=hwIsNieuw();
+  ['hw_accu_vak','hw_nieuweaccu_vak'].forEach(id=>{ const e=document.getElementById(id); if(e) e.hidden=nieuw; });
+}
 
 let hwLocaties=[];
 function hwLocatieNaam(h){
@@ -15718,7 +15727,7 @@ function renderHardware(){
             ${hwSpecsKort(h)?`<div class="muted klein">${esc(hwSpecsKort(h))}</div>`:(h.herkomst?`<div class="muted klein">${esc(h.herkomst)}</div>`:'')}
             ${hwWie(h)?`<div class="muted klein">Door ${esc(hwWie(h))}</div>`:''}</div></div></td>
         <td class="mono">${esc(h.code||h.serienummer||'—')}</td>
-        <td>${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:'<span class="muted">—</span>'}</td>
+        <td>${h.staat?`<span class="gradepil">${h.staat==='N'?'Nieuw':esc(h.staat)}</span>`:'<span class="muted">—</span>'}</td>
         <td>${h.status==='onderweg'
           ? '<span class="onderweg">Nog niet ingescand</span>'
           : (hwLocatieNaam(h)?`<span class="locpil">${esc(hwLocatieNaam(h))}</span>`:'<span class="muted">—</span>')}
@@ -15864,7 +15873,7 @@ function hwVenster(h){
       </div>
       ${h?`<div class="row" style="gap:8px; align-items:center; flex-direction:row; width:auto; flex-wrap:wrap">
         <span class="chip">${esc(statusLabel)}</span>
-        ${h.staat?`<span class="gradepil">${esc(h.staat)}</span>`:''}
+        ${h.staat?`<span class="gradepil">${h.staat==='N'?'Nieuw':esc(h.staat)}</span>`:''}
       </div>`:''}
     </div>
 
@@ -15921,12 +15930,12 @@ function hwVenster(h){
         <div id="hw_opslag_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Opslag</label>
           <select id="hw_opslag_kies" onchange="hwOpslagKies()" hidden></select>
           <input id="hw_opslag" value="${esc((h&&h.specs&&h.specs.Opslag)||'')}" placeholder="Bijvoorbeeld 128 GB" onchange="hwNieuwprijsVul(); hwVraagprijsVul()"></div>
-        <div><label>Staat</label><select id="hw_staat" onchange="hwVraagprijsVul()">
+        <div><label>Staat</label><select id="hw_staat" onchange="hwStaatToon(); hwVraagprijsVul()">
           ${Object.keys(HW_STAAT).map(s=>
-            `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s} &middot; ${HW_STAAT[s]}</option>`).join('')}
+            `<option value="${s}"${((h&&h.staat)||'B')===s?' selected':''}>${s==='N'?'Nieuw':s+' &middot; '+HW_STAAT[s]}</option>`).join('')}
         </select></div>
         <div><label>Vraagprijs</label><input id="hw_verkoop" type="number" step="0.01" value="${(h&&h.verkoop!=null)?h.verkoop:''}" placeholder="Nog niet bepaald" oninput="hwVraagprijsGetypt(this)" onchange="hwVraagprijsBewaar()"><p class="muted klein" id="hw_verkoop_bron"></p></div>
-        <div><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
+        <div id="hw_accu_vak"${(h&&h.staat==='N')?' hidden':''}><label>Accuconditie (%)</label><input id="hw_accu" type="number" min="1" max="100" inputmode="numeric" value="${(h&&h.nieuwe_accu)?100:((h&&h.accu!=null)?h.accu:'')}" placeholder="Bijvoorbeeld 87"${(h&&h.nieuwe_accu)?' disabled':''}></div>
         ${(!h && hwLocaties.length)?`<div><label>Ligt in</label><select id="hw_loc_nieuw">
           ${hwLocatiesWinkelEerst().map(l=>`<option value="${l.id}">${esc(l.naam)}</option>`).join('')}
         </select></div>`:''}
@@ -15948,7 +15957,7 @@ function hwVenster(h){
       <div class="lapspecs" id="hw_lapspecs"${hwSpecSoort((h&&h.categorie)||'Laptop')?'':' hidden'}>${hwLapVeldenHtml(h)}</div>
       <div class="row" style="gap:4px 18px; flex-wrap:wrap; margin-top:4px">
         <label class="hkrij"><input type="checkbox" id="hw_doos" ${(h&&h.doos)?'checked':''}> Doos erbij</label>
-        <label class="hkrij"><input type="checkbox" id="hw_nieuweaccu" ${(h&&h.nieuwe_accu)?'checked':''} onchange="hwNieuweAccu(this)"> Nieuwe accu</label>
+        <label class="hkrij" id="hw_nieuweaccu_vak"${(h&&h.staat==='N')?' hidden':''}><input type="checkbox" id="hw_nieuweaccu" ${(h&&h.nieuwe_accu)?'checked':''} onchange="hwNieuweAccu(this)"> Nieuwe accu</label>
       </div>
     </div>
 
@@ -16339,6 +16348,7 @@ function hwVeld(id){ const e=document.getElementById(id); return e?e.value.trim(
    refurbish-kant (naarVoorraad), want daar rekent de webshop mee. Geen getal is null,
    nooit 0: een verzonnen accu op de webshop is een valse belofte. */
 function hwAccuVelden(){
+  if(hwIsNieuw()) return { nieuwe_accu:false, accu:null, doos:!!(document.getElementById('hw_doos')||{}).checked };
   const nieuw=!!(document.getElementById('hw_nieuweaccu')||{}).checked;
   const n=Math.round(Number(hwVeld('hw_accu')));
   return {
@@ -16427,8 +16437,14 @@ function hwLapVeldenHtml(h){
       <label for="${v.id}">${v.sleutel}</label>
       <div class="optieknoppen" id="${v.id}_opties" hidden></div>
       <input id="${v.id}" value="${esc(sp[v.sleutel]||'')}" placeholder="${esc(v.hint)}" autocomplete="off" oninput="hwLapTeken()" onchange="hwNieuwprijsVul(); hwVraagprijsVul()">
-    </div>`).join('');
+    </div>`).join('')+
+    /* Touch apart aan te zetten (wens eigenaar, november 2026): een touch-laptop is een eigen
+       uitvoering met een eigen prijs en een eigen advertentie (touch zit in de webshopsleutel).
+       Niet de klasse lapspec: hwKleurToon telt die af tegen HW_LAP_VELDEN. */
+    `<label class="hkrij laptouch"><input type="checkbox" id="hw_sp_touch"${hwTouchVan(sp)?' checked':''} onchange="hwVraagprijsVul()"> Touchscreen</label>`;
 }
+function hwTouchVan(sp){ sp=sp||{}; return /^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim()) || /touch/i.test(String(sp.Scherm||'')); }
+function hwTouchAan(){ const e=document.getElementById('hw_sp_touch'); return !!(e && e.checked); }
 /* De knoppen per veld: de uitvoeringen van het model (of de vaste keuzes van Windows). Wat in het
    veld staat licht op. */
 function hwLapTeken(){
@@ -16449,6 +16465,8 @@ function hwLapKies(id, i){
   const o=(v.vast || hwLapOpt[v.sleutel] || [])[i];
   if(o==null) return;
   e.value = e.value.trim().toLowerCase()===String(o).toLowerCase() ? '' : o;
+  /* Een scherm met "touch" in de naam: dan is het een touch-laptop. */
+  if(v.sleutel==='Scherm' && /touch/i.test(e.value)){ const t=document.getElementById('hw_sp_touch'); if(t) t.checked=true; }
   hwLapTeken();
   e.dispatchEvent(new Event('change', {bubbles:true}));
 }
@@ -16821,7 +16839,7 @@ async function vpRijen(merk, model){
 function vpRaak(x, op, g, uv){ return x.opslag===op && x.grade===g && String(x.uitvoering||'')===uv; }
 async function vraagprijsVan(merk, model, opslag, grade, uitvoering){
   merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase(), uv=String(uitvoering||'');
-  if(!merk || !model || !op || !['A','B','C'].includes(g)) return null;
+  if(!merk || !model || !op || !['A','B','C','N'].includes(g)) return null;
   const r=(await vpRijen(merk, model)).find(x=>vpRaak(x, op, g, uv));
   return r ? {prijs:Number(r.prijs)} : null;
 }
@@ -16829,7 +16847,7 @@ async function vraagprijsVan(merk, model, opslag, grade, uitvoering){
 async function vraagprijsOnthoud(merk, model, opslag, grade, prijs, uitvoering){
   merk=nwSchoon(merk); model=nwSchoon(model); const op=nwOpslag(opslag), g=String(grade||'').toUpperCase(), uv=String(uitvoering||'');
   prijs=Math.round(Number(prijs)*100)/100;
-  if(!merk || !model || !op || !['A','B','C'].includes(g) || !(prijs>0) || prijs>=10000 || !account || !account.team_id) return false;
+  if(!merk || !model || !op || !['A','B','C','N'].includes(g) || !(prijs>0) || prijs>=10000 || !account || !account.team_id) return false;
   const oud=(await vpRijen(merk, model)).find(x=>vpRaak(x, op, g, uv));
   if(oud && Number(oud.prijs)===prijs) return false;
   const nu=new Date().toISOString();
@@ -16848,7 +16866,8 @@ function hwVpSleutel(){
   if(hwKleurTelt(cat)) return {opslag:hwVeld('hw_opslag'), uitvoering:'', laptop:false};
   if(!hwSpecSoort(cat)) return null;
   const sp=hwLapSpecs(), uv=nwlSleutel(sp);
-  return {opslag:uv ? sp.Opslag : '', uitvoering:uv, laptop:true};
+  /* Touch is een andere uitvoering met een andere prijs (zie de migratie nieuw_en_touch). */
+  return {opslag:uv ? sp.Opslag : '', uitvoering:uv ? uv+(hwTouchAan()?'|touch':'') : '', laptop:true};
 }
 /* Het veld Vraagprijs, zoals de nieuwprijs: data-auto = wij vulden hem in, dus hij verandert
    mee als je model, opslag, uitvoering of grade wijzigt. Wat je zelf typt, blijft staan. */
@@ -17136,7 +17155,9 @@ function hwKleurVeld(){
       const w=hwVeld(v.id);
       if(w) specs[v.sleutel]=w; else delete specs[v.sleutel];
     });
-    if(/touch/i.test(specs.Scherm||'')) specs.Touchscreen='ja';
+    const tv=document.getElementById('hw_sp_touch');
+    if(tv){ if(tv.checked) specs.Touchscreen='ja'; else delete specs.Touchscreen; }
+    else if(/touch/i.test(specs.Scherm||'')) specs.Touchscreen='ja';
     /* De artikelcode van de sticker: daarmee vindt productfotos de fabrieksfoto's precies. */
     if(document.getElementById('hw_sp_artikel')){
       const ac=hwArtikelcode();
@@ -17336,7 +17357,7 @@ function hwLabelRegels(h){
     zet('Scherm', [t.inch, t.type].filter(Boolean).join(' ')); zet('Netwerk', t.net);
   }
   else { zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Scherm', sp.Scherm); }
-  if(h.staat) zet('Staat', h.staat+(HW_STAAT_KLANT[h.staat]?' · '+HW_STAAT_KLANT[h.staat]:''));
+  if(h.staat) zet('Staat', h.staat==='N' ? 'Nieuw' : h.staat+(HW_STAAT_KLANT[h.staat]?' · '+HW_STAAT_KLANT[h.staat]:''));
   const accuNaam=tel?'Batterij':'Accu';    // "Batterijconditie" op het kaartje
   if(h.nieuwe_accu) zet(accuNaam, 'nieuw (100%)'); else if(h.accu) zet(accuNaam, h.accu+'%');
   if(!tel) zet('Windows', sp.Windows||sp.Besturingssysteem);
