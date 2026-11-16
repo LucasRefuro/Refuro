@@ -450,7 +450,7 @@ repo `refuro-webshop`.
       **A0084 zelf:** één keer opnieuw online zetten. Dat is ook stap 3 van de fase-4-uitrol.
 
 ### Jouw actie (code is klaar)
-- [ ] **Bestaande producten opnieuw online zetten** -> net artikelnummer (A0016), OS-rij,
+- [x] **Bestaande producten opnieuw online zetten** GEDAAN (16 nov, edge-actie `alles`, 31 stuks). -> net artikelnummer (A0016), OS-rij,
       conditietekst zonder streepje verschijnen (zitten al in shopify-edge v25).
 - [ ] **Oude advertenties met verzonnen tekst opnieuw laten schrijven** (bv. de Dell met
       "Face ID"). Nieuwe worden goed, oude niet vanzelf.
