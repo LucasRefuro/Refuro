@@ -2584,16 +2584,31 @@ function toestelNaam(a){
    bepalende specs (telefoon/tablet: opslag; laptop/desktop: processor + geheugen + opslag).
    Zelfde sleutel = zelfde advertentie; de grade is de variant erbinnen. Wordt straks ook in
    de push gebruikt om te groeperen, dus hier centraal. */
+/* Een losse videokaart (NVIDIA, Radeon RX of Pro, Arc), niet de ingebouwde van de processor.
+   Gelijk aan losseVideokaart en videokaartCode in _gedeeld/shopify.ts en de winkelapp; daar
+   staat waarom (tests/videokaart.js legt ze naast elkaar). */
+function losseVideokaart(gpu){
+  const g=String(gpu??'').trim();
+  if(!g || /ge[iï]ntegreerd|integrated|ingebouwd/i.test(g)) return '';
+  return /nvidia|geforce|quadro|\b(gtx|rtx|mx)\s?a?\d|radeon\s*(rx|pro|r[579]\b|\d{3}x?\b)|firepro|\barc\s*a\d/i.test(g) ? g : '';
+}
+function videokaartCode(gpu){
+  const g=losseVideokaart(gpu);
+  if(!g) return '';
+  return g.toLowerCase().replace(/\(.*?\)/g,' ')
+    .replace(/\b(nvidia|amd|ati|intel|geforce|quadro|graphics|videokaart|laptop|mobile|gpu|max-q|with design)\b/g,' ')
+    .replace(/\b\d+\s*gb\b|\bg?ddr\d\w*/g,' ').replace(/[^a-z0-9]/g,'') || 'videokaart';
+}
 function webshopSleutel(a){
   const sp=a.specs||{};
   const kleur=a.kleur||sp.Kleur||'';
   const cat=a.categorie||'Laptop';
   const deel=[a.merk, a.model, kleur];
-  /* Touch en nieuw krijgen een eigen advertentie (november 2026); gelijk aan webshopSleutel in
-     _gedeeld/shopify.ts (heeftTouch, isNieuw), tests/nieuw-touch.js legt ze naast elkaar. */
+  /* Touch, een losse videokaart en nieuw krijgen een eigen advertentie (november 2026); gelijk
+     aan webshopSleutel in _gedeeld/shopify.ts, tests/nieuw-touch.js legt ze naast elkaar. */
   const touch=/^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim());
   if(cat==='Telefoon'||cat==='Tablet') deel.push(sp.Opslag);
-  else if(cat==='Laptop'||cat==='Desktop') deel.push(sp.Processor||sp.Chip, sp.Geheugen||sp.Werkgeheugen, sp.Opslag, touch?'touch':'');
+  else if(cat==='Laptop'||cat==='Desktop') deel.push(sp.Processor||sp.Chip, sp.Geheugen||sp.Werkgeheugen, sp.Opslag, videokaartCode(sp.Videokaart), touch?'touch':'');
   else deel.push(sp.Opslag);
   if(String(a.staat||a.grade||'').toUpperCase()==='N') deel.push('nieuw');
   return deel.filter(Boolean).map(s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')).join('_');
@@ -3077,7 +3092,9 @@ function vpSleutel(a){
   const sp=Object.assign({}, (hardwareVan(a)||{}).specs||{}, (a&&a.specs)||{});
   const uv=nwlSleutel({Processor:sp.Processor||sp.Chip, Geheugen:sp.Geheugen||sp.Werkgeheugen, Opslag:sp.Opslag});
   const touch=/^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim());
-  return uv ? {opslag:sp.Opslag, uitvoering:uv+(touch?'|touch':'')} : null;
+  /* Een losse videokaart is net als touch een eigen uitvoering met een eigen prijs. */
+  const gpu=videokaartCode(sp.Videokaart);
+  return uv ? {opslag:sp.Opslag, uitvoering:uv+(gpu?'|gpu '+gpu:'')+(touch?'|touch':'')} : null;
 }
 function vpTelt(a){ return !!vpSleutel(a); }
 async function vpRijen(merk, model){

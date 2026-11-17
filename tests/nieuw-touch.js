@@ -36,8 +36,8 @@ const zonderTypes=t=>t.replace(/export /g,'').replace(/: (any|unknown|string)(\[
   const rb=fs.readFileSync(bron('refurbish/index.html'),'utf8');
 
   // ── 1. de sleutel ──
-  const edge=new Function(zonderTypes(haal(sh,'isNieuw')+haal(sh,'heeftTouch')+haal(sh,'webshopSleutel'))+'; return webshopSleutel;')();
-  const werkbank=new Function(haal(rb,'webshopSleutel')+'; return webshopSleutel;')();
+  const edge=new Function(zonderTypes(haal(sh,'isNieuw')+haal(sh,'heeftTouch')+haal(sh,'losseVideokaart')+haal(sh,'videokaartCode')+haal(sh,'webshopSleutel'))+'; return webshopSleutel;')();
+  const werkbank=new Function(haal(rb,'losseVideokaart')+haal(rb,'videokaartCode')+haal(rb,'webshopSleutel')+'; return webshopSleutel;')();
   const proeven=[
     {merk:'Dell', model:'Latitude 3410', categorie:'Laptop', staat:'B', grade:'B', specs:{Processor:'Intel Core i5-10210U', Geheugen:'16 GB', Opslag:'256 GB SSD', Touchscreen:'ja'}},
     {merk:'Dell', model:'Latitude 3410', categorie:'Laptop', staat:'B', grade:'B', specs:{Processor:'Intel Core i5-10210U', Geheugen:'16 GB', Opslag:'256 GB SSD'}},

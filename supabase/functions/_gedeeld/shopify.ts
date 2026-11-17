@@ -357,6 +357,30 @@ export function heeftTouch(h: any) {
   return /^(ja|1|true|waar)$/i.test(String(sp.Touchscreen ?? "").trim());
 }
 
+/* ── losse videokaart (november 2026, wens eigenaar: een ZBook met een NVIDIA erin) ──
+   Een laptop met een losse videokaart is een andere uitvoering dan dezelfde zonder (hij kost
+   meer), dus net als touch een eigen advertentie. Alleen een LOSSE kaart telt: de ingebouwde
+   (Intel UHD, Iris Xe, Radeon Graphics) staat bij bijna elke laptop in de specs, en die in de
+   sleutel zetten zou alle bestaande advertenties een nieuwe sleutel geven. "Radeon 610M" en
+   "680M" zijn ingebouwd en vallen erbuiten (geen \b na de drie cijfers). MOET gelijk zijn aan
+   losseVideokaart() en videokaartCode() in app/index.html en refurbish/index.html
+   (tests/videokaart.js legt ze naast elkaar). */
+export function losseVideokaart(gpu: unknown) {
+  const g = String(gpu ?? "").trim();
+  if (!g || /ge[iï]ntegreerd|integrated|ingebouwd/i.test(g)) return "";
+  return /nvidia|geforce|quadro|\b(gtx|rtx|mx)\s?a?\d|radeon\s*(rx|pro|r[579]\b|\d{3}x?\b)|firepro|\barc\s*a\d/i.test(g) ? g : "";
+}
+/* De kaart als korte code voor de sleutel: "NVIDIA Quadro T1000 4GB" en "NVIDIA T1000" worden
+   allebei t1000, zodat hetzelfde toestel niet op twee advertenties belandt omdat het een keer
+   anders getypt is. */
+export function videokaartCode(gpu: unknown) {
+  const g = losseVideokaart(gpu);
+  if (!g) return "";
+  return g.toLowerCase().replace(/\(.*?\)/g, " ")
+    .replace(/\b(nvidia|amd|ati|intel|geforce|quadro|graphics|videokaart|laptop|mobile|gpu|max-q|with design)\b/g, " ")
+    .replace(/\b\d+\s*gb\b|\bg?ddr\d\w*/g, " ").replace(/[^a-z0-9]/g, "") || "videokaart";
+}
+
 /* ── grade-varianten ──
    De drie grades als varianten op één advertentie. De naam (optiewaarde) is wat het
    thema toont; de grade-kiezer leidt de code ook uit de naam af ("Zeer goed" -> zeer_goed),
@@ -383,7 +407,8 @@ export function gradeSchat(anker: string, prijs: number) {
 }
 
 /* De webshop-sleutel: de identiteit van één advertentie = merk + model + kleur + de bepalende
-   specs (telefoon/tablet: opslag; laptop/desktop: processor + geheugen + opslag). MOET gelijk
+   specs (telefoon/tablet: opslag; laptop/desktop: processor + geheugen + opslag, en een losse
+   videokaart en touch als die er zijn). MOET gelijk
    zijn aan webshopSleutel() in refurbish/index.html, anders groeperen de kanten niet gelijk.
    hardware heeft geen kleur-kolom; de kleur reist mee in specs.Kleur (uit de controle). */
 export function webshopSleutel(h: any) {
@@ -392,7 +417,7 @@ export function webshopSleutel(h: any) {
   const cat = h.categorie || "Laptop";
   const deel: any[] = [h.merk, h.model, kleur];
   if (cat === "Telefoon" || cat === "Tablet") deel.push(sp.Opslag);
-  else if (cat === "Laptop" || cat === "Desktop") deel.push(sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag, heeftTouch(h) ? "touch" : "");
+  else if (cat === "Laptop" || cat === "Desktop") deel.push(sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag, videokaartCode(sp.Videokaart), heeftTouch(h) ? "touch" : "");
   else deel.push(sp.Opslag);
   if (isNieuw(h)) deel.push("nieuw");
   return deel.filter(Boolean).map((s: any) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).join("_");
@@ -420,7 +445,7 @@ function uitvoeringDelen(h: any) {
   const sp = (h.specs && typeof h.specs === "object") ? h.specs : {};
   const kleur = h.kleur || sp.Kleur || "";
   const cat = h.categorie || "Laptop";
-  if (cat === "Laptop" || cat === "Desktop") return [sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag, heeftTouch(h) ? "touch" : ""];
+  if (cat === "Laptop" || cat === "Desktop") return [sp.Processor || sp.Chip, sp.Geheugen || sp.Werkgeheugen, sp.Opslag, losseVideokaart(sp.Videokaart), heeftTouch(h) ? "touch" : ""];
   return [sp.Opslag, kleur];
 }
 export function webshopZoektitel(h: any) {

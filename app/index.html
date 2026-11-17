@@ -16408,11 +16408,17 @@ const HW_FEITEN_TEL=['Chip','Werkgeheugen','Scherm','Camera','Netwerk','Besturin
    de videokaart als het model er maar één heeft) haalt Storvo zelf op, net als de fabrieksfoto's
    en de nieuwprijs van deze uitvoering. Dezelfde sleutels als aan de werkbank (SPEC_VELDEN in het
    refurbish-deel), zodat Online zetten, het label en de webshop ze lezen. Het scherm alleen bij
-   een laptop. Windows tik je aan uit drie vaste keuzes; dat zegt het model niet. */
+   een laptop. Windows tik je aan uit drie vaste keuzes; dat zegt het model niet. De videokaart
+   staat erbij: kent het model er één, dan staat hij al ingevuld en pas je hem aan als deze een
+   andere (of geen losse) heeft. */
 const HW_LAP_VELDEN=[
   {sleutel:'Processor', id:'hw_sp_cpu',    hint:'Bijvoorbeeld Intel Core i5-1335U'},
   {sleutel:'Geheugen',  id:'hw_sp_ram',    hint:'Bijvoorbeeld 16 GB'},
   {sleutel:'Opslag',    id:'hw_sp_ssd',    hint:'Bijvoorbeeld 512 GB SSD'},
+  /* Een eigen vak sinds november 2026 (wens eigenaar, een ZBook met een NVIDIA erin). Eerst
+     kwam de videokaart alleen stil mee uit de modellenlijst, en dan alleen als het model er maar
+     één kende. Een losse kaart staat op het prijskaartje en maakt een eigen advertentie. */
+  {sleutel:'Videokaart',id:'hw_sp_gpu',    hint:'Alleen een losse, bijvoorbeeld NVIDIA Quadro T1000'},
   {sleutel:'Scherm',    id:'hw_sp_scherm', hint:'Bijvoorbeeld 14 inch Full HD', alleenLaptop:true},
   {sleutel:'Windows',   id:'hw_sp_win',    hint:'Bijvoorbeeld Windows 11 Pro', vast:['Windows 11 Pro','Windows 11 Home','Windows 10 Pro']}
 ];
@@ -16445,6 +16451,21 @@ function hwLapVeldenHtml(h){
 }
 function hwTouchVan(sp){ sp=sp||{}; return /^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim()) || /touch/i.test(String(sp.Scherm||'')); }
 function hwTouchAan(){ const e=document.getElementById('hw_sp_touch'); return !!(e && e.checked); }
+/* Een losse videokaart (NVIDIA, Radeon RX of Pro, Arc), niet de ingebouwde van de processor.
+   Gelijk aan losseVideokaart en videokaartCode in _gedeeld/shopify.ts en de werkbank: daar staat
+   waarom (tests/videokaart.js legt ze naast elkaar). */
+function losseVideokaart(gpu){
+  const g=String(gpu??'').trim();
+  if(!g || /ge[iï]ntegreerd|integrated|ingebouwd/i.test(g)) return '';
+  return /nvidia|geforce|quadro|\b(gtx|rtx|mx)\s?a?\d|radeon\s*(rx|pro|r[579]\b|\d{3}x?\b)|firepro|\barc\s*a\d/i.test(g) ? g : '';
+}
+function videokaartCode(gpu){
+  const g=losseVideokaart(gpu);
+  if(!g) return '';
+  return g.toLowerCase().replace(/\(.*?\)/g,' ')
+    .replace(/\b(nvidia|amd|ati|intel|geforce|quadro|graphics|videokaart|laptop|mobile|gpu|max-q|with design)\b/g,' ')
+    .replace(/\b\d+\s*gb\b|\bg?ddr\d\w*/g,' ').replace(/[^a-z0-9]/g,'') || 'videokaart';
+}
 /* De knoppen per veld: de uitvoeringen van het model (of de vaste keuzes van Windows). Wat in het
    veld staat licht op. */
 function hwLapTeken(){
@@ -16488,9 +16509,19 @@ async function hwLapOptiesLaden(){
   let gevuld=false;
   HW_LAP_VELDEN.forEach(v=>{
     const e=document.getElementById(v.id), lijst=hwLapOpt[v.sleutel]||[];
+    /* De videokaart alleen bij een nieuwe laptop: een bestaande openen mag niets stil opslaan
+       (de werkbank kan hem intussen bewerkt hebben); daar vult hwSpecsOphalen de modelfeiten. */
+    if(v.sleutel==='Videokaart' && hwOpen) return;
     if(e && !e.value.trim() && lijst.length===1 && hwLapVeldAan(v, cat)){ e.value=lijst[0]; gevuld=true; }
   });
   if(!hwOpen) hwNieuwFeiten=uit ? hwSpecFeiten(uit, cat) : null;
+  /* De videokaart heeft in de modellenlijst vaak geen uitvoeringen maar één vaste waarde. Die
+     zetten we in het vak, anders haalt een leeg vak hem bij opslaan weg. */
+  const gpuVak=document.getElementById('hw_sp_gpu');
+  if(gpuVak && !gpuVak.value.trim() && uit && !hwOpen){
+    const g=hwSpecFeiten(uit, cat).Videokaart;
+    if(g){ gpuVak.value=g; gevuld=true; }
+  }
   hwLapTeken();
   if(gevuld && hwOpen) hwStilPlan();
   hwNieuwprijsVul();
@@ -16554,6 +16585,10 @@ async function hwSpecsOphalen(knop, opnieuw, stil){
     if(error) throw new Error('Opslaan lukte niet');
     hwOpen.specs=specs;
     const rij=hwData.find(x=>x.id===id); if(rij) rij.specs=specs;
+    /* De videokaart heeft een eigen vak. Hertekenen doen we niet als je aan het typen bent (zie
+       onder), en een leeg vak haalt hem bij de volgende opslag weer weg. Dus het vak meteen vullen. */
+    const gv=document.getElementById('hw_sp_gpu');
+    if(gv && specs.Videokaart && !gv.value.trim()) gv.value=specs.Videokaart;
     /* Ook op de werkbank-rij, maar alleen wat daar nog leeg is: Online zetten leest die rij, en
        de controle-uitslag gaat voor. */
     try{
@@ -16866,8 +16901,10 @@ function hwVpSleutel(){
   if(hwKleurTelt(cat)) return {opslag:hwVeld('hw_opslag'), uitvoering:'', laptop:false};
   if(!hwSpecSoort(cat)) return null;
   const sp=hwLapSpecs(), uv=nwlSleutel(sp);
-  /* Touch is een andere uitvoering met een andere prijs (zie de migratie nieuw_en_touch). */
-  return {opslag:uv ? sp.Opslag : '', uitvoering:uv ? uv+(hwTouchAan()?'|touch':'') : '', laptop:true};
+  /* Touch en een losse videokaart zijn een andere uitvoering met een andere prijs (zie de
+     migraties nieuw_en_touch en videokaart). */
+  const gpu=videokaartCode(sp.Videokaart);
+  return {opslag:uv ? sp.Opslag : '', uitvoering:uv ? uv+(gpu?'|gpu '+gpu:'')+(hwTouchAan()?'|touch':'') : '', laptop:true};
 }
 /* Het veld Vraagprijs, zoals de nieuwprijs: data-auto = wij vulden hem in, dus hij verandert
    mee als je model, opslag, uitvoering of grade wijzigt. Wat je zelf typt, blijft staan. */
@@ -17356,14 +17393,14 @@ function hwLabelRegels(h){
     zet('Kleur', sp.Kleur); zet('Opslag', t.opslag||sp.Opslag);
     zet('Scherm', [t.inch, t.type].filter(Boolean).join(' ')); zet('Netwerk', t.net);
   }
-  else { zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Scherm', sp.Scherm); }
+  else { zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Videokaart', losseVideokaart(sp.Videokaart)); zet('Scherm', sp.Scherm); }
   if(h.staat) zet('Staat', h.staat==='N' ? 'Nieuw' : h.staat+(HW_STAAT_KLANT[h.staat]?' · '+HW_STAAT_KLANT[h.staat]:''));
   const accuNaam=tel?'Batterij':'Accu';    // "Batterijconditie" op het kaartje
   if(h.nieuwe_accu) zet(accuNaam, 'nieuw (100%)'); else if(h.accu) zet(accuNaam, h.accu+'%');
   if(!tel) zet('Windows', sp.Windows||sp.Besturingssysteem);
   if(h.doos) zet('Doos', 'ja');
   if(Number(h.garantie)>0) zet('Garantie', h.garantie+' maanden');
-  return regels.slice(0, 9);
+  return regels.slice(0, 10);   // 10: een laptop met een losse videokaart heeft er een regel meer
 }
 async function hwLabelPng(h, apparaatId){
   await laadScript('/app/qrcode.min.js');
@@ -17516,6 +17553,14 @@ function hwLaptopProcessor(cpu){
   /* Iets anders (Celeron, Pentium, Snapdragon): zoals het er staat, met een hoofdletter. */
   return c.replace(/\b(intel|amd|celeron|pentium|athlon|xeon|snapdragon|qualcomm)\b/gi, w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
 }
+function hwVideokaartRegel(gpu){
+  const g=losseVideokaart(gpu);
+  if(!g) return '';
+  const geh=(g.match(/(\d+)\s*gb/i)||[])[1];
+  const naam=g.replace(/\(.*?\)/g,' ').replace(/\b\d+\s*gb\b|\bg?ddr\d\w*|\b(graphics|videokaart|laptop gpu|gpu)\b/gi,' ')
+    .replace(/\bnvidia\b/i,'NVIDIA').replace(/\s+/g,' ').trim();
+  return naam+' Videokaart'+(geh ? ' ('+geh+'GB)' : '');
+}
 function hwLaptopSpecs(h){
   const sp=(h.specs&&typeof h.specs==='object')?h.specs:{};
   const S=k=>String(sp[k]||'').trim();
@@ -17523,6 +17568,11 @@ function hwLaptopSpecs(h){
   const regels=[];
   const cpu=hwLaptopProcessor(S('Processor')||S('Chip'));
   if(cpu) regels.push(cpu);
+  /* Een losse videokaart direct onder de processor (november 2026, een ZBook met een NVIDIA):
+     "NVIDIA Quadro T1000 Videokaart (4GB)". De ingebouwde zetten we er niet op; die heeft
+     elke laptop. */
+  const gpu=hwVideokaartRegel(S('Videokaart'));
+  if(gpu) regels.push(gpu);
   const ram=maat(S('Geheugen')||S('Werkgeheugen'));
   if(ram) regels.push(ram+' Werkgeheugen (RAM)');
   const op=S('Opslag');
