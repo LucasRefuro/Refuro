@@ -64,8 +64,36 @@ const zet=(id,waarde)=>{ const e=w.document.getElementById(id); if(e) e.value=wa
 const knop=tekst=>[...w.document.querySelectorAll('#vensterKnoppen .btn')].find(b=>b.textContent===tekst);
 const klik=tekst=>{ const b=knop(tekst); if(b) b.click(); return !!b; };
 const wacht=ms=>new Promise(r=>setTimeout(r,ms));
+/* Wachten op de toestand zelf in plaats van op een vaste pauze. Met pauzes van 20 tot 50 ms
+   faalde deze test ongeveer een op de drie keer, op een drukke machine bijna altijd. De
+   boosdoener: na opslaan vanaf een toestel opent de app het DOR-scherm pas 300 ms later
+   (setTimeout in appVerklaringOpen). Liepen de pauzes van de test uit, dan sprong dat venster
+   midden in de volgende stap open. Het verving dan het verklaringvenster (geen Klaar-knop,
+   dus niets opgeslagen) of de vraag "Nog in bewaring" (die gaat dicht als er een ander
+   venster overheen komt). Het maximum is ruim: het telt alleen als er echt iets stuk is. */
+const wachtOp=async(f, max=10000)=>{
+  const tot=Date.now()+max;
+  for(;;){
+    let uit=false; try{ uit=f(); }catch(_e){}
+    if(uit) return uit;
+    if(Date.now()>tot) return false;
+    await wacht(10);
+  }
+};
+const vensterHtml=()=>(w.document.getElementById('venster')||{}).innerHTML||'';
+/* Opslaan vanaf een toestel zet het DOR-scherm klaar voor over 300 ms. Daarop wachten en
+   het sluiten, anders valt het later over de volgende stap heen. Dat het venster komt,
+   betekent ook dat het opslaan klaar is: de timer wordt pas daarna gezet. */
+const dorAfwachten=async()=>{
+  const kwam=await wachtOp(()=>/Overnemen in het DOR/.test(vensterHtml()));
+  w.eval('sluit()');
+  return !!kwam;
+};
 
-setTimeout(async()=>{
+(async()=>{
+  /* Opgestart is pas als het account, de toestellen en de locaties er zijn, niet na een vaste
+     tijd. De locaties laadt start() als laatste; daarna volgt alleen nog showTab. */
+  await wachtOp(()=>w.eval("!!account && apparaten.some(a=>a.id==='a1') && locaties.some(l=>l.id==='l1')"));
   const d=w.document;
   ok('app start zonder fout', fouten.length===0);
   if(fouten.length) console.log('   ', fouten.slice(0,2).join(' | '));
@@ -131,8 +159,8 @@ setTimeout(async()=>{
 
   console.log('\n── opslaan bij toevoegen');
   w.__geschreven.length=0;
+  // toevoegen() wacht zelf alles af en opent het DOR-scherm zonder timer.
   await w.eval('toevoegen(document.createElement("button"))');
-  await wacht(50);
   const gs=w.__geschreven;
   const reg=gs.find(g=>g[0]==='inkoop_registraties' && g[1]==='insert');
   ok('inkoop in het register', !!reg);
@@ -155,8 +183,7 @@ setTimeout(async()=>{
   ok('verklaring noemt elk toestel met IMEI', w.__verklaring && w.__verklaring.goederenLijst.length===2 && /IMEI 351234567890123/.test(w.__verklaring.goederenLijst[0]));
   ok('verklaring zegt dat er geen btw is afgetrokken', /geen btw in aftrek te hebben gebracht/.test(ruw));
   ok('verklaring in het register gezet', gs.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && /inkoopverklaring-/.test(g[2].verklaring_url||'')));
-  await wacht(500);
-  ok('DOR-scherm gaat vanzelf open', /Overnemen in het DOR/.test((d.getElementById('venster')||{}).innerHTML||''));
+  ok('DOR-scherm gaat vanzelf open', !!await wachtOp(()=>/Overnemen in het DOR/.test(vensterHtml())));
 
   console.log('\n── het DOR-scherm');
   const regRij={id:'reg1', volgnummer:7, datum:new Date().toISOString(), inkoper:'Lucas', voornamen:'Jan', achternaam:'Jansen',
@@ -171,19 +198,18 @@ setTimeout(async()=>{
   ok('link naar het DOR opent veilig', /href="https:\/\/opkopersregister\.stopheling\.nl" target="_blank" rel="noopener"/.test(dv));
   w.__geschreven.length=0;
   klik('Staat in het DOR');
-  await wacht(30);
-  ok('aanvinken legt vast wanneer en door wie', w.__geschreven.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && g[2].dor_ingevoerd_op && g[2].dor_door==='Lucas'));
+  ok('aanvinken legt vast wanneer en door wie', !!await wachtOp(()=>w.__geschreven.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && g[2].dor_ingevoerd_op && g[2].dor_door==='Lucas')));
 
   console.log('\n── opnieuw en achteraf');
   // Opnieuw op een toestel dat al in het register staat: zelfde regel bijwerken.
   w.eval("sluit(); const a=apparaten.find(x=>x.id==='a1'); a.inkoop_registratie_id='reg1'; a.verkoper_naam='Jan van der Berg';");
   await w.eval("appVerklaringOpen('a1')");
-  await wacht(20);
+  await wachtOp(()=>d.getElementById('vkl_voorvoegsel'));
   ok('opnieuw vult de registergegevens vooraf in', d.getElementById('vkl_voorvoegsel').value==='van der' && d.getElementById('vkl_idnr').value==='NX1234567');
   zet('vkl_achternaam','Bergen');
   w.__geschreven.length=0;
   klik('Klaar');
-  await wacht(50);
+  await dorAfwachten();
   const gs2=w.__geschreven;
   ok('opnieuw maakt geen tweede inkoop', !gs2.some(g=>g[0]==='inkoop_registraties' && g[1]==='insert'));
   ok('opnieuw werkt de bestaande regel bij', gs2.some(g=>g[0]==='inkoop_registraties' && g[1]==='update' && g[2].achternaam==='Bergen'));
@@ -192,13 +218,13 @@ setTimeout(async()=>{
   // Maken achteraf op een toestel zonder registerregel: de inkoopdatum is die van het toestel.
   w.eval("sluit(); apparaten.push({id:'a2', team_id:'t1', code:'A0005', merk:'Dell', model:'Latitude 5430', categorie:'Laptop', status:'klaar', aangemaakt_op:'2026-09-01T09:00:00Z'});");
   await w.eval("appVerklaringOpen('a2')");
-  await wacht(20);
+  await wachtOp(()=>d.getElementById('vkl_voornamen'));
   zet('vkl_voornamen','Piet'); zet('vkl_achternaam','Pieters'); zet('vkl_geboorte','1980-01-01');
   zet('vkl_postcode','5121 JA'); zet('vkl_huisnr','1'); zet('vkl_straat','Hoofdstraat'); zet('vkl_plaats','Rijen');
   w.eval("vklKies('id_soort','rijbewijs')"); zet('vkl_idnr','5123456789');
   w.__geschreven.length=0;
   klik('Klaar');
-  await wacht(50);
+  ok('achteraf: daarna gaat het DOR-scherm open', await dorAfwachten());
   const ins3=w.__geschreven.find(g=>g[0]==='inkoop_registraties' && g[1]==='insert');
   ok('achteraf: inkoopdatum van het toestel', !!ins3 && ins3[2].datum.slice(0,10)==='2026-09-01');
   ok('achteraf: bewaartermijn vanaf die dag', !!ins3 && ins3[2].bewaar_tot==='2026-09-08');
@@ -206,34 +232,33 @@ setTimeout(async()=>{
   // Upload mislukt: de inkoop staat wel in het register en de toestellen hangen eraan.
   w.eval("sluit(); apparaten.push({id:'a3', team_id:'t1', code:'A0006', merk:'HP', model:'ProBook', categorie:'Laptop', status:'klaar', aangemaakt_op:new Date().toISOString()});");
   await w.eval("appVerklaringOpen('a3')");
-  await wacht(20);
+  await wachtOp(()=>d.getElementById('vkl_voornamen'));
   zet('vkl_voornamen','Piet'); zet('vkl_achternaam','Pieters'); zet('vkl_geboorte','1980-01-01');
   zet('vkl_postcode','5121 JA'); zet('vkl_huisnr','1'); zet('vkl_straat','Hoofdstraat'); zet('vkl_plaats','Rijen');
   w.eval("vklKies('id_soort','rijbewijs')"); zet('vkl_idnr','5123456789');
   w.__uploadFout=true; w.__geschreven.length=0;
   klik('Klaar');
-  await wacht(50);
+  // Pas terugzetten als het opslaan klaar is; ging dat eerder, dan lukte de upload alsnog.
+  await dorAfwachten();
   w.__uploadFout=false;
   const koppel=w.__geschreven.find(g=>g[0]==='refurbish_apparaten' && g[1]==='update' && g[2].inkoop_registratie_id);
   ok('upload mislukt: toestel toch aan het register', !!koppel && !koppel[2].handtekening_url);
 
   console.log('\n── waarschuwen tijdens de bewaring');
   w.eval("sluit(); apparaten.find(a=>a.id==='a1').bewaar_tot=isoDag(werkdagenNa(new Date(),3)); ctr=null; appOpen('a1');");
-  await wacht(20);
-  ok('vraagt eerst of je toch wilt beginnen', /Nog in bewaring/.test((d.getElementById('venster')||{}).innerHTML||'') && w.eval('ctr')===null);
+  ok('vraagt eerst of je toch wilt beginnen', !!await wachtOp(()=>/Nog in bewaring/.test(vensterHtml())) && w.eval('ctr')===null);
   klik('Toch beginnen');
-  await wacht(20);
-  ok('na "Toch beginnen" start de controle', !!w.eval('ctr') && w.eval('ctr.a.id')==='a1');
+  ok('na "Toch beginnen" start de controle', await wachtOp(()=>w.eval('ctr && ctr.a.id'))==='a1');
+  // Al akkoord gegeven: dan opent appOpen de controle meteen, zonder vraag en zonder wachten.
   w.eval("ctr=null; appOpen('a1');");
-  await wacht(20);
-  ok('één keer vragen per toestel', !!w.eval('ctr'));
+  ok('één keer vragen per toestel', !!w.eval('ctr') && !/Nog in bewaring/.test(vensterHtml()));
   ok('in de lijst staat tot wanneer', /in bewaring t\/m/.test(w.eval("showTab('werkbank'); document.getElementById('tab-werkbank').innerHTML")));
 
   w.close();
   await winkelapp();
   console.log(fout ? fout+' FOUT' : 'inkoopregister in orde');
   process.exit(fout?1:0);
-}, 400);
+})();
 
 /* De Inkopen-pagina van de winkelapp: hier haalt de boekhouder de verklaringen op. */
 async function winkelapp(){
@@ -265,12 +290,14 @@ window.supabase={createClient:()=>({
   const domW=new JSDOM(htmlW,{runScripts:'dangerously', url:'https://storvo.app/app/', pretendToBeVisual:true});
   const ww=domW.window, dw=ww.document;
   const foutenW=[]; ww.onerror=(m)=>foutenW.push(String(m));
-  await wacht(400);
+  // Zonder sessie eindigt het opstarten bij het inlogscherm: daarop wachten.
+  await wachtOp(()=>dw.getElementById('al_id'));
   ok('winkelapp start zonder fout', foutenW.length===0);
   ok('blok staat op de Inkopen-pagina', !!dw.querySelector('#tab-inkopen #particulierKaart'));
 
   ww.eval("inkopenPeriode='alles'; partLaden();");
-  await wacht(50);
+  // partRijen wordt gevuld vlak voor het tekenen, in dezelfde stap.
+  await wachtOp(()=>ww.eval('partRijen.length'));
   const lijst=dw.getElementById('partLijst').innerHTML;
   ok('beide inkopen in de lijst', /Jan Jansen/.test(lijst) && /Kantoor BV/.test(lijst));
   ok('totaal van de periode', /1\.600,00/.test(lijst));
@@ -296,7 +323,10 @@ window.supabase={createClient:()=>({
   ok('met IMEI en legitimatie om te kopiëren', !!ov && /data-kopie="351234567890123"/.test(ov.innerHTML) && /data-kopie="AB12CD34"/.test(ov.innerHTML));
   ww.__schrijf.length=0;
   ov.querySelector('#partDorKlaar').click();
-  await wacht(30);
+  /* Niet wachten op het schrijven zelf: dat gebeurt al bij de klik, vóór het antwoord.
+     Het venster gaat pas weg als het antwoord er is, en direct daarna wordt de lijst
+     opnieuw getekend. */
+  await wachtOp(()=>!dw.getElementById('partDorOverlay'));
   ok('aanvinken schrijft naar het register', ww.__schrijf.some(x=>x[0]==='inkoop_registraties' && x[1].dor_ingevoerd_op));
   ok('daarna staat hij erin', /staat erin/.test(dw.getElementById('partLijst').innerHTML) && !/partDor\('r1'\)/.test(dw.getElementById('partLijst').innerHTML));
   ww.close();

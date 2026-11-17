@@ -85,3 +85,14 @@ refurbish-tests. Daarom staat bovenin elke asynchrone test een `beforeExit`-wach
 die dat als fout telt. Zet die er ook in als je een nieuwe test schrijft.
 `clover-sync.js` heeft hem niet: die is synchroon en eindigt zonder `process.exit`.
 
+
+## Wachten op de toestand, niet op een pauze
+
+Een vaste pauze (`await wacht(20)`) is een gok op hoe snel de machine is. Op een
+drukke machine loopt hij uit, en dan gaat een timer van de app ineens midden in
+de volgende stap af. `inkoopregister.js` faalde zo ongeveer een op de drie keer:
+na opslaan vanaf een toestel opent de app het DOR-scherm pas na 300 ms, en dat
+venster verdrong dan het volgende venster van de test. Wacht daarom op wat je
+verwacht (een element, een geschreven rij, een variabele) met een ruim maximum,
+zoals `wachtOp` in die test. En opent de app iets op een timer, wacht daar dan op
+en ruim het op voordat je verdergaat.
