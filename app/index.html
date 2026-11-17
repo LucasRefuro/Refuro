@@ -17616,10 +17616,11 @@ function hwKaartData(h){
    foto van twee prints naast elkaar: met de titel op 10 mm viel hij half van het papier. Daarom
    begint alles op BOVEN en eindigt het op ONDER, met iets krappere regels zodat het past.
    Eerst stond BOVEN op 20 mm; op de echte print stond de titel toen te laag. De eigenaar wilde
-   hem de helft van die verlaging terug omhoog, dus 15 mm (17 november 2026). */
+   hem de helft van die verlaging terug omhoog, dus 15 mm, en na de volgende print nog 10 mm
+   hoger: 5 mm (17 november 2026). Dat is gemeten op zijn printer met zijn instellingen. */
 function hwKaartTeken(ctx, PX, data){
   const W=105,H=148,M=9,A='#1800ad',DONKER='#1b2340';
-  const BOVEN=15, ONDER=138;
+  const BOVEN=5, ONDER=138;
   const mm=v=>v*PX, pt=v=>v*0.3528*PX;
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,mm(W),mm(H));   // "wit" = geen inkt; het papier schijnt door
   const font=(w,s)=>ctx.font=w+' '+pt(s)+"px 'Helvetica Neue',Helvetica,Arial,sans-serif";
