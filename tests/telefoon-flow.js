@@ -181,8 +181,22 @@ const fouten=[]; w.onerror=m=>fouten.push(String(m));
   ok('kaartje: zonder modellenlijst uit de specs', galaxy.samenvatting==='256GB | 6,2 inch | Dynamic AMOLED 2X' && galaxy.specs[0]==='Dynamic AMOLED 2X 6,2 inch' && galaxy.specs.includes('Batterijconditie: 91%') && galaxy.titel==='Galaxy S24');
   const leeg=w.eval(`hwKaartData({merk:'Apple', model:'iPhone 13', categorie:'Telefoon', verkoop:299, specs:{}})`);
   ok('kaartje: niets bekend is geen halve regel', leeg.samenvatting==='6,1 inch | Super Retina XDR OLED' && !leeg.specs.some(s=>/undefined|null|:\s*$/.test(s)));
-  const laptop=w.eval(`hwKaartData({merk:'HP', model:'EliteBook 840 G8', categorie:'Laptop', verkoop:499, specs:{Processor:'Intel Core i5-1135G7', Geheugen:'16 GB', Opslag:'512 GB SSD'}})`);
-  ok('kaartje: een laptop blijft zoals hij was', laptop.titel==='HP EliteBook 840 G8' && /i5/.test(laptop.samenvatting) && laptop.specs.includes('Processor: Intel Core i5-1135G7'));
+  // ── het prijskaartje van een laptop, zoals het kaartje van de winkel (HP EliteBook 840 G9) ──
+  const laptop=w.eval(`hwKaartData({merk:'HP', model:'EliteBook 840 G9', categorie:'Laptop', verkoop:925, nieuwprijs:1599, garantie:12, accu:96,
+    specs:{Processor:'Intel Core i7-1265U', Geheugen:'32 GB', Opslag:'512 GB SSD', Scherm:'14 inch Full HD', Windows:'Windows 11 Pro', Gewicht:'1,3 kg', Poorten:'2x USB-C'}})`);
+  ok('laptopkaartje: titel', laptop.titel==='HP EliteBook 840 G9');
+  ok('laptopkaartje: regel onder de titel zoals op het kaartje', laptop.samenvatting==='i7 | 32GB | 512GB SSD | 14" Full HD');
+  ok('laptopkaartje: vier specificaties zoals op het kaartje', JSON.stringify(laptop.specs)===JSON.stringify(['Intel Core i7 Gen12','32GB Werkgeheugen (RAM)',{tekst:'512GB Opslag (SSD)', cursief:'(uitbreidbaar)'},'Windows 11 Pro']));
+  ok('laptopkaartje: geen gewicht of poorten', !JSON.stringify(laptop.specs).includes('1,3 kg') && !JSON.stringify(laptop.specs).includes('2x USB-C'));
+  ok('laptopkaartje: nieuwprijs zonder punt', laptop.prijs==='€925,-' && laptop.np==='€1599,-');
+  ok('laptopkaartje: vinkjes met batterij', JSON.stringify(laptop.gar)===JSON.stringify(['12 maanden garantie','Technisch 100% gecontroleerd','Batterij in nieuwstaat','Direct klaar voor gebruik']));
+  const zwak=w.eval(`hwKaartData({merk:'Dell', model:'Latitude 5490', categorie:'Laptop', verkoop:299, accu:81, specs:{Processor:'intel core m3-6Y30', Geheugen:'8 GB', Opslag:'500 GB HDD'}})`);
+  ok('laptopkaartje: een zwakkere accu met het getal', zwak.gar.includes('Batterijconditie: 81%') && !zwak.gar.includes('Batterij in nieuwstaat'));
+  ok('laptopkaartje: Core m3 en een HDD', zwak.specs[0]==='Intel Core m3 Gen6' && zwak.specs[2].tekst==='500GB Opslag (HDD)');
+  const mac=w.eval(`hwKaartData({merk:'Apple', model:'MacBook Air 13', categorie:'Laptop', verkoop:699, specs:{Processor:'Apple M3', Geheugen:'16 GB', Opslag:'256 GB SSD'}})`);
+  ok('laptopkaartje: MacBook is geen Intel en niet uitbreidbaar', mac.specs[0]==='Apple M3' && mac.specs[2]==='256GB Opslag (SSD)');
+  ok('laptopkaartje: accu onbekend, dan geen batterijregel', !mac.gar.some(g=>/Batterij/.test(g)));
+  ok('laptopkaartje: Core Ultra en Ryzen', w.eval("hwLaptopProcessor('Intel Core Ultra 5 120U')")==='Intel Core Ultra 5' && w.eval("hwLaptopProcessor('AMD Ryzen 5 PRO 5650U')")==='AMD Ryzen 5 5650U');
 
   console.log(fout? '\n'+fout+' FOUTEN' : '\ntelefoon-flow in orde');
   process.exit(fout?1:0);

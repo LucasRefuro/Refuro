@@ -17468,6 +17468,8 @@ function hwSamenvatting(sp){
   if(cpu){
     let kort='', m;
     if(m=cpu.match(/\bi([3579])\b/i)) kort='i'+m[1];
+    else if(m=cpu.match(/\bultra\s*([3579])\b/i)) kort='Ultra '+m[1];
+    else if(m=cpu.match(/\bcore\s*m([357])\b/i)) kort='m'+m[1];
     else if(m=cpu.match(/ryzen\s*([3579])/i)) kort='Ryzen '+m[1];
     else if(m=cpu.match(/\bapple\s*(m\d\w*)/i)) kort='Apple '+m[1].toUpperCase();
     else if(m=cpu.match(/\b(celeron|pentium|athlon|xeon)\b/i)) kort=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
@@ -17484,7 +17486,55 @@ function hwSamenvatting(sp){
   }
   const sc=S('Scherm');
   if(sc){ delen.push(sc.replace(/\s*inch\b/i,'"').replace(/(\d)\s*"/,'$1"')); }
-  return delen.filter(Boolean).slice(0,4).join('   |   ');
+  return delen.filter(Boolean).slice(0,4).join(' | ');
+}
+/* De specificaties van een laptop op het kaartje, precies zoals de winkel ze in Canva maakte
+   (november 2026, foto van het kaartje bij de HP EliteBook 840 G9):
+     Intel Core i7 Gen12
+     32GB Werkgeheugen (RAM)
+     512GB Opslag (SSD) (uitbreidbaar)
+     Windows 11 Pro
+   Eerst stonden hier de eerste zes specs als "Processor: Intel Core i7-1265U", met gewicht en
+   poorten ertussen. Het scherm staat al in de regel onder de titel, dus niet nog eens hier.
+   "(uitbreidbaar)" komt schuin: in Storvo staat nergens of de opslag te vervangen is, dus we
+   gaan uit van wat bij vrijwel elke zakelijke laptop klopt (een M.2- of 2,5 inch-sleuf). Een
+   MacBook heeft de opslag vastgesoldeerd, die krijgt het niet. */
+function hwLaptopProcessor(cpu){
+  const c=String(cpu||'').replace(/\(r\)|\(tm\)|®|™/gi,'').replace(/\s*(cpu|processor)\b/gi,'').replace(/@.*$/,'').replace(/\s+/g,' ').trim();
+  if(!c) return '';
+  let m;
+  /* Eerst Apple en AMD: "Apple M3" zou anders als Intel Core m3 gelezen worden. */
+  if(m=c.match(/\bapple\s*(m\d+)(\s*(pro|max|ultra))?/i)) return 'Apple '+m[1].toUpperCase()+(m[3]?' '+m[3][0].toUpperCase()+m[3].slice(1).toLowerCase():'');
+  if(m=c.match(/\bryzen\s*([3579])\s*(pro\s*)?(\d{4}\w*)?/i)) return 'AMD Ryzen '+m[1]+(m[3]?' '+m[3].toUpperCase():'');
+  if(m=c.match(/\bcore\s*ultra\s*([3579])\b/i)) return 'Intel Core Ultra '+m[1];
+  if(m=c.match(/\b([im][3579])(?![a-z])/i)){
+    const reeks=m[1].toLowerCase();
+    const gen=cpuGen({Processor:'i9-'+(c.match(/[im][3579][\s-]*(\d{3,5})/i)||['',''])[1]})
+      || ((c.match(/m[357][\s-]*(\d)y/i)||[])[1] ? Number(c.match(/m[357][\s-]*(\d)y/i)[1]) : 0);
+    return 'Intel Core '+reeks+(gen?' Gen'+gen:'');
+  }
+  /* Iets anders (Celeron, Pentium, Snapdragon): zoals het er staat, met een hoofdletter. */
+  return c.replace(/\b(intel|amd|celeron|pentium|athlon|xeon|snapdragon|qualcomm)\b/gi, w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
+}
+function hwLaptopSpecs(h){
+  const sp=(h.specs&&typeof h.specs==='object')?h.specs:{};
+  const S=k=>String(sp[k]||'').trim();
+  const maat=t=>{ const m=String(t).match(/(\d+(?:[.,]\d+)?)\s*([gt]b)/i); return m ? m[1].replace(',','.')+m[2].toUpperCase() : ''; };
+  const regels=[];
+  const cpu=hwLaptopProcessor(S('Processor')||S('Chip'));
+  if(cpu) regels.push(cpu);
+  const ram=maat(S('Geheugen')||S('Werkgeheugen'));
+  if(ram) regels.push(ram+' Werkgeheugen (RAM)');
+  const op=S('Opslag');
+  const opMaat=maat(op);
+  if(opMaat){
+    const type=/hdd|hard/i.test(op) ? 'HDD' : 'SSD';
+    const apple=/apple/i.test(String(h.merk||'')) || /macbook|imac/i.test(String(h.model||''));
+    regels.push(apple ? opMaat+' Opslag ('+type+')' : {tekst:opMaat+' Opslag ('+type+')', cursief:'(uitbreidbaar)'});
+  }
+  const os=S('Windows')||S('Besturingssysteem')||S('OS');
+  if(os) regels.push(os.replace(/\bwindows\b/i,'Windows').replace(/\b(pro|home)\b/i, w=>w[0].toUpperCase()+w.slice(1).toLowerCase()));
+  return regels;
 }
 /* Een telefoon op het kaartje zoals de winkel hem in Canva maakte: "128GB | 6,1 inch | Super
    Retina XDR OLED" onder de titel, en alleen scherm, opslag, 5G en batterijconditie als
@@ -17532,26 +17582,42 @@ function hwTelKaart(h){
 function hwKaartData(h){
   const specsObj=(h.specs&&typeof h.specs==='object')?h.specs:{};
   const tel=hwKleurTelt(h.categorie) ? hwTelKaart(h) : null;
-  const specs=tel ? tel.specs : Object.entries(specsObj)
+  const lap=!tel && hwSpecSoort(h.categorie);
+  const specs=tel ? tel.specs : lap ? hwLaptopSpecs(h) : Object.entries(specsObj)
     .filter(([k,w])=>String(w||'').trim() && !/serien|imei|kleur|servicetag/i.test(k))
     .map(([k,w])=>k+': '+w).slice(0,6);   // max 6, anders past het niet op A6
   /* Prijs strak als "\u20AC499,-" (geen spatie na het euroteken, zoals op het Canva-kaartje);
      een bedrag met echte centen laten we staan als "\u20AC499,50". */
-  const eur=n=>euro(n).replace(/,00$/,',-').replace(/\u20AC\s+/,'\u20AC');
+  /* Zonder punt voor de duizendtallen, zoals op het kaartje: "\u20AC1599,-". */
+  const eur=n=>euro(n).replace(/,00$/,',-').replace(/\u20AC\s+/,'\u20AC').replace(/(\d)\.(?=\d{3}\b)/g,'$1');
   const prijs=h.verkoop!=null?eur(h.verkoop):'';
   const np=(h.nieuwprijs!=null&&h.nieuwprijs!=='')?eur(Number(h.nieuwprijs)):null;
   const staat=HW_STAAT_KLANT[h.staat]||'Nette staat';
   const g=(h.garantie!=null)?Number(h.garantie):24;
   const gar=[]; if(g>0) gar.push(g+' maanden garantie');
-  gar.push('Technisch 100% gecontroleerd'); gar.push('Direct klaar voor gebruik');
+  gar.push('Technisch 100% gecontroleerd');
+  /* Bij een laptop staat de batterij als vinkje, zoals op het kaartje van de winkel. "In
+     nieuwstaat" alleen als hij dat echt is (nieuwe accu, of 90% of meer); anders het getal.
+     Weten we het niet, dan zeggen we niets. Een telefoon heeft hem al bij de specificaties. */
+  if(lap){
+    const ac=h.nieuwe_accu ? 100 : (Number(h.accu)||null);
+    if(ac!=null) gar.push(ac>=90 ? 'Batterij in nieuwstaat' : 'Batterijconditie: '+ac+'%');
+  }
+  gar.push('Direct klaar voor gebruik');
   return { titel:(tel ? tel.titel : [h.merk,h.model].filter(Boolean).join(' '))||'Toestel',
            samenvatting:tel ? tel.samenvatting : hwSamenvatting(specsObj), specs, prijs, np, staat, gar };
 }
 /* De kaart op een canvas tekenen, ware A6-grootte (105x148mm) bij ~305 dpi. Alles in
    millimeters (PX px per mm); punten -> px via 0.3528mm/pt. Vinkjes tekenen we met
    lijntjes (Helvetica heeft geen nette check-glyph). */
+/* Gemaakt om te printen op "A6 zonder rand" (de keuze van de winkel, november 2026). Dan
+   vergroot de printer het kaartje ongeveer 12% en snijdt hij ongeveer 13 mm van de bovenkant
+   af en 2 tot 3 mm van de onderkant; links en rechts blijft het zoals het is. Nagemeten op een
+   foto van twee prints naast elkaar: met de titel op 10 mm viel hij half van het papier. Daarom
+   begint alles op BOVEN en eindigt het op ONDER, met iets krappere regels zodat het past. */
 function hwKaartTeken(ctx, PX, data){
   const W=105,H=148,M=9,A='#1800ad',DONKER='#1b2340';
+  const BOVEN=20, ONDER=138;
   const mm=v=>v*PX, pt=v=>v*0.3528*PX;
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,mm(W),mm(H));   // "wit" = geen inkt; het papier schijnt door
   const font=(w,s)=>ctx.font=w+' '+pt(s)+"px 'Helvetica Neue',Helvetica,Arial,sans-serif";
@@ -17559,42 +17625,56 @@ function hwKaartTeken(ctx, PX, data){
     for(const w of words){ const t=ln?ln+' '+w:w; if(ctx.measureText(t).width>maxW && ln){lines.push(ln); ln=w;} else ln=t; }
     if(ln)lines.push(ln); return lines; }
   ctx.textBaseline='top'; ctx.textAlign='left';
-  let y=M+1;
-  /* Titel in het zwart. */
+  let y=mm(BOVEN);
+  /* Titel in het zwart. Past hij niet op een regel ("Lenovo ThinkPad X1 Carbon Gen 9"), dan
+     kleiner, anders drukt een tweede regel de prijs op de vinkjes. */
   ctx.fillStyle='#111'; font('700',21);
-  const tlh=pt(21)*1.12;
+  let tpt=21;
+  if(wrap(data.titel, mm(W-2*M)).length>1){ tpt=17; font('700',tpt); }
+  const tlh=pt(tpt)*1.12;
   wrap(data.titel, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=tlh; });
   /* Samenvattingsregel eronder ("i7 | 32GB | 512GB SSD | 13.3\" Full HD"). */
   if(data.samenvatting){
-    y+=mm(2.5); font('400',11.5); ctx.fillStyle=DONKER;
+    y+=mm(2); font('400',11.5); ctx.fillStyle=DONKER;
     const slh=pt(11.5)*1.28;
     wrap(data.samenvatting, mm(W-2*M)).forEach(l=>{ ctx.fillText(l, mm(M), y); y+=slh; });
-    y+=mm(4.5);
-  } else { y+=mm(4); }
+    y+=mm(3.5);
+  } else { y+=mm(3.5); }
   /* Specificaties-balk, ruim opgezet. */
   font('700',13); const bandW=ctx.measureText('Specificaties').width+mm(9), bandH=mm(8.2);
   ctx.fillStyle=A; ctx.fillRect(mm(M), y, bandW, bandH);
   ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText('Specificaties', mm(M)+mm(4.5), y+bandH/2+pt(.4));
-  ctx.textBaseline='top'; y+=bandH+mm(4.5);
+  ctx.textBaseline='top'; y+=bandH+mm(3.5);
   /* Specs met ruime regelafstand, grotere opsommingsbolletjes. */
-  font('400',12); const lh=pt(12)*1.4;
+  font('400',12); const lh=pt(12)*1.3;
   (data.specs||[]).forEach(s=>{
     ctx.fillStyle=DONKER; ctx.beginPath(); ctx.arc(mm(M+1.2), y+pt(12)*0.62, mm(.9), 0, 7); ctx.fill();
-    wrap(s, mm(W-2*M-6)).forEach(l=>{ ctx.fillText(l, mm(M+5.4), y); y+=lh; });
-    y+=mm(1.5);
+    /* Een regel kan een schuin stukje achteraan hebben, "(uitbreidbaar)" op het kaartje. Past het
+       er niet meer achter, dan op de volgende regel. */
+    const tekst=typeof s==='object' ? s.tekst : s, schuin=typeof s==='object' ? s.cursief : '';
+    const lijnen=wrap(tekst, mm(W-2*M-6));
+    lijnen.forEach((l,i)=>{ ctx.fillText(l, mm(M+5.4), y); if(i<lijnen.length-1) y+=lh; });
+    if(schuin){
+      const x=mm(M+5.4)+ctx.measureText(lijnen[lijnen.length-1]+' ').width;
+      font('italic 400',12);
+      if(x+ctx.measureText(schuin).width<=mm(W-M)) ctx.fillText(schuin, x, y);
+      else { y+=lh; ctx.fillText(schuin, mm(M+5.4), y); }
+      font('400',12);
+    }
+    y+=lh+mm(1);
   });
   const ySpecs=y;
   /* De onderkant (Staat + garantie-vinkjes) hoort onderaan de kaart. De prijs zetten we
      NETJES gecentreerd in de ruimte tussen de specs en die onderkant, zodat de witruimte
      boven en onder de prijs gelijk is en het geheel mooi gekaderd staat. Bij heel veel specs
      drukken we 'm omlaag zodat hij nooit over de Staat-regel valt. */
-  const gh=pt(12)*1.42, onderH=pt(13)*1.2+mm(3)+(data.gar||[]).length*gh;
-  const oyStaat=mm(H-M)-onderH;
-  font('700',36); const pw=ctx.measureText(data.prijs).width+mm(13), ph=mm(18), pxX=mm(W-M)-pw;
+  const gh=pt(12)*1.32, onderH=pt(13)*1.2+mm(3)+(data.gar||[]).length*gh;
+  const oyStaat=mm(ONDER)-onderH;
+  font('700',36); const pw=ctx.measureText(data.prijs).width+mm(13), ph=mm(16), pxX=mm(W-M)-pw;
   const priceBlokH=ph+(data.np ? mm(2)+pt(11)*1.2 : 0);
-  let py=ySpecs+Math.max(mm(5), (oyStaat-ySpecs-priceBlokH)/2);
-  const maxPy=oyStaat-priceBlokH-mm(4);
-  if(py>maxPy) py=Math.max(ySpecs+mm(3), maxPy);
+  let py=ySpecs+Math.max(mm(3), (oyStaat-ySpecs-priceBlokH)/2);
+  const maxPy=oyStaat-priceBlokH-mm(3);
+  if(py>maxPy) py=Math.max(ySpecs+mm(2), maxPy);
   ctx.fillStyle=A; ctx.fillRect(pxX, py, pw, ph);
   ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(data.prijs, pxX+mm(6.5), py+ph/2+pt(1));
   ctx.textBaseline='top';
