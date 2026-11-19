@@ -392,6 +392,8 @@ setTimeout(async()=>{
      ==='Galaxy A12|Galaxy A54|Galaxy S10|Galaxy S23 Ultra');
   // Categorieën met aantal boven de lijst, en een kopregel per merk.
   ok('categorieën met aantal boven de lijst', /hwKiesCat\('alles'\)/.test(d.getElementById('hwLijst').innerHTML));
+  ok('standaard nieuwste eerst op nummer, zonder kopregels per merk', w.eval('hwSortNu')==='nummer' && d.querySelectorAll('#hwLijst tr.hwmerkrij').length===0);
+  w.eval("hwSortNu='merk-oud'; renderHardware();");
   ok('kopregel per merk bij sorteren per merk', d.querySelectorAll('#hwLijst tr.hwmerkrij').length>0);
   // De Online-knop blijft staan en zegt waar het toestel online staat.
   ok('online-knop zegt waar hij online staat', /hwonline aan[^>]*>.*Webshop/.test(d.getElementById('hwLijst').innerHTML));

@@ -3094,6 +3094,7 @@
         <div class="periodesel" id="hwFilter">
           <button data-f="voorraad" class="active">Op voorraad</button>
           <span id="hwLocFilters"></span>
+          <button data-f="reparatie">Reparaties <span class="filtertel" id="hwRepTel" hidden></span></button>
           <button data-f="onderweg">Onderweg</button>
           <button data-f="online">Staat online</button>
           <button data-f="oud">Langer dan 30 dagen</button>
@@ -14796,6 +14797,12 @@ function toonKortingAanbod(){
    de refurbish-app en straks Shopify als daar iets verkocht wordt.          */
 
 let hwData=[], hwFilterNu='voorraad', hwBezig=false, hwPartners=[];
+/* Wat aan de werkbank op Te repareren staat (hardware_id's). Zo'n toestel is geen goede voorraad:
+   je kunt hem niet verkopen tot hij gemaakt is. Eerst stond hij gewoon tussen Op voorraad, want de
+   hardware-rij zelf blijft op voorraad (de werkbank houdt de reparatie bij). Nu staat hij onder het
+   kopje Reparaties en telt hij niet mee in de goede voorraad (wens eigenaar, november 2026). */
+let hwInReparatie=new Set();
+function hwInRep(h){ return !!h && h.status!=='verkocht' && hwInReparatie.has(h.id); }
 
 /* De link naar de refurbish-app staat er alleen als de winkel die module
    heeft. Wie hem niet heeft ziet niets; dat is rustiger dan een knop die
@@ -15009,6 +15016,10 @@ async function hwLaad(stil){
   if(error){ console.error('hardware laden:', error); const v=document.getElementById('hwLijst');
     if(v) v.innerHTML='<p class="muted">Kon de hardware niet laden.</p>'; return; }
   hwData=data||[];
+  try{
+    const {data:rep}=await sb.from('refurbish_apparaten').select('hardware_id').eq('status','te_repareren');
+    hwInReparatie=new Set((rep||[]).map(r=>r.hardware_id).filter(Boolean));
+  }catch(_e){ hwInReparatie=new Set(); }
   const {data:locs}=await sb.from('hardware_locaties').select('*').order('volgorde');
   hwLocaties=locs||[];
   // Partners (id -> naam) om op de rij te tonen aan wie een toestel is toegewezen.
@@ -15397,6 +15408,8 @@ function hwZichtbaar(h){
   if(hwFilterNu==='verkocht') return h.status==='verkocht';
   if(h.status==='verkocht') return false;
   if(hwFilterNu==='onderweg') return h.status==='onderweg';
+  if(hwFilterNu==='reparatie') return hwInRep(h);
+  if(hwInRep(h)) return false;   // in reparatie is geen goede voorraad, ook niet per plek of online
   /* Alleen wat in de winkel ligt, of alleen wat in het magazijn ligt. Dat is
      de vraag die je stelt als een klant voor je staat. */
   if(hwFilterNu.startsWith('loc:'))
@@ -15449,11 +15462,21 @@ function cpuGen(specs){
    Daarom per merk, dan per serie (iPhone, Galaxy S, Latitude), dan op generatie: hoe
    nieuw het model is. Voor laptops is dat de processorgeneratie (cpuGen). */
 const HW_CAT_VOLGORDE=['Laptop','Telefoon','Tablet','Desktop','Monitor','Overig'];
-const HW_SORTEN=[['merk-oud','Per merk, oud naar nieuw'],['merk-nieuw','Per merk, nieuw naar oud'],['prijs','Prijs, laag naar hoog'],['dagen','Langst op voorraad']];
+/* Nieuwste eerst op het nummer (A0172 boven A0171) is de standaard sinds november 2026 (wens
+   eigenaar): wat je net toevoegde wil je bovenaan zien, en het nummer staat op de sticker. Het
+   nummer en niet de datum, want een partij krijgt in één keer nummers achter elkaar. Een nieuwe
+   sleutel in localStorage, zodat ook wie eerder Per merk koos één keer op de nieuwe standaard begint. */
+const HW_SORTEN=[['nummer','Nieuwste eerst, op nummer'],['merk-oud','Per merk, oud naar nieuw'],['merk-nieuw','Per merk, nieuw naar oud'],['prijs','Prijs, laag naar hoog'],['dagen','Langst op voorraad']];
 let hwCatNu='alles';
-let hwSortNu=(()=>{ try{ const v=localStorage.getItem('storvo_hw_sort'); return HW_SORTEN.some(x=>x[0]===v)?v:'merk-oud'; }catch(e){ return 'merk-oud'; } })();
+let hwSortNu=(()=>{ try{ const v=localStorage.getItem('storvo_hw_volgorde'); return HW_SORTEN.some(x=>x[0]===v)?v:'nummer'; }catch(e){ return 'nummer'; } })();
 function hwKiesCat(c){ hwCatNu=c; renderHardware(); }
-function hwKiesSort(v){ hwSortNu=v; try{ localStorage.setItem('storvo_hw_sort', v); }catch(e){} renderHardware(); }
+function hwKiesSort(v){ hwSortNu=v; try{ localStorage.setItem('storvo_hw_volgorde', v); }catch(e){} renderHardware(); }
+/* Hoog nummer eerst. Zonder nummer onderaan, daar de nieuwste eerst. */
+function hwNummerCmp(a, b){
+  const na=String(a.code||'').trim(), nb=String(b.code||'').trim();
+  if(!na || !nb) return (!na)-(!nb) || String(b.aangemaakt_op||'').localeCompare(String(a.aangemaakt_op||''));
+  return natCmp(nb, na);
+}
 function hwSerie(h){
   const t=(String(h.merk||'')+' '+String(h.model||'')).toLowerCase();
   if(/iphone/.test(t)) return 'iphone';
@@ -15493,6 +15516,7 @@ function hwVergelijkModel(a, b, r){
       || natCmp(a.code||a.serienummer, b.code||b.serienummer);
 }
 function hwSorteerNu(a, b){
+  if(hwSortNu==='nummer') return hwNummerCmp(a, b);
   if(hwSortNu==='prijs') return ((a.verkoop==null)-(b.verkoop==null)) || (Number(a.verkoop)||0)-(Number(b.verkoop)||0) || hwVergelijkModel(a,b,1);
   if(hwSortNu==='dagen') return (hwDagen(b)-hwDagen(a)) || hwVergelijkModel(a,b,1);
   return hwVergelijkModel(a, b, hwSortNu==='merk-nieuw' ? -1 : 1);
@@ -15649,9 +15673,13 @@ function renderHardware(){
   const vak=document.getElementById('hwLijst');
   if(!vak) return;
 
-  const opVoorraad=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg');
+  const opVoorraad=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg' && !hwInRep(h));
   const onderweg=hwData.filter(h=>h.status==='onderweg');
-  const waarde=opVoorraad.reduce((n,h)=>n+(Number(h.inkoop)||0),0);
+  const inRep=hwData.filter(hwInRep);
+  /* Ingekocht voor telt de toestellen in reparatie wel mee: dat geld is al uitgegeven. */
+  const waarde=opVoorraad.concat(inRep).reduce((n,h)=>n+(Number(h.inkoop)||0),0);
+  const rt=document.getElementById('hwRepTel');
+  if(rt){ rt.textContent=inRep.length; rt.hidden=!inRep.length; }
   /* Verkoopwaarde: wat de voorraad opbrengt als alles voor de vraagprijs weggaat. Een
      toestel zonder vraagprijs telt niet mee. We zeggen erbij hoeveel dat er zijn, anders
      lijkt het getal kleiner dan het is. Staat ook in Simpel: vraagprijzen zijn niet geheim,
@@ -15669,6 +15697,7 @@ function renderHardware(){
       (zonderPrijs?`<div class="kpimeta"><span class="muted klein">${zonderPrijs} nog zonder prijs</span></div>`:'')+`</div>`+
     `<div class="kpi"><div class="l">Staat online</div><div class="v">${online}</div></div>`+
     `<div class="kpi${oud?' hwattentie':''}"><div class="l">Langer dan 30 dagen</div><div class="v">${oud}</div></div>`+
+    (inRep.length?`<div class="kpi"><div class="l">In reparatie</div><div class="v">${inRep.length}</div></div>`:'')+
     (onderweg.length?`<div class="kpi hwattentie"><div class="l">Nog inscannen</div><div class="v">${onderweg.length}</div></div>`:'');
 
   const basis=hwData.filter(hwZichtbaar);
@@ -15683,6 +15712,8 @@ function renderHardware(){
   if(!basis.length){
     vak.innerHTML=`<p class="muted">${hwFilterNu==='verkocht'
       ? 'Nog niets verkocht.'
+      : hwFilterNu==='reparatie'
+      ? 'Er staat niets in reparatie.'
       : 'Niets in deze lijst. Voeg een toestel toe, of laat de refurbish-app ze hierheen sturen zodra ze goedgekeurd zijn.'}</p>`;
     return;
   }
@@ -15793,7 +15824,7 @@ async function hwBulkVerwijder(){
 function hwLocFilters(){
   const vak=document.getElementById('hwLocFilters'); if(!vak) return;
   vak.innerHTML=hwLocaties.map(l=>{
-    const n=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg'
+    const n=hwData.filter(h=>h.status!=='verkocht' && h.status!=='onderweg' && !hwInRep(h)
                           && h.locatie_id===l.id).length;
     return `<button data-f="loc:${l.id}" class="${hwFilterNu==='loc:'+l.id?'active':''}"
       onclick="hwKiesFilter('loc:${l.id}')">${esc(l.naam)}${n?` <span class="filtertel">${n}</span>`:''}</button>`;
