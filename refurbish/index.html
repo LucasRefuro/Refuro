@@ -2667,6 +2667,10 @@ function labelRegels(a, info){
   // zodat het label goed gevuld is maar niet overvol.
   const specRegels=(p.specVelden||[]).filter(v=>specs[v.sleutel] && !/kleur|imei|serien|windows/i.test(v.sleutel))
     .map(v=>v.sleutel+': '+specs[v.sleutel]);
+  /* Touch en de indeling van het toetsenbord ook erop (wens eigenaar, november 2026): een
+     touch-laptop staat op een eigen advertentie, en zo zie je aan de sticker welke het is. */
+  if(/^(ja|1|true|waar)$/i.test(String(specs.Touchscreen||'').trim())) specRegels.push('Touchscreen: ja');
+  if(specs.Toetsenbord) specRegels.push('Toetsenbord: '+specs.Toetsenbord);
   /* Accu, besturingssysteem en een eventuele notitie horen er altijd op; die zetten
      we apart en garanderen we, de specs vullen de rest van het label op. */
   const vast=[];
@@ -2677,7 +2681,7 @@ function labelRegels(a, info){
   if(os) vast.push(String(os));
   if(a.doos) vast.push('Met doos');
   if(a.notitie) vast.push(a.notitie);
-  return specRegels.slice(0, Math.max(3, 8-vast.length)).concat(vast);
+  return specRegels.slice(0, Math.max(3, 11-vast.length)).concat(vast);
 }
 async function deviceLabelPng(a){
   await laadScript('/app/qrcode.min.js');
@@ -4226,6 +4230,8 @@ function ctrVeldBewaar(){
   ctr.specs=ctr.specs||{};
   prof().specExtra.forEach(v=>{
     if(v.type==='ja'){ const e=document.getElementById(v.id); if(e) ctr.specs[v.s]=e.checked?'ja':''; }
+    /* Alleen als hij nog nooit gezet is: wie hem bewust uittikt (leeg) krijgt hem niet terug. */
+    if(v.standaard && ctr.specs[v.s]===undefined) ctr.specs[v.s]=v.standaard;
   });
   const not=document.getElementById('c_notitie');
   if(not) ctr.notitie=not.value;
@@ -4616,7 +4622,11 @@ const SPEC_EXTRA=[
   {s:'SureView',               id:'ce_sure',   type:'ja'},
   {s:'Touchscreen',            id:'ce_touch',  type:'ja'},
   {s:'Toetsenbordverlichting', id:'ce_kbd',    type:'ja'},
-  {s:'Schermtype',             id:'ce_scht',   type:'keuze', opties:['Mat','Glans']}
+  {s:'Schermtype',             id:'ce_scht',   type:'keuze', opties:['Mat','Glans']},
+  /* De indeling van het toetsenbord (november 2026, wens eigenaar). Staat standaard op QWERTY
+     (ctrVeldBewaar), want bijna alles is dat; je tikt alleen iets anders aan als het anders is.
+     Dezelfde sleutel als het vak Toetsenbord in de winkelapp; de webshop toont hem als rij. */
+  {s:'Toetsenbord',            id:'ce_layout', type:'keuze', opties:['QWERTY','AZERTY','QWERTZ'], standaard:'QWERTY'}
 ];
 
 /* Het profiel-register. Laptop wijst naar de bestaande arrays hierboven, zodat de

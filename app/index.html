@@ -16420,6 +16420,12 @@ const HW_LAP_VELDEN=[
      één kende. Een losse kaart staat op het prijskaartje en maakt een eigen advertentie. */
   {sleutel:'Videokaart',id:'hw_sp_gpu',    hint:'Alleen een losse, bijvoorbeeld NVIDIA Quadro T1000'},
   {sleutel:'Scherm',    id:'hw_sp_scherm', hint:'Bijvoorbeeld 14 inch Full HD', alleenLaptop:true},
+  /* De indeling van het toetsenbord (november 2026, wens eigenaar). Een klant die een AZERTY
+     krijgt terwijl hij QWERTY verwacht, stuurt hem terug. Bijna alles wat hier binnenkomt is
+     QWERTY, dus dat staat bij een nieuwe laptop al ingevuld; de laptops van daarvoor zijn in de
+     database op QWERTY gezet. Dezelfde sleutel als aan de werkbank (SPEC_EXTRA); de webshop
+     toont hem als rij Toetsenbord. Alleen bij een laptop: een desktop heeft een los toetsenbord. */
+  {sleutel:'Toetsenbord',id:'hw_sp_kbd',   hint:'Bijvoorbeeld QWERTY', alleenLaptop:true, vast:['QWERTY','AZERTY','QWERTZ'], standaard:'QWERTY'},
   {sleutel:'Windows',   id:'hw_sp_win',    hint:'Bijvoorbeeld Windows 11 Pro', vast:['Windows 11 Pro','Windows 11 Home','Windows 10 Pro']}
 ];
 const HW_FEITEN_LAPTOP=['Bouwjaar','Gewicht','Materiaal','Poorten'];
@@ -16442,7 +16448,7 @@ function hwLapVeldenHtml(h){
     HW_LAP_VELDEN.map(v=>`<div class="lapspec"${hwLapVeldAan(v, cat)?'':' hidden'}>
       <label for="${v.id}">${v.sleutel}</label>
       <div class="optieknoppen" id="${v.id}_opties" hidden></div>
-      <input id="${v.id}" value="${esc(sp[v.sleutel]||'')}" placeholder="${esc(v.hint)}" autocomplete="off" oninput="hwLapTeken()" onchange="hwNieuwprijsVul(); hwVraagprijsVul()">
+      <input id="${v.id}" value="${esc(sp[v.sleutel]||(!(h&&h.id)&&v.standaard)||'')}" placeholder="${esc(v.hint)}" autocomplete="off" oninput="hwLapTeken()" onchange="hwNieuwprijsVul(); hwVraagprijsVul()">
     </div>`).join('')+
     /* Touch apart aan te zetten (wens eigenaar, november 2026): een touch-laptop is een eigen
        uitvoering met een eigen prijs en een eigen advertentie (touch zit in de webshopsleutel).
@@ -17393,14 +17399,20 @@ function hwLabelRegels(h){
     zet('Kleur', sp.Kleur); zet('Opslag', t.opslag||sp.Opslag);
     zet('Scherm', [t.inch, t.type].filter(Boolean).join(' ')); zet('Netwerk', t.net);
   }
-  else { zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Videokaart', losseVideokaart(sp.Videokaart)); zet('Scherm', sp.Scherm); }
+  else {
+    zet('Processor', sp.Processor||sp.Chip); zet('Geheugen', sp.Geheugen||sp.Werkgeheugen); zet('Opslag', sp.Opslag); zet('Videokaart', losseVideokaart(sp.Videokaart)); zet('Scherm', sp.Scherm);
+    /* Touch en de indeling van het toetsenbord (wens eigenaar, november 2026). Een touch-laptop
+       staat op een eigen advertentie; zonder deze regel zag je aan de sticker niet welke het is. */
+    if(hwTouchVan(sp)) zet('Touchscreen', 'ja');
+    zet('Toetsenbord', sp.Toetsenbord);
+  }
   if(h.staat) zet('Staat', h.staat==='N' ? 'Nieuw' : h.staat+(HW_STAAT_KLANT[h.staat]?' · '+HW_STAAT_KLANT[h.staat]:''));
   const accuNaam=tel?'Batterij':'Accu';    // "Batterijconditie" op het kaartje
   if(h.nieuwe_accu) zet(accuNaam, 'nieuw (100%)'); else if(h.accu) zet(accuNaam, h.accu+'%');
   if(!tel) zet('Windows', sp.Windows||sp.Besturingssysteem);
   if(h.doos) zet('Doos', 'ja');
   if(Number(h.garantie)>0) zet('Garantie', h.garantie+' maanden');
-  return regels.slice(0, 10);   // 10: een laptop met een losse videokaart heeft er een regel meer
+  return regels.slice(0, 12);   // 12: een laptop met videokaart, touch en toetsenbord heeft er zoveel
 }
 async function hwLabelPng(h, apparaatId){
   await laadScript('/app/qrcode.min.js');
