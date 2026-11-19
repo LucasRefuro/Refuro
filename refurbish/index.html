@@ -1941,10 +1941,8 @@ function tekenSoorten(){
     <button type="button" class="soortknop${s.n===soortNu?' aan':''}" onclick="soortKies('${s.n}')">
       <svg class="i"><use href="#${s.i}"/></svg><span>${s.n}</span>
     </button>`).join('');
-  // Kleurveld alleen bij telefoons; bij een ander soort verbergen we het én wissen we
-  // de waarde, zodat er geen kleur van een vorige telefoon blijft plakken.
-  const kw=document.getElementById('t_kleur_wrap');
-  if(kw){ const aan=(soortNu==='Telefoon'); kw.hidden=!aan; if(!aan){ const ki=document.getElementById('t_kleur'); if(ki) ki.value=''; } else kleurToevoegen(); }
+  // Kleurveld bij een telefoon of MacBook (kleurTelt); kleurToevoegen zet het vak.
+  kleurToevoegen();
   // Doos-vraag bij de categorieën die een doos hebben (telefoon/tablet/watch=Overig).
   const dw=document.getElementById('t_doos_wrap');
   if(dw){ const aan=!!((CATEGORIE_PROFIEL[soortNu]||{}).vraagDoos); dw.hidden=!aan; if(!aan){ const di=document.getElementById('t_doos'); if(di) di.checked=false; } }
@@ -2032,7 +2030,7 @@ function modelTyp(){
 function modelPak(i){
   const m=modelTreffers[i]; if(!m) return;
   document.getElementById('t_model').value=m.merk+' '+m.model;
-  if(m.categorie){ soortNu=m.categorie; tekenSoorten(); }
+  if(m.categorie){ soortNu=m.categorie; tekenSoorten(); } else kleurToevoegen();
   document.getElementById('modelLijstje').hidden=true;
   modelHint();
   iprHulpTeken();
@@ -2079,7 +2077,7 @@ function bewijsVerklaringOpen(){
   const aantal=Math.max(1, Math.min(50, Number(v('t_aantal'))||1));
   const bedrag=Math.round((Number(v('t_inkoop'))||0)*aantal*100)/100;
   const {merk, model}=splitsModel(v('t_model'));
-  const kleur=(soortNu==='Telefoon' && v('t_kleur'))?' '+v('t_kleur'):'';
+  const kleur=(kleurTelt(soortNu, v('t_model')) && v('t_kleur'))?' '+v('t_kleur'):'';
   const label=([merk,model].filter(Boolean).join(' ')||'Toestel')+kleur;
   // Dezelfde nummers die toevoegen() straks uitdeelt, zodat het IMEI bij het juiste label hoort.
   const toestellen=Array.from({length:aantal}, (_x,i)=>({label, soort:soortNu, code:volgendeCode(i)}));
@@ -2360,7 +2358,7 @@ async function toevoegen(knop){
       rijen.push({
         team_id:account.team_id,
         merk:merk||null, model, categorie:cat,
-        kleur:(cat==='Telefoon' && v('t_kleur'))?v('t_kleur'):null,
+        kleur:(kleurTelt(cat, v('t_model')) && v('t_kleur'))?v('t_kleur'):null,
         inkoop:Number(v('t_inkoop'))||0,
         leverancier:v('t_lev')||null,
         batch_id:batKeuze,
@@ -7171,10 +7169,25 @@ function kleurKies(vakId, invoerId, knop){
   const i=document.getElementById(invoerId); if(i) i.value=knop.textContent;
   document.querySelectorAll('#'+vakId+' .optieknop').forEach(b=>b.classList.toggle('aan', b===knop));
 }
+/* Een kleur bij een telefoon, en sinds november 2026 ook bij een MacBook (wens eigenaar): die
+   koop je net zo goed in een kleur, en een zilveren staat op een andere advertentie dan een
+   spacegrijze (de kleur zit in de webshopsleutel). Bij een andere laptop vraagt niemand naar de
+   kleur, dus daar blijft het vak weg. Gaat het vak dicht, dan wissen we de waarde, zodat er geen
+   kleur van het vorige toestel blijft plakken. */
+function kleurTelt(soort, tekst){
+  return soort==='Telefoon' || (soort==='Laptop' && /\bmacbook\b|^\s*apple\b/i.test(String(tekst||'')));
+}
 function kleurToevoegen(){
-  if(soortNu!=='Telefoon') return;
+  const aan=kleurTelt(soortNu, v('t_model'));
+  const kw=document.getElementById('t_kleur_wrap');
+  if(kw) kw.hidden=!aan;
+  if(!aan){
+    const ki=document.getElementById('t_kleur'); if(ki) ki.value='';
+    const kk=document.getElementById('t_kleur_keus'); if(kk) kk.innerHTML='';
+    return;
+  }
   const {merk, model}=splitsModel(v('t_model'));
-  kleurKnoppen('t_kleur_keus', 't_kleur', merk, model, 'Telefoon');
+  kleurKnoppen('t_kleur_keus', 't_kleur', merk, model, soortNu);
 }
 
 /* De kleur hier invullen als hij nog ontbreekt. Eerst zei de pagina "vul eerst de kleur

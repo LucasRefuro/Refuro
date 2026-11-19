@@ -15923,7 +15923,7 @@ function hwVenster(h){
         <div><label>Merk</label>${hwMerkKiezer((h&&h.merk)||'')}</div>
         <div class="zoekveld"><label>Model *</label><input id="hw_model" autocomplete="off" value="${esc((h&&h.model)||'')}" placeholder="${esc(hwModelVoorbeeld((h&&h.categorie)||'Laptop'))}"
           oninput="hwModelTyp()" onfocus="hwModelTyp()" onblur="setTimeout(hwModelSluit,180)" onkeydown="hwModelToets(event)" onchange="hwModelGekozen()"><div class="zoeklijst" id="hwModelLijst" hidden></div></div>
-        <div id="hw_kleur_vak"${hwKleurTelt((h&&h.categorie)||'Laptop')?'':' hidden'}><label>Kleur</label>
+        <div id="hw_kleur_vak"${hwKleurBij((h&&h.categorie)||'Laptop', h&&h.merk, h&&h.model)?'':' hidden'}><label>Kleur</label>
           <select id="hw_kleur_kies" onchange="hwKleurKies()" hidden></select>
           <input id="hw_kleur" value="${esc((h&&h.specs&&h.specs.Kleur)||'')}" placeholder="Bijvoorbeeld Zwart">
           <span class="muted klein" id="hw_kleur_bezig"></span></div>
@@ -16361,6 +16361,14 @@ function hwAccuVelden(){
    sleutel van de advertentie, en de fabrieksfoto's van een telefoon zoek je per kleur.
    Alleen bij telefoon en tablet; bij een laptop zou een kleur de advertenties opsplitsen. */
 function hwKleurTelt(cat){ return /telefoon|tablet/i.test(String(cat||'')); }
+/* Het vak Kleur: bij een telefoon of tablet, en sinds november 2026 ook bij een MacBook (wens
+   eigenaar). Die koop je net zo goed in een kleur, en een zilveren staat op een andere advertentie
+   dan een spacegrijze: de kleur zit in de webshopsleutel. Een andere laptop is zwart of grijs en
+   daar vraagt niemand naar, dus daar blijft het vak weg. hwKleurTelt blijft alleen telefoon en
+   tablet: die beslist ook over opslag, chip en het telefoonkaartje. */
+function hwKleurBij(cat, merk, model){
+  return hwKleurTelt(cat) || (/laptop/i.test(String(cat||'')) && /\bmacbook\b|^\s*apple\b/i.test(String(merk||'')+' '+String(model||'')));
+}
 /* Bij een nieuw toestel raden we de soort uit het model, zolang je die niet zelf koos:
    een iPhone of Galaxy is een telefoon, dan staat het kleurveld er meteen. Eerst stond de
    soort op Laptop en verstopt onder Meer gegevens, dus bij aanmaken was er geen kleurveld. */
@@ -16375,7 +16383,7 @@ function hwSoortRaden(){
 }
 function hwKleurToon(){
   const cat=hwVeld('hw_cat'), telt=hwKleurTelt(cat);
-  ['hw_kleur_vak','hw_opslag_vak'].forEach(id=>{ const vak=document.getElementById(id); if(vak) vak.hidden=!telt; });
+  const ov=document.getElementById('hw_opslag_vak'); if(ov) ov.hidden=!telt;   // het kleurvak zet hwKleurenLaden
   const lap=document.getElementById('hw_lapspecs');
   if(lap){
     lap.hidden=!hwSpecSoort(cat);
@@ -17099,6 +17107,9 @@ async function hwModelOnthoud(merk, model, cat){
   }
   return true;
 }
+/* Zoek je de kleuren van een MacBook op, dan komt hij in de modellenlijst (model_kleuren). Die
+   lijst is ook de keuzelijst van telefoons en tablets, en daar hoort een MacBook niet tussen. */
+const HW_MAC_MODEL=/\b(macbook|imac|mac\s?mini|mac\s?studio|mac\s?pro)\b/i;
 function hwModelTyp(){
   const veld=document.getElementById('hw_model'), lijst=document.getElementById('hwModelLijst');
   if(!veld || !lijst) return;
@@ -17114,7 +17125,7 @@ function hwModelTyp(){
      twaalf, en dan hield Apple op bij de iPhone 16 Plus: oudere iPhones kon je niet kiezen.
      Bij een laptop of desktop de laptoplijst, meest gebruikt bovenaan. */
   const namen=lap ? hwLapModelLijst(merk, cat).map(r=>r.model)
-    : hwModellen.filter(r=>r.toon!==false && String(r.merk||'').toLowerCase()===merk)
+    : hwModellen.filter(r=>r.toon!==false && String(r.merk||'').toLowerCase()===merk && !HW_MAC_MODEL.test(String(r.model||'')))
         .sort((a,b)=>(Number(b.volgorde)||0)-(Number(a.volgorde)||0) || String(a.model).localeCompare(String(b.model)))
         .map(r=>r.model);
   const treffers=q ? namen.filter(n=>tstNorm(n).includes(q)) : namen;
@@ -17141,8 +17152,13 @@ let hwKleurVraag=0;
 async function hwKleurenLaden(){
   const vak=document.getElementById('hw_kleur_vak'), sel=document.getElementById('hw_kleur_kies'),
         veld=document.getElementById('hw_kleur'), bezig=document.getElementById('hw_kleur_bezig');
-  if(!vak || !sel || !veld || vak.hidden) return;
+  if(!vak || !sel || !veld) return;
   const merk=hwVeld('hw_merk'), model=hwVeld('hw_model');
+  /* Hier en niet alleen in hwKleurToon: bij een laptop hangt het vak van merk en model af
+     (een MacBook), en die veranderen zonder dat de soort verandert. */
+  vak.hidden=!hwKleurBij(hwVeld('hw_cat'), merk, model);
+  if(vak.hidden) return;
+  veld.placeholder=hwKleurTelt(hwVeld('hw_cat')) ? 'Bijvoorbeeld Zwart' : 'Bijvoorbeeld Spacegrijs';
   const mijn=++hwKleurVraag;
   const toon=(lijst)=>{
     if(mijn!==hwKleurVraag) return;                       // intussen een ander model gekozen
@@ -17201,6 +17217,10 @@ function hwKleurVeld(){
     const tv=document.getElementById('hw_sp_touch');
     if(tv){ if(tv.checked) specs.Touchscreen='ja'; else delete specs.Touchscreen; }
     else if(/touch/i.test(specs.Scherm||'')) specs.Touchscreen='ja';
+    /* De kleur van een MacBook. Alleen als het vak er staat: bij een andere laptop laten we een
+       kleur van de werkbank met rust. */
+    const kv=document.getElementById('hw_kleur_vak');
+    if(kv && !kv.hidden){ const k=hwVeld('hw_kleur'); if(k) specs.Kleur=k; else delete specs.Kleur; }
     /* De artikelcode van de sticker: daarmee vindt productfotos de fabrieksfoto's precies. */
     if(document.getElementById('hw_sp_artikel')){
       const ac=hwArtikelcode();
@@ -17405,6 +17425,7 @@ function hwLabelRegels(h){
        staat op een eigen advertentie; zonder deze regel zag je aan de sticker niet welke het is. */
     if(hwTouchVan(sp)) zet('Touchscreen', 'ja');
     zet('Toetsenbord', sp.Toetsenbord);
+    zet('Kleur', sp.Kleur);   // een MacBook: een zilveren en een spacegrijze liggen op andere advertenties
   }
   if(h.staat) zet('Staat', h.staat==='N' ? 'Nieuw' : h.staat+(HW_STAAT_KLANT[h.staat]?' · '+HW_STAAT_KLANT[h.staat]:''));
   const accuNaam=tel?'Batterij':'Accu';    // "Batterijconditie" op het kaartje
@@ -17412,7 +17433,7 @@ function hwLabelRegels(h){
   if(!tel) zet('Windows', sp.Windows||sp.Besturingssysteem);
   if(h.doos) zet('Doos', 'ja');
   if(Number(h.garantie)>0) zet('Garantie', h.garantie+' maanden');
-  return regels.slice(0, 12);   // 12: een laptop met videokaart, touch en toetsenbord heeft er zoveel
+  return regels.slice(0, 13);   // 13: een laptop met videokaart, touch, toetsenbord en kleur heeft er zoveel
 }
 async function hwLabelPng(h, apparaatId){
   await laadScript('/app/qrcode.min.js');
