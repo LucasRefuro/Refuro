@@ -15771,7 +15771,8 @@ function renderHardware(){
         <td class="uitgebreid">${hwKanalen(h)}</td>
         <td class="uitgebreid" title="Toegevoegd ${esc(hwWanneer(h))}${hwWie(h)?' door '+esc(hwWie(h)):''}">${h.status==='verkocht'?'<span class="muted">verkocht</span>'
               :`<span class="${d>=30?'hwoud':''}">${d}</span>`}</td>
-        <td class="num hwact">${h.status==='verkocht'?''
+        <td class="num hwact">${h.status==='verkocht'
+          ? `<div class="hwacties"><button class="btn ghost small" onclick="event.stopPropagation(); hwRetour('${h.id}')"><svg class="i s"><use href="#i-undo"/></svg>Retour</button></div>`
           : `<div class="hwacties">${h.partner_id
             ? `<span class="partnerpil">Bij ${esc((hwPartners.find(p=>p.id===h.partner_id)||{}).naam||'partner')}</span><button class="btn ghost small" onclick="event.stopPropagation(); hwTerughalen('${h.id}')">Terughalen</button>`
             : `${h.status!=='onderweg' ? hwOnlineKnop(h) : ''}${h.status!=='onderweg'
@@ -15924,7 +15925,8 @@ function hwVenster(h){
          dat je verlaat; alleen een nieuw toestel heeft een opslaan-knop nodig. -->
     <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center; margin:4px 0 18px">
       ${h&&h.status!=='verkocht'
-        ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`:''}
+        ? `<button class="btn actie" onclick="hwVerkoop('${h.id}')"><svg class="i s"><use href="#i-cash"/></svg>Verkopen aan de balie</button>`
+        : (h ? `<button class="btn actie" onclick="hwRetour('${h.id}')"><svg class="i s"><use href="#i-undo"/></svg>Retour</button>` : '')}
       ${h&&h.status!=='verkocht'&&hwOnlinePaginaMag()
         ? `<button class="btn" onclick="hwOnlinePagina('${h.id}')"><svg class="i s"><use href="#i-globe"/></svg>Online zetten</button>`:''}
       ${h?'':`<button class="btn actie" onclick="hwOpslaan(this)"><svg class="i s"><use href="#i-save"/></svg>Toestel opslaan</button>`}
@@ -17958,6 +17960,106 @@ async function hwBoek(id, bet){
   toast('Verkocht ('+betaalNaam(bet)+'): '+naam+', '+euro(h.verkoop), true);
   if(hwOnline(h)) hwShopify(id,'offline');
   await hwLaad(true); herteken();
+}
+
+/* ═══ Retour: een verkocht toestel terugnemen ═══
+   Een klant brengt een verkocht toestel terug. Eerst kon dat alleen door de verkoop terug te
+   draaien op de verkooppagina, en een kapot toestel kon je daarna nergens heen sturen (wens
+   eigenaar, november 2026). Nu zit het op het toestel zelf, met één vraag: werkt hij nog goed?
+   Goed: terug op voorraad. Kapot: terug, en aan de werkbank op Te repareren, met wat er kapot is.
+   Daar komt hij in Hardware onder Reparaties.
+   Het geld: de verkoop gaat uit de omzet, net als Terugdraaien op de verkooppagina, en bij
+   contant met bon ook uit de kassa. Geef je het geld niet terug (een ruil, of de klant wil hem
+   gemaakt terug), dan vink je dat uit. Een verkoop via de webshop staat niet in de omzet van
+   Storvo; dat geld betaal je terug in Shopify.
+   Het toestel komt niet vanzelf weer online: dat beslis je zelf met Online zetten. */
+function hwRetourVerkoop(id){ return (state.verkopen||[]).find(v=>v && v.hardware===id) || null; }
+function hwRetour(id){
+  const h=hwData.find(x=>x.id===id) || (hwOpen&&hwOpen.id===id?hwOpen:null);
+  if(!h || h.status!=='verkocht') return;
+  hwSluit();
+  const v=hwRetourVerkoop(id);
+  const naam=[h.merk,h.model].filter(Boolean).join(' ')+(h.code?' ('+h.code+')':'');
+  const wanneer=h.verkocht_op ? new Date(h.verkocht_op).toLocaleDateString('nl-NL',{day:'numeric', month:'long'}) : '';
+  const geld = v
+    ? `<label class="btwoptie" style="margin-bottom:16px"><input type="checkbox" id="hw_retour_geld" checked>Klant krijgt ${euro(v.verkoop)} terug${v.betaal==='cash'?' uit de kassa':''}</label>`
+    : (h.verkocht_via==='webshop' ? `<p class="muted klein" style="margin:0 0 16px">Verkocht via de webshop. Het geld betaal je terug in Shopify.</p>` : '');
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='hwOverlay';
+  ov.onclick=e=>{ if(e.target===ov) hwSluit(); };
+  ov.innerHTML=`<div class="popup">
+    <h3>Retour: ${esc(naam)}</h3>
+    <div class="pv">${wanneer?'Verkocht op '+esc(wanneer):'Verkocht'}${h.verkocht_via==='webshop'?' via de webshop':''}.</div>
+    ${geld}
+    <div id="hw_retour_vraag">
+      <label>Werkt hij nog goed?</label>
+      <div class="acts">
+        <button class="btn actie" onclick="hwRetourDoe('${h.id}', false, this)"><svg class="i s"><use href="#i-check"/></svg>Ja, terug op voorraad</button>
+        <button class="btn" onclick="hwRetourKapot()"><svg class="i s"><use href="#i-wrench"/></svg>Nee, hij is kapot</button>
+        <button class="btn ghost" onclick="hwSluit()">Annuleren</button>
+      </div>
+    </div>
+    <div id="hw_retour_kapot" hidden>
+      <label for="hw_retour_defect">Wat is er kapot?</label>
+      <input id="hw_retour_defect" placeholder="Bijvoorbeeld: scherm flikkert" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); hwRetourDoe('${h.id}', true, document.getElementById('hw_retour_kapotknop'));}">
+      <div class="acts" style="margin-top:14px">
+        <button class="btn actie" id="hw_retour_kapotknop" onclick="hwRetourDoe('${h.id}', true, this)"><svg class="i s"><use href="#i-wrench"/></svg>Naar reparatie</button>
+        <button class="btn ghost" onclick="hwSluit()">Annuleren</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function hwRetourKapot(){
+  const vr=document.getElementById('hw_retour_vraag'), kp=document.getElementById('hw_retour_kapot');
+  if(vr) vr.hidden=true;
+  if(kp){ kp.hidden=false; const i=document.getElementById('hw_retour_defect'); if(i) i.focus(); }
+}
+async function hwRetourDoe(id, kapot, knop){
+  const h=hwData.find(x=>x.id===id) || (hwOpen&&hwOpen.id===id?hwOpen:null);
+  if(!h || h.status!=='verkocht') return;
+  const defect=kapot ? hwVeld('hw_retour_defect') : '';
+  if(kapot && !defect){ toast('Schrijf kort op wat er kapot is','let-op'); const i=document.getElementById('hw_retour_defect'); if(i) i.focus(); return; }
+  const gv=document.getElementById('hw_retour_geld');
+  const geldTerug=!!(gv && gv.checked);
+  const naam=[h.merk,h.model].filter(Boolean).join(' ')+(h.code?' ('+h.code+')':'');
+  if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  const nu=new Date().toISOString();
+  /* Alleen als hij nog op verkocht staat: twee keer tikken, of een tweede scherm dat hem al
+     terugnam, boekt het geld dan niet twee keer terug. */
+  const {data:terug, error}=await sb.from('hardware')
+    .update({status:'voorraad', verkocht_op:null, verkocht_via:null, verkocht_betaal:null, bijgewerkt_op:nu})
+    .eq('id', id).eq('status', 'verkocht').select('id');
+  if(error){ console.error('retour:', error); hwSluit(); toast('Terugnemen lukte niet. Probeer het nog eens.','fout'); return; }
+  if(!terug || !terug.length){ hwSluit(); await hwLaad(true); toast('Dit toestel stond al niet meer op verkocht','let-op'); return; }
+  if(geldTerug){
+    const v=hwRetourVerkoop(id);
+    if(v){
+      if(v.betaal==='cash') kasVerkoop(-(Number(v.verkoop)||0), 'cash', 'Retour: '+v.naam);
+      state.verkopen=(state.verkopen||[]).filter(x=>x!==v);
+      save(); if(typeof renderVerkoop==='function') renderVerkoop(); if(typeof updateBadge==='function') updateBadge();
+    }
+  }
+  /* De werkbankrij. Een heel oud verkocht toestel heeft er soms nog geen: koppel_losse_hardware
+     maakt hem nu hij weer op voorraad staat. Kapot: Te repareren, met de reden erbij. Goed: klaar,
+     ook als er nog een klus op stond (de accu voor een webshopbestelling): jij zegt dat hij werkt. */
+  try{
+    await sb.rpc('koppel_losse_hardware');
+    const {data:ap}=await sb.from('refurbish_apparaten').select('id,status,defecten').eq('hardware_id', id).maybeSingle();
+    if(ap && kapot){
+      const def=Array.isArray(ap.defecten)?ap.defecten.slice():[];
+      const t='Retour: '+defect;
+      if(!def.includes(t)) def.push(t);
+      await sb.from('refurbish_apparaten').update({status:'te_repareren', defecten:def, bijgewerkt_op:nu}).eq('id', ap.id);
+    } else if(ap && ap.status==='te_repareren'){
+      await sb.from('refurbish_apparaten').update({status:'klaar', bijgewerkt_op:nu}).eq('id', ap.id);
+    } else if(!ap && kapot){
+      toast('Terug op voorraad, maar naar reparatie lukte niet. Zet hem zelf naar reparatie.','let-op');
+    }
+  }catch(e){ console.error('retour werkbank:', e); }
+  hwSluit();
+  await hwLaad(true);
+  toast(kapot ? 'Terug en naar reparatie: '+naam : 'Terug op voorraad: '+naam, true);
 }
 
 /* ---------- Shopify ---------- */
