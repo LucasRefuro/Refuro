@@ -131,7 +131,7 @@ export function voorstelMail(o: VoorstelInvoer) {
   <tr><td align="center" style="padding:24px 12px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:20px;font-family:Arial,Helvetica,sans-serif">
       <tr><td style="padding:28px 28px 8px">
-        <img src="${veilig(webadres(o.logo))}" width="150" alt="Refuro" style="display:block;width:150px;height:auto">
+        <img src="${veilig(webadres(o.logo))}" width="150" height="28" alt="Refuro" style="display:block;width:150px;height:28px;border:0">
       </td></tr>
       <tr><td style="padding:16px 28px 4px">
         <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:${NAVY}">Over je bestelling ${veilig(nummer)}</h1>
