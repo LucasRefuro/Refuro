@@ -12446,9 +12446,10 @@ async function bstWegZet(reden){
 }
 
 /* ── 2. iets anders voorstellen ── */
+/* De eigenaar wil dat de klant leest dat het echt onze fout was, zonder smoesjes. */
 function bstVsStandaard(besteld){
-  return `Je bestelde bij ons een ${besteld}. Die is helaas net verkocht, voordat we hem konden inpakken. Sorry daarvoor.\n\n`+
-    `Hieronder staan toestellen die erop lijken. Wil je er een? Antwoord dan op deze mail, dan ruilen we hem om en sturen we hem op. Je hoeft niet opnieuw te bestellen. Een prijsverschil regelen we met je.`;
+  return `Het spijt ons echt. Je bestelde bij ons een ${besteld}, maar die was al verkocht. Hij stond nog op onze webshop, terwijl hij daar al af had moeten zijn. Dat is onze fout, en niet die van jou.\n\n`+
+    `We willen het graag goedmaken. Hieronder staan toestellen die er het meest op lijken. Wil je er een? Antwoord dan op deze mail, dan sturen we hem zo snel mogelijk op. Je hoeft niet opnieuw te bestellen. Een prijsverschil regelen we netjes met je.`;
 }
 async function bstOpVoorstel(){
   const st=bstOpNu; if(!st) return;

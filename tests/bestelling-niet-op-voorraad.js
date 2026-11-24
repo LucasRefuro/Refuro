@@ -186,7 +186,8 @@ window.supabase={createClient:()=>({
   /* A0161 staat sinds de ruil hierboven aan de werkbank voor de nieuwe accu: die telt niet mee. */
   ok('voorstel: eerst wat het meest lijkt (zelfde specs, A0162), alleen laptops, niets in reparatie',
     vs[0]==='A0162' && !vs.includes('A0400') && !vs.includes('A0170') && !vs.includes('A0161'));
-  ok('voorstel: de tekst staat klaar met wat de klant bestelde', /Je bestelde bij ons een HP EliteBook 840 G8/.test(d.getElementById('bst_vs_tekst').value));
+  ok('voorstel: de tekst staat klaar met wat de klant bestelde, en zegt dat het onze fout is',
+    /Je bestelde bij ons een HP EliteBook 840 G8/.test(d.getElementById('bst_vs_tekst').value) && /Dat is onze fout, en niet die van jou/.test(d.getElementById('bst_vs_tekst').value));
   ok('voorstel: de voornaam staat klaar', d.getElementById('bst_vs_naam').value==='Sanne');
   w.eval("bstVsKies('h162'); bstVsKies('h181')");
   ok('voorstel: gekozen toestellen staan bovenaan', d.querySelectorAll('#bst_vs_lijst .bstkand.gekozen').length===2);
@@ -232,7 +233,8 @@ window.supabase={createClient:()=>({
     toestellen:[
       {code:'A0161', merk:'HP', model:'EliteBook 840 G8', categorie:'Laptop', staat:'A', accu:88, prijs:399, specs:SP160, url:'https://refuro.nl/products/hp-840?variant=9', foto:'https://x.supabase.co/a.jpg'},
       {code:'A0400', merk:'Apple', model:'iPhone 13', categorie:'Telefoon', staat:'B', prijs:349.5, specs:{Opslag:'128 GB', Kleur:'Blauw'}, url:'javascript:alert(1)', foto:null}]});
-  ok('mail: onderwerp met het bestelnummer', mail.onderwerp==='Over je bestelling #1032 bij Refuro');
+  ok('mail: onderwerp zegt sorry, met het bestelnummer', mail.onderwerp==='Sorry, we hebben een fout gemaakt met je bestelling #1032');
+  ok('mail: de kop zegt dat het onze fout was', /Sorry, dit hebben we fout gedaan/.test(mail.html) && /Nogmaals sorry/.test(mail.html) && /hele bedrag terug/.test(mail.html));
   ok('mail: de kleuren en het logo van Refuro', /#1B2254/.test(mail.html) && /#E8421A/.test(mail.html) && /refuro-logo\.png/.test(mail.html));
   ok('mail: de tekst van de winkelier is ontsnapt', /Sorry &lt;b&gt;echt&lt;\/b&gt;\./.test(mail.html) && !/<b>echt<\/b>/.test(mail.html));
   ok('mail: voornaam, staat, specs, accu en prijs', /Hoi Sanne,/.test(mail.html) && /Uitstekend/.test(mail.html) && /Intel Core i5-1145G7 · 16 GB geheugen · 256 GB SSD/.test(mail.html)

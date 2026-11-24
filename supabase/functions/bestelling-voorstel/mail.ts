@@ -120,7 +120,7 @@ function kaart(t: VoorstelToestel) {
 export function voorstelMail(o: VoorstelInvoer) {
   const nummer = String(o.nummer || "").trim();
   const naam = String(o.naam || "").trim().split(/\s+/)[0] || "";
-  const onderwerp = `Over je bestelling ${nummer} bij Refuro`.replace(/\s+/g, " ").trim();
+  const onderwerp = `Sorry, we hebben een fout gemaakt met je bestelling ${nummer}`.replace(/\s+/g, " ").trim();
   const alineas = String(o.tekst || "").trim().split(/\n\s*\n/).map((a) => a.trim()).filter(Boolean)
     .map((a) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${NAVY}">${veilig(a).replace(/\n/g, "<br>")}</p>`).join("");
   const kaarten = (o.toestellen || []).map(kaart).join("");
@@ -134,7 +134,7 @@ export function voorstelMail(o: VoorstelInvoer) {
         <img src="${veilig(webadres(o.logo))}" width="150" height="28" alt="Refuro" style="display:block;width:150px;height:28px;border:0">
       </td></tr>
       <tr><td style="padding:16px 28px 4px">
-        <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:${NAVY}">Over je bestelling ${veilig(nummer)}</h1>
+        <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:${NAVY}">Sorry, dit hebben we fout gedaan</h1>
         <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${NAVY}">Hoi${naam ? " " + veilig(naam) : ""},</p>
         ${alineas}
       </td></tr>
@@ -142,8 +142,8 @@ export function voorstelMail(o: VoorstelInvoer) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${kaarten}</table>
       </td></tr>` : ""}
       <tr><td style="padding:8px 28px 28px">
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${NAVY}">Liever je geld terug? Antwoord op deze mail, dan regelen we het.</p>
-        <p style="margin:0;font-size:15px;line-height:1.6;color:${NAVY}">Groet,<br><b>Refuro</b></p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${NAVY}">Liever je geld terug? Antwoord op deze mail, dan storten we het hele bedrag terug.</p>
+        <p style="margin:0;font-size:15px;line-height:1.6;color:${NAVY}">Nogmaals sorry,<br><b>Refuro</b></p>
       </td></tr>
       <tr><td style="padding:16px 28px;background:${NAVY};border-radius:0 0 20px 20px;color:#ffffff;font-size:13px;line-height:1.5">
         Refurbished telefoons en laptops met garantie | <a href="https://refuro.nl" style="color:#ffffff">refuro.nl</a>
@@ -162,8 +162,8 @@ export function voorstelMail(o: VoorstelInvoer) {
       return [titel(t.merk, t.model) + (g ? " (" + g + ")" : ""), ...specRegels(t), euro(t.prijs), webadres(t.url)]
         .filter(Boolean).concat("");
     }),
-    "Liever je geld terug? Antwoord op deze mail, dan regelen we het.", "",
-    "Groet,", "Refuro", "https://refuro.nl",
+    "Liever je geld terug? Antwoord op deze mail, dan storten we het hele bedrag terug.", "",
+    "Nogmaals sorry,", "Refuro", "https://refuro.nl",
   ].join("\n");
   return { onderwerp, html, tekst };
 }
