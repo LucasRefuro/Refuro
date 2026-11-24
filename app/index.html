@@ -508,6 +508,22 @@
     padding:2px 10px; border-radius:var(--pil); background:var(--navy); color:#fff; white-space:nowrap;
     font-variant-numeric:tabular-nums;}
   .bstregels .r{align-items:center;}
+  .bstspec{font-size:12.5px; color:var(--muted); padding:0 0 4px;}
+  /* Een toestel dat er niet meer is: geel, want er moet nog iets gebeuren of er is iets gebeurd. */
+  .bstweg{margin-top:12px; padding:10px 14px; border-radius:12px; background:var(--amber-soft); color:var(--amber-tekst);
+    font-size:13.5px; line-height:1.45; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:space-between;}
+  .bstweg b{font-weight:800;}
+  /* Het venster Niet meer op voorraad: breder dan een gewone vraag, want er staan lijstjes in. */
+  .bstoppop{width:min(620px,94vw); max-height:calc(100dvh - 40px); overflow-y:auto;}
+  .bstklijst{display:flex; flex-direction:column; gap:6px; margin:8px 0 14px;}
+  .bstkand{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:10px 12px;
+    border:1.5px solid var(--border); border-radius:12px; background:var(--card); cursor:pointer; font:inherit; color:inherit;}
+  .bstkand:hover{border-color:var(--navy);}
+  .bstkand.gekozen{border-color:var(--navy); box-shadow:0 0 0 1px var(--navy); background:var(--lblauw);}
+  .bstknaam{flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; font-weight:600;}
+  .bstknaam .klein{font-weight:400;}
+  .bstkprijs{font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .bstvoorbeeld{width:100%; height:520px; border:1px solid var(--border); border-radius:12px; margin-top:12px; background:#fff;}
   .bstvoet{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;}
   .bststatus{font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
     padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
@@ -11848,6 +11864,8 @@ async function bstLaad(stil){
   bstData=data||[];
   renderBestellingen();
   bstBadge();
+  /* De specs bij de toestellen komen uit de hardware-tabel; eerst de lijst, dan aanvullen. */
+  if(await bstHwLaad(bstData)) renderBestellingen();
 }
 
 function bstBadge(){
@@ -11866,8 +11884,8 @@ function dashSimpelBijwerken(){
 
 function bstZichtbaar(x){
   if(bstFilterNu==='nieuw')       return !x.gezien && !x.geannuleerd;
-  if(bstFilterNu==='open')        return !x.verzonden && !x.geannuleerd;
-  if(bstFilterNu==='toestellen')  return (x.toestellen||[]).length>0;
+  if(bstFilterNu==='open')        return !x.verzonden && !x.geannuleerd && !bstGeldTerug(x);
+  if(bstFilterNu==='toestellen')  return (x.toestellen||[]).length>0 || (x.toestellen_weg||[]).length>0;
   return true;
 }
 
@@ -11877,8 +11895,8 @@ function renderBestellingen(){
   const kpi=document.getElementById('bstKpis');
   if(kpi){
     const nieuw=bstData.filter(x=>!x.gezien && !x.geannuleerd).length;
-    const open=bstData.filter(x=>!x.verzonden && !x.geannuleerd).length;
-    const maand=bstData.filter(x=>!x.geannuleerd &&
+    const open=bstData.filter(x=>!x.verzonden && !x.geannuleerd && !bstGeldTerug(x)).length;
+    const maand=bstData.filter(x=>!x.geannuleerd && !bstGeldTerug(x) &&
       new Date(x.geplaatst_op) > new Date(Date.now()-30*86400000));
     const omzet=maand.reduce((n,x)=>n+(Number(x.bedrag)||0),0);
     kpi.innerHTML=
@@ -11911,6 +11929,7 @@ function renderBestellingen(){
 
       ${x.nieuwe_accu && !x.geannuleerd ? bstAccuBlok(x) : ''}
       ${!x.geannuleerd ? bstKlaarBlok(x) : ''}
+      ${bstWegBlok(x)}
 
       <div class="bstregels">${bstRegelsHtml(x) || '<div class="r">Geen regels meegekomen</div>'}</div>
 
@@ -11919,13 +11938,14 @@ function renderBestellingen(){
         <span class="muted klein">uit je voorraad gehaald</span></div>`:''}
 
       <div class="bstvoet">
-        <span class="bststatus ${esc(x.status)}">${esc(bstStatusNaam(x))}</span>
+        <span class="bststatus ${esc(bstGeldTerug(x)?'geannuleerd':x.status)}">${esc(bstStatusNaam(x))}</span>
         <span class="muted klein">${x.geplaatst_op
           ? new Date(x.geplaatst_op).toLocaleString('nl-NL',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})
           : ''}</span>
         <span style="margin-left:auto"></span>
         ${!x.gezien?`<button class="btn ghost small" onclick="bstGezien('${x.id}')">Gezien</button>`:''}
-        ${(!x.verzonden && !x.geannuleerd && x.bestelling_id)?`<button class="btn small" onclick="bstVerzenden('${x.id}', this)"><svg class="i s"><use href="#i-check"/></svg>Markeer als verzonden</button>`:''}
+        ${(!x.verzonden && !x.geannuleerd && (x.toestellen||[]).length)?`<button class="btn ghost small" onclick="bstOp('${x.id}')">Niet meer op voorraad</button>`:''}
+        ${(!x.verzonden && !x.geannuleerd && x.bestelling_id && !bstGeldTerug(x))?`<button class="btn small" onclick="bstVerzenden('${x.id}', this)"><svg class="i s"><use href="#i-check"/></svg>Markeer als verzonden</button>`:''}
         ${x.beheer_url?`<a class="btn ghost small" href="${esc(x.beheer_url)}" target="_blank" rel="noopener">Openen in Shopify</a>`:''}
       </div>
     </div>`;
@@ -11958,7 +11978,11 @@ function bstRegelsHtml(x){
   const {per}=bstToestelPerRegel(x);
   return ((x && x.regels)||[]).map((r,i)=>`
         <div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span>
-          ${per[i].map(t=>t.code?`<span class="bstcode" title="Uit je voorraad gehaald">${esc(t.code)}</span>`:'').join('')}</div>`).join('');
+          ${per[i].map(t=>t.code?`<span class="bstcode" title="Uit je voorraad gehaald">${esc(t.code)}</span>`:'').join('')}</div>
+        ${per[i].map(t=>{
+          const sp=bstSpecTekst(bstHw[t.id]);
+          return (sp||t.vervangt) ? `<div class="bstspec">${t.code?esc(t.code)+': ':''}${esc(sp)}${t.vervangt?(sp?' · ':'')+'in plaats van '+esc(t.vervangt):''}</div>` : '';
+        }).join('')}`).join('');
 }
 
 /* Een bestelling met nieuwe accu (de klant koos hem op de productpagina, 45 euro bij een telefoon
@@ -12021,6 +12045,7 @@ async function bstPopupControle(){
   const x=(data||[]).find(b=>!al.includes(b.id));
   if(!x) return;
   bstPopOnthoud(x.id);
+  await bstHwLaad([x]);   // de specs bij het toestel
   bstPopup(x);
   // Ook de lijst en het bolletje bijwerken, zodat die meteen kloppen.
   try{ bstLaad(true); }catch(_e){}
@@ -12078,6 +12103,7 @@ async function bstVerzenden(id, knop){
 
 function bstStatusNaam(x){
   if(x.geannuleerd) return 'Geannuleerd';
+  if(bstGeldTerug(x)) return 'Geld terug';
   if(x.verzonden)   return 'Verzonden';
   if(x.betaald)     return 'Betaald';
   return 'Nog niet betaald';
@@ -12090,6 +12116,445 @@ async function bstGezien(id){
   if(error){ toast('Afvinken mislukt','fout'); return; }
   const x=bstData.find(b=>b.id===id); if(x) x.gezien=true;
   renderBestellingen(); bstBadge();
+}
+
+/* ═══ Bestelling: toestel niet meer op voorraad ═══
+   Aanleiding (24 november 2026): A0160 ging in de webshop weg terwijl er een half uur eerder in
+   de winkel een EliteBook 840 G8 was afgerekend. Vanuit de bestelling kies je dan: hetzelfde
+   toestel met een ander A-nummer, de klant iets vergelijkbaars voorstellen (een mail van Refuro,
+   gebouwd door de edge bestelling-voorstel), of het geld terug in Shopify.
+
+   Het toestel dat er niet meer is gaat van toestellen naar toestellen_weg. Dat moet: een
+   annulering in Shopify zet alles uit toestellen terug op voorraad, en een toestel dat weg is mag
+   daar nooit terugkomen. De melding van Shopify telt toestellen_weg wel mee als toegewezen, anders
+   pakt een volgende melding stilletjes een ander exemplaar. Het toestel zelf blijft op verkocht;
+   ligt hij toch nog ergens, dan zet Retour (Hardware) hem terug. */
+
+let bstHw={};        // hardware-rijen van de toestellen in de bestellingen, op id (voor de specs)
+let bstOpNu=null;    // het open venster: {best, oud, alWeg, kandidaten, gekozen, kies}
+const BST_GRADE={A:'Uitstekend', B:'Zeer goed', C:'Prima', N:'Nieuw'};   // de namen van de webshop
+
+async function bstHwLaad(lijst){
+  const ids=new Set();
+  (lijst||[]).forEach(x=>[...((x&&x.toestellen)||[]), ...((x&&x.toestellen_weg)||[])]
+    .forEach(t=>{ if(t && t.id && !bstHw[t.id]) ids.add(t.id); }));
+  if(!ids.size) return false;
+  try{
+    const {data, error}=await sb.from('hardware').select('id,code,merk,model,categorie,staat,accu,specs,serienummer,verkoop,status')
+      .in('id', [...ids]);
+    if(error) return false;
+    (data||[]).forEach(h=>{ bstHw[h.id]=h; });
+    return true;
+  }catch(_e){ return false; }
+}
+/* Wat je bij het inpakken wilt zien: de specs, de staat zoals de klant hem kocht en de accu. */
+function bstSpecTekst(h){
+  if(!h) return '';
+  const sp=(h.specs && typeof h.specs==='object') ? h.specs : {};
+  const w=k=>String(sp[k]??'').trim();
+  const delen=/telefoon|tablet/i.test(String(h.categorie||''))
+    ? [w('Opslag'), w('Kleur')]
+    : [w('Processor')||w('Chip'), w('Geheugen'), w('Opslag'), /^(ja|1|true|waar)$/i.test(w('Touchscreen'))?'touch':'', w('Kleur')];
+  const g=String(h.staat||'').toUpperCase();
+  if(BST_GRADE[g]) delen.push(BST_GRADE[g]);
+  if(g!=='N' && Number(h.accu)>0) delen.push('accu '+Math.round(Number(h.accu))+'%');
+  return delen.filter(Boolean).join(' · ');
+}
+/* Gelijk aan webshopSleutel aan de werkbank en in _gedeeld/shopify.ts: zelfde sleutel is zelfde
+   advertentie, dus dezelfde specs. tests/bestelling-niet-op-voorraad.js legt ze naast elkaar. */
+function webshopSleutel(a){
+  const sp=a.specs||{};
+  const kleur=a.kleur||sp.Kleur||'';
+  const cat=a.categorie||'Laptop';
+  const deel=[a.merk, a.model, kleur];
+  const touch=/^(ja|1|true|waar)$/i.test(String(sp.Touchscreen||'').trim());
+  if(cat==='Telefoon'||cat==='Tablet') deel.push(sp.Opslag);
+  else if(cat==='Laptop'||cat==='Desktop') deel.push(sp.Processor||sp.Chip, sp.Geheugen||sp.Werkgeheugen, sp.Opslag, videokaartCode(sp.Videokaart), touch?'touch':'');
+  else deel.push(sp.Opslag);
+  if(String(a.staat||a.grade||'').toUpperCase()==='N') deel.push('nieuw');
+  return deel.filter(Boolean).map(s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')).join('_');
+}
+/* Een toestel dat weg is, is open zolang er niets mee gedaan is: geen vervanger en geen geld terug. */
+function bstWegOpen(x){
+  const vervangen=new Set(((x&&x.toestellen)||[]).map(t=>t&&t.vervangt_id).filter(Boolean));
+  return ((x&&x.toestellen_weg)||[]).filter(t=>t && !vervangen.has(t.id) && t.reden!=='geld terug');
+}
+/* Alles weg en het geld terug: dan is de bestelling klaar, ook al staat hij in Shopify nog open. */
+function bstGeldTerug(x){
+  return !!x && !(x.toestellen||[]).length && (x.toestellen_weg||[]).some(t=>t && t.reden==='geld terug');
+}
+function bstDatum(iso){
+  return iso ? new Date(iso).toLocaleDateString('nl-NL',{day:'numeric', month:'long'}) : '';
+}
+function bstWegBlok(x){
+  const weg=(x.toestellen_weg||[]).filter(Boolean);
+  if(!weg.length) return '';
+  const laatste=(x.voorstellen||[]).slice(-1)[0];
+  return weg.map(t=>{
+    const v=(x.toestellen||[]).find(y=>y && y.vervangt_id===t.id);
+    let wat='Kies wat je wilt doen.';
+    if(v) wat='Vervangen door '+esc(v.code||v.naam||'een ander toestel')+'.';
+    else if(t.reden==='geld terug') wat='Geld terug via Shopify.';
+    else if(laatste) wat='Voorstel gestuurd op '+esc(bstDatum(laatste.op))+'. Wacht op de klant.';
+    const open=!v && t.reden!=='geld terug' && !x.geannuleerd && !x.verzonden;
+    return `<div class="bstweg"><span><b>${esc(t.code||t.naam||'Een toestel')} is er niet meer.</b> ${wat}</span>${open
+      ? `<button class="btn small" onclick="bstOp('${x.id}','${esc(t.id)}')">Kiezen</button>` : ''}</div>`;
+  }).join('');
+}
+
+async function bstEdge(naam, lijf){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) throw new Error('Je bent uitgelogd. Log opnieuw in.');
+  const res=await fetch(SUPABASE_URL+'/functions/v1/'+naam,{method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify(lijf)});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok || !j.ok) throw new Error(j.error||'Dat lukte niet');
+  return j;
+}
+function bstDoor(){ return (gebruiker && gebruiker.naam) || ''; }
+
+/* ── het venster ── */
+function bstOpSluit(){ const o=document.getElementById('bstOverlay'); if(o) o.remove(); bstOpNu=null; }
+function bstOpScherm(html){
+  let ov=document.getElementById('bstOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.className='overlay'; ov.id='bstOverlay';
+    ov.onclick=e=>{ if(e.target===ov) bstOpSluit(); };
+    ov.addEventListener('keydown', e=>{ if(e.key==='Escape'){ e.stopPropagation(); bstOpSluit(); } });
+    ov.innerHTML='<div class="popup bstoppop" role="dialog" aria-modal="true"></div>';
+    document.body.appendChild(ov);
+  }
+  const p=ov.querySelector('.popup'); p.innerHTML=html; p.scrollTop=0;
+  return p;
+}
+async function bstOp(bestId, wegId){
+  const x=bstData.find(b=>b.id===bestId); if(!x) return;
+  let oud=null;
+  if(wegId) oud=(x.toestellen_weg||[]).find(t=>t && t.id===wegId);
+  else{
+    const lijst=(x.toestellen||[]).filter(Boolean);
+    if(lijst.length>1){ bstOpNu={best:x}; return bstOpKiesToestel(); }
+    oud=lijst[0];
+  }
+  if(!oud) return;
+  bstOpNu={best:x, oud, alWeg:!!wegId, kandidaten:null, gekozen:[]};
+  await bstHwLaad([x]);
+  bstOpMenu();
+}
+function bstOpKiesToestel(){
+  const x=bstOpNu.best;
+  bstOpScherm(`<h3>Welk toestel is er niet meer?</h3>
+    <div class="bstklijst">${(x.toestellen||[]).filter(Boolean).map(t=>`
+      <button class="bstkand" onclick="bstOpVoor('${esc(t.id)}')"><span class="bstcode">${esc(t.code||'')}</span>
+        <span class="bstknaam">${esc(t.naam||'')}<span class="muted klein">${esc(bstSpecTekst(bstHw[t.id]))}</span></span></button>`).join('')}</div>
+    <div class="acts"><button class="btn ghost" onclick="bstOpSluit()">Annuleren</button></div>`);
+}
+async function bstOpVoor(id){
+  const x=bstOpNu && bstOpNu.best; if(!x) return;
+  const oud=(x.toestellen||[]).find(t=>t && t.id===id); if(!oud) return;
+  bstOpNu={best:x, oud, alWeg:false, kandidaten:null, gekozen:[]};
+  bstOpMenu();
+}
+function bstOpMenu(){
+  const st=bstOpNu; if(!st) return;
+  const h=bstHw[st.oud.id];
+  bstOpScherm(`<h3>${esc(st.oud.code||st.oud.naam||'Dit toestel')} is er niet meer</h3>
+    <div class="pv">${esc(st.oud.naam||'')}${h?'<br>'+esc(bstSpecTekst(h)):''}</div>
+    <label>Wat wil je doen?</label>
+    <div class="acts">
+      <button class="btn actie" onclick="bstOpRuil()">Hetzelfde toestel, ander nummer</button>
+      <button class="btn" onclick="bstOpVoorstel()">Iets anders voorstellen aan de klant</button>
+      <button class="btn" onclick="bstOpGeld()">Geld terugstorten</button>
+      <button class="btn ghost" onclick="bstOpSluit()">Annuleren</button>
+    </div>`);
+}
+/* Wat er op voorraad ligt en verkocht mag worden: niet in reparatie, niet gereserveerd (dat is
+   een eigen status). Eén keer per venster ophalen. */
+async function bstKandidaten(){
+  if(bstOpNu.kandidaten) return bstOpNu.kandidaten;
+  const [hw, rep]=await Promise.all([
+    sb.from('hardware').select('id,code,merk,model,categorie,staat,accu,specs,verkoop,kanalen,fotos,status,aangemaakt_op').eq('status','voorraad'),
+    sb.from('refurbish_apparaten').select('hardware_id').eq('status','te_repareren')]);
+  if(hw.error) throw hw.error;
+  const inRep=new Set(((rep&&rep.data)||[]).map(r=>r.hardware_id).filter(Boolean));
+  bstOpNu.kandidaten=(hw.data||[]).filter(h=>h && !inRep.has(h.id) && h.id!==bstOpNu.oud.id);
+  return bstOpNu.kandidaten;
+}
+function bstKandKnop(h, actie, gekozen){
+  return `<button class="bstkand${gekozen?' gekozen':''}" aria-pressed="${gekozen?'true':'false'}" onclick="${actie}('${esc(h.id)}')">
+    <span class="bstcode">${esc(h.code||'')}</span>
+    <span class="bstknaam">${esc(toestelTitel(h.merk, h.model))}<span class="muted klein">${esc(bstSpecTekst(h))}${hwOnline(h)?'':' · niet online'}</span></span>
+    <span class="bstkprijs">${h.verkoop!=null?euro(h.verkoop):''}</span></button>`;
+}
+function bstZoekFilter(lijst, tekst){
+  const delen=String(tekst||'').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!delen.length) return [];
+  return lijst.filter(h=>{
+    const sp=(h.specs&&typeof h.specs==='object')?h.specs:{};
+    const hooi=[h.code, h.merk, h.model, sp.Processor, sp.Geheugen, sp.Opslag, sp.Kleur, h.categorie].join(' ').toLowerCase();
+    return delen.every(d=>hooi.includes(d));
+  }).slice(0, 20);
+}
+/* Lijkt het erop? Eerst dezelfde advertentie (zelfde specs), dan hetzelfde model, dan een prijs
+   in de buurt. Minder geheugen of opslag zakt naar achteren, en wat niet online staat ook een
+   beetje: daar kan de klant niet op klikken. */
+function bstGelijkend(oud, lijst){
+  const sp=h=>(h && h.specs && typeof h.specs==='object') ? h.specs : {};
+  const gb=s=>{ const m=String(s||'').match(/(\d+(?:[.,]\d+)?)\s*(tb|gb)/i); return m ? parseFloat(m[1].replace(',','.'))*(/tb/i.test(m[2])?1024:1) : 0; };
+  const o=sp(oud), sl=webshopSleutel(oud||{}), prijs=Number(oud&&oud.verkoop)||0;
+  const kl=s=>String(s||'').toLowerCase();
+  return lijst.filter(h=>kl(h.categorie)===kl(oud&&oud.categorie)).map(h=>{
+    const s=sp(h);
+    let score=0;
+    if(webshopSleutel(h)===sl) score-=10;
+    if(kl(h.merk)!==kl(oud.merk)) score+=3;
+    if(kl(h.model)!==kl(oud.model)) score+=2;
+    score += (prijs>0 && Number(h.verkoop)>0) ? Math.min(6, Math.abs(Number(h.verkoop)-prijs)/prijs*10) : 3;
+    if(gb(s.Geheugen)<gb(o.Geheugen)) score+=2;
+    if(gb(s.Opslag)<gb(o.Opslag)) score+=2;
+    if(String(h.staat||'')!==String(oud.staat||'')) score+=1;
+    if(!hwOnline(h)) score+=1.5;
+    return {h, score};
+  }).sort((a,b)=>a.score-b.score).map(r=>r.h);
+}
+
+/* ── 1. hetzelfde toestel, ander nummer ── */
+async function bstOpRuil(){
+  const st=bstOpNu; if(!st) return;
+  bstOpScherm('<p class="muted">Even zoeken…</p>');
+  let lijst;
+  try{ lijst=await bstKandidaten(); }catch(e){ console.error('kandidaten:', e); toast('Kon de voorraad niet laden','fout'); return bstOpMenu(); }
+  const oudH=bstHw[st.oud.id]||{};
+  const sl=webshopSleutel(oudH), g=String(oudH.staat||'').toUpperCase();
+  /* Net als de webshop: het oudste exemplaar eerst. */
+  const zelfde=lijst.filter(h=>webshopSleutel(h)===sl && String(h.staat||'').toUpperCase()===g)
+    .sort((a,b)=>String(a.aangemaakt_op||'').localeCompare(String(b.aangemaakt_op||'')));
+  bstOpScherm(`<h3>Hetzelfde toestel, ander nummer</h3>
+    ${zelfde.length
+      ? `<div class="pv">Zelfde specs en staat als ${esc(st.oud.code||'het oude')}:</div>
+         <div class="bstklijst">${zelfde.map(h=>bstKandKnop(h,'bstRuilKies',false)).join('')}</div>`
+      : `<div class="pv">Er is geen ander exemplaar met dezelfde specs en staat.</div>`}
+    <label for="bst_zoek">${zelfde.length?'Of zoek':'Zoek'} een ander toestel</label>
+    <input id="bst_zoek" placeholder="A-nummer, model of processor" autocomplete="off" oninput="bstRuilZoek()">
+    <div class="bstklijst" id="bst_zoek_lijst"></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="bstOpMenu()">Terug</button>
+    </div>`);
+}
+function bstRuilZoek(){
+  const vak=document.getElementById('bst_zoek_lijst'), inv=document.getElementById('bst_zoek');
+  if(!vak || !inv || !bstOpNu) return;
+  const hits=bstZoekFilter(bstOpNu.kandidaten||[], inv.value);
+  vak.innerHTML=inv.value.trim() && !hits.length ? '<p class="muted klein">Niets gevonden.</p>' : hits.map(h=>bstKandKnop(h,'bstRuilKies',false)).join('');
+}
+function bstRuilKies(id){
+  const st=bstOpNu; if(!st) return;
+  const h=(st.kandidaten||[]).find(k=>k.id===id); if(!h) return;
+  const oudH=bstHw[st.oud.id]||{};
+  const gelijk=webshopSleutel(h)===webshopSleutel(oudH) && String(h.staat||'').toUpperCase()===String(oudH.staat||'').toUpperCase();
+  bstOpScherm(`<h3>${esc(h.code||'Dit toestel')} versturen?</h3>
+    <div class="pv">${esc(toestelTitel(h.merk, h.model))}<br>${esc(bstSpecTekst(h))}</div>
+    <p>${esc(h.code||'Dit toestel')} gaat naar de klant in plaats van ${esc(st.oud.code||'het oude')}.</p>
+    ${gelijk?'':`<div class="bstweg"><span>Dit toestel is anders dan wat de klant kocht. Spreek het eerst af met de klant. Een prijsverschil regel je in Shopify.</span></div>`}
+    <div class="acts" style="margin-top:16px">
+      <button class="btn actie" onclick="bstRuilDoe('${esc(h.id)}', this)"><svg class="i s"><use href="#i-check"/></svg>Ja, dit toestel versturen</button>
+      <button class="btn ghost" onclick="bstOpRuil()">Terug</button>
+    </div>`);
+}
+async function bstRuilDoe(nieuwId, knop){
+  const st=bstOpNu; if(!st) return;
+  const x=st.best, oud=st.oud;
+  const h=(st.kandidaten||[]).find(k=>k.id===nieuwId); if(!h) return;
+  if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  const nu=new Date().toISOString();
+  try{
+    /* 1. Het nieuwe toestel op verkocht, alleen als het nog op voorraad staat: zo verkoop je
+       niet iets wat net aan de balie weg ging. */
+    const {data:h1, error:e1}=await sb.from('hardware')
+      .update({status:'verkocht', verkocht_op:nu, verkocht_via:'webshop', bijgewerkt_op:nu})
+      .eq('id', h.id).eq('status','voorraad').select('id');
+    if(e1) throw e1;
+    if(!h1 || !h1.length){ toast((h.code||'Dat toestel')+' is net weg. Kies een ander.','let-op'); st.kandidaten=null; return bstOpRuil(); }
+    /* 2. De bestelling vers ophalen (de melding van Shopify kan hem net bijgewerkt hebben) en het
+       oude toestel van toestellen naar toestellen_weg zetten. De vervanger krijgt de variant van
+       de oude, zodat het A-nummer bij de goede regel staat en de melding hem meetelt. */
+    const {data:vers, error:e2}=await sb.from('webshop_bestellingen').select('toestellen,toestellen_weg').eq('id', x.id).maybeSingle();
+    if(e2 || !vers) throw e2 || new Error('Bestelling niet gevonden');
+    const toestellen=(vers.toestellen||[]).filter(t=>t && t.id!==oud.id);
+    const weg=(vers.toestellen_weg||[]).filter(t=>t && t.id!==oud.id);
+    weg.push(Object.assign({}, oud, {reden:'vervangen', op:oud.op||nu, door:oud.door||bstDoor()}));
+    toestellen.push(Object.assign({id:h.id, naam:[h.merk,h.model].filter(Boolean).join(' '), code:h.code||null,
+      variant:oud.variant||null, vervangt:oud.code||null, vervangt_id:oud.id},
+      oud.nieuwe_accu?{nieuwe_accu:true}:{}, oud.accu_origineel?{accu_origineel:true}:{}));
+    const {error:e3}=await sb.from('webshop_bestellingen').update({toestellen, toestellen_weg:weg, bijgewerkt_op:nu}).eq('id', x.id);
+    if(e3){
+      // Terugdraaien, anders staat het nieuwe toestel op verkocht zonder bestelling.
+      await sb.from('hardware').update({status:'voorraad', verkocht_op:null, verkocht_via:null, bijgewerkt_op:new Date().toISOString()}).eq('id', h.id).eq('status','verkocht');
+      throw e3;
+    }
+    /* 3. Van de webshop: de edge telt de advertentie opnieuw. */
+    if(hwOnline(h) || (h.kanalen && h.kanalen.shopify && h.kanalen.shopify.sleutel)){
+      try{ await bstEdge('shopify', {actie:'offline', hardware_id:h.id}); }
+      catch(e){ console.error('webshop bijwerken:', e); toast('Let op: haal '+(h.code||'het toestel')+' zelf van de webshop','let-op'); }
+    }
+    /* 4. Koos de klant een nieuwe accu, dan gaat die klus mee naar het nieuwe toestel. */
+    if(oud.nieuwe_accu) await bstAccuKlusVerhuis(x.nummer, oud.id, h.id, !!oud.accu_origineel);
+    bstOpSluit();
+    toast((h.code||'Het toestel')+' gaat naar de klant', true);
+    await bstLaad(true);
+  }catch(e){
+    console.error('ruilen:', e);
+    toast('Ruilen lukte niet. Probeer het nog eens.','fout');
+    if(knop){ knop.disabled=false; knop.textContent='Ja, dit toestel versturen'; }
+  }
+}
+/* De klus "nieuwe accu" staat bij het toestel aan de werkbank (de melding van Shopify zette hem
+   daar). Bij een ruil haal je hem van het oude af en zet je hem op het nieuwe; dezelfde tekst als
+   accuKlusTekst in shopify-webhook, zodat een volgende melding hem herkent. */
+async function bstAccuKlusVerhuis(nummer, oudId, nieuwId, origineel){
+  const tekst=`Accu: nieuwe ${origineel?'ORIGINELE ':''}accu plaatsen, webshopbestelling ${nummer}. Daarna verzenden.`;
+  const nu=new Date().toISOString();
+  try{
+    const {data:oudA}=await sb.from('refurbish_apparaten').select('id,status,defecten').eq('hardware_id', oudId).maybeSingle();
+    if(oudA){
+      const rest=(oudA.defecten||[]).filter(d=>d!==tekst);
+      await sb.from('refurbish_apparaten').update(Object.assign({defecten:rest, bijgewerkt_op:nu},
+        oudA.status==='te_repareren' && !rest.length ? {status:'klaar'} : {})).eq('id', oudA.id);
+    }
+    try{ await sb.rpc('koppel_losse_hardware'); }catch(_e){}
+    const {data:nA}=await sb.from('refurbish_apparaten').select('id,defecten').eq('hardware_id', nieuwId).maybeSingle();
+    if(nA){
+      const d=(nA.defecten||[]).slice(); if(!d.includes(tekst)) d.push(tekst);
+      await sb.from('refurbish_apparaten').update({status:'te_repareren', defecten:d, bijgewerkt_op:nu}).eq('id', nA.id);
+    }
+  }catch(e){ console.error('accuklus verhuizen:', e); toast('Zet de nieuwe accu zelf bij het nieuwe toestel op de werkbank','let-op'); }
+}
+
+/* Het toestel als weg markeren (voorstel of geld terug). Stond hij al weg, dan alleen de reden bij. */
+async function bstWegZet(reden){
+  const st=bstOpNu; if(!st) return false;
+  const x=st.best, oud=st.oud, nu=new Date().toISOString();
+  const {data:vers, error}=await sb.from('webshop_bestellingen').select('toestellen,toestellen_weg').eq('id', x.id).maybeSingle();
+  if(error || !vers) return false;
+  const toestellen=(vers.toestellen||[]).filter(t=>t && t.id!==oud.id);
+  const weg=(vers.toestellen_weg||[]).filter(t=>t && t.id!==oud.id);
+  const eerder=(vers.toestellen_weg||[]).find(t=>t && t.id===oud.id) || oud;
+  weg.push(Object.assign({}, eerder, {reden, op:eerder.op||nu, door:eerder.door||bstDoor()}));
+  const {error:e2}=await sb.from('webshop_bestellingen').update({toestellen, toestellen_weg:weg, bijgewerkt_op:nu}).eq('id', x.id);
+  return !e2;
+}
+
+/* ── 2. iets anders voorstellen ── */
+function bstVsStandaard(besteld){
+  return `Je bestelde bij ons een ${besteld}. Die is helaas net verkocht, voordat we hem konden inpakken. Sorry daarvoor.\n\n`+
+    `Hieronder staan toestellen die erop lijken. Wil je er een? Antwoord dan op deze mail, dan ruilen we hem om en sturen we hem op. Je hoeft niet opnieuw te bestellen. Een prijsverschil regelen we met je.`;
+}
+async function bstOpVoorstel(){
+  const st=bstOpNu; if(!st) return;
+  bstOpScherm('<p class="muted">Even zoeken…</p>');
+  let lijst;
+  try{ lijst=await bstKandidaten(); }catch(e){ console.error('kandidaten:', e); toast('Kon de voorraad niet laden','fout'); return bstOpMenu(); }
+  const x=st.best, oudH=bstHw[st.oud.id]||{};
+  st.gelijkend=bstGelijkend(oudH, lijst).slice(0, 12);
+  const regel=(x.regels||[]).find(r=>r && !r.accu && !r.extra);
+  const besteld=(regel && regel.titel) || toestelTitel(oudH.merk, oudH.model) || st.oud.naam || 'toestel';
+  const voornaam=String(x.klant||'').trim().split(/\s+/)[0]||'';
+  bstOpScherm(`<h3>Iets anders voorstellen</h3>
+    <div class="pv">Kies tot vier toestellen. De klant krijgt een mail van Refuro met foto, specs, prijs en een knop naar de webshop.</div>
+    <input id="bst_vs_zoek" placeholder="Zoek op A-nummer, model of processor" autocomplete="off" oninput="bstVsLijst()">
+    <div class="bstklijst" id="bst_vs_lijst"></div>
+    <label for="bst_vs_mail">Mailadres van de klant</label>
+    <input id="bst_vs_mail" type="email" value="${esc(x.email||'')}" placeholder="Staat in Shopify bij de bestelling" autocomplete="off">
+    ${!x.email && x.beheer_url?`<p class="muted klein"><a href="${esc(x.beheer_url)}" target="_blank" rel="noopener">Open de bestelling in Shopify</a> en kopieer het adres.</p>`:''}
+    <label for="bst_vs_naam">Voornaam</label>
+    <input id="bst_vs_naam" value="${esc(voornaam)}" autocomplete="off">
+    <label for="bst_vs_tekst">Je bericht</label>
+    <textarea id="bst_vs_tekst" rows="6">${esc(bstVsStandaard(besteld))}</textarea>
+    <div id="bst_vs_voorbeeld" hidden></div>
+    <div class="acts" style="margin-top:16px">
+      <button class="btn actie" onclick="bstVsStuur(this)"><svg class="i s"><use href="#i-check"/></svg>Versturen</button>
+      <button class="btn" onclick="bstVsVoorbeeld(this)">Eerst de mail bekijken</button>
+      <button class="btn ghost" onclick="bstOpMenu()">Terug</button>
+    </div>`);
+  bstVsLijst();
+}
+function bstVsLijst(){
+  const st=bstOpNu, vak=document.getElementById('bst_vs_lijst'), inv=document.getElementById('bst_vs_zoek');
+  if(!st || !vak) return;
+  const zoek=inv ? inv.value : '';
+  const gekozen=(st.gekozen||[]).map(id=>(st.kandidaten||[]).find(k=>k.id===id)).filter(Boolean);
+  const rest=(zoek.trim() ? bstZoekFilter(st.kandidaten||[], zoek) : (st.gelijkend||[])).filter(h=>!st.gekozen.includes(h.id));
+  vak.innerHTML=gekozen.map(h=>bstKandKnop(h,'bstVsKies',true)).join('')
+    + (zoek.trim() && !rest.length ? '<p class="muted klein">Niets gevonden.</p>' : rest.map(h=>bstKandKnop(h,'bstVsKies',false)).join(''));
+}
+function bstVsKies(id){
+  const st=bstOpNu; if(!st) return;
+  const i=st.gekozen.indexOf(id);
+  if(i>=0) st.gekozen.splice(i,1);
+  else{
+    if(st.gekozen.length>=4){ toast('Hooguit vier toestellen','let-op'); return; }
+    st.gekozen.push(id);
+  }
+  bstVsLijst();
+}
+function bstVsInvoer(voorbeeld){
+  const st=bstOpNu;
+  return {bestelling:st.best.id, toestellen:st.gekozen.slice(), naar:hwVeld('bst_vs_mail'), naam:hwVeld('bst_vs_naam'),
+    tekst:(document.getElementById('bst_vs_tekst')||{}).value||'', voorbeeld:!!voorbeeld};
+}
+async function bstVsVoorbeeld(knop){
+  const st=bstOpNu; if(!st) return;
+  if(!st.gekozen.length){ toast('Kies eerst een toestel','let-op'); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    const j=await bstEdge('bestelling-voorstel', bstVsInvoer(true));
+    const vak=document.getElementById('bst_vs_voorbeeld'); if(!vak) return;
+    vak.hidden=false; vak.innerHTML='';
+    /* sandbox zonder rechten: de mail draait hier geen code en opent niets. */
+    const fr=document.createElement('iframe'); fr.className='bstvoorbeeld'; fr.setAttribute('sandbox',''); fr.title='Voorbeeld van de mail';
+    fr.srcdoc=j.html||''; vak.appendChild(fr);
+    fr.scrollIntoView({block:'nearest'});
+  }catch(e){ toast(e.message,'fout'); }
+  finally{ if(knop){ knop.disabled=false; knop.textContent=oud; } }
+}
+async function bstVsStuur(knop){
+  const st=bstOpNu; if(!st) return;
+  if(!st.gekozen.length){ toast('Kies eerst een toestel','let-op'); return; }
+  const inv=bstVsInvoer(false);
+  if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(inv.naar)){ toast('Vul het mailadres van de klant in','let-op'); const m=document.getElementById('bst_vs_mail'); if(m) m.focus(); return; }
+  const oud=knop?knop.textContent:''; if(knop){ knop.disabled=true; knop.textContent='Bezig…'; }
+  try{
+    await bstEdge('bestelling-voorstel', inv);
+    if(!st.alWeg) await bstWegZet('voorstel');
+    bstOpSluit();
+    toast('Mail verstuurd naar '+inv.naar, true);
+    await bstLaad(true);
+  }catch(e){
+    toast(e.message,'fout');
+    if(knop){ knop.disabled=false; knop.textContent=oud; }
+  }
+}
+
+/* ── 3. geld terug ──
+   Terugbetalen doe je in Shopify (keuze eigenaar): daar zit het geld en daar krijgt de klant zijn
+   bevestiging. Storvo zet het toestel als weg met geld terug, zodat de bestelling hier klaar is. */
+function bstOpGeld(){
+  const st=bstOpNu; if(!st) return;
+  const url=st.best.beheer_url ? String(st.best.beheer_url).replace(/\/+$/,'')+'/refund' : '';
+  bstOpScherm(`<h3>Geld terugstorten</h3>
+    <div class="pv">Dat doe je in Shopify. De knop opent het terugbetaalscherm van deze bestelling.</div>
+    <p>Staat daar een vinkje om de voorraad terug te zetten? Zet dat uit. ${esc(st.oud.code||'Het toestel')} is er niet meer.</p>
+    <div class="acts" style="margin-top:16px">
+      ${url?`<a class="btn actie" href="${esc(url)}" target="_blank" rel="noopener" onclick="bstGeldDoe()">Terugbetalen in Shopify</a>`:'<p class="muted">Deze bestelling heeft geen link naar Shopify.</p>'}
+      <button class="btn ghost" onclick="bstOpMenu()">Terug</button>
+    </div>`);
+}
+async function bstGeldDoe(){
+  const ok=await bstWegZet('geld terug');
+  bstOpSluit();
+  if(ok) toast('Staat in Storvo als geld terug', true); else toast('Opslaan in Storvo lukte niet','fout');
+  await bstLaad(true);
 }
 
 /* ---------- inruilaanvragen uit de webshop ----------

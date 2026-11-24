@@ -292,9 +292,13 @@ Deno.serve(async (req) => {
      daarna niet meer via de melding te matchen, en paid/cancelled/fulfilled komen
      als losse meldingen binnen. */
   const { data: bestaand } = await admin.from("webshop_bestellingen")
-    .select("id, toestellen").eq("team_id", kop.team_id).eq("kanaal", "shopify")
+    .select("id, toestellen, toestellen_weg").eq("team_id", kop.team_id).eq("kanaal", "shopify")
     .eq("bestelling_id", String(bestellingId)).maybeSingle();
   const eerderToestellen: any[] = Array.isArray(bestaand?.toestellen) ? bestaand.toestellen : [];
+  /* Toestellen die er niet meer zijn (de winkel koos in Storvo "Niet meer op voorraad"). Ze tellen
+     mee als al toegewezen, anders pakt een volgende melding stilletjes een ander exemplaar van
+     dezelfde variant. Ze staan niet in toestellen, dus een annulering zet ze ook niet terug. */
+  const wegToestellen: any[] = Array.isArray(bestaand?.toestellen_weg) ? bestaand.toestellen_weg : [];
 
   /* ── de toestellen uit deze bestelling ──
      Bij grade-varianten hangen meerdere toestellen aan één product; de verkochte
@@ -310,8 +314,11 @@ Deno.serve(async (req) => {
   const gedaan = new Set<string>();
   // Een nieuwe accu is een klus, geen toestel: die telt hier niet mee.
   const totaalNodig = regels.filter((r: any) => !isAccuRegel(r) && !isExtraRegel(r)).reduce((n: number, r: any) => n + Math.max(1, Math.floor(Number(r?.quantity) || 1)), 0);
-  const alGedaanIds = new Set<string>(eerderToestellen.map((t: any) => t?.id).filter(Boolean));
-  let toegewezen = eerderToestellen.length;
+  const alGedaanIds = new Set<string>([...eerderToestellen, ...wegToestellen].map((t: any) => t?.id).filter(Boolean));
+  /* Een weg-toestel dat al vervangen is, telt via zijn vervanger (die staat in toestellen). */
+  const vervangen = new Set<string>(eerderToestellen.map((t: any) => t?.vervangt_id).filter(Boolean));
+  const wegOpen = wegToestellen.filter((t: any) => t?.id && !vervangen.has(t.id));
+  let toegewezen = eerderToestellen.length + wegOpen.length;
 
   for (const r of regels) {
     if (geannuleerd) continue;             // een annulering loopt via de bewaarde bestelling hieronder
@@ -325,7 +332,7 @@ Deno.serve(async (req) => {
     const aantal = Math.max(1, Math.floor(Number(r?.quantity) || 1));
 
     // Zoveel van deze variant hangen er al aan de bestelling; die hoeven we niet nog eens.
-    const alReeds = variantId ? eerderToestellen.filter((t: any) => t?.variant && String(t.variant) === String(variantId)).length : 0;
+    const alReeds = variantId ? [...eerderToestellen, ...wegOpen].filter((t: any) => t?.variant && String(t.variant) === String(variantId)).length : 0;
     let nodig = Math.min(aantal - alReeds, totaalNodig - toegewezen);
     if (nodig <= 0) continue;
 
