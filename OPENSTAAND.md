@@ -5,6 +5,29 @@ er niet in staat is af.
 
 ---
 
+## Magazijn: kast, plank, bak en vak (25 november 2026)
+
+De voorraad die niet in de winkel hangt ligt in een stellingkast met bakken, en in een bak staan
+schotjes per model. Keuzes eigenaar: een product mag op meerdere plekken liggen, indeling
+kast > plank > bak > vak, vaklabel 62 x 25 mm met de tekst over de lange kant, en "plek tonen en
+product scannen" als controle.
+
+- [x] **Gebouwd.** Tabel `magazijn_plekken` (indeling, vaste codes A2-3 en een scancode PL-...
+      per plek). Het aantal per vak staat bij het product in de blob (`plekken`), zodat het nooit
+      uit de pas loopt met het aantal achter. Pagina Voorraad, Magazijn: planken met bakken,
+      een bak met vakken, vakken per model (zoekt het glas er meteen bij), scannen in een bak,
+      waar ligt het, en wat er achter ligt zonder plek. Labels voor plank, bak en vak op de
+      labelprinter. Bijhangen zegt "pak uit A2-3 · iPhone 16 Pro", inscannen "leg hem in ...".
+      Extra barcodes koppelen aan een product, en een onbekende code vraagt eerst: nieuw
+      product of koppelen. Test: `tests/magazijn.js`.
+- [ ] **Eigenaar: de kast inrichten.** Voorraad, Magazijn, Kast aanmaken met het aantal planken.
+      Per plank de bakken, per bak Vakken per model. Tel per vak wat erin ligt: de eerste keer
+      gaat dat van de winkeltelling af (het totaal blijft gelijk), want tot nu toe telde alles
+      als "hangt in de winkel". Hangen er toch nog in de winkel, zet dat dan goed bij Tellen.
+- [ ] **Eigenaar: één vaklabel proefprinten** en kijken of 62 x 25 mm op het schotje past.
+- [ ] **Later, als het nodig is:** de werkbank (refurbish) heeft nog een los tekstveld Plek voor
+      toestellen. Dat kan dezelfde kast gaan gebruiken.
+
 ## Extra's bij een toestel op de webshop (16 november 2026)
 
 Glas, hoesje, beschermset, snellader, muis, laptophoes, Office Home 2024, McAfee en "klaar voor

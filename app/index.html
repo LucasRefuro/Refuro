@@ -1583,6 +1583,81 @@
     .hanglijst{max-height:38vh;}
   }
 
+  /* Magazijn: de kast achter de winkel. Een plank is een kaart, de bakken staan ernaast in een
+     rij zoals in het echt, en een bak is een tegel die je aantikt. De plaatscode (A2-3) staat
+     overal in hetzelfde groen, zodat je hem in elke lijst meteen terugvindt. */
+  .kastuitleg{margin-bottom:14px; max-width:72ch;}
+  .kastknopvak{display:flex; align-items:flex-end;}
+  .kastkeuze{margin-bottom:16px; flex-wrap:wrap;}
+  .kastonder{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;}
+  .kastplank{scroll-margin-top:90px;}   /* na het scannen van een planklabel schuift hij onder de kopbalk vandaan in beeld */
+  .kastplankkop{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .kastplankkop h2{margin:0;}
+  .kastplankkop .rijmeer{margin-left:auto;}
+  .kastbakken{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr)); gap:10px;}
+  .kastbak{display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left; min-height:98px;
+    background:var(--soft); border:1.5px solid var(--border); border-radius:var(--radius-s); padding:13px 15px;
+    font-family:inherit; font-size:14px; color:var(--text); cursor:pointer;}
+  .kastbak:hover{border-color:var(--mint);}
+  .kastbak.nieuw{flex-direction:row; align-items:center; justify-content:center; gap:8px; background:none;
+    border-style:dashed; color:var(--muted); font-weight:600;}
+  .kastcode{font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--oranje); font-variant-numeric:tabular-nums;}
+  .kastcode.groot{font-size:26px; line-height:1.1; flex:none;}
+  .kasttel{margin-top:auto; padding-top:4px; font-size:12px; color:var(--muted);}
+  .kastlijst{display:flex; flex-direction:column; gap:6px; margin-top:10px;}
+  .kastlijst:empty{display:none;}
+  .kastkeus{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--soft);
+    border:1px solid var(--border); border-radius:12px; padding:10px 13px; font-family:inherit; font-size:14px;
+    color:var(--text); cursor:pointer;}
+  .kastkeus:hover{border-color:var(--mint);}
+  .kastkeus > span:first-child{flex:1; min-width:0;}
+  .kastkeus .muted{font-size:12.5px; text-align:right;}
+  /* het venster van één bak */
+  .kastpop{max-height:min(90vh,calc(100dvh - 32px)); overflow-y:auto;}
+  .kastpopkop{display:flex; align-items:flex-start; gap:14px; margin-bottom:18px;}
+  .kastpopnaam{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;}
+  .kastpopnaam input:first-child{font-weight:700; font-size:16px;}
+  .kastvak{border:1.5px solid var(--border); border-radius:var(--radius-s); padding:10px 14px; margin-top:10px;}
+  .kastvak.licht{border-color:var(--oranje); background:var(--lblauw);}
+  .kastvakkop{display:flex; align-items:center; gap:10px; padding:2px 0 4px;}
+  .kastvakkop .rijmeer{margin-left:auto;}
+  .kastprod{display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--soft-2);}
+  .kastvakkop + .kastprod{border-top:none;}
+  .kastprodnaam{flex:1; min-width:0; font-size:14px;}
+  .kaststap{display:inline-flex; align-items:center; gap:5px; flex:none;}
+  .kaststap button{width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border); background:var(--card);
+    font-family:inherit; font-size:18px; font-weight:700; line-height:1; color:var(--text); cursor:pointer;}
+  .kaststap button:hover{border-color:var(--oranje); color:var(--oranje);}
+  .kaststap input{width:60px; text-align:center; font-weight:700;}
+  .kastniets{padding:6px 0;}
+  .kastacties{display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;}
+  .kastchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .kastchip{background:var(--card); border:1.5px solid var(--border); border-radius:var(--pil); padding:7px 13px;
+    font-family:inherit; font-size:13px; font-weight:600; color:var(--text); cursor:pointer;}
+  .kastchip:hover, .kastchip.aan{border-color:var(--oranje); color:var(--oranje);}
+  .kastbreed{flex:2; min-width:200px;}
+  .kastserie{display:flex; flex-direction:column; gap:6px; margin:14px 0 4px;}
+  .kastserierij{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; border-radius:12px;
+    background:var(--soft); font-size:14px; letter-spacing:0; text-transform:none; color:var(--text); margin:0;}
+  .kastkiesplank{margin-bottom:14px;}
+  .kastkieskop{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted-l); margin-bottom:6px;}
+  .kastkiesbak{padding:8px 0; border-top:1px solid var(--soft-2);}
+  /* labels: een voorbeeld op schaal, vier pixels per millimeter */
+  .kastlabels{display:flex; flex-direction:column; gap:12px; margin:14px 0;}
+  .kastlabel{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .kastlabel img{width:248px; max-width:100%; height:auto; border:1px solid var(--border); border-radius:6px; background:#fff;}
+  .kastlabelnaam{flex:1; min-width:120px; font-size:14px; font-weight:600;}
+  .kastlabelkop{display:block; margin-top:18px;}
+  /* in lijsten: waar het ligt */
+  .prodplek{font-size:12px; color:var(--muted); margin-top:2px;}
+  .prodplek b{color:var(--oranje); font-weight:700;}
+  @media(max-width:560px){
+    .kastpopkop{flex-wrap:wrap;}
+    .kastprod{flex-wrap:wrap;}
+    .kastprodnaam{flex-basis:100%;}
+    .kaststap{margin-left:auto;}
+  }
+
   /* nulmeting */
   .nulkaart{background:var(--lblauw); border-radius:var(--radius-s); padding:18px 20px;}
   .nulnaam{font-weight:700; font-size:16px; margin-bottom:14px;}
@@ -2438,6 +2513,7 @@
 <nav class="voorraadsub pagtabs" id="voorraadSub" hidden aria-label="Voorraad">
   <button data-vsub="producten" onclick="showTab('producten')">Producten</button>
   <button data-vsub="voorraad" onclick="showTab('voorraad')">Tellen<span class="badge" id="vrdBadge" style="display:none">0</span></button>
+  <button data-vsub="magazijn" onclick="showTab('magazijn')">Magazijn</button>
   <button data-vsub="scan" onclick="showTab('scan')">Inscannen</button>
   <button data-vsub="bestellen" onclick="showTab('bestellen')">Bijbestellen<span class="badge" id="bestelBadge" style="display:none">0</span><span class="badge rood" id="urgentBadge" style="display:none">0</span></button>
 </nav>
@@ -3158,6 +3234,22 @@
     <div id="nulVak"></div>
     <div id="nulLog" class="nullog"></div>
   </div>
+</section>
+
+<!-- MAGAZIJN: de kast achter de winkel, met planken, bakken en vakken. Zie "Magazijn: kast,
+     plank, bak en vak" in het script. -->
+<section id="tab-magazijn" hidden>
+  <div class="pagehead">
+    <h1>Magazijn</h1>
+    <button class="btn ghost" onclick="openBijhangen()"><svg class="i s"><use href="#i-up"/></svg>Bijhangen</button>
+  </div>
+  <div class="card">
+    <h2><svg class="i"><use href="#i-search"/></svg>Waar ligt het?</h2>
+    <input id="kastZoek" placeholder="Zoek of scan een product, of scan het label van een bak" autocomplete="off"
+      oninput="kastZoekTeken()" onkeydown="if(event.key==='Enter'){event.preventDefault(); kastZoekScan(this.value);}">
+    <div id="kastZoekUit" class="kastlijst"></div>
+  </div>
+  <div id="kastVak"></div>
 </section>
 
 <!-- BESTELLINGEN -->
@@ -4366,7 +4458,7 @@ function betaalNaam(b){ return b==='pin'?'pin':b==='cash'?'cash met bon':b==='ca
    elke toetsaanslag (zie de input-listener onderaan de sync) en gewist zodra er iets
    wordt opgeslagen. Voedt de "niet-opgeslagen wijzigingen"-waarschuwing bij afsluiten. */
 let _vuil=false;
-function save(){ _vuil=false; localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); if(typeof wsExtrasNaOpslaan==='function') wsExtrasNaOpslaan(); }
+function save(){ _vuil=false; if(typeof plekkenKloppen==='function') plekkenKloppen(); localStorage.setItem(KEY, JSON.stringify(state)); if(typeof syncPlan==='function') syncPlan(); if(typeof wsExtrasNaOpslaan==='function') wsExtrasNaOpslaan(); }
 
 /* ===== Concept-vangnet: een half ingevuld formulier (reparatie-intake, inkoop, factuur)
    overleeft een crash of herlaad. We bewaren de velden per sleutel in localStorage, zetten
@@ -4429,7 +4521,7 @@ function showTab(t){
   let menu = t;
   if(t==='nieuw'||t==='catalogus') menu='producten';
   else if(t==='facturen'||t==='inruil'||t==='inruilprijzen'||t==='verkopen') menu='verkoop';   /* de verkoop-hub */
-  else if(t==='scan'||t==='voorraad'||t==='bestellen') menu='producten';   /* de voorraad-hub */
+  else if(t==='scan'||t==='voorraad'||t==='magazijn'||t==='bestellen') menu='producten';   /* de voorraad-hub */
   else if(HUB_TABS.includes(t)) menu='meer';
   document.querySelectorAll('aside nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===menu));
   /* De gedeelde voorraad-sub-balk: tonen op de vier voorraadschermen, met de juiste
@@ -4443,7 +4535,7 @@ function showTab(t){
   }
   const vSub=document.getElementById('voorraadSub');
   if(vSub){
-    vSub.hidden = !['producten','voorraad','scan','bestellen'].includes(t);
+    vSub.hidden = !['producten','voorraad','magazijn','scan','bestellen'].includes(t);
     vSub.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.vsub===t));
   }
   if(t!=='nieuw' && typeof npStop==='function') npStop();
@@ -4470,6 +4562,9 @@ function showTab(t){
   if(t==='producten') renderProducten();
   if(t==='catalogus') catOpen();
   if(t==='voorraad') renderVoorraad();
+  /* Meteen tekenen wat we hebben, en daarna de kast vers ophalen: een collega kan op een
+     ander apparaat net een bak hebben toegevoegd. */
+  if(t==='magazijn'){ renderMagazijn(); kastLaad().then(()=>{ const m=document.getElementById('tab-magazijn'); if(m && !m.hidden) renderMagazijn(); }); }
   if(t==='hardware') hwLaad();
   if(t==='webshop'){ bstLaad(); rsvLaad(); }
   if(t==='inruil') inrLaad();
@@ -8375,11 +8470,17 @@ function verwerkScan(code){
     showTab('reparaties'); repDetail(rep.id);
     return;
   }
-  const p=state.producten.find(p=>p.barcode===code);
   const fb=document.getElementById('scanFeedback');
+  if(kastIsLabel(code)){
+    const pl=kastVanScan(code);
+    if(pl){ piep(660); kastPlekOpen(pl.id); }
+    else { fb.className='err'; fb.textContent='Dit label hoort bij een plek die er niet meer is.'; piep(200); }
+    return;
+  }
+  const p=productBijCode(code);
   if(!p){
     fb.className='err';
-    fb.innerHTML=`Onbekende barcode <b>${esc(code)}</b> <button class="btn small" onclick="nieuwMetBarcode('${esc(code)}')">Product aanmaken</button>`;
+    fb.innerHTML=`Dit nummer ken ik niet: <b>${esc(code)}</b> <button class="btn small" onclick="codeOnbekend('${esc(code)}')">Aanmaken of koppelen</button>`;
     piep(200); return;
   }
   if(mode==='uit' && p.voorraad<1){
@@ -8398,9 +8499,12 @@ function verwerkScan(code){
        het nieuwe stuk achterin ligt en niet vanzelf op het schap staat. Ligt het schap
        onder zijn minimum, dan hoort het bijgevuld te worden en zeggen we dat erbij. */
     const achter=achterLiggen(p), tekort=bijTeVullen(p);
+    /* Waar het heen moet: de vaste plek in de kast. Zonder plek bieden we aan er een te kiezen. */
+    const leg=prodLegTekst(p);
     fb.innerHTML='+1 '+esc(p.naam)+' · <b>'+inWinkel(p)+'</b> in de winkel, <b>'+achter+'</b> in de overvoorraad'+
+      (leg?' · leg hem in <b>'+esc(leg)+'</b>':(kastPlekken.some(x=>x.soort==='bak')?' · <button class="linkknop" onclick="kastProdPlek(\''+esc(String(p.id))+'\')">plek kiezen</button>':''))+
       (tekort>0?' · <span style="color:var(--oranje-d); font-weight:700">hang er '+tekort+' bij (schap wil '+schapNorm(p)+')</span>':'');
-    toast('+1 '+p.naam+' · ligt in de overvoorraad ('+achter+' achter)'+(tekort>0?' · nog '+tekort+' bijhangen':''), true);
+    toast('+1 '+p.naam+(leg?' · leg hem in '+leg:' · ligt in de overvoorraad ('+achter+' achter)')+(tekort>0?' · nog '+tekort+' bijhangen':''), true);
   }else{
     fb.textContent='-1 '+p.naam+' · voorraad: '+p.voorraad;
     toast('-1 '+p.naam+' · voorraad '+p.voorraad, true);
@@ -8551,18 +8655,20 @@ function scanPopup(code){
      losse verkoop-popup. Zo valt een order nooit stilletjes uiteen. */
   const vk=document.getElementById('tab-verkoop');
   if(vk && !vk.hidden){ vkScanVerwerk(code); const s=document.getElementById('vkScan'); if(s){ try{ s.focus(); }catch(e){} } return; }
-  const p=state.producten.find(p=>p.barcode===code);
-  if(!p){
-    piep(200);
-    toast('Onbekende barcode '+code+', maak het product aan', 'let-op');
-    nieuwMetBarcode(code);
+  /* Het label van een plek in de kast: open die bak, met het vak erin aangewezen. */
+  if(kastIsLabel(code)){
+    const pl=kastVanScan(code);
+    if(pl){ piep(660); kastPlekOpen(pl.id); } else { piep(200); toast('Dit label hoort bij een plek die er niet meer is.','let-op'); }
     return;
   }
+  const p=productBijCode(code);
+  if(!p){ codeOnbekend(code); return; }
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='scanOverlay';
   ov.innerHTML=`<div class="popup">
     <h3>${esc(p.naam)}</h3>
     <div class="pv">Winkel: <b>${inWinkel(p)}</b> &middot; Achter: <b>${overVoorraad(p)}</b> &middot; Verkoopprijs: <b>${euro(p.verkoop)}</b> &middot; ${esc(catNaam(p.cat))}</div>
+    ${prodWaar(p)?`<div class="prodplek">Ligt in <b>${esc(prodWaar(p))}</b></div>`:''}
     <div class="acts">
       <button class="btn" style="background:var(--green); box-shadow:0 5px 16px rgba(30,158,106,.22)" onclick="popupIn(${p.id})"><svg class="i s"><use href="#i-down"/></svg>Inscannen (+1)</button>
       <div class="betaalrow">
@@ -8598,6 +8704,7 @@ function herteken(){
   if(!document.getElementById('tab-dashboard').hidden) renderDashboard();
   if(!document.getElementById('tab-producten').hidden) renderProducten();
   if(!document.getElementById('tab-voorraad').hidden) renderVoorraad();
+  if(!document.getElementById('tab-magazijn').hidden) renderMagazijn();
   if(!document.getElementById('tab-kassa').hidden) renderKassa();
   if(!document.getElementById('tab-aanvragen').hidden) renderAanvragen();
   if(!document.getElementById('tab-bestellen').hidden) renderBestellen();
@@ -8827,7 +8934,11 @@ function renderVerkoop(){
 function vkScanVerwerk(code){
   const fb=document.getElementById('vkFeedback');
   if(!code) return;
-  const p=state.producten.find(p=>p.barcode===code);
+  if(kastIsLabel(code)){
+    if(fb){ fb.className='err'; fb.textContent='Dat is het label van een plek in de kast. Scan het product zelf.'; }
+    piep(200); return;
+  }
+  const p=productBijCode(code);
   if(!p){
     if(fb){ fb.className='err'; fb.innerHTML='Onbekende code <b>'+esc(code)+'</b>. <button class="btn small" onclick="hvOpen()">Los verkopen</button>'; }
     piep(200); return;
@@ -9464,12 +9575,14 @@ let bcLaatste=0, bcTraag=false, bcTimer=null, bcVorige='', bcVorigeT=0;
 function nieuweInterneBarcode(){
   let code, n=0;
   do{ code='INT-'+Math.random().toString(36).slice(2,8).toUpperCase(); }
-  while(state.producten.some(p=>String(p.barcode)===code) && ++n<50);
+  while(productBijCode(code) && ++n<50);
   return code;
 }
 function barcodeConflict(code, behalveId){
   code=String(code||'').trim(); if(!code) return null;
-  return state.producten.find(p=>String(p.barcode)===code && p.id!==behalveId)||null;
+  /* Een gekoppelde extra code van een ander product botst net zo goed: dan pak je bij het
+     scannen het verkeerde. */
+  return state.producten.find(x=>x.id!==behalveId && (String(x.barcode)===code || (Array.isArray(x.codes) && x.codes.some(c=>String(c)===code))))||null;
 }
 function eigenBarcodeInForm(){
   const b=document.getElementById('f_barcode'); if(!b) return;
@@ -9512,7 +9625,7 @@ async function barcodeOpzoeken(){
   const nu=performance.now();
   if(code===bcVorige && nu-bcVorigeT<800) return;  /* dubbele trigger (Enter + auto) negeren */
   bcVorige=code; bcVorigeT=nu;
-  const eigen=state.producten.find(p=>p.barcode===code && p.id!==editId);
+  const eigen=barcodeConflict(code, editId);
   if(eigen){ toast('Dit product staat al in je voorraad: '+eigen.naam, true); bewerk(eigen.id); return; }
   try{
     /* De streepjescode op het doosje kan de EAN zijn of de artikelcode van de
@@ -9931,14 +10044,15 @@ function renderProducten(){
   const q=(document.getElementById('zoek').value||'').toLowerCase();
   const fc=document.getElementById('filterCat').value;
   const zichtbaar=state.producten
-    .filter(p=>(!q || zoekPast(p.naam+' '+(p.merk||'')+' '+(p.type||'')+' '+(p.model||'')+' '+(p.sku||''), zoekGroepen(q)) || String(p.barcode||'').includes(q) || String(p.sku||'').toLowerCase().includes(q)) && (!fc || p.cat===Number(fc)))
+    .filter(p=>(!q || zoekPast(p.naam+' '+(p.merk||'')+' '+(p.type||'')+' '+(p.model||'')+' '+(p.sku||''), zoekGroepen(q)) || String(p.barcode||'').includes(q) || (Array.isArray(p.codes) && p.codes.some(c=>String(c).includes(q))) || String(p.sku||'').toLowerCase().includes(q)) && (!fc || p.cat===Number(fc)))
     .sort((a,b)=>a.naam.localeCompare(b.naam));
   prodZichtbaar=zichtbaar.map(p=>p.id);
   const rows=zichtbaar
     .map(p=>`<tr><td class="uitgebreid"><input type="checkbox" onchange="prodSelect(${p.id},this.checked)"${prodGeselecteerd.has(p.id)?' checked':''}></td><td>${esc(p.naam)}`+
       `${isUitlopend(p)?' <span class="tag" style="background:var(--amber-soft);color:var(--amber-tekst)">loopt uit</span>':''}`+
       `${wachtNog(p)?' <span class="tag" title="Komt op de bestellijst zodra de voorganger op is">wacht op voorganger</span>':''}`+
-      `${state.cloverGekoppeld?(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id?' <span class="tag" style="background:var(--green-soft);color:var(--green-tekst)" title="Staat in Clover">in Clover</span>':' <span class="tag muted" title="Nog niet naar Clover gestuurd">niet in Clover</span>'):''}</td>`+
+      `${state.cloverGekoppeld?(p.kanalen&&p.kanalen.clover&&p.kanalen.clover.id?' <span class="tag" style="background:var(--green-soft);color:var(--green-tekst)" title="Staat in Clover">in Clover</span>':' <span class="tag muted" title="Nog niet naar Clover gestuurd">niet in Clover</span>'):''}`+
+      `${prodWaar(p)?`<div class="prodplek">${esc(prodWaar(p))}</div>`:''}</td>`+
       `<td class="uitgebreid">${esc(p.barcode)}</td>`+
       `<td class="uitgebreid">${p.merk?`<span class="tag">${esc(p.merk)}</span>`:'<span class="muted">—</span>'}</td>`+
       `<td><span class="tag">${esc(catNaam(p.cat))}</span></td>`+
@@ -9968,6 +10082,9 @@ function prodMenu(ev, id){
   toonRijMenu(ev, [
     {ico:'i-tag', label:'Barcode-sticker printen', fn:function(){ printProductSticker(id); }},
     {ico:'i-plus', label:'Nieuwe eigen barcode + printen', fn:function(){ nieuweBarcodePrint(id); }},
+    {ico:'i-link', label:'Nog een barcode koppelen', fn:function(){ prodCodeKoppelen(id); }},
+    ...((prodVanId(id)||{}).codes||[]).map(c=>({ico:'i-trash', label:'Code '+c+' loshalen', fn:function(){ prodCodeWeg(id, c); }})),
+    {ico:'i-box', label:'Plek in het magazijn', fn:function(){ kastProdPlek(id); }},
     {ico:'i-recycle', label:'Loopt uit / vervangen', fn:function(){ uitloopOpen(id); }},
     {ico:'i-edit', label:'Bewerken', fn:function(){ bewerk(id); }},
     {ico:'i-trash', label:'Verwijderen', danger:true, fn:function(){ verwijder(id); }}
@@ -10255,7 +10372,7 @@ async function npFoto(beeld){
 function npBarcode(lading){
   const code=lading && lading.code ? String(lading.code).trim() : '';
   if(!code) return;
-  const bestaat=state.producten.find(p=>p.barcode===code);
+  const bestaat=productBijCode(code);
   if(bestaat){
     np.fout='Deze code hoort al bij '+bestaat.naam+'. Bewerk dat product of scan een andere code.';
     npTeken();
@@ -10520,7 +10637,7 @@ async function opslaanProduct(){
      streepjescode, dan zet je die er via Bewerken overheen. */
   if(!barcode) barcode='INT-'+uid();
   if(document.getElementById('f_cat').value==='__nieuw'){ toast('Kies eerst een categorie','let-op'); return; }
-  const dubbel=state.producten.find(p=>String(p.barcode)===String(barcode) && p.id!==editId);
+  const dubbel=barcodeConflict(barcode, editId);
   if(dubbel){
     /* Geen doodlopende melding meer: een botsende code kun je meteen vervangen door
        een eigen interne code, die je daarna op een sticker uitprint. */
@@ -10739,7 +10856,7 @@ function tekenHangLijst(){
     : 'Alles hangt zoals het hoort';
   el.innerHTML = lijst.length ? lijst.map(p=>`
     <div class="hangrij${inWinkel(p)===0?' leeg':''}" id="hang-${p.id}">
-      <div class="hgnaam">${esc(p.naam)}<div class="muted" style="font-size:12px">${esc(p.barcode)}</div></div>
+      <div class="hgnaam">${esc(p.naam)}${prodPakTekst(p, bijTeVullen(p))?`<div class="prodplek">Pak uit <b>${esc(prodPakTekst(p, bijTeVullen(p)))}</b></div>`:`<div class="muted" style="font-size:12px">${esc(p.barcode)}</div>`}</div>
       <div class="hgaantal">+${bijTeVullen(p)}</div>
       <button class="btn small ghost" onclick="hangKlaar(${p.id})">Opgehangen</button>
     </div>`).join('')
@@ -10761,7 +10878,8 @@ function hangKlaar(id){
 function hangScan(code){
   code=String(code||'').trim();
   if(!code) return;
-  const p=state.producten.find(p=>String(p.barcode)===code);
+  if(kastIsLabel(code)){ hangMeld('let','Dat is het label van de bak. Scan het product zelf.'); piep(300); return; }
+  const p=productBijCode(code);
   if(!p){ hangMeld('mis','Onbekende barcode '+code); piep(300); return; }
   if(bijTeVullen(p)<=0){
     hangMeld('let', p.naam+' hoeft niet bijgehangen te worden'+
@@ -10799,9 +10917,10 @@ function hangKoppel(){
     .on('broadcast',{event:'barcode'}, ({payload})=>{
       const code=payload&&payload.code?String(payload.code).trim():'';
       if(!code) return;
-      const p=state.producten.find(p=>String(p.barcode)===code);
+      const p=kastIsLabel(code) ? null : productBijCode(code);
       let antwoord;
-      if(!p) antwoord={ok:false, tekst:'Onbekende barcode'};
+      if(kastIsLabel(code)) antwoord={ok:false, tekst:'Dat is het label van de bak. Scan het product.'};
+      else if(!p) antwoord={ok:false, tekst:'Onbekende barcode'};
       else if(bijTeVullen(p)<=0) antwoord={ok:false, tekst:p.naam+' hoeft niet bijgehangen'};
       else { const n=hangKlaar(p.id); antwoord={ok:true, tekst:n+'× '+p.naam+' opgehangen', over:hangLijst().length}; }
       hangKanaal.send({type:'broadcast', event:'hangterug', payload:antwoord});
@@ -10818,6 +10937,1047 @@ function hangKoppel(){
       <div class="nplink">Lukt scannen niet? Typ over: <b>${esc(link)}</b></div>
     </div></div>`;
   npQr(document.getElementById('hangQrVak'), link);
+}
+
+/* ═══ Magazijn: kast, plank, bak en vak ═══
+   Wat niet in de winkel hangt, ligt achter in een stellingkast met bakken. In een bak staan
+   schotjes: één vak per model. Hier leg je vast wat waar ligt, zodat je nooit misgrijpt. Bij
+   bijhangen staat er "pak uit A2-3 · iPhone 16 Pro", bij inscannen "leg hem in ...", en het
+   product scannen bevestigt dat je het goede in je hand hebt.
+
+   De indeling (kast > plank > bak > vak) staat in de tabel magazijn_plekken. Hoeveel er van
+   een product in een vak ligt, staat bij het product zelf: p.plekken = [{id, n}], de eerste is
+   de vaste plek. Waarom daar en niet in een tabel: het aantal achter (voorraad min winkel)
+   staat al in de blob, en twee bronnen voor hetzelfde getal lopen uit de pas. Zo reist het
+   aantal per vak mee met de sync van dat ene product.
+
+   De regel die het bij elkaar houdt (plekKlopt, bij elke save): heeft een product plekken,
+   dan is hun som precies wat er achter ligt. Komt er iets bij (inscannen, tellen), dan gaat
+   het naar de vaste plek. Gaat er iets af (verkopen, bijhangen), dan uit de plek met het
+   minst: dan raakt een vak leeg, in plaats van dat er overal nog één ligt. Bijhangen noemt
+   precies die plek, want het rekent met dezelfde volgorde (prodPakPlan). Een product zonder
+   plek mag ook; dat ligt dan achter zonder plek.
+
+   Labels gaan naar de labelprinter (62 mm rol), met de tekst over de breedte: plank 62 x 30,
+   bak 62 x 40 en vak 62 x 25 mm (het smalle label op het schotje). De barcode op een label is
+   de vaste code van die plek (PL-...), niet A2-3. Zo kun je een bak hernoemen zonder opnieuw
+   te stickeren. */
+let kastPlekken=[], kastGeladen=false, kastLaadBezig=null, kastNu=null, kastBakNu=null, kastVakNu=null;
+const KAST_LABEL_MM={plank:30, bak:40, vak:25, kast:30};
+
+async function kastLaad(){
+  try{
+    const {data,error}=await sb.from('magazijn_plekken').select('*').order('volgorde',{ascending:true});
+    if(!error && Array.isArray(data)){ kastPlekken=data; kastGeladen=true; }
+  }catch(e){}
+  return kastPlekken;
+}
+/* Eén laadronde tegelijk: de pagina tekent zich soms een paar keer achter elkaar. */
+function kastLaadEenmaal(){
+  if(!kastLaadBezig) kastLaadBezig=kastLaad().finally(()=>{ kastLaadBezig=null; });
+  return kastLaadBezig;
+}
+function kastSorteer(a,b){ return ((a.volgorde||0)-(b.volgorde||0)) || String(a.kort||'').localeCompare(String(b.kort||''),'nl',{numeric:true}); }
+function kastPlek(id){ return id ? (kastPlekken.find(x=>x.id===id)||null) : null; }
+function kastKinderen(id, soort){ return kastPlekken.filter(x=>(x.ouder_id||null)===(id||null) && (!soort || x.soort===soort)).sort(kastSorteer); }
+function kastKetting(id){ const k=[]; let p=kastPlek(id), n=0; while(p && n++<6){ k.unshift(p); p=kastPlek(p.ouder_id); } return k; }
+function kastDeel(id, soort){ return kastKetting(id).find(x=>x.soort===soort)||null; }
+/* De code op het label en in de lijsten: kast-letter en plank-nummer aan elkaar, dan de bak.
+   A2-3 is kast A, plank 2, bak 3. Een vak noemen we bij zijn naam, het model, want zo kijk je
+   ook in de bak. */
+function kastCode(id){
+  const kast=kastDeel(id,'kast'), plank=kastDeel(id,'plank'), bak=kastDeel(id,'bak');
+  return (kast?kast.kort:'')+(plank?plank.kort:'')+(bak?'-'+bak.kort:'');
+}
+/* Hoe een plek in een zin heet. Leeg als we hem niet kennen, bijvoorbeeld offline voordat de
+   kast geladen is: dan liever niets dan "onbekend". */
+function kastNaam(id){
+  const p=kastPlek(id); if(!p) return '';
+  if(p.soort==='kast') return 'Kast '+p.kort;
+  if(p.soort==='plank') return 'Plank '+kastCode(id);
+  if(p.soort==='bak') return kastCode(id)+(p.naam?' · '+p.naam:'');
+  return kastCode(id)+' · '+(p.naam||'vak');
+}
+/* Alles wat onder een plek hangt, die plek zelf meegeteld. */
+function kastOnder(id){
+  const s=new Set([id]); let groei=true;
+  while(groei){ groei=false; kastPlekken.forEach(x=>{ if(x.ouder_id && s.has(x.ouder_id) && !s.has(x.id)){ s.add(x.id); groei=true; } }); }
+  return s;
+}
+function kastNieuweCode(){
+  /* Geen 0/O en 1/I: die lees je verkeerd als je hem een keer moet overtypen. */
+  const tekens='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c, n=0;
+  do{ c='PL-'; for(let i=0;i<6;i++) c+=tekens[Math.floor(Math.random()*tekens.length)]; }
+  while(kastPlekken.some(x=>x.code===c) && ++n<50);
+  return c;
+}
+/* Is dit het label van een plek in de kast? Dan is het geen product, en maken we er nooit een
+   nieuw product van, ook niet als die plek inmiddels weg is. */
+function kastIsLabel(code){ return /^PL-[A-Z0-9]{4,10}$/i.test(String(code||'').trim()); }
+function kastVanScan(code){
+  if(!kastIsLabel(code)) return null;
+  const c=String(code).trim().toUpperCase();
+  return kastPlekken.find(x=>x.code===c)||null;
+}
+/* Het volgende vrije nummer (of de volgende letter, voor een kast). Vrij, niet "aantal plus
+   één": haal je plank 2 weg, dan krijgt een nieuwe plank niet nog een keer nummer 3. */
+function kastVolgendKort(ouderId, soort){
+  const broers=kastKinderen(ouderId, soort);
+  if(soort==='kast'){
+    const l='ABCDEFGHJKLMNPQRSTUVWXYZ'.split('').find(x=>!broers.some(b=>b.kort===x));
+    return l||String(broers.length+1);
+  }
+  let n=1; while(broers.some(b=>String(b.kort)===String(n))) n++;
+  return String(n);
+}
+async function kastMaak(soort, ouderId, velden){
+  const rij=Object.assign({team_id:account.team_id, soort, ouder_id:ouderId||null, kort:kastVolgendKort(ouderId, soort),
+    naam:'', sub:'', volgorde:kastKinderen(ouderId).length, code:kastNieuweCode()}, velden||{});
+  const {data,error}=await sb.from('magazijn_plekken').insert(rij).select().single();
+  if(error || !data) throw (error||new Error('niet opgeslagen'));
+  kastPlekken.push(data);
+  return data;
+}
+async function kastVeld(id, veld, waarde){
+  const p=kastPlek(id); if(!p) return;
+  const w=String(waarde||'').trim().slice(0,60);
+  if((p[veld]||'')===w) return;
+  p[veld]=w;
+  try{
+    const {error}=await sb.from('magazijn_plekken').update({[veld]:w, bijgewerkt_op:new Date().toISOString()}).eq('id',id);
+    if(error) throw error;
+  }catch(e){ toast('Opslaan lukte niet. Ben je online?','fout'); }
+  if(!document.getElementById('tab-magazijn').hidden) renderMagazijn();
+}
+
+/* ── de producten in de kast ── */
+function prodVanId(id){ return (state.producten||[]).find(p=>String(p.id)===String(id))||null; }
+/* Een product vinden op elke code die erbij hoort: de barcode, of een gekoppelde extra code
+   (een doosje met een andere streepjescode, een eigen sticker). */
+function productBijCode(code){
+  code=String(code||'').trim(); if(!code) return null;
+  const l=state.producten||[];
+  return l.find(p=>String(p.barcode||'')===code)
+    || l.find(p=>Array.isArray(p.codes) && p.codes.some(c=>String(c)===code)) || null;
+}
+function prodPlekken(p){ return (p && Array.isArray(p.plekken)) ? p.plekken.filter(x=>x && x.id) : []; }
+function plekN(x){ return Math.max(0, Math.floor(Number(x && x.n)||0)); }
+/* Waar pak je n stuks: eerst de plek met het minst. Plekken zonder iets slaan we over. */
+function prodPakPlan(p, n){
+  const lijst=prodPlekken(p).map((x,i)=>({id:x.id, n:plekN(x), i})).filter(x=>x.n>0)
+    .sort((a,b)=>(a.n-b.n)||(a.i-b.i));
+  const plan=[]; let rest=Math.max(0, Math.floor(Number(n)||0));
+  for(const x of lijst){ if(rest<=0) break; const k=Math.min(rest, x.n); plan.push({id:x.id, n:k}); rest-=k; }
+  return plan;
+}
+/* De som van de plekken is wat er achter ligt. Zie de uitleg bovenaan. Geeft true als er iets
+   rechtgezet is. Plekken die we (nog) niet kennen laten we staan: offline is de kast misschien
+   nog niet geladen, en dan zou je bij elke save iemands indeling weggooien. */
+function plekKlopt(p){
+  const pl=prodPlekken(p); if(!pl.length) return false;
+  const schoon=pl.map(x=>({id:x.id, n:plekN(x)}));
+  const achter=achterLiggen(p);
+  const som=schoon.reduce((s,x)=>s+x.n,0);
+  if(som<achter) schoon[0].n+=achter-som;
+  else if(som>achter) prodPakPlan({plekken:schoon}, som-achter).forEach(s=>{ const x=schoon.find(y=>y.id===s.id); if(x) x.n-=s.n; });
+  if(syncGelijk(schoon, p.plekken)) return false;
+  p.plekken=schoon;
+  return true;
+}
+function plekkenKloppen(){ (state.producten||[]).forEach(p=>{ if(p && p.plekken) plekKlopt(p); }); }
+/* Waar ligt het: de vaste plek, en hoeveel andere plekken er nog zijn. */
+function prodWaar(p){
+  const pl=prodPlekken(p).filter(x=>kastPlek(x.id)); if(!pl.length) return '';
+  const eerste=kastNaam(pl[0].id);
+  return pl.length>1 ? eerste+' en nog '+(pl.length-1)+' plek'+(pl.length===2?'':'ken') : eerste;
+}
+/* Waar pak je n stuks uit. Bij één plek alleen de naam, bij meer ook hoeveel per plek. */
+function prodPakTekst(p, n){
+  const plan=prodPakPlan(p, n).filter(x=>kastPlek(x.id));
+  if(!plan.length) return '';
+  if(plan.length===1) return kastNaam(plan[0].id);
+  return plan.map(x=>kastNaam(x.id)+' ('+x.n+')').join(', ');
+}
+/* Waar leg je iets neer dat binnenkomt: de vaste plek, de eerste. */
+function prodLegTekst(p){ const pl=prodPlekken(p); return pl.length ? kastNaam(pl[0].id) : ''; }
+/* Het model van een product: het gekoppelde model, of het langste model dat in de naam staat
+   ("iPhone 16 Pro Max" wint van "iPhone 16"). "Apple" en "Galaxy" doen niet mee: de
+   modellenlijst zegt "Samsung S24", de leverancier "Samsung Galaxy S24". */
+function kastModelVan(p){
+  if(!p) return null;
+  const lijst=state.modellen||[];
+  if(p.modelId!=null){ const m=lijst.find(x=>String(x.id)===String(p.modelId)); if(m) return m.naam; }
+  const naam=' '+String(p.naam||'').replace(/\b(apple|galaxy)\s+/gi,'').toLowerCase()+' ';
+  let beste=null;
+  lijst.forEach(m=>{
+    const mn=String(m.naam||'').toLowerCase(); if(!mn) return;
+    let i=naam.indexOf(mn);
+    while(i>=0){
+      const voor=naam[i-1]||' ', na=naam[i+mn.length]||' ';
+      if(!/[a-z0-9]/.test(voor) && !/[a-z0-9+]/.test(na)){ if(!beste || m.naam.length>beste.length) beste=m.naam; break; }
+      i=naam.indexOf(mn, i+1);
+    }
+  });
+  return beste;
+}
+/* De modellen van een serie: "iPhone 16" geeft 16, 16 Plus, 16 Pro, 16 Pro Max en 16e, maar
+   niet de iPhone 160. Na de serie mag dus geen cijfer meer komen. */
+function kastSerie(q){
+  q=String(q||'').trim().toLowerCase(); if(!q) return [];
+  return (state.modellen||[]).filter(m=>{
+    const n=String(m.naam||'').toLowerCase();
+    return n.startsWith(q) && !/[0-9]/.test(n[q.length]||'');
+  }).map(m=>m.naam);
+}
+function kastStuksIn(id){
+  const s=kastOnder(id); let n=0;
+  (state.producten||[]).forEach(p=>prodPlekken(p).forEach(x=>{ if(s.has(x.id)) n+=plekN(x); }));
+  return n;
+}
+function kastInhoud(id){
+  const uit=[];
+  (state.producten||[]).forEach(p=>prodPlekken(p).forEach(x=>{ if(x.id===id) uit.push({p, n:plekN(x)}); }));
+  return uit.sort((a,b)=>String(a.p.naam).localeCompare(String(b.p.naam),'nl',{numeric:true}));
+}
+/* Staat er iets van een product in een plek, ook al is het nul: dan hoort het daar. */
+function kastHeeftVerwijzing(id){
+  const s=kastOnder(id);
+  return (state.producten||[]).some(p=>prodPlekken(p).some(x=>s.has(x.id)));
+}
+
+/* ── tellen in een vak ──
+   Een aantal in een vak is wat daar ligt. Bij het inrichten van de kast ligt dat er meestal
+   al: de winkel telde het tot nu toe gewoon mee als "hangt in de winkel" (dat is het enige
+   getal dat het toevoegformulier vraagt). Geef je een product voor het eerst een plek, dan
+   gaat wat je in dat vak telt dus van de winkeltelling af en blijft het totaal gelijk. Pas
+   als je meer telt dan er volgens de winkel hing, komt het totaal omhoog. Heeft het product
+   al een plek, dan is een nieuw getal gewoon een hertelling en verandert het totaal mee.
+   kastInricht onthoudt per product en vak hoeveel er zo uit de winkeltelling kwam (uit) en
+   hoeveel er bovenop het totaal kwam (erbij). Zo draait een typfout (10 in plaats van 4) netjes
+   terug: eerst gaat eraf wat er te veel bij kwam, pas daarna gaat er iets terug naar de winkel. */
+const kastInricht=new Map();
+function kastSleutel(pid, plekId){ return String(pid)+'|'+plekId; }
+function kastAantalZet(pid, plekId, waarde){
+  const p=prodVanId(pid); if(!p) return;
+  const n=Math.max(0, Math.min(9999, Math.floor(Number(waarde)||0)));
+  const pl=prodPlekken(p).map(x=>({id:x.id, n:plekN(x)}));
+  let x=pl.find(y=>y.id===plekId);
+  if(!x){ x={id:plekId, n:0}; pl.push(x); }
+  const delta=n-x.n;
+  if(!delta){ kastNaAantal(p, plekId); return; }
+  x.n=n;
+  let winkel=inWinkel(p);
+  const k=kastSleutel(p.id, plekId);
+  if(kastInricht.has(k)){
+    const r=kastInricht.get(k);
+    if(delta>0){ const s=Math.min(delta, winkel); winkel-=s; r.uit+=s; r.erbij+=delta-s; }
+    else {
+      let d=-delta;
+      const e=Math.min(d, r.erbij); r.erbij-=e; d-=e;
+      const t=Math.min(d, r.uit); r.uit-=t; winkel+=t;
+    }
+  }
+  p.plekken=pl;
+  p.winkel=winkel;
+  p.voorraad=winkel+pl.reduce((s,y)=>s+y.n,0);
+  if(!moetBestellen(p)){ p.besteld=false; p.besteldOp=null; }
+  save(); updateBadge();
+  if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
+  const r=kastInricht.get(k);
+  kastNaAantal(p, plekId, r && r.uit ? 'De winkel telde er al '+r.uit+' van mee.' : '');
+}
+function kastAantal(pid, plekId, d){
+  const p=prodVanId(pid); if(!p) return;
+  const x=prodPlekken(p).find(y=>y.id===plekId);
+  kastAantalZet(pid, plekId, (x?plekN(x):0)+d);
+}
+/* Na een nieuw aantal alleen de getallen bijwerken, niet het hele venster opnieuw tekenen.
+   Anders gaat een klik op de plus van de volgende regel verloren: die knop bestaat dan niet
+   meer op het moment dat de klik aankomt. */
+function kastNaAantal(p, plekId, extra){
+  const pl=prodPlekken(p).find(y=>y.id===plekId);
+  const inp=document.getElementById('kastn-'+plekId+'-'+p.id);
+  if(inp && document.activeElement!==inp) inp.value=pl?plekN(pl):0;
+  document.querySelectorAll('[data-kasttel]').forEach(e=>{ e.textContent=kastStuksIn(e.dataset.kasttel)+' stuks'; });
+  kastMeld('goed', p.naam+': '+achterLiggen(p)+' achter. '+(extra?extra+' ':'')+'Totaal '+(p.voorraad||0)+', in de winkel '+inWinkel(p)+'.');
+}
+function kastMeld(soort, tekst){
+  ['kastBakMelding','kastProdMelding'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML=`<div class="npmelding ${soort==='mis'?'mis':'goed'}">${esc(tekst)}</div>`;
+  });
+}
+/* Een product op een plek leggen. Het aantal begint op wat er achter lag zonder plek, zodat
+   koppelen zelf nooit de voorraad verandert. Daarna vul je in hoeveel er echt liggen. */
+function kastKoppel(p, plekId){
+  const pl=prodPlekken(p).map(x=>({id:x.id, n:plekN(x)}));
+  if(pl.some(x=>x.id===plekId)){
+    kastHerteken(); kastFocusAantal(p.id, plekId);
+    kastMeld('goed', p.naam+' ligt al hier. Vul in hoeveel er liggen.');
+    piep(660); return;
+  }
+  const eerste=!pl.length;
+  const los=Math.max(0, achterLiggen(p)-pl.reduce((s,x)=>s+x.n,0));
+  pl.push({id:plekId, n:los});
+  p.plekken=pl;
+  if(eerste) kastInricht.set(kastSleutel(p.id, plekId), {uit:0, erbij:0});
+  save();
+  kastHerteken(); kastFocusAantal(p.id, plekId);
+  kastMeld('goed', p.naam+' ligt nu in '+kastNaam(plekId)+'. Vul in hoeveel er liggen.');
+  piep(880);
+}
+function kastKoppelId(pid, plekId){ const p=prodVanId(pid); if(p) kastKoppel(p, plekId); }
+function kastFocusAantal(pid, plekId){
+  setTimeout(()=>{ const e=document.getElementById('kastn-'+plekId+'-'+pid); if(e){ try{ e.focus(); e.select(); }catch(_e){} } }, 30);
+}
+/* Eén regel: een product (in een bak) of een plek (bij een product), met het aantal. */
+function kastRijHtml(p, plekId, n, label){
+  const pid=esc(String(p.id));
+  return `<div class="kastprod">
+    <span class="kastprodnaam">${esc(label)}</span>
+    <span class="kaststap">
+      <button type="button" onclick="kastAantal('${pid}','${plekId}',-1)" aria-label="Eén minder">&minus;</button>
+      <input id="kastn-${plekId}-${pid}" type="number" min="0" step="1" value="${n}" aria-label="Aantal"
+        onchange="kastAantalZet('${pid}','${plekId}',this.value)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault(); kastAantalZet('${pid}','${plekId}',this.value); kastScanFocus();}">
+      <button type="button" onclick="kastAantal('${pid}','${plekId}',1)" aria-label="Eén meer">+</button>
+    </span>
+    <button class="btn small ghost icoknop rijmeer" title="Acties" onclick="kastRijMenu(event,'${pid}','${plekId}')">⋯</button>
+  </div>`;
+}
+function kastRijMenu(ev, pid, plekId){
+  toonRijMenu(ev, [
+    {ico:'i-right', label:'Naar een andere plek', fn:function(){ kastVerplaats(pid, plekId); }},
+    {ico:'i-trash', label:'Hier weghalen', danger:true, fn:function(){ kastHierWeg(pid, plekId); }}
+  ]);
+}
+function kastVerplaats(pid, vanId){
+  const p=prodVanId(pid); if(!p) return;
+  kastKiesPlek('Waar ligt '+p.naam+' nu?', 'Alles uit '+kastNaam(vanId)+' gaat mee.', function(naarId){
+    const q=prodVanId(pid); if(!q || naarId===vanId) return;
+    const pl=prodPlekken(q).map(x=>({id:x.id, n:plekN(x)}));
+    const van=pl.find(x=>x.id===vanId); if(!van) return;
+    const naar=pl.find(x=>x.id===naarId);
+    if(naar){ naar.n+=van.n; pl.splice(pl.indexOf(van),1); } else van.id=naarId;
+    q.plekken=pl; save();
+    toast(q.naam+' ligt nu in '+kastNaam(naarId), true);
+    kastHerteken();
+  }, vanId);
+}
+async function kastHierWeg(pid, plekId){
+  let p=prodVanId(pid); if(!p) return;
+  const x=prodPlekken(p).find(y=>y.id===plekId); if(!x) return;
+  const n=plekN(x);
+  if(n>0 && !await vraagJaNee('Er liggen er '+n+'. Die gaan van de voorraad af. Liggen ze ergens anders? Kies dan Naar een andere plek.', {kop:p.naam+' hier weghalen?', ja:'Weghalen', gevaar:true})) return;
+  p=prodVanId(pid); if(!p) return;   // na de vraag opnieuw opzoeken: de sync kan de lijst vervangen hebben
+  const pl=prodPlekken(p).map(y=>({id:y.id, n:plekN(y)}));
+  const weg=pl.find(y=>y.id===plekId); if(!weg) return;
+  pl.splice(pl.indexOf(weg),1);
+  p.plekken=pl;
+  p.voorraad=Math.max(inWinkel(p), (p.voorraad||0)-weg.n);
+  kastInricht.delete(kastSleutel(p.id, plekId));
+  save(); updateBadge();
+  if(typeof cloverVoorraadGewijzigd==='function') cloverVoorraadGewijzigd(p);
+  kastHerteken();
+  toast(p.naam+' weggehaald uit '+kastNaam(plekId), true);
+}
+function kastHerteken(){
+  if(document.getElementById('kastBakVenster')) kastBakTeken();
+  if(document.getElementById('kastProdVenster')) kastProdTeken();
+  const tab=document.getElementById('tab-magazijn');
+  if(tab && !tab.hidden) renderMagazijn();
+}
+function kastScanFocus(){
+  const e=document.getElementById('kastBakScan')||document.getElementById('kastZoek');
+  if(e){ try{ e.focus(); }catch(_e){} }
+}
+
+/* ── de pagina Magazijn ── */
+function renderMagazijn(){
+  const el=document.getElementById('kastVak'); if(!el) return;
+  if(!kastGeladen){
+    el.innerHTML='<div class="card"><p class="muted">De kast wordt geladen.</p></div>';
+    kastLaadEenmaal().then(()=>{
+      if(kastGeladen) renderMagazijn();
+      else el.innerHTML='<div class="card"><p class="muted">De kast laden lukte niet. Ben je online?</p></div>';
+    });
+    return;
+  }
+  const kasten=kastKinderen(null,'kast');
+  if(!kasten.length){
+    el.innerHTML=`<div class="card">
+      <h2><svg class="i"><use href="#i-layers"/></svg>Leg je kast vast</h2>
+      <p class="muted kastuitleg">Hoeveel planken heeft de kast? Daarna zet je per plank de bakken erin, en per bak de vakken.</p>
+      <div class="row">
+        <div><label for="kastAantalPlanken">Planken</label><input id="kastAantalPlanken" type="number" min="1" max="20" step="1" value="5"></div>
+        <div class="kastknopvak"><button class="btn actie" onclick="kastMaken(this)"><svg class="i s"><use href="#i-plus"/></svg>Kast aanmaken</button></div>
+      </div>
+    </div>`;
+    return;
+  }
+  if(!kastNu || !kasten.some(k=>k.id===kastNu)) kastNu=kasten[0].id;
+  const kies=kasten.length>1
+    ? `<div class="periodesel kastkeuze">${kasten.map(k=>`<button class="${k.id===kastNu?'active':''}" onclick="kastKies('${k.id}')">Kast ${esc(k.kort)}</button>`).join('')}</div>`
+    : '';
+  const planken=kastKinderen(kastNu,'plank');
+  const zonder=(state.producten||[]).filter(p=>achterLiggen(p)>0 && !prodPlekken(p).length)
+    .sort((a,b)=>String(a.naam).localeCompare(String(b.naam),'nl',{numeric:true}));
+  el.innerHTML=kies+planken.map(kastPlankHtml).join('')+
+    `<div class="kastonder">
+      <button class="btn ghost" onclick="kastPlankErbij(this)"><svg class="i s"><use href="#i-plus"/></svg>Plank toevoegen</button>
+      <button class="btn ghost uitgebreid" onclick="kastErbij(this)"><svg class="i s"><use href="#i-plus"/></svg>Nog een kast</button>
+    </div>`+
+    (zonder.length ? `<div class="card"><details class="meeropties kaartuitklap"><summary><svg class="i"><use href="#i-box"/></svg>Ligt achter zonder plek (${zonder.length})</summary>
+      <div class="kastlijst">${zonder.slice(0,80).map(p=>`<button class="kastkeus" onclick="kastProdPlek('${esc(String(p.id))}')"><span>${esc(p.naam)}</span><span class="muted">${achterLiggen(p)} achter</span></button>`).join('')}</div>
+    </details></div>` : '');
+}
+function kastPlankHtml(pl){
+  const bakken=kastKinderen(pl.id,'bak');
+  return `<div class="card kastplank" id="kastplank-${pl.id}">
+    <div class="kastplankkop">
+      <h2>Plank ${esc(kastCode(pl.id))}</h2>
+      <span class="muted klein">${bakken.length} ${bakken.length===1?'bak':'bakken'}</span>
+      <button class="btn small ghost icoknop rijmeer" title="Acties" onclick="kastPlankMenu(event,'${pl.id}')">⋯</button>
+    </div>
+    <div class="kastbakken">${bakken.map(kastBakTegel).join('')}
+      <button type="button" class="kastbak nieuw" onclick="kastBakErbij('${pl.id}', this)"><svg class="i s"><use href="#i-plus"/></svg>Bak</button>
+    </div>
+  </div>`;
+}
+function kastBakTegel(b){
+  const vakken=kastKinderen(b.id,'vak');
+  return `<button type="button" class="kastbak" onclick="kastBakOpen('${b.id}')">
+    <span class="kastcode">${esc(kastCode(b.id))}</span>
+    <b>${esc(b.naam||'Bak zonder naam')}</b>
+    ${b.sub?`<span class="muted klein">${esc(b.sub)}</span>`:''}
+    <span class="kasttel">${vakken.length?vakken.length+' '+(vakken.length===1?'vak':'vakken')+' · ':''}<span data-kasttel="${b.id}">${kastStuksIn(b.id)} stuks</span></span>
+  </button>`;
+}
+function kastKies(id){ kastNu=id; renderMagazijn(); }
+async function kastMaken(knop){
+  const n=Math.max(1, Math.min(20, Math.floor(Number((document.getElementById('kastAantalPlanken')||{}).value)||5)));
+  if(knop) knop.disabled=true;
+  try{
+    const kast=await kastMaak('kast', null);
+    for(let i=0;i<n;i++) await kastMaak('plank', kast.id);
+    kastNu=kast.id;
+    toast('Kast '+kast.kort+' staat erin, met '+n+' planken', true);
+  }catch(e){ toast('Aanmaken lukte niet. Ben je online?','fout'); }
+  if(knop) knop.disabled=false;
+  renderMagazijn();
+}
+async function kastErbij(knop){
+  if(knop) knop.disabled=true;
+  try{ const k=await kastMaak('kast', null); await kastMaak('plank', k.id); kastNu=k.id; toast('Kast '+k.kort+' toegevoegd', true); }
+  catch(e){ toast('Toevoegen lukte niet. Ben je online?','fout'); }
+  if(knop) knop.disabled=false;
+  renderMagazijn();
+}
+async function kastPlankErbij(knop){
+  if(!kastNu) return;
+  if(knop) knop.disabled=true;
+  try{ const p=await kastMaak('plank', kastNu); toast('Plank '+kastCode(p.id)+' toegevoegd', true); }
+  catch(e){ toast('Toevoegen lukte niet. Ben je online?','fout'); }
+  if(knop) knop.disabled=false;
+  renderMagazijn();
+}
+async function kastBakErbij(plankId, knop){
+  if(knop) knop.disabled=true;
+  try{ const b=await kastMaak('bak', plankId); renderMagazijn(); kastBakOpen(b.id); setTimeout(()=>{ const e=document.getElementById('kastBakNaam'); if(e) e.focus(); }, 40); }
+  catch(e){ toast('Toevoegen lukte niet. Ben je online?','fout'); if(knop) knop.disabled=false; }
+}
+function kastPlankMenu(ev, id){
+  const bakken=kastKinderen(id,'bak');
+  toonRijMenu(ev, [
+    {ico:'i-tag', label:'Plank-label printen', fn:function(){ kastLabels([id], 'Label van '+kastNaam(id)); }},
+    {ico:'i-tag', label:'Alle labels van deze plank', verborgen:!bakken.length, fn:function(){
+      const ids=[id]; bakken.forEach(b=>{ ids.push(b.id); kastKinderen(b.id,'vak').forEach(v=>ids.push(v.id)); });
+      kastLabels(ids, 'Labels van '+kastNaam(id));
+    }},
+    {ico:'i-trash', label:'Plank weghalen', danger:true, fn:function(){ kastWeg(id); }}
+  ]);
+}
+async function kastWeg(id){
+  const pl=kastPlek(id); if(!pl) return;
+  if(kastStuksIn(id)>0){ toast('Er ligt nog iets in '+kastNaam(id)+'. Verplaats het eerst, of tel het naar nul.','let-op'); return; }
+  const onder=kastOnder(id);
+  const naam=kastNaam(id);
+  if(!await vraagJaNee('Het label op de kast hoort dan nergens meer bij.'+(onder.size>1?' Wat erin staat gaat mee.':''), {kop:naam+' weghalen?', ja:'Weghalen', gevaar:true})) return;
+  try{
+    const {error}=await sb.from('magazijn_plekken').delete().eq('id',id);
+    if(error) throw error;
+  }catch(e){ toast('Weghalen lukte niet. Ben je online?','fout'); return; }
+  kastPlekken=kastPlekken.filter(x=>!onder.has(x.id));
+  let veranderd=false;
+  (state.producten||[]).forEach(p=>{
+    const pl=prodPlekken(p);
+    if(pl.some(x=>onder.has(x.id))){ p.plekken=pl.filter(x=>!onder.has(x.id)); veranderd=true; }
+  });
+  if(veranderd) save();
+  if(kastBakNu && onder.has(kastBakNu)) kastBakSluit();
+  kastHerteken();
+  toast(naam+' weggehaald', true);
+}
+
+/* ── zoeken: waar ligt het? ── */
+function kastZoekTeken(){
+  const uit=document.getElementById('kastZoekUit'); if(!uit) return;
+  const q=String((document.getElementById('kastZoek')||{}).value||'').trim();
+  if(q.length<2){ uit.innerHTML=''; return; }
+  const p1=productBijCode(q);
+  const lijst=p1 ? [p1] : (state.producten||[]).filter(p=>zoekPast(p.naam+' '+(p.merk||''), zoekGroepen(q.toLowerCase()))).slice(0,8);
+  uit.innerHTML=lijst.length ? lijst.map(p=>{
+    const waar=prodWaar(p);
+    return `<button class="kastkeus" onclick="kastNaarProduct('${esc(String(p.id))}')"><span>${esc(p.naam)}</span><span class="muted">${waar?esc(waar):'nog geen plek'}</span></button>`;
+  }).join('') : '<div class="muted klein">Niets gevonden.</div>';
+}
+function kastZoekScan(code){
+  code=String(code||'').trim(); if(!code) return;
+  if(kastIsLabel(code)){
+    const pl=kastVanScan(code);
+    if(pl){ const z=document.getElementById('kastZoek'); if(z) z.value=''; kastZoekTeken(); kastPlekOpen(pl.id); }
+    else toast('Dit label hoort bij een plek die er niet meer is.','let-op');
+    return;
+  }
+  const p=productBijCode(code);
+  if(p){ const z=document.getElementById('kastZoek'); if(z) z.value=''; kastZoekTeken(); kastNaarProduct(p.id); return; }
+  kastZoekTeken();
+}
+function kastNaarProduct(pid){
+  const p=prodVanId(pid); if(!p) return;
+  const pl=prodPlekken(p).filter(x=>kastPlek(x.id));
+  if(pl.length===1){ kastPlekOpen(pl[0].id); return; }
+  kastProdPlek(pid);
+}
+/* Een plek openen, bijvoorbeeld na het scannen van zijn label. */
+function kastPlekOpen(id){
+  const pl=kastPlek(id); if(!pl) return;
+  if(pl.soort==='vak'){ kastBakOpen(pl.ouder_id, pl.id); return; }
+  if(pl.soort==='bak'){ kastBakOpen(pl.id); return; }
+  const kast=kastDeel(id,'kast'); if(kast) kastNu=kast.id;
+  showTab('magazijn');
+  if(pl.soort==='plank') setTimeout(()=>{
+    const e=document.getElementById('kastplank-'+pl.id);
+    if(e && e.scrollIntoView) e.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 60);
+}
+
+/* ── het venster van één bak ── */
+function kastBakOpen(id, vakId){
+  if(!kastPlek(id)) return;
+  kastBakNu=id; kastVakNu=vakId||null;
+  let ov=document.getElementById('kastBakVenster');
+  if(!ov){
+    ov=document.createElement('div'); ov.className='overlay'; ov.id='kastBakVenster';
+    ov.onclick=e=>{ if(e.target===ov) kastBakSluit(); };
+    /* Toetsen blijven in het venster: anders ziet de scanner op de pagina een getypt aantal
+       aan voor een barcode en opent hij er een venster achteraan. */
+    ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); kastBakSluit(); } });
+    document.body.appendChild(ov);
+  }
+  kastBakTeken();
+  if(vakId) setTimeout(()=>{ const v=document.getElementById('kastvak-'+vakId); if(v && v.scrollIntoView) v.scrollIntoView({block:'center'}); }, 40);
+  kastScanFocus();
+}
+function kastBakSluit(){
+  const ov=document.getElementById('kastBakVenster'); if(ov) ov.remove();
+  kastBakNu=null; kastVakNu=null;
+  const tab=document.getElementById('tab-magazijn');
+  if(tab && !tab.hidden) renderMagazijn();
+}
+function kastBakTeken(){
+  const ov=document.getElementById('kastBakVenster'); if(!ov) return;
+  const b=kastPlek(kastBakNu); if(!b){ kastBakSluit(); return; }
+  const vakken=kastKinderen(b.id,'vak');
+  const los=kastInhoud(b.id);
+  ov.innerHTML=`<div class="popup groot kastpop" role="dialog" aria-modal="true">
+    <div class="kastpopkop">
+      <span class="kastcode groot">${esc(kastCode(b.id))}</span>
+      <div class="kastpopnaam">
+        <input id="kastBakNaam" value="${esc(b.naam||'')}" placeholder="Naam, bijvoorbeeld iPhone 16 serie" autocomplete="off" onchange="kastVeld('${b.id}','naam',this.value)">
+        <input id="kastBakSub" value="${esc(b.sub||'')}" placeholder="Wat erin ligt, bijvoorbeeld Screenprotectors" autocomplete="off" onchange="kastVeld('${b.id}','sub',this.value)">
+      </div>
+      <button class="btn ghost small" onclick="kastBakSluit()"><svg class="i s"><use href="#i-check"/></svg>Klaar</button>
+    </div>
+    <label for="kastBakScan">Scan of zoek wat hierin ligt</label>
+    <input id="kastBakScan" placeholder="Scan de barcode, of typ de naam" autocomplete="off"
+      oninput="kastBakZoek(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault(); kastBakScan(this.value);}">
+    <div id="kastBakZoek" class="kastlijst"></div>
+    <div id="kastBakMelding"></div>
+    ${vakken.map(kastVakHtml).join('')}
+    ${(!vakken.length || los.length) ? `<div class="kastvak">
+        ${vakken.length?'<div class="kastvakkop"><b>Los in de bak</b></div>':''}
+        ${los.length ? los.map(x=>kastRijHtml(x.p, b.id, x.n, x.p.naam)).join('') : '<div class="muted klein kastniets">Nog niets. Scan een product, of maak eerst vakken per model.</div>'}
+      </div>` : ''}
+    <div class="kastacties">
+      <button class="btn ghost small" onclick="kastVakkenPerModel('${b.id}')"><svg class="i s"><use href="#i-layers"/></svg>Vakken per model</button>
+      <button class="btn ghost small" onclick="kastVakErbij('${b.id}')"><svg class="i s"><use href="#i-plus"/></svg>Los vak</button>
+      <button class="btn ghost small" onclick="kastLabelsBak('${b.id}')"><svg class="i s"><use href="#i-tag"/></svg>Labels printen</button>
+      <button class="btn ghost small" onclick="kastWeg('${b.id}')"><svg class="i s"><use href="#i-trash"/></svg>Bak weghalen</button>
+    </div>
+  </div>`;
+}
+function kastVakHtml(v){
+  const inhoud=kastInhoud(v.id);
+  return `<div class="kastvak${kastVakNu===v.id?' licht':''}" id="kastvak-${v.id}">
+    <div class="kastvakkop">
+      <b>${esc(v.naam||'Vak')}</b>
+      <span class="muted klein" data-kasttel="${v.id}">${kastStuksIn(v.id)} stuks</span>
+      <button class="btn small ghost icoknop rijmeer" title="Acties" onclick="kastVakMenu(event,'${v.id}')">⋯</button>
+    </div>
+    ${inhoud.length ? inhoud.map(x=>kastRijHtml(x.p, v.id, x.n, x.p.naam)).join('') : '<div class="muted klein kastniets">Nog leeg. Scan wat erin ligt.</div>'}
+  </div>`;
+}
+function kastVakMenu(ev, id){
+  toonRijMenu(ev, [
+    {ico:'i-edit', label:'Naam wijzigen', fn:async function(){
+      const v=kastPlek(id); if(!v) return;
+      const naam=await vraagTekst('Naam van het vak', 'Meestal het model, bijvoorbeeld iPhone 16 Pro.', {waarde:v.naam||'', ja:'Opslaan'});
+      if(naam==null || !String(naam).trim()) return;
+      await kastVeld(id, 'naam', naam); kastHerteken();
+    }},
+    {ico:'i-tag', label:'Label printen', fn:function(){ kastLabels([id], 'Label van '+kastNaam(id)); }},
+    {ico:'i-trash', label:'Vak weghalen', danger:true, fn:function(){ kastWeg(id); }}
+  ]);
+}
+async function kastVakErbij(bakId){
+  const naam=await vraagTekst('Nieuw vak', 'Meestal het model, bijvoorbeeld iPhone 16 Pro.', {ja:'Toevoegen', placeholder:'Naam van het vak'});
+  if(naam==null || !String(naam).trim()) return;
+  try{ const v=await kastMaak('vak', bakId, {naam:String(naam).trim().slice(0,60)}); kastVakNu=v.id; }
+  catch(e){ toast('Toevoegen lukte niet. Ben je online?','fout'); return; }
+  if(kastBakNu===bakId) kastBakTeken(); else kastBakOpen(bakId);
+  kastScanFocus();
+}
+function kastBakZoek(q){
+  const uit=document.getElementById('kastBakZoek'); if(!uit) return;
+  q=String(q||'').trim();
+  if(q.length<2 || /^\d{6,}$/.test(q) || kastIsLabel(q)){ uit.innerHTML=''; return; }
+  const lijst=(state.producten||[]).filter(p=>zoekPast(p.naam+' '+(p.merk||''), zoekGroepen(q.toLowerCase()))).slice(0,6);
+  uit.innerHTML=lijst.map(p=>{
+    const waar=prodWaar(p);
+    return `<button class="kastkeus" onclick="kastLegHierId('${esc(String(p.id))}')"><span>${esc(p.naam)}</span><span class="muted">${waar?esc(waar):''}</span></button>`;
+  }).join('');
+}
+function kastBakScan(code){
+  code=String(code||'').trim();
+  const inp=document.getElementById('kastBakScan'); if(inp) inp.value='';
+  const z=document.getElementById('kastBakZoek'); if(z) z.innerHTML='';
+  if(!code) return;
+  if(kastIsLabel(code)){
+    const pl=kastVanScan(code);
+    if(!pl){ kastMeld('mis','Dit label hoort bij een plek die er niet meer is.'); piep(300); return; }
+    if(pl.soort==='vak' && pl.ouder_id===kastBakNu){
+      kastVakNu=pl.id; kastBakTeken(); kastScanFocus();
+      kastMeld('goed','Vak '+(pl.naam||'')+'. Scan nu wat erin ligt.'); piep(660); return;
+    }
+    piep(660); kastPlekOpen(pl.id); return;
+  }
+  const p=productBijCode(code);
+  if(!p){ codeOnbekend(code); return; }
+  kastLegHier(p);
+}
+function kastLegHierId(pid){
+  const z=document.getElementById('kastBakZoek'); if(z) z.innerHTML='';
+  const inp=document.getElementById('kastBakScan'); if(inp) inp.value='';
+  const p=prodVanId(pid); if(p) kastLegHier(p);
+}
+/* In welk vak van deze bak hoort het? Ligt het er al: dat vak. Scande je net een vaklabel:
+   dat vak. Anders het vak met de naam van het model. Weten we het niet, dan vragen we het. */
+function kastLegHier(p){
+  const b=kastPlek(kastBakNu); if(!b) return;
+  const vakken=kastKinderen(b.id,'vak');
+  if(!vakken.length){ kastKoppel(p, b.id); return; }
+  const al=vakken.find(v=>prodPlekken(p).some(x=>x.id===v.id));
+  const model=kastModelVan(p);
+  const opModel=model ? vakken.find(v=>String(v.naam||'').toLowerCase()===model.toLowerCase()) : null;
+  const gekozen=kastVakNu && vakken.some(v=>v.id===kastVakNu) ? kastVakNu : null;
+  const doel=(al&&al.id) || gekozen || (opModel&&opModel.id) || null;
+  if(doel){ kastKoppel(p, doel); return; }
+  const el=document.getElementById('kastBakMelding'); if(!el) return;
+  el.innerHTML=`<div class="npmelding goed">In welk vak hoort ${esc(p.naam)}?
+    <div class="kastchips">${vakken.map(v=>`<button type="button" class="kastchip" onclick="kastKoppelId('${esc(String(p.id))}','${v.id}')">${esc(v.naam||'vak')}</button>`).join('')}
+    ${model?`<button type="button" class="kastchip" onclick="kastNieuwVakVoor('${esc(String(p.id))}')">Nieuw vak: ${esc(model)}</button>`:''}</div></div>`;
+  piep(440);
+}
+async function kastNieuwVakVoor(pid){
+  const p=prodVanId(pid); if(!p || !kastBakNu) return;
+  const model=kastModelVan(p); if(!model) return;
+  try{ const v=await kastMaak('vak', kastBakNu, {naam:model}); const q=prodVanId(pid); if(q) kastKoppel(q, v.id); }
+  catch(e){ toast('Toevoegen lukte niet. Ben je online?','fout'); }
+}
+
+/* ── vakken per model ──
+   Een bak voor de iPhone 16 serie krijgt een vak per model. Storvo zoekt meteen de producten
+   erbij (glas, hoesjes) en legt ze in het vak van hun model. Wat al ergens anders ligt, laten
+   we liggen: dat verhuist niet stilletjes naar een andere bak. */
+let kastSerieBak=null;
+function kastVakkenPerModel(bakId){
+  const b=kastPlek(bakId); if(!b) return;
+  kastSerieBak=bakId;
+  const oud=document.getElementById('kastSerieVenster'); if(oud) oud.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='kastSerieVenster';
+  ov.onclick=e=>{ if(e.target===ov) kastSerieSluit(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); kastSerieSluit(); } });
+  const gok=String(b.naam||'').replace(/\s*serie\s*$/i,'').trim();
+  const sub=String(b.sub||'').toLowerCase();
+  const cats=(state.categorieen||[]).filter(c=>!c.systeem);
+  const catGok=cats.find(c=>sub && String(c.naam||'').toLowerCase()===sub);
+  ov.innerHTML=`<div class="popup groot" role="dialog" aria-modal="true">
+    <h3>Vakken per model</h3>
+    <p class="pv">Typ de serie. Storvo maakt een vak voor elk model en legt de producten die erbij horen erin.</p>
+    <div class="row">
+      <div class="kastbreed"><label for="kastSerieQ">Serie</label><input id="kastSerieQ" value="${esc(gok)}" placeholder="Bijvoorbeeld iPhone 16" autocomplete="off" oninput="kastSerieTeken()"></div>
+      <div><label for="kastSerieCat">Wat ligt erin</label><select id="kastSerieCat" onchange="kastSerieTeken()"><option value="">Alles</option>${cats.map(c=>`<option value="${esc(String(c.id))}"${catGok&&catGok.id===c.id?' selected':''}>${esc(c.naam)}</option>`).join('')}</select></div>
+    </div>
+    <div id="kastSerieLijst" class="kastserie"></div>
+    <div class="acts">
+      <button class="btn actie" id="kastSerieKnop" onclick="kastSerieMaak(this)">Vakken maken</button>
+      <button class="btn ghost" onclick="kastSerieSluit()">Annuleren</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  kastSerieTeken();
+  const q=document.getElementById('kastSerieQ'); if(q){ try{ q.focus(); }catch(_e){} }
+}
+function kastSerieSluit(){ const o=document.getElementById('kastSerieVenster'); if(o) o.remove(); kastScanFocus(); }
+/* Welke producten horen bij een model, binnen de gekozen soort. */
+function kastSerieProducten(model, cat){
+  const m=String(model).toLowerCase();
+  return (state.producten||[]).filter(p=>(!cat || String(p.cat)===String(cat)) && String(kastModelVan(p)||'').toLowerCase()===m);
+}
+function kastSerieTeken(){
+  const uit=document.getElementById('kastSerieLijst'); if(!uit) return;
+  const q=(document.getElementById('kastSerieQ')||{}).value||'';
+  const cat=(document.getElementById('kastSerieCat')||{}).value||'';
+  const modellen=kastSerie(q);
+  const knop=document.getElementById('kastSerieKnop');
+  if(!modellen.length){
+    uit.innerHTML=`<div class="muted klein">${q.trim()?'Geen modellen gevonden die zo beginnen.':'Typ hierboven een serie.'}</div>`;
+    if(knop) knop.disabled=true;
+    return;
+  }
+  const bestaand=kastKinderen(kastSerieBak,'vak').map(v=>String(v.naam||'').toLowerCase());
+  uit.innerHTML=modellen.map(m=>{
+    const al=bestaand.includes(m.toLowerCase());
+    const prods=kastSerieProducten(m, cat);
+    const vrij=prods.filter(p=>!prodPlekken(p).length);
+    const elders=prods.length-vrij.length;
+    const uitleg=al ? 'heeft al een vak'
+      : (vrij.length ? vrij.length+' product'+(vrij.length===1?'':'en')+' gaan erin' : 'nog geen producten')
+        +(elders?', '+elders+' ligt al ergens anders':'');
+    return `<label class="kastserierij"><input type="checkbox" data-model="${esc(m)}"${al?' disabled':' checked'}>
+      <b>${esc(m)}</b><span class="muted klein">${esc(uitleg)}</span></label>`;
+  }).join('');
+  if(knop) knop.disabled=false;
+}
+async function kastSerieMaak(knop){
+  const bakId=kastSerieBak; const b=kastPlek(bakId); if(!b) return;
+  const q=String((document.getElementById('kastSerieQ')||{}).value||'').trim();
+  const catEl=document.getElementById('kastSerieCat');
+  const cat=catEl?catEl.value:'';
+  const modellen=[...document.querySelectorAll('#kastSerieLijst input[type=checkbox]:checked:not(:disabled)')].map(i=>i.dataset.model);
+  if(!modellen.length){ toast('Vink eerst aan voor welke modellen je een vak wilt.','let-op'); return; }
+  if(knop) knop.disabled=true;
+  let vakken=0, gelegd=0;
+  try{
+    for(const m of modellen){
+      const v=await kastMaak('vak', bakId, {naam:m});
+      vakken++;
+      kastSerieProducten(m, cat).forEach(p=>{
+        if(prodPlekken(p).length) return;
+        p.plekken=[{id:v.id, n:achterLiggen(p)}];
+        kastInricht.set(kastSleutel(p.id, v.id), {uit:0, erbij:0});
+        gelegd++;
+      });
+    }
+  }catch(e){ toast('Niet alles is gelukt. Ben je online?','fout'); }
+  if(gelegd) save();
+  /* Een lege bak krijgt meteen een naam: "iPhone 16 serie" en wat erin ligt. */
+  if(!b.naam && q) await kastVeld(bakId, 'naam', modellen.length>1 ? q+' serie' : modellen[0]);
+  const catNaamNu=cat ? ((state.categorieen||[]).find(c=>String(c.id)===String(cat))||{}).naam : '';
+  if(!b.sub && catNaamNu) await kastVeld(bakId, 'sub', catNaamNu);
+  kastSerieSluit();
+  kastHerteken();
+  toast(vakken+' '+(vakken===1?'vak':'vakken')+' gemaakt'+(gelegd?', '+gelegd+' product'+(gelegd===1?'':'en')+' erin gelegd. Tel nu hoeveel er liggen.':''), true);
+}
+
+/* ── kiezen waar iets ligt ── */
+let kastKiesKlaar=null;
+function kastKiesPlek(kop, uitleg, klaar, huidig){
+  if(!kastPlekken.some(x=>x.soort==='bak')){ toast('Er staan nog geen bakken in de kast. Begin bij Voorraad, Magazijn.','let-op'); return; }
+  kastKiesKlaar=klaar;
+  const oud=document.getElementById('kastKiesVenster'); if(oud) oud.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='kastKiesVenster';
+  ov.onclick=e=>{ if(e.target===ov) kastKiesSluit(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); kastKiesSluit(); } });
+  const chip=(pl, label)=>`<button type="button" class="kastchip${pl.id===huidig?' aan':''}" onclick="kastKiesKlik('${pl.id}')">${esc(label)}</button>`;
+  const inhoud=kastKinderen(null,'kast').map(k=>kastKinderen(k.id,'plank').map(pl=>{
+    const bakken=kastKinderen(pl.id,'bak'); if(!bakken.length) return '';
+    return `<div class="kastkiesplank"><div class="kastkieskop">Plank ${esc(kastCode(pl.id))}</div>${bakken.map(b=>{
+      const vakken=kastKinderen(b.id,'vak');
+      return `<div class="kastkiesbak"><b>${esc(kastNaam(b.id))}</b><div class="kastchips">${vakken.length ? vakken.map(v=>chip(v, v.naam||'vak')).join('') : chip(b, 'In deze bak')}</div></div>`;
+    }).join('')}</div>`;
+  }).join('')).join('');
+  ov.innerHTML=`<div class="popup groot" role="dialog" aria-modal="true">
+    <h3>${esc(kop)}</h3>${uitleg?`<p class="pv">${esc(uitleg)}</p>`:''}
+    ${inhoud}
+    <div class="acts"><button class="btn ghost" onclick="kastKiesSluit()">Annuleren</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function kastKiesSluit(){ const o=document.getElementById('kastKiesVenster'); if(o) o.remove(); kastKiesKlaar=null; }
+function kastKiesKlik(id){ const f=kastKiesKlaar; kastKiesSluit(); if(f) f(id); }
+
+/* ── waar ligt dit product (vanuit de productenlijst) ── */
+let kastProdNu=null;
+function kastProdPlek(pid){
+  if(!prodVanId(pid)) return;
+  kastProdNu=String(pid);
+  let ov=document.getElementById('kastProdVenster');
+  if(!ov){
+    ov=document.createElement('div'); ov.className='overlay'; ov.id='kastProdVenster';
+    ov.onclick=e=>{ if(e.target===ov) kastProdSluit(); };
+    ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); kastProdSluit(); } });
+    document.body.appendChild(ov);
+  }
+  if(!kastGeladen) kastLaadEenmaal().then(()=>{ if(document.getElementById('kastProdVenster')) kastProdTeken(); });
+  kastProdTeken();
+}
+function kastProdSluit(){ const o=document.getElementById('kastProdVenster'); if(o) o.remove(); kastProdNu=null; }
+function kastProdTeken(){
+  const ov=document.getElementById('kastProdVenster'); if(!ov) return;
+  const p=prodVanId(kastProdNu); if(!p){ kastProdSluit(); return; }
+  const pl=prodPlekken(p);
+  const pid=esc(String(p.id));
+  ov.innerHTML=`<div class="popup groot" role="dialog" aria-modal="true">
+    <h3>Waar ligt het?</h3>
+    <p class="pv">${esc(p.naam)}. ${inWinkel(p)} in de winkel, ${achterLiggen(p)} achter.</p>
+    <div id="kastProdMelding"></div>
+    ${pl.length ? `<div class="kastvak">${pl.map((x,i)=>kastRijHtml(p, x.id, plekN(x), (kastNaam(x.id)||'Een plek die hier niet bekend is')+(i===0&&pl.length>1?' (vaste plek)':''))).join('')}</div>`
+      : '<p class="muted">Nog geen plek in de kast. Kies er een, dan zegt Storvo bij bijhangen en inscannen waar het ligt.</p>'}
+    <div class="acts">
+      <button class="btn actie" onclick="kastProdPlekErbij('${pid}')"><svg class="i s"><use href="#i-plus"/></svg>${pl.length?'Nog een plek':'Plek kiezen'}</button>
+      <button class="btn ghost" onclick="kastProdSluit()">Klaar</button>
+    </div>
+  </div>`;
+}
+function kastProdPlekErbij(pid){
+  const p=prodVanId(pid); if(!p) return;
+  kastKiesPlek('Waar ligt '+p.naam+'?', '', function(id){ const q=prodVanId(pid); if(q) kastKoppel(q, id); });
+}
+
+/* ── labels ── */
+function kastPas(ctx, tekst, maxW, groot, klein, gewicht){
+  for(let px=groot; px>klein; px-=2){ ctx.font=gewicht+' '+px+'px Arial'; if(ctx.measureText(tekst).width<=maxW) return px; }
+  ctx.font=gewicht+' '+klein+'px Arial'; return klein;
+}
+function kastKnip(ctx, tekst, maxW){
+  let t=String(tekst||'');
+  if(ctx.measureText(t).width<=maxW) return t;
+  while(t.length>1 && ctx.measureText(t+'…').width>maxW) t=t.slice(0,-1);
+  return t+'…';
+}
+/* Tekst over hooguit twee regels, zo groot als past. Geeft de regels en de lettergrootte. */
+function kastTweeRegels(ctx, tekst, maxW, groot, klein, gewicht){
+  const woorden=String(tekst||'').split(/\s+/).filter(Boolean);
+  for(let px=groot; px>=klein; px-=2){
+    ctx.font=gewicht+' '+px+'px Arial';
+    const regels=[]; let r='';
+    woorden.forEach(w=>{ const t=r?r+' '+w:w; if(ctx.measureText(t).width>maxW && r){ regels.push(r); r=w; } else r=t; });
+    if(r) regels.push(r);
+    if(regels.length<=2 && regels.every(x=>ctx.measureText(x).width<=maxW)) return {regels, px};
+  }
+  ctx.font=gewicht+' '+klein+'px Arial';
+  return {regels:[kastKnip(ctx, tekst, maxW)], px:klein};
+}
+function kastStreepjes(code, hoogte){
+  if(typeof JsBarcode==='undefined') return null;
+  try{
+    const c=document.createElement('canvas');
+    JsBarcode(c, String(code), {format:'CODE128', width:2, height:hoogte, displayValue:false, margin:0});
+    return c;
+  }catch(e){ return null; }
+}
+async function kastLabelCanvas(id){
+  const pl=kastPlek(id); if(!pl) return null;
+  const inst=labelInstelling();
+  const dpmm=11.81, mm=v=>Math.round(v*dpmm);
+  const W=mm(inst.breedte||62), H=mm(KAST_LABEL_MM[pl.soort]||30), pad=mm(2.4);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  /* Eerst kijken of er getekend kan worden, pas dan de barcode-bibliotheek laden. */
+  const ctx=c.getContext && c.getContext('2d'); if(!ctx) return null;
+  try{ await laadScript('/app/jsbarcode.min.js'); }catch(e){}
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  ctx.textBaseline='top';
+  /* De plaatscode in het rood op de tweekleurenrol (DK-22251): die zie je van een afstand.
+     Zonder tweekleuren printen we alles zwart, anders valt het rood weg. */
+  const ZWART='#000', ROOD=inst.tweekleuren?'#f00':'#000';
+  const bak=kastDeel(id,'bak');
+  if(pl.soort==='vak'){
+    const bc=kastStreepjes(pl.code, mm(7));
+    const by=H-pad-mm(7);
+    ctx.fillStyle=ZWART;
+    kastPas(ctx, pl.naam||'Vak', W-2*pad, mm(8), mm(3.6), '800');
+    ctx.fillText(kastKnip(ctx, pl.naam||'Vak', W-2*pad), pad, pad);
+    const rechts=bc ? W-pad-bc.width-mm(2) : W-pad;
+    if(bc) ctx.drawImage(bc, W-pad-bc.width, by);
+    ctx.fillStyle=ROOD; ctx.font='800 '+mm(4.2)+'px Arial';
+    ctx.fillText(kastKnip(ctx, kastCode(id), rechts-pad), pad, by-mm(0.6));
+    if(bak && (bak.sub||bak.naam)){
+      ctx.fillStyle=ZWART; ctx.font='400 '+mm(2.7)+'px Arial';
+      ctx.fillText(kastKnip(ctx, bak.sub||bak.naam, rechts-pad), pad, by+mm(4.2));
+    }
+  }else if(pl.soort==='bak'){
+    ctx.fillStyle=ROOD; ctx.font='800 '+mm(8.5)+'px Arial';
+    ctx.fillText(kastCode(id), pad, pad);
+    let y=pad+mm(10);
+    ctx.fillStyle=ZWART;
+    const titel=kastTweeRegels(ctx, pl.naam||'Bak', W-2*pad, mm(6.2), mm(3.8), '800');
+    titel.regels.forEach(r=>{ ctx.fillText(r, pad, y); y+=Math.round(titel.px*1.12); });
+    if(pl.sub){ ctx.font='400 '+mm(3.6)+'px Arial'; ctx.fillText(kastKnip(ctx, pl.sub, W-2*pad), pad, y+mm(0.4)); }
+    const bc=kastStreepjes(pl.code, mm(6));
+    if(bc) ctx.drawImage(bc, W-pad-bc.width, H-pad-mm(6));
+  }else{
+    const code=pl.soort==='kast' ? pl.kort : kastCode(id);
+    ctx.fillStyle=ZWART; ctx.font='700 '+mm(3)+'px Arial';
+    ctx.fillText(pl.soort==='kast'?'KAST':'PLANK', pad, pad);
+    ctx.fillStyle=ROOD; ctx.font='800 '+mm(14)+'px Arial';
+    ctx.fillText(code, pad, pad+mm(3.8));
+    const x0=pad+ctx.measureText(code).width+mm(4);
+    const bc=kastStreepjes(pl.code, mm(7));
+    if(bc) ctx.drawImage(bc, W-pad-bc.width, H-pad-mm(7));
+    const namen=kastKinderen(id, pl.soort==='kast'?'plank':'bak').map(x=>x.naam||kastCode(x.id)).filter(Boolean).join(', ');
+    if(namen && W-pad-x0>mm(12)){
+      ctx.fillStyle=ZWART;
+      const r=kastTweeRegels(ctx, namen, W-pad-x0, mm(3.2), mm(2.6), '400');
+      let y=pad;
+      r.regels.forEach(t=>{ ctx.fillText(t, x0, y); y+=Math.round(r.px*1.18); });
+    }
+  }
+  return c;
+}
+let kastLabelIds=[];
+async function kastLabels(ids, kop){
+  ids=(ids||[]).filter(id=>kastPlek(id));
+  if(!ids.length) return;
+  kastLabelIds=ids;
+  const oud=document.getElementById('kastLabelVenster'); if(oud) oud.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='kastLabelVenster';
+  ov.onclick=e=>{ if(e.target===ov) kastLabelsSluit(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); kastLabelsSluit(); } });
+  ov.innerHTML=`<div class="popup groot" role="dialog" aria-modal="true">
+    <h3>${esc(kop||'Labels')}</h3>
+    <p class="pv">Voor de labelprinter, 62 mm rol. Plank 62 x 30, bak 62 x 40, vak 62 x 25 mm.</p>
+    <div id="kastLabelLijst" class="kastlabels"><div class="muted klein">Even tekenen.</div></div>
+    <div class="acts">
+      <button class="btn actie" onclick="kastLabelsPrint(this)"><svg class="i s"><use href="#i-tag"/></svg>${ids.length>1?'Alles printen ('+ids.length+')':'Printen'}</button>
+      <button class="btn ghost" onclick="kastLabelsSluit()">Sluiten</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const lijst=document.getElementById('kastLabelLijst');
+  const delen=[];
+  for(const id of ids){
+    let src='';
+    try{ const c=await kastLabelCanvas(id); if(c) src=c.toDataURL('image/png'); }catch(e){}
+    delen.push(`<div class="kastlabel">${src?`<img src="${src}" alt="Label ${esc(kastNaam(id))}">`:''}
+      <span class="kastlabelnaam">${esc(kastNaam(id))}</span>
+      ${ids.length>1?`<button class="btn small ghost" onclick="kastLabelPrint('${id}', this)">Alleen deze</button>`:''}</div>`);
+  }
+  if(lijst && document.getElementById('kastLabelVenster')===ov) lijst.innerHTML=delen.join('');
+}
+function kastLabelsSluit(){ const o=document.getElementById('kastLabelVenster'); if(o) o.remove(); }
+function kastLabelsBak(bakId){
+  const ids=[bakId].concat(kastKinderen(bakId,'vak').map(v=>v.id));
+  return kastLabels(ids, 'Labels van '+kastNaam(bakId));
+}
+async function kastLabelPrint(id, knop, stil){
+  const inst=labelInstelling();
+  if(knop) knop.disabled=true;
+  try{
+    const c=await kastLabelCanvas(id); if(!c) throw new Error('geen label');
+    await printViaHelper(c.toDataURL('image/png').split(',')[1], {label:inst.breedte, red:inst.tweekleuren, kopieen:1});
+    if(!stil) toast('Label geprint', true);
+    return true;
+  }catch(e){
+    if(!stil) toast('Printen lukte niet. Staat de printhulp aan? Test via Instellingen, Labelprinter.','fout');
+    return false;
+  }finally{ if(knop) knop.disabled=false; }
+}
+async function kastLabelsPrint(knop){
+  const ids=kastLabelIds.slice();
+  if(knop) knop.disabled=true;
+  let n=0;
+  for(const id of ids){ if(await kastLabelPrint(id, null, true)) n++; else break; }
+  if(knop) knop.disabled=false;
+  if(n===ids.length) toast(n===1?'Label geprint':n+' labels geprint', true);
+  else toast((n?n+' van '+ids.length+' geprint. ':'')+'Printen lukte niet. Staat de printhulp aan?','fout');
+}
+
+/* ── een code die we niet kennen: nieuw product, of koppelen aan een bestaand ──
+   Een doosje met een andere streepjescode dan het product dat je al hebt, of een eigen sticker
+   die je eerder printte: dan wil je geen tweede product, maar die code erbij. */
+let codeOnbekendNu='';
+function codeOnbekend(code){
+  codeOnbekendNu=String(code||'').trim();
+  const oud=document.getElementById('codeVenster'); if(oud) oud.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='codeVenster';
+  ov.onclick=e=>{ if(e.target===ov) codeSluit(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape'){ e.preventDefault(); codeSluit(); } });
+  ov.innerHTML=`<div class="popup" role="dialog" aria-modal="true">
+    <h3>Dit nummer ken ik niet</h3>
+    <p class="pv"><b>${esc(codeOnbekendNu)}</b></p>
+    <div class="acts"><button class="btn actie" onclick="codeNieuwProduct()"><svg class="i s"><use href="#i-plus"/></svg>Nieuw product</button></div>
+    <label for="codeZoek" class="kastlabelkop">Of hoort hij bij een product dat je al hebt?</label>
+    <input id="codeZoek" placeholder="Typ de naam" autocomplete="off" oninput="codeZoekTeken()">
+    <div id="codeLijst" class="kastlijst"></div>
+    <div class="acts"><button class="btn ghost" onclick="codeSluit()">Annuleren</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  piep(200);
+}
+function codeSluit(){ const o=document.getElementById('codeVenster'); if(o) o.remove(); kastScanFocus(); }
+function codeNieuwProduct(){ const c=codeOnbekendNu; codeSluit(); kastBakSluit(); nieuwMetBarcode(c); }
+function codeZoekTeken(){
+  const uit=document.getElementById('codeLijst'); if(!uit) return;
+  const q=String((document.getElementById('codeZoek')||{}).value||'').trim();
+  if(q.length<2){ uit.innerHTML=''; return; }
+  const lijst=(state.producten||[]).filter(p=>zoekPast(p.naam+' '+(p.merk||''), zoekGroepen(q.toLowerCase()))).slice(0,8);
+  uit.innerHTML=lijst.length ? lijst.map(p=>`<button class="kastkeus" onclick="codeKoppelAan('${esc(String(p.id))}')"><span>${esc(p.naam)}</span><span class="muted">${esc(String(p.barcode||''))}</span></button>`).join('')
+    : '<div class="muted klein">Niets gevonden.</div>';
+}
+async function codeKoppelAan(pid){
+  const c=codeOnbekendNu; codeSluit();
+  if(await prodCodeKoppelen(pid, c)){
+    const p=prodVanId(pid);
+    /* Kwam de onbekende code uit een bak, dan hoort het product daar ook. */
+    if(p && kastBakNu && document.getElementById('kastBakVenster')) kastLegHier(p);
+  }
+}
+/* Een extra code aan een product hangen. Geeft true als het gelukt is. */
+async function prodCodeKoppelen(pid, code){
+  let p=prodVanId(pid); if(!p) return false;
+  if(code==null){
+    code=await vraagTekst('Barcode koppelen', 'Scan de code of typ hem over. Daarna herkent Storvo hem als '+p.naam+'.', {ja:'Koppelen', placeholder:'Scan of typ de code'});
+    if(code==null) return false;
+    p=prodVanId(pid); if(!p) return false;   // na de vraag opnieuw opzoeken
+  }
+  code=String(code||'').trim();
+  if(!code) return false;
+  if(kastIsLabel(code)){ toast('Dat is het label van een plek in de kast, geen product.','let-op'); return false; }
+  const bots=productBijCode(code);
+  if(bots && String(bots.id)!==String(p.id)){ toast('Die code hoort al bij '+bots.naam+'.','let-op'); return false; }
+  if(bots){ toast('Die code hoort al bij dit product.', true); return true; }
+  p.codes=(Array.isArray(p.codes)?p.codes:[]).concat([code]);
+  save(); herteken();
+  toast(code+' hoort nu bij '+p.naam, true);
+  return true;
+}
+function prodCodeWeg(pid, code){
+  const p=prodVanId(pid); if(!p || !Array.isArray(p.codes)) return;
+  p.codes=p.codes.filter(c=>String(c)!==String(code));
+  save(); herteken();
+  toast(code+' is los van '+p.naam, true);
 }
 
 /* ═══════════════ AANVRAGEN ═══════════════
@@ -11545,7 +12705,8 @@ function renderVoorraad(){
     const leeg=inWinkel(p)===0;
     return `<div class="bijvulrij${leeg?' leeg':''}">
       <div class="bvnaam">${esc(p.naam)}${leeg?'<span class="bvleeg">rek is leeg</span>':''}
-        <div class="muted" style="font-size:12.5px">${esc(catNaam(p.cat))}</div></div>
+        <div class="muted" style="font-size:12.5px">${esc(catNaam(p.cat))}</div>
+        ${prodPakTekst(p, bijTeVullen(p))?`<div class="prodplek">Pak uit <b>${esc(prodPakTekst(p, bijTeVullen(p)))}</b></div>`:''}</div>
       <div class="bvcijfer"><b>${inWinkel(p)}</b><span>hangt</span></div>
       <div class="bvcijfer"><b>${achterLiggen(p)}</b><span>achter</span></div>
       <div class="bvcijfer"><b>${schapNorm(p)}</b><span>zou moeten</span></div>
@@ -11565,7 +12726,9 @@ function nulZoek(){
   const veld=document.getElementById('nm_code');
   const code=veld.value.trim();
   if(!code) return;
-  const p=state.producten.find(p=>String(p.barcode)===code)
+  /* Een kastlabel scannen bij het tellen opent die bak: daar tel je per vak. */
+  if(kastVanScan(code)){ veld.value=''; kastPlekOpen(kastVanScan(code).id); return; }
+  const p=productBijCode(code)
        || state.producten.find(p=>zoekPast(p.naam, zoekGroepen(code)));
   if(!p){
     document.getElementById('nulVak').innerHTML=
@@ -11582,7 +12745,8 @@ function tekenNulVak(){
   const vak=document.getElementById('nulVak');
   if(!p){ vak.innerHTML=''; return; }
   vak.innerHTML=`<div class="nulkaart">
-    <div class="nulnaam">${esc(p.naam)}<div class="muted" style="font-size:12.5px">${esc(p.barcode)} · ${esc(catNaam(p.cat))}</div></div>
+    <div class="nulnaam">${esc(p.naam)}<div class="muted" style="font-size:12.5px">${esc(p.barcode)} · ${esc(catNaam(p.cat))}</div>
+      ${prodWaar(p)?`<div class="prodplek">Ligt in <b>${esc(prodWaar(p))}</b>. Per vak tellen kan bij Magazijn.</div>`:''}</div>
     <div class="nulvelden">
       <div><label>Hangt in de winkel</label><input id="nm_winkel" type="number" min="0" step="1" value="${inWinkel(p)}"
         onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('nm_achter').select();}"></div>
@@ -13921,7 +15085,7 @@ const MODULES=[
    uitleg:'Het geld in de lade bijhouden en tellen.',
    verdwijnt:['Kassa in het menu','De kassa-tegel','Melding bij te veel geld','Instellingen: Kassa'],
    blijft:'Contante verkopen gaan gewoon in het kasboek.'},
-  {id:'voorraad', groep:'Winkel', naam:'Winkelvoorraad', ico:'i-package', tabs:['producten','nieuw','catalogus','voorraad','scan','bestellen'],
+  {id:'voorraad', groep:'Winkel', naam:'Winkelvoorraad', ico:'i-package', tabs:['producten','nieuw','catalogus','voorraad','magazijn','scan','bestellen'],
    uitleg:'Producten met een barcode, zoals hoesjes en kabels. Tellen, inscannen en bijbestellen.',
    verdwijnt:['Voorraad in het menu','Producten, tellen en inscannen','Bijbestellen en de bestellijst','Product toevoegen op het dashboard','Instellingen: Voorraad en Serie inscannen'],
    blijft:'Een verkoop haalt nog steeds van de voorraad af, en de bestellijst telt door.'},
@@ -14042,11 +15206,13 @@ function renderModules(){
    pinbetaling voor een laptop niet meer als toestelverkoop herkend. */
 function mag(tab){
   /* Producten uit betekent ook geen nieuw product kunnen aanmaken. */
-  const hoort = (tab==='nieuw'||tab==='catalogus') ? 'producten' : tab;
+  /* Het magazijn hoort bij Tellen: wie de voorraad mag tellen, mag ook de kast zien. */
+  const hoort = (tab==='nieuw'||tab==='catalogus') ? 'producten' : (tab==='magazijn' ? 'voorraad' : tab);
   if(!paginaAan(hoort)) return false;
   return magRol(tab);
 }
 function magRol(tab){
+  if(tab==='magazijn') return magRol('voorraad');
   const hoort = (tab==='nieuw'||tab==='catalogus') ? 'producten' : tab;
   const r=gebruiker?gebruiker.rol:'eigenaar';
   if(r==='eigenaar') return true;   /* de eigenaar ziet altijd alles */
@@ -14989,6 +16155,9 @@ async function ladAccountEnStart(session){
     window._cloverTimerLus=setInterval(()=>{ if(account) cloverBestellingenVerwerken(); }, 3*60*1000);
   }
   if(typeof wsExtrasStart==='function') wsExtrasStart();
+  /* De kast alvast laden: bijhangen en inscannen noemen de plek, ook als je de pagina
+     Magazijn nog niet open hebt gehad. */
+  if(typeof kastLaad==='function') kastLaad();
   moduleLinks();
   hwLaad(true);
   proefNudge();

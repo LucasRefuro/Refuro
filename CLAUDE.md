@@ -171,6 +171,7 @@ wordt. Alleen de service_role kan erbij. Laat dat zo.
 | `winkel_koppelingen` | de webshopkoppeling per winkel (versleuteld) |
 | `webshop_bestellingen` | wat er online besteld is |
 | `inruil_prijzen` | wat de winkel betaalt per model, opslag en staat; de webshop leest het |
+| `magazijn_plekken` | de kast achter: kast, plank, bak en vak met hun labelcode; hoeveel er per vak ligt staat bij het product (`plekken` in de blob) |
 
 RLS staat overal aan en werkt via de hulpfunctie `my_team_id()`.
 
