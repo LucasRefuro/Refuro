@@ -91,7 +91,7 @@ setTimeout(async()=>{
   ok('bedrag erbij', /449,00/.test(l));
   ok('wat er besteld is', /HP ZBook 15 G6/.test(l) && /USB-C kabel/.test(l));
   ok('aantal bij meer dan één', /2× USB-C kabel/.test(l));
-  ok('welke toestellen eruit gingen', /A0007/.test(l) && /uit je voorraad gehaald/.test(l));
+  ok('welke toestellen eruit gingen: het A-nummer groot bij de regel', /HP ZBook 15 G6<\/span>\s*<span class="bstcode"[^>]*>A0007<\/span>/.test(l));
   ok('nieuwe bestelling valt op', /bstrij nieuw/.test(l) && /bstnieuwvlag/.test(l));
   ok('betaalstatus zichtbaar', /Betaald/.test(l) && /Nog niet betaald/.test(l));
   ok('verzonden zichtbaar', /Verzonden/.test(l));
@@ -127,6 +127,39 @@ setTimeout(async()=>{
   ok('afvinken gaat naar de database', !!bij && bij[1].gezien===true);
   ok('bolletje verdwijnt', d().getElementById('bBestel').hidden);
   ok('en de vlag ook', !/bstnieuwvlag/.test(lijst()));
+
+  // ── het A-nummer bij de goede regel (24 november 2026, wens eigenaar) ──
+  // Bij grade-varianten is de sku de webshopsleutel en hangen er meer toestellen aan één advertentie.
+  const regelCodes=x=>JSON.parse(w.eval(`JSON.stringify(bstToestelPerRegel(${JSON.stringify(x)}).per.map(l=>l.map(t=>t.code)))`));
+  const losCodes=x=>JSON.parse(w.eval(`JSON.stringify(bstToestelPerRegel(${JSON.stringify(x)}).los.map(t=>t.code))`));
+  const twee={regels:[
+      {titel:'iPhone 13', sku:'apple_iphone-13_blauw_128-gb-A', aantal:1, variant:'gid://shopify/ProductVariant/1'},
+      {titel:'iPhone 13', sku:'apple_iphone-13_blauw_128-gb-B', aantal:1, variant:'gid://shopify/ProductVariant/2'}],
+    toestellen:[{id:'h8', naam:'Apple iPhone 13', code:'A0302', variant:'gid://shopify/ProductVariant/2'},
+                {id:'h9', naam:'Apple iPhone 13', code:'A0301', variant:'gid://shopify/ProductVariant/1'}]};
+  ok('twee dezelfde modellen: elk A-nummer bij zijn eigen grade', JSON.stringify(regelCodes(twee))==='[["A0301"],["A0302"]]');
+  const oud={regels:[
+      {sku:'NIEUWE-ACCU-TELEFOON', accu:true, titel:'Nieuwe accu voor je telefoon', aantal:1},
+      {sku:'apple_iphone-17_zwart_256-gb-B', titel:'iPhone 17', aantal:1},
+      {sku:'EXTRA-GLAS', extra:true, titel:'Screenprotector', aantal:1}],
+    toestellen:[{id:'h7', naam:'Apple iPhone 17', code:'A0118', variant:'gid://shopify/ProductVariant/7', nieuwe_accu:true}]};
+  ok('oudere bestelling zonder variant op de regel: bij de enige toestelregel, niet bij de accu of de extra',
+    JSON.stringify(regelCodes(oud))==='[[],["A0118"],[]]' && losCodes(oud).length===0);
+  const onzeker={regels:[{titel:'iPhone 13', sku:'x-A', aantal:1}, {titel:'iPhone 12', sku:'y-B', aantal:1}],
+    toestellen:[{id:'h5', naam:'Apple iPhone 13', code:'A0401'}, {id:'h6', naam:'Apple iPhone 12', code:'A0402'}]};
+  ok('niet zeker te koppelen: blijft los onderaan, nooit bij de verkeerde regel',
+    JSON.stringify(regelCodes(onzeker))==='[[],[]]' && losCodes(onzeker).join()==='A0401,A0402');
+  w.eval(`bstData=[Object.assign({id:'b9', nummer:'#1050', klant:'Test', bedrag:700, status:'betaald', betaald:true,
+    gezien:true, geplaatst_op:new Date().toISOString()}, ${JSON.stringify(onzeker)})]; renderBestellingen();`);
+  ok('los onderaan met de oude zin erbij', /A0401/.test(lijst()) && /uit je voorraad gehaald/.test(lijst()));
+  ok('de lange webshopsleutel staat er niet meer', !/x-A/.test(lijst()));
+  w.eval(`bstPopup(Object.assign({id:'b10', nummer:'#1051', klant:'Test', bedrag:399}, ${JSON.stringify(twee)}))`);
+  const pop=d().getElementById('bstPopup');
+  ok('pop-up: het A-nummer staat erin', !!pop && /A0301/.test(pop.innerHTML) && /A0302/.test(pop.innerHTML) && pop.querySelectorAll('.bstcode').length===2);
+  w.eval("document.getElementById('bstPopDicht').click()");
+  w.eval(`bstPopup(Object.assign({id:'b11', nummer:'#1052', klant:'Test', bedrag:700}, ${JSON.stringify(onzeker)}))`);
+  ok('pop-up: ook een los toestel krijgt zijn A-nummer', /A0401/.test(d().getElementById('bstPopup').innerHTML) && /A0402/.test(d().getElementById('bstPopup').innerHTML));
+  w.eval("document.getElementById('bstPopDicht').click()");
 
   // ── lege staat ──
   w.eval("bstData=[]; renderBestellingen();");

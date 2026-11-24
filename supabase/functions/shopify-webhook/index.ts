@@ -161,8 +161,12 @@ async function mailBestelling(rij: any) {
       <div style="font-size:15px;line-height:1.5">Eerst de accu vervangen, daarna verzenden. De klant rekent op 1 tot 3 werkdagen.
       ${accuToestellen.length ? "<br><b>Toestel:</b> " + accuToestellen.map((t: any) => veilig(t.naam) + (t.code ? " (" + veilig(t.code) + ")" : "")).join(", ") + ". Staat in Storvo bij Te repareren." : ""}</div>
     </div>` : "";
+  /* Het A-nummer bij de regel: daarop pak je het toestel uit de kast. */
+  const codesBij = (r: any) => r?.variant
+    ? (rij.toestellen || []).filter((t: any) => t?.code && t?.variant && String(t.variant) === String(r.variant)).map((t: any) => t.code)
+    : [];
   const regels = (rij.regels || []).map((r: any) =>
-    `<tr><td style="padding:6px 0">${r.aantal > 1 ? veilig(r.aantal) + "× " : ""}${r.accu ? "<b>" + veilig(r.titel) + "</b>" : veilig(r.titel)}${r.uitvoering ? " (" + veilig(r.uitvoering) + ")" : ""}${r.voor ? "<br><span style=\"color:#555\">Voor: " + veilig(r.voor) + "</span>" : ""}</td><td style="padding:6px 0;text-align:right;white-space:nowrap">${euro(r.bedrag)}</td></tr>`).join("");
+    `<tr><td style="padding:6px 0">${r.aantal > 1 ? veilig(r.aantal) + "× " : ""}${r.accu ? "<b>" + veilig(r.titel) + "</b>" : veilig(r.titel)}${r.uitvoering ? " (" + veilig(r.uitvoering) + ")" : ""}${codesBij(r).length ? " <b>" + codesBij(r).map(veilig).join(", ") + "</b>" : ""}${r.voor ? "<br><span style=\"color:#555\">Voor: " + veilig(r.voor) + "</span>" : ""}</td><td style="padding:6px 0;text-align:right;white-space:nowrap">${euro(r.bedrag)}</td></tr>`).join("");
   const toestellen = (rij.toestellen || []).map((t: any) => veilig(t.naam) + (t.code ? " (" + veilig(t.code) + ")" : "") + (t.nieuwe_accu ? " <b>met nieuwe accu</b>" : "")).join("<br>");
   const html = `
     <div style="font-family:Arial,sans-serif;color:#1B2254;max-width:560px">
@@ -460,6 +464,9 @@ Deno.serve(async (req) => {
       return {
         titel: r.title, sku: r.sku || null, aantal: r.quantity,
         bedrag: geld(r.originalTotalSet),
+        /* De variant wijst aan welk toestel bij deze regel hoort (toestellen[].variant). Zo zet
+           Storvo het A-nummer bij de goede regel, ook als er twee dezelfde modellen in staan. */
+        ...(r?.variant?.id ? { variant: String(r.variant.id) } : {}),
         ...(r.variantTitle && r.variantTitle !== "Default Title" ? { uitvoering: r.variantTitle } : {}),
         ...(isAccuRegel(r) ? { accu: true, voor, ...(isOrigineel(r) ? { accu_origineel: true } : {}) } : {}),
         ...(isExtraRegel(r) ? { extra: true, voor } : {}),

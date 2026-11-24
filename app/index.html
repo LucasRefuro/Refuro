@@ -503,6 +503,11 @@
   .bstregels{margin-top:10px; font-size:13.5px; color:var(--muted);}
   .bstregels .r{display:flex; gap:8px; padding:2px 0;}
   .bsttoestellen{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+  /* Het A-nummer bij de regel: daarop pak je het toestel uit de kast, dus groot en donker. */
+  .bstcode{font-family:'Sora',sans-serif; font-size:13px; font-weight:800; letter-spacing:.02em;
+    padding:2px 10px; border-radius:var(--pil); background:var(--navy); color:#fff; white-space:nowrap;
+    font-variant-numeric:tabular-nums;}
+  .bstregels .r{align-items:center;}
   .bstvoet{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px;}
   .bststatus{font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
     padding:4px 10px; border-radius:var(--pil); background:var(--soft-2); color:var(--muted);}
@@ -11895,8 +11900,7 @@ function renderBestellingen(){
   }
 
   vak.innerHTML=rijen.map(x=>{
-    const toestellen=x.toestellen||[];
-    const regels=x.regels||[];
+    const los=bstToestelPerRegel(x).los;
     return `<div class="bstrij${!x.gezien && !x.geannuleerd?' nieuw':''}">
       <div class="bstkop">
         ${!x.gezien && !x.geannuleerd?'<span class="bstnieuwvlag">Nieuw</span>':''}
@@ -11908,12 +11912,9 @@ function renderBestellingen(){
       ${x.nieuwe_accu && !x.geannuleerd ? bstAccuBlok(x) : ''}
       ${!x.geannuleerd ? bstKlaarBlok(x) : ''}
 
-      <div class="bstregels">${regels.map(r=>`
-        <div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span>
-          ${r.sku?`<span class="mono">${esc(r.sku)}</span>`:''}</div>`).join('')
-        || '<div class="r">Geen regels meegekomen</div>'}</div>
+      <div class="bstregels">${bstRegelsHtml(x) || '<div class="r">Geen regels meegekomen</div>'}</div>
 
-      ${toestellen.length?`<div class="bsttoestellen">${toestellen.map(t=>`
+      ${los.length?`<div class="bsttoestellen">${los.map(t=>`
         <span class="kan shop">${esc(t.naam)}${t.code?' · '+esc(t.code):''}${t.nieuwe_accu?' · nieuwe accu':''}</span>`).join('')}
         <span class="muted klein">uit je voorraad gehaald</span></div>`:''}
 
@@ -11930,6 +11931,36 @@ function renderBestellingen(){
     </div>`;
   }).join('');
 }
+/* Welk toestel hoort bij welke regel van de bestelling. De eigenaar pakt een bestelling in op het
+   A-nummer; dat stond eerst los onderaan de kaart, en in de pop-up helemaal niet. De regel zelf
+   droeg alleen de webshopsleutel (hp_elitebook-840-g8_..._256-gb-ssd-A), waar je niets aan hebt.
+   Bij grade-varianten hangen meer toestellen aan één advertentie, dus de titel zegt niet welk
+   exemplaar het is: dat weet alleen de melding van Shopify, die het toestel aan de verkochte
+   variant koppelt. Daarom eerst op variant (bestellingen vanaf 24 november 2026 hebben die op de
+   regel), dan de oude manier (de sku wás het A-nummer), en blijft er precies één toestelregel
+   over, dan horen de overgebleven toestellen bij die. Wat niet zeker te koppelen is, blijft los
+   onderaan staan; liever daar dan bij de verkeerde regel. */
+function bstToestelPerRegel(x){
+  const regels=(x && x.regels)||[];
+  const toestellen=((x && x.toestellen)||[]).filter(Boolean);
+  const per=regels.map(()=>[]);
+  const vrij=new Set(toestellen.map((_t,j)=>j));
+  const isToestel=r=>!!r && !r.accu && !r.extra;
+  const pak=(i, past)=>toestellen.forEach((t,j)=>{ if(vrij.has(j) && past(t)){ per[i].push(t); vrij.delete(j); } });
+  regels.forEach((r,i)=>{ if(isToestel(r) && r.variant) pak(i, t=>t.variant && String(t.variant)===String(r.variant)); });
+  regels.forEach((r,i)=>{ if(isToestel(r) && r.sku) pak(i, t=>t.code && String(t.code)===String(r.sku)); });
+  const open=regels.map((_r,i)=>i).filter(i=>isToestel(regels[i]) && !per[i].length);
+  if(open.length===1 && vrij.size) pak(open[0], ()=>true);
+  return {per, los:[...vrij].map(j=>toestellen[j])};
+}
+/* De regels van een bestelling, met het A-nummer groot ernaast. Gebruikt door de lijst en de pop-up. */
+function bstRegelsHtml(x){
+  const {per}=bstToestelPerRegel(x);
+  return ((x && x.regels)||[]).map((r,i)=>`
+        <div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span>
+          ${per[i].map(t=>t.code?`<span class="bstcode" title="Uit je voorraad gehaald">${esc(t.code)}</span>`:'').join('')}</div>`).join('');
+}
+
 /* Een bestelling met nieuwe accu (de klant koos hem op de productpagina, 45 euro bij een telefoon
    en 89 bij een laptop). De melding van Shopify zette het toestel al bij Te repareren op de
    werkbank; hier staat het groot, zodat niemand hem zonder nieuwe accu verstuurt. */
@@ -11998,7 +12029,8 @@ function bstPopup(x){
   bstPopOpen=true;
   const ov=document.createElement('div');
   ov.className='overlay'; ov.id='bstPopup';
-  const regels=(x.regels||[]).map(r=>`<div class="r${r.accu?' accu':''}"><span>${r.aantal>1?esc(String(r.aantal))+'× ':''}${esc(r.titel||'')}${r.voor?' · voor '+esc(r.voor):''}</span></div>`).join('');
+  const los=bstToestelPerRegel(x).los;
+  const regels=bstRegelsHtml(x)+los.map(t=>`<div class="r"><span>${esc(t.naam||'')}</span>${t.code?`<span class="bstcode">${esc(t.code)}</span>`:''}</div>`).join('');
   ov.innerHTML=`<div class="popup jnpop bstpop" role="dialog" aria-modal="true">
     <h3>Nieuwe bestelling ${esc(x.nummer||'')}</h3>
     <p class="pv">${esc(x.klant||x.email||'Onbekende klant')}${x.bedrag!=null?' · '+euro(x.bedrag):''}</p>
